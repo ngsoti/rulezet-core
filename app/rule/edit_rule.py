@@ -9,9 +9,9 @@ from wtforms.validators import InputRequired, Length
 class EditRuleFrom(FlaskForm):
     format = StringField('Format', validators=[InputRequired(), Length(1, 64)])
     title = StringField('Title', validators=[InputRequired(), Length(1, 64)])
-    license = StringField('License', validators=[InputRequired(), Length(1, 64)])
-    description = TextAreaField('Description', validators=[InputRequired(), Length(1, 64)])
-    source = StringField('Source', validators=[InputRequired(), Length(1, 64)])
+    license = StringField('License', validators=[InputRequired(), Length(1, 64)])  # autorisiser que certain comme fsf et osi
+    description = TextAreaField('Description', validators=[InputRequired()])
+    source = StringField('Source', validators=[InputRequired()])
     version = StringField('Version', validators=[InputRequired(), Length(1, 64)])
 
     submit = SubmitField('Register')
