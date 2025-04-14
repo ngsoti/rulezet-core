@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="container mt-4">
+        <h1 class="ui dividing header text-center mb-4">Create a Rule</h1>
+
+        <div class="card card-body shadow-sm" id="main-container">
+            <form action="" method="post" id="form">
+                {{ form.hidden_tag() }}
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.title.label(class_="col-form-label") }}
+                            {{ form.title(class_="form-control") }}
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.title.errors[0] | safe }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.format.label(class_="col-form-label") }}
+                            {{ form.format(class_="form-control") }}
+                            {% if form.format.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.format.errors[0] | safe }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.license.label(class_="col-form-label") }}
+                            {{ form.license(class_="form-control") }}
+                            {% if form.license.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.license.errors[0] | safe }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.source.label(class_="col-form-label") }}
+                            {{ form.source(class_="form-control") }}
+                            {% if form.source.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.source.errors[0] | safe }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.author.label(class_="col-form-label") }}
+                            {{ form.author(class_="form-control") }}
+                            {% if form.author.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.author.errors[0] | safe }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.version.label(class_="col-form-label") }}
+                            {{ form.version(class_="form-control") }}
+                            {% if form.version.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.version.errors[0] | safe }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col">
+                        <div class="form-group">
+                            {{ form.description.label(class_="col-form-label") }}
+                            {{ form.description(class_="form-control", rows=4) }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.description.errors[0] | safe }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+
+
+{% block script %}
+<script type="module">
+    const { createApp, ref} = Vue
+    import {message_list} from '/static/js/toaster.js'
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            return {
+                message_list,
+            }
+        }
+    }).mount('#main-container')
+
+</script>
+{% endblock %}
+
+

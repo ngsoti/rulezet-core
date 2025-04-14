@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    
+<div class="container mt-4">
+    <h1 class="text-center text-primary mb-4">
+        <i class="fas fa-user-circle"></i> My Profile
+    </h1>
+
+    <hr>
+ 
+    
+    <div class="bg-light p-4 rounded shadow-sm">
+        <div class="mb-3">
+            <h6 class="text-muted">First Name:</h6>
+            <span class="h5">{{user.first_name}}</span>
+        </div>
+        <div class="mb-3">
+            <h6 class="text-muted">Last Name:</h6>
+            <span class="h5">{{user.last_name}}</span>
+        </div>
+        <div class="mb-3">
+            <h6 class="text-muted">Email:</h6>
+            <span class="h5">{{user.email}}</span>
+        </div>
+        <div class="mb-3">
+            <h6 class="text-muted">API Key:</h6>
+            <span class="h5 text-break">{{user.api_key}}</span>
+        </div>
+    </div>
+
+    <a class="btn btn-success btn-lg" href="/account/edit" role="button" style="margin-bottom: 20px;">
+        <i class="fas fa-edit"></i> Edit Profile
+    </a>
+    
+</div>
+
+{% endblock %}

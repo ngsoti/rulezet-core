@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+  <header class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-dark m-0"><i class="fas fa-cogs"></i> Rule Set</h1>
+    <a href="/rule" class="btn btn-primary btn-sm">
+      <i class="fas fa-hammer"></i> Add Rule
+    </a>
+  </header>
+
+  <a href="import_yara" class="btn btn-success btn-sm me-2" title="Add to Favorites">
+    <i class="fas fa-star"></i> Ajouter une regle a partir dun fichier 
+  </a>
+
+  <template v-if="rules_list && rules_list.rule.length > 0">
+    <br/>
+    <!-- Pagination dynamique -->
+    <nav aria-label="Page navigation">
+      <ul class="pagination">
+
+        <!-- Bouton Précédent -->
+        <li class="page-item" :class="{ disabled: current_page === 1 }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
+            <i class="fas fa-arrow-left"></i> Previous
+          </a>
+        </li>
+
+        <!-- Numéros de pages dynamiques -->
+        <li class="page-item" v-for="page in total_pages" :key="page" :class="{ active: current_page === page }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+        </li>
+
+        <!-- Bouton Suivant -->
+        <li class="page-item" :class="{ disabled: current_page === total_pages }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
+            Next <i class="fas fa-arrow-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <br/>
+    
+    
+    
+    
+    
+
+    <!-- Liste des règles -->
+    <div class="card card-body mb-3" v-for="(rule, index) in rules_list.rule" :key="rule.uuid">
+      <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1371ff">
+        <h4 class="mb-0">[[ rule.id ]] - [[ rule.title ]]</h4>
+        <div class="d-flex">
+          
+          
+
+          <a :href="`/favorie/${rule.id}`" class="btn btn-success btn-sm me-2" title="Add to Favorites">
+            <i class="fas fa-star"></i>
+          </a>
+          <!-- <button @click="addFavoriteRule(rule.id, index)" class="btn btn-success btn-sm me-2" title="DAdd to Favorites">
+            <i class="fas fa-star"></i>
+          </button> -->
+          
+          
+          
+          
+          
+          <a :href="`/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2" title="Edit Rule">
+            <i class="fas fa-pen"></i>
+          </a>
+          <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2" title="Delete Rule">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="card-body">
+        <div class="mb-2">
+          <strong>Description :</strong>
+          <p class="card-text">[[ rule.description ]]</p>
+        </div>
+    
+        <div class="row">
+          <div class="col-md-6 mb-2">
+            <strong>Format :</strong> [[ rule.format ]]
+          </div>
+          <div class="col-md-6 mb-2">
+            <strong>Source :</strong> [[ rule.source ]]
+          </div>
+          <div class="col-md-6 mb-2">
+            <strong>License :</strong> [[ rule.license ]]
+          </div>
+          <div class="col-md-6 mb-2">
+            <strong>UUID :</strong> [[ rule.uuid ]]
+          </div>
+          <div class="col-md-6 mb-2">
+            <strong>Version :</strong> [[ rule.version ]]
+          </div>
+        </div>
+    
+        <div class="row mt-3">
+          <div class="col-md-6">
+            <strong>Creation date :</strong> [[ rule.creation_date ]]
+          </div>
+          <div class="col-md-6">
+            <strong>Modification time :</strong> [[ rule.last_modif ]]
+          </div>
+        </div>
+    
+        <div class="mt-3">
+          <strong>Author :</strong> [[ rule.author ]]
+        </div>
+    
+        <div class="mt-3">
+          <button @click="vote('up', rule.id)" class="btn btn-success btn-sm">
+            <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
+          </button>
+          <button @click="vote('down', rule.id)" class="btn btn-danger btn-sm">
+            <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
+          </button>
+        </div>
+      </div>
+      <div class="text-center mt-3">
+        <a :href="`/detail_rule/${rule.id}`" class="btn btn-info fa-solid fa-plus" style="font-size: 14px; padding: 12px;">View more</a>
+      </div>
+    </div>
+    
+    <nav aria-label="Page navigation">
+      <ul class="pagination">
+
+        <!-- Bouton Précédent -->
+        <li class="page-item" :class="{ disabled: current_page === 1 }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
+            <i class="fas fa-arrow-left"></i> Previous
+          </a>
+        </li>
+
+        <!-- Numéros de pages dynamiques -->
+        <li class="page-item" v-for="page in total_pages" :key="page" :class="{ active: current_page === page }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+        </li>
+
+        <!-- Bouton Suivant -->
+        <li class="page-item" :class="{ disabled: current_page === total_pages }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
+            Next <i class="fas fa-arrow-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </template>
+
+  <!-- Message si aucune règle -->
+  <i v-else class="text-muted">No rules added</i>
+
+  <br />
+
+</div>
+{% endblock %}
+
+
+{% block script %}
+<script type="module">
+  const { createApp, ref } = Vue
+  import { message_list } from '/static/js/toaster.js'
+
+  createApp({
+    delimiters: ['[[', ']]'],
+    setup() {
+      const rules_list = ref({ rule: [] })
+      const current_page = ref(1)
+      const total_pages = ref(1)
+
+      async function fetchRules(page) {
+        const res = await fetch('get_rules_page?page=' + page)
+        const data = await res.json()
+        rules_list.value = data
+        total_pages.value = data.total_pages
+        current_page.value = page
+      }
+
+
+      async function deleteRule(id, index) {
+        const res = await fetch('delete_rule?id=' + id)
+        rules_list.value.rule.splice(index, 1)
+      }
+
+      // Fonction pour gérer les votes
+      async function vote(voteType, ruleId) {
+        const res = await fetch(`vote_rule?id=${ruleId}&vote_type=${voteType}`, { method: 'GET' })
+        const data = await res.json()
+        // Met à jour les votes de la règle après le vote
+        const updatedRule = rules_list.value.rule.find(rule => rule.id === ruleId)
+        if (updatedRule) {
+          if (voteType === 'up') {
+            updatedRule.vote_up = data.vote_up
+          } else if (voteType === 'down') {
+            updatedRule.vote_down = data.vote_down
+          }
+        }     
+      }
+
+      fetchRules(1)
+
+
+      // add rule in favorite
+      async function addFavoriteRule(id, index){
+        const res = await fetch('add_rule_favorite?id=' + id)
+        if (res){
+          message_list.success('Rule added to favorites!');
+        }else{
+          message_list.console.error('Rule added to favorites!');
+        }
+      }
+
+
+
+
+      return {
+        message_list,
+        rules_list,
+        current_page,
+        total_pages,
+        fetchRules,
+        addFavoriteRule,
+        deleteRule,
+        vote
+      }
+    }
+  }).mount('#main-container')
+</script>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% import 'macros/form_macros.html' as f %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="text-center mb-4">Edit a Rule</h3>
+    <form action="" method="post">
+        {{ form.hidden_tag() }}
+        
+        <div class="modal-body">
+            <!-- Row for Format and Title -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <!-- Format -->
+                    <div class="form-group">
+                        {{ form.format.label(class_="col-form-label") }}
+                        {{ form.format(class_="form-control") }}
+                        {% if form.format.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.format.errors[0] | safe }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <!-- Title -->
+                    <div class="form-group">
+                        {{ form.title.label(class_="col-form-label") }}
+                        {{ form.title(class_="form-control") }}
+                        {% if form.title.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.title.errors[0] | safe }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- License -->
+            <div class="mb-3">
+                <div class="form-group">
+                    {{ form.license.label(class_="col-form-label") }}
+                    {{ form.license(class_="form-control") }}
+                    {% if form.license.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.license.errors[0] | safe }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Source -->
+            <div class="mb-3">
+                <div class="form-group">
+                    {{ form.source.label(class_="col-form-label") }}
+                    {{ form.source(class_="form-control") }}
+                    {% if form.source.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.source.errors[0] | safe }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-group">
+                    {{ form.version.label(class_="col-form-label") }}
+                    {{ form.version(class_="form-control") }}
+                    {% if form.version.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.version.errors[0] | safe }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Description -->
+            <div class="mb-3">
+                <div class="form-group">
+                    {{ form.description.label(class_="col-form-label") }}
+                    {{ form.description(class_="form-control", rows=4) }}
+                    {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.description.errors[0] | safe }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="text-center">
+                {{ form.submit(class='btn btn-primary') }}
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

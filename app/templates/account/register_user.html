@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% import 'macros/form_macros.html' as f %}
+
+{% block content %}
+<div>
+    <header>
+        <h1 style="color: rgb(0, 0, 0);">Register</h1>
+    </header>
+    
+</div>
+<div class="card card-body" id="main-container">
+    <form action="" method="post">
+        {{ form.hidden_tag() }}
+        {% if not edit_mode %}
+            {{form.user_id}}
+        {%endif%}
+        <div class="modal-body">
+            <div class="row">
+                <div class="col">
+                    {{form.first_name.label(class_="col-form-label")}}:
+                    {{form.first_name(class_="form-control")}}
+                    {% if form.first_name.errors %}
+                        <div style="color: red;">{{form.first_name.errors[0] | safe}}</div>
+                    {%endif%}
+                </div>
+                <div class="col">
+                    {{form.last_name.label(class_="col-form-label")}}:
+                    {{form.last_name(class_="form-control")}}
+                    {% if form.last_name.errors %}
+                        <div style="color: red;">{{form.last_name.errors[0] | safe}}</div>
+                    {%endif%}
+                </div>
+            </div>
+            <div class="col">
+                {{form.email.label(class_="col-form-label")}}:
+                {{form.email(class_="form-control")}}
+                {% if form.email.errors %}
+                    <div style="color: red;">{{form.email.errors[0] | safe}}</div>
+                {%endif%}
+            </div>
+            <div class="col">
+                {{form.password.label(class_="col-form-label")}}:
+                {{form.password(class_="form-control")}}
+                {% if form.password.errors %}
+                    <div style="color: red;">{{form.password.errors[0] | safe}}</div>
+                {%endif%}
+            </div>
+            <div class="modal-footer" style="margin-top: 10px;">
+                {{form.submit(class='btn btn-primary')}}
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

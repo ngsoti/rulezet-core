@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% import 'macros/form_macros.html' as f %}
+
+{% block content %}
+    <form action="" method="post">
+        {{ form.hidden_tag() }}
+        {% if not edit_mode %}
+            {{form.user_id}}
+        {% endif %}
+        
+        <div class="modal-body bg-light p-4 rounded shadow-sm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.first_name.id }}" class="col-form-label text-primary">{{ form.first_name.label }}</label>
+                    {{ form.first_name(class_="form-control border-primary") }}
+                    {% if form.first_name.errors %}
+                        <div class="text-danger">{{ form.first_name.errors[0] | safe }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.last_name.id }}" class="col-form-label text-primary">{{ form.last_name.label }}</label>
+                    {{ form.last_name(class_="form-control border-primary") }}
+                    {% if form.last_name.errors %}
+                        <div class="text-danger">{{ form.last_name.errors[0] | safe }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.email.id }}" class="col-form-label text-primary">{{ form.email.label }}</label>
+                {{ form.email(class_="form-control border-primary") }}
+                {% if form.email.errors %}
+                    <div class="text-danger">{{ form.email.errors[0] | safe }}</div>
+                {% endif %}
+            </div>
+
+            <div class="modal-footer mt-3">
+                {{ form.submit(class_="btn btn-success") }}
+            </div>
+        </div>
+    </form>
+{% endblock %}

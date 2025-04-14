@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% import 'macros/form_macros.html' as f %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header text-white" style="background-color: rgb(90, 133, 197)">
+            <h1 class="mb-0">{{ rule.title }}</h1>
+        </div>
+        <div class="card-body">
+            <!-- Description de la règle -->
+            <div class="mb-4">
+                <strong class="h5">Description :</strong>
+                <p>{{ rule.description }}</p>
+            </div>
+
+            <!-- Informations supplémentaires -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <strong>Format :</strong>
+                    <p>{{ rule.format }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Licence :</strong>
+                    <p>{{ rule.license }}</p>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <strong>UUID :</strong>
+                    <p>{{ rule.uuid }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Source :</strong>
+                    <p>{{ rule.source }}</p>
+                </div>
+            </div>
+
+            <!-- Dates de création et modification -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <strong>Creation date :</strong>
+                    <p>{{ rule.creation_date.strftime('%d/%m/%Y %H:%M:%S') }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Modification date :</strong>
+                    <p>{{ rule.last_modif.strftime('%d/%m/%Y %H:%M:%S') }}</p>
+                </div>
+            </div>
+
+            <!-- Auteur -->
+            <div class="mb-4">
+                <strong>Author :</strong>
+                <p>{{ rule.author }}</p>
+            </div>
+
+            <!-- Votes -->
+            <div class="mt-3 mb-4">
+                <strong>Votes :</strong>
+                <div>
+                    <span class="text-success">Vote positif : {{ rule.vote_up }}</span> | 
+                    <span class="text-danger">Vote négatif : {{ rule.vote_down }}</span>
+                </div>
+            </div>
+
+            <!-- Bouton retour -->
+            <div class="text-center mt-3">
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Back to rules
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

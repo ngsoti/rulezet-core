@@ -1,0 +1,17 @@
+flask
+sqlalchemy
+Flask-Login
+flask-session
+flask-sqlalchemy
+Flask-Migrate
+Flask-WTF
+WTForms
+Werkzeug==2.3.8
+flask-restx
+email_validator
+python-dateutil
+schedule
+pytest
+gunicorn
+jsonschema
+requests
