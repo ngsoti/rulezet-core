@@ -85,7 +85,7 @@ class Rule(db.Model):
     """Rule model to store and describe various rules."""
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    userId = db.Column(db.String) # the user who import the rule
+    user_id = db.Column(db.String) # the user who import the rule
     version = db.Column(db.String)
     format = db.Column(db.String)
     title = db.Column(db.String)
@@ -113,7 +113,7 @@ class Rule(db.Model):
             "last_modif": self.last_modif.strftime('%Y-%m-%d %H:%M'),
             "vote_up": self.vote_up,
             "vote_down": self.vote_down,
-            "userId": self.userId,
+            "user_id": self.user_id,
             "version": self.version
         }
 

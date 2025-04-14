@@ -23,7 +23,7 @@ def add_rule_core(form_dict):
         source=form_dict["source"],
         # author=form_dict["author"],
         version=form_dict["version"],
-        userId=current_user.id,
+        user_id=current_user.id,
         creation_date=datetime.datetime.now(tz=datetime.timezone.utc),
         last_modif=datetime.datetime.now(tz=datetime.timezone.utc),
         vote_up=0,
@@ -75,7 +75,7 @@ def decrement_up(id):
 
 def get_rules_page(page):
     """Return all rules by page"""
-    return Rule.query.paginate(page=page, per_page=3, max_per_page=3)
+    return Rule.query.paginate(page=page, per_page=60, max_per_page=70)
 
 def get_rule(id):
     """Return the rule"""

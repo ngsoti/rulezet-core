@@ -15,3 +15,4 @@ pytest
 gunicorn
 jsonschema
 requests
+gitpython

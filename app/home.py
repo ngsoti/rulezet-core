@@ -5,7 +5,8 @@ from sqlalchemy import true
 from app.db_class import db
 from app.db_class.db import Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
-from app.import_github_project.script import  parse_yara_rule
+
+from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule
 from app.rule.edit_rule import EditRuleFrom
 from app.utils.utils import form_to_dict
 from .rule import rule_core as RuleModel
@@ -118,16 +119,16 @@ def add_favorite_rule(rule_id):
 
 from flask_login import login_required, current_user
 
-@home_blueprint.route("/import_yara")
-@login_required
-def import_yara():
-    if not current_user.is_admin:
-        flash("Access denied", "danger")
-        return redirect(url_for("rule.rule"))
+# @home_blueprint.route("/import_yara")
+# @login_required
+# def import_yara():
+#     if not current_user.is_admin:
+#         flash("Access denied", "danger")
+#         return redirect(url_for("rule.rule"))
 
-    parse_yara_rule()
-    flash("YARA rules imported successfully!", "success")
-    return redirect(url_for("rule.rule"))
+#     parse_yara_rule()
+#     flash("YARA rules imported successfully!", "success")
+#     return redirect(url_for("rule.rule"))
 
 
 # @home_blueprint.route("/import_yara_from_url", methods=["POST"])
@@ -148,3 +149,44 @@ def import_yara():
 #         flash(f"Erreur lors de l'import : {e}", "danger")
 
 #     return redirect(url_for("home.home"))
+
+
+
+
+
+@home_blueprint.route("/import_yara_from_repo")
+@login_required
+def import_yara_from_repo():
+    if not current_user.is_admin:
+        flash("Accès refusé. Admin uniquement.", "danger")
+        return redirect(url_for("rule.rule"))
+
+    repo_url = "https://github.com/Neo23x0/signature-base.git"
+    local_dir = "signature-base"
+
+    try:
+        repo = clone_or_access_repo(repo_url, local_dir)
+        yara_files = get_yara_files_from_repo(local_dir)
+
+        imported = 0
+        skipped = 0
+
+        for file_path in yara_files:
+            rule_dict = parse_yara_rule(file_path)
+
+            # Compléter les champs manquants pour add_rule_core
+            rule_dict["version"] = "1.0"
+            rule_dict["author"] = current_user.username if hasattr(current_user, "username") else "unknown"
+
+            success = RuleModel.add_rule_core(rule_dict)
+            if success:
+                imported += 1
+            else:
+                skipped += 1
+
+        flash(f"{imported} règles YARA importées. {skipped} ignorées (déjà existantes).", "success")
+
+    except Exception as e:
+        flash(f"Erreur pendant l'importation : {str(e)}", "danger")
+
+    return redirect(url_for("home.home"))

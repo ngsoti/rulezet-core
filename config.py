@@ -6,7 +6,7 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///ptitcrolle.sqlite"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///rulezet.sqlite"
     SESSION_TYPE = "sqlalchemy"
     SESSION_SQLALCHEMY_TABLE = "flask_sessions"
     
@@ -17,7 +17,7 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///ptitcrolle-test.sqlite"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///rulezet-test.sqlite"
     WTF_CSRF_ENABLED = False
 
     @classmethod
