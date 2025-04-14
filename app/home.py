@@ -30,12 +30,18 @@ def home():
 def get_rules_page():
     page = request.args.get('page', 1, type=int)
     rules = RuleModel.get_rules_page(page)
+    
+    # Obtenez le nombre total de règles
+    total_rules = RuleModel.get_total_rules_count()  # Ajouter une méthode qui retourne le total des règles
+
     if rules:
         rules_list = list()
         for rule in rules:
             u = rule.to_json()
             rules_list.append(u)
-        return {"rule": rules_list, "total_pages": rules.pages}
+
+        return {"rule": rules_list, "total_pages": rules.pages, "total_rules": total_rules}
+    
     return {"message": "No Rule"}, 404
 
 
@@ -48,12 +54,6 @@ def delete_rule():
     flash('Rule delete !', 'success')
     return redirect(url_for('home.home'))
 
-# @home_blueprint.route("/add_rule_favorite" , methods=['GET', 'POST'])
-# def add_rule_favorite():
-#     rule_id = request.args.get('id', 1 , int)
-#     FavoriteModel.add_favorite(current_user.id,rule_id)
-#     flash('Rule add to favorite !', 'success')
-#     return redirect(url_for('home.home'))
 
 
 
@@ -154,15 +154,15 @@ from flask_login import login_required, current_user
 
 
 
-@home_blueprint.route("/import_yara_from_repo")
+@home_blueprint.route("/import_yara_from_repo", methods=['GET', 'POST'])
 @login_required
 def import_yara_from_repo():
     if not current_user.is_admin:
         flash("Accès refusé. Admin uniquement.", "danger")
         return redirect(url_for("rule.rule"))
-
-    repo_url = "https://github.com/Neo23x0/signature-base.git"
-    local_dir = "signature-base"
+    if request.method == 'POST':
+        repo_url = request.form.get('url') 
+        local_dir = "Rules_Github/Yara_Project"
 
     try:
         repo = clone_or_access_repo(repo_url, local_dir)
@@ -176,7 +176,7 @@ def import_yara_from_repo():
 
             # Compléter les champs manquants pour add_rule_core
             rule_dict["version"] = "1.0"
-            rule_dict["author"] = current_user.username if hasattr(current_user, "username") else "unknown"
+            # rule_dict["author"] = current_user.username if hasattr(current_user, "username") else "unknown"
 
             success = RuleModel.add_rule_core(rule_dict)
             if success:
@@ -184,6 +184,7 @@ def import_yara_from_repo():
             else:
                 skipped += 1
 
+        
         flash(f"{imported} règles YARA importées. {skipped} ignorées (déjà existantes).", "success")
 
     except Exception as e:

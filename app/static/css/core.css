@@ -64,3 +64,12 @@ span#goTop, span#project-version{
 .navbar-brand:hover img {
     transform: scale(1.05);
 }
+
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #f1f1f1;
+  padding: 1em;
+}

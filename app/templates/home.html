@@ -10,14 +10,16 @@
     </a>
   </header>
 
-  <!-- <a href="import_yara" class="btn btn-success btn-sm me-2" title="Add to Favorites">
-    <i class="fas fa-star"></i> Ajouter une regle a partir dun fichier 
+
+  <!-- <a href="{{ url_for('home.import_yara_from_repo') }}" class="btn btn-success btn-sm me-2">
+    <i class="fas fa-code"></i> Importer from GitHub
   </a> -->
 
-  <a href="{{ url_for('home.import_yara_from_repo') }}" class="btn btn-success btn-sm me-2">
-  <i class="fas fa-code"></i> Importer depuis GitHub
-</a>
-
+  <form method="POST" action="{{ url_for('home.import_yara_from_repo') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="text" name="url" placeholder="url" required>
+    <input type="submit" value="send">
+</form>
 
   <template v-if="rules_list && rules_list.rule.length > 0">
     <br/>
@@ -47,7 +49,8 @@
     </nav>
     <br/>
 
-    
+    <p>Total rules: [[ total_rules ]]</p>  <!-- Affichage dynamique avec Vue.js -->
+
     
 
     <!-- Liste des règles -->
@@ -172,6 +175,7 @@
     delimiters: ['[[', ']]'],
     setup() {
       const rules_list = ref({ rule: [] })
+      const total_rules = ref(0)
       const current_page = ref(1)
       const total_pages = ref(1)
 
@@ -180,6 +184,7 @@
         const data = await res.json()
         rules_list.value = data
         total_pages.value = data.total_pages
+        total_rules.value = data.total_rules
         current_page.value = page
       }
 
@@ -216,15 +221,12 @@
           message_list.console.error('Rule added to favorites!');
         }
       }
-
-
-
-
       return {
         message_list,
         rules_list,
         current_page,
         total_pages,
+        total_rules,
         fetchRules,
         addFavoriteRule,
         deleteRule,

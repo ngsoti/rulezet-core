@@ -21,7 +21,7 @@ def add_rule_core(form_dict):
         description=form_dict["description"],
         uuid=str(uuid.uuid4()),
         source=form_dict["source"],
-        # author=form_dict["author"],
+        author=form_dict["author"],
         version=form_dict["version"],
         user_id=current_user.id,
         creation_date=datetime.datetime.now(tz=datetime.timezone.utc),
@@ -83,3 +83,6 @@ def get_rule(id):
 
 def get_rule_by_title(title):
     return Rule.query.filter_by(title=title).all()
+
+def get_total_rules_count():
+    return Rule.query.count()
