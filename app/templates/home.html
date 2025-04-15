@@ -15,7 +15,6 @@
     <div class="mb-3">
       <label for="url" class="form-label">URL for a Github project to add</label>
       <div class="input-group">
-        <span class="input-group-text"><i class="fa-brands fa-github"></i></span>
         <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>
       </div>
     </div>
@@ -57,7 +56,7 @@
       <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1371ff">
         <h4 class="mb-0">[[ rule.id ]] - [[ rule.title ]]</h4>
         <div class="d-flex">
-          <a :href="`/favorie/${rule.id}`" class="btn btn-success btn-sm me-2" title="Add to Favorites">
+          <a :href="`/favorite/${rule.id}`" class="btn btn-success btn-sm me-2" title="Add to Favorites">
             <i class="fas fa-star"></i>
           </a>
           <a :href="`/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2" title="Edit Rule">
