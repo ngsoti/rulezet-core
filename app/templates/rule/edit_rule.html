@@ -8,10 +8,8 @@
         {{ form.hidden_tag() }}
         
         <div class="modal-body">
-            <!-- Row for Format and Title -->
             <div class="row mb-3">
                 <div class="col-md-6">
-                    <!-- Format -->
                     <div class="form-group">
                         {{ form.format.label(class_="col-form-label") }}
                         {{ form.format(class_="form-control") }}
@@ -23,7 +21,6 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <!-- Title -->
                     <div class="form-group">
                         {{ form.title.label(class_="col-form-label") }}
                         {{ form.title(class_="form-control") }}
@@ -36,7 +33,6 @@
                 </div>
             </div>
 
-            <!-- License -->
             <div class="mb-3">
                 <div class="form-group">
                     {{ form.license.label(class_="col-form-label") }}
@@ -49,7 +45,6 @@
                 </div>
             </div>
 
-            <!-- Source -->
             <div class="mb-3">
                 <div class="form-group">
                     {{ form.source.label(class_="col-form-label") }}
@@ -73,7 +68,6 @@
                     {% endif %}
                 </div>
             </div>
-            <!-- Description -->
             <div class="mb-3">
                 <div class="form-group">
                     {{ form.description.label(class_="col-form-label") }}
@@ -86,7 +80,6 @@
                 </div>
             </div>
 
-            <!-- Submit Button -->
             <div class="text-center">
                 {{ form.submit(class='btn btn-primary') }}
             </div>

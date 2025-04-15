@@ -32,8 +32,7 @@ def get_rules_page():
     page = request.args.get('page', 1, type=int)
     rules = RuleModel.get_rules_page(page)
     
-    # Obtenez le nombre total de règles
-    total_rules = RuleModel.get_total_rules_count()  # Ajouter une méthode qui retourne le total des règles
+    total_rules = RuleModel.get_total_rules_count()  
 
     if rules:
         rules_list = list()
@@ -67,7 +66,6 @@ def edit_rule(rule_id):
         RuleModel.edit_rule_core(form_dict, rule_id)  
         return redirect("/")
     else:
-        # Préremplissage du formulaire avec les données actuelles de la règle
         form.format.data = rule.format
         form.source.data = rule.source
         form.title.data = rule.title
@@ -100,11 +98,11 @@ def vote_rule():
 
 @home_blueprint.route("/detail_rule/<int:rule_id>", methods=['GET'])
 def detail_rule(rule_id):
-    rule = RuleModel.get_rule(rule_id)  # Récupérer la règle à partir de son ID
+    rule = RuleModel.get_rule(rule_id)  
     return render_template("rule/detail_rule.html", rule=rule)
 
 
-@home_blueprint.route('/favorie/<int:rule_id>', methods=['GET'])
+@home_blueprint.route('/favorite/<int:rule_id>', methods=['GET'])
 @login_required
 def add_favorite_rule(rule_id):
     """Add a rule to user's favorites via link."""
@@ -117,7 +115,7 @@ def add_favorite_rule(rule_id):
         fav = add_favorite(user_id=current_user.id, rule_id=rule_id)
         flash("Rule added to favorites!", "success")
 
-    return redirect(url_for('account.favorie'))  # ou vers la page précédente
+    return redirect(url_for('account.favorite')) 
 
 from flask_login import login_required, current_user
 
@@ -176,7 +174,6 @@ def import_yara_from_repo():
         for file_path in yara_files:
             rule_dict = parse_yara_rule(file_path)
 
-            # Compléter les champs manquants pour add_rule_core
             rule_dict["version"] = "1.0"
             # rule_dict["author"] = current_user.username if hasattr(current_user, "username") else "unknown"
 
@@ -187,9 +184,9 @@ def import_yara_from_repo():
                 skipped += 1
 
         
-        flash(f"{imported} règles YARA importées. {skipped} ignorées (déjà existantes).", "success")
+        flash(f"{imported} YARA rules imported. {skipped} ignored (existe already).", "success")
 
     except Exception as e:
-        flash(f"Erreur pendant l'importation : {str(e)}", "danger")
+        flash(f"fail to import: {str(e)}", "danger")
 
     return redirect(url_for("home.home"))

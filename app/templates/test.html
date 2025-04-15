@@ -42,8 +42,7 @@
         delimiters: ['[[', ']]'],
         setup() {
             const users_list = ref(null)
-            const current_page = ref(1)   // ref rend la variable reactive 
-
+            const current_page = ref(1)   
 
             async function fetchUsers(page) {
                     users_list.value = null

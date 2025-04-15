@@ -3,7 +3,7 @@ from app.favorite import favorite_core
 from app.favorite.favorite_core import get_all_user_favorites_with_rules, get_user_favorites, remove_favorite
 from ..db_class.db import RuleFavoriteUser, User
 from flask import Blueprint, render_template, redirect, url_for, request, flash
-from .form import LoginForm, EditUserFrom, AddNewUserFrom
+from .form import LoginForm, EditUserForm, AddNewUserForm
 from flask_login import (
     current_user,
     login_required,
@@ -33,7 +33,7 @@ def index():
 @login_required
 def edit_user():
     """Edit the user"""
-    form = EditUserFrom()
+    form = EditUserForm()
 
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
@@ -76,7 +76,7 @@ def logout():
 @account_blueprint.route('/register', methods=['GET', 'POST'])
 def add_user():
     """Add a new user"""
-    form = AddNewUserFrom()
+    form = AddNewUserForm()
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
         AccountModel.add_user_core(form_dict)
@@ -84,18 +84,18 @@ def add_user():
     return render_template("account/register_user.html", form=form) 
 
 
-@account_blueprint.route('/favorie', methods=['GET'])
+@account_blueprint.route('/favorite', methods=['GET'])
 @login_required
-def favorie():
-    """Page des règles favorites"""
+def favorite():
+    """favorite page"""
     rules = FavoriteModel.get_all_user_favorites_with_rules(current_user.id)
     rules_list = [r.to_json() for r in rules]
-    return render_template("account/favorie_user.html", rules_list=rules_list)
+    return render_template("account/favorite_user.html", rules_list=rules_list)
 
 
 
 
-@account_blueprint.route('/favorie/remove_favorite', methods=['POST'])
+@account_blueprint.route('/favorite/remove_favorite', methods=['POST'])
 @login_required
 def remove_favorite_user():
     rule_id = request.args.get('id', 1 , int)
@@ -105,6 +105,6 @@ def remove_favorite_user():
     else:
         flash('This rule is not in your favorites.', 'warning')
     
-    return redirect(url_for('account/favorie_user.html'))
+    return redirect(url_for('account/favorite_user.html'))
 
 

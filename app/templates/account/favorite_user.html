@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% import 'macros/form_macros.html' as f %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="fas fa-heart"></i> My Favorite Rules</h2>
+
+    {% if rules_list %}
+        <div class="list-group">
+        {% for rule in rules_list %}
+            <div class="list-group-item d-flex justify-content-between align-items-center mb-3">
+                <div class="me-3">
+                    <h5 class="mb-1">{{ rule.title }}</h5>
+                    <p class="mb-1 text-muted"><em>{{ rule.description }}</em></p>
+                    <small class="text-muted">Added on {{ rule.creation_date }}</small>
+                </div>
+
+                <div class="btn-group">
+                    <a href="/detail_rule/{{ rule.id }}" class="btn btn-info btn-sm me-2" title="View Details">
+                        <i class="fas fa-eye"></i> View Details
+                    </a>
+                    
+                    <!-- <a href="favorite/remove_favorite/{{ rule.id }}" class="btn btn-warning btn-sm" onclick="return confirm('Are you sure you want to remove this rule from your favorites?')" title="Remove from Favorites">
+                        <i class="fas fa-times-circle"></i> Remove from Favorites
+                    </a> -->
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> You don't have any favorite rules yet.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+<script type="module">
+    const { createApp, ref } = Vue
+    import { message_list } from '/static/js/toaster.js'
+  
+    createApp({
+      delimiters: ['[[', ']]'],
+      setup() {
+        const rules_list_favorite = ref(rules_list)
+
+
+        async function deleteRule(id, index) {
+            const res = await fetch('delete_rule_favorite?id=' + id)
+            rules_list.value.rule.splice(index, 1)
+        }  
+  
+        async function fetchRules(page) {
+            const res = await fetch('get_rules_page_favorite?page=' + page)
+            const data = await res.json()
+            rules_list_favorite.value = data  
+        }
+
+  
+        fetchRules(1)
+  
+        return {
+          rules_list_favorite, 
+          fetchRules
+        }
+      }
+    }).mount('#main-container')
+</script>
