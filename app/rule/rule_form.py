@@ -31,3 +31,17 @@ class AddNewRuleForm(FlaskForm):
 
 
     submit = SubmitField('Register')
+
+
+
+class EditRuleFrom(FlaskForm):
+    format = StringField('Format', validators=[InputRequired()])
+    title = StringField('Title', validators=[InputRequired()])
+    license = StringField('License', validators=[InputRequired()])  
+    description = TextAreaField('Description', validators=[InputRequired()])
+    source = StringField('Source', validators=[InputRequired()])
+    version = StringField('Version', validators=[InputRequired()])
+
+    submit = SubmitField('Register')
+    
+    

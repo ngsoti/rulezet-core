@@ -8,7 +8,7 @@ from app.db_class.db import Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 
 from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule
-from app.rule.edit_rule import EditRuleFrom
+from app.rule.rule_form import EditRuleFrom
 from app.utils.utils import form_to_dict
 from .rule import rule_core as RuleModel
 from .favorite import favorite_core as FavoriteModel
