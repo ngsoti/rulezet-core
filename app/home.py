@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from flask import Flask, Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import true
@@ -72,7 +73,8 @@ def edit_rule(rule_id):
         form.title.data = rule.title
         form.description.data = rule.description
         form.license.data = rule.license
-
+        form.version.data = rule.version
+        rule.last_modif = datetime.now(timezone.utc)
     return render_template("rule/edit_rule.html", form=form, rule=rule)
 
 

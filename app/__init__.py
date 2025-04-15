@@ -1,3 +1,4 @@
+import shutil
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
@@ -30,6 +31,12 @@ def create_app():
     login_manager.init_app(app)
     app.config["SESSION_SQLALCHEMY"] = db
     sess.init_app(app)
+    # remove the previous rule
+    REPO_DIR = "Rules_Github"
+    if os.path.exists(REPO_DIR):
+       shutil.rmtree(REPO_DIR)
+
+    
 
     from .home import home_blueprint
     from .account.account import account_blueprint

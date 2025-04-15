@@ -98,6 +98,7 @@ class Rule(db.Model):
     last_modif = db.Column(db.DateTime, index=True)
     vote_up = db.Column(db.String)
     vote_down = db.Column(db.String)
+    
 
     def to_json(self):
         return {

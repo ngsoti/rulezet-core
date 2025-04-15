@@ -10,15 +10,8 @@
     </a>
   </header>
 
-
-  <!-- <a href="{{ url_for('home.import_yara_from_repo') }}" class="btn btn-success btn-sm me-2">
-    <i class="fas fa-code"></i> Importer from GitHub
-  </a> -->
-
   <form method="POST" action="{{ url_for('home.import_yara_from_repo') }}" class="p-4 border rounded shadow-sm bg-light">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    
-    <!-- URL input -->
     <div class="mb-3">
       <label for="url" class="form-label">URL for a Github project to add</label>
       <div class="input-group">
@@ -26,33 +19,29 @@
         <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>
       </div>
     </div>
-  
-    <!-- Submit button -->
     <button type="submit" class="btn btn-primary w-100">
       <i class="fas fa-paper-plane"></i> Send
     </button>
   </form>
-  
 
   <template v-if="rules_list && rules_list.rule.length > 0">
     <br/>
-    <!-- Pagination dynamique -->
     <nav aria-label="Page navigation">
       <ul class="pagination">
-
-        <!-- Bouton Précédent -->
         <li class="page-item" :class="{ disabled: current_page === 1 }">
           <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
             <i class="fas fa-arrow-left"></i> Previous
           </a>
         </li>
-
-        <!-- Numéros de pages dynamiques -->
-        <li class="page-item" v-for="page in total_pages" :key="page" :class="{ active: current_page === page }">
-          <a class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+        <li
+          class="page-item"
+          v-for="page in visiblePages"
+          :key="page"
+          :class="{ active: current_page === page, disabled: page === '...' }"
+        >
+          <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+          <span v-else class="page-link">...</span>
         </li>
-
-        <!-- Bouton Suivant -->
         <li class="page-item" :class="{ disabled: current_page === total_pages }">
           <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
             Next <i class="fas fa-arrow-right"></i>
@@ -62,29 +51,15 @@
     </nav>
     <br/>
 
-    <p>Total rules: [[ total_rules ]]</p>  <!-- Affichage dynamique avec Vue.js -->
+    <p>Total rules: [[ total_rules ]]</p>
 
-    
-
-    <!-- Liste des règles -->
     <div class="card card-body mb-3" v-for="(rule, index) in rules_list.rule" :key="rule.uuid">
       <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1371ff">
         <h4 class="mb-0">[[ rule.id ]] - [[ rule.title ]]</h4>
         <div class="d-flex">
-          
-          
-
           <a :href="`/favorie/${rule.id}`" class="btn btn-success btn-sm me-2" title="Add to Favorites">
             <i class="fas fa-star"></i>
           </a>
-          <!-- <button @click="addFavoriteRule(rule.id, index)" class="btn btn-success btn-sm me-2" title="DAdd to Favorites">
-            <i class="fas fa-star"></i>
-          </button> -->
-          
-          
-          
-          
-          
           <a :href="`/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2" title="Edit Rule">
             <i class="fas fa-pen"></i>
           </a>
@@ -93,13 +68,13 @@
           </button>
         </div>
       </div>
-      
+
       <div class="card-body">
         <div class="mb-2">
           <strong>Description :</strong>
           <p class="card-text">[[ rule.description ]]</p>
         </div>
-    
+
         <div class="row">
           <div class="col-md-6 mb-2">
             <strong>Format :</strong> [[ rule.format ]]
@@ -117,7 +92,7 @@
             <strong>Version :</strong> [[ rule.version ]]
           </div>
         </div>
-    
+
         <div class="row mt-3">
           <div class="col-md-6">
             <strong>Creation date :</strong> [[ rule.creation_date ]]
@@ -126,11 +101,11 @@
             <strong>Modification time :</strong> [[ rule.last_modif ]]
           </div>
         </div>
-    
+
         <div class="mt-3">
           <strong>Author :</strong> [[ rule.author ]]
         </div>
-    
+
         <div class="mt-3">
           <button @click="vote('up', rule.id)" class="btn btn-success btn-sm">
             <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
@@ -144,23 +119,23 @@
         <a :href="`/detail_rule/${rule.id}`" class="btn btn-info fa-solid fa-plus" style="font-size: 14px; padding: 12px;">View more</a>
       </div>
     </div>
-    
+
     <nav aria-label="Page navigation">
       <ul class="pagination">
-
-        <!-- Bouton Précédent -->
         <li class="page-item" :class="{ disabled: current_page === 1 }">
           <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
             <i class="fas fa-arrow-left"></i> Previous
           </a>
         </li>
-
-        <!-- Numéros de pages dynamiques -->
-        <li class="page-item" v-for="page in total_pages" :key="page" :class="{ active: current_page === page }">
-          <a class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+        <li
+          class="page-item"
+          v-for="page in visiblePages"
+          :key="page"
+          :class="{ active: current_page === page, disabled: page === '...' }"
+        >
+          <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+          <span v-else class="page-link">...</span>
         </li>
-
-        <!-- Bouton Suivant -->
         <li class="page-item" :class="{ disabled: current_page === total_pages }">
           <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
             Next <i class="fas fa-arrow-right"></i>
@@ -170,18 +145,14 @@
     </nav>
   </template>
 
-  <!-- Message si aucune règle -->
   <i v-else class="text-muted">No rules added</i>
-
   <br />
-
 </div>
 {% endblock %}
 
-
 {% block script %}
 <script type="module">
-  const { createApp, ref } = Vue
+  const { createApp, ref, computed } = Vue
   import { message_list } from '/static/js/toaster.js'
 
   createApp({
@@ -201,17 +172,14 @@
         current_page.value = page
       }
 
-
       async function deleteRule(id, index) {
         const res = await fetch('delete_rule?id=' + id)
         rules_list.value.rule.splice(index, 1)
       }
 
-      // Fonction pour gérer les votes
       async function vote(voteType, ruleId) {
         const res = await fetch(`vote_rule?id=${ruleId}&vote_type=${voteType}`, { method: 'GET' })
         const data = await res.json()
-        // Met à jour les votes de la règle après le vote
         const updatedRule = rules_list.value.rule.find(rule => rule.id === ruleId)
         if (updatedRule) {
           if (voteType === 'up') {
@@ -222,10 +190,6 @@
         }     
       }
 
-      fetchRules(1)
-
-
-      // add rule in favorite
       async function addFavoriteRule(id, index){
         const res = await fetch('add_rule_favorite?id=' + id)
         if (res){
@@ -234,6 +198,29 @@
           message_list.console.error('Rule added to favorites!');
         }
       }
+
+      const visiblePages = computed(() => {
+        const pages = []
+        const total = total_pages.value
+        const current = current_page.value
+
+        if (total <= 7) {
+          for (let i = 1; i <= total; i++) pages.push(i)
+        } else {
+          if (current <= 4) {
+            pages.push(1, 2, 3, 4, 5, '...', total)
+          } else if (current >= total - 3) {
+            pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+          } else {
+            pages.push(1, '...', current - 1, current, current + 1, '...', total)
+          }
+        }
+
+        return pages
+      })
+
+      fetchRules(1)
+
       return {
         message_list,
         rules_list,
@@ -243,7 +230,8 @@
         fetchRules,
         addFavoriteRule,
         deleteRule,
-        vote
+        vote,
+        visiblePages
       }
     }
   }).mount('#main-container')

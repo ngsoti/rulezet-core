@@ -22,9 +22,9 @@
                     </a>
                     
                     <!-- Formulaire pour retirer la règle des favoris avec icône Font Awesome -->
-                    <a href="/remove_favorite/{{ rule.id }}" class="btn btn-warning btn-sm" onclick="return confirm('Are you sure you want to remove this rule from your favorites?')" title="Remove from Favorites">
+                    <!-- <a href="favorie/remove_favorite/{{ rule.id }}" class="btn btn-warning btn-sm" onclick="return confirm('Are you sure you want to remove this rule from your favorites?')" title="Remove from Favorites">
                         <i class="fas fa-times-circle"></i> Remove from Favorites
-                    </a>
+                    </a> -->
                 </div>
             </div>
         {% endfor %}
@@ -46,12 +46,19 @@
       delimiters: ['[[', ']]'],
       setup() {
         const rules_list_favorite = ref(rules_list)
+
+
+        async function deleteRule(id, index) {
+            const res = await fetch('delete_rule_favorie?id=' + id)
+            rules_list.value.rule.splice(index, 1)
+        }  
   
         async function fetchRules(page) {
             const res = await fetch('get_rules_page_favorie?page=' + page)
             const data = await res.json()
             rules_list_favorite.value = data  
         }
+
   
         fetchRules(1)
   

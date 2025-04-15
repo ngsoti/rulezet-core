@@ -84,23 +84,18 @@ def add_user():
     return render_template("account/register_user.html", form=form) 
 
 
-@account_blueprint.route('/favorie', methods=['GET', 'POST'])
+@account_blueprint.route('/favorie', methods=['GET'])
 @login_required
 def favorie():
-    """Favorie"""
+    """Page des règles favorites"""
     rules = FavoriteModel.get_all_user_favorites_with_rules(current_user.id)
-    rules_list = []
-
-    if rules:
-        for rule in rules:
-            u = rule.to_json()
-            rules_list.append(u)
+    rules_list = [r.to_json() for r in rules]
     return render_template("account/favorie_user.html", rules_list=rules_list)
 
 
 
 
-@account_blueprint.route('/remove_favorite', methods=['POST'])
+@account_blueprint.route('/favorie/remove_favorite', methods=['POST'])
 @login_required
 def remove_favorite_user():
     rule_id = request.args.get('id', 1 , int)
