@@ -1,6 +1,7 @@
 # RULEZET
 
-<img title="MarkText logo" src="https://github.com/ngsoti/rulezet-core/tree/main/app/static/image/crolle.png?raw=true" alt="Alt text" width="388" data-align="center">
+
+<img title="MarkText logo" src="https://github.com/ngsoti/rulezet-core/tree/main/doc/crolle.png?raw=true" alt="Alt text" width="388" data-align="center">
 
 ## Flask Application Template
 
