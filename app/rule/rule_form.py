@@ -16,13 +16,13 @@ from ..db_class.db import Rule
 
 class AddNewRuleForm(FlaskForm):
     
-    format = StringField('Format', validators=[InputRequired(), Length(1, 64)])
-    title = StringField('Title', validators=[InputRequired(), Length(1, 64)])
-    license = StringField('License', validators=[InputRequired(), Length(1, 64)])
-    description = TextAreaField('Description', validators=[InputRequired(), Length(1, 64)])
-    source = StringField('Source', validators=[InputRequired(), Length(1, 64)])
-    author = StringField('Author', validators=[InputRequired(), Length(1, 64)])
-    version = StringField('Version', validators=[InputRequired(), Length(1, 64)])
+    format = StringField('Format', validators=[InputRequired()])
+    title = StringField('Title', validators=[InputRequired()])
+    license = StringField('License', validators=[InputRequired()])
+    description = TextAreaField('Description', validators=[InputRequired()])
+    source = StringField('Source', validators=[InputRequired()])
+    author = StringField('Author', validators=[InputRequired()])
+    version = StringField('Version', validators=[InputRequired()])
 
     def validate_title(self, field):
         if not field.data == Rule.title:

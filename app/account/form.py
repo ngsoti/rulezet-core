@@ -15,16 +15,16 @@ from ..db_class.db import User
 
 
 class LoginForm(FlaskForm):
-    email = EmailField('Email', validators=[InputRequired(), Length(1, 64), Email()])
+    email = EmailField('Email', validators=[InputRequired(), Email()])
     password = PasswordField('Password', validators=[InputRequired()])
     remember_me = BooleanField('Keep me logged in')
     submit = SubmitField('Log in')
 
 
-class EditUserFrom(FlaskForm):
-    first_name = StringField('First name', validators=[InputRequired(), Length(1, 64)])
-    last_name = StringField('Last name', validators=[InputRequired(), Length(1, 64)])
-    email = EmailField('Email', validators=[InputRequired(), Length(1, 64), Email()])
+class EditUserForm(FlaskForm):
+    first_name = StringField('First name', validators=[InputRequired()])
+    last_name = StringField('Last name', validators=[InputRequired()])
+    email = EmailField('Email', validators=[InputRequired(), Email()])
 
     submit = SubmitField('Register')
 
@@ -40,11 +40,11 @@ class EditUserFrom(FlaskForm):
 
 
 
-class AddNewUserFrom(FlaskForm):
+class AddNewUserForm(FlaskForm):
     
-    first_name = StringField('First name', validators=[InputRequired(), Length(1, 64)])
-    last_name = StringField('Last name', validators=[InputRequired(), Length(1, 64)])
-    email = EmailField('Email', validators=[InputRequired(), Length(1, 64), Email()])
+    first_name = StringField('First name', validators=[InputRequired()])
+    last_name = StringField('Last name', validators=[InputRequired()])
+    email = EmailField('Email', validators=[InputRequired(), Email()])
     password = PasswordField('Password', validators=[InputRequired()])
 
     submit = SubmitField('Register')
