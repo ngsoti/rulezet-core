@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from flask import Flask, Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from flask import get_flashed_messages
 from sqlalchemy import true
 
 from app.db_class import db
@@ -8,10 +9,11 @@ from app.db_class.db import Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 
 from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule
-from app.rule.rule_form import EditRuleFrom
+from app.rule.rule_form import EditRuleForm
 from app.utils.utils import form_to_dict
 from .rule import rule_core as RuleModel
 from .favorite import favorite_core as FavoriteModel
+
 
 home_blueprint = Blueprint(
     'home',
@@ -24,6 +26,7 @@ home_blueprint = Blueprint(
 @home_blueprint.route("/")
 def home():
     # list all the rules
+    get_flashed_messages()
     return render_template("home.html")
 
 
@@ -47,33 +50,58 @@ def get_rules_page():
 
 
 
-@home_blueprint.route("/delete_rule" , methods=['GET', 'POST'])
+# @home_blueprint.route("/delete_rule" , methods=['GET', 'POST'])
+# def delete_rule():
+#     rule_id = request.args.get('id', 1 , int)
+#     user_id = RuleModel.get_rule_user_id(rule_id)
+#     if current_user.id == user_id or current_user.is_admin():
+#         RuleModel.delete_rule_core(rule_id)
+#         flash('Rule delete !', 'success')
+#         return redirect(url_for('home.home'))
+#     flash("Acces denied", "danger")
+#     return redirect(url_for('home.home'))
+
+
+@home_blueprint.route("/delete_rule", methods=['GET', 'POST'])
 def delete_rule():
-    rule_id = request.args.get('id', 1 , int)
-    RuleModel.delete_rule_core(rule_id)
-    flash('Rule delete !', 'success')
-    return redirect(url_for('home.home'))
+    rule_id = request.args.get('id', 1, int)
+    user_id = RuleModel.get_rule_user_id(rule_id)
 
+    if current_user.id == user_id or current_user.is_admin():
+        RuleModel.delete_rule_core(rule_id)
+        return jsonify({"success": True, "message": "Rule deleted!"})
+    
+    return jsonify({"success": False, "message": "Access denied"})
 
+    
 
 
 @home_blueprint.route("/edit_rule/<int:rule_id>", methods=['GET', 'POST'])
 def edit_rule(rule_id):
-    rule = RuleModel.get_rule(rule_id)  
-    form = EditRuleFrom()
-    if form.validate_on_submit():
-        form_dict = form_to_dict(form)
-        RuleModel.edit_rule_core(form_dict, rule_id)  
-        return redirect("/")
+    rule = RuleModel.get_rule(rule_id)
+    user_id = RuleModel.get_rule_user_id(rule_id)
+
+
+    if current_user.id == user_id or current_user.is_admin():
+        form = EditRuleForm()
+        if form.validate_on_submit():
+            form_dict = form_to_dict(form)
+            RuleModel.edit_rule_core(form_dict, rule_id)
+            return redirect("/")
+        else:
+            form.format.data = rule.format
+            form.source.data = rule.source
+            form.title.data = rule.title
+            form.description.data = rule.description
+            form.license.data = rule.license
+            form.version.data = rule.version
+            rule.last_modif = datetime.now(timezone.utc)
+
+        return render_template("rule/edit_rule.html", form=form, rule=rule)
     else:
-        form.format.data = rule.format
-        form.source.data = rule.source
-        form.title.data = rule.title
-        form.description.data = rule.description
-        form.license.data = rule.license
-        form.version.data = rule.version
-        rule.last_modif = datetime.now(timezone.utc)
-    return render_template("rule/edit_rule.html", form=form, rule=rule)
+        flash("Acces denied", "danger")
+    return redirect("/")
+
 
 
 @home_blueprint.route('/vote_rule', methods=['GET','POST'])

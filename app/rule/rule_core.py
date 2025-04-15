@@ -86,3 +86,8 @@ def get_rule_by_title(title):
 
 def get_total_rules_count():
     return Rule.query.count()
+
+def get_rule_user_id(rule_id):
+    rule = Rule.query.get(rule_id) 
+    return rule.user_id
+

@@ -34,7 +34,7 @@ class AddNewRuleForm(FlaskForm):
 
 
 
-class EditRuleFrom(FlaskForm):
+class EditRuleForm(FlaskForm):
     format = StringField('Format', validators=[InputRequired()])
     title = StringField('Title', validators=[InputRequired()])
     license = StringField('License', validators=[InputRequired()])  

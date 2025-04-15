@@ -85,7 +85,7 @@ class Rule(db.Model):
     """Rule model to store and describe various rules."""
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.String) # the user who import the rule
+    user_id = db.Column(db.Integer) # the user who import the rule
     version = db.Column(db.String)
     format = db.Column(db.String)
     title = db.Column(db.String)
