@@ -57,20 +57,28 @@
       <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1371ff">
         <h4 class="mb-0">[[ rule.id ]] - [[ rule.title ]]</h4>
         
-        
-        <div class="d-flex">
-          <a :href="`/favorite/${rule.id}`" class="btn btn-success btn-sm me-2" title="Add to Favorites">
-            <i class="fas fa-star"></i>
-          </a>
-          <a :href="`/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2" title="Edit Rule">
-            <i class="fas fa-pen"></i>
-          </a>
-          <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2" title="Delete Rule">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
+        {{current_user.id}}
+        {{current_user.is_admin()}}
+        [[rule.user_id]]
+        [[parseInt('{{current_user.id}}') == rule.user_id]]
 
-        
+        {% if current_user.is_authenticated %}
+          <div class="d-flex">
+            <template v-if="parseInt('{{current_user.id}}') == rule.user_id || current_user_is_admin">
+              <a :href="`/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2" title="Edit Rule">
+                <i class="fas fa-pen"></i>
+              </a>
+              <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2" title="Delete Rule">
+                <i class="fas fa-trash"></i>
+              </button>
+            </template>
+            
+            <a :href="`/favorite/${rule.id}`" class="btn btn-success btn-sm me-2" title="Add to Favorites">
+              <i class="fas fa-star"></i>
+            </a>
+          </div>
+          {% endif %}
+
       </div>
 
       <div class="card-body">
@@ -166,6 +174,7 @@
       const total_rules = ref(0)
       const current_page = ref(1)
       const total_pages = ref(1)
+      const current_user_is_admin = ref()
 
       async function fetchRules(page) {
         const res = await fetch('get_rules_page?page=' + page)
@@ -174,6 +183,11 @@
         total_pages.value = data.total_pages
         total_rules.value = data.total_rules
         current_page.value = page
+      }
+      async function fetchCurrentUser(){
+        const res = await fetch('get_current_user')
+        const data = await res.json()
+        current_user_is_admin.value = data.user
       }
 
       async function deleteRule(id, index) {
@@ -228,6 +242,7 @@
       })
 
       fetchRules(1)
+      fetchCurrentUser()
 
       return {
         message_list,
@@ -239,7 +254,9 @@
         addFavoriteRule,
         deleteRule,
         vote,
-        visiblePages
+        visiblePages,
+        fetchCurrentUser,
+        current_user_is_admin
       }
     }
   }).mount('#main-container')

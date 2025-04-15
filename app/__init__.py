@@ -32,9 +32,9 @@ def create_app():
     app.config["SESSION_SQLALCHEMY"] = db
     sess.init_app(app)
     # remove the previous rule
-    REPO_DIR = "Rules_Github"
-    if os.path.exists(REPO_DIR):
-       shutil.rmtree(REPO_DIR)
+   #  REPO_DIR = "Rules_Github"
+   #  if os.path.exists(REPO_DIR):
+   #     shutil.rmtree(REPO_DIR)
 
     
 

@@ -73,7 +73,10 @@ def delete_rule():
     
     return jsonify({"success": False, "message": "Access denied"})
 
-    
+
+@home_blueprint.route("/get_current_user", methods=['GET', 'POST'])
+def get_current_user():
+    return jsonify({'user': current_user.is_admin()})
 
 
 @home_blueprint.route("/edit_rule/<int:rule_id>", methods=['GET', 'POST'])
