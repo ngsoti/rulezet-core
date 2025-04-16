@@ -57,10 +57,10 @@
       <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1371ff">
         <h4 class="mb-0">[[ rule.id ]] - [[ rule.title ]]</h4>
         
-        {{current_user.id}}
+        <!-- {{current_user.id}}
         {{current_user.is_admin()}}
         [[rule.user_id]]
-        [[parseInt('{{current_user.id}}') == rule.user_id]]
+        [[parseInt('{{current_user.id}}') == rule.user_id]] -->
 
         {% if current_user.is_authenticated %}
           <div class="d-flex">

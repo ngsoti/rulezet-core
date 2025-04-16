@@ -6,6 +6,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_session import Session
 
+from app.rule.rule_licence import fetch_and_save_licenses
 from config import config as Config
 import os
 
@@ -31,6 +32,10 @@ def create_app():
     login_manager.init_app(app)
     app.config["SESSION_SQLALCHEMY"] = db
     sess.init_app(app)
+
+    # take all the licenses 
+    fetch_and_save_licenses()
+
     # remove the previous rule
    #  REPO_DIR = "Rules_Github"
    #  if os.path.exists(REPO_DIR):

@@ -36,7 +36,7 @@ def clone_or_access_repo(repo_url, base_dir="repos"):
 
 
 def get_yara_files_from_repo(repo_dir):
-    """Retrieve all .yar and .yara files from a local repository."""
+    """Retrieve all .yar , rule and .yara files from a local repository."""
     yara_files = []
     for root, dirs, files in os.walk(repo_dir):
         for file in files:
@@ -51,24 +51,21 @@ def parse_yara_rule(file_path):
     with open(file_path, 'r', encoding="utf-8", errors="ignore") as file:
         raw_content = file.read()
 
-    # Supprimer les commentaires multilignes (/* ... */)
     cleaned_content = re.sub(r'/\*.*?\*/', '', raw_content, flags=re.DOTALL)
 
-    # Séparer ligne par ligne après nettoyage
+
     lines = cleaned_content.splitlines()
 
-    # Valeurs par défaut
+
     title = "Untitled"
     description = "Imported YARA rule"
     license = "Unknown"
     author = "Unknown"
     source_url = file_path
 
-    # Parcourir les lignes
     for line in lines:
         line = line.strip()
         if line.lower().startswith("rule "):
-            # Extraction du titre de la règle
             title_match = re.match(r'rule\s+([^\s{]+)', line, re.IGNORECASE)
             if title_match:
                 title = title_match.group(1).strip()
@@ -79,7 +76,7 @@ def parse_yara_rule(file_path):
         elif line.lower().startswith("author"):
             author = line.split("=", 1)[-1].strip().strip(' "')
 
-    # Résultat
+
     return {
         "format": "YARA",
         "title": title,
