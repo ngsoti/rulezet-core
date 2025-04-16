@@ -56,9 +56,13 @@
             </div>
             <div class="row mt-4 mb-4 align-items-center">
                 <div class="col-md-6 text-center text-md-start">
-                    <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success">
+                    <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success me-2">
                         <i class="fas fa-download"></i> Download
                     </a>
+            
+                    <button class="btn btn-secondary" onclick="copyToClipboard()">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
                 </div>
             
                 <div class="col-md-6 text-center text-md-end">
@@ -70,6 +74,8 @@
                 </div>
             </div>
             
+            <textarea id="ruleContentToCopy" style="display: none;">{{ rule.to_string }}</textarea>
+
             <div class="text-center mt-3">
                 <a href="/" class="btn btn-primary">
                     <i class="fas fa-arrow-left"></i> Back to rules
@@ -78,4 +84,17 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block script %}
+<script>
+    function copyToClipboard() {
+        const textarea = document.getElementById('ruleContentToCopy');
+        textarea.style.display = 'block'; // nécessaire pour sélectionner le texte
+        textarea.select();
+        textarea.setSelectionRange(0, 99999); // pour mobile
+        document.execCommand("copy");
+        textarea.style.display = 'none';
+        alert("Contenu copié dans le presse-papier !");
+    }
+</script>
 {% endblock %}
