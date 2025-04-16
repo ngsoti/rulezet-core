@@ -3,28 +3,38 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="card shadow-sm">
-        <div class="card-header text-white" style="background-color: rgb(90, 133, 197)">
+    <!-- Main Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header text-white" style="background-color: rgb(19, 113, 255)">
             <h1 class="mb-0">{{ rule.title }}</h1>
         </div>
         <div class="card-body">
+            <!-- Rule Description -->
             <div class="mb-4">
                 <strong class="h5">Description :</strong>
                 <p>{{ rule.description }}</p>
             </div>
+        </div>
+    </div>
 
-            <div class="row mb-4">
+    <!-- Additional Information Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Additional Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
                 <div class="col-md-6">
                     <strong>Format :</strong>
                     <p>{{ rule.format }}</p>
                 </div>
                 <div class="col-md-6">
-                    <strong>Licence :</strong>
+                    <strong>License :</strong>
                     <p>{{ rule.license }}</p>
                 </div>
             </div>
 
-            <div class="row mb-4">
+            <div class="row mb-3">
                 <div class="col-md-6">
                     <strong>UUID :</strong>
                     <p>{{ rule.uuid }}</p>
@@ -35,7 +45,7 @@
                 </div>
             </div>
 
-            <div class="row mb-4">
+            <div class="row mb-3">
                 <div class="col-md-6">
                     <strong>Creation date :</strong>
                     <p>{{ rule.creation_date.strftime('%d/%m/%Y %H:%M:%S') }}</p>
@@ -46,55 +56,78 @@
                 </div>
             </div>
 
-            <div class="mb-4">
+            <div class="mb-3">
                 <strong>Author :</strong>
                 <p>{{ rule.author }}</p>
             </div>
-            <div class="mb-4">
-                <strong>The rule to string:</strong>
-                <pre class="bg-light p-3 rounded border" style="white-space: pre-wrap;">{{ rule.to_string }}</pre>
-            </div>
-            <div class="row mt-4 mb-4 align-items-center">
-                <div class="col-md-6 text-center text-md-start">
-                    <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success me-2">
-                        <i class="fas fa-download"></i> Download
-                    </a>
-            
-                    <button class="btn btn-secondary" onclick="copyToClipboard()">
-                        <i class="fas fa-copy"></i> Copy
-                    </button>
-                </div>
-            
-                <div class="col-md-6 text-center text-md-end">
-                    <strong>Votes :</strong>
-                    <div>
-                        <span class="text-success">Vote positif : {{ rule.vote_up }}</span> | 
-                        <span class="text-danger">Vote négatif : {{ rule.vote_down }}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <textarea id="ruleContentToCopy" style="display: none;">{{ rule.to_string }}</textarea>
+        </div>
+    </div>
 
-            <div class="text-center mt-3">
-                <a href="/" class="btn btn-primary">
-                    <i class="fas fa-arrow-left"></i> Back to rules
+    <!-- Rule Content Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-file-alt"></i> Rule Content</h5>
+        </div>
+        <div class="card-body">
+            <pre class="bg-light p-3 rounded-3 border" style="white-space: pre-wrap;">{{ rule.to_string }}</pre>
+        </div>
+    </div>
+
+    <!-- Actions Card -->
+    <div class="card shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <!-- Actions -->
+            <div class="d-flex">
+                <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success me-3 px-4 py-2">
+                    <i class="fas fa-download"></i> Download
                 </a>
+
+                <button class="btn btn-outline-info me-3 px-4 py-2" onclick="copyToClipboard()">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+
+                <span id="copyMessage" class="text-success ms-2" style="display: none; font-size: 0.875rem;">
+                    Content copied to clipboard!
+                </span>
+            </div>
+
+            <!-- Votes -->
+            <div class="text-center">
+                <strong>Votes :</strong>
+                <div>
+                    <span class="text-success">Positive Vote : {{ rule.vote_up }}</span> | 
+                    <span class="text-danger">Negative Vote : {{ rule.vote_down }}</span>
+                </div>
             </div>
         </div>
     </div>
+
+    <textarea id="ruleContentToCopy" style="display: none;">{{ rule.to_string }}</textarea>
+
+    <div class="text-center mt-3">
+        <a href="/" class="btn btn-primary px-4 py-2">
+            <i class="fas fa-arrow-left"></i> Back to rules
+        </a>
+    </div>
 </div>
+
 {% endblock %}
+
 {% block script %}
 <script>
     function copyToClipboard() {
         const textarea = document.getElementById('ruleContentToCopy');
-        textarea.style.display = 'block'; // nécessaire pour sélectionner le texte
+        textarea.style.display = 'block'; 
         textarea.select();
-        textarea.setSelectionRange(0, 99999); // pour mobile
         document.execCommand("copy");
         textarea.style.display = 'none';
-        alert("Contenu copié dans le presse-papier !");
+
+        var copyMessage = document.getElementById('copyMessage');
+        copyMessage.style.display = 'inline'; 
+
+        setTimeout(function() {
+            copyMessage.style.display = 'none';
+        }, 2000);
     }
 </script>
 {% endblock %}
