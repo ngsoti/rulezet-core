@@ -57,7 +57,7 @@ def login():
                 user.verify_password(form.password.data):
             login_user(user, form.remember_me.data)
             flash('You are now logged in. Welcome back!', 'success')
-            return redirect(request.args.get('next') or "/")
+            return redirect( "/")
         else:
             flash('Invalid email or password.', 'error')
     return render_template('account/login.html', form=form)

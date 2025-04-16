@@ -58,6 +58,7 @@ def edit_rule_core(form_dict, id) -> None:
     rule.description = form_dict["description"]
     rule.source = form_dict["source"]
     rule.version = form_dict["version"]
+    rule.to_string = form_dict["to_string"]
 
     db.session.commit()
 

@@ -1,38 +1,53 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    
-<div class="container mt-4">
-    <h1 class="text-center text-primary mb-4">
-        <i class="fas fa-user-circle"></i> My Profile
-    </h1>
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow border-0">
+        <div class="card-body p-4 bg-light rounded">
+          
+          <div class="text-center mb-4">
+            <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Avatar" class="rounded-circle mb-2" width="100" height="100">
+            <h2 class="text-primary"><i class="fas fa-user-circle me-2"></i>My Profile</h2>
+            <hr class="w-25 mx-auto">
+          </div>
 
-    <hr>
- 
-    
-    <div class="bg-light p-4 rounded shadow-sm">
-        <div class="mb-3">
-            <h6 class="text-muted">First Name:</h6>
-            <span class="h5">{{user.first_name}}</span>
+          <!-- User Info -->
+          <div class="mb-3 d-flex align-items-center">
+            <i class="fas fa-id-badge me-2 text-secondary"></i>
+            <strong class="me-2">First Name:</strong>
+            <span class="h5 mb-0">{{ user.first_name }}</span>
+          </div>
+
+          <div class="mb-3 d-flex align-items-center">
+            <i class="fas fa-id-badge me-2 text-secondary"></i>
+            <strong class="me-2">Last Name:</strong>
+            <span class="h5 mb-0">{{ user.last_name }}</span>
+          </div>
+
+          <div class="mb-3 d-flex align-items-center">
+            <i class="fas fa-envelope me-2 text-secondary"></i>
+            <strong class="me-2">Email:</strong>
+            <span class="h5 mb-0">{{ user.email }}</span>
+          </div>
+
+          <div class="mb-3 d-flex align-items-center">
+            <i class="fas fa-key me-2 text-secondary"></i>
+            <strong class="me-2">API Key:</strong>
+            <span class="h5 mb-0 text-break">{{ user.api_key }}</span>
+          </div>
+
+
+          <div class="text-end mt-4">
+            <a class="btn btn-outline-success btn-lg" href="{{ url_for('account.edit_user') }}">
+              <i class="fas fa-edit me-2"></i>Edit Profile
+            </a>
+          </div>
+
         </div>
-        <div class="mb-3">
-            <h6 class="text-muted">Last Name:</h6>
-            <span class="h5">{{user.last_name}}</span>
-        </div>
-        <div class="mb-3">
-            <h6 class="text-muted">Email:</h6>
-            <span class="h5">{{user.email}}</span>
-        </div>
-        <div class="mb-3">
-            <h6 class="text-muted">API Key:</h6>
-            <span class="h5 text-break">{{user.api_key}}</span>
-        </div>
+      </div>
     </div>
-
-    <a class="btn btn-success btn-lg" href="/account/edit" role="button" style="margin-bottom: 20px;">
-        <i class="fas fa-edit"></i> Edit Profile
-    </a>
-    
+  </div>
 </div>
-
 {% endblock %}

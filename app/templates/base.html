@@ -69,9 +69,6 @@
                     <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token()|safe }}">
                     </div>
                 {% endif %}
-                <button id="scrollToTopBtn" class="btn btn-primary" title="Back to top">
-                    <i class="fas fa-arrow-up"></i>
-                </button>
         </div>
         
 
@@ -101,25 +98,7 @@
             })
           </script>
         
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                window.onscroll = function() {
-                    let btn = document.getElementById("scrollToTopBtn");
-                    if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
-                        btn.style.display = "block";
-                    } else {
-                        btn.style.display = "none";
-                    }
-                };
-            
-                document.getElementById("scrollToTopBtn").onclick = function() {
-                    window.scrollTo({
-                        top: 0,
-                        behavior: "smooth"
-                    });
-                };
-            });
-            </script>
+        
 
 
 
@@ -127,37 +106,56 @@
     </body>
     <footer class="bg-dark text-white py-4 mt-5">
         <div class="container">
-            <div class="row">
-                <!-- GitHub Button -->
-                <div class="col-12 col-md-6 text-center text-md-start mb-3 mb-md-0">
-                    <a href="https://github.com/DavidCruciani/ptit-crolle.git" target="_blank" class="btn btn-outline-light">
-                        <img src="https://img.icons8.com/?size=100&id=12599&format=png&color=000000" alt="GitHub Icon" style="width: 20px; height: 20px; vertical-align: middle;"> GitHub
-                    </a>
-                </div>
-                
-                <!-- Social Media Links -->
-                <div class="col-12 col-md-6 text-center text-md-end">
-                    <a href="https://twitter.com" target="_blank" class="btn btn-outline-info me-2">
-                        <img src="https://img.icons8.com/?size=100&id=fJp7hepMryiw&format=png&color=000000" alt="Twitter Icon" style="width: 20px; height: 20px; vertical-align: middle; filter: invert(38%) sepia(97%) saturate(511%) hue-rotate(153deg) brightness(99%) contrast(96%);">
-                    </a>
-                    <a href="https://lu.linkedin.com/company/circl-computer-incident-response-center-luxembourg-" target="_blank" class="btn btn-outline-primary me-2">
-                        <img src="https://img.icons8.com/?size=100&id=447&format=png&color=000000" alt="LinkedIn Icon" style="width: 20px; height: 20px; vertical-align: middle; filter: invert(47%) sepia(50%) saturate(4842%) hue-rotate(192deg) brightness(92%) contrast(88%);">
-                    </a>
-                    <a href="https://www.facebook.com/circlcom/" target="_blank" class="btn btn-outline-primary me-2">
-                        <img src="https://img.icons8.com/?size=100&id=118468&format=png&color=000000" alt="Facebook Icon" style="width: 20px; height: 20px; vertical-align: middle; filter: invert(40%) sepia(100%) saturate(2926%) hue-rotate(216deg) brightness(93%) contrast(95%);">
-                    </a>
-                    <!-- Link to the official CIRCL website -->
-                    <a href="https://circl.lu/" target="_blank" class="btn btn-outline-danger me-2">
-                        <i class="fa-solid fa-link fa-computer"></i> CIRCL
-                    </a>
-                </div>
-            </div>
+          <div class="row align-items-center justify-content-between">
             
-            <div class="row mt-3">
-                <div class="col-12 text-center">
-                    <small>&copy; 2025 <strong>RULEZET</strong>. All rights reserved.</small>
-                </div>
+            <!-- GitHub -->
+            <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
+              <a href="https://github.com/DavidCruciani/ptit-crolle.git" target="_blank" class="btn btn-outline-light">
+                <img src="https://img.icons8.com/?size=100&id=12599&format=png&color=ffffff" alt="GitHub" style="width: 20px; height: 20px; vertical-align: middle;"> GitHub
+              </a>
             </div>
+      
+            <!-- Social links -->
+            <div class="col-md-4 text-center mb-3 mb-md-0">
+              <a href="https://twitter.com" target="_blank" class="btn btn-outline-info me-1">
+                <img src="https://img.icons8.com/?size=100&id=fJp7hepMryiw&format=png" alt="Twitter" style="width: 20px; height: 20px;">
+              </a>
+              <a href="https://lu.linkedin.com/company/circl-computer-incident-response-center-luxembourg-" target="_blank" class="btn btn-outline-primary me-1">
+                <img src="https://img.icons8.com/?size=100&id=447&format=png" alt="LinkedIn" style="width: 20px; height: 20px;">
+              </a>
+              <a href="https://www.facebook.com/circlcom/" target="_blank" class="btn btn-outline-primary me-1">
+                <img src="https://img.icons8.com/?size=100&id=118468&format=png" alt="Facebook" style="width: 20px; height: 20px;">
+              </a>
+              <a href="https://circl.lu/" target="_blank" class="btn btn-outline-danger">
+                <i class="fa-solid fa-link"></i> CIRCL
+              </a>
+            </div>
+      
+            <!-- Scroll to top -->
+            <div class="col-md-4 text-center text-md-end">
+              <button id="scrollToTopBtn" class="btn btn-primary" title="Back to top">
+                <i class="fas fa-arrow-up"></i>
+              </button>
+            </div>
+          </div>
+      
+          <!-- Footer bottom -->
+          <div class="row mt-3">
+            <div class="col-12 text-center">
+              <small>&copy; 2025 <strong>RULEZET</strong>. All rights reserved.</small>
+            </div>
+          </div>
         </div>
-    </footer>
+      </footer>
+      
+      
+
+      <script>
+        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+        scrollToTopBtn.addEventListener('click', () => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      </script>
+      
+    
 </html>

@@ -81,7 +81,6 @@
                 <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success me-3 px-4 py-2">
                     <i class="fas fa-download"></i> Download
                 </a>
-
                 <button class="btn btn-outline-info me-3 px-4 py-2" onclick="copyToClipboard()">
                     <i class="fas fa-copy"></i> Copy
                 </button>
@@ -104,11 +103,15 @@
 
     <textarea id="ruleContentToCopy" style="display: none;">{{ rule.to_string }}</textarea>
 
-    <div class="text-center mt-3">
-        <a href="/" class="btn btn-primary px-4 py-2">
-            <i class="fas fa-arrow-left"></i> Back to rules
+    <div class="text-center mt-4">
+        <a href="/" class="btn btn-outline-primary btn-lg me-2">
+            <i class="fas fa-arrow-left me-1"></i> Back to Rules
+        </a>
+        <a href="/account/favorite" class="btn btn-outline-warning btn-lg">
+            <i class="fas fa-star me-1"></i> Go to Favorites
         </a>
     </div>
+    
 </div>
 
 {% endblock %}

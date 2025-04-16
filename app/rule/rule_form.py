@@ -23,6 +23,7 @@ class AddNewRuleForm(FlaskForm):
     source = StringField('Source', validators=[InputRequired()])
     author = StringField('Author', validators=[InputRequired()])
     version = StringField('Version', validators=[InputRequired()])
+    to_string = TextAreaField('Content rule', validators=[InputRequired()])
 
     def validate_title(self, field):
         if not field.data == Rule.title:
@@ -41,6 +42,7 @@ class EditRuleForm(FlaskForm):
     description = TextAreaField('Description', validators=[InputRequired()])
     source = StringField('Source', validators=[InputRequired()])
     version = StringField('Version', validators=[InputRequired()])
+    to_string = TextAreaField('Content rule', validators=[InputRequired()])
 
     submit = SubmitField('Register')
     

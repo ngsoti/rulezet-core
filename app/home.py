@@ -93,6 +93,7 @@ def edit_rule(rule_id):
             form.description.data = rule.description
             form.license.data = rule.license  # Selected value
             form.version.data = rule.version
+            form.to_string.data = rule.to_string
             rule.last_modif = datetime.now(timezone.utc)
 
         return render_template("rule/edit_rule.html", form=form, rule=rule)

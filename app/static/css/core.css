@@ -2,7 +2,7 @@
 body {
   background-color: #fbfbfb;
   align-items: center;
-  margin-bottom: 200px;
+  
 }
 
 
@@ -26,7 +26,7 @@ span#goTop, span#project-version{
 	border-bottom-right-radius: 3px;
 	margin-right: 2px;
 	border-top-left-radius: 3px;
-  	border-bottom-left-radius: 3px;
+  border-bottom-left-radius: 3px;
 	display: inline-block;
 	padding: 2px 4px;
 	font-size: 12px;
@@ -67,11 +67,10 @@ span#goTop, span#project-version{
 }
 
 footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
+  
   width: 100%;
   background: #f1f1f1;
   padding: 1em;
-  z-index: 9999;
+
 }
+

@@ -3,6 +3,8 @@ import shutil
 import git
 import hashlib
 import re
+from git import Repo
+import tempfile
 
 # === Git & Parsing Functions ===
 
@@ -16,10 +18,6 @@ def get_repo_name_from_url(repo_url):
     return name
 
 def clone_or_access_repo(repo_url):
-    import os
-    from git import Repo
-    import tempfile
-
     base_dir = "Rules_Github"
     os.makedirs(base_dir, exist_ok=True)
 
@@ -29,7 +27,6 @@ def clone_or_access_repo(repo_url):
     if not os.path.exists(repo_dir):
         Repo.clone_from(repo_url, repo_dir)
     else:
-        # Optionally, you can pull the latest changes if needed
         pass
 
     return repo_dir, repo_dir
