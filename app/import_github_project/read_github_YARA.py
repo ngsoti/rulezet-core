@@ -1,4 +1,5 @@
 import os
+import shutil
 import git
 import hashlib
 import re
@@ -14,25 +15,25 @@ def get_repo_name_from_url(repo_url):
         name = name[:-4]
     return name
 
-def clone_or_access_repo(repo_url, base_dir="repos"):
-    """
-    Clone a Git repository into a uniquely named local directory.
-    Returns the Git repo object.
-    """
+def clone_or_access_repo(repo_url):
+    import os
+    from git import Repo
+    import tempfile
+
+    base_dir = "Rules_Github"
     os.makedirs(base_dir, exist_ok=True)
 
-    repo_name = get_repo_name_from_url(repo_url)
-    
+    repo_name = repo_url.rstrip('/').split('/')[-1].replace('.git', '')
+    repo_dir = os.path.join(base_dir, repo_name)
 
-    repo_hash = hashlib.md5(repo_url.encode()).hexdigest()[:8]
-    local_dir = os.path.join(base_dir, f"{repo_name}_{repo_hash}")
-
-    if not os.path.exists(local_dir):
-        repo = git.Repo.clone_from(repo_url, local_dir)
+    if not os.path.exists(repo_dir):
+        Repo.clone_from(repo_url, repo_dir)
     else:
-        repo = git.Repo(local_dir)
+        # Optionally, you can pull the latest changes if needed
+        pass
 
-    return repo, local_dir
+    return repo_dir, repo_dir
+
 
 
 def get_yara_files_from_repo(repo_dir):
@@ -50,6 +51,44 @@ def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt
         return [line.strip() for line in f if line.strip()]
 
 
+def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
+    """
+    Retrieve all YARA rules from a Git repository and save each rule exactly as it is
+    without any modification.
+    Each rule is saved in a file named after the rule's title.
+    """
+    
+    repo, repo_dir = clone_or_access_repo(repo_url)
+    yara_files = get_yara_files_from_repo(repo_dir)
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    for yara_file in yara_files:
+        with open(yara_file, 'r', encoding="utf-8", errors="ignore") as file:
+            raw_content = file.read()
+
+        rule_title = re.match(r'rule\s+([^\s{]+)', raw_content)
+        if rule_title:
+            rule_title = rule_title.group(1).strip()
+            # Remove colon (":") from the rule title
+            rule_title = rule_title.replace(":", "")
+        else:
+            rule_title = "Untitled"
+
+        file_name = f"{rule_title}.yar"
+        file_path = os.path.join(output_dir, file_name)
+
+        with open(file_path, 'w', encoding="utf-8") as output_file:
+            output_file.write(raw_content)
+
+
+def delete_existing_repo_folder(local_dir):
+    """Delete the existing folder if it exists."""
+    if os.path.exists(local_dir):
+        shutil.rmtree(local_dir)
+
+
+
 def parse_yara_rule(file_path, repo_dir=None, repo_url=None, known_licenses=None, branch="main"):
     """
     Read and parse a YARA rule from a file, try to detect metadata and GitHub URL for the rule.
@@ -57,6 +96,8 @@ def parse_yara_rule(file_path, repo_dir=None, repo_url=None, known_licenses=None
     if known_licenses is None:
         known_licenses = load_known_licenses()
 
+
+    
     # Read the file content
     with open(file_path, 'r', encoding="utf-8", errors="ignore") as file:
         raw_content = file.read()
@@ -94,6 +135,8 @@ def parse_yara_rule(file_path, repo_dir=None, repo_url=None, known_licenses=None
         # Construct GitHub URL for the file
         source_url = f"https://github.com/{'/'.join(repo_url.split('/')[-2:])}/blob/{branch}/{relative_path}"
 
+        # save a rule into a file to download it later
+        save_yara_rules_as_is(repo_url)
     return {
         "format": "YARA",
         "title": title,

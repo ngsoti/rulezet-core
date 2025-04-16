@@ -156,11 +156,11 @@ def import_yara_from_repo():
     
     if request.method == 'POST':
         repo_url = request.form.get('url')
-        local_dir = "Rules_Github/Yara_Project"
+        # local_dir = "Rules_Github/Yara_Project"
         
         try:
             # Clone or access the GitHub repository
-            repo, repo_dir = clone_or_access_repo(repo_url, local_dir)
+            repo, repo_dir = clone_or_access_repo(repo_url)
 
             # Retrieve all .yar, .yara, and .rule files
             yara_files = get_yara_files_from_repo(repo_dir)
