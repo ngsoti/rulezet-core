@@ -12,12 +12,22 @@ rule_blueprint = Blueprint(
 )
 
 
-@rule_blueprint.route("/" , methods=['GET', 'POST'])
+@rule_blueprint.route("/", methods=['GET', 'POST'])
 def rule():
     form = AddNewRuleForm()
+
+    licenses = []
+    with open("app/rule/licenses.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                licenses.append(line)
+
+    form.license.choices = [(lic, lic) for lic in licenses]
+
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
         RuleModel.add_rule_core(form_dict)
         flash('Rule added !', 'success')
+        
     return render_template("rule/rule.html", form=form)
-

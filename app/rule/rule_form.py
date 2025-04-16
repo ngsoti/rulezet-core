@@ -1,7 +1,7 @@
 from flask import url_for, flash
 from flask_login import current_user
 from flask_wtf import FlaskForm
-from wtforms import  ValidationError
+from wtforms import  ValidationError, SelectField
 from wtforms.fields import (
     BooleanField,
     PasswordField,
@@ -10,7 +10,7 @@ from wtforms.fields import (
     TextAreaField,
     EmailField
 )
-from wtforms.validators import Email, InputRequired, Length
+from wtforms.validators import Email, InputRequired, DataRequired
 
 from ..db_class.db import Rule
 
@@ -18,7 +18,7 @@ class AddNewRuleForm(FlaskForm):
     
     format = StringField('Format', validators=[InputRequired()])
     title = StringField('Title', validators=[InputRequired()])
-    license = StringField('License', validators=[InputRequired()])
+    license = SelectField("License", choices=[], validators=[DataRequired()])
     description = TextAreaField('Description', validators=[InputRequired()])
     source = StringField('Source', validators=[InputRequired()])
     author = StringField('Author', validators=[InputRequired()])

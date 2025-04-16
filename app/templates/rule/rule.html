@@ -36,7 +36,7 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             {{ form.license.label(class_="col-form-label") }}
-                            {{ form.license(class_="form-control") }}
+                            {{ form.license(class_="form-control", id="license-select") }}
                             {% if form.license.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.license.errors[0] | safe }}
@@ -105,18 +105,27 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref} = Vue
-    import {message_list} from '/static/js/toaster.js'
+    // Import Vue and custom toaster messages
+    const { createApp, ref } = Vue;
+    import { message_list } from '/static/js/toaster.js';
+
+    // Initialize Vue app
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
             return {
                 message_list,
-            }
+            };
         }
-    }).mount('#main-container')
+    }).mount('#main-container');
 
+    // Initialize Select2 on the license dropdown
+    $(document).ready(function() {
+        $('#license-select').select2({
+            placeholder: "Search for a license",
+            allowClear: true
+        });
+    });
 </script>
 {% endblock %}
-
 

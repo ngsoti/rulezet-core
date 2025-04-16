@@ -50,16 +50,6 @@ def get_rules_page():
 
 
 
-# @home_blueprint.route("/delete_rule" , methods=['GET', 'POST'])
-# def delete_rule():
-#     rule_id = request.args.get('id', 1 , int)
-#     user_id = RuleModel.get_rule_user_id(rule_id)
-#     if current_user.id == user_id or current_user.is_admin():
-#         RuleModel.delete_rule_core(rule_id)
-#         flash('Rule delete !', 'success')
-#         return redirect(url_for('home.home'))
-#     flash("Acces denied", "danger")
-#     return redirect(url_for('home.home'))
 
 
 @home_blueprint.route("/delete_rule", methods=['GET', 'POST'])
