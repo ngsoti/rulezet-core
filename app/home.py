@@ -48,10 +48,6 @@ def get_rules_page():
     return {"message": "No Rule"}, 404
 
 
-
-
-
-
 @home_blueprint.route("/delete_rule", methods=['GET', 'POST'])
 def delete_rule():
     rule_id = request.args.get('id', 1, int)
@@ -61,7 +57,7 @@ def delete_rule():
         RuleModel.delete_rule_core(rule_id)
         return jsonify({"success": True, "message": "Rule deleted!"})
     
-    return jsonify({"success": False, "message": "Access denied"})
+    return render_template("access_denied.html")
 
 
 @home_blueprint.route("/get_current_user", methods=['GET', 'POST'])
@@ -101,7 +97,7 @@ def edit_rule(rule_id):
 
         return render_template("rule/edit_rule.html", form=form, rule=rule)
     else:
-        flash("Access denied", "danger")
+        return render_template("access_denied.html")
     return redirect("/")
 
 
