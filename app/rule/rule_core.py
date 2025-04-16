@@ -27,7 +27,8 @@ def add_rule_core(form_dict):
         creation_date=datetime.datetime.now(tz=datetime.timezone.utc),
         last_modif=datetime.datetime.now(tz=datetime.timezone.utc),
         vote_up=0,
-        vote_down=0
+        vote_down=0,
+        to_string = form_dict["to_string"]
     )
 
     db.session.add(new_rule)

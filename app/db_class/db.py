@@ -98,7 +98,7 @@ class Rule(db.Model):
     last_modif = db.Column(db.DateTime, index=True)
     vote_up = db.Column(db.String)
     vote_down = db.Column(db.String)
-    
+    to_string = db.Column(db.String)
 
     def to_json(self):
         return {
@@ -115,7 +115,8 @@ class Rule(db.Model):
             "vote_up": self.vote_up,
             "vote_down": self.vote_down,
             "user_id": self.user_id,
-            "version": self.version
+            "version": self.version,
+            "to_string": self.to_string
         }
 
 class RuleFavoriteUser(db.Model):

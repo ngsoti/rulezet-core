@@ -50,16 +50,26 @@
                 <strong>Author :</strong>
                 <p>{{ rule.author }}</p>
             </div>
-
-
-            <div class="mt-3 mb-4">
-                <strong>Votes :</strong>
-                <div>
-                    <span class="text-success">Vote positif : {{ rule.vote_up }}</span> | 
-                    <span class="text-danger">Vote négatif : {{ rule.vote_down }}</span>
+            <div class="mb-4">
+                <strong>The rule to string:</strong>
+                <pre class="bg-light p-3 rounded border" style="white-space: pre-wrap;">{{ rule.to_string }}</pre>
+            </div>
+            <div class="row mt-4 mb-4 align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                </div>
+            
+                <div class="col-md-6 text-center text-md-end">
+                    <strong>Votes :</strong>
+                    <div>
+                        <span class="text-success">Vote positif : {{ rule.vote_up }}</span> | 
+                        <span class="text-danger">Vote négatif : {{ rule.vote_down }}</span>
+                    </div>
                 </div>
             </div>
-
+            
             <div class="text-center mt-3">
                 <a href="/" class="btn btn-primary">
                     <i class="fas fa-arrow-left"></i> Back to rules

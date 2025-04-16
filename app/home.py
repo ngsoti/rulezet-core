@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from flask import Flask, Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, Blueprint, Response, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from flask import get_flashed_messages
 from sqlalchemy import true
@@ -145,6 +145,35 @@ def add_favorite_rule(rule_id):
     return redirect(url_for('account.favorite')) 
 
 from flask_login import login_required, current_user
+
+
+
+
+
+
+
+
+@home_blueprint.route("/download/<int:rule_id>", methods=['GET', 'POST'])
+def download_rule(rule_id):
+
+    rule = RuleModel.get_rule(rule_id)
+
+    filename = f"{rule.title}.yar"
+    content = rule.to_string or ""
+
+    return Response(
+        content,
+        mimetype='application/octet-stream',
+        headers={
+            "Content-Disposition": f"attachment;filename={filename}"
+        }
+    )
+
+
+
+
+
+
 
 
 @home_blueprint.route("/import_yara_from_repo", methods=['GET', 'POST'])
