@@ -78,7 +78,7 @@ def edit_rule(rule_id):
         form = EditRuleForm()
 
         # Load licenses
-        with open("app/rule/licenses.txt", "r", encoding="utf-8") as f:
+        with open("app/rule/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
             licenses = [line.strip() for line in f if line.strip()]
 
         if rule.license and rule.license not in licenses:
@@ -150,74 +150,48 @@ def add_favorite_rule(rule_id):
 
 from flask_login import login_required, current_user
 
-# @home_blueprint.route("/import_yara")
-# @login_required
-# def import_yara():
-#     if not current_user.is_admin:
-#         flash("Access denied", "danger")
-#         return redirect(url_for("rule.rule"))
-
-#     parse_yara_rule()
-#     flash("YARA rules imported successfully!", "success")
-#     return redirect(url_for("rule.rule"))
-
-
-# @home_blueprint.route("/import_yara_from_url", methods=["POST"])
-# @login_required
-# def import_yara_from_url():
-#     if not current_user.is_admin:
-#         flash("Accès refusé", "danger")
-#         return redirect(url_for("home.home"))
-
-#     url = request.form.get("github_url")
-#     try:
-#         added = import_yara_from_github(url)
-#         if added == 0:
-#             flash("Aucune nouvelle règle YARA importée.", "info")
-#         else:
-#             flash(f"{added} règle(s) YARA importée(s) avec succès !", "success")
-#     except Exception as e:
-#         flash(f"Erreur lors de l'import : {e}", "danger")
-
-#     return redirect(url_for("home.home"))
-
-
-
-
 
 @home_blueprint.route("/import_yara_from_repo", methods=['GET', 'POST'])
 @login_required
 def import_yara_from_repo():
     if not current_user.is_admin:
-        flash("Accès refusé. Admin uniquement.", "danger")
+        flash("Access denied. Admins only.", "danger")
         return redirect(url_for("rule.rule"))
+    
     if request.method == 'POST':
-        repo_url = request.form.get('url') 
+        repo_url = request.form.get('url')
         local_dir = "Rules_Github/Yara_Project"
-
-    try:
-        repo = clone_or_access_repo(repo_url, local_dir)
-        yara_files = get_yara_files_from_repo(local_dir)
-
-        imported = 0
-        skipped = 0
-
-        for file_path in yara_files:
-            rule_dict = parse_yara_rule(file_path)
-
-            rule_dict["version"] = "1.0"
-            # rule_dict["author"] = current_user.username if hasattr(current_user, "username") else "unknown"
-
-            success = RuleModel.add_rule_core(rule_dict)
-            if success:
-                imported += 1
-            else:
-                skipped += 1
-
         
-        flash(f"{imported} YARA rules imported. {skipped} ignored (existe already).", "success")
+        try:
+            # Clone or access the GitHub repository
+            repo, repo_dir = clone_or_access_repo(repo_url, local_dir)
 
-    except Exception as e:
-        flash(f"fail to import: {str(e)}", "danger")
+            # Retrieve all .yar, .yara, and .rule files
+            yara_files = get_yara_files_from_repo(repo_dir)
+
+            imported = 0
+            skipped = 0
+
+            # Import YARA rules
+            for file_path in yara_files:
+                # Parse the YARA rule and retrieve data (including GitHub URL)
+                rule_dict = parse_yara_rule(file_path, repo_dir=repo_dir, repo_url=repo_url)
+
+                # Add version and other data if necessary
+                rule_dict["version"] = "1.0"
+
+                # Attempt to add the rule to the database
+                success = RuleModel.add_rule_core(rule_dict)
+                if success:
+                    imported += 1
+                else:
+                    skipped += 1
+
+            # Return a message indicating how many rules were imported or skipped
+            flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
+
+        except Exception as e:
+            # In case of an error, show the error message
+            flash(f"Failed to import: {str(e)}", "danger")
 
     return redirect(url_for("home.home"))

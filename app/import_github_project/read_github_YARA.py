@@ -50,23 +50,27 @@ def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt
         return [line.strip() for line in f if line.strip()]
 
 
-def parse_yara_rule(file_path):
-    """Read and parse a YARA rule from a file, ignoring /* ... */ comments."""
+def parse_yara_rule(file_path, repo_dir=None, repo_url=None, known_licenses=None, branch="main"):
+    """
+    Read and parse a YARA rule from a file, try to detect metadata and GitHub URL for the rule.
+    """
+    if known_licenses is None:
+        known_licenses = load_known_licenses()
+
+    # Read the file content
     with open(file_path, 'r', encoding="utf-8", errors="ignore") as file:
         raw_content = file.read()
 
     cleaned_content = re.sub(r'/\*.*?\*/', '', raw_content, flags=re.DOTALL)
-
-
     lines = cleaned_content.splitlines()
 
-
+    # Default metadata
     title = "Untitled"
     description = "Imported YARA rule"
     license = "Unknown"
     author = "Unknown"
-    source_url = file_path
 
+    # Extract metadata from rule content
     for line in lines:
         line = line.strip()
         if line.lower().startswith("rule "):
@@ -80,6 +84,15 @@ def parse_yara_rule(file_path):
         elif line.lower().startswith("author"):
             author = line.split("=", 1)[-1].strip().strip(' "')
 
+    # Build GitHub URL if possible
+    source_url = file_path
+    if repo_dir and repo_url and "github.com" in repo_url:
+        relative_path = os.path.relpath(file_path, repo_dir).replace("\\", "/")
+        if repo_url.endswith(".git"):
+            repo_url = repo_url[:-4]
+
+        # Construct GitHub URL for the file
+        source_url = f"https://github.com/{'/'.join(repo_url.split('/')[-2:])}/blob/{branch}/{relative_path}"
 
     return {
         "format": "YARA",
