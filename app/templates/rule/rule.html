@@ -46,8 +46,8 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            {{ form.source.label(class_="col-form-label") }}
-                            {{ form.source(class_="form-control") }}
+                            {{ form.source.label(class_="col-form-label") }}       
+                                {{ form.source(class_="form-control") }}                            
                             {% if form.source.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.source.errors[0] | safe }}
@@ -55,6 +55,8 @@
                             {% endif %}
                         </div>
                     </div>
+                    
+                    
                     <div class="col-md-6">
                         <div class="form-group">
                             {{ form.author.label(class_="col-form-label") }}

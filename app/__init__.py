@@ -45,11 +45,9 @@ def create_app():
 
     from .home import home_blueprint
     from .account.account import account_blueprint
-    from .test import test_blueprint
     from .rule.rule import rule_blueprint   
     app.register_blueprint(home_blueprint, url_prefix="/")
     app.register_blueprint(account_blueprint, url_prefix="/account")
-    app.register_blueprint(test_blueprint, url_prefix="/test")
     app.register_blueprint(rule_blueprint, url_prefix="/rule")
    
     

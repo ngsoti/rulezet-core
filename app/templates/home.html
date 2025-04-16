@@ -10,18 +10,36 @@
     </a>
   </header>
 
-  <form method="POST" action="{{ url_for('home.import_yara_from_repo') }}" class="p-4 border rounded shadow-sm bg-light">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    <div class="mb-3">
-      <label for="url" class="form-label">URL for a Github project to add</label>
-      <div class="input-group">
-        <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>
+
+
+
+  <div class="accordion" id="accordionExample">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingOne">
+        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+          Add a Github Project with URL
+        </button>
+      </h2>
+      <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+        <div class="accordion-body">
+          <form method="POST" action="{{ url_for('home.import_yara_from_repo') }}" class="p-4 border rounded shadow-sm bg-light">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="mb-3">
+              <label for="url" class="form-label">URL for a Github project to add</label>
+              <div class="input-group">
+                <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="fas fa-paper-plane"></i> Send
+            </button>
+          </form>
+        </div>
       </div>
     </div>
-    <button type="submit" class="btn btn-primary w-100">
-      <i class="fas fa-paper-plane"></i> Send
-    </button>
-  </form>
+  </div>
+  
+  
 
   <template v-if="rules_list && rules_list.rule.length > 0">
     <br/>
@@ -90,7 +108,10 @@
             <strong>Format :</strong> [[ rule.format ]]
           </div>
           <div class="col-md-6 mb-2">
-            <strong>Source :</strong> [[ rule.source ]]
+            <strong>Source :</strong> 
+              <a :href="[[ rule.source ]]" target="_blank" class="text-decoration-none" style="word-wrap: break-word;">
+                [[ rule.source ]]
+              </a>
           </div>
           <div class="col-md-6 mb-2">
             <strong>License :</strong> [[ rule.license ]]
