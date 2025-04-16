@@ -4,7 +4,7 @@ import os
 # script to take all the differents licenses in the github repo to stock them in a txt file.
 
 API_URL = "https://api.github.com/repos/spdx/license-list-XML/contents/src"
-OUTPUT_FILE = "app/rule/licenses.txt"
+OUTPUT_FILE = "app/rule/import_licenses/licenses.txt"
 
 def fetch_and_save_licenses():
     # Delete existing file if it exists

@@ -17,7 +17,7 @@ def rule():
     form = AddNewRuleForm()
 
     licenses = []
-    with open("app/rule/licenses.txt", "r", encoding="utf-8") as f:
+    with open("app/rule/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:

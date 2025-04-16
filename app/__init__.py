@@ -6,7 +6,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_session import Session
 
-from app.rule.rule_licence import fetch_and_save_licenses
+from app.rule.import_licenses.rule_licence import fetch_and_save_licenses
 from config import config as Config
 import os
 

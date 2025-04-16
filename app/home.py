@@ -74,9 +74,18 @@ def edit_rule(rule_id):
     rule = RuleModel.get_rule(rule_id)
     user_id = RuleModel.get_rule_user_id(rule_id)
 
-
     if current_user.id == user_id or current_user.is_admin():
         form = EditRuleForm()
+
+        # Load licenses
+        with open("app/rule/licenses.txt", "r", encoding="utf-8") as f:
+            licenses = [line.strip() for line in f if line.strip()]
+
+        if rule.license and rule.license not in licenses:
+            licenses.insert(0, rule.license) 
+
+        form.license.choices = [(lic, lic) for lic in licenses]
+
         if form.validate_on_submit():
             form_dict = form_to_dict(form)
             RuleModel.edit_rule_core(form_dict, rule_id)
@@ -86,14 +95,15 @@ def edit_rule(rule_id):
             form.source.data = rule.source
             form.title.data = rule.title
             form.description.data = rule.description
-            form.license.data = rule.license
+            form.license.data = rule.license  # Selected value
             form.version.data = rule.version
             rule.last_modif = datetime.now(timezone.utc)
 
         return render_template("rule/edit_rule.html", form=form, rule=rule)
     else:
-        flash("Acces denied", "danger")
+        flash("Access denied", "danger")
     return redirect("/")
+
 
 
 

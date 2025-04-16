@@ -44,6 +44,10 @@ def get_yara_files_from_repo(repo_dir):
                 yara_files.append(os.path.join(root, file))
     return yara_files
 
+def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt"):
+    """load all the licenses in  licenses.txt."""
+    with open(license_file_path, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
 
 
 def parse_yara_rule(file_path):

@@ -36,7 +36,7 @@
             <div class="mb-3">
                 <div class="form-group">
                     {{ form.license.label(class_="col-form-label") }}
-                    {{ form.license(class_="form-control") }}
+                    {{ form.license(class_="form-control", id="license-select") }}
                     {% if form.license.errors %}
                         <div class="invalid-feedback d-block">
                             {{ form.license.errors[0] | safe }}
@@ -44,6 +44,7 @@
                     {% endif %}
                 </div>
             </div>
+            
 
             <div class="mb-3">
                 <div class="form-group">
@@ -86,4 +87,14 @@
         </div>
     </form>
 </div>
+{% endblock %}
+{% block script %}
+<script>
+    $(document).ready(function() {
+        $('#license-select').select2({
+            placeholder: "Search for a license",
+            allowClear: true
+        });
+    });
+</script>
 {% endblock %}
