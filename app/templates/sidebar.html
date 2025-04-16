@@ -27,6 +27,11 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
                     {% if current_user.is_authenticated %}
+                    <li>
+                        <a href="/account/" class="dropdown-item">
+                            <i class="fa-solid fa-user fa-fw me-2 text-primary"></i> Profil
+                        </a>
+                    </li>
                         <li>
                             <a href="/account/favorite" class="dropdown-item">
                                 <i class="fa-solid fa-star fa-fw me-2 text-warning"></i> Favorite
@@ -37,6 +42,7 @@
                                 <i class="fa-solid fa-right-from-bracket fa-fw me-2 text-danger"></i> Logout
                             </a>
                         </li>
+
                     {% else %}
                         <li>
                             <a href="/account/register" class="dropdown-item">
@@ -44,7 +50,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="/account" class="dropdown-item">
+                            <a href="/account/profil" class="dropdown-item">
                                 <i class="fa-solid fa-right-to-bracket fa-fw me-2 text-primary"></i> Login
                             </a>
                         </li>

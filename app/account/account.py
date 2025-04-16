@@ -92,7 +92,10 @@ def favorite():
     rules_list = [r.to_json() for r in rules]
     return render_template("account/favorite_user.html", rules_list=rules_list)
 
-
+@account_blueprint.route("/profil")
+@login_required
+def profil():
+    return render_template("account/account_index.html", user=current_user)
 
 
 @account_blueprint.route('/favorite/remove_favorite', methods=['POST'])
