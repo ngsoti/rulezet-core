@@ -2,6 +2,7 @@
 body {
   background-color: #fbfbfb;
   align-items: center;
+  margin-bottom: 200px;
 }
 
 
@@ -72,4 +73,5 @@ footer {
   width: 100%;
   background: #f1f1f1;
   padding: 1em;
+  z-index: 9999;
 }
