@@ -4,8 +4,9 @@ from flask_login import current_user, login_required
 from flask import get_flashed_messages
 from sqlalchemy import true
 
+from app.comment.comment_core import add_comment_core, delete_comment, get_comment_by_id, get_comments_for_rule, update_comment
 from app.db_class import db
-from app.db_class.db import Rule, RuleFavoriteUser
+from app.db_class.db import Comment, Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 
 from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule
@@ -124,10 +125,58 @@ def vote_rule():
     return jsonify({"message": "Rule not found"}), 404
 
 
+
 @home_blueprint.route("/detail_rule/<int:rule_id>", methods=['GET'])
 def detail_rule(rule_id):
-    rule = RuleModel.get_rule(rule_id)  
-    return render_template("rule/detail_rule.html", rule=rule)
+    rule = RuleModel.get_rule(rule_id)
+    comments = get_comments_for_rule(rule_id)
+    return render_template("rule/detail_rule.html", rule=rule, comments=comments)
+
+
+@home_blueprint.route("/rule/<int:rule_id>/comment", methods=["POST"])
+@login_required
+def add_comment(rule_id):
+    content = request.form.get("content", "")
+    success, message = add_comment_core(rule_id, content)
+
+    flash(message, "success" if success else "danger")
+    return redirect(url_for("home.detail_rule", rule_id=rule_id)
+)
+@home_blueprint.route("/comment/<int:comment_id>/edit", methods=["POST"])
+@login_required
+def edit_comment(comment_id):
+    comment = get_comment_by_id(comment_id)
+    if not comment or comment.user_id != current_user.id:
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("home.home"))
+
+    new_content = request.form.get("content", "").strip()
+    if not new_content:
+        flash("Content cannot be empty.", "danger")
+    else:
+        update_comment(comment_id, new_content)
+        flash("Comment updated successfully.", "success")
+
+    return redirect(url_for("home.detail_rule", rule_id=comment.rule_id))
+
+@home_blueprint.route("/comment/<int:comment_id>/delete", methods=["POST"])
+@login_required
+def delete_comment_route(comment_id):
+    comment = get_comment_by_id(comment_id)
+    if not comment or comment.user_id != current_user.id:
+        flash("Unauthorized action.", "danger")
+        return redirect(url_for("home.home"))
+
+    rule_id = comment.rule_id
+    delete_comment(comment_id)
+    flash("Comment deleted.", "success")
+    return redirect(url_for("home.detail_rule", rule_id=rule_id))
+
+
+
+
+
+
 
 
 @home_blueprint.route('/favorite/<int:rule_id>', methods=['GET'])
@@ -169,6 +218,7 @@ def download_rule(rule_id):
             "Content-Disposition": f"attachment;filename={filename}"
         }
     )
+
 
 
 

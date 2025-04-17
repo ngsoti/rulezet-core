@@ -103,6 +103,92 @@
 
     <textarea id="ruleContentToCopy" style="display: none;">{{ rule.to_string }}</textarea>
 
+
+<!-- Comments Section -->
+<div class="card shadow-sm mt-5">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <i class="fas fa-comments"></i> Comments
+            <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse" data-bs-target="#commentsCollapse" aria-expanded="false" aria-controls="commentsCollapse">
+                <i class="fas fa-eye"></i> Show/Hide Comments
+            </button>
+        </h5>
+    </div>
+    <div class="card-body">
+
+        {% if current_user.is_authenticated %}
+        <!-- Add a new comment -->
+        <form method="post" action="{{ url_for('home.add_comment', rule_id=rule.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="mb-3">
+                <label for="commentContent" class="form-label">Leave a comment:</label>
+                <textarea class="form-control" id="commentContent" name="content" rows="3" placeholder="Your comment here..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane"></i> Post Comment
+            </button>
+        </form>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-sign-in-alt"></i> Please <a href="{{ url_for('auth.login') }}">log in</a> to post a comment.
+        </div>
+        {% endif %}
+
+        <hr>
+
+        <!-- Existing comments section, collapsible -->
+        <div class="collapse" id="commentsCollapse">
+            {% if comments %}
+                {% for comment in comments %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong><i class="fas fa-user-circle"></i> {{ comment.user_name }}</strong>
+                            <small class="text-muted ms-2">
+                                <i class="far fa-clock"></i> {{ comment.created_at }}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <p class="mb-1">{{ comment.content }}</p>
+                    </div>
+
+                    <!-- Edit and delete options if the current user is the owner of the comment -->
+                    {% if current_user.is_authenticated and comment.user_id == current_user.id %}
+                        <div class="mt-2">
+                            <!-- Edit Comment Form -->
+                            <form method="post" action="{{ url_for('home.edit_comment', comment_id=comment.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" name="content" value="{{ comment.content }}" placeholder="Edit your comment..." required>
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- Delete Comment Form -->
+                            <form method="post" action="{{ url_for('home.delete_comment_route', comment_id=comment.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+
+                    <hr>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted"><i class="fas fa-info-circle"></i> No comments yet. Be the first to comment!</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+
     <div class="text-center mt-4">
         <a href="/" class="btn btn-outline-primary btn-lg me-2">
             <i class="fas fa-arrow-left me-1"></i> Back to Rules
