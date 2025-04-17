@@ -154,7 +154,7 @@
                     </div>
 
                     <!-- Edit and delete options if the current user is the owner of the comment -->
-                    {% if current_user.is_authenticated and comment.user_id == current_user.id %}
+                    {% if current_user.is_authenticated and (comment.user_id == current_user.id or current_user.is_admin()) %}
                         <div class="mt-2">
                             <!-- Edit Comment Form -->
                             <form method="post" action="{{ url_for('home.edit_comment', comment_id=comment.id) }}" class="d-inline">
