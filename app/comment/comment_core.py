@@ -39,3 +39,15 @@ def delete_comment(comment_id):
 
 def get_comments_for_rule(rule_id):
     return Comment.query.filter_by(rule_id=rule_id).order_by(Comment.created_at.desc()).all()
+
+def like_comment(comment_id):
+    """Increments the like count of a comment."""
+    comment = Comment.query.get_or_404(comment_id)
+    comment.likes += 1
+    db.session.commit()
+
+def dislike_comment(comment_id):
+    """Increments the dislike count of a comment."""
+    comment = Comment.query.get_or_404(comment_id)
+    comment.dislikes += 1
+    db.session.commit()

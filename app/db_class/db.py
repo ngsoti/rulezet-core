@@ -148,6 +148,8 @@ class Comment(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, index=True)
     updated_at = db.Column(db.DateTime, index=True)
+    likes = db.Column(db.Integer, default=0)
+    dislikes = db.Column(db.Integer, default=0)
 
     # Relations
     user = db.relationship('User', backref=db.backref('comments', lazy='dynamic'))
@@ -161,5 +163,7 @@ class Comment(db.Model):
             "content": self.content,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
             "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M') if self.updated_at else None,
-            "user_name": f"{self.user.first_name} {self.user.last_name}" if self.user else "Anonymous"
+            "user_name": f"{self.user.first_name} {self.user.last_name}" if self.user else "Anonymous",
+            "likes": self.likes,
+            "dislikes": self.dislikes
         }

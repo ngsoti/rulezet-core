@@ -4,7 +4,7 @@ from flask_login import current_user, login_required
 from flask import get_flashed_messages
 from sqlalchemy import true
 
-from app.comment.comment_core import add_comment_core, delete_comment, get_comment_by_id, get_comments_for_rule, update_comment
+from app.comment.comment_core import add_comment_core, delete_comment, dislike_comment, get_comment_by_id, get_comments_for_rule, like_comment, update_comment
 from app.db_class import db
 from app.db_class.db import Comment, Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
@@ -173,7 +173,18 @@ def delete_comment_route(comment_id):
     return redirect(url_for("home.detail_rule", rule_id=rule_id))
 
 
+@home_blueprint.route("/comment/<int:comment_id>/like", methods=["POST"])
+@login_required
+def like_comment_rule(comment_id):
+    comment = get_comment_by_id(comment_id)
+    like_comment(comment_id)  
+    return redirect(url_for('home.detail_rule', rule_id=comment.rule_id)) 
 
+@home_blueprint.route("/comment/<int:comment_id>/dislike", methods=["POST"])
+@login_required
+def dislike_comment_rule(comment_id):
+    dislike_comment(comment_id)  
+    return redirect(url_for('home.detail_rule', rule_id=comment_id)) 
 
 
 
