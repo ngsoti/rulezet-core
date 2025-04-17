@@ -35,8 +35,7 @@ def update_comment(comment_id, new_content):
     if comment:
         comment.content = new_content
         db.session.commit()
-        return True
-    return False
+    return comment
 
 def delete_comment(comment_id):
     comment = get_comment_by_id(comment_id)

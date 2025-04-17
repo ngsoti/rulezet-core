@@ -124,8 +124,8 @@
     <div class="card-header bg-light">
         <h5 class="mb-0">
             <i class="fas fa-comments"></i> Comments 
-            <span class="badge bg-secondary ms-2">{{ comments|length }}</span> <!-- Affiche le nombre total de commentaires -->
-            <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse" data-bs-target="#commentsCollapse" aria-expanded="false" aria-controls="commentsCollapse">
+            <span class="badge bg-secondary ms-2">{{ comments|length }}</span> 
+            <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse" data-bs-target="#commentsCollapse" aria-expanded="true" aria-controls="commentsCollapse">
                 <i class="fas fa-eye"></i> Show/Hide Comments
             </button>
         </h5>
@@ -153,9 +153,9 @@
 
         <hr>
 
-       <!-- Existing comments section, collapsible -->
+        <!-- Existing comments section, collapsible -->
         <template v-if="comments_list && comments_list.length > 0">
-            <div class="collapse" id="commentsCollapse" v-for="(comment, index) in comments_list" :key="comment.id">
+            <div class="collapse show" id="commentsCollapse" v-for="(comment, index) in comments_list" :key="comment.id">
                 <div class="mb-4">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -166,58 +166,52 @@
                         </div>
                     </div>
                     <div class="mt-2">
-                        <p class="mb-1">[[ comment.content ]]</p>
+                        <p class="mb-1" style="padding: 25px;">[[ comment.content ]]</p>
                     </div>
-
-
-
-
-
-                    <!-- Likes/Dislikes and Actions -->
-                    <div class="mt-2 d-flex justify-content-between">
-                        <div class="d-flex gap-3">
-                            <form method="post" :action="'/like_comment_rule/' + comment.id" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="btn btn-sm btn-success">
-                                    <i class="fas fa-thumbs-up"></i> Like ([[ comment.likes ]])
-                                </button>
-                            </form>
-                            <form method="post" :action="'/dislike_comment_rule/' + comment.id" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="btn btn-sm btn-danger">
-                                    <i class="fas fa-thumbs-down"></i> Dislike ([[ comment.dislikes ]])
-                                </button>
-                            </form>
-                        </div>
-
-                        <div class="d-flex gap-3">
-                            <template v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
-                                
-                                <button class="btn btn-warning btn-sm" type="button" data-bs-toggle="collapse" :data-bs-target="'#editForm' + [[comment.id]]" aria-expanded="false" :aria-controls="'editForm' + comment.id">
-                                    <i class="fas fa-pen"></i> Edit Comment
-                                </button>
-                                <form method="post" :action="'/delete_comment/' + comment.id" class="d-inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <button type="submit" class="btn btn-danger btn-sm">
-                                        <i class="fas fa-trash-alt"></i> Delete
+                    <div class="mt-2">
+                        <div class="d-flex justify-content-between">
+                            <div class="d-flex gap-3">
+                                <template v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
+                                    <!-- Edit Button -->
+                                    <button
+                                        class="btn btn-warning btn-sm"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        :data-bs-target="'#editForm' + comment.id"
+                                        aria-expanded="false"
+                                        :aria-controls="'editForm' + comment.id">
+                                        <i class="fas fa-pen"></i> 
                                     </button>
-                                </form>
-                            </template>
+                        
+                                    <!-- Delete Button -->
+                                    <button
+                                        @click="deleteComment(comment.id)"
+                                        class="btn btn-danger btn-sm">
+                                        <i class="fas fa-trash-alt"></i> 
+                                    </button>
+                                </template>
+                            </div>
                         </div>
                     </div>
+                    <!-- Collapse Zone Below (Edit Form) -->
+                    <template v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
+                        <div class="collapse mt-2 w-100" :id="'editForm' + comment.id">
+                            <form @submit.prevent="editComment(comment.id)">
+                                <input type="hidden" name="csrf_token" :value="csrf_token" />
+                                <div class="input-group">
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        v-model="comment.editContent"
+                                        required
+                                    />
 
-                    <template v-if="comment.user_id === current_user_id || is_admin">
-                    <div class="collapse" :id="'editForm' + comment.id">
-                        <form method="post" :action="'/edit_comment/' + comment.id" class="mb-2">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <div class="input-group mt-3">
-                                <input type="text" class="form-control" name="content" :value="comment.content" required>
-                                <button type="submit" class="btn btn-warning">
-                                    <i class="fas fa-edit"></i> Save
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="fas fa-edit"></i> Save
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </template>
                     <hr>
                 </div>
@@ -250,9 +244,49 @@
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
+            const csrf_token = '{{ csrf_token() }}'
             const comments_list = ref([])
             const total_comments = ref(0)
             const current_user_is_admin = ref()
+
+
+            async function editComment(commentId) {
+                const comment = comments_list.value.find(c => c.id === commentId);
+
+                const res = await fetch('/edit_comment?commentID=' + commentId + '&newContent=' + encodeURIComponent(comment.editContent));
+
+                if (res.ok) {
+                    const updatedComment = await res.json();
+                    const index = comments_list.value.findIndex(c => c.id === commentId);
+                    if (index !== -1) {
+                        comments_list.value[index].content = updatedComment.updatedComment.content;
+                        comments_list.value[index].editContent = updatedComment.updatedComment.content;
+
+                        const collapseEl = document.getElementById('editForm' + commentId);
+                        const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseEl);
+                        bsCollapse.hide();
+                    }
+                } else {
+                    alert('Error while saving comment.');
+                }
+            }
+
+
+
+
+        
+            async function deleteComment(commentId) {
+                const res = await fetch('/comment_delete/' + commentId );
+
+                if (res.ok) {
+                    const index = comments_list.value.findIndex(c => c.id === commentId);
+                    if (index !== -1) {
+                        comments_list.value.splice(index, 1);  
+                    }
+                } else {
+                    alert('Error while deleting comment.');
+                }
+            }
             
 
             async function fetchCurrentUser(){
@@ -263,10 +297,13 @@
             async function fetchComments(page) {
                 const res = await fetch('get_comments_page?page=' + page)
                 const data = await res.json()
-                comments_list.value = data.comments_list
-                total_comments.value = data.total_comments
-
+                comments_list.value = data.comments_list.map(comment => ({
+                    ...comment,
+                    editContent: comment.content
+                }));
+                total_comments.value = data.total_comments;
             }
+
             fetchComments(1)
             fetchCurrentUser()
 
@@ -276,7 +313,10 @@
                 message_list,
                 comments_list,
                 fetchComments,
-                fetchCurrentUser
+                fetchCurrentUser,
+                csrf_token,
+                editComment,
+                deleteComment
             };
         }
     }).mount('#main-container');

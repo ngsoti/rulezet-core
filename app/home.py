@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import string
 from flask import Flask, Blueprint, Response, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from flask import get_flashed_messages
@@ -169,50 +170,39 @@ def add_comment(rule_id):
 
 
 
-@home_blueprint.route("/comment/<int:comment_id>/edit", methods=["POST"])
+@home_blueprint.route("/edit_comment", methods=["POST", "GET"])
 @login_required
-def edit_comment(comment_id):
+def edit_comment():
+    comment_id = request.args.get('commentID', 1, type=int)
+    new_content = request.args.get('newContent', '', type=str)
+
     comment = get_comment_by_id(comment_id)
-    if not comment or comment.user_id != current_user.id:
-        flash("Unauthorized access.", "danger")
-        return redirect(url_for("home.home"))
-
-    new_content = request.form.get("content", "").strip()
-    if not new_content:
-        flash("Content cannot be empty.", "danger")
-    else:
-        update_comment(comment_id, new_content)
+    if  comment.user_id == current_user.id or current_user.is_admin():
+        update_content = update_comment(comment_id, new_content)
         flash("Comment updated successfully.", "success")
+        return jsonify({"updatedComment": update_content.to_json()})
+    else:
+        print("aie")
+        return {"message": "No Comments"}
 
-    return redirect(url_for("home.detail_rule", rule_id=comment.rule_id))
 
-@home_blueprint.route("/comment/<int:comment_id>/delete", methods=["POST"])
+
+
+@home_blueprint.route("/comment_delete/<int:comment_id>", methods=["POST", "GET"])
 @login_required
 def delete_comment_route(comment_id):
     comment = get_comment_by_id(comment_id)
-    if not comment or comment.user_id != current_user.id:
-        flash("Unauthorized action.", "danger")
-        return redirect(url_for("home.home"))
+    if  comment.user_id == current_user.id or current_user.is_admin():
+        rule_id = comment.rule_id
+        delete_comment(comment_id)
+        flash("Comment deleted.", "success")
+        return redirect(url_for("home.detail_rule", rule_id=rule_id))
+    flash("Unauthorized action.", "danger")
+    return redirect(url_for("home.home"))
 
-    rule_id = comment.rule_id
-    delete_comment(comment_id)
-    flash("Comment deleted.", "success")
-    return redirect(url_for("home.detail_rule", rule_id=rule_id))
+    
 
 
-@home_blueprint.route("/comment/<int:comment_id>/like", methods=["POST"])
-@login_required
-def like_comment_rule(comment_id):
-    comment = get_comment_by_id(comment_id)
-    like_comment(comment_id)  
-    return redirect(url_for('home.detail_rule', rule_id=comment.rule_id)) 
-
-@home_blueprint.route("/comment/<int:comment_id>/dislike", methods=["POST"])
-@login_required
-def dislike_comment_rule(comment_id):
-    comment = get_comment_by_id(comment_id)
-    dislike_comment(comment_id)  
-    return redirect(url_for('home.detail_rule', rule_id=comment.rule_id))  
 
 
 
