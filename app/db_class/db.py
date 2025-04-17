@@ -145,6 +145,7 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_name = db.Column(db.Text, nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, index=True)
     updated_at = db.Column(db.DateTime, index=True)
@@ -162,8 +163,8 @@ class Comment(db.Model):
             "user_id": self.user_id,
             "content": self.content,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
-            "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M') if self.updated_at else None,
-            "user_name": f"{self.user.first_name} {self.user.last_name}" if self.user else "Anonymous",
+            "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M') ,
             "likes": self.likes,
+            "user_name": self.user_name,
             "dislikes": self.dislikes
         }

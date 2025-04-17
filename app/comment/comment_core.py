@@ -1,5 +1,7 @@
 import datetime
 from flask_login import current_user
+
+from app.account.account_core import get_user
 from .. import db
 from ..db_class.db import Comment
 
@@ -10,6 +12,7 @@ def add_comment_core(rule_id, content):
     comment = Comment(
         rule_id=rule_id,
         user_id=current_user.id,
+        user_name= current_user.first_name,
         content=content.strip(),
         created_at=datetime.datetime.utcnow()
     )
@@ -20,6 +23,11 @@ def add_comment_core(rule_id, content):
 
 def get_comment_by_id(comment_id):
     return Comment.query.get(comment_id)
+
+def get_user_id(comment_id):
+    comment = Comment.query.get(comment_id)
+    return comment.user_id 
+
 
 def update_comment(comment_id, new_content):
     comment = get_comment_by_id(comment_id)
@@ -51,3 +59,8 @@ def dislike_comment(comment_id):
     comment = Comment.query.get_or_404(comment_id)
     comment.dislikes += 1
     db.session.commit()
+
+def get_username_comment(comment_id):
+    comment = get_comment_by_id(comment_id)
+    user = get_user(comment.id)
+    return f"{user.first_name} {user.last_name}"

@@ -71,7 +71,7 @@ def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
         if rule_title:
             rule_title = rule_title.group(1).strip()
             # Remove colon (":") from the rule title
-            rule_title = rule_title.replace(":", "")
+            # rule_title = rule_title.replace(":", "")
         else:
             rule_title = "Untitled"
 

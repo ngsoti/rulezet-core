@@ -130,6 +130,7 @@ def vote_rule():
 def detail_rule(rule_id):
     rule = RuleModel.get_rule(rule_id)
     comments = get_comments_for_rule(rule_id)
+
     return render_template("rule/detail_rule.html", rule=rule, comments=comments)
 
 
@@ -138,10 +139,10 @@ def detail_rule(rule_id):
 def add_comment(rule_id):
     content = request.form.get("content", "")
     success, message = add_comment_core(rule_id, content)
-
     flash(message, "success" if success else "danger")
-    return redirect(url_for("home.detail_rule", rule_id=rule_id)
-)
+    return redirect(url_for("home.detail_rule", rule_id=rule_id, ))
+
+
 @home_blueprint.route("/comment/<int:comment_id>/edit", methods=["POST"])
 @login_required
 def edit_comment(comment_id):
@@ -183,8 +184,9 @@ def like_comment_rule(comment_id):
 @home_blueprint.route("/comment/<int:comment_id>/dislike", methods=["POST"])
 @login_required
 def dislike_comment_rule(comment_id):
+    comment = get_comment_by_id(comment_id)
     dislike_comment(comment_id)  
-    return redirect(url_for('home.detail_rule', rule_id=comment_id)) 
+    return redirect(url_for('home.detail_rule', rule_id=comment.rule_id))  
 
 
 
