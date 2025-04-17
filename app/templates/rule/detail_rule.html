@@ -153,91 +153,82 @@
 
         <hr>
 
-        <!-- Existing comments section, collapsible -->
-        <div class="collapse" id="commentsCollapse">
-            {% if comments %}
-                {% for comment in comments %}
+       <!-- Existing comments section, collapsible -->
+        <template v-if="comments_list && comments_list.length > 0">
+            <div class="collapse" id="commentsCollapse" v-for="(comment, index) in comments_list" :key="comment.id">
                 <div class="mb-4">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <strong><i class="fas fa-user-circle"></i> {{ comment.user_name }}</strong>
+                            <strong><i class="fas fa-user-circle"></i> [[ comment.user_name ]]</strong>
                             <small class="text-muted ms-2">
-                                <i class="far fa-clock"></i> {{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                <i class="far fa-clock"></i> [[ comment.created_at ]]
                             </small>
                         </div>
                     </div>
                     <div class="mt-2">
-                        <p class="mb-1">{{ comment.content }}</p>
+                        <p class="mb-1">[[ comment.content ]]</p>
                     </div>
 
-                    <!-- Likes/Dislikes and Actions (Likes left, Edit/Delete right) -->
+
+
+
+
+                    <!-- Likes/Dislikes and Actions -->
                     <div class="mt-2 d-flex justify-content-between">
-                        <!-- Likes and Dislikes to the left -->
                         <div class="d-flex gap-3">
-                            <!-- Like Button -->
-                            <form method="post" action="{{ url_for('home.like_comment_rule', comment_id=comment.id) }}" class="d-inline">
+                            <form method="post" :action="'/like_comment_rule/' + comment.id" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 <button type="submit" class="btn btn-sm btn-success">
-                                    <i class="fas fa-thumbs-up"></i> Like ({{ comment.likes }})
+                                    <i class="fas fa-thumbs-up"></i> Like ([[ comment.likes ]])
                                 </button>
                             </form>
-                            <!-- Dislike Button -->
-                            <form method="post" action="{{ url_for('home.dislike_comment_rule', comment_id=comment.id) }}" class="d-inline">
+                            <form method="post" :action="'/dislike_comment_rule/' + comment.id" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 <button type="submit" class="btn btn-sm btn-danger">
-                                    <i class="fas fa-thumbs-down"></i> Dislike ({{ comment.dislikes }})
+                                    <i class="fas fa-thumbs-down"></i> Dislike ([[ comment.dislikes ]])
                                 </button>
                             </form>
                         </div>
 
-                        <!-- Edit and Delete to the right -->
                         <div class="d-flex gap-3">
-                            {% if current_user.is_authenticated and (comment.user_id == current_user.id or current_user.is_admin()) %}
-                            <!-- Edit Button -->
-                            <button class="btn btn-warning btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#editForm{{ comment.id }}" aria-expanded="false" aria-controls="editForm{{ comment.id }}">
-                                <i class="fas fa-pen"></i> Edit Comment
-                            </button>
-                            <!-- Delete Button -->
-                            <form method="post" action="{{ url_for('home.delete_comment_route', comment_id=comment.id) }}" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="btn btn-danger btn-sm">
-                                    <i class="fas fa-trash-alt"></i> Delete
+                            <template v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
+                                
+                                <button class="btn btn-warning btn-sm" type="button" data-bs-toggle="collapse" :data-bs-target="'#editForm' + [[comment.id]]" aria-expanded="false" :aria-controls="'editForm' + comment.id">
+                                    <i class="fas fa-pen"></i> Edit Comment
                                 </button>
-                            </form>
-                            {% endif %}
+                                <form method="post" :action="'/delete_comment/' + comment.id" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-trash-alt"></i> Delete
+                                    </button>
+                                </form>
+                            </template>
                         </div>
                     </div>
 
-                    <!-- Collapsible Edit Form -->
-                    {% if current_user.is_authenticated and (comment.user_id == current_user.id or current_user.is_admin()) %}
-                    <div class="collapse" id="editForm{{ comment.id }}">
-                        <form method="post" action="{{ url_for('home.edit_comment', comment_id=comment.id) }}" class="mb-2">
+                    <template v-if="comment.user_id === current_user_id || is_admin">
+                    <div class="collapse" :id="'editForm' + comment.id">
+                        <form method="post" :action="'/edit_comment/' + comment.id" class="mb-2">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <div class="input-group" style="margin-top: 15px;">
-                                <input type="text" class="form-control" name="content" value="{{ comment.content }}" required>
+                            <div class="input-group mt-3">
+                                <input type="text" class="form-control" name="content" :value="comment.content" required>
                                 <button type="submit" class="btn btn-warning">
-                                    <i class="fas fa-edit "></i> Save
+                                    <i class="fas fa-edit"></i> Save
                                 </button>
                             </div>
                         </form>
                     </div>
-                    {% endif %}
-
+                    </template>
                     <hr>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted"><i class="fas fa-info-circle"></i> No comments yet. Be the first to comment!</p>
-            {% endif %}
-        </div>
+            </div>
+        </template>
+
+        <template v-else>
+            <p class="text-muted"><i class="fas fa-info-circle"></i> No comments yet. Be the first to comment!</p>
+        </template>          
     </div>
 </div>
-
-
-
-
-
-
 
     <div class="text-center mt-4">
         <a href="/" class="btn btn-outline-primary btn-lg me-2">
@@ -259,14 +250,33 @@
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
-
+            const comments_list = ref([])
+            const total_comments = ref(0)
+            const current_user_is_admin = ref()
             
 
+            async function fetchCurrentUser(){
+                const res = await fetch('get_current_user')
+                const data = await res.json()
+                current_user_is_admin.value = data.user
+            }
+            async function fetchComments(page) {
+                const res = await fetch('get_comments_page?page=' + page)
+                const data = await res.json()
+                comments_list.value = data.comments_list
+                total_comments.value = data.total_comments
 
+            }
+            fetchComments(1)
+            fetchCurrentUser()
 
 
             return {
+                current_user_is_admin,
                 message_list,
+                comments_list,
+                fetchComments,
+                fetchCurrentUser
             };
         }
     }).mount('#main-container');

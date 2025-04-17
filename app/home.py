@@ -14,6 +14,7 @@ from app.rule.rule_form import EditRuleForm
 from app.utils.utils import form_to_dict
 from .rule import rule_core as RuleModel
 from .favorite import favorite_core as FavoriteModel
+from .comment import comment_core as CommentModel
 
 
 home_blueprint = Blueprint(
@@ -64,6 +65,12 @@ def delete_rule():
 @home_blueprint.route("/get_current_user", methods=['GET', 'POST'])
 def get_current_user():
     return jsonify({'user': current_user.is_admin()})
+
+
+@home_blueprint.route("/detail_rule/get_current_user", methods=['GET', 'POST'])
+def get_current_user_from_detail():
+    return jsonify({'user': current_user.is_admin()})
+
 
 
 @home_blueprint.route("/edit_rule/<int:rule_id>", methods=['GET', 'POST'])
@@ -126,12 +133,30 @@ def vote_rule():
 
 
 
+
 @home_blueprint.route("/detail_rule/<int:rule_id>", methods=['GET'])
 def detail_rule(rule_id):
     rule = RuleModel.get_rule(rule_id)
-    comments = get_comments_for_rule(rule_id)
+    
+    # comments = get_comments_for_rule(rule_id)
+    # return render_template("rule/detail_rule.html", rule=rule, comments=comments)
+    return render_template("rule/detail_rule.html", rule=rule)
 
-    return render_template("rule/detail_rule.html", rule=rule, comments=comments)
+
+@home_blueprint.route("/detail_rule/get_comments_page", methods=['GET'])
+def comment_rule():
+    page = request.args.get('page', 1, type=int)
+    comments = CommentModel.get_comment_page(page)
+    total_comments = CommentModel.get_total_comments_count()
+    if comments:
+        comments_list = list()
+        for comment in comments:
+            u = comment.to_json()
+            comments_list.append(u)
+        return {"comments_list": comments_list, "total_comments": total_comments}
+    return {"message": "No Comments"}, 404
+
+
 
 
 @home_blueprint.route("/rule/<int:rule_id>/comment", methods=["POST"])
@@ -141,6 +166,7 @@ def add_comment(rule_id):
     success, message = add_comment_core(rule_id, content)
     flash(message, "success" if success else "danger")
     return redirect(url_for("home.detail_rule", rule_id=rule_id, ))
+
 
 
 @home_blueprint.route("/comment/<int:comment_id>/edit", methods=["POST"])

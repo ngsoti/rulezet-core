@@ -2,7 +2,7 @@ from sqlalchemy import true
 from app.favorite import favorite_core
 from app.favorite.favorite_core import get_all_user_favorites_with_rules, get_user_favorites, remove_favorite
 from ..db_class.db import RuleFavoriteUser, User
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, jsonify, render_template, redirect, url_for, request, flash
 from .form import LoginForm, EditUserForm, AddNewUserForm
 from flask_login import (
     current_user,

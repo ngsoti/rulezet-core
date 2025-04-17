@@ -14,7 +14,8 @@ def add_comment_core(rule_id, content):
         user_id=current_user.id,
         user_name= current_user.first_name,
         content=content.strip(),
-        created_at=datetime.datetime.utcnow()
+        created_at=datetime.datetime.utcnow(),
+        updated_at=datetime.datetime.utcnow()
     )
     db.session.add(comment)
     db.session.commit()
@@ -64,3 +65,10 @@ def get_username_comment(comment_id):
     comment = get_comment_by_id(comment_id)
     user = get_user(comment.id)
     return f"{user.first_name} {user.last_name}"
+
+def get_comment_page(page):
+    """Return all comment by page"""
+    return Comment.query.paginate(page=page, per_page=10, max_per_page=20)
+
+def get_total_comments_count():
+    return Comment.query.count()

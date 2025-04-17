@@ -163,7 +163,7 @@ class Comment(db.Model):
             "user_id": self.user_id,
             "content": self.content,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
-            "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M') ,
+            "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M'),
             "likes": self.likes,
             "user_name": self.user_name,
             "dislikes": self.dislikes
