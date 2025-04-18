@@ -12,7 +12,8 @@ from app.db_class.db import Comment, Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 
 from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule
-from app.import_github_project.yara_python import extraire_regles_yara
+
+from app.import_github_project.yara_python import extract_yara_rules
 from app.rule.rule_form import EditRuleForm
 from app.utils.utils import form_to_dict
 from .rule import rule_core as RuleModel
@@ -315,5 +316,5 @@ def import_yara_from_repo():
 def test_yara_python():
     # Appel de la méthode avec le fichier YARA
     fichier_yara = 'app/test.yar'
-    extraire_regles_yara(fichier_yara)
+    extract_yara_rules(fichier_yara)
     return redirect(url_for("home.home"))
