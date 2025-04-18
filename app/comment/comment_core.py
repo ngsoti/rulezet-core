@@ -65,9 +65,18 @@ def get_username_comment(comment_id):
     user = get_user(comment.id)
     return f"{user.first_name} {user.last_name}"
 
-def get_comment_page(page):
-    """Return all comment by page"""
-    return Comment.query.paginate(page=page, per_page=10, max_per_page=20)
+def get_comment_page(page, rule_id):
+    """Return all comments by page for a specific rule"""
+    return Comment.query.filter_by(rule_id=rule_id).paginate(page=page, per_page=10, max_per_page=20)
+
 
 def get_total_comments_count():
     return Comment.query.count()
+
+def get_latest_comment_for_user_and_rule(user_id: int, rule_id: int):
+    return (
+        Comment.query
+        .filter_by(user_id=user_id, rule_id=rule_id)
+        .order_by(Comment.id.desc())
+        .first()
+    )

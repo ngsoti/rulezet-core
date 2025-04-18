@@ -5,7 +5,7 @@ from flask_login import current_user, login_required
 from flask import get_flashed_messages
 from sqlalchemy import true
 
-from app.comment.comment_core import add_comment_core, delete_comment, dislike_comment, get_comment_by_id, get_comments_for_rule, like_comment, update_comment
+from app.comment.comment_core import add_comment_core, delete_comment, dislike_comment, get_comment_by_id, get_comments_for_rule, get_latest_comment_for_user_and_rule, like_comment, update_comment
 from app.db_class import db
 from app.db_class.db import Comment, Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
@@ -147,7 +147,8 @@ def detail_rule(rule_id):
 @home_blueprint.route("/detail_rule/get_comments_page", methods=['GET'])
 def comment_rule():
     page = request.args.get('page', 1, type=int)
-    comments = CommentModel.get_comment_page(page)
+    rule_id = request.args.get('rule_id', type=int)
+    comments = CommentModel.get_comment_page(page , rule_id)
     total_comments = CommentModel.get_total_comments_count()
     if comments:
         comments_list = list()
@@ -160,13 +161,28 @@ def comment_rule():
 
 
 
-@home_blueprint.route("/rule/<int:rule_id>/comment", methods=["POST"])
+@home_blueprint.route("/comment_add", methods=["POST", "GET"])
 @login_required
-def add_comment(rule_id):
-    content = request.form.get("content", "")
-    success, message = add_comment_core(rule_id, content)
+def add_comment():
+    new_content = request.args.get('new_content', '', type=str)
+    rule_id = request.args.get('rule_id', 1, type=int)
+
+    # content = request.form.get("content", "")
+    success, message = add_comment_core(rule_id, new_content)
     flash(message, "success" if success else "danger")
-    return redirect(url_for("home.detail_rule", rule_id=rule_id, ))
+    # new_comment = Comment.query.order_by(Comment.id.desc()).first()
+    new_comment = get_latest_comment_for_user_and_rule(current_user.id, rule_id)
+    return {
+        "comment": {
+            "id": new_comment.id,
+            "content": new_comment.content,
+            "user_name": new_comment.user_name,  
+            "user_id": new_comment.user.id,
+            "created_at": new_comment.created_at.strftime("%Y-%m-%d %H:%M")
+        }
+    }
+    # return {"comment": new_content, "rule_id": rule_id}
+    # return redirect(url_for("home.detail_rule", rule_id=rule_id, ))
 
 
 
