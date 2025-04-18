@@ -1,3 +1,4 @@
+import asyncio
 import os
 import shutil
 import git
@@ -6,10 +7,6 @@ import re
 from git import Repo
 import tempfile
 
-# === Git & Parsing Functions ===
-
-
-
 def get_repo_name_from_url(repo_url):
     """Extract the repository name from its Git URL."""
     name = repo_url.rstrip('/').split('/')[-1]
@@ -17,7 +14,8 @@ def get_repo_name_from_url(repo_url):
         name = name[:-4]
     return name
 
-def clone_or_access_repo(repo_url):
+
+async def clone_or_access_repo(repo_url):
     base_dir = "Rules_Github"
     os.makedirs(base_dir, exist_ok=True)
 
@@ -25,14 +23,13 @@ def clone_or_access_repo(repo_url):
     repo_dir = os.path.join(base_dir, repo_name)
 
     if not os.path.exists(repo_dir):
-        Repo.clone_from(repo_url, repo_dir)
-    else:
-        pass
+        await asyncio.to_thread(Repo.clone_from, repo_url, repo_dir)
 
     return repo_dir, repo_dir
 
 
 
+# Keep it 
 def get_yara_files_from_repo(repo_dir):
     """Retrieve all .yar , rule and .yara files from a local repository."""
     yara_files = []
@@ -42,6 +39,7 @@ def get_yara_files_from_repo(repo_dir):
                 yara_files.append(os.path.join(root, file))
     return yara_files
 
+# Keep it 
 def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt"):
     """load all the licenses in  licenses.txt."""
     with open(license_file_path, "r", encoding="utf-8") as f:
@@ -50,15 +48,13 @@ def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt
 
 
 
-
-def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
+async def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
     """
-    Retrieve all YARA rules from a Git repository and save each rule exactly as it is
-    without any modification.
-    Each rule is saved in a file named after the rule's title.
+    Retrieve all YARA rules from a Git repository and save each rule as-is,
+    even when there are multiple rules per file.
+    Each rule is saved in a separate file named after the rule's title.
     """
-    
-    repo, repo_dir = clone_or_access_repo(repo_url)
+    repo, repo_dir = await clone_or_access_repo(repo_url)
     yara_files = get_yara_files_from_repo(repo_dir)
 
     os.makedirs(output_dir, exist_ok=True)
@@ -67,19 +63,20 @@ def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
         with open(yara_file, 'r', encoding="utf-8", errors="ignore") as file:
             raw_content = file.read()
 
-        rule_title = re.match(r'rule\s+([^\s{]+)', raw_content)
-        if rule_title:
-            rule_title = rule_title.group(1).strip()
-            # Remove colon (":") from the rule title
-            # rule_title = rule_title.replace(":", "")
-        else:
-            rule_title = "Untitled"
+        rules = re.findall(r'(rule\s+[^\s{]+\s*{(?:[^{}]*|{[^{}]*})*})', raw_content, re.DOTALL)
 
-        file_name = f"{rule_title}.yar"
-        file_path = os.path.join(output_dir, file_name)
+        for i, rule in enumerate(rules):
+            title_match = re.match(r'rule\s+([^\s{]+)', rule)
+            rule_title = title_match.group(1).strip() if title_match else f"Untitled_{i}"
 
-        with open(file_path, 'w', encoding="utf-8") as output_file:
-            output_file.write(raw_content)
+
+            safe_title = re.sub(r'[^\w\-_.]', '_', rule_title)
+
+            file_name = f"{safe_title}.yar"
+            file_path = os.path.join(output_dir, file_name)
+
+            with open(file_path, 'w', encoding="utf-8") as output_file:
+                output_file.write(rule)
 
 
 
@@ -197,6 +194,8 @@ def parse_yara_rule(file_path, repo_dir=None, repo_url=None, known_licenses=None
 
         # Construct GitHub URL for the file
         source_url = f"https://github.com/{'/'.join(repo_url.split('/')[-2:])}/blob/{branch}/{relative_path}"
+    
+    save_yara_rules_as_is(repo_url)
 
     return {
         "format": "YARA",
@@ -208,3 +207,4 @@ def parse_yara_rule(file_path, repo_dir=None, repo_url=None, known_licenses=None
         "author": author or "Unknown",
         "to_string": raw_content  
     }
+

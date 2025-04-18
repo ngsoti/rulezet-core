@@ -1,4 +1,5 @@
 from flask import Blueprint, redirect, request,render_template, flash, url_for
+from flask_login import login_required
 
 from .rule_form import AddNewRuleForm
 from ..utils.utils import form_to_dict
@@ -13,6 +14,7 @@ rule_blueprint = Blueprint(
 
 
 @rule_blueprint.route("/", methods=['GET', 'POST'])
+@login_required
 def rule():
     form = AddNewRuleForm()
 

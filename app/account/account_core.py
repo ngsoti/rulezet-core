@@ -70,3 +70,6 @@ def get_user_by_lastname(lastname):
 def get_user_by_matrix_id(matrix_id):
     return User.query.filter_by(matrix_id=matrix_id).first()
 
+def get_username_by_id(user_id):
+    user = get_user(user_id)
+    return user.username if user else "Unknown"

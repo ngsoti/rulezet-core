@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 import string
 from flask import Flask, Blueprint, Response, flash, jsonify, redirect, render_template, request, url_for
@@ -52,6 +53,7 @@ def get_rules_page():
 
 
 @home_blueprint.route("/delete_rule", methods=['GET', 'POST'])
+@login_required
 def delete_rule():
     rule_id = request.args.get('id', 1, int)
     user_id = RuleModel.get_rule_user_id(rule_id)
@@ -64,17 +66,20 @@ def delete_rule():
 
 
 @home_blueprint.route("/get_current_user", methods=['GET', 'POST'])
+@login_required
 def get_current_user():
     return jsonify({'user': current_user.is_admin()})
 
 
 @home_blueprint.route("/detail_rule/get_current_user", methods=['GET', 'POST'])
+@login_required
 def get_current_user_from_detail():
     return jsonify({'user': current_user.is_admin()})
 
 
 
 @home_blueprint.route("/edit_rule/<int:rule_id>", methods=['GET', 'POST'])
+@login_required
 def edit_rule(rule_id):
     rule = RuleModel.get_rule(rule_id)
     user_id = RuleModel.get_rule_user_id(rule_id)
@@ -136,15 +141,14 @@ def vote_rule():
 
 
 @home_blueprint.route("/detail_rule/<int:rule_id>", methods=['GET'])
+@login_required
 def detail_rule(rule_id):
     rule = RuleModel.get_rule(rule_id)
-    
-    # comments = get_comments_for_rule(rule_id)
-    # return render_template("rule/detail_rule.html", rule=rule, comments=comments)
     return render_template("rule/detail_rule.html", rule=rule)
 
 
 @home_blueprint.route("/detail_rule/get_comments_page", methods=['GET'])
+@login_required
 def comment_rule():
     page = request.args.get('page', 1, type=int)
     rule_id = request.args.get('rule_id', type=int)
@@ -167,10 +171,8 @@ def add_comment():
     new_content = request.args.get('new_content', '', type=str)
     rule_id = request.args.get('rule_id', 1, type=int)
 
-    # content = request.form.get("content", "")
     success, message = add_comment_core(rule_id, new_content)
     flash(message, "success" if success else "danger")
-    # new_comment = Comment.query.order_by(Comment.id.desc()).first()
     new_comment = get_latest_comment_for_user_and_rule(current_user.id, rule_id)
     return {
         "comment": {
@@ -181,9 +183,6 @@ def add_comment():
             "created_at": new_comment.created_at.strftime("%Y-%m-%d %H:%M")
         }
     }
-    # return {"comment": new_content, "rule_id": rule_id}
-    # return redirect(url_for("home.detail_rule", rule_id=rule_id, ))
-
 
 
 @home_blueprint.route("/edit_comment", methods=["POST", "GET"])
@@ -249,6 +248,7 @@ from flask_login import login_required, current_user
 
 
 @home_blueprint.route("/download/<int:rule_id>", methods=['GET', 'POST'])
+@login_required
 def download_rule(rule_id):
 
     rule = RuleModel.get_rule(rule_id)
@@ -275,44 +275,34 @@ def download_rule(rule_id):
 @home_blueprint.route("/import_yara_from_repo", methods=['GET', 'POST'])
 @login_required
 def import_yara_from_repo():
-    if not current_user.is_admin:
-        flash("Access denied. Admins only.", "danger")
-        return redirect(url_for("rule.rule"))
-    
+    # if not current_user.is_admin:
+    #     flash("Access denied. Admins only.", "danger")
+    #     return redirect(url_for("rule.rule"))
+
     if request.method == 'POST':
         repo_url = request.form.get('url')
-        # local_dir = "Rules_Github/Yara_Project"
-        
-        try:
-            # Clone or access the GitHub repository
-            repo, repo_dir = clone_or_access_repo(repo_url)
 
-            # Retrieve all .yar, .yara, and .rule files
+        try:
+
+            repo, repo_dir = asyncio.run(clone_or_access_repo(repo_url))
             yara_files = get_yara_files_from_repo(repo_dir)
 
             imported = 0
             skipped = 0
 
-            # Import YARA rules
             for file_path in yara_files:
-                # Parse the YARA rule and retrieve data (including GitHub URL)
                 rule_dict = parse_yara_rule(file_path, repo_dir=repo_dir, repo_url=repo_url)
-
-                # Add version and other data if necessary
                 rule_dict["version"] = "1.0"
 
-                # Attempt to add the rule to the database
                 success = RuleModel.add_rule_core(rule_dict)
                 if success:
                     imported += 1
                 else:
                     skipped += 1
 
-            # Return a message indicating how many rules were imported or skipped
             flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
 
         except Exception as e:
-            # In case of an error, show the error message
             flash(f"Failed to import: {str(e)}", "danger")
 
     return redirect(url_for("home.home"))
