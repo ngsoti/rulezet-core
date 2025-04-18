@@ -12,11 +12,13 @@ from app.db_class.db import Comment, Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 
 from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule
+from app.import_github_project.yara_python import extraire_regles_yara
 from app.rule.rule_form import EditRuleForm
 from app.utils.utils import form_to_dict
 from .rule import rule_core as RuleModel
 from .favorite import favorite_core as FavoriteModel
 from .comment import comment_core as CommentModel
+
 
 
 home_blueprint = Blueprint(
@@ -305,4 +307,13 @@ def import_yara_from_repo():
         except Exception as e:
             flash(f"Failed to import: {str(e)}", "danger")
 
+    return redirect(url_for("home.home"))
+
+
+@home_blueprint.route("/test_yara_python", methods=['GET', 'POST'])
+@login_required
+def test_yara_python():
+    # Appel de la méthode avec le fichier YARA
+    fichier_yara = 'app/test.yar'
+    extraire_regles_yara(fichier_yara)
     return redirect(url_for("home.home"))

@@ -7,6 +7,7 @@ import re
 from git import Repo
 import tempfile
 
+
 def get_repo_name_from_url(repo_url):
     """Extract the repository name from its Git URL."""
     name = repo_url.rstrip('/').split('/')[-1]
