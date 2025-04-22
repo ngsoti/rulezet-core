@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import shutil
 import git
@@ -62,6 +63,7 @@ def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt
     """load all the licenses in  licenses.txt."""
     with open(license_file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
+    
 def count_braces_outside_strings(line):
     # Variable to track if we're inside single or double quotes
     in_single_quote = False
@@ -290,7 +292,7 @@ def parse_yara_rule(file_path, repo_dir=None, repo_url=None, known_licenses=None
         # Construct GitHub URL for the file
         source_url = f"https://github.com/{'/'.join(repo_url.split('/')[-2:])}/blob/{branch}/{relative_path}"
     
-    save_yara_rules_as_is(repo_url)
+    #save_yara_rules_as_is(repo_url)
 
     return {
         "format": "YARA",
@@ -303,3 +305,85 @@ def parse_yara_rule(file_path, repo_dir=None, repo_url=None, known_licenses=None
         "to_string": raw_content  
     }
 
+
+
+
+
+
+
+
+def read_and_parse_all_rules_from_folder(folder_path="app/rule/output_rules", repo_dir=None, repo_url=None, known_licenses=None, branch="main"):
+    """
+    Read all .yar files in the folder line by line, extract metadata and return a list of rules
+    in JSON format (title, license, description, author, etc.).
+    """
+
+    rules_json = []
+
+    if not os.path.isdir(folder_path):
+        raise FileNotFoundError(f"Folder '{folder_path}' does not exist.")
+
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+
+        if os.path.isfile(file_path) and filename.lower().endswith(".yar"):
+            with open(file_path, 'r', encoding="utf-8", errors="ignore") as file:
+                raw_content = file.read()
+
+            cleaned_content = re.sub(r'/\*.*?\*/', '', raw_content, flags=re.DOTALL)
+            lines = cleaned_content.splitlines()
+
+            # Default metadata
+            title = "Untitled"
+            description = "Imported YARA rule"
+            license = "Unknown"
+            author = "Unknown"
+
+            # Parse line by line
+            for line in lines:
+                line = line.strip()
+
+                if line.lower().startswith("rule "):
+                    title_match = re.match(r'^\s*rule\s+([^\s{]+)', line, re.IGNORECASE)
+                    if title_match:
+                        title = title_match.group(1).strip()
+
+                elif line.lower().startswith("rule:"):
+                    title_match = re.match(r'^\s*rule\s*:?\s*([^\s{]+)', line, re.IGNORECASE)
+                    if title_match:
+                        title = title_match.group(1).strip()
+
+                elif line.lower().startswith("description"):
+                    description = line.split("=", 1)[-1].strip().strip(' "')
+
+                elif line.lower().startswith("license"):
+                    license = line.split("=", 1)[-1].strip().strip(' "')
+
+                elif line.lower().startswith("author"):
+                    author = line.split("=", 1)[-1].strip().strip(' "')
+
+            # Build GitHub URL if repo details are provided
+            source_url = file_path
+            if repo_dir and repo_url and "github.com" in repo_url:
+                relative_path = os.path.relpath(file_path, repo_dir).replace("\\", "/")
+                if repo_url.endswith(".git"):
+                    repo_url = repo_url[:-4]
+
+                source_url = f"https://github.com/{'/'.join(repo_url.split('/')[-2:])}/blob/{branch}/{relative_path}"
+
+            rule_dict = {
+                "format": "YARA",
+                "title": title,
+                "license": license or "Unknown",
+                "description": description,
+                "source": source_url,
+                "version": "1.0",
+                "author": author or "Unknown",
+                "to_string": raw_content
+            }
+
+            rules_json.append(rule_dict)
+
+    return rules_json
+
+    

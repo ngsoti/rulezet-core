@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
+import json
 import string
 import tempfile
 from flask import Flask, Blueprint, Response, flash, jsonify, redirect, render_template, request, url_for
@@ -13,9 +14,9 @@ from app.db_class import db
 from app.db_class.db import Comment, Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 
-from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule
+from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule, read_and_parse_all_rules_from_folder, save_yara_rules_as_is
 
-from app.import_github_project.yara_python import clone_or_access_repo_v1, extract_yara_rules
+from app.import_github_project.yara_python import  extract_yara_rules
 from app.rule.rule_form import EditRuleForm
 from app.utils.utils import form_to_dict
 from .rule import rule_core as RuleModel
@@ -367,55 +368,69 @@ def test_yara_python_url():
         repo_url = request.form.get('url')
 
         try:
-            # tmp_dir = tempfile.mkdtemp()
-            tmp_dir = "app/github_depot"
-            git.Repo.clone_from(repo_url, tmp_dir)
-            # tmp_dir = clone_or_access_repo_v1(repo_url)
-            
+            # Step 1: Save all the YARA files from the given URL
+            save_yara_rules_as_is(repo_url)
 
-            yara_files = get_yara_files_from_repo(tmp_dir)
+            # Step 2: Read and parse all files in the output_rules folder
+            all_rules = read_and_parse_all_rules_from_folder(repo_url=repo_url)
 
-            for file_path in yara_files:
-                extract_yara_rules(file_path)
+            # Step 3: Try to add each rule to the database
+            imported = 0
+            skipped = 0
 
+            for rule_dict in all_rules:
+                success = RuleModel.add_rule_core(rule_dict)
+                if success:
+                    imported += 1
+                else:
+                    skipped += 1
+
+            flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
         except Exception as e:
-            flash(f"Failed to import: {str(e)}", "danger")
+            flash(f"Failed to import rules: {str(e)}", "danger")
 
     return redirect(url_for("home.home"))
 
 
 
+
 # @home_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
 # @login_required
-# def test_yara_python_url():
+# def test_yara_python_with_folder():
+#     """
+#     Handles the importation of YARA rules from a URL input via a form, parses them, 
+#     and adds them to the database.
+#     """
 #     if request.method == 'POST':
 #         repo_url = request.form.get('url')
 
 #         try:
-#             tmp_dir = tempfile.mkdtemp()
-#             git.Repo.clone_from(repo_url, tmp_dir)
-
-#             yara_files = get_yara_files_from_repo(tmp_dir)
-
+#             # Initialize counters for imported and skipped rules
 #             imported = 0
 #             skipped = 0
 #             all_rules = []
 
-#             for file_path in yara_files:
-#                 print(file_path)
-#                 rules_info = extract_yara_rules(file_path)
-#                 all_rules.append(rules_info)
+#             # Path where YARA rules are saved
+#             output_dir = "app/rule/output_rules"
 
-#             for rules_dict in all_rules:
-#                 print(rules_dict)
+#             # Parse all YARA rules in the directory
+#             all_rules_json = parse_all_yara_rules_in_directory(output_dir, repo_url=repo_url)
+
+#             # Load the parsed JSON data
+#             all_rules_data = json.loads(all_rules_json)
+
+#             # Process each rule's metadata and try to add it to the database
+#             for rules_dict in all_rules_data:
+#                 print(f"Processing rule: {rules_dict['title']}")
 #                 success = RuleModel.add_rule_core(rules_dict)
-#                 print("je suis mort")
 #                 if success:
 #                     imported += 1
 #                 else:
 #                     skipped += 1
 
+#             # Provide feedback on the import process
 #             flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
+
 #         except Exception as e:
 #             flash(f"Failed to import: {str(e)}", "danger")
 
