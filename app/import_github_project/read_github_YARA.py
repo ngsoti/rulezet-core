@@ -62,8 +62,37 @@ def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt
     """load all the licenses in  licenses.txt."""
     with open(license_file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
+def count_braces_outside_strings(line):
+    # Variable to track if we're inside single or double quotes
+    in_single_quote = False
+    in_double_quote = False
+    escaped = False  # To handle escape sequences
+    count = 0  # Brace counter
 
+    for char in line:
+        if escaped:
+            escaped = False
+            continue
 
+        # If a backslash is found, treat the next character as escaped
+        if char == "\\":
+            escaped = True
+            continue
+
+        # Toggle single quote state when not inside double quotes
+        if char == "'" and not in_double_quote:
+            in_single_quote = not in_single_quote
+        # Toggle double quote state when not inside single quotes
+        elif char == '"' and not in_single_quote:
+            in_double_quote = not in_double_quote
+        # Count braces only if not inside quotes
+        elif not in_single_quote and not in_double_quote:
+            if char == "{":
+                count += 1
+            elif char == "}":
+                count -= 1
+
+    return count
 
 
 def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
@@ -73,34 +102,66 @@ def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
     Each rule is saved in a file named after the rule's title.
     """
     
+    # Clone or access the given repository
     repo_dir = clone_or_access_repo(repo_url)
+    
+    # Get the list of YARA files from the repository
     yara_files = get_yara_files_from_repo(repo_dir)
 
+    # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
+    # Process each YARA file
     for yara_file in yara_files:
         with open(yara_file, 'r', encoding="utf-8", errors="ignore") as file:
-            raw_content = file.read()
+            lines = file.readlines()
 
-        rule_title_final = ""
-        rule_title = re.match(r'rule\s+([^\s{]+)', raw_content)
-        rule_title_with_error_match = re.search(r'\brule\s*:?\s*([^\s{]+)', raw_content)
+        inside_rule = False
+        brace_count = 0
+        current_rule_lines = []
+        rule_index = 0
 
+        # Read each line of the YARA file
+        for line in lines:
+            stripped = line.strip()
 
-        if rule_title:
-            rule_title_final = rule_title.group(1).strip()
+            # Check if the line starts a new rule
+            if not inside_rule and re.match(r'^\s*rule\b', stripped):
+                inside_rule = True
+                brace_count = 0
+                current_rule_lines = [line]
 
-        elif rule_title_with_error_match:
-            rule_title_final = rule_title_with_error_match.group(1).strip()
-        else:
-            rule_title_final = "Untitled"
+                # Count braces on the first line outside of quotes
+                brace_count += count_braces_outside_strings(line)
 
-        file_name = f"{rule_title_final}.yar"
-        file_path = os.path.join(output_dir, file_name)
+            # Process lines inside the rule
+            elif inside_rule:
+                current_rule_lines.append(line)
+                brace_count += count_braces_outside_strings(line)
 
-        with open(file_path, 'w', encoding="utf-8") as output_file:
-            output_file.write(raw_content)
+                # If brace count reaches zero, the rule is complete
+                if brace_count == 0:
+                    # Join all lines of the rule
+                    raw_rule = ''.join(current_rule_lines)
 
+                    # Extract the rule title, supporting both "rule" and "rule:"
+                    title_match = re.search(r'\brule\s*:?\s*([^\s{(]+)', raw_rule)
+                    if title_match:
+                        rule_title_final = title_match.group(1).strip()
+                    else:
+                        rule_title_final = f"Untitled_{rule_index}"
+
+                    # Generate a safe file name using the rule title
+                    file_name = f"{rule_title_final}.yar"
+                    file_path = os.path.join(output_dir, file_name)
+
+                    # Write the rule to a new file
+                    with open(file_path, 'w', encoding="utf-8") as output_file:
+                        output_file.write(raw_rule.strip())
+
+                    rule_index += 1
+                    inside_rule = False
+                    current_rule_lines = []
 
 
 
@@ -198,25 +259,24 @@ def parse_yara_rule(file_path, repo_dir=None, repo_url=None, known_licenses=None
     for line in lines:
         line = line.strip()
 
-        # Traitement du titre de la règle avec "rule" ou "rule:"
         if line.lower().startswith("rule "):
-            title_match = re.match(r'^\s*rule\s+([^\s{]+)', line, re.IGNORECASE)  # Gestion de "rule nom {"
+            title_match = re.match(r'^\s*rule\s+([^\s{]+)', line, re.IGNORECASE) 
             if title_match:
                 title = title_match.group(1).strip()
-        elif line.lower().startswith("rule:"):  # Nouveau cas pour "rule: nom {"
+        elif line.lower().startswith("rule:"):  
             title_match = re.match(r'^\s*rule\s*:?\s*([^\s{]+)', line, re.IGNORECASE)
             if title_match:
                 title = title_match.group(1).strip()
 
-        # Traitement de la description
+
         elif line.lower().startswith("description"):
             description = line.split("=", 1)[-1].strip().strip(' "')
 
-        # Traitement de la licence
+
         elif line.lower().startswith("license"):
             license = line.split("=", 1)[-1].strip().strip(' "')
 
-        # Traitement de l'auteur
+
         elif line.lower().startswith("author"):
             author = line.split("=", 1)[-1].strip().strip(' "')
 
