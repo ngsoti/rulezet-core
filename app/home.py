@@ -1,9 +1,11 @@
 import asyncio
 from datetime import datetime, timezone
 import string
+import tempfile
 from flask import Flask, Blueprint, Response, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from flask import get_flashed_messages
+import git
 from sqlalchemy import true
 
 from app.comment.comment_core import add_comment_core, delete_comment, dislike_comment, get_comment_by_id, get_comments_for_rule, get_latest_comment_for_user_and_rule, like_comment, update_comment
@@ -13,7 +15,7 @@ from app.favorite.favorite_core import add_favorite
 
 from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule
 
-from app.import_github_project.yara_python import extract_yara_rules
+from app.import_github_project.yara_python import clone_or_access_repo_v1, extract_yara_rules
 from app.rule.rule_form import EditRuleForm
 from app.utils.utils import form_to_dict
 from .rule import rule_core as RuleModel
@@ -274,36 +276,107 @@ def download_rule(rule_id):
 
 
 
-
 @home_blueprint.route("/import_yara_from_repo", methods=['GET', 'POST'])
 @login_required
 def import_yara_from_repo():
-    # if not current_user.is_admin:
-    #     flash("Access denied. Admins only.", "danger")
-    #     return redirect(url_for("rule.rule"))
-
+    if not current_user.is_admin:
+        flash("Access denied. Admins only.", "danger")
+        return redirect(url_for("rule.rule"))
+    
     if request.method == 'POST':
         repo_url = request.form.get('url')
-
+        # local_dir = "Rules_Github/Yara_Project"
+        
         try:
+            # Clone or access the GitHub repository
+            repo_dir = clone_or_access_repo(repo_url)
 
-            repo, repo_dir = asyncio.run(clone_or_access_repo(repo_url))
+            # Retrieve all .yar, .yara, and .rule files
             yara_files = get_yara_files_from_repo(repo_dir)
 
             imported = 0
             skipped = 0
 
+            # Import YARA rules
             for file_path in yara_files:
+                # Parse the YARA rule and retrieve data (including GitHub URL)
                 rule_dict = parse_yara_rule(file_path, repo_dir=repo_dir, repo_url=repo_url)
+
+                # Add version and other data if necessary
                 rule_dict["version"] = "1.0"
 
+                # Attempt to add the rule to the database
                 success = RuleModel.add_rule_core(rule_dict)
                 if success:
                     imported += 1
                 else:
                     skipped += 1
 
+            # Return a message indicating how many rules were imported or skipped
             flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
+
+        except Exception as e:
+            # In case of an error, show the error message
+            flash(f"Failed to import: {str(e)}", "danger")
+
+    return redirect(url_for("home.home"))
+
+
+# @home_blueprint.route("/test_yara_python", methods=['GET', 'POST'])
+# @login_required
+# def test_yara_python():
+#     # Appel de la méthode avec le fichier YARA
+#     fichier_yara = 'app/test.yar'
+#     extract_yara_rules(fichier_yara)
+#     return redirect(url_for("home.home"))
+
+@home_blueprint.route("/test_yara_python", methods=['GET', 'POST'])
+@login_required
+def test_yara_python():
+    
+    # Path to the YARA file
+    yara_file = 'app/test.yar'
+    
+    
+
+    rules_info = extract_yara_rules(yara_file)
+
+    if not rules_info:
+        return redirect(url_for("home.home", message="No valid YARA rules found"))
+
+    imported = 0
+    skipped = 0
+    for rule_dict in rules_info:
+
+        success = RuleModel.add_rule_core(rule_dict)
+
+        if success:
+            imported += 1
+        else:
+            skipped += 1
+    flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
+    return redirect(url_for("home.home"))
+
+
+
+
+@home_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
+@login_required
+def test_yara_python_url():
+    if request.method == 'POST':
+        repo_url = request.form.get('url')
+
+        try:
+            # tmp_dir = tempfile.mkdtemp()
+            tmp_dir = "app/github_depot"
+            git.Repo.clone_from(repo_url, tmp_dir)
+            # tmp_dir = clone_or_access_repo_v1(repo_url)
+            
+
+            yara_files = get_yara_files_from_repo(tmp_dir)
+
+            for file_path in yara_files:
+                extract_yara_rules(file_path)
 
         except Exception as e:
             flash(f"Failed to import: {str(e)}", "danger")
@@ -311,10 +384,43 @@ def import_yara_from_repo():
     return redirect(url_for("home.home"))
 
 
-@home_blueprint.route("/test_yara_python", methods=['GET', 'POST'])
-@login_required
-def test_yara_python():
-    # Appel de la méthode avec le fichier YARA
-    fichier_yara = 'app/test.yar'
-    extract_yara_rules(fichier_yara)
-    return redirect(url_for("home.home"))
+
+# @home_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
+# @login_required
+# def test_yara_python_url():
+#     if request.method == 'POST':
+#         repo_url = request.form.get('url')
+
+#         try:
+#             tmp_dir = tempfile.mkdtemp()
+#             git.Repo.clone_from(repo_url, tmp_dir)
+
+#             yara_files = get_yara_files_from_repo(tmp_dir)
+
+#             imported = 0
+#             skipped = 0
+#             all_rules = []
+
+#             for file_path in yara_files:
+#                 print(file_path)
+#                 rules_info = extract_yara_rules(file_path)
+#                 all_rules.append(rules_info)
+
+#             for rules_dict in all_rules:
+#                 print(rules_dict)
+#                 success = RuleModel.add_rule_core(rules_dict)
+#                 print("je suis mort")
+#                 if success:
+#                     imported += 1
+#                 else:
+#                     skipped += 1
+
+#             flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
+#         except Exception as e:
+#             flash(f"Failed to import: {str(e)}", "danger")
+
+#     return redirect(url_for("home.home"))
+
+
+
+    

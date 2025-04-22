@@ -91,3 +91,10 @@ def get_total_rules_count():
 
 
 
+def get_rule_user_id(rule_id: int):
+    rule = Rule.query.filter_by(id=rule_id).first()
+    if rule:
+        return rule.user_id  
+    return None  
+
+    

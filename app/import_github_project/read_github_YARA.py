@@ -10,23 +10,40 @@ import tempfile
 
 def get_repo_name_from_url(repo_url):
     """Extract the repository name from its Git URL."""
+    # delete the last /  if there is and we split with /  the different part of the url to take the last ( the titile ) "https://github.com/user/repo" → ["https:", "", "github.com", "user", "repo"]
     name = repo_url.rstrip('/').split('/')[-1]
+    # in many case there is .hit juste after the title 
     if name.endswith('.git'):
-        name = name[:-4]
+        name = name[:-4] #remove the 4 last letter .git to have the complete title
     return name
+    
+    # get_repo_name_from_url("https://github.com/user/mon-depot.git")
+    # Résultat : "mon-depot"
+
+    # get_repo_name_from_url("https://github.com/user/mon-depot/")
+    # Résultat : "mon-depot"
 
 
-async def clone_or_access_repo(repo_url):
+
+def clone_or_access_repo(repo_url):
+    """Clone or acces the repository from Git URL."""
+    # folder racine to git clone
     base_dir = "Rules_Github"
-    os.makedirs(base_dir, exist_ok=True)
+    os.makedirs(base_dir, exist_ok=True) # create the folder if not exist
 
-    repo_name = repo_url.rstrip('/').split('/')[-1].replace('.git', '')
+    #take the repo name 
+    repo_name = get_repo_name_from_url(repo_url)
+    # repo_name = repo_url.rstrip('/').split('/')[-1].replace('.git', '')
+
+    # build the complete path 
     repo_dir = os.path.join(base_dir, repo_name)
 
     if not os.path.exists(repo_dir):
-        await asyncio.to_thread(Repo.clone_from, repo_url, repo_dir)
+        Repo.clone_from(repo_url, repo_dir)
+    else:
+        pass
 
-    return repo_dir, repo_dir
+    return repo_dir
 
 
 
@@ -49,13 +66,14 @@ def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt
 
 
 
-async def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
+def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
     """
-    Retrieve all YARA rules from a Git repository and save each rule as-is,
-    even when there are multiple rules per file.
-    Each rule is saved in a separate file named after the rule's title.
+    Retrieve all YARA rules from a Git repository and save each rule exactly as it is
+    without any modification.
+    Each rule is saved in a file named after the rule's title.
     """
-    repo, repo_dir = await clone_or_access_repo(repo_url)
+    
+    repo_dir = clone_or_access_repo(repo_url)
     yara_files = get_yara_files_from_repo(repo_dir)
 
     os.makedirs(output_dir, exist_ok=True)
@@ -64,20 +82,24 @@ async def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
         with open(yara_file, 'r', encoding="utf-8", errors="ignore") as file:
             raw_content = file.read()
 
-        rules = re.findall(r'(rule\s+[^\s{]+\s*{(?:[^{}]*|{[^{}]*})*})', raw_content, re.DOTALL)
-
-        for i, rule in enumerate(rules):
-            title_match = re.match(r'rule\s+([^\s{]+)', rule)
-            rule_title = title_match.group(1).strip() if title_match else f"Untitled_{i}"
+        rule_title_final = ""
+        rule_title = re.match(r'rule\s+([^\s{]+)', raw_content)
+        rule_title_with_error_match = re.search(r'\brule\s*:?\s*([^\s{]+)', raw_content)
 
 
-            safe_title = re.sub(r'[^\w\-_.]', '_', rule_title)
+        if rule_title:
+            rule_title_final = rule_title.group(1).strip()
 
-            file_name = f"{safe_title}.yar"
-            file_path = os.path.join(output_dir, file_name)
+        elif rule_title_with_error_match:
+            rule_title_final = rule_title_with_error_match.group(1).strip()
+        else:
+            rule_title_final = "Untitled"
 
-            with open(file_path, 'w', encoding="utf-8") as output_file:
-                output_file.write(rule)
+        file_name = f"{rule_title_final}.yar"
+        file_path = os.path.join(output_dir, file_name)
+
+        with open(file_path, 'w', encoding="utf-8") as output_file:
+            output_file.write(raw_content)
 
 
 
@@ -175,14 +197,26 @@ def parse_yara_rule(file_path, repo_dir=None, repo_url=None, known_licenses=None
     # Extract metadata from rule content
     for line in lines:
         line = line.strip()
+
+        # Traitement du titre de la règle avec "rule" ou "rule:"
         if line.lower().startswith("rule "):
-            title_match = re.match(r'rule\s+([^\s{]+)', line, re.IGNORECASE)
+            title_match = re.match(r'^\s*rule\s+([^\s{]+)', line, re.IGNORECASE)  # Gestion de "rule nom {"
             if title_match:
                 title = title_match.group(1).strip()
+        elif line.lower().startswith("rule:"):  # Nouveau cas pour "rule: nom {"
+            title_match = re.match(r'^\s*rule\s*:?\s*([^\s{]+)', line, re.IGNORECASE)
+            if title_match:
+                title = title_match.group(1).strip()
+
+        # Traitement de la description
         elif line.lower().startswith("description"):
             description = line.split("=", 1)[-1].strip().strip(' "')
+
+        # Traitement de la licence
         elif line.lower().startswith("license"):
             license = line.split("=", 1)[-1].strip().strip(' "')
+
+        # Traitement de l'auteur
         elif line.lower().startswith("author"):
             author = line.split("=", 1)[-1].strip().strip(' "')
 
