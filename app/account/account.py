@@ -4,6 +4,7 @@ from app.favorite.favorite_core import get_all_user_favorites_with_rules, get_us
 from ..db_class.db import RuleFavoriteUser, User
 from flask import Blueprint, jsonify, render_template, redirect, url_for, request, flash
 from .form import LoginForm, EditUserForm, AddNewUserForm
+from ..rule import rule_core as RuleModel
 from flask_login import (
     current_user,
     login_required,
@@ -88,9 +89,9 @@ def add_user():
 @login_required
 def favorite():
     """favorite page"""
-    rules = FavoriteModel.get_all_user_favorites_with_rules(current_user.id)
-    rules_list = [r.to_json() for r in rules]
-    return render_template("account/favorite_user.html", rules_list=rules_list)
+    # rules = FavoriteModel.get_all_user_favorites_with_rules(current_user.id)
+    # rules_list = [r.to_json() for r in rules]
+    return render_template("account/favorite_user.html")
 
 @account_blueprint.route("/profil")
 @login_required
@@ -98,16 +99,50 @@ def profil():
     return render_template("account/account_index.html", user=current_user)
 
 
-@account_blueprint.route('/favorite/remove_favorite', methods=['POST'])
-@login_required
-def remove_favorite_user():
-    rule_id = request.args.get('id', 1 , int)
-    a = remove_favorite(current_user.id, rule_id)
-    if a == true:
-        flash('The rule has been removed from your favorites.', 'success')
-    else:
-        flash('This rule is not in your favorites.', 'warning')
+# @account_blueprint.route('/favorite/remove_favorite', methods=['POST'])
+# @login_required
+# def remove_favorite_user():
+#     rule_id = request.args.get('id', 1 , int)
+#     a = remove_favorite(current_user.id, rule_id)
+#     if a == true:
+#         flash('The rule has been removed from your favorites.', 'success')
+#     else:
+#         flash('This rule is not in your favorites.', 'warning')
     
-    return redirect(url_for('account/favorite_user.html'))
+#     return redirect(url_for('account/favorite_user.html'))
+
+
+
+@account_blueprint.route("/favorite/get_rules_page_favorite",  methods=['GET','POST'])
+@login_required
+def get_rules_page_favorite():
+    page = request.args.get('page', 1, type=int)
+    id_user = current_user.id
+    rules = RuleModel.get_rules_page_favorite(page, id_user)
+    # total_rules = RuleModel.get_total_rules_favorites_count()
+    if rules:
+        rules_list = list()
+        for rule in rules:
+            u = rule.to_json()
+            rules_list.append(u)
+
+        return {"rule": rules_list, "total_pages": rules.pages}
+    
+    return {"message": "No Rule"}, 404
+
+
+@account_blueprint.route("/favorite/delete_rule",  methods=['GET','POST'])
+@login_required
+def remove_rule_favorite():
+    rule_id = request.args.get('id', 1, type=int)
+    user_id = current_user.id
+    if current_user.id == user_id or current_user.is_admin():
+        rep = remove_favorite(user_id, rule_id)
+        if rep:
+            return jsonify({"success": True, "message": "Rule deleted!"})
+
+    return jsonify({"success": False, "message": "Access denied"}), 403
+
+    
 
 

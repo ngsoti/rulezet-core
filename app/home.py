@@ -14,7 +14,7 @@ from app.db_class import db
 from app.db_class.db import Comment, Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 
-from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule, read_and_parse_all_rules_from_folder, save_yara_rules_as_is
+from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule, read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
 
 from app.import_github_project.yara_python import  extract_yara_rules
 from app.rule.rule_form import EditRuleForm
@@ -372,7 +372,7 @@ def test_yara_python_url():
             save_yara_rules_as_is(repo_url)
 
             # Step 2: Read and parse all files in the output_rules folder
-            all_rules = read_and_parse_all_rules_from_folder(repo_url=repo_url)
+            all_rules = read_and_parse_all_yara_rules_from_folder(repo_url=repo_url)
 
             # Step 3: Try to add each rule to the database
             imported = 0

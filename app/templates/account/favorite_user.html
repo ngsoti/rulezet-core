@@ -2,68 +2,72 @@
 {% import 'macros/form_macros.html' as f %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4" id="main-container">
     <h2 class="mb-4"><i class="fas fa-heart"></i> My Favorite Rules</h2>
 
-    {% if rules_list %}
-        <div class="list-group">
-        {% for rule in rules_list %}
+    <template v-if="rules_list_favorite && rules_list_favorite.length > 0">
+        <div class="list-group" v-for="(rule, index) in rules_list_favorite" :key="rule.id">
             <div class="list-group-item d-flex justify-content-between align-items-center mb-3">
                 <div class="me-3">
-                    <h5 class="mb-1">{{ rule.title }}</h5>
-                    <p class="mb-1 text-muted"><em>{{ rule.description }}</em></p>
-                    <small class="text-muted">Added on {{ rule.creation_date }}</small>
+                    <h5 class="mb-1">[[ rule.title ]]</h5>
+                    <p class="mb-1 text-muted"><em>[[ rule.description ]]</em></p>
+                    <small class="text-muted">Added on [[ rule.creation_date ]]</small>
                 </div>
 
                 <div class="btn-group">
-                    <a href="/detail_rule/{{ rule.id }}" class="btn btn-info btn-sm me-2" title="View Details">
+                    <a :href="'/detail_rule/' + rule.id" class="btn btn-info btn-sm me-2" title="View Details">
                         <i class="fas fa-eye"></i> View Details
                     </a>
-                    
-                    <!-- <a href="favorite/remove_favorite/{{ rule.id }}" class="btn btn-warning btn-sm" onclick="return confirm('Are you sure you want to remove this rule from your favorites?')" title="Remove from Favorites">
-                        <i class="fas fa-times-circle"></i> Remove from Favorites
-                    </a> -->
+
+                    <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash-alt"></i> 
+                    </button>
                 </div>
             </div>
-        {% endfor %}
         </div>
-    {% else %}
+    </template>
+
+    <template v-else>
         <div class="alert alert-info">
             <i class="fas fa-info-circle"></i> You don't have any favorite rules yet.
         </div>
-    {% endif %}
+    </template>  
 </div>
 {% endblock %}
 
-
+{% block script %}
 <script type="module">
-    const { createApp, ref } = Vue
-    import { message_list } from '/static/js/toaster.js'
-  
+    const { createApp, ref } = Vue;
+    import { message_list } from '/static/js/toaster.js';
+
     createApp({
       delimiters: ['[[', ']]'],
       setup() {
-        const rules_list_favorite = ref(rules_list)
-
+        const rules_list_favorite = ref([]);
 
         async function deleteRule(id, index) {
-            const res = await fetch('delete_rule_favorite?id=' + id)
-            rules_list.value.rule.splice(index, 1)
-        }  
-  
-        async function fetchRules(page) {
-            const res = await fetch('get_rules_page_favorite?page=' + page)
+            const res = await fetch('/account/favorite/delete_rule?id=' + id)
             const data = await res.json()
-            rules_list_favorite.value = data  
+            const acces = data.success
+            if(acces){
+                rules_list_favorite.value.splice(index, 1)
+            }
         }
 
-  
-        fetchRules(1)
-  
-        return {
-          rules_list_favorite, 
-          fetchRules
+        async function fetchRules(page) {
+            const res = await fetch(`/account/favorite/get_rules_page_favorite?page=${page}`);
+            const data = await res.json();
+            rules_list_favorite.value = data.rule;
         }
+
+        fetchRules(1)
+
+        return {
+          rules_list_favorite,
+          fetchRules,
+          deleteRule
+        };
       }
-    }).mount('#main-container')
+    }).mount('#main-container');
 </script>
+{% endblock %}

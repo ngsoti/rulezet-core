@@ -6,8 +6,8 @@ import git
 import hashlib
 import re
 from git import Repo
-import tempfile
 
+#---------------------------------------------------------------------------------------For_all_rules_types----------------------------------------------------------------------------------------------------------#
 
 def get_repo_name_from_url(repo_url):
     """Extract the repository name from its Git URL."""
@@ -46,9 +46,18 @@ def clone_or_access_repo(repo_url):
 
     return repo_dir
 
+def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt"):
+    """load all the licenses in  licenses.txt."""
+    with open(license_file_path, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
 
 
-# Keep it 
+def delete_existing_repo_folder(local_dir):
+    """Delete the existing folder if it exists."""
+    if os.path.exists(local_dir):
+        shutil.rmtree(local_dir)
+#---------------------------------------------------------------------------------------Yara_Rules------------------------------------------------------------------------------------------------------------------#
+
 def get_yara_files_from_repo(repo_dir):
     """Retrieve all .yar , rule and .yara files from a local repository."""
     yara_files = []
@@ -58,12 +67,7 @@ def get_yara_files_from_repo(repo_dir):
                 yara_files.append(os.path.join(root, file))
     return yara_files
 
-# Keep it 
-def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt"):
-    """load all the licenses in  licenses.txt."""
-    with open(license_file_path, "r", encoding="utf-8") as f:
-        return [line.strip() for line in f if line.strip()]
-    
+
 def count_braces_outside_strings(line):
     # Variable to track if we're inside single or double quotes
     in_single_quote = False
@@ -97,7 +101,7 @@ def count_braces_outside_strings(line):
     return count
 
 
-def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
+def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules/Yara/"):
     """
     Retrieve all YARA rules from a Git repository and save each rule exactly as it is
     without any modification.
@@ -166,21 +170,7 @@ def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules"):
                     current_rule_lines = []
 
 
-
-
-def delete_existing_repo_folder(local_dir):
-    """Delete the existing folder if it exists."""
-    if os.path.exists(local_dir):
-        shutil.rmtree(local_dir)
-
-
-
-
-
-
-
-
-def read_and_parse_all_rules_from_folder(folder_path="app/rule/output_rules", repo_dir=None, repo_url=None, known_licenses=None, branch="main"):
+def read_and_parse_all_yara_rules_from_folder(folder_path="app/rule/output_rules", repo_dir=None, repo_url=None, known_licenses=None, branch="main"):
     """
     Read all .yar files in the folder line by line, extract metadata and return a list of rules
     in JSON format (title, license, description, author, etc.).

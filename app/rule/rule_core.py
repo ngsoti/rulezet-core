@@ -97,4 +97,21 @@ def get_rule_user_id(rule_id: int):
         return rule.user_id  
     return None  
 
+def get_rules_page_favorite(page, id_user, per_page=10):
+    """
+    Récupère les règles favorites d'un utilisateur avec pagination.
     
+    :param page: Numéro de page.
+    :param id_user: ID de l'utilisateur.
+    :param per_page: Nombre d'éléments par page.
+    :return: Objet pagination contenant les règles.
+    """
+    favorites_query = (
+        Rule.query
+        .join(RuleFavoriteUser, Rule.id == RuleFavoriteUser.rule_id)
+        .filter(RuleFavoriteUser.user_id == id_user)
+        .order_by(RuleFavoriteUser.created_at.desc())
+    )
+    
+    paginated_rules = favorites_query.paginate(page=page, per_page=per_page, error_out=False)
+    return paginated_rules
