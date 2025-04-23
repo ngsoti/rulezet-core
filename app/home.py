@@ -274,6 +274,7 @@ def admin_requests():
 def get_requests_page(): 
     page = request.args.get('page', 1, type=int)
     requests_paginated = RequestModel.get_requests_page(page)
+    total_requests = RequestModel.get_total_requests()
 
     if requests_paginated.items:
         requests_list = []
@@ -288,7 +289,8 @@ def get_requests_page():
 
         return {
             "requests_list": requests_list,
-            "requests_pages": requests_paginated.pages  
+            "requests_pages": requests_paginated.pages,  
+            "total_requests": total_requests
         }
     
     return {"message": "No requests found"}, 404

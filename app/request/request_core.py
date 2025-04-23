@@ -67,3 +67,13 @@ def get_request_user_id(request_id):
     if request_obj:
         return request_obj.user_id
     return None
+
+def get_total_requests():
+    """Return the total count of requests."""
+    return Request.query.count()
+
+
+
+def get_total_requests_to_check():
+    """Return the total count of requests not check yet."""
+    return Request.query.filter_by(status="pending").count()

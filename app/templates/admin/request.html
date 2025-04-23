@@ -21,7 +21,7 @@
             <tbody>
                 <tr v-for="(request, index) in pending_requests" :key="request.id">
                     <th>[[ index + 1 ]]</th>
-                    <td>[[ request.user_id ]]</td>
+                    <td>[[ request.user_name ]]</td>
                     <td>[[ request.title ]]</td>
                     <td>
                         <span class="badge bg-warning text-dark">[[ request.status ]]</span>
@@ -86,6 +86,7 @@ createApp({
         const requests_list = ref([]);
         const currentPage = ref(1);
         const totalPages = ref(1);
+        const total_requests = ref(1) // use later
 
         const pending_requests = computed(() => {
             return requests_list.value.filter(r => r.status === "pending");
@@ -103,6 +104,7 @@ createApp({
                 requests_list.value = data.requests_list;
                 totalPages.value = data.requests_pages;
                 currentPage.value = page;
+                total_requests.value = total_requests;
             } catch (error) {
                 message_list("Failed to load requests.", "danger");
             }
@@ -129,7 +131,8 @@ createApp({
             totalPages,
             updateStatus,
             pending_requests,
-            archived_requests
+            archived_requests,
+            total_requests
         };
     }
 }).mount('#main-container');

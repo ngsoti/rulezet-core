@@ -1,9 +1,9 @@
 import shutil
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user, login_required
 from flask_session import Session
 
 from app.rule.import_licenses.rule_licence import fetch_and_save_licenses
@@ -16,6 +16,10 @@ csrf = CSRFProtect()
 migrate = Migrate()
 login_manager = LoginManager()
 sess = Session()
+
+
+
+
 
 def create_app():
     app = Flask(__name__)
@@ -50,7 +54,17 @@ def create_app():
     app.register_blueprint(account_blueprint, url_prefix="/account")
     app.register_blueprint(rule_blueprint, url_prefix="/rule")
    
+    from .request import request_core as RequestModel
+    @app.context_processor
+    def inject_requests_to_validate():
+        try:
+            count = RequestModel.get_total_requests_to_check()
+        except:
+            count = 0
+        return dict(requests_to_validate=count)
     
 
+
     return app
+    
     
