@@ -23,6 +23,10 @@ class User(UserMixin, db.Model):
         """Check if the user has admin privileges."""
         role = Role.query.get(self.role_id)
         return role.admin if role else False
+    
+    
+    def get_first_name(self):
+        return self.first_name 
 
     def is_read_only(self):
         """Check if the user has read-only access."""

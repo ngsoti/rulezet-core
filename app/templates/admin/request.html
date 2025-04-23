@@ -5,72 +5,92 @@
 <div class="container my-4" id="main-container">
     <h2 class="mb-4">Ownership Requests</h2>
 
-    <h4>Pending Requests</h4>
-    <div v-if="pending_requests.length > 0">
-        <table class="table table-bordered table-striped align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>#</th>
-                    <th>User</th>
-                    <th>Title</th>
-                    <th>Status</th>
-                    <th>Submitted</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="(request, index) in pending_requests" :key="request.id">
-                    <th>[[ index + 1 ]]</th>
-                    <td>[[ request.user_name ]]</td>
-                    <td>[[ request.title ]]</td>
-                    <td>
-                        <span class="badge bg-warning text-dark">[[ request.status ]]</span>
-                    </td>
-                    <td>[[ request.created_at ]]</td>
-                    <td>
-                        <button class="btn btn-success me-2" @click="updateStatus(request.id, 'approved')">
-                            <i class="fas fa-check"></i> Accept
-                        </button>
-                        <button class="btn btn-warning me-2" @click="updateStatus(request.id, 'rejected')">
-                            <i class="fas fa-times"></i> Reject
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div v-else class="alert alert-secondary">No pending requests.</div>
+    <!-- Nav tabs for Pending and Processed Requests -->
+    <ul class="nav nav-tabs" id="requestsTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="pending-tab" data-bs-toggle="tab" href="#pending" role="tab" aria-controls="pending" aria-selected="true">
+                Pending Requests
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="processed-tab" data-bs-toggle="tab" href="#processed" role="tab" aria-controls="processed" aria-selected="false">
+                Processed Requests
+            </a>
+        </li>
+    </ul>
 
+    <!-- Tab content for Pending and Processed Requests -->
+    <div class="tab-content mt-3">
+        <!-- Pending Requests Tab -->
+        <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab">
+            <div v-if="pending_requests.length > 0">
+                <table class="table table-bordered table-striped align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>User</th>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(request, index) in pending_requests" :key="request.id">
+                            <th>[[ index + 1 ]]</th>
+                            <td>[[ request.user_name ]]</td>
+                            <td>[[ request.title ]]</td>
+                            <td>
+                                <span class="badge bg-warning text-dark">[[ request.status ]]</span>
+                            </td>
+                            <td>[[ request.created_at ]]</td>
+                            <td>
+                                <button class="btn btn-success me-2" @click="updateStatus(request.id, 'approved')">
+                                    <i class="fas fa-check"></i> Accept
+                                </button>
+                                <button class="btn btn-warning me-2" @click="updateStatus(request.id, 'rejected')">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div v-else class="alert alert-secondary">No pending requests.</div>
+        </div>
 
-    <h4 class="mt-5">Processed Requests</h4>
-    <div v-if="archived_requests.length > 0">
-        <table class="table table-hover table-bordered align-middle">
-            <thead class="table-secondary">
-                <tr>
-                    <th>#</th>
-                    <th>User</th>
-                    <th>Title</th>
-                    <th>Status</th>
-                    <th>Submitted</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="(request, index) in archived_requests" :key="request.id">
-                    <th>[[ index + 1 ]]</th>
-                    <td>[[ request.user_name ]]</td>
-                    <td>[[ request.title ]]</td>
-                    <td>
-                        <span :class="{
-                            'badge bg-success': request.status === 'approved',
-                            'badge bg-secondary': request.status === 'rejected'
-                        }">[[ request.status ]]</span>
-                    </td>
-                    <td>[[ request.created_at ]]</td>
-                </tr>
-            </tbody>
-        </table>
+        <!-- Processed Requests Tab -->
+        <div class="tab-pane fade" id="processed" role="tabpanel" aria-labelledby="processed-tab">
+            <div v-if="archived_requests.length > 0">
+                <table class="table table-hover table-bordered align-middle">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>#</th>
+                            <th>User</th>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(request, index) in archived_requests" :key="request.id">
+                            <th>[[ index + 1 ]]</th>
+                            <td>[[ request.user_name ]]</td>
+                            <td>[[ request.title ]]</td>
+                            <td>
+                                <span :class="{
+                                    'badge bg-success': request.status === 'approved',
+                                    'badge bg-secondary': request.status === 'rejected'
+                                }">[[ request.status ]]</span>
+                            </td>
+                            <td>[[ request.created_at ]]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div v-else class="alert alert-info">No processed requests.</div>
+        </div>
     </div>
-    <div v-else class="alert alert-info">No processed requests.</div>
 </div>
 {% endblock %}
 
@@ -86,7 +106,7 @@ createApp({
         const requests_list = ref([]);
         const currentPage = ref(1);
         const totalPages = ref(1);
-        const total_requests = ref(1) // use later
+        const total_requests = ref(1); // use later
 
         const pending_requests = computed(() => {
             return requests_list.value.filter(r => r.status === "pending");
@@ -110,7 +130,7 @@ createApp({
             }
         }
 
-        async function updateStatus(request_id, status){
+        async function updateStatus(request_id, status) {
             try {
                 const res = await fetch(`/update_request?request_id=${request_id}&status=${status}`);
                 if (!res.ok) throw new Error("Failed to update request");
@@ -119,8 +139,6 @@ createApp({
                 message_list("Failed to update request.", "danger");
             }
         }
-
-        
 
         fetchRequests(1);
 
