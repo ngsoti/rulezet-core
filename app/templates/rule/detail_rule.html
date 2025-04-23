@@ -90,10 +90,11 @@
                 </a>
             
                 <!-- Request Ownership button -->
+                {% if rule.user_id != current_user.id%}
                 <button class="btn btn-outline-warning me-3 px-4 py-2 mb-2" @click="Ownership({{rule.id}})">
                     <i class="fas fa-user-shield me-1"></i> Request Ownership
                 </button>
-            
+                {% endif%}
                 <!-- Copy button -->
                 <button class="btn btn-outline-info me-3 px-4 py-2 mb-2" onclick="copyToClipboard()">
                     <i class="fas fa-copy me-1"></i> Copy
