@@ -242,7 +242,7 @@ def add_favorite_rule(rule_id):
         fav = add_favorite(user_id=current_user.id, rule_id=rule_id)
         flash("Rule added to favorites!", "success")
 
-    return redirect(url_for('account.favorite')) 
+    return redirect(url_for('home.home')) 
 
 from flask_login import login_required, current_user
 

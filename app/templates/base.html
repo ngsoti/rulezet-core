@@ -18,27 +18,28 @@
         <script>dayjs.extend(window.dayjs_plugin_relativeTime)</script>
         <script src="{{ url_for('static',filename='js/zxcvbn.js') }}"></script>
 
-        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/select2.min.css') }}">
-        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/select2-bootstrap-5-theme.min.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2.min.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2-bootstrap-5-theme.min.css') }}">
 
-        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='bootstrap-5.3.0/css/bootstrap.min.css') }}">
-        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='fontawesome-6.3.0/css/fontawesome.css') }}"> 
-        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='fontawesome-6.3.0/css/solid.css') }}">
-        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='fontawesome-6.3.0/css/brands.css') }}">
-        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/jquery-ui.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='bootstrap-5.3.0/css/bootstrap.min.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/fontawesome.css') }}"> 
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/solid.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/brands.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/jquery-ui.css') }}">
 
-        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/core.css') }}">
-        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/sidebar.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/core.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/sidebar.css') }}">
     </head>
 
     <body>
-        <div class="container" id="main-container">
+        <div class="d-flex flex-column min-vh-100">
+            <div class="flex-grow-1 container" id="main-container">
                 {% include 'sidebar.html' %}
 
                 <!--Main layout-->
                 <main class="col ps-md-4 pt-2">
                     {% include 'macros/_flashes.html' %}
-    
+
                     <div aria-live="polite" aria-atomic="true" class="">
                         <div class="toast-container start-50 translate-middle-x top-0 p-3" style="position: fixed;">
                             <template v-if="message_list">
@@ -57,24 +58,64 @@
                             </template>
                         </div>
                     </div>
-                    {# When extended, the content block contains all the html of the webpage #}
+
                     {% block content %}
                     {% endblock %}
                 </main>
-                <!--Main layout-->
-        
-                {# Implement CSRF protection for site #}
+
                 {% if csrf_token()|safe %}
                     <div style="visibility: hidden; display: none">
-                    <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token()|safe }}">
+                        <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token()|safe }}">
                     </div>
                 {% endif %}
+            </div>
+
+            <footer class="bg-dark text-white py-4 mt-auto">
+                <div class="container">
+                    <div class="row align-items-center justify-content-between">
+                        <!-- GitHub -->
+                        <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
+                            <a href="https://github.com/DavidCruciani/ptit-crolle.git" target="_blank" class="btn btn-outline-light">
+                                <img src="https://img.icons8.com/?size=100&id=12599&format=png&color=ffffff" alt="GitHub" style="width: 20px; height: 20px; vertical-align: middle;"> GitHub
+                            </a>
+                        </div>
+
+                        <!-- Social links -->
+                        <div class="col-md-4 text-center mb-3 mb-md-0">
+                            <a href="https://twitter.com" target="_blank" class="btn btn-outline-info me-1">
+                                <img src="https://img.icons8.com/?size=100&id=fJp7hepMryiw&format=png" alt="Twitter" style="width: 20px; height: 20px;">
+                            </a>
+                            <a href="https://lu.linkedin.com/company/circl-computer-incident-response-center-luxembourg-" target="_blank" class="btn btn-outline-primary me-1">
+                                <img src="https://img.icons8.com/?size=100&id=447&format=png" alt="LinkedIn" style="width: 20px; height: 20px;">
+                            </a>
+                            <a href="https://www.facebook.com/circlcom/" target="_blank" class="btn btn-outline-primary me-1">
+                                <img src="https://img.icons8.com/?size=100&id=118468&format=png" alt="Facebook" style="width: 20px; height: 20px;">
+                            </a>
+                            <a href="https://circl.lu/" target="_blank" class="btn btn-outline-danger">
+                                <i class="fa-solid fa-link"></i> CIRCL
+                            </a>
+                        </div>
+
+                        <!-- Scroll to top -->
+                        <div class="col-md-4 text-center text-md-end">
+                            <button id="scrollToTopBtn" class="btn btn-primary" title="Back to top">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Footer bottom -->
+                    <div class="row mt-3">
+                        <div class="col-12 text-center">
+                            <small>&copy; 2025 <strong>RULEZET</strong>. All rights reserved.</small>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
-        
 
         {% block script %}
         <script type="module">
-            // Empty vue used for toast to declar vue is used in the rest of the project
             const {createApp} = Vue
             createApp({
                 delimiters: ['[[', ']]'],
@@ -82,91 +123,32 @@
             }).mount('#main-container')
         </script>
         {% endblock %}
-        
+
         <script>
-            $( document ).ready(function() {
+            $(document).ready(function() {
                 $('.message').each((i, el) => {
-                const $el = $(el);
-                const $xx = $el.find('.close');
-                const sec = $el.data('autohide');
-                const triggerRemove = () => clearTimeout($el.trigger('remove').T);
-            
-                $el.one('remove', () => $el.remove());
-                $xx.one('click', triggerRemove);
-                if (sec) $el.T = setTimeout(triggerRemove, sec * 1000);
+                    const $el = $(el);
+                    const $xx = $el.find('.close');
+                    const sec = $el.data('autohide');
+                    const triggerRemove = () => clearTimeout($el.trigger('remove').T);
+
+                    $el.one('remove', () => $el.remove());
+                    $xx.one('click', triggerRemove);
+                    if (sec) $el.T = setTimeout(triggerRemove, sec * 1000);
                 });
-            })
-          </script>
-        
-        
+            });
 
-
-
-            
+            const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 100) {
+                    scrollToTopBtn.style.display = 'block';
+                } else {
+                    scrollToTopBtn.style.display = 'none';
+                }
+            });
+            scrollToTopBtn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        </script>
     </body>
-    <footer class="bg-dark text-white py-4 mt-5">
-        <div class="container">
-          <div class="row align-items-center justify-content-between">
-            
-            <!-- GitHub -->
-            <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
-              <a href="https://github.com/DavidCruciani/ptit-crolle.git" target="_blank" class="btn btn-outline-light">
-                <img src="https://img.icons8.com/?size=100&id=12599&format=png&color=ffffff" alt="GitHub" style="width: 20px; height: 20px; vertical-align: middle;"> GitHub
-              </a>
-            </div>
-      
-            <!-- Social links -->
-            <div class="col-md-4 text-center mb-3 mb-md-0">
-              <a href="https://twitter.com" target="_blank" class="btn btn-outline-info me-1">
-                <img src="https://img.icons8.com/?size=100&id=fJp7hepMryiw&format=png" alt="Twitter" style="width: 20px; height: 20px;">
-              </a>
-              <a href="https://lu.linkedin.com/company/circl-computer-incident-response-center-luxembourg-" target="_blank" class="btn btn-outline-primary me-1">
-                <img src="https://img.icons8.com/?size=100&id=447&format=png" alt="LinkedIn" style="width: 20px; height: 20px;">
-              </a>
-              <a href="https://www.facebook.com/circlcom/" target="_blank" class="btn btn-outline-primary me-1">
-                <img src="https://img.icons8.com/?size=100&id=118468&format=png" alt="Facebook" style="width: 20px; height: 20px;">
-              </a>
-              <a href="https://circl.lu/" target="_blank" class="btn btn-outline-danger">
-                <i class="fa-solid fa-link"></i> CIRCL
-              </a>
-            </div>
-      
-            <!-- Scroll to top -->
-            <div class="col-md-4 text-center text-md-end">
-              <button id="scrollToTopBtn" class="btn btn-primary" title="Back to top">
-                <i class="fas fa-arrow-up"></i>
-              </button>
-            </div>
-          </div>
-      
-          <!-- Footer bottom -->
-          <div class="row mt-3">
-            <div class="col-12 text-center">
-              <small>&copy; 2025 <strong>RULEZET</strong>. All rights reserved.</small>
-            </div>
-          </div>
-        </div>
-      </footer>
-      
-      
-
-      <script>
-        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-      
-
-        window.addEventListener('scroll', () => {
-          if (window.scrollY > 100) {
-            scrollToTopBtn.style.display = 'block';
-          } else {
-            scrollToTopBtn.style.display = 'none';
-          }
-        });
-
-        scrollToTopBtn.addEventListener('click', () => {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-      </script>
-      
-      
-    
 </html>

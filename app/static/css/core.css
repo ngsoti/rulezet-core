@@ -75,11 +75,13 @@ span#goTop, span#project-version{
     transform: scale(1.05);
 }
 
-footer {
-  
-  width: 100%;
+
+
+footer{
+  position:relative;
+  width: 100%; 
+  bottom: 0; 
   background: #f1f1f1;
-  padding: 1em;
 
 }
 
