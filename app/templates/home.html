@@ -67,9 +67,18 @@
   </div>
   
   
-  <div class="mb-3">
-    <input type="text" v-model="searchQuery" class="form-control" placeholder="Search for a rule...">
+  <div class="mb-3 input-group">
+    <span class="input-group-text">
+      <i class="fas fa-search"></i>
+    </span>
+    <input
+      type="text"
+      v-model="searchQuery"
+      class="form-control"
+      placeholder="Search for a rule..."
+    >
   </div>
+  
   
 
   <template v-if="rules_list && rules_list.rule.length > 0">
