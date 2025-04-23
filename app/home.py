@@ -273,20 +273,33 @@ def get_requests_page():
 
 
 
-@home_blueprint.route("/update_request_status", methods=["POST"])
+
+
+
+
+@home_blueprint.route("/update_request", methods=["POST", "GET"])
 @login_required
 def update_request_status():
-    data = request.get_json()
-    req_id = data.get("request_id")
-    status = data.get("status")
-    updated = RequestModel.update_request_status(req_id, status)
-    return jsonify({"success": updated}), 200 if updated else 400
+    request_id = request.args.get('request_id')
+    status = request.args.get('status')
+    if current_user.is_admin():
+        updated = RequestModel.update_request_status(request_id, status)
+        
+        if updated and status == "approved":
+            ownership_request = RequestModel.get_request_by_id(request_id)
+            rule_id_of_request = RequestModel.get_request_rule_id(request_id)
+            user_id = RequestModel.get_request_user_id(request_id)
 
-@home_blueprint.route("/delete_request/<int:request_id>", methods=["DELETE"])
-@login_required
-def delete_request(request_id):
-    deleted = RequestModel.delete_request(request_id)
-    return jsonify({"success": deleted}), 200 if deleted else 400
+            if ownership_request:
+                rule = RuleModel.get_rule(rule_id_of_request)
+                if rule:
+                    # modifie the owner of the rule by the admin
+                    response = RuleModel.set_user_id(rule_id_of_request, user_id)
+
+
+        return jsonify({"success": updated}), 200 if updated else 400
+    else:
+        return render_template("access_denied.html")
 
 
 
@@ -468,9 +481,10 @@ def test_yara_python_url():
             # Step 3: Try to add each rule to the database
             imported = 0
             skipped = 0
-
+            print(all_rules)
             for rule_dict in all_rules:
                 success = RuleModel.add_rule_core(rule_dict)
+
                 if success:
                     imported += 1
                 else:

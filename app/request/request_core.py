@@ -6,7 +6,7 @@ def create_request(rule, user_id, current_user):
     """Create or update an ownership request."""
 
 
-    existing_request = Request.query.filter_by(user_id=user_id, title=f"Request for ownership of rule {rule.id}").first()
+    existing_request = Request.query.filter_by(user_id=user_id, title=f"Request for ownership of rule {rule.title}").first()
 
     if existing_request:
 
@@ -23,7 +23,8 @@ def create_request(rule, user_id, current_user):
         content=f"{current_user.first_name} {current_user.last_name} (ID: {current_user.id}) wants to become the owner of '{rule.title}'",
         status="pending",
         created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        updated_at=datetime.utcnow(),
+        rule_id=rule.id
     )
     db.session.add(new_request)
     db.session.commit()
@@ -50,3 +51,26 @@ def delete_request(request_id):
         db.session.commit()
         return True
     return False
+
+def get_request_by_id(request_id):
+        if not request_id:
+            return None
+        return Request.query.get(request_id)
+
+def get_request_rule_id(request_id):
+        if not request_id:
+            return None
+        request_obj = Request.query.get(request_id)
+        return request_obj.rule_id if request_obj else None
+
+def get_request_user_id(request_id):
+    """
+    Récupère l'ID de l'utilisateur associé à la demande spécifiée.
+
+    :param request_id: ID de la demande.
+    :return: L'ID de l'utilisateur si la demande existe, sinon None.
+    """
+    request_obj = Request.query.get(request_id)
+    if request_obj:
+        return request_obj.user_id
+    return None

@@ -7,13 +7,15 @@ from .. import db
 from ..db_class.db import *
 
 
+
 def add_rule_core(form_dict):
     title = form_dict["title"].strip()
 
     existing_rule = get_rule_by_title(title)
+    print(title)
     if existing_rule:
         return False
-
+    print("je suis ici")
     new_rule = Rule(
         format=form_dict["format"],
         title=title,
@@ -24,12 +26,13 @@ def add_rule_core(form_dict):
         author=form_dict["author"],
         version=form_dict["version"],
         user_id=current_user.id,
-        creation_date=datetime.datetime.now(tz=datetime.timezone.utc),
-        last_modif=datetime.datetime.now(tz=datetime.timezone.utc),
+        creation_date = datetime.now(),
+        last_modif = datetime.now(),
         vote_up=0,
         vote_down=0,
         to_string = form_dict["to_string"]
     )
+    print("ma regle ")
 
     db.session.add(new_rule)
     db.session.commit()
@@ -118,3 +121,17 @@ def get_rules_page_favorite(page, id_user, per_page=10):
 
 
 
+def set_user_id(rule_id, user_id):
+    """
+    Met à jour l'ID utilisateur pour la règle spécifiée.
+    
+    :param rule_id: ID de la règle à mettre à jour.
+    :param user_id: Nouveau ID de l'utilisateur.
+    :return: True si la mise à jour est effectuée, sinon False.
+    """
+    rule = get_rule(rule_id)
+    if rule:
+        rule.user_id = user_id
+        db.session.commit()  
+        return True
+    return False
