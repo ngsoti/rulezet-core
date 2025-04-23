@@ -254,13 +254,37 @@ def admin_requests():
     return render_template("admin/request.html")
 
 
+# @home_blueprint.route("/get_requests_page", methods=['GET'])
+# def get_requests_page(): 
+#     page = request.args.get('page', 1, type=int)
+#     requests_paginated = RequestModel.get_requests_page(page)
+
+#     if requests_paginated.items:
+#         requests_list = [r.to_json() for r in requests_paginated.items]
+
+#         return {
+#             "requests_list": requests_list,
+#             "requests_pages": requests_paginated.pages  
+#         }
+    
+#     return {"message": "No requests found"}, 404
+
+
 @home_blueprint.route("/get_requests_page", methods=['GET'])
 def get_requests_page(): 
     page = request.args.get('page', 1, type=int)
     requests_paginated = RequestModel.get_requests_page(page)
 
     if requests_paginated.items:
-        requests_list = [r.to_json() for r in requests_paginated.items]
+        requests_list = []
+        
+        for r in requests_paginated.items:
+            user = AccountModel.get_username_by_id(r.user_id)
+            request_data = r.to_json()  
+            
+            request_data['user_name'] = user
+            requests_list.append(request_data)
+
 
         return {
             "requests_list": requests_list,
@@ -269,9 +293,7 @@ def get_requests_page():
     
     return {"message": "No requests found"}, 404
 
-
-
-
+from .account import account_core as AccountModel
 
 
 

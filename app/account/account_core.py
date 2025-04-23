@@ -72,4 +72,4 @@ def get_user_by_matrix_id(matrix_id):
 
 def get_username_by_id(user_id):
     user = get_user(user_id)
-    return user.username if user else "Unknown"
+    return user.first_name 

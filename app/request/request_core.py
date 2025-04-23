@@ -43,7 +43,6 @@ def update_request_status(request_id, status):
             return True
         return False
 
-   
 def delete_request(request_id):
     req = Request.query.get(request_id)
     if req:
@@ -64,12 +63,6 @@ def get_request_rule_id(request_id):
         return request_obj.rule_id if request_obj else None
 
 def get_request_user_id(request_id):
-    """
-    Récupère l'ID de l'utilisateur associé à la demande spécifiée.
-
-    :param request_id: ID de la demande.
-    :return: L'ID de l'utilisateur si la demande existe, sinon None.
-    """
     request_obj = Request.query.get(request_id)
     if request_obj:
         return request_obj.user_id
