@@ -174,3 +174,28 @@ class Comment(db.Model):
             "user_name": self.user_name,
             "dislikes": self.dislikes
         }
+
+
+class Request(db.Model):
+    """Model for user-submitted requests visible by admins."""
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(128), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(32), default="pending")  # Ex: pending, reviewed, closed
+    created_at = db.Column(db.DateTime, index=True)
+    updated_at = db.Column(db.DateTime, index=True)
+
+    user = db.relationship('User', backref=db.backref('requests', lazy='dynamic'))
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "title": self.title,
+            "content": self.content,
+            "status": self.status,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
+            "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M')
+        }

@@ -13,6 +13,13 @@
                     <i class="fa-solid fa-house fa-fw me-1"></i> Home
                 </a>
             </li>
+            {% if current_user.is_authenticated and  current_user.is_admin() %}
+                <li  class="nav-item mx-2" >
+                    <a href="/admin/request" class="nav-link text-dark fw-semibold">
+                        <i class="fa-solid fa-user fa-fw me-1"></i> Requests
+                    </a>
+                </li>
+            {% endif %}
 
             <!-- Profile Dropdown -->
             <li class="nav-item dropdown mx-2">
@@ -36,7 +43,7 @@
                                 <i class="fa-solid fa-right-from-bracket fa-fw me-2 text-danger"></i> Logout
                             </a>
                         </li>
-
+                        
                     {% else %}
                         <li>
                             <a href="/account/register" class="dropdown-item">

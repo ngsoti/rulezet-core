@@ -9,6 +9,18 @@
       <i class="fas fa-hammer"></i> Add Rule
     </a>
   </header>
+
+  <div class="mb-3 input-group">
+    <span class="input-group-text">
+      <i class="fas fa-search"></i>
+    </span>
+    <input
+      type="text"
+      v-model="searchQuery"
+      class="form-control"
+      placeholder="Search for a rule..."
+    >
+  </div>
   <!-- <a href="/test_yara_python" class="btn btn-warning btn-sm">
     <i class="fas fa-hammer"></i> Test on one yara file
   </a> -->
@@ -67,17 +79,7 @@
   </div>
   
   
-  <div class="mb-3 input-group">
-    <span class="input-group-text">
-      <i class="fas fa-search"></i>
-    </span>
-    <input
-      type="text"
-      v-model="searchQuery"
-      class="form-control"
-      placeholder="Search for a rule..."
-    >
-  </div>
+  
   
 
 

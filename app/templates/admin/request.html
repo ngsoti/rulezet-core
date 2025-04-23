@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% import 'macros/form_macros.html' as f %}
+
+{% block content %}
+<div class="container my-4" id="main-container">
+    <h2 class="mb-4">Ownership Requests</h2>
+
+    <div v-if="requests_list.length > 0">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">User</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Submitted</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(request, index) in requests_list" :key="request.id">
+                    <th scope="row">[[ index + 1 ]]</th>
+                    <td>[[ request.user_id ]]</td>
+                    <td>[[ request.title ]]</td>
+                    <td>
+                        <span :class="{
+                            'badge bg-warning text-dark': request.status === 'pending',
+                            'badge bg-success': request.status === 'approved',
+                            'badge bg-secondary': request.status === 'closed'
+                        }">
+                            [[ request.status ]]
+                        </span>
+                    </td>
+                    <td>[[ request.created_at ]]</td>
+                    <td>
+                        <button class="btn btn-success me-2" @click="updateStatus(request.id, 'approved')">
+                            <i class="fas fa-check"></i> Accept
+                        </button>
+                        <button class="btn btn-warning me-2" @click="updateStatus(request.id, 'rejected')">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                        <button class="btn btn-danger" @click="deleteRequest(request.id)">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <nav class="mt-3">
+            <ul class="pagination justify-content-center">
+                <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                    <button class="page-link" @click="fetchRequests(currentPage - 1)" :disabled="currentPage === 1">
+                        Previous
+                    </button>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        Page [[ currentPage ]] of [[ totalPages ]]
+                    </span>
+                </li>
+                <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                    <button class="page-link" @click="fetchRequests(currentPage + 1)" :disabled="currentPage === totalPages">
+                        Next
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <div v-else class="alert alert-info">
+        No requests available.
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref } = Vue;
+    import { message_list } from '/static/js/toaster.js';
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const csrf_token = '{{ csrf_token() }}';
+            const requests_list = ref([]);
+            const currentPage = ref(1);
+            const totalPages = ref(1);
+
+            async function fetchRequests(page = 1) {
+                try {
+                    const res = await fetch(`/get_requests_page?page=${page}`);
+                    if (!res.ok) throw new Error("Failed to load requests");
+                    const data = await res.json();
+                    requests_list.value = data.requests_list;
+                    totalPages.value = data.requests_pages;
+                    currentPage.value = page;
+                } catch (error) {
+                    message_list("Failed to load requests.", "danger");
+                }
+            }
+
+            fetchRequests(1);
+
+            return {
+                fetchRequests,
+                requests_list,
+                currentPage,
+                totalPages
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

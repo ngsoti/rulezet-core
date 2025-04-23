@@ -22,6 +22,7 @@ from app.utils.utils import form_to_dict
 from .rule import rule_core as RuleModel
 from .favorite import favorite_core as FavoriteModel
 from .comment import comment_core as CommentModel
+from .request import request_core as RequestModel
 
 
 
@@ -203,7 +204,6 @@ def edit_comment():
         flash("Comment updated successfully.", "success")
         return jsonify({"updatedComment": update_content.to_json()})
     else:
-        print("aie")
         return {"message": "No Comments"}
 
 
@@ -222,6 +222,96 @@ def delete_comment_route(comment_id):
     return redirect(url_for("home.home"))
 
     
+
+@home_blueprint.route("/owner_request", methods=["POST", "GET"])
+@login_required
+def owner_request():
+    rule_id = request.args.get('rule_id')
+    if not rule_id:
+        flash("No rule ID provided.", "danger")
+        return redirect(url_for("home.home"))
+
+    rule = RuleModel.get_rule(rule_id)
+    if not rule:
+        flash("Rule not found.", "danger")
+        return redirect(url_for("home.home"))
+
+    try:
+        request_rule = RequestModel.create_request(rule, current_user.id, current_user)
+        flash("Ownership request submitted successfully.", "success")
+    except Exception as e:
+        print(f"Error creating request: {e}")
+        flash("An error occurred while submitting the request.", "danger")
+
+    return redirect(url_for("home.home"))
+
+@home_blueprint.route("/admin/request", methods=["POST", "GET"])
+@login_required
+def admin_requests():
+    if not current_user.is_admin():
+        return render_template("access_denied.html")
+
+    return render_template("admin/request.html")
+
+
+@home_blueprint.route("/get_requests_page", methods=['GET'])
+def get_requests_page(): 
+    page = request.args.get('page', 1, type=int)
+    requests_paginated = RequestModel.get_requests_page(page)
+
+    if requests_paginated.items:
+        requests_list = [r.to_json() for r in requests_paginated.items]
+
+        return {
+            "requests_list": requests_list,
+            "requests_pages": requests_paginated.pages  
+        }
+    
+    return {"message": "No requests found"}, 404
+
+
+
+
+
+@home_blueprint.route("/update_request_status", methods=["POST"])
+@login_required
+def update_request_status():
+    data = request.get_json()
+    req_id = data.get("request_id")
+    status = data.get("status")
+    updated = RequestModel.update_request_status(req_id, status)
+    return jsonify({"success": updated}), 200 if updated else 400
+
+@home_blueprint.route("/delete_request/<int:request_id>", methods=["DELETE"])
+@login_required
+def delete_request(request_id):
+    deleted = RequestModel.delete_request(request_id)
+    return jsonify({"success": deleted}), 200 if deleted else 400
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

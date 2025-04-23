@@ -64,9 +64,8 @@
                     <strong>Editor :</strong>
                     <p>{{ rule.get_rule_user_first_name_by_id() }}</p>
                 </div>
-
-                
             </div>
+
         </div>
     </div>
 
@@ -84,18 +83,28 @@
     <div class="card shadow-sm">
         <div class="card-body d-flex justify-content-between align-items-center">
             <!-- Actions -->
-            <div class="d-flex">
-                <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success me-3 px-4 py-2">
-                    <i class="fas fa-download"></i> Download
+            <div class="d-flex align-items-center flex-wrap">
+                <!-- Download button -->
+                <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success me-3 px-4 py-2 mb-2">
+                    <i class="fas fa-download me-1"></i> Download
                 </a>
-                <button class="btn btn-outline-info me-3 px-4 py-2" onclick="copyToClipboard()">
-                    <i class="fas fa-copy"></i> Copy
+            
+                <!-- Request Ownership button -->
+                <button class="btn btn-outline-warning me-3 px-4 py-2 mb-2" @click="Ownership({{rule.id}})">
+                    <i class="fas fa-user-shield me-1"></i> Request Ownership
                 </button>
-
+            
+                <!-- Copy button -->
+                <button class="btn btn-outline-info me-3 px-4 py-2 mb-2" onclick="copyToClipboard()">
+                    <i class="fas fa-copy me-1"></i> Copy
+                </button>
+            
+                <!-- Copy message -->
                 <span id="copyMessage" class="text-success ms-2" style="display: none; font-size: 0.875rem;">
                     Content copied to clipboard!
                 </span>
             </div>
+            
             <script>
                 function copyToClipboard() {
                     const textarea = document.getElementById('ruleContentToCopy');
@@ -280,9 +289,19 @@
             const current_user_is_admin = ref()
             const newCommentContent = ref("");
             
+            async function Ownership(rule_id){
+                const response = await fetch('/owner_request?rule_id=' + rule_id)
+                if (response.ok) {
+                    alert("Your request has been sent!");
+                } else {
+                    alert("Failed to send the request.");
+                }
+            }
+
+
 
             async function submitComment(){
-                const response = await fetch(`/comment_add?new_content=`+ newCommentContent.value + '&rule_id=' + rule_id)
+                const response = await fetch('/comment_add?new_content='+ newCommentContent.value + '&rule_id=' + rule_id)
                 if (response.ok) {
                     const data = await response.json();
                     comments_list.value.unshift(data.comment); 
@@ -355,6 +374,7 @@
 
 
             return {
+                Ownership,
                 current_user_is_admin,
                 message_list,
                 comments_list,
