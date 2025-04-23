@@ -109,7 +109,7 @@
     </nav>
     <br/>
 
-    <p>Total rules: [[ total_rules ]]</p>
+    <p>Total rules: [[ total_rules_liste ]]</p>
     <div class="card card-body mb-3" v-for="(rule, index) in filteredRules" :key="rule.uuid">
 
       <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1371ff">
@@ -232,6 +232,7 @@
       const total_pages = ref(1)
       const current_user_is_admin = ref()
       const searchQuery = ref('')
+      const total_rules_liste = ref()
   
       const filteredRules = computed(() => {
         if (!rules_list.value || !rules_list.value.rule) return []
@@ -250,6 +251,7 @@
         rules_list.value = data
         total_pages.value = data.total_pages
         total_rules.value = data.total_rules
+        total_rules_liste.value = data.total_rules // copy to have a dynamique value of total rule
         current_page.value = page
       }
       async function fetchCurrentUser(){
@@ -264,6 +266,7 @@
         const acces = data.success
         if(acces){
           rules_list.value.rule.splice(index, 1)
+          total_rules_liste.value -= 1
         }
       }
 
@@ -326,7 +329,8 @@
         fetchCurrentUser,
         current_user_is_admin,
         filteredRules,
-        searchQuery
+        searchQuery,
+        total_rules_liste
       }
     }
   }).mount('#main-container')

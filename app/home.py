@@ -14,7 +14,7 @@ from app.db_class import db
 from app.db_class.db import Comment, Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 
-from app.import_github_project.read_github_YARA import clone_or_access_repo, get_yara_files_from_repo, parse_yara_rule, read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
+from app.import_github_project.read_github_YARA import clone_or_access_repo, extract_owner_repo, get_license_file_from_github_repo, get_license_name, get_yara_files_from_repo, parse_yara_rule, read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
 
 from app.import_github_project.yara_python import  extract_yara_rules
 from app.rule.rule_form import EditRuleForm
@@ -362,11 +362,18 @@ def test_yara_python_url():
         repo_url = request.form.get('url')
 
         try:
-            # Step 1: Save all the YARA files from the given URL
-            save_yara_rules_as_is(repo_url)
+            # Step 1: Save all the YARA files from the given URL and take the license if it existe
+            repo_dir = save_yara_rules_as_is(repo_url)
+
+            # license_from_github = get_license_file_from_github_repo(repo_dir) old version
+            # take owner and repo to extract the license
+            owner, repo = extract_owner_repo(repo_url)
+            license_from_github = get_license_name(owner,repo)
+            # print("License:", license_from_github)
 
             # Step 2: Read and parse all files in the output_rules folder
-            all_rules = read_and_parse_all_yara_rules_from_folder(repo_url=repo_url)
+            all_rules = read_and_parse_all_yara_rules_from_folder(license_from_github,repo_url=repo_url)
+            
 
             # Step 3: Try to add each rule to the database
             imported = 0

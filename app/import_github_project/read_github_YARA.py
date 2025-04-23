@@ -2,10 +2,12 @@ import asyncio
 import json
 import os
 import shutil
+from urllib.parse import urlparse
 import git
 import hashlib
 import re
 from git import Repo
+import requests
 
 #---------------------------------------------------------------------------------------For_all_rules_types----------------------------------------------------------------------------------------------------------#
 
@@ -56,7 +58,62 @@ def delete_existing_repo_folder(local_dir):
     """Delete the existing folder if it exists."""
     if os.path.exists(local_dir):
         shutil.rmtree(local_dir)
+
+
+
+def get_license_file_from_github_repo(repo_dir):
+    """Retrieve the first line of the license from a GitHub repository folder."""
+
+    # list of differents names of license file
+    possible_filenames = [
+        "LICENSE", "LICENSE.txt", "LICENSE.md", "LICENSE.rst",
+        "COPYING", "COPYING.txt", "COPYING.md"
+    ]
+
+    for filename in possible_filenames:
+        license_path = os.path.join(repo_dir, filename)
+        if os.path.isfile(license_path):
+            with open(license_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    first_line = line.strip()
+                    if first_line:  # Ignore blank lines
+                        return first_line
+                return "(Empty license file)"
+    
+    return "(No license file found)"
+
+#----------------------------------------------------------------------------------------LICENSE--------------------------------------------------------------------------------------------------------------------#
+
+# use API GITHUB 
+def extract_owner_repo(github_url):
+    parsed = urlparse(github_url)
+    path_parts = parsed.path.strip('/').split('/')
+    if len(path_parts) >= 2:
+        owner = path_parts[0]
+        repo = path_parts[1].replace('.git', '')  
+        return owner, repo
+    else:
+        return None, None
+
+def get_license_name(owner, repo):
+    url = f"https://api.github.com/repos/{owner}/{repo}/license"
+    headers = {"Accept": "application/vnd.github.v3+json"}
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        return response.json().get('license', {}).get('name', '(Unknown license)')
+    elif response.status_code == 404:
+        return "(No license file found)"
+    else:
+        return f"(Error: {response.status_code})"
+
+
+
+
 #---------------------------------------------------------------------------------------Yara_Rules------------------------------------------------------------------------------------------------------------------#
+
+
+
 
 def get_yara_files_from_repo(repo_dir):
     """Retrieve all .yar , rule and .yara files from a local repository."""
@@ -168,9 +225,10 @@ def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules/Yara"):
                     rule_index += 1
                     inside_rule = False
                     current_rule_lines = []
+    return repo_dir
 
 
-def read_and_parse_all_yara_rules_from_folder(folder_path="app/rule/output_rules/Yara", repo_dir=None, repo_url=None, known_licenses=None, branch="main"):
+def read_and_parse_all_yara_rules_from_folder(license_from_github,folder_path="app/rule/output_rules/Yara", repo_dir=None, repo_url=None, known_licenses=None, branch="main"):
     """
     Read all .yar files in the folder line by line, extract metadata and return a list of rules
     in JSON format (title, license, description, author, etc.).
@@ -184,6 +242,7 @@ def read_and_parse_all_yara_rules_from_folder(folder_path="app/rule/output_rules
         file_path = os.path.join(folder_path, filename)
 
         if os.path.isfile(file_path) and filename.lower().endswith(".yar"):
+            
             with open(file_path, 'r', encoding="utf-8", errors="ignore") as file:
                 raw_content = file.read()
 
@@ -193,8 +252,11 @@ def read_and_parse_all_yara_rules_from_folder(folder_path="app/rule/output_rules
             # Default metadata
             title = "Untitled"
             description = "Imported YARA rule"
-            license = "Unknown"
+            license = license_from_github or "Unknown"
             author = "Unknown"
+            version = "1.0"
+
+            
 
             # Parse line by line
             for line in lines:
@@ -219,6 +281,9 @@ def read_and_parse_all_yara_rules_from_folder(folder_path="app/rule/output_rules
                 elif line.lower().startswith("author"):
                     author = line.split("=", 1)[-1].strip().strip(' "')
 
+                elif line.lower().startswith("version"):
+                    version = line.split("=", 1)[-1].strip().strip(' "')
+
             
             
             
@@ -233,18 +298,19 @@ def read_and_parse_all_yara_rules_from_folder(folder_path="app/rule/output_rules
 
             source_url = repo_url
 
+            
             rule_dict = {
                 "format": "YARA",
                 "title": title,
-                "license": license or "Unknown",
+                "license": license,
                 "description": description,
                 "source": source_url,
-                "version": "1.0",
+                "version": version or "1.0",
                 "author": author or "Unknown",
                 "to_string": raw_content
             }
-      
-
+            
+            
             rules_json.append(rule_dict)
 
     return rules_json
