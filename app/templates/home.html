@@ -67,6 +67,10 @@
   </div>
   
   
+  <div class="mb-3">
+    <input type="text" v-model="searchQuery" class="form-control" placeholder="Search for a rule...">
+  </div>
+  
 
   <template v-if="rules_list && rules_list.rule.length > 0">
     <br/>
@@ -96,7 +100,8 @@
     <br/>
 
     <p>Total rules: [[ total_rules ]]</p>
-    <div class="card card-body mb-3" v-for="(rule, index) in rules_list.rule" :key="rule.uuid">
+    <div class="card card-body mb-3" v-for="(rule, index) in filteredRules" :key="rule.uuid">
+
       <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1371ff">
         <h4 class="mb-0">[[ rule.id ]] - [[ rule.title ]]</h4>
         {% if current_user.is_authenticated %}
@@ -216,7 +221,18 @@
       const current_page = ref(1)
       const total_pages = ref(1)
       const current_user_is_admin = ref()
+      const searchQuery = ref('')
   
+      const filteredRules = computed(() => {
+        if (!rules_list.value || !rules_list.value.rule) return []
+        const query = searchQuery.value.toLowerCase()
+        return rules_list.value.rule.filter(rule =>
+          rule.title.toLowerCase().includes(query) ||
+          rule.description.toLowerCase().includes(query) ||
+          rule.author.toLowerCase().includes(query) ||
+          rule.format.toLowerCase().includes(query)
+        )
+      })
 
       async function fetchRules(page) {
         const res = await fetch('get_rules_page?page=' + page)
@@ -298,7 +314,9 @@
         vote,
         visiblePages,
         fetchCurrentUser,
-        current_user_is_admin
+        current_user_is_admin,
+        filteredRules,
+        searchQuery
       }
     }
   }).mount('#main-container')

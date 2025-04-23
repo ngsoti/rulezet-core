@@ -5,8 +5,10 @@
 <div class="container mt-4" id="main-container">
     <h2 class="mb-4"><i class="fas fa-heart"></i> My Favorite Rules</h2>
 
-    <template v-if="rules_list_favorite && rules_list_favorite.length > 0">
-        <div class="list-group" v-for="(rule, index) in rules_list_favorite" :key="rule.id">
+    <input type="text" class="form-control mb-3" v-model="searchQuery" placeholder="Enter search keyword...">
+
+    <template v-if="filteredRules.length > 0">
+        <div class="list-group" v-for="(rule, index) in filteredRules" :key="rule.id">
             <div class="list-group-item d-flex justify-content-between align-items-center mb-3">
                 <div class="me-3">
                     <h5 class="mb-1">[[ rule.title ]]</h5>
@@ -15,12 +17,11 @@
                 </div>
 
                 <div class="btn-group">
-                    <a :href="'/detail_rule/' + rule.id" class="btn btn-info btn-sm me-2" title="View Details">
+                    <a :href="'/detail_rule/' + rule.id" class="btn btn-info btn-sm me-2">
                         <i class="fas fa-eye"></i> View Details
                     </a>
-
-                    <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm">
-                        <i class="fas fa-trash-alt"></i> 
+                    <button @click="deleteRule(rule.id)" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
             </div>
@@ -29,7 +30,8 @@
 
     <template v-else>
         <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i> You don't have any favorite rules yet.
+            <i class="fas fa-info-circle"></i>
+            [[ searchQuery ? 'No rules found for your search.' : 'You don\'t have any favorite rules yet.' ]]
         </div>
     </template>  
 </div>
@@ -37,37 +39,52 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref } = Vue;
-    import { message_list } from '/static/js/toaster.js';
+const { createApp, ref, computed } = Vue;
+import { message_list } from '/static/js/toaster.js';
 
-    createApp({
-      delimiters: ['[[', ']]'],
-      setup() {
-        const rules_list_favorite = ref([]);
+createApp({
+  delimiters: ['[[', ']]'],
+  setup() {
+    const rules_list_favorite = ref([]);
+    const searchQuery = ref("");
 
-        async function deleteRule(id, index) {
-            const res = await fetch('/account/favorite/delete_rule?id=' + id)
-            const data = await res.json()
-            const acces = data.success
-            if(acces){
-                rules_list_favorite.value.splice(index, 1)
-            }
-        }
 
-        async function fetchRules(page) {
-            const res = await fetch(`/account/favorite/get_rules_page_favorite?page=${page}`);
-            const data = await res.json();
-            rules_list_favorite.value = data.rule;
-        }
-
-        fetchRules(1)
-
-        return {
-          rules_list_favorite,
-          fetchRules,
-          deleteRule
-        };
+    // can use an other way with /favorite/search_rules but more difficult and use the db filter 
+    // filter on the list (reduce the trafic)
+    const filteredRules = computed(() => {
+      if (!searchQuery.value.trim()) {
+        return rules_list_favorite.value;
       }
-    }).mount('#main-container');
+      const query = searchQuery.value.trim().toLowerCase();
+      return rules_list_favorite.value.filter(rule =>
+        rule.title.toLowerCase().includes(query) ||
+        rule.description.toLowerCase().includes(query)
+      );
+    });
+
+    async function fetchRules(page) {
+      const res = await fetch(`/account/favorite/get_rules_page_favorite?page=${page}`);
+      const data = await res.json();
+      rules_list_favorite.value = data.rule;
+    }
+
+    async function deleteRule(id) {
+      const res = await fetch('/account/favorite/delete_rule?id=' + id);
+      const data = await res.json();
+      if (data.success) {
+        rules_list_favorite.value = rules_list_favorite.value.filter(rule => rule.id !== id);
+      }
+    }
+
+    fetchRules(1);
+
+    return {
+      rules_list_favorite,
+      searchQuery,
+      filteredRules,
+      deleteRule
+    };
+  }
+}).mount('#main-container');
 </script>
 {% endblock %}

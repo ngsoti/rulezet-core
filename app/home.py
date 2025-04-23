@@ -323,13 +323,7 @@ def import_yara_from_repo():
     return redirect(url_for("home.home"))
 
 
-# @home_blueprint.route("/test_yara_python", methods=['GET', 'POST'])
-# @login_required
-# def test_yara_python():
-#     # Appel de la méthode avec le fichier YARA
-#     fichier_yara = 'app/test.yar'
-#     extract_yara_rules(fichier_yara)
-#     return redirect(url_for("home.home"))
+
 
 @home_blueprint.route("/test_yara_python", methods=['GET', 'POST'])
 @login_required

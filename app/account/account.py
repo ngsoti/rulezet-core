@@ -1,6 +1,6 @@
 from sqlalchemy import true
-from app.favorite import favorite_core
-from app.favorite.favorite_core import get_all_user_favorites_with_rules, get_user_favorites, remove_favorite
+from app.favorite import favorite_core as FavoriteModel
+from app.favorite.favorite_core import remove_favorite
 from ..db_class.db import RuleFavoriteUser, User
 from flask import Blueprint, jsonify, render_template, redirect, url_for, request, flash
 from .form import LoginForm, EditUserForm, AddNewUserForm
@@ -146,3 +146,12 @@ def remove_rule_favorite():
     
 
 
+@account_blueprint.route("/favorite/search_rules", methods=['GET','POST'])
+@login_required
+def search_rules():
+    query = request.args.get("query", "").strip().lower()
+    if not query:
+        return jsonify({"rules": []})
+
+    results = FavoriteModel.search_rules_favorite(current_user.id,query)  
+    return jsonify({"rules": [r.to_json() for r in results]})

@@ -115,3 +115,6 @@ def get_rules_page_favorite(page, id_user, per_page=10):
     
     paginated_rules = favorites_query.paginate(page=page, per_page=per_page, error_out=False)
     return paginated_rules
+
+
+

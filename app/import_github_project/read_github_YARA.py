@@ -101,7 +101,7 @@ def count_braces_outside_strings(line):
     return count
 
 
-def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules/Yara/"):
+def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules/Yara"):
     """
     Retrieve all YARA rules from a Git repository and save each rule exactly as it is
     without any modification.
@@ -170,7 +170,7 @@ def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules/Yara/"):
                     current_rule_lines = []
 
 
-def read_and_parse_all_yara_rules_from_folder(folder_path="app/rule/output_rules", repo_dir=None, repo_url=None, known_licenses=None, branch="main"):
+def read_and_parse_all_yara_rules_from_folder(folder_path="app/rule/output_rules/Yara", repo_dir=None, repo_url=None, known_licenses=None, branch="main"):
     """
     Read all .yar files in the folder line by line, extract metadata and return a list of rules
     in JSON format (title, license, description, author, etc.).
@@ -180,7 +180,6 @@ def read_and_parse_all_yara_rules_from_folder(folder_path="app/rule/output_rules
 
     if not os.path.isdir(folder_path):
         raise FileNotFoundError(f"Folder '{folder_path}' does not exist.")
-
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)
 
@@ -244,6 +243,7 @@ def read_and_parse_all_yara_rules_from_folder(folder_path="app/rule/output_rules
                 "author": author or "Unknown",
                 "to_string": raw_content
             }
+      
 
             rules_json.append(rule_dict)
 

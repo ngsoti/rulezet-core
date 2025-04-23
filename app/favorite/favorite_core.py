@@ -58,3 +58,19 @@ def get_all_user_favorites_with_rules(user_id: int):
             rules_list.append(rule)  
     
     return rules_list
+
+
+def search_rules_favorite(user_id, query):
+    if not query:
+        return []
+
+    #table join to have acces to the title of a rule with his id ( filter by name ) 
+    return (
+        db.session.query(Rule)
+        .join(RuleFavoriteUser, Rule.id == RuleFavoriteUser.rule_id)
+        .filter(
+            RuleFavoriteUser.user_id == user_id,
+            Rule.title.ilike(f"%{query}%")
+        )
+        .all()
+    )
