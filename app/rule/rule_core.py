@@ -117,3 +117,66 @@ def set_user_id(rule_id, user_id):
         db.session.commit()  
         return True
     return False
+
+
+
+def propose_edit_core(rule_id, proposed_content, message=None):
+    if not proposed_content:
+        return False
+
+    new_proposal = RuleEditProposal(
+        rule_id=rule_id,
+        user_id=current_user.id,
+        proposed_content=proposed_content,
+        message=message
+    )
+    db.session.add(new_proposal)
+    db.session.commit()
+    return True
+
+
+
+def get_rules_edit_propose_page(page):
+    """Return all rules by page"""
+    return RuleEditProposal.query.paginate(page=page, per_page=60, max_per_page=70)
+
+def get_rules_edit_propose_page_pending(page):
+    return RuleEditProposal.query.filter_by(status='pending').paginate(
+        page=page,
+        per_page=60,
+        max_per_page=70
+    )
+
+
+def get_rule_proposal(id):
+    """Return the rule"""
+    return RuleEditProposal.query.get(id)
+
+def set_to_string_rule(rule_id, proposed_content):
+    try:
+        rule = Rule.query.get(rule_id)
+        if not rule:
+            return {"message": "Rule not found"}, 404
+
+        rule.to_string = proposed_content  
+        db.session.commit()
+        return {"message": "Rule updated successfully"}, 200
+
+    except Exception as e:
+        db.session.rollback()
+        return {"message": "Error updating rule", "error": str(e)}, 500
+    
+def set_status(proposal_id, status):
+    if status not in ['accepted', 'rejected']:
+        return {'error': 'Statut invalide'}, 400
+
+    proposal = RuleEditProposal.query.get(proposal_id)
+
+    if not proposal:
+        return {'error': 'Proposition non trouvée'}, 404
+
+    proposal.status = status
+    db.session.commit()
+
+    return {'success': True, 'new_status': status}, 200
+

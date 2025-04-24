@@ -14,16 +14,29 @@
                 </a>
             </li>
             {% if current_user.is_authenticated and current_user.is_admin() %}
-                <li class="nav-item mx-2">
-                    <a href="/admin/request" class="nav-link text-dark fw-semibold">
-                        <i class="fa-solid fa-user fa-fw me-1"></i> Requests
+                <li class="nav-item mx-2 position-relative">
+                    <a href="/admin/request" class="nav-link d-flex align-items-center text-dark fw-semibold">
+                        <i class="fa-solid fa-envelope fa-fw me-1"></i>
+                        Requests
                         {% if requests_to_validate > 0 %}
-                            <span class="badge bg-danger ms-2">{{ requests_to_validate }}</span>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ requests_to_validate }}
+                                <span class="visually-hidden">unread messages</span>
+                            </span>
                         {% endif %}
-                        
                     </a>
                 </li>
             {% endif %}
+
+            {% if current_user.is_authenticated %}
+                <li class="nav-item mx-2">
+                    <a href="/rule/rule_propose_edit" class="nav-link d-flex align-items-center text-dark fw-semibold">
+                        <i class="fa-solid fa-pen-to-square fa-fw me-1"></i>
+                        Rule Proposal
+                    </a>
+                </li>
+            {% endif %}
+
 
             <!-- Profile Dropdown -->
             <li class="nav-item dropdown mx-2">

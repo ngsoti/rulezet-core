@@ -214,3 +214,27 @@ class Request(db.Model):
         }
 
 
+class RuleEditProposal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    proposed_content = db.Column(db.Text, nullable=False)
+    message = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String, default="pending")
+
+    rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic'))
+    user = db.relationship('User', backref=db.backref('proposed_edits', lazy='dynamic'))
+
+
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'rule_id': self.rule_id,
+            'user_id': self.user_id,
+            'proposed_content': self.proposed_content,
+            'message': self.message,
+            "status": self.status,
+            'timestamp': self.timestamp.isoformat(),
+        }

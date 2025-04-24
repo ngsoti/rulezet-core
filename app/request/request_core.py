@@ -6,7 +6,7 @@ def create_request(rule, user_id, current_user):
     """Create or update an ownership request."""
 
 
-    existing_request = Request.query.filter_by(user_id=user_id, title=f"Request for ownership of rule {rule.id} - {rule.title}").first()
+    existing_request = Request.query.filter_by(user_id=user_id, title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.author}").first()
 
     if existing_request:
 
@@ -19,7 +19,7 @@ def create_request(rule, user_id, current_user):
 
     new_request = Request(
         user_id=user_id,
-        title=f"Request for ownership of rule {rule.id} - {rule.title}",
+        title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.author}",
         content=f"{current_user.first_name} {current_user.last_name} (ID: {current_user.id}) wants to become the owner of '{rule.title}'",
         status="pending",
         created_at=datetime.utcnow(),

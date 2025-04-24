@@ -1,20 +1,14 @@
-import asyncio
 from datetime import datetime, timezone
-import json
-import string
-import tempfile
 from flask import Flask, Blueprint, Response, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from flask import get_flashed_messages
-import git
-from sqlalchemy import true
 
-from app.comment.comment_core import add_comment_core, delete_comment, dislike_comment, get_comment_by_id, get_comments_for_rule, get_latest_comment_for_user_and_rule, like_comment, update_comment
-from app.db_class import db
-from app.db_class.db import Comment, Rule, RuleFavoriteUser
+
+from app.comment.comment_core import add_comment_core, delete_comment, get_comment_by_id,  get_latest_comment_for_user_and_rule,  update_comment
+from app.db_class.db import Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 
-from app.import_github_project.read_github_YARA import clone_or_access_repo, extract_owner_repo, get_license_file_from_github_repo, get_license_name, get_yara_files_from_repo, parse_yara_rule, read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
+from app.import_github_project.read_github_YARA import clone_or_access_repo, extract_owner_repo,  get_license_name, get_yara_files_from_repo, parse_yara_rule, read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
 
 from app.import_github_project.yara_python import  extract_yara_rules
 from app.rule.rule_form import EditRuleForm
@@ -33,6 +27,7 @@ home_blueprint = Blueprint(
     static_folder='static'
 )
 
+#-----------------------------------------------------------Rules_pages-----------------------------------------------------------#
 
 @home_blueprint.route("/")
 def home():
@@ -170,7 +165,25 @@ def comment_rule():
     return {"message": "No Comments"}, 404
 
 
+@home_blueprint.route("/download/<int:rule_id>", methods=['GET', 'POST'])
+@login_required
+def download_rule(rule_id):
 
+    rule = RuleModel.get_rule(rule_id)
+
+    filename = f"{rule.title}.yar"
+    content = rule.to_string or ""
+
+    return Response(
+        content,
+        mimetype='application/octet-stream',
+        headers={
+            "Content-Disposition": f"attachment;filename={filename}"
+        }
+    )
+
+
+#-----------------------------------------------------------comment_part-----------------------------------------------------------#
 
 @home_blueprint.route("/comment_add", methods=["POST", "GET"])
 @login_required
@@ -201,7 +214,7 @@ def edit_comment():
     comment = get_comment_by_id(comment_id)
     if  comment.user_id == current_user.id or current_user.is_admin():
         update_content = update_comment(comment_id, new_content)
-        flash("Comment updated successfully.", "success")
+        # flash("Comment updated successfully.", "success")
         return jsonify({"updatedComment": update_content.to_json()})
     else:
         return {"message": "No Comments"}
@@ -216,12 +229,13 @@ def delete_comment_route(comment_id):
     if  comment.user_id == current_user.id or current_user.is_admin():
         rule_id = comment.rule_id
         delete_comment(comment_id)
-        flash("Comment deleted.", "success")
+        # flash("Comment deleted.", "success")
         return redirect(url_for("home.detail_rule", rule_id=rule_id))
     flash("Unauthorized action.", "danger")
     return redirect(url_for("home.home"))
 
     
+#-----------------------------------------------------------request_part-----------------------------------------------------------#
 
 @home_blueprint.route("/owner_request", methods=["POST", "GET"])
 @login_required
@@ -327,33 +341,7 @@ def update_request_status():
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#-----------------------------------------------------------favorite_part-----------------------------------------------------------#
 
 
 @home_blueprint.route('/favorite/<int:rule_id>', methods=['GET'])
@@ -375,33 +363,73 @@ from flask_login import login_required, current_user
 
 
 
+#-----------------------------------------------------------propose_edit-----------------------------------------------------------#
 
-
-
-
-
-@home_blueprint.route("/download/<int:rule_id>", methods=['GET', 'POST'])
+@home_blueprint.route("/rule/rule_propose_edit", methods=["POST", "GET"])
 @login_required
-def download_rule(rule_id):
+def rule_propose_edit():
+    return render_template("rule/rule_propose_edit.html")
 
+
+@home_blueprint.route("/rule/get_rules_propose_edit_page", methods=['GET'])
+def get_rules_propose_edit_page():
+    page = request.args.get('page', 1, type=int)
+    rules = RuleModel.get_rules_edit_propose_page(page)
+    rules_pendings = RuleModel.get_rules_edit_propose_page_pending(page)
+    
+    if rules and rules_pendings:
+        rules_list = list()
+        for rule in rules:
+            u = rule.to_json()
+            rules_list.append(u)
+        rules_pendings_list = list()
+        for rule_pending in rules_pendings:
+            m = rule_pending.to_json()
+            rules_pendings_list.append(m)
+
+        return {"rules_list": rules_list, "total_pages": rules.pages, "rules_pendings_list": rules_pendings_list}
+    
+    return {"message": "No Rule"}, 404
+
+@home_blueprint.route("/rule/validate_proposal", methods=['GET'])
+def validate_proposal():
+    rule_id = request.args.get('ruleId', type=int) # id of the real rule 
+    decision = request.args.get('decision', type=str)
+    rule_proposal_id = request.args.get('ruleproposalId', type=int) #id of the rule request
+
+    if rule_id and decision and rule_proposal_id:
+        # the rule modified
+        rule_proposal = RuleModel.get_rule_proposal(rule_proposal_id)
+        # the real rule
+        rule = RuleModel.get_rule(rule_id)
+
+        if decision == "accepted":
+            RuleModel.set_status(rule_proposal_id,"accepted")
+            # change the to_string part of the rule in the db 
+            message = RuleModel.set_to_string_rule(rule_id, rule_proposal.proposed_content)
+        elif decision == "rejected":
+            RuleModel.set_status(rule_proposal_id,"rejected")
+            message = "rejected"
+        else:
+            return jsonify({"message": "Invalid decision"}), 400
+    return jsonify({"message": message})
+
+
+@home_blueprint.route('/propose_edit/<int:rule_id>', methods=['POST'])
+@login_required
+def propose_edit(rule_id):
     rule = RuleModel.get_rule(rule_id)
+    data = request.form
+    proposed_content = data.get('proposed_content')
+    message = data.get('message')
 
-    filename = f"{rule.title}.yar"
-    content = rule.to_string or ""
+    success = RuleModel.propose_edit_core(rule_id, proposed_content, message)
 
-    return Response(
-        content,
-        mimetype='application/octet-stream',
-        headers={
-            "Content-Disposition": f"attachment;filename={filename}"
-        }
-    )
+    flash("success" if success else "error")
+    return redirect(url_for('home.detail_rule', rule_id=rule_id))
 
 
-
-
-
-
+#-----------------------------------------------------------import_from_github-----------------------------------------------------------#
 
 
 @home_blueprint.route("/import_yara_from_repo", methods=['GET', 'POST'])
