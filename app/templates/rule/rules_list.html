@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+{% import 'macros/form_macros.html' as f %}
+{% block content %}
+
+<div class="container mt-4">
+  <header class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-dark m-0"><i class="fas fa-cogs"></i> Rule Set</h1>
+    <a href="/rule" class="btn btn-warning btn-sm">
+      <i class="fas fa-hammer"></i> Add Rule
+    </a>
+  </header>
+
+  <div class="mb-3 input-group">
+    <span class="input-group-text">
+      <i class="fas fa-search"></i>
+    </span>
+    <input
+      type="text"
+      v-model="searchQuery"
+      class="form-control"
+      placeholder="Search for a rule..."
+    >
+  </div>
+
+
+  <div class="accordion" id="accordionExample2">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingOne">
+        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+          Add a Github Project with URL Final Version
+        </button>
+      </h2>
+      <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample2">
+        <div class="accordion-body">
+          <form method="POST" action="{{ url_for('rule.test_yara_python_url') }}" class="p-4 border rounded shadow-sm bg-light">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="mb-3">
+              <label for="url" class="form-label">URL for a Github project to add</label>
+              <div class="input-group">
+                <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="fas fa-paper-plane"></i> Send
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  
+  
+  
+
+
+  </template>
+  <template v-if="rules_list && rules_list.rule.length > 0">
+    <br/>
+    <nav aria-label="Page navigation">
+      <ul class="pagination">
+        <li class="page-item" :class="{ disabled: current_page === 1 }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
+            <i class="fas fa-arrow-left"></i> Previous
+          </a>
+        </li>
+        <li
+          class="page-item"
+          v-for="page in visiblePages"
+          :key="page"
+          :class="{ active: current_page === page, disabled: page === '...' }"
+        >
+          <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+          <span v-else class="page-link">...</span>
+        </li>
+        <li class="page-item" :class="{ disabled: current_page === total_pages }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
+            Next <i class="fas fa-arrow-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <br/>
+
+    <p>Total rules: [[ total_rules_liste ]]</p>
+    <div class="card card-body mb-3" v-for="(rule, index) in filteredRules" :key="rule.uuid">
+
+      <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1371ff">
+        <h4 class="mb-0">[[ rule.id ]] - [[ rule.title ]]</h4>
+        {% if current_user.is_authenticated %}
+          <div class="d-flex">
+            <template v-if="parseInt('{{current_user.id}}') == rule.user_id || current_user_is_admin">
+              <a :href="`/rule/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2" title="Edit Rule">
+                <i class="fas fa-pen"></i>
+              </a>
+              <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2" title="Delete Rule">
+                <i class="fas fa-trash"></i>
+              </button>
+            </template>
+            
+            <a :href="`/rule/favorite/${rule.id}`" class="btn btn-success btn-sm me-2" title="Add to Favorites">
+              <i class="fas fa-star"></i>
+            </a>
+          </div>
+          {% endif %}
+
+      </div>
+
+      <div class="card-body">
+        <div class="mb-2">
+          <strong>Description :</strong>
+          <p class="card-text">[[ rule.description ]]</p>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-2">
+            <strong>Format :</strong> [[ rule.format ]]
+          </div>
+          <div class="col-md-6 mb-2">
+            <strong>Source :</strong> 
+              <a :href="[[ rule.source ]]" target="_blank" class="text-decoration-none" style="word-wrap: break-word;">
+                [[ rule.source ]]
+              </a>
+          </div>
+          <div class="col-md-6 mb-2">
+            <strong>License :</strong> [[ rule.license ]]
+          </div>
+          <div class="col-md-6 mb-2">
+            <strong>UUID :</strong> [[ rule.uuid ]]
+          </div>
+          <div class="col-md-6 mb-2">
+            <strong>Version :</strong> [[ rule.version ]]
+          </div>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-md-6">
+            <strong>Creation date :</strong> [[ rule.creation_date ]]
+          </div>
+          <div class="col-md-6">
+            <strong>Modification time :</strong> [[ rule.last_modif ]]
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <strong>Author :</strong> [[ rule.author ]]
+        </div>
+        {% if current_user.is_authenticated %}
+          <div class="mt-3">
+            <button @click="vote('up', rule.id)" class="btn btn-success btn-sm">
+              <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
+            </button>
+            <button @click="vote('down', rule.id)" class="btn btn-danger btn-sm">
+              <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
+            </button>
+          </div>
+        {% endif %}
+      </div>
+      <div class="text-center mt-3">
+        <a :href="`detail_rule/${rule.id}`" class="btn btn-info fa-solid fa-plus" style="font-size: 14px; padding: 12px;">View more</a>
+      </div>
+    </div>
+
+    <nav aria-label="Page navigation">
+      <ul class="pagination">
+        <li class="page-item" :class="{ disabled: current_page === 1 }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
+            <i class="fas fa-arrow-left"></i> Previous
+          </a>
+        </li>
+        <li
+          class="page-item"
+          v-for="page in visiblePages"
+          :key="page"
+          :class="{ active: current_page === page, disabled: page === '...' }"
+        >
+          <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+          <span v-else class="page-link">...</span>
+        </li>
+        <li class="page-item" :class="{ disabled: current_page === total_pages }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
+            Next <i class="fas fa-arrow-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </template>
+
+  <i v-else class="text-muted">No rules added</i>
+  <br />
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+  const { createApp, ref, computed } = Vue
+  import { message_list } from '/static/js/toaster.js'
+
+  createApp({
+    delimiters: ['[[', ']]'],
+    setup() {
+      const rules_list = ref({ rule: [] })
+      const total_rules = ref(0)
+      const current_page = ref(1)
+      const total_pages = ref(1)
+      const current_user_is_admin = ref()
+      const searchQuery = ref('')
+      const total_rules_liste = ref()
+  
+      const filteredRules = computed(() => {
+        if (!rules_list.value || !rules_list.value.rule) return []
+        const query = searchQuery.value.toLowerCase()
+        return rules_list.value.rule.filter(rule =>
+          rule.title.toLowerCase().includes(query) ||
+          rule.description.toLowerCase().includes(query) ||
+          rule.author.toLowerCase().includes(query) ||
+          rule.format.toLowerCase().includes(query)
+        )
+      })
+
+      async function fetchRules(page) {
+        const res = await fetch('get_rules_page?page=' + page)
+        const data = await res.json()
+        rules_list.value = data
+        total_pages.value = data.total_pages
+        total_rules.value = data.total_rules
+        total_rules_liste.value = data.total_rules // copy to have a dynamique value of total rule
+        current_page.value = page
+      }
+      async function fetchCurrentUser(){
+        const res = await fetch('get_current_user')
+        const data = await res.json()
+        current_user_is_admin.value = data.user
+      }
+
+      async function deleteRule(id, index) {
+        const res = await fetch('delete_rule?id=' + id)
+        const data = await res.json()
+        const acces = data.success
+        if(acces){
+          rules_list.value.rule.splice(index, 1)
+          total_rules_liste.value -= 1
+        }
+      }
+
+      async function vote(voteType, ruleId) {
+        const res = await fetch(`vote_rule?id=${ruleId}&vote_type=${voteType}`, { method: 'GET' })
+        const data = await res.json()
+        const updatedRule = rules_list.value.rule.find(rule => rule.id === ruleId)
+        if (updatedRule) {
+          if (voteType === 'up') {
+            updatedRule.vote_up = data.vote_up
+          } else if (voteType === 'down') {
+            updatedRule.vote_down = data.vote_down
+          }
+        }     
+      }
+
+      async function addFavoriteRule(id, index){
+        const res = await fetch('add_rule_favorite?id=' + id)
+        if (res){
+          message_list.success('Rule added to favorites!');
+        }else{
+          message_list.error('Rule added to favorites!');
+        }
+      }
+
+      const visiblePages = computed(() => {
+        const pages = []
+        const total = total_pages.value
+        const current = current_page.value
+
+        if (total <= 7) {
+          for (let i = 1; i <= total; i++) pages.push(i)
+        } else {
+          if (current <= 4) {
+            pages.push(1, 2, 3, 4, 5, '...', total)
+          } else if (current >= total - 3) {
+            pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+          } else {
+            pages.push(1, '...', current - 1, current, current + 1, '...', total)
+          }
+        }
+
+        return pages
+      })
+
+      fetchRules(1)
+      fetchCurrentUser()
+
+      return {
+        message_list,
+        rules_list,
+        current_page,
+        total_pages,
+        total_rules,
+        fetchRules,
+        addFavoriteRule,
+        deleteRule,
+        vote,
+        visiblePages,
+        fetchCurrentUser,
+        current_user_is_admin,
+        filteredRules,
+        searchQuery,
+        total_rules_liste
+      }
+    }
+  }).mount('#main-container')
+</script>
+{% endblock %}

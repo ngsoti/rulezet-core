@@ -8,7 +8,7 @@
             <a class="nav-link active" data-bs-toggle="tab" href="#1" role="tab">Rule</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#2" role="tab">Change propose</a>
+            <a class="nav-link" data-bs-toggle="tab" href="#2" role="tab">Suggest an edit</a>
         </li>
     </ul>
     <div class="tab-content mt-4">
@@ -95,7 +95,7 @@
                     <!-- Actions -->
                     <div class="d-flex align-items-center flex-wrap">
                         <!-- Download button -->
-                        <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success me-3 px-4 py-2 mb-2">
+                        <a href="{{ url_for('rule.download_rule', rule_id=rule.id) }}" class="btn btn-success me-3 px-4 py-2 mb-2">
                             <i class="fas fa-download me-1"></i> Download
                         </a>
                     
@@ -158,17 +158,6 @@
                 <div class="card-body">
 
                     {% if current_user.is_authenticated %}
-                    <!-- Add a new comment -->
-                    <!-- <form method="post" action="{{ url_for('home.add_comment', rule_id=rule.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <div class="mb-3">
-                            <label for="commentContent" class="form-label">Leave a comment:</label>
-                            <textarea class="form-control" id="commentContent" name="content" rows="3" placeholder="Your comment here..." required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-paper-plane"></i> Post Comment
-                        </button>
-                    </form> -->
                     <form @submit.prevent="submitComment">
                         <input type="hidden" name="csrf_token" :value="csrf_token" />
                         
@@ -268,14 +257,7 @@
                 </div>
             </div>
 
-            <div class="text-center mt-4 mb-5">
-                <a href="/" class="btn btn-outline-primary btn-lg me-2">
-                    <i class="fas fa-arrow-left me-1"></i> Back to Rules
-                </a>
-                <a href="/account/favorite" class="btn btn-outline-warning btn-lg">
-                    <i class="fas fa-star me-1"></i> Go to Favorites
-                </a>
-            </div>
+            
             
             <div id="rule_id" data-rule-id="{{ rule.id }}"></div>
         </div>
@@ -288,22 +270,22 @@
                     <h2 class="mb-0"><i class="fas fa-pencil-alt"></i> Propose an Edit</h2>
                     </div>
                     <div class="card-body">
-                    <form action="{{ url_for('home.propose_edit', rule_id=rule.id) }}" method="post">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <div class="form-group mb-4">
-                        <label for="proposed_content" class="font-weight-bold">Modified Rule Content</label>
-                        <textarea id="proposed_content" name="proposed_content" rows="8" class="form-control" placeholder="Paste your modified version of the rule here">{{ rule.to_string }}</textarea>
-                        </div>
-                        <div class="form-group mb-4">
-                        <label for="message" class="font-weight-bold">Message or Justification (optional)</label>
-                        <input id="message" type="text" name="message" class="form-control" placeholder="Explain the changes you made or provide any additional context">
-                        </div>
-                        <div class="d-flex justify-content-end">
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-paper-plane"></i> Submit Proposal
-                        </button>
-                        </div>
-                    </form>
+                        <form action="{{ url_for('rule.propose_edit', rule_id=rule.id) }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="form-group mb-4">
+                            <label for="proposed_content" class="font-weight-bold">Modified Rule Content</label>
+                            <textarea id="proposed_content" name="proposed_content" rows="8" class="form-control" placeholder="Paste your modified version of the rule here">{{ rule.to_string }}</textarea>
+                            </div>
+                            <div class="form-group mb-4">
+                            <label for="message" class="font-weight-bold">Message or Justification (optional)</label>
+                            <input id="message" type="text" name="message" class="form-control" placeholder="Explain the changes you made or provide any additional context">
+                            </div>
+                            <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-paper-plane"></i> Submit Proposal
+                            </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             {% else %}
@@ -314,7 +296,14 @@
                 </div>
             {% endif %}
         </div>        
-
+        <div class="text-center mt-4 mb-5">
+            <a href="/" class="btn btn-outline-primary btn-lg me-2">
+                <i class="fas fa-arrow-left me-1"></i> Back to Rules
+            </a>
+            <a href="/account/favorite" class="btn btn-outline-warning btn-lg">
+                <i class="fas fa-star me-1"></i> Go to Favorites
+            </a>
+        </div>
             
     </div>
         
@@ -347,7 +336,7 @@
 
 
             async function submitComment(){
-                const response = await fetch('/comment_add?new_content='+ newCommentContent.value + '&rule_id=' + rule_id)
+                const response = await fetch('/rule/comment_add?new_content='+ newCommentContent.value + '&rule_id=' + rule_id)
                 if (response.ok) {
                     const data = await response.json();
                     comments_list.value.unshift(data.comment); 
@@ -363,7 +352,7 @@
             async function editComment(commentId) {
                 const comment = comments_list.value.find(c => c.id === commentId);
 
-                const res = await fetch('/edit_comment?commentID=' + commentId + '&newContent=' + encodeURIComponent(comment.editContent));
+                const res = await fetch('/rule/edit_comment?commentID=' + commentId + '&newContent=' + encodeURIComponent(comment.editContent));
 
                 if (res.ok) {
                     const updatedComment = await res.json();
@@ -386,7 +375,7 @@
 
         
             async function deleteComment(commentId) {
-                const res = await fetch('/comment_delete/' + commentId );
+                const res = await fetch('/rule/comment_delete/' + commentId );
 
                 if (res.ok) {
                     const index = comments_list.value.findIndex(c => c.id === commentId);
@@ -400,7 +389,7 @@
             
 
             async function fetchCurrentUser(){
-                const res = await fetch('get_current_user')
+                const res = await fetch('/rule/get_current_user')
                 const data = await res.json()
                 current_user_is_admin.value = data.user
             }

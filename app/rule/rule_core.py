@@ -2,6 +2,7 @@ import uuid
 import datetime
 
 from flask_login import current_user
+from sqlalchemy import case, func
 
 from .. import db
 from ..db_class.db import *
@@ -59,6 +60,7 @@ def edit_rule_core(form_dict, id) -> None:
     rule.source = form_dict["source"]
     rule.version = form_dict["version"]
     rule.to_string = form_dict["to_string"]
+    rule.last_modif = datetime.now()
 
     db.session.commit()
 
@@ -205,3 +207,13 @@ def set_status(proposal_id, status):
 
     return {'success': True, 'new_status': status}, 200
 
+# def get_last_rules_from_db(limit=10):
+#     return Rule.query.order_by(Rule.last_modif.desc()).limit(limit).all()
+
+def get_last_rules_from_db(limit=10):
+    return Rule.query.order_by(
+        case(
+            (Rule.creation_date > Rule.last_modif, Rule.creation_date),
+            else_=Rule.last_modif
+        ).desc()
+    ).limit(limit).all()
