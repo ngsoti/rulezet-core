@@ -123,12 +123,14 @@ def set_user_id(rule_id, user_id):
 def propose_edit_core(rule_id, proposed_content, message=None):
     if not proposed_content:
         return False
+    rule = get_rule(rule_id)
 
     new_proposal = RuleEditProposal(
         rule_id=rule_id,
         user_id=current_user.id,
         proposed_content=proposed_content,
-        message=message
+        message=message,
+        old_content =rule.to_string
     )
     db.session.add(new_proposal)
     db.session.commit()
@@ -136,16 +138,39 @@ def propose_edit_core(rule_id, proposed_content, message=None):
 
 
 
-def get_rules_edit_propose_page(page):
-    """Return all rules by page"""
-    return RuleEditProposal.query.paginate(page=page, per_page=60, max_per_page=70)
+# def get_rules_edit_propose_page(page):
+#     """Return all rules by page"""
+#     return RuleEditProposal.query.paginate(page=page, per_page=60, max_per_page=70)
 
-def get_rules_edit_propose_page_pending(page):
-    return RuleEditProposal.query.filter_by(status='pending').paginate(
+# def get_rules_edit_propose_page_pending(page):
+#     return RuleEditProposal.query.filter_by(status='pending').paginate(
+#         page=page,
+#         per_page=60,
+#         max_per_page=70
+#     )
+
+from sqlalchemy.orm import joinedload
+def get_rules_edit_propose_page(page):
+    """Return all rule proposals where the original rule belongs to current user"""
+    return RuleEditProposal.query.join(Rule).filter(
+        Rule.user_id == current_user.id
+    ).options(joinedload(RuleEditProposal.rule)).paginate(
         page=page,
         per_page=60,
         max_per_page=70
     )
+
+def get_rules_edit_propose_page_pending(page):
+    """Return all pending rule proposals where the original rule belongs to current user"""
+    return RuleEditProposal.query.join(Rule).filter(
+        Rule.user_id == current_user.id,
+        RuleEditProposal.status == 'pending'
+    ).options(joinedload(RuleEditProposal.rule)).paginate(
+        page=page,
+        per_page=60,
+        max_per_page=70
+    )
+
 
 
 def get_rule_proposal(id):

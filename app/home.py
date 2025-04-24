@@ -374,12 +374,13 @@ def rule_propose_edit():
 @home_blueprint.route("/rule/get_rules_propose_edit_page", methods=['GET'])
 def get_rules_propose_edit_page():
     page = request.args.get('page', 1, type=int)
-    rules = RuleModel.get_rules_edit_propose_page(page)
+    rules_propose = RuleModel.get_rules_edit_propose_page(page)
     rules_pendings = RuleModel.get_rules_edit_propose_page_pending(page)
     
-    if rules and rules_pendings:
+    
+    if rules_propose and rules_pendings:
         rules_list = list()
-        for rule in rules:
+        for rule in rules_propose:
             u = rule.to_json()
             rules_list.append(u)
         rules_pendings_list = list()
@@ -387,7 +388,7 @@ def get_rules_propose_edit_page():
             m = rule_pending.to_json()
             rules_pendings_list.append(m)
 
-        return {"rules_list": rules_list, "total_pages": rules.pages, "rules_pendings_list": rules_pendings_list}
+        return {"rules_list": rules_list, "total_pages": rules_propose.pages, "rules_pendings_list": rules_pendings_list}
     
     return {"message": "No Rule"}, 404
 

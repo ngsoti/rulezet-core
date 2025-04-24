@@ -3,319 +3,322 @@
 
 {% block content %}
 <div class="container mt-4">
-
-    
-    <div class="mb-6">
-        {% if current_user.is_authenticated %}
-        <!-- Proposal Edit Card -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-            <h2 class="mb-0"><i class="fas fa-pencil-alt"></i> Propose an Edit</h2>
-            </div>
-            <div class="card-body">
-            <form action="{{ url_for('home.propose_edit', rule_id=rule.id) }}" method="post">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="form-group mb-4">
-                <label for="proposed_content" class="font-weight-bold">Modified Rule Content</label>
-                <textarea id="proposed_content" name="proposed_content" rows="8" class="form-control" placeholder="Paste your modified version of the rule here">{{ rule.to_string }}</textarea>
+    <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#1" role="tab">Rule</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#2" role="tab">Change propose</a>
+        </li>
+    </ul>
+    <div class="tab-content mt-4">
+        <div class="tab-pane fade show active" id="1" role="tabpanel">
+            <!-- Main Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header text-white" style="background-color: rgb(19, 113, 255)">
+                    <h1 class="mb-0">{{ rule.title }}</h1>
                 </div>
-                <div class="form-group mb-4">
-                <label for="message" class="font-weight-bold">Message or Justification (optional)</label>
-                <input id="message" type="text" name="message" class="form-control" placeholder="Explain the changes you made or provide any additional context">
-                </div>
-                <div class="d-flex justify-content-end">
-                <button type="submit" class="btn btn-warning">
-                    <i class="fas fa-paper-plane"></i> Submit Proposal
-                </button>
-                </div>
-            </form>
-            </div>
-        </div>
-        {% else %}
-        <div class="card shadow-sm mb-4">
-            <div class="card-body text-center">
-            <p class="text-muted">Please <a href="{{ url_for('auth.login') }}" class="text-primary">log in</a> to propose an edit.</p>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-
-
-
-
-
-
-    <!-- Main Card -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header text-white" style="background-color: rgb(19, 113, 255)">
-            <h1 class="mb-0">{{ rule.title }}</h1>
-        </div>
-        <div class="card-body">
-            <!-- Rule Description -->
-            <div class="mb-4">
-                <strong class="h5">Description :</strong>
-                <p>{{ rule.description }}</p>
-            </div>
-        </div>
-    </div>
-    <!-- Additional Information Card -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Additional Information</h5>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <strong>Format :</strong>
-                    <p>{{ rule.format }}</p>
-                </div>
-                <div class="col-md-6">
-                    <strong>License :</strong>
-                    <p>{{ rule.license }}</p>
-                </div>
-            </div>
-
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <strong>UUID :</strong>
-                    <p>{{ rule.uuid }}</p>
-                </div>
-                <div class="col-md-6">
-                    <strong>Source :</strong>
-                    <p>{{ rule.source }}</p>
-                </div>
-            </div>
-
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <strong>Creation date :</strong>
-                    <p>{{ rule.creation_date.strftime('%d/%m/%Y %H:%M:%S') }}</p>
-                </div>
-                <div class="col-md-6">
-                    <strong>Modification date :</strong>
-                    <p>{{ rule.last_modif.strftime('%d/%m/%Y %H:%M:%S') }}</p>
-                </div>
-            </div>
-
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <strong>Author :</strong>
-                    <p>{{ rule.author }}</p>
-                </div>
-                <div class="col-md-6">
-                    <strong>Editor :</strong>
-                    <p>{{ rule.get_rule_user_first_name_by_id() }}</p>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- Rule Content Card -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="fas fa-file-alt"></i> Rule Content</h5>
-        </div>
-        <div class="card-body">
-            <pre class="bg-light p-3 rounded-3 border" style="white-space: pre-wrap;">{{ rule.to_string }}</pre>
-        </div>
-    </div>
-
-    <!-- Actions Card -->
-    <div class="card shadow-sm">
-        <div class="card-body d-flex justify-content-between align-items-center">
-            <!-- Actions -->
-            <div class="d-flex align-items-center flex-wrap">
-                <!-- Download button -->
-                <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success me-3 px-4 py-2 mb-2">
-                    <i class="fas fa-download me-1"></i> Download
-                </a>
-            
-                <!-- Request Ownership button -->
-                {% if rule.user_id != current_user.id%}
-                <button class="btn btn-outline-warning me-3 px-4 py-2 mb-2" @click="Ownership({{rule.id}})">
-                    <i class="fas fa-user-shield me-1"></i> Request Ownership
-                </button>
-                {% endif%}
-                <!-- Copy button -->
-                <button class="btn btn-outline-info me-3 px-4 py-2 mb-2" onclick="copyToClipboard()">
-                    <i class="fas fa-copy me-1"></i> Copy
-                </button>
-            
-                <!-- Copy message -->
-                <span id="copyMessage" class="text-success ms-2" style="display: none; font-size: 0.875rem;">
-                    Content copied to clipboard!
-                </span>
-            </div>
-            
-            <script>
-                function copyToClipboard() {
-                    const textarea = document.getElementById('ruleContentToCopy');
-                    textarea.style.display = 'block'; 
-                    textarea.select();
-                    document.execCommand("copy");
-                    textarea.style.display = 'none';
-            
-                    var copyMessage = document.getElementById('copyMessage');
-                    copyMessage.style.display = 'inline'; 
-            
-                    setTimeout(function() {
-                        copyMessage.style.display = 'none';
-                    }, 2000);
-                }
-            </script>
-
-            <!-- Votes -->
-            <div class="text-center">
-                <strong>Votes :</strong>
-                <div>
-                    <span class="text-success">Positive Vote : {{ rule.vote_up }}</span> | 
-                    <span class="text-danger">Negative Vote : {{ rule.vote_down }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <textarea id="ruleContentToCopy" style="display: none;">{{ rule.to_string }}</textarea>
-
-    <!-- Comments Section -->
-    <div class="card shadow-sm mt-5">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">
-                <i class="fas fa-comments"></i> Comments 
-                <span class="badge bg-secondary ms-2">[[ comments_list.length ]]</span>
-                <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse" data-bs-target="#commentsCollapse" aria-expanded="true" aria-controls="commentsCollapse">
-                    <i class="fas fa-eye"></i> Show/Hide Comments
-                </button>
-            </h5>
-        </div>
-        
-        <div class="card-body">
-
-            {% if current_user.is_authenticated %}
-            <!-- Add a new comment -->
-            <!-- <form method="post" action="{{ url_for('home.add_comment', rule_id=rule.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="mb-3">
-                    <label for="commentContent" class="form-label">Leave a comment:</label>
-                    <textarea class="form-control" id="commentContent" name="content" rows="3" placeholder="Your comment here..." required></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Post Comment
-                </button>
-            </form> -->
-            <form @submit.prevent="submitComment">
-                <input type="hidden" name="csrf_token" :value="csrf_token" />
-                
-                <div class="mb-3">
-                    <label for="commentContent" class="form-label">Leave a comment:</label>
-                    <textarea
-                        class="form-control"
-                        id="commentContent"
-                        v-model="newCommentContent"
-                        rows="3"
-                        placeholder="Your comment here..."
-                        required>
-                    </textarea>
-                </div>
-            
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Post Comment
-                </button>
-            </form>
-            
-            {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-sign-in-alt"></i> Please <a href="{{ url_for('auth.login') }}">log in</a> to post a comment.
-            </div>
-            {% endif %}
-
-            <hr>
-
-            <!-- Existing comments section, collapsible -->
-            <template v-if="comments_list && comments_list.length > 0">
-                <div class="collapse show" id="commentsCollapse" v-for="(comment, index) in comments_list" :key="comment.id">
+                <div class="card-body">
+                    <!-- Rule Description -->
                     <div class="mb-4">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <strong><i class="fas fa-user-circle"></i> [[ comment.user_name ]]</strong>
-                                <small class="text-muted ms-2">
-                                    <i class="far fa-clock"></i> [[ comment.created_at ]]
-                                </small>
-                            </div>
-                        </div>
-                        <div class="mt-2">
-                            <p class="mb-1" style="padding: 25px;">[[ comment.content ]]</p>
-                        </div>
-                        <div class="mt-2">
-                            <div class="d-flex justify-content-between">
-                                <div class="d-flex gap-3">
-                                    <template v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
-                                        <!-- Edit Button -->
-                                        <button
-                                            class="btn btn-warning btn-sm"
-                                            type="button"
-                                            data-bs-toggle="collapse"
-                                            :data-bs-target="'#editForm' + comment.id"
-                                            aria-expanded="false"
-                                            :aria-controls="'editForm' + comment.id">
-                                            <i class="fas fa-pen"></i> 
-                                        </button>
-                            
-                                        <!-- Delete Button -->
-                                        <button
-                                            @click="deleteComment(comment.id)"
-                                            class="btn btn-danger btn-sm">
-                                            <i class="fas fa-trash-alt"></i> 
-                                        </button>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Collapse Zone Below (Edit Form) -->
-                        <template v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
-                            <div class="collapse mt-2 w-100" :id="'editForm' + comment.id">
-                                <form @submit.prevent="editComment(comment.id)">
-                                    <input type="hidden" name="csrf_token" :value="csrf_token" />
-                                    <div class="input-group">
-                                        <input
-                                            type="text"
-                                            class="form-control"
-                                            v-model="comment.editContent"
-                                            required
-                                        />
-
-                                        <button type="submit" class="btn btn-warning">
-                                            <i class="fas fa-edit"></i> Save
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </template>
-                        <hr>
+                        <strong class="h5">Description :</strong>
+                        <p>{{ rule.description }}</p>
                     </div>
                 </div>
-            </template>
+            </div>
+            <!-- Additional Information Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Additional Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Format :</strong>
+                            <p>{{ rule.format }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>License :</strong>
+                            <p>{{ rule.license }}</p>
+                        </div>
+                    </div>
 
-            <template v-else>
-                <p class="text-muted"><i class="fas fa-info-circle"></i> No comments yet. Be the first to comment!</p>
-            </template>          
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>UUID :</strong>
+                            <p>{{ rule.uuid }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Source :</strong>
+                            <p>{{ rule.source }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Creation date :</strong>
+                            <p>{{ rule.creation_date.strftime('%d/%m/%Y %H:%M:%S') }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Modification date :</strong>
+                            <p>{{ rule.last_modif.strftime('%d/%m/%Y %H:%M:%S') }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Author :</strong>
+                            <p>{{ rule.author }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Editor :</strong>
+                            <p>{{ rule.get_rule_user_first_name_by_id() }}</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Rule Content Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-file-alt"></i> Rule Content</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded-3 border" style="white-space: pre-wrap;">{{ rule.to_string }}</pre>
+                </div>
+            </div>
+
+            <!-- Actions Card -->
+            <div class="card shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <!-- Actions -->
+                    <div class="d-flex align-items-center flex-wrap">
+                        <!-- Download button -->
+                        <a href="{{ url_for('home.download_rule', rule_id=rule.id) }}" class="btn btn-success me-3 px-4 py-2 mb-2">
+                            <i class="fas fa-download me-1"></i> Download
+                        </a>
+                    
+                        <!-- Request Ownership button -->
+                        {% if rule.user_id != current_user.id%}
+                        <button class="btn btn-outline-warning me-3 px-4 py-2 mb-2" @click="Ownership({{rule.id}})">
+                            <i class="fas fa-user-shield me-1"></i> Request Ownership
+                        </button>
+                        {% endif%}
+                        <!-- Copy button -->
+                        <button class="btn btn-outline-info me-3 px-4 py-2 mb-2" onclick="copyToClipboard()">
+                            <i class="fas fa-copy me-1"></i> Copy
+                        </button>
+                    
+                        <!-- Copy message -->
+                        <span id="copyMessage" class="text-success ms-2" style="display: none; font-size: 0.875rem;">
+                            Content copied to clipboard!
+                        </span>
+                    </div>
+                    
+                    <script>
+                        function copyToClipboard() {
+                            const textarea = document.getElementById('ruleContentToCopy');
+                            textarea.style.display = 'block'; 
+                            textarea.select();
+                            document.execCommand("copy");
+                            textarea.style.display = 'none';
+                    
+                            var copyMessage = document.getElementById('copyMessage');
+                            copyMessage.style.display = 'inline'; 
+                    
+                            setTimeout(function() {
+                                copyMessage.style.display = 'none';
+                            }, 2000);
+                        }
+                    </script>
+
+                    <!-- Votes -->
+                    <div class="text-center">
+                        <strong>Votes :</strong>
+                        <div>
+                            <span class="text-success">Positive Vote : {{ rule.vote_up }}</span> | 
+                            <span class="text-danger">Negative Vote : {{ rule.vote_down }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Comments Section -->
+            <div class="card shadow-sm mt-5">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments"></i> Comments 
+                        <span class="badge bg-secondary ms-2">[[ comments_list.length ]]</span>
+                        <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse" data-bs-target="#commentsCollapse" aria-expanded="true" aria-controls="commentsCollapse">
+                            <i class="fas fa-eye"></i> Show/Hide Comments
+                        </button>
+                    </h5>
+                </div>
+                
+                <div class="card-body">
+
+                    {% if current_user.is_authenticated %}
+                    <!-- Add a new comment -->
+                    <!-- <form method="post" action="{{ url_for('home.add_comment', rule_id=rule.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="mb-3">
+                            <label for="commentContent" class="form-label">Leave a comment:</label>
+                            <textarea class="form-control" id="commentContent" name="content" rows="3" placeholder="Your comment here..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Post Comment
+                        </button>
+                    </form> -->
+                    <form @submit.prevent="submitComment">
+                        <input type="hidden" name="csrf_token" :value="csrf_token" />
+                        
+                        <div class="mb-3">
+                            <label for="commentContent" class="form-label">Leave a comment:</label>
+                            <textarea
+                                class="form-control"
+                                id="commentContent"
+                                v-model="newCommentContent"
+                                rows="3"
+                                placeholder="Your comment here..."
+                                required>
+                            </textarea>
+                        </div>
+                    
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Post Comment
+                        </button>
+                    </form>
+                    
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-sign-in-alt"></i> Please <a href="{{ url_for('auth.login') }}">log in</a> to post a comment.
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <!-- Existing comments section, collapsible -->
+                    <template v-if="comments_list && comments_list.length > 0">
+                        <div class="collapse show" id="commentsCollapse" v-for="(comment, index) in comments_list" :key="comment.id">
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong><i class="fas fa-user-circle"></i> [[ comment.user_name ]]</strong>
+                                        <small class="text-muted ms-2">
+                                            <i class="far fa-clock"></i> [[ comment.created_at ]]
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <p class="mb-1" style="padding: 25px;">[[ comment.content ]]</p>
+                                </div>
+                                <div class="mt-2">
+                                    <div class="d-flex justify-content-between">
+                                        <div class="d-flex gap-3">
+                                            <template v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
+                                                <!-- Edit Button -->
+                                                <button
+                                                    class="btn btn-warning btn-sm"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    :data-bs-target="'#editForm' + comment.id"
+                                                    aria-expanded="false"
+                                                    :aria-controls="'editForm' + comment.id">
+                                                    <i class="fas fa-pen"></i> 
+                                                </button>
+                                    
+                                                <!-- Delete Button -->
+                                                <button
+                                                    @click="deleteComment(comment.id)"
+                                                    class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-trash-alt"></i> 
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Collapse Zone Below (Edit Form) -->
+                                <template v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
+                                    <div class="collapse mt-2 w-100" :id="'editForm' + comment.id">
+                                        <form @submit.prevent="editComment(comment.id)">
+                                            <input type="hidden" name="csrf_token" :value="csrf_token" />
+                                            <div class="input-group">
+                                                <input
+                                                    type="text"
+                                                    class="form-control"
+                                                    v-model="comment.editContent"
+                                                    required
+                                                />
+
+                                                <button type="submit" class="btn btn-warning">
+                                                    <i class="fas fa-edit"></i> Save
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </template>
+                                <hr>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <p class="text-muted"><i class="fas fa-info-circle"></i> No comments yet. Be the first to comment!</p>
+                    </template>          
+                </div>
+            </div>
+
+            <div class="text-center mt-4 mb-5">
+                <a href="/" class="btn btn-outline-primary btn-lg me-2">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Rules
+                </a>
+                <a href="/account/favorite" class="btn btn-outline-warning btn-lg">
+                    <i class="fas fa-star me-1"></i> Go to Favorites
+                </a>
+            </div>
+            
+            <div id="rule_id" data-rule-id="{{ rule.id }}"></div>
         </div>
+        <textarea id="ruleContentToCopy" style="display: none;">{{ rule.to_string }}</textarea>
+        <div class="tab-pane fade" id="2" role="tabpanel">
+            {% if current_user.is_authenticated %}
+            <!-- Proposal Edit Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0"><i class="fas fa-pencil-alt"></i> Propose an Edit</h2>
+                    </div>
+                    <div class="card-body">
+                    <form action="{{ url_for('home.propose_edit', rule_id=rule.id) }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="form-group mb-4">
+                        <label for="proposed_content" class="font-weight-bold">Modified Rule Content</label>
+                        <textarea id="proposed_content" name="proposed_content" rows="8" class="form-control" placeholder="Paste your modified version of the rule here">{{ rule.to_string }}</textarea>
+                        </div>
+                        <div class="form-group mb-4">
+                        <label for="message" class="font-weight-bold">Message or Justification (optional)</label>
+                        <input id="message" type="text" name="message" class="form-control" placeholder="Explain the changes you made or provide any additional context">
+                        </div>
+                        <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-paper-plane"></i> Submit Proposal
+                        </button>
+                        </div>
+                    </form>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body text-center">
+                    <p class="text-muted">Please <a href="{{ url_for('auth.login') }}" class="text-primary">log in</a> to propose an edit.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>        
+
+            
     </div>
-
-    <div class="text-center mt-4 mb-5">
-        <a href="/" class="btn btn-outline-primary btn-lg me-2">
-            <i class="fas fa-arrow-left me-1"></i> Back to Rules
-        </a>
-        <a href="/account/favorite" class="btn btn-outline-warning btn-lg">
-            <i class="fas fa-star me-1"></i> Go to Favorites
-        </a>
-    </div>
-    
-    <div id="rule_id" data-rule-id="{{ rule.id }}"></div>
-
-
+        
+</div>
 {% endblock %}
 
 {% block script %}

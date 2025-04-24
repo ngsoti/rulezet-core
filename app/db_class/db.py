@@ -219,6 +219,7 @@ class RuleEditProposal(db.Model):
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     proposed_content = db.Column(db.Text, nullable=False)
+    old_content = db.Column(db.String)
     message = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String, default="pending")
@@ -232,6 +233,7 @@ class RuleEditProposal(db.Model):
         return {
             'id': self.id,
             'rule_id': self.rule_id,
+            'old_content': self.old_content,
             'user_id': self.user_id,
             'proposed_content': self.proposed_content,
             'message': self.message,
