@@ -79,7 +79,7 @@ def decrement_up(id):
 
 def get_rules_page(page):
     """Return all rules by page"""
-    return Rule.query.paginate(page=page, per_page=60, max_per_page=70)
+    return Rule.query.paginate(page=page, per_page=1000, max_per_page=1700)
 
 def get_rule(id):
     """Return the rule"""

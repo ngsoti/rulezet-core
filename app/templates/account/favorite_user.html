@@ -51,6 +51,7 @@ createApp({
 
     // can use an other way with /favorite/search_rules but more difficult and use the db filter 
     // filter on the list (reduce the trafic)
+    
     const filteredRules = computed(() => {
       if (!searchQuery.value.trim()) {
         return rules_list_favorite.value;
