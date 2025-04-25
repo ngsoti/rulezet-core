@@ -252,7 +252,7 @@ def edit_comment():
         # flash("Comment updated successfully.", "success")
         return jsonify({"updatedComment": update_content.to_json()})
     else:
-        return {"message": "No Comments"}
+        return render_template("access_denied.html")
     
 @rule_blueprint.route("/comment_delete/<int:comment_id>", methods=["POST", "GET"])
 @login_required
@@ -263,8 +263,8 @@ def delete_comment_route(comment_id):
         CommentModel.delete_comment(comment_id)
         # flash("Comment deleted.", "success")
         return redirect(url_for("rule.detail_rule", rule_id=rule_id))
-    flash("Unauthorized action.", "danger")
-    return redirect(url_for("home.home"))
+    else:
+        return render_template("access_denied.html")
 
 
 #-----------------------------------------------------------propose_edit-----------------------------------------------------------#
@@ -311,40 +311,36 @@ def propose_edit(rule_id):
     flash("success" if success else "error")
     return redirect(url_for('rule.detail_rule', rule_id=rule_id))
 
+
+
 @rule_blueprint.route("/validate_proposal", methods=['GET'])
 def validate_proposal():
     rule_id = request.args.get('ruleId', type=int) # id of the real rule 
     decision = request.args.get('decision', type=str)
     rule_proposal_id = request.args.get('ruleproposalId', type=int) #id of the rule request
 
-    if rule_id and decision and rule_proposal_id:
-        # the rule modified
-        rule_proposal = RuleModel.get_rule_proposal(rule_proposal_id)
-        # the real rule
-        rule = RuleModel.get_rule(rule_id)
-
-        if decision == "accepted":
-            RuleModel.set_status(rule_proposal_id,"accepted")
-            # change the to_string part of the rule in the db 
-            message = RuleModel.set_to_string_rule(rule_id, rule_proposal.proposed_content)
-        elif decision == "rejected":
-            RuleModel.set_status(rule_proposal_id,"rejected")
-            message = "rejected"
-        else:
-            return jsonify({"message": "Invalid decision"}), 400
-    return jsonify({"message": message})
+    user_id = RuleModel.get_rule_user_id(rule_id)
 
 
+    if user_id == current_user.id:
+        if rule_id and decision and rule_proposal_id:
+            # the rule modified
+            rule_proposal = RuleModel.get_rule_proposal(rule_proposal_id)
+            # the real rule
+            rule = RuleModel.get_rule(rule_id)
 
-
-
-
-
-
-
-
-
-
+            if decision == "accepted":
+                RuleModel.set_status(rule_proposal_id,"accepted")
+                # change the to_string part of the rule in the db 
+                message = RuleModel.set_to_string_rule(rule_id, rule_proposal.proposed_content)
+            elif decision == "rejected":
+                RuleModel.set_status(rule_proposal_id,"rejected")
+                message = "rejected"
+            else:
+                return jsonify({"message": "Invalid decision"}), 400
+        return jsonify({"message": message})
+    else:
+        return render_template("access_denied.html")
 
 @rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
 @login_required

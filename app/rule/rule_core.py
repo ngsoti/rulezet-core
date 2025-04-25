@@ -219,8 +219,7 @@ def set_status(proposal_id, status):
 
     return {'success': True, 'new_status': status}, 200
 
-# def get_last_rules_from_db(limit=10):
-#     return Rule.query.order_by(Rule.last_modif.desc()).limit(limit).all()
+
 
 def get_last_rules_from_db(limit=10):
     return Rule.query.order_by(
@@ -262,19 +261,3 @@ def remove_has_voted(vote, rule_id):
 
 
 
-# def remove_vote(rule_id, vote_type):
-#     user_id = current_user.id
-#     rule = Rule.query.get(rule_id)
-
-#     vote = RuleVote.query.filter_by(rule_id=rule_id, user_id=user_id, vote_type=vote_type).first()
-#     if vote and rule:
-#         if vote_type == 'up' and int(rule.vote_up or "0") > 0:
-#             rule.vote_up = str(int(rule.vote_up) - 1)
-#         elif vote_type == 'down' and int(rule.vote_down or "0") > 0:
-#             rule.vote_down = str(int(rule.vote_down) - 1)
-
-#         db.session.delete(vote)
-#         db.session.commit()
-
-#         return rule, None
-#     return None, "Vote not found"
