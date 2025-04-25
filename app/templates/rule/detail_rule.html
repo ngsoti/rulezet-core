@@ -15,9 +15,15 @@
         <div class="tab-pane fade show active" id="1" role="tabpanel">
             <!-- Main Card -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header text-white" style="background-color: rgb(19, 113, 255)">
+                <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: rgb(19, 113, 255)">
                     <h1 class="mb-0">{{ rule.title }}</h1>
+                    {% if current_user.id == rule.user_id or current_user_is_admin %}
+                    <a :href="`/rule/edit_rule/{{rule.id}}`" class="btn btn-warning btn-sm">
+                        <i class="fas fa-pen"></i>
+                    </a>
+                    {% endif %}
                 </div>
+                
                 <div class="card-body">
                     <!-- Rule Description -->
                     <div class="mb-4">
