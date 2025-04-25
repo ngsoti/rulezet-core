@@ -32,14 +32,41 @@
                                         [[ rule.status ]]
                                     </span>
                                 </p>
-                                <p class="card-text">
-                                    <strong>Proposed Content:</strong>
-                                    <pre class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">[[ rule.proposed_content ]]</pre>
-                                </p>
-                                <p class="card-text">
-                                    <strong>Old Content:</strong>
-                                    <pre class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">[[ rule.old_content ]]</pre>
-                                </p>
+                            
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="card-text">
+                                            <strong>Proposed Content:</strong>
+                                            <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
+                                                <div v-for="(line, index) in getProposedContentLines(rule.proposed_content)" :key="index">
+                                                    <span v-if="line.trim() !== ''" :class="{
+                                                        'text-success': isLineNew(line, rule.old_content),
+                                                        'text-warning': isLineIdentical(line, rule.old_content)
+                                                    }" class="d-block p-2">
+                                                        [[ line ]]
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <p class="card-text">
+                                            <strong>Old Content:</strong>
+                                            <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
+                                                <div v-for="(line, index) in getOldContentLines(rule.old_content)" :key="index">
+                                                    <span v-if="line.trim() !== ''" :class="{
+                                                        'text-danger': isLineDeleted(line, rule.proposed_content),
+                                                        'text-warning': isLineIdentical(line, rule.proposed_content)
+                                                    }" class="d-block p-2">
+                                                        [[ line ]]
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </p>
+                                    </div>
+                                </div>
+                                
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-outline-success btn-sm"
                                             @click="handleDecision(rule.id, 'accepted', rule.rule_id, index)">
@@ -62,9 +89,6 @@
             </div>
         </div>
 
-
-
-
         <div class="tab-pane fade" id="history" role="tabpanel">
             <div class="row">
                 <template v-if="rules_list && rules_list.length > 0">
@@ -75,25 +99,60 @@
                                 <p class="card-text mb-2">
                                     <strong>Status:</strong>
                                     <span :class="{
+                                        'badge bg-secondary': rule.status === 'pending',
                                         'badge bg-success': rule.status === 'accepted',
                                         'badge bg-danger': rule.status === 'rejected'
                                     }">
                                         [[ rule.status ]]
                                     </span>
                                 </p>
-                                <p class="card-text">
-                                    <strong>Proposed Content:</strong>
-                                    <pre class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">[[ rule.proposed_content ]]</pre>
-                                </p>
-                                <p class="card-text">
-                                    <strong>Old Content:</strong>
-                                    <pre class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">[[ rule.old_content ]]</pre>
-                                </p>
-                                <p class="card-text">
-                                    <strong>Date:</strong> [[ new Date(rule.timestamp).toLocaleString() ]]
-                                </p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="card-text">
+                                            <strong>Proposed Content:</strong>
+                                            <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
+                                                <div v-for="(line, index) in getProposedContentLines(rule.proposed_content)" :key="index">
+                                                    <span v-if="line.trim() !== ''" :class="{
+                                                        'text-success': isLineNew(line, rule.old_content),
+                                                        'text-warning': isLineIdentical(line, rule.old_content)
+                                                    }" class="d-block p-2">
+                                                        [[ line ]]
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <p class="card-text">
+                                            <strong>Old Content:</strong>
+                                            <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
+                                                <div v-for="(line, index) in getOldContentLines(rule.old_content)" :key="index">
+                                                    <span v-if="line.trim() !== ''" :class="{
+                                                        'text-danger': isLineDeleted(line, rule.proposed_content),
+                                                        'text-warning': isLineIdentical(line, rule.proposed_content)
+                                                    }" class="d-block p-2">
+                                                        [[ line ]]
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-success btn-sm"
+                                            @click="handleDecision(rule.id, 'accepted', rule.rule_id, index)">
+                                        Accept
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm"
+                                            @click="handleDecision(rule.id, 'rejected', rule.rule_id, index)">
+                                        Reject
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                    </div>
                     </div>
                 </template>
                 <template v-else>
@@ -105,8 +164,6 @@
         </div>
     </div>
 </div>
-
-
 {% endblock %}
 
 {% block script %}
@@ -133,14 +190,51 @@
             }
 
             async function handleDecision(ruleProposalId, decision, ruleId , index) {
-            const res = await fetch(`/rule/validate_proposal?ruleId=${ruleId}&decision=${decision}&ruleproposalId=${ruleProposalId}`);
+                const res = await fetch(`/rule/validate_proposal?ruleId=${ruleId}&decision=${decision}&ruleproposalId=${ruleProposalId}`);
 
-            if (res.ok) {
-                const result = await res.json();
-                rules_pendings_list.value.splice(index, 1);
-                // fetchRules(current_page.value);  
-            } 
-        }
+                if (res.ok) {
+                    const result = await res.json();
+                    rules_pendings_list.value.splice(index, 1);
+                } 
+            }
+
+            function getOldContentLines(content) {
+                return content.split('\n');
+            }
+
+            function getProposedContentLines(content) {
+                return content.split('\n');
+            }
+
+            function isLineNew(line, oldContent) {
+                const normalizedLine = line.trim();
+                const normalizedOldContent = oldContent.split('\n').map(l => l.trim());
+                
+                return !normalizedOldContent.includes(normalizedLine); 
+            }
+
+            function isLineDeleted(line, proposedContent) {
+                const normalizedLine = line.trim();
+                const normalizedProposedContent = proposedContent.split('\n').map(l => l.trim());
+                
+                return !normalizedProposedContent.includes(normalizedLine);  
+            }
+            // in yallow if the line is almost identical
+            function isLineJustModifie(line, content) {
+                const normalizedLine = line.trim();
+                const normalizedContent = content.split('\n').map(l => l.trim());
+                
+                return normalizedProposedContent.includes(normalizedLine);  
+            }
+
+
+            // shoud be remove 
+            function isLineIdentical(line, content) {
+                const normalizedLine = line.trim();
+                const normalizedContent = content.split('\n').map(l => l.trim());
+                
+                return normalizedContent.includes(normalizedLine);  
+            }
 
 
 
@@ -153,10 +247,14 @@
                 current_page,
                 total_pages,
                 handleDecision,
-                rules_pendings_list
+                rules_pendings_list,
+                getOldContentLines,
+                getProposedContentLines,
+                isLineNew,
+                isLineDeleted,
+                isLineIdentical
             };
         }
     }).mount('#main-container');
 </script>
-
 {% endblock %}
