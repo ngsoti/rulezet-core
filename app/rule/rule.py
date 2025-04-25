@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from math import ceil
 from flask import Blueprint, Response, jsonify, redirect, request,render_template, flash, url_for
 from flask_login import current_user, login_required
 
@@ -45,7 +46,7 @@ def rule():
 def rules_list():        
     return render_template("rule/rules_list.html")
 
-
+# without search
 @rule_blueprint.route("/get_rules_page", methods=['GET'])
 def get_rules_page():
     page = request.args.get('page', 1, type=int)
@@ -62,6 +63,27 @@ def get_rules_page():
         return {"rule": rules_list, "total_pages": rules.pages, "total_rules": total_rules}
     
     return {"message": "No Rule"}, 404
+
+
+# get page with filter
+
+@rule_blueprint.route("/get_rules_page_filter", methods=['GET'])
+@login_required
+def get_rules_page_filter():
+    page = int(request.args.get("page", 1))
+    per_page = 10
+    search = request.args.get("search", None)
+    author = request.args.get("author", None)
+    sort_by = request.args.get("sort_by", "newest")
+
+    query = RuleModel.filter_rules(current_user.id, search=search, author=author, sort_by=sort_by)
+    total_rules = query.count()
+    rules = query.offset((page - 1) * per_page).limit(per_page).all()
+    return jsonify({
+        "rule": [r.to_json() for r in rules],
+        "total_rules": total_rules,
+        "total_pages": ceil(total_rules / per_page)
+    })
 
 
 

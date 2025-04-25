@@ -2,7 +2,7 @@ import uuid
 import datetime
 
 from flask_login import current_user
-from sqlalchemy import case, func
+from sqlalchemy import asc, case, desc, func, or_
 
 from .. import db
 from ..db_class.db import *
@@ -66,25 +66,25 @@ def edit_rule_core(form_dict, id) -> None:
 
 def increment_up(id):
     rule = get_rule(id)
-    rule.vote_up = int(rule.vote_up) + 1
+    rule.vote_up = rule.vote_up + 1
     db.session.commit()
 
 
 def decrement_up(id):
     rule = get_rule(id)
-    rule.vote_down = int(rule.vote_down) + 1
+    rule.vote_down = rule.vote_down + 1
     db.session.commit()
 
 
 
 def remove_one_to_increment_up(id):
     rule = get_rule(id)
-    rule.vote_up = int(rule.vote_up) - 1
+    rule.vote_up = rule.vote_up - 1
     db.session.commit()
 
 def remove_one_to_decrement_up(id):
     rule = get_rule(id)
-    rule.vote_down = int(rule.vote_down) - 1
+    rule.vote_down = rule.vote_down - 1
     db.session.commit()
 
 
@@ -281,3 +281,40 @@ def search_rules(user_id, query):
          Rule.description.ilike(f"%{query}%") |
          Rule.author.ilike(f"%{query}%"))
     ).all()
+
+
+
+
+
+
+def filter_rules(user_id, search=None, author=None, sort_by=None):
+    query = Rule.query
+
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                Rule.title.ilike(search_lower),
+                Rule.description.ilike(search_lower),
+                Rule.format.ilike(search_lower),
+                Rule.author.ilike(search_lower)
+            )
+        )
+
+
+    if author:
+        query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
+
+    # add new sort 
+    if sort_by == "newest":
+        query = query.order_by(Rule.creation_date.desc())
+    elif sort_by == "oldest":
+        query = query.order_by(Rule.creation_date.asc())
+    elif sort_by == "most_likes":
+        query = query.order_by(Rule.vote_up.desc())  
+    elif sort_by == "least_likes":
+        query = query.order_by(Rule.vote_down.desc())  
+    else:
+        query = query.order_by(Rule.creation_date.desc())  
+
+    return query

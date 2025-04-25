@@ -100,8 +100,8 @@ class Rule(db.Model):
     author = db.Column(db.String) # the reel author of the rule
     creation_date = db.Column(db.DateTime, index=True)
     last_modif = db.Column(db.DateTime, index=True)
-    vote_up = db.Column(db.String)
-    vote_down = db.Column(db.String)
+    vote_up = db.Column(db.Integer)
+    vote_down = db.Column(db.Integer)
     to_string = db.Column(db.String)
 
     #edit
