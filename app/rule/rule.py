@@ -64,6 +64,30 @@ def get_rules_page():
     return {"message": "No Rule"}, 404
 
 
+
+@rule_blueprint.route("/get_rules_page_owner", methods=['GET'])
+def get_rules_page_owner():
+    page = request.args.get('page', 1, type=int)
+    rules = RuleModel.get_rules_page_owner(page)
+    
+    total_rules = RuleModel.get_total_rules_count_owner()  
+
+    if rules:
+        rules_list = list()
+        for rule in rules:
+            u = rule.to_json()
+            rules_list.append(u)
+
+        return {"rule": rules_list, "total_pages": rules.pages, "total_rules": total_rules}
+    
+    return {"message": "No Rule"}, 404
+
+
+
+
+
+
+
 @rule_blueprint.route("/delete_rule", methods=['GET', 'POST'])
 @login_required
 def delete_rule():
@@ -124,6 +148,10 @@ def vote_rule():
     return jsonify({"message": "Rule not found"}), 404
 
 
+@rule_blueprint.route("/owner_rules", methods=['GET'])
+@login_required
+def owner_rules():
+    return render_template("rule/rules_owner.html")
 
 
 

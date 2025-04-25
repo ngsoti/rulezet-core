@@ -93,6 +93,19 @@ def get_rules_page(page):
     """Return all rules by page"""
     return Rule.query.paginate(page=page, per_page=1000, max_per_page=1700)
 
+
+
+
+
+
+def get_rules_page_owner(page):
+    """Return all owner rules by page where the user_id matches the current logged-in user"""
+    return Rule.query.filter_by(user_id=current_user.id).paginate(page=page, per_page=1000, max_per_page=1700)
+
+def get_total_rules_count_owner():
+    """Return the total count of rules created by the current logged-in user"""
+    return Rule.query.filter_by(user_id=current_user.id).count()
+
 def get_rule(id):
     """Return the rule"""
     return Rule.query.get(id)
