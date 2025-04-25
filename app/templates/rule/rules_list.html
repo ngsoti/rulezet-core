@@ -22,23 +22,24 @@
   <div class="tab-content" id="myTabContent">
     <div class="tab-pane fade" id="addProject" role="tabpanel" aria-labelledby="addProject-tab">
       <div class="card p-4 shadow-sm bg-light mb-3">
-        <form method="POST" action="{{ url_for('rule.test_yara_python_url') }}">
+        <h5><label for="url" class="form-label">URL for a Github project to add</label></h5>
+        <form method="POST" action="{{ url_for('rule.test_yara_python_url') }}" class="d-flex">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-          <div class="mb-3">
-            <label for="url" class="form-label">URL for a Github project to add</label>
-            <div class="input-group">
-              <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>
-            </div>
+          <div class="mb-3 flex-grow-1 me-2">
+            <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>
           </div>
-          <button type="submit" class="btn btn-primary w-100">
-            <i class="fas fa-paper-plane"></i> Send
-          </button>
-        </form>
+          <div class="d-flex align-items-center" style="height: 100%;">
+            <button type="submit" class="btn btn-primary" style="max-width: fit-content; height: 100%;">
+              <i class="fas fa-paper-plane"></i> Send
+            </button>
+          </div>
+        </form>        
       </div>
+      
     </div>
   
     <div class="tab-pane fade show active" id="filters" role="tabpanel" aria-labelledby="filters-tab">
-      <div class="card p-4 shadow-sm bg-light">
+      <div class="card p-4 shadow-sm bg-light mb-3" >
         <h5 class="mb-4">Filters</h5>
         <div class="row g-3">
           <div class="col-md-4">
