@@ -42,6 +42,15 @@ def get_last_rules():
     rules = RuleModel.get_last_rules_from_db()
     return jsonify({'rules': [r.to_json() for r in rules]})
 
+@home_blueprint.route("/get_current_user_connected", methods=['GET', 'POST'])
+def get_current_user_connected():
+    if current_user.is_authenticated:
+        print(current_user.is_authenticated)
+        return jsonify({"is_authenticated": True, "user_id": current_user.id})
+    else:
+        print(current_user.is_authenticated)
+        return jsonify({"is_authenticated": False})
+
 
 #-----------------------------------------------------------request_part-----------------------------------------------------------#
 

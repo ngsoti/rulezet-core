@@ -274,3 +274,10 @@ def remove_has_voted(vote, rule_id):
 
 
 
+def search_rules(user_id, query):
+    return Rule.query.filter(
+        Rule.user_id == user_id,
+        (Rule.title.ilike(f"%{query}%") | 
+         Rule.description.ilike(f"%{query}%") |
+         Rule.author.ilike(f"%{query}%"))
+    ).all()

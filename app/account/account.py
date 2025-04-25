@@ -146,12 +146,4 @@ def remove_rule_favorite():
     
 
 
-@account_blueprint.route("/favorite/search_rules", methods=['GET','POST'])
-@login_required
-def search_rules():
-    query = request.args.get("query", "").strip().lower()
-    if not query:
-        return jsonify({"rules": []})
 
-    results = FavoriteModel.search_rules_favorite(current_user.id,query)  
-    return jsonify({"rules": [r.to_json() for r in results]})

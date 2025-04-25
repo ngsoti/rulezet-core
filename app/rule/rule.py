@@ -107,6 +107,14 @@ def get_current_user():
     return jsonify({'user': current_user.is_admin()})
 
 
+
+    
+
+
+
+
+
+
 @rule_blueprint.route("/detail_rule/<int:rule_id>", methods=['GET'])
 @login_required
 def detail_rule(rule_id):
@@ -145,7 +153,7 @@ def vote_rule():
             'vote_down': rule.vote_down
         })
 
-    return jsonify({"message": "Rule not found"}), 404
+    return jsonify({"message": "Rule not found"})
 
 
 @rule_blueprint.route("/owner_rules", methods=['GET'])
@@ -208,6 +216,17 @@ def download_rule(rule_id):
             "Content-Disposition": f"attachment;filename={filename}"
         }
     )
+
+# not use yet
+@rule_blueprint.route("/search_rules", methods=['GET','POST'])
+@login_required
+def search_rules():
+    query = request.args.get("query", "").strip().lower()
+    if not query:
+        return jsonify({"rules": []})
+
+    results = RuleModel.search_rules(current_user.id,query)  
+    return jsonify({"rules": [r.to_json() for r in results]})
 
 #-----------------------------------------------------------favorite_part-----------------------------------------------------------#
 

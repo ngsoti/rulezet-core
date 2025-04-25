@@ -23,6 +23,7 @@
   </div>
 
 
+
   <div class="accordion" id="accordionExample2">
     <div class="accordion-item">
       <h2 class="accordion-header" id="headingOne">
@@ -206,6 +207,7 @@
       const current_user_is_admin = ref()
       const searchQuery = ref('')
       const total_rules_liste = ref()
+
   
       const filteredRules = computed(() => {
         if (!rules_list.value || !rules_list.value.rule) return []
@@ -217,6 +219,11 @@
           rule.format.toLowerCase().includes(query)
         )
       })
+
+
+
+
+
 
       async function fetchRules(page) {
         const res = await fetch('get_rules_page?page=' + page)
