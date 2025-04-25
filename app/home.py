@@ -36,6 +36,7 @@ def home():
     get_flashed_messages()
     return render_template("home.html")
 
+
 @home_blueprint.route("/get_last_rules", methods=['GET'])
 def get_last_rules():
     rules = RuleModel.get_last_rules_from_db()
@@ -90,8 +91,6 @@ def get_requests_page():
             
             request_data['user_name'] = user
             requests_list.append(request_data)
-
-
         return {
             "requests_list": requests_list,
             "requests_pages": requests_paginated.pages,  
@@ -131,12 +130,5 @@ def update_request_status():
         return render_template("access_denied.html")
 
 
-
-
-
-
-
-
-#-----------------------------------------------------------import_from_github-----------------------------------------------------------#
 
     

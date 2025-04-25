@@ -240,3 +240,24 @@ class RuleEditProposal(db.Model):
             "status": self.status,
             'timestamp': self.timestamp.isoformat(),
         }
+
+
+
+class RuleVote(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    vote_type = db.Column(db.String(10), nullable=False)  
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('rule_votes', lazy='dynamic'))
+    rule = db.relationship('Rule', backref=db.backref('votes', lazy='dynamic'))
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "rule_id": self.rule_id,
+            "vote_type": self.vote_type,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M')
+        }

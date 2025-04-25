@@ -96,11 +96,25 @@ def vote_rule():
     rule_id = request.args.get('id', 1 , int)
     vote_type = request.args.get('vote_type', 2 , str)
     rule = RuleModel.get_rule(rule_id)
+
+    
+
     if rule:
-        if vote_type == 'up':
-            RuleModel.increment_up(rule_id)
+        alreadyVote , already_vote_type= RuleModel.has_already_vote(rule_id, current_user.id)
+        if vote_type == 'up':  
+            if alreadyVote == False:
+                RuleModel.increment_up(rule_id)
+                RuleModel.has_voted('up',rule_id)
+            elif already_vote_type == 'up':
+                RuleModel.remove_one_to_increment_up(rule_id)
+                RuleModel.remove_has_voted('up',rule_id)
         elif vote_type == 'down':
-            RuleModel.decrement_up(rule_id)
+            if alreadyVote == False:
+                RuleModel.decrement_up(rule_id)
+                RuleModel.has_voted('down',rule_id)
+            elif already_vote_type == 'down':
+                RuleModel.remove_one_to_decrement_up(rule_id)
+                RuleModel.remove_has_voted('down',rule_id)
 
         return jsonify({
             'vote_up': rule.vote_up,
@@ -108,6 +122,9 @@ def vote_rule():
         })
 
     return jsonify({"message": "Rule not found"}), 404
+
+
+
 
 
 

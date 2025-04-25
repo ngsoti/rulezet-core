@@ -77,6 +77,18 @@ def decrement_up(id):
 
 
 
+def remove_one_to_increment_up(id):
+    rule = get_rule(id)
+    rule.vote_up = int(rule.vote_up) - 1
+    db.session.commit()
+
+def remove_one_to_decrement_up(id):
+    rule = get_rule(id)
+    rule.vote_down = int(rule.vote_down) - 1
+    db.session.commit()
+
+
+
 def get_rules_page(page):
     """Return all rules by page"""
     return Rule.query.paginate(page=page, per_page=1000, max_per_page=1700)
@@ -217,3 +229,52 @@ def get_last_rules_from_db(limit=10):
             else_=Rule.last_modif
         ).desc()
     ).limit(limit).all()
+
+
+
+
+# vote 
+
+def has_already_vote(rule_id, user_id):
+    vote =  RuleVote.query.filter_by(rule_id=rule_id, user_id=user_id).first()
+    if vote:
+        return True , vote.vote_type
+    return False , None
+
+def has_voted(vote,rule_id):
+    user_id = current_user.id
+    vote = RuleVote(rule_id=rule_id, user_id=user_id, vote_type=vote)
+    db.session.add(vote)    
+    db.session.commit()
+    return True
+
+
+def remove_has_voted(vote, rule_id):
+    user_id = current_user.id
+    existing_vote = RuleVote.query.filter_by(rule_id=rule_id, user_id=user_id, vote_type=vote).first()
+
+    if existing_vote:
+        db.session.delete(existing_vote)
+        db.session.commit()
+        return True 
+
+    return False 
+
+
+
+# def remove_vote(rule_id, vote_type):
+#     user_id = current_user.id
+#     rule = Rule.query.get(rule_id)
+
+#     vote = RuleVote.query.filter_by(rule_id=rule_id, user_id=user_id, vote_type=vote_type).first()
+#     if vote and rule:
+#         if vote_type == 'up' and int(rule.vote_up or "0") > 0:
+#             rule.vote_up = str(int(rule.vote_up) - 1)
+#         elif vote_type == 'down' and int(rule.vote_down or "0") > 0:
+#             rule.vote_down = str(int(rule.vote_down) - 1)
+
+#         db.session.delete(vote)
+#         db.session.commit()
+
+#         return rule, None
+#     return None, "Vote not found"

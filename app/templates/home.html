@@ -47,6 +47,7 @@
   
 </div>
 
+
 {% endblock %}
 
 
@@ -62,6 +63,12 @@
       const rules_list = ref([])
       const searchQuery = ref('')
       const current_user_is_admin = ref(false)
+
+      // // to limit the user with only 1 like or dislike
+      // const count_vote_user_up = ref(0);
+      // const count_vote_user_down = ref(0);
+      // const count_vote_user = computed(() => count_vote_user_up.value + count_vote_user_down.value);
+
 
       const filteredRules = computed(() => {
         return rules_list.value.filter(rule => {
@@ -95,15 +102,20 @@
       }
 
       async function vote(voteType, ruleId) {
-        const res = await fetch(`/rule/vote_rule?id=${ruleId}&vote_type=${voteType}`)
-        const data = await res.json()
-        const updated = rules_list.value.find(rule => rule.id === ruleId)
+        const res = await fetch(`/rule/vote_rule?id=${ruleId}&vote_type=${voteType}`);
+        const data = await res.json();
+        const updated = rules_list.value.find(rule => rule.id === ruleId);
         if (updated) {
-          if (voteType === 'up') updated.vote_up = data.vote_up
-          if (voteType === 'down') updated.vote_down = data.vote_down
+          if (voteType === 'up') {
+            updated.vote_up = data.vote_up;
+          }
+          if (voteType === 'down') {
+            updated.vote_down = data.vote_down;
+          }
         }
       }
-     
+
+  
       fetchRecentRules()
       fetchCurrentUser()
 
@@ -113,7 +125,7 @@
         filteredRules,
         current_user_is_admin,
         deleteRule,
-        vote
+        vote 
       }
     }
   }).mount('#main-container')
