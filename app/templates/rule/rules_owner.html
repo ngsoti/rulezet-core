@@ -113,6 +113,7 @@ import { message_list } from '/static/js/toaster.js'
 createApp({
     delimiters: ['[[', ']]'],
     setup() {
+    const csrf_token = '{{ csrf_token() }}';
     const rules_list = ref({ rule: [] })
     const total_rules = ref(0)
     const current_page = ref(1)
@@ -153,11 +154,27 @@ createApp({
         current_user_is_admin.value = data.user
     }
 
+    // async function deleteRule(id, index) {
+    //     const res = await fetch('delete_rule?id=' + id)
+    //     const data = await res.json()
+    //     const acces = data.success
+    //     if(acces){
+    //         rules_list.value.rule.splice(index, 1)
+    //         total_rules_liste.value -= 1
+    //     }
+    // }
     async function deleteRule(id, index) {
-        const res = await fetch('delete_rule?id=' + id)
-        const data = await res.json()
-        const acces = data.success
-        if(acces){
+        const res = await fetch('/rule/delete_rule', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrf_token  
+          },
+          body: JSON.stringify({ id: id })
+        });
+
+        const data = await res.json();
+        if (data.success) {
             rules_list.value.rule.splice(index, 1)
             total_rules_liste.value -= 1
         }
@@ -224,7 +241,8 @@ createApp({
         filteredRules,
         searchQuery,
         total_rules_liste,
-        detailRule
+        detailRule,
+        csrf_token
     }
     }
 }).mount('#main-container')

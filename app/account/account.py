@@ -82,6 +82,7 @@ def add_user():
         form_dict = form_to_dict(form)
         AccountModel.add_user_core(form_dict)
         flash('You are now register. You can connect !', 'success')
+        return redirect("/account/login")
     return render_template("account/register_user.html", form=form) 
 
 

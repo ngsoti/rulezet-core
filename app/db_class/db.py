@@ -225,7 +225,7 @@ class RuleEditProposal(db.Model):
     status = db.Column(db.String, default="pending")
 
     rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic'))
-    user = db.relationship('User', backref=db.backref('proposed_edits', lazy='dynamic'))
+    user = db.relationship('User', backref=db.backref('proposed_edits', lazy='dynamic', cascade='all, delete-orphan'))
 
 
 
@@ -251,7 +251,7 @@ class RuleVote(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', backref=db.backref('rule_votes', lazy='dynamic'))
-    rule = db.relationship('Rule', backref=db.backref('votes', lazy='dynamic'))
+    rule = db.relationship('Rule', backref=db.backref('votes', lazy='dynamic', cascade='all, delete-orphan'))
 
     def to_json(self):
         return {

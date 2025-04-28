@@ -139,17 +139,6 @@
                                         </p>
                                     </div>
                                 </div>
-                                
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-outline-success btn-sm"
-                                            @click="handleDecision(rule.id, 'accepted', rule.rule_id, index)">
-                                        Accept
-                                    </button>
-                                    <button class="btn btn-outline-danger btn-sm"
-                                            @click="handleDecision(rule.id, 'rejected', rule.rule_id, index)">
-                                        Reject
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -219,7 +208,7 @@
                 
                 return !normalizedProposedContent.includes(normalizedLine);  
             }
-            // in yallow if the line is almost identical
+            // in yellow if the line is almost identical
             function isLineJustModifie(line, content) {
                 const normalizedLine = line.trim();
                 const normalizedContent = content.split('\n').map(l => l.trim());

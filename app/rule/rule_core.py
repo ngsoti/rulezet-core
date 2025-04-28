@@ -47,6 +47,7 @@ def delete_rule_core(id):
         return True
     else:
         return False
+    
 
 
 def edit_rule_core(form_dict, id) -> None:

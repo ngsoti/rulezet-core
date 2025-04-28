@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from math import ceil
-from flask import Blueprint, Response, jsonify, redirect, request,render_template, flash, url_for
+from flask import Blueprint, Response, jsonify, redirect, request,render_template, flash, session, url_for
 from flask_login import current_user, login_required
 
 from app.db_class.db import Rule, RuleFavoriteUser
@@ -110,10 +110,12 @@ def get_rules_page_owner():
 
 
 
-@rule_blueprint.route("/delete_rule", methods=['GET', 'POST'])
+@rule_blueprint.route("/delete_rule", methods=['POST'])
 @login_required
 def delete_rule():
-    rule_id = request.args.get('id', 1, int)
+    data = request.get_json()
+    # rule_id = request.args.get('id', 1, int)
+    rule_id = data.get('id')
     user_id = RuleModel.get_rule_user_id(rule_id)
 
     if current_user.id == user_id or current_user.is_admin():
@@ -121,6 +123,10 @@ def delete_rule():
         return jsonify({"success": True, "message": "Rule deleted!"})
     
     return render_template("access_denied.html")
+
+
+
+
 
 
 @rule_blueprint.route("/get_current_user", methods=['GET', 'POST'])
@@ -162,6 +168,12 @@ def vote_rule():
             elif already_vote_type == 'up':
                 RuleModel.remove_one_to_increment_up(rule_id)
                 RuleModel.remove_has_voted('up',rule_id)
+            elif already_vote_type == 'down':
+                RuleModel.increment_up(rule_id) # +1 to up
+                RuleModel.remove_one_to_decrement_up(rule_id) # -1 to down
+                RuleModel.remove_has_voted('down',rule_id)
+                RuleModel.has_voted('up',rule_id)
+
         elif vote_type == 'down':
             if alreadyVote == False:
                 RuleModel.decrement_up(rule_id)
@@ -169,7 +181,11 @@ def vote_rule():
             elif already_vote_type == 'down':
                 RuleModel.remove_one_to_decrement_up(rule_id)
                 RuleModel.remove_has_voted('down',rule_id)
-
+            elif already_vote_type == 'up':
+                RuleModel.decrement_up(rule_id) # +1 to down
+                RuleModel.remove_one_to_increment_up(rule_id) # -1 to up
+                RuleModel.remove_has_voted('up',rule_id)
+                RuleModel.has_voted('down',rule_id)
         return jsonify({
             'vote_up': rule.vote_up,
             'vote_down': rule.vote_down
@@ -411,6 +427,9 @@ def validate_proposal():
     else:
         return render_template("access_denied.html")
 
+
+
+
 @rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
 @login_required
 def test_yara_python_url():
@@ -444,6 +463,6 @@ def test_yara_python_url():
 
             flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
         except Exception as e:
-            flash(f"Failed to import rules: {str(e)}", "danger")
+            flash("Failed to import rules: URL ", "danger")
 
     return redirect(url_for("rule.rules_list"))

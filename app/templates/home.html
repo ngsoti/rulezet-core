@@ -61,7 +61,8 @@
             <h5 class="mb-0">[[ rule.title ]]</h5>
             <div v-if="parseInt('{{current_user.id}}') === rule.user_id || current_user_is_admin">
               <a :href="`rule/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2"><i class="fas fa-pen"></i></a>
-              <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+              <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2"><i class="fas fa-trash"></i></button>
+              <a :href="`rule/favorite/${rule.id}`" class="btn btn-success btn-sm me-2" ><i class="fas fa-star"></i></a>
             </div>
           </div>
           <div class="card-body">
@@ -72,7 +73,6 @@
             <a :href="`rule/detail_rule/${rule.id}`" class="btn btn-info btn-sm">View more</a>
             <button @click="vote('up', rule.id)" class="btn btn-success btn-sm mx-2"><i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]</button>
             <button @click="vote('down', rule.id)" class="btn btn-danger btn-sm"><i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]</button>
-            <a :href="`rule/favorite/${rule.id}`" class="btn btn-outline-primary btn-sm ms-2"><i class="fas fa-star"></i></a>
           </div>
         </div>
       </div>
@@ -98,6 +98,7 @@
   createApp({
     delimiters: ['[[', ']]'],
     setup() {
+      const csrf_token = '{{ csrf_token() }}';
       const rules_list = ref([])
       const searchQuery = ref('')
       const current_user_is_admin = ref(false)
@@ -137,13 +138,30 @@
     }
 
 
+      // async function deleteRule(id, index) {
+      //   const res = await fetch('/rule/delete_rule?id=' + id)
+      //   const data = await res.json()
+      //   if (data.success) {
+      //     rules_list.value.splice(index, 1)
+      //   }
+      // }
+
       async function deleteRule(id, index) {
-        const res = await fetch('/rule/delete_rule?id=' + id)
-        const data = await res.json()
+        const res = await fetch('/rule/delete_rule', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrf_token  
+          },
+          body: JSON.stringify({ id: id })
+        });
+
+        const data = await res.json();
         if (data.success) {
-          rules_list.value.splice(index, 1)
+          rules_list.value.splice(index, 1);
         }
       }
+
 
       async function vote(voteType, ruleId) {
         if(current_user_is_connected.value == true){
@@ -151,12 +169,8 @@
           const data = await res.json();
           const updated = rules_list.value.find(rule => rule.id === ruleId);
           if (updated) {
-            if (voteType === 'up') {
-              updated.vote_up = data.vote_up;
-            }
-            if (voteType === 'down') {
-              updated.vote_down = data.vote_down;
-            }
+            updated.vote_up = data.vote_up;
+            updated.vote_down = data.vote_down;
           }
         }else{
           alert("you have to connect to access this fonction")
@@ -177,7 +191,8 @@
         deleteRule,
         vote,
         checkIfUserIsConnected,
-        current_user_is_connected
+        current_user_is_connected,
+        csrf_token
       }
     }
   }).mount('#main-container')
