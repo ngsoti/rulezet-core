@@ -434,8 +434,9 @@ def validate_proposal():
         return render_template("access_denied.html")
 
 
+#----------------------------------------------------------------------------------Import_from_github-----------------------------------------------------------------------------------------------
 
-
+# import only yara rules 
 @rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
 @login_required
 def test_yara_python_url():
@@ -443,20 +444,17 @@ def test_yara_python_url():
         repo_url = request.form.get('url')
 
         try:
-            # Step 1: Save all the YARA files from the given URL and take the license if it existe
+
             repo_dir = save_yara_rules_as_is(repo_url)
 
-            # license_from_github = get_license_file_from_github_repo(repo_dir) old version
-            # take owner and repo to extract the license
             owner, repo = extract_owner_repo(repo_url)
             license_from_github = get_license_name(owner,repo)
-            # print("License:", license_from_github)
 
-            # Step 2: Read and parse all files in the output_rules folder
+
+
             all_rules = read_and_parse_all_yara_rules_from_folder(license_from_github,repo_url=repo_url)
             
 
-            # Step 3: Try to add each rule to the database
             imported = 0
             skipped = 0
             for rule_dict in all_rules:
@@ -474,53 +472,13 @@ def test_yara_python_url():
     return redirect(url_for("rule.rules_list"))
 
 
-# @rule_blueprint.route("/import_rules_from_github", methods=['GET', 'POST'])
-# @login_required
-# def import_rules_from_github():
-#     if request.method == 'POST':
-#         repo_url = request.form.get('url')
-
-#         try:
-#             yara_repo_dir = save_yara_rules_as_is(repo_url)
-
-
-#             # license_from_github = get_license_file_from_github_repo(repo_dir) old version
-#             # take owner and repo to extract the license
-#             owner, repo = extract_owner_repo(repo_url)
-#             license_from_github = get_license_name(owner,repo)
-#             # print("License:", license_from_github)
-
-#             # Step 2: Read and parse all files in the output_rules folder
-#             all_rules = read_and_parse_all_yara_rules_from_folder(license_from_github,repo_url=repo_url)
-            
-
-#             # Step 3: Try to add each rule to the database
-#             imported = 0
-#             skipped = 0
-#             for rule_dict in all_rules:
-#                 success = RuleModel.add_rule_core(rule_dict)
-
-#                 if success:
-#                     imported += 1
-#                 else:
-#                     skipped += 1
-
-#             flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
-#         except Exception as e:
-#             flash("Failed to import rules: URL ", "danger")
-
-#     return redirect(url_for("rule.rules_list"))
-
-
+# Import only sigma rules
 @rule_blueprint.route("/test_sigma_rules_parse", methods=['GET', 'POST'])
 @login_required
 def test_sigma_rules_parse():
     """Route to test parsing Sigma rules from a GitHub project URL."""
     if request.method == 'POST':
-        repo_url = request.form.get('url')
-    
-        # repo_url = 'https://github.com/SigmaHQ/sigma.git'  
-        
+        repo_url = request.form.get('url')        
 
         repo_dir = clone_or_access_repo(repo_url) 
         
@@ -528,8 +486,12 @@ def test_sigma_rules_parse():
             flash("Failed to clone or access the repository.", "danger")
             return redirect(url_for("rule.rules_list"))
         
+
+        owner, repo = extract_owner_repo(repo_url)
+        license_from_github = get_license_name(owner,repo)
+
         # Get and parse all Sigma rules from the folder
-        rule_dicts = read_and_parse_all_sigma_rules_from_folder(repo_dir,repo_url)
+        rule_dicts = read_and_parse_all_sigma_rules_from_folder(repo_dir,repo_url,license_from_github)
         
 
         imported = 0
@@ -557,3 +519,57 @@ def test_sigma_rules_parse():
 
 
     return redirect(url_for("rule.rules_list"))
+
+
+
+
+# All the rules 
+@rule_blueprint.route("/import_rules_from_github", methods=['GET', 'POST'])
+@login_required
+def import_rules_from_github():
+    if request.method == 'POST':
+        repo_url = request.form.get('url')
+
+        try:
+            repo_dir = clone_or_access_repo(repo_url) 
+            if not repo_dir:
+                flash("Failed to clone or access the repository.", "danger")
+                return redirect(url_for("rule.rules_list"))
+
+            save_yara_rules_as_is(repo_url)
+
+
+
+
+
+            owner, repo = extract_owner_repo(repo_url)
+            license_from_github = get_license_name(owner,repo)
+
+
+            rule_dicts_Sigma = read_and_parse_all_sigma_rules_from_folder(repo_dir,repo_url,license_from_github)
+            rule_dicts_Yara = read_and_parse_all_yara_rules_from_folder(license_from_github,repo_url=repo_url)
+
+            imported = 0
+            skipped = 0
+            
+            for rule_dict in rule_dicts_Sigma:
+                success = RuleModel.add_rule_core(rule_dict)
+
+                if success:
+                    imported += 1
+                else:
+                    skipped += 1
+            for rule_dic2 in rule_dicts_Yara:
+                success = RuleModel.add_rule_core(rule_dic2)
+
+                if success:
+                    imported += 1
+                else:
+                    skipped += 1
+
+            flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
+        except Exception as e:
+            flash("Failed to import rules: URL ", "danger")
+
+    return redirect(url_for("rule.rules_list"))
+

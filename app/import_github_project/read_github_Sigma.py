@@ -22,7 +22,6 @@ def get_sigma_files_from_repo(repo_dir):
 def load_sigma_rules(files):
     """Load and parse Sigma rule files."""
     all_rules = []
-
     if files:
         for file in files:
             try:
@@ -40,16 +39,20 @@ def load_sigma_rules(files):
         print("No files found to process.")
     
     print(f"{len(all_rules)} rules loaded.")
+    
+
     return all_rules
 
 
-def read_and_parse_all_sigma_rules_from_folder(repo_dir,url_github):
+def read_and_parse_all_sigma_rules_from_folder(repo_dir,url_github,license_from_github):
     """Reads and parses all Sigma rules from the given folder, returning a dictionary for each rule."""
     
     files = get_sigma_files_from_repo(repo_dir)
     all_rules = load_sigma_rules(files)
     
     rule_dict_list = []
+
+    license = license_from_github 
 
     # Iterate through all the parsed Sigma rules
     for rule in all_rules:
@@ -58,7 +61,7 @@ def read_and_parse_all_sigma_rules_from_folder(repo_dir,url_github):
             "format": "Sigma",  # Assuming the format is Sigma
             "title": rule.get("title", "Untitled"),  # Default to "Untitled" if not present
             "license": rule.get("license", "Unknown"),  # Default to "Unknown" if not present
-            "description": rule.get("description", "No description provided"),
+            "description": rule.get(license, "No description provided"),
             "source": url_github ,# rule.get("source", "No source available"),
             "version": rule.get("version", "1.0"),  # Default to version "1.0"
             "author": rule.get("author", "Unknown"),  # Default to "Unknown" if not present

@@ -57,30 +57,30 @@
     <template v-if="filteredRules.length > 0">
       <div class="col-md-6 mb-3" v-for="(rule, index) in filteredRules" :key="rule.uuid">
         <div class="card card-body">
-          <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1371ff">
-            <h5 class="mb-0">[[ rule.title ]]</h5>
-            <div v-if="parseInt('{{current_user.id}}') === rule.user_id || current_user_is_admin" class="ms-auto">
-                <a :href="`rule/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2"><i class="fas fa-pen"></i></a>
-                <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2"><i class="fas fa-trash"></i></button>
+            <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1371ff">
+                <h5 class="mb-0" style="flex-grow: 1;">[[ rule.title ]]</h5>
+                <div v-if="parseInt('{{current_user.id}}') === rule.user_id || current_user_is_admin" class="d-flex justify-content-end">
+                    <a :href="`rule/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2"><i class="fas fa-pen"></i></a>
+                    <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2"><i class="fas fa-trash"></i></button>
+                </div>
+                <a :href="`rule/favorite/${rule.id}`" class="btn btn-success btn-sm"><i class="fas fa-star"></i></a>
             </div>
-            <a :href="`rule/favorite/${rule.id}`" class="btn btn-success btn-sm me-2"><i class="fas fa-star"></i></a>
-        </div>        
-          <div class="card-body">
-            <p><strong>Description:</strong> [[ rule.description ]]</p>
-            <p><strong>Author:</strong> [[ rule.author ]]</p>
-            <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
-            <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
-            <a :href="`rule/detail_rule/${rule.id}`" class="btn btn-info btn-sm">View more</a>
-            <button @click="vote('up', rule.id)" class="btn btn-success btn-sm mx-2"><i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]</button>
-            <button @click="vote('down', rule.id)" class="btn btn-danger btn-sm"><i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]</button>
-          </div>
+            <div class="card-body">
+                <p><strong>Description:</strong> [[ rule.description ]]</p>
+                <p><strong>Author:</strong> [[ rule.author ]]</p>
+                <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
+                <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
+                <a :href="`rule/detail_rule/${rule.id}`" class="btn btn-info btn-sm">View more</a>
+                <button @click="vote('up', rule.id)" class="btn btn-success btn-sm mx-2"><i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]</button>
+                <button @click="vote('down', rule.id)" class="btn btn-danger btn-sm"><i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]</button>
+            </div>
         </div>
-      </div>
+    </div>
+    
     </template>
     <template v-else >
       <p class="text-muted">No recent rules found.</p>
     </template>
-  
   </div>
   
 </div>
