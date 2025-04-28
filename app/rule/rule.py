@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from math import ceil
+import os
 from flask import Blueprint, Response, jsonify, redirect, request,render_template, flash, session, url_for
 from flask_login import current_user, login_required
 
@@ -7,7 +8,7 @@ from app.db_class.db import Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 from app.import_github_project.read_github_Sigma import get_sigma_files_from_repo, load_sigma_rules, read_and_parse_all_sigma_rules_from_folder
 from app.import_github_project.read_github_YARA import  read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
-from app.import_github_project.untils_import import extract_owner_repo, get_license_name
+from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_license_name
 
 from .rule_form import AddNewRuleForm, EditRuleForm
 from ..utils.utils import form_to_dict
@@ -473,52 +474,86 @@ def test_yara_python_url():
     return redirect(url_for("rule.rules_list"))
 
 
-
-# @rule_blueprint.route("/test_sigma_rules_parse", methods=['GET', 'POST'])
+# @rule_blueprint.route("/import_rules_from_github", methods=['GET', 'POST'])
 # @login_required
-# def test_sigma_rules_parse():
-#     directory = 'app/sigma_test'  
-    
-#     files = get_sigma_files_from_repo(directory)
-#     print(f"files .yml find : {files}")
-    
-#     rules = load_sigma_rules(files)
-    
-#     if rules:
-#         for rule in rules:
-#             print(f"rules found: {rule}")
-#     else:
-#         print("Failed to found rules.")
-    
+# def import_rules_from_github():
+#     if request.method == 'POST':
+#         repo_url = request.form.get('url')
+
+#         try:
+#             yara_repo_dir = save_yara_rules_as_is(repo_url)
+
+
+#             # license_from_github = get_license_file_from_github_repo(repo_dir) old version
+#             # take owner and repo to extract the license
+#             owner, repo = extract_owner_repo(repo_url)
+#             license_from_github = get_license_name(owner,repo)
+#             # print("License:", license_from_github)
+
+#             # Step 2: Read and parse all files in the output_rules folder
+#             all_rules = read_and_parse_all_yara_rules_from_folder(license_from_github,repo_url=repo_url)
+            
+
+#             # Step 3: Try to add each rule to the database
+#             imported = 0
+#             skipped = 0
+#             for rule_dict in all_rules:
+#                 success = RuleModel.add_rule_core(rule_dict)
+
+#                 if success:
+#                     imported += 1
+#                 else:
+#                     skipped += 1
+
+#             flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
+#         except Exception as e:
+#             flash("Failed to import rules: URL ", "danger")
+
 #     return redirect(url_for("rule.rules_list"))
 
 
 @rule_blueprint.route("/test_sigma_rules_parse", methods=['GET', 'POST'])
 @login_required
 def test_sigma_rules_parse():
-    """Route to test parsing Sigma rules from a folder."""
+    """Route to test parsing Sigma rules from a GitHub project URL."""
+    if request.method == 'POST':
+        repo_url = request.form.get('url')
     
-    # Directory containing the Sigma rule files
-    directory = 'app/sigma_test'
-    
-    # Call the function to get and parse all the Sigma rules from the folder
-    rule_dicts = read_and_parse_all_sigma_rules_from_folder(directory)
-    
-    # Variables to keep track of the import success
-    imported = 0
-    skipped = 0
-    print("je suis arrive ici")
-    # Attempt to import each rule
-    for rule_dict in rule_dicts:
-        success = RuleModel.add_rule_core(rule_dict)
+        # repo_url = 'https://github.com/SigmaHQ/sigma.git'  
+        
 
-        if success:
-            imported += 1
+        repo_dir = clone_or_access_repo(repo_url) 
+        
+        if not repo_dir:
+            flash("Failed to clone or access the repository.", "danger")
+            return redirect(url_for("rule.rules_list"))
+        
+        # Get and parse all Sigma rules from the folder
+        rule_dicts = read_and_parse_all_sigma_rules_from_folder(repo_dir,repo_url)
+        
+
+        imported = 0
+        skipped = 0
+        
+        if rule_dicts:
+
+            for rule_dict in rule_dicts:
+                success = RuleModel.add_rule_core(rule_dict)
+
+                if success:
+                    imported += 1
+                else:
+                    skipped += 1
+        
+
+            print(f"Successfully imported {imported} rules.")
+            print(f"Skipped {skipped} rules.")
+            flash(f"Successfully imported {imported} rules.", "success")
+            if skipped > 0:
+                flash(f"Skipped {skipped} rules.", "warning")
         else:
-            skipped += 1
-    
-    # Print the number of successful and skipped imports for debugging
-    print(f"Successfully imported {imported} rules.")
-    print(f"Skipped {skipped} rules.")
+            flash("No Sigma rules found to parse.", "warning")
+
+
 
     return redirect(url_for("rule.rules_list"))

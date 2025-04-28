@@ -43,7 +43,7 @@ def load_sigma_rules(files):
     return all_rules
 
 
-def read_and_parse_all_sigma_rules_from_folder(repo_dir):
+def read_and_parse_all_sigma_rules_from_folder(repo_dir,url_github):
     """Reads and parses all Sigma rules from the given folder, returning a dictionary for each rule."""
     
     files = get_sigma_files_from_repo(repo_dir)
@@ -59,7 +59,7 @@ def read_and_parse_all_sigma_rules_from_folder(repo_dir):
             "title": rule.get("title", "Untitled"),  # Default to "Untitled" if not present
             "license": rule.get("license", "Unknown"),  # Default to "Unknown" if not present
             "description": rule.get("description", "No description provided"),
-            "source": rule.get("source", "No source available"),
+            "source": url_github ,# rule.get("source", "No source available"),
             "version": rule.get("version", "1.0"),  # Default to version "1.0"
             "author": rule.get("author", "Unknown"),  # Default to "Unknown" if not present
             "to_string": yaml.dump(rule)  # Convert the full rule to a string representation
