@@ -288,7 +288,7 @@ def search_rules(user_id, query):
 
 
 
-def filter_rules(user_id, search=None, author=None, sort_by=None):
+def filter_rules(user_id, search=None, author=None, sort_by=None, rule_type=None):
     query = Rule.query
 
     if search:
@@ -302,20 +302,23 @@ def filter_rules(user_id, search=None, author=None, sort_by=None):
             )
         )
 
-
     if author:
         query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
 
-    # add new sort 
+    if rule_type:
+        query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))  # <-- ajouté ici
+
+    # Ajout du tri
     if sort_by == "newest":
         query = query.order_by(Rule.creation_date.desc())
     elif sort_by == "oldest":
         query = query.order_by(Rule.creation_date.asc())
     elif sort_by == "most_likes":
-        query = query.order_by(Rule.vote_up.desc())  
+        query = query.order_by(Rule.vote_up.desc())
     elif sort_by == "least_likes":
-        query = query.order_by(Rule.vote_down.desc())  
+        query = query.order_by(Rule.vote_down.desc())
     else:
-        query = query.order_by(Rule.creation_date.desc())  
+        query = query.order_by(Rule.creation_date.desc())
 
     return query
+

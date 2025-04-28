@@ -113,6 +113,14 @@
               <option value="least_likes">Least Likes</option>
             </select>
           </div>
+          <div class="col-md-3">
+            <select v-model="ruleType" class="form-select">
+              <option value="">All Types</option>
+              <option value="yara">Yara</option>
+              <option value="sigma">Sigma</option>
+            </select>
+          </div>
+          
           <div class="col-md-2">
             <button class="btn btn-primary w-100" @click="fetchRules(1)">
               <i class="fas fa-filter"></i> Filter
@@ -230,6 +238,8 @@
       const authorFilter = ref('')
       const sortBy = ref('newest')
       const total_rules_liste = ref(0)
+      const ruleType = ref("");
+
 
       
 
@@ -240,7 +250,8 @@
           page,
           search: searchQuery.value,
           author: authorFilter.value,
-          sort_by: sortBy.value
+          sort_by: sortBy.value,
+          rule_type: ruleType.value
         })
 
         const res = await fetch('/rule/get_rules_page_filter?' + params.toString())
@@ -352,7 +363,8 @@
         total_rules_liste,
         csrf_token,
         onSearchInput,
-        onEnterKey
+        onEnterKey,
+        ruleType
       }
     }
   }).mount('#main-container')

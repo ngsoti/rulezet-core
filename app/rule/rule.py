@@ -82,15 +82,18 @@ def get_rules_page_filter():
     search = request.args.get("search", None)
     author = request.args.get("author", None)
     sort_by = request.args.get("sort_by", "newest")
+    rule_type = request.args.get("rule_type", None) 
 
-    query = RuleModel.filter_rules(current_user.id, search=search, author=author, sort_by=sort_by)
+    query = RuleModel.filter_rules(current_user.id, search=search, author=author, sort_by=sort_by, rule_type=rule_type)
     total_rules = query.count()
     rules = query.offset((page - 1) * per_page).limit(per_page).all()
+
     return jsonify({
         "rule": [r.to_json() for r in rules],
         "total_rules": total_rules,
         "total_pages": ceil(total_rules / per_page)
     })
+
 
 
 
