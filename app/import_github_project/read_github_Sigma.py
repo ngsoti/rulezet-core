@@ -52,20 +52,19 @@ def read_and_parse_all_sigma_rules_from_folder(repo_dir,url_github,license_from_
     
     rule_dict_list = []
 
-    license = license_from_github 
+    
 
-    # Iterate through all the parsed Sigma rules
     for rule in all_rules:
-        # Extract information for the rule dictionary
+
         rule_dict = {
-            "format": "Sigma",  # Assuming the format is Sigma
-            "title": rule.get("title", "Untitled"),  # Default to "Untitled" if not present
-            "license": rule.get("license", "Unknown"),  # Default to "Unknown" if not present
-            "description": rule.get(license, "No description provided"),
+            "format": "Sigma",  
+            "title": rule.get("title", "Untitled"), 
+            "license": license_from_github or  rule.get("license"), 
+            "description": rule.get("description", "No description provided"),
             "source": url_github ,# rule.get("source", "No source available"),
-            "version": rule.get("version", "1.0"),  # Default to version "1.0"
-            "author": rule.get("author", "Unknown"),  # Default to "Unknown" if not present
-            "to_string": yaml.dump(rule)  # Convert the full rule to a string representation
+            "version": rule.get("version", "1.0"), 
+            "author": rule.get("author", "Unknown"),  
+            "to_string": yaml.dump(rule)  
         }
         rule_dict_list.append(rule_dict)
 

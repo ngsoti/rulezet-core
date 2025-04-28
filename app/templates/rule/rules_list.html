@@ -16,6 +16,10 @@
     {% endif %}
   {% endwith %}
 
+  <!-- <a :href="`/rule/test_suricata_rules_parse`" class="btn btn-warning btn-sm me-2" title="Edit Rule">
+    <i class="fas fa-pen"></i>
+  </a> -->
+
   
   <header class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="text-dark m-0"><i class="fas fa-cogs"></i> Rule Set</h1>
@@ -95,6 +99,8 @@
             <input
               type="text"
               v-model="searchQuery"
+              @input="onSearchInput"
+              @keyup.enter="onEnterKey"
               class="form-control"
               placeholder="Search by title, description..."
             >
@@ -246,6 +252,26 @@
         current_page.value = page
       }
 
+
+
+
+      async function onSearchInput() {
+        if (searchQuery.value.trim() === "") {
+          await fetchRules(1)
+        } else {
+          await fetchRules(1)
+        }
+      }
+
+      async function onEnterKey() {
+        await fetchRules(1)
+      }
+
+
+
+
+
+
       async function fetchCurrentUser() {
         const res = await fetch('get_current_user')
         const data = await res.json()
@@ -324,7 +350,9 @@
         authorFilter,
         sortBy,
         total_rules_liste,
-        csrf_token
+        csrf_token,
+        onSearchInput,
+        onEnterKey
       }
     }
   }).mount('#main-container')
