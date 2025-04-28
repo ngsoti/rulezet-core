@@ -5,7 +5,8 @@ from flask_login import current_user, login_required
 
 from app.db_class.db import Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
-from app.import_github_project.read_github_YARA import extract_owner_repo, get_license_name, read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
+from app.import_github_project.read_github_YARA import  read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
+from app.import_github_project.untils_import import extract_owner_repo, get_license_name
 
 from .rule_form import AddNewRuleForm, EditRuleForm
 from ..utils.utils import form_to_dict
