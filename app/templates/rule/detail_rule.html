@@ -3,6 +3,7 @@
 
 {% block content %}
 <div class="container mt-4">
+
     <ul class="nav nav-tabs" role="tablist">
         <li class="nav-item">
             <a class="nav-link active" data-bs-toggle="tab" href="#1" role="tab">Rule</a>
@@ -261,47 +262,83 @@
                         <p class="text-muted"><i class="fas fa-info-circle"></i> No comments yet. Be the first to comment!</p>
                     </template>          
                 </div>
-            </div>
-
-            
-            
+            </div>            
             <div id="rule_id" data-rule-id="{{ rule.id }}"></div>
         </div>
         <textarea id="ruleContentToCopy" style="display: none;">{{ rule.to_string }}</textarea>
         <div class="tab-pane fade" id="2" role="tabpanel">
             {% if current_user.is_authenticated %}
-            <!-- Proposal Edit Card -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-primary text-white">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
                     <h2 class="mb-0"><i class="fas fa-pencil-alt"></i> Propose an Edit</h2>
-                    </div>
-                    <div class="card-body">
-                        <form action="{{ url_for('rule.propose_edit', rule_id=rule.id) }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <div class="form-group mb-4">
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('rule.propose_edit', rule_id=rule.id) }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="form-group mb-4">
                             <label for="proposed_content" class="font-weight-bold">Modified Rule Content</label>
-                            <textarea id="proposed_content" name="proposed_content" rows="8" class="form-control" placeholder="Paste your modified version of the rule here">{{ rule.to_string }}</textarea>
-                            </div>
-                            <div class="form-group mb-4">
+                            <textarea
+                                v-model="modifiedRuleContent"
+                                id="proposed_content"
+                                name="proposed_content"
+                                class="form-control"
+                                placeholder="Paste your modified version of the rule here"
+                                style="white-space: pre-wrap; overflow: hidden; resize: none; min-height: 200px;"
+                            ></textarea>
+                        </div>
+            
+
+
+
+                       <!-- Prism.js CSS pour le style -->
+                        <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
+
+                        <!-- Prism.js pour la coloration syntaxique -->
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+
+                        <!-- Mode pour la coloration syntaxique Python -->
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+
+
+
+                        <div class="form-group mb-4">
+                            <label for="code_preview" class="font-weight-bold">Code Preview</label>
+                            <pre><code id="code_preview" class="language-python">[[ modifiedRuleContent ]]</code></pre>
+                        </div>
+                        
+                        
+            
+                        
+                        
+                    
+                        
+                        <div class="form-group mb-4">
                             <label for="message" class="font-weight-bold">Message or Justification (optional)</label>
-                            <input id="message" type="text" name="message" class="form-control" placeholder="Explain the changes you made or provide any additional context">
-                            </div>
-                            <div class="d-flex justify-content-end">
+                            <input 
+                                id="message" 
+                                type="text" 
+                                name="message" 
+                                class="form-control" 
+                                placeholder="Explain the changes you made or provide any additional context"
+                            >
+                        </div>
+                        <div class="d-flex justify-content-end">
                             <button type="submit" class="btn btn-warning">
                                 <i class="fas fa-paper-plane"></i> Submit Proposal
                             </button>
-                            </div>
-                        </form>
-                    </div>
+                        </div>
+                    </form>
                 </div>
+            </div>
             {% else %}
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body text-center">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center">
                     <p class="text-muted">Please <a href="{{ url_for('auth.login') }}" class="text-primary">log in</a> to propose an edit.</p>
-                    </div>
                 </div>
+            </div>
             {% endif %}
-        </div>        
+            
+        </div>     
         <div class="text-center mt-4 mb-5">
             <a href="/" class="btn btn-outline-primary btn-lg me-2">
                 <i class="fas fa-arrow-left me-1"></i> Back to Rules
@@ -312,13 +349,22 @@
         </div>
             
     </div>
+    
         
 </div>
+
+
+
+
+
+
+
+
 {% endblock %}
 
 {% block script %}
 <script type="module">
-    const { createApp, ref } = Vue;
+    const { createApp, ref ,onMounted} = Vue;
     import { message_list } from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
     createApp({
@@ -329,7 +375,15 @@
             const total_comments = ref(0)
             const current_user_is_admin = ref()
             const newCommentContent = ref("");
-            
+            const modifiedRuleContent = ref('{{ rule_content | tojson }}');
+
+
+            onMounted(() => {
+                Prism.highlightElement(document.getElementById('code_preview'));  
+            });
+
+
+
             async function Ownership(rule_id){
                 const response = await fetch('/owner_request?rule_id=' + rule_id)
                 if (response.ok) {
@@ -398,6 +452,7 @@
                 const res = await fetch('/rule/get_current_user')
                 const data = await res.json()
                 current_user_is_admin.value = data.user
+
             }
 
             async function fetchComments(page ) {
@@ -425,7 +480,8 @@
                 editComment,
                 deleteComment,
                 submitComment,
-                newCommentContent
+                newCommentContent,
+                modifiedRuleContent
             };
         }
     }).mount('#main-container');

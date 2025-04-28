@@ -157,7 +157,8 @@ def get_current_user():
 @login_required
 def detail_rule(rule_id):
     rule = RuleModel.get_rule(rule_id)
-    return render_template("rule/detail_rule.html", rule=rule)
+    return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string)
+
 
 
 @rule_blueprint.route('/vote_rule', methods=['GET','POST'])

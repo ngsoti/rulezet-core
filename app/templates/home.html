@@ -81,6 +81,11 @@
     <template v-else >
       <p class="text-muted">No recent rules found.</p>
     </template>
+
+
+
+
+    
   </div>
   
 </div>
@@ -103,7 +108,6 @@
       const searchQuery = ref('')
       const current_user_is_admin = ref(false)
       const current_user_is_connected = ref(false)
-
 
 
       const filteredRules = computed(() => {
