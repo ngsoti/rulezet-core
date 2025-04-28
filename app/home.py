@@ -11,7 +11,7 @@ from app.favorite.favorite_core import add_favorite
 
 from app.import_github_project.read_github_YARA import clone_or_access_repo, extract_owner_repo,  get_license_name, get_yara_files_from_repo, parse_yara_rule, read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
 
-from app.import_github_project.yara_python import  extract_yara_rules
+
 from app.rule.rule_form import EditRuleForm
 from app.utils.utils import form_to_dict
 from .rule import rule_core as RuleModel
@@ -45,7 +45,6 @@ def get_last_rules():
 @home_blueprint.route("/get_current_user_connected", methods=['GET', 'POST'])
 def get_current_user_connected():
     if current_user.is_authenticated:
-        print(current_user.is_authenticated)
         return jsonify({"is_authenticated": True, "user_id": current_user.id})
     else:
         print(current_user.is_authenticated)

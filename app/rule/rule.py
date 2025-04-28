@@ -285,7 +285,7 @@ def add_favorite_rule(rule_id):
         fav = add_favorite(user_id=current_user.id, rule_id=rule_id)
         flash("Rule added to favorites!", "success")
 
-    return redirect(url_for('rule.rules_list')) 
+    return redirect(request.referrer or url_for('rule.rules_list'))
 
 
 

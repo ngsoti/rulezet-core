@@ -1,3 +1,4 @@
+import re
 from flask import url_for, flash
 from flask_login import current_user
 from flask_wtf import FlaskForm
@@ -44,7 +45,7 @@ class AddNewUserForm(FlaskForm):
     
     first_name = StringField('First name', validators=[InputRequired()])
     last_name = StringField('Last name', validators=[InputRequired()])
-    email = EmailField('Email', validators=[InputRequired(), Email()])
+    email = EmailField('Email', validators=[InputRequired(), Email(message="Please enter a valid email address.")])
     password = PasswordField('Password', validators=[InputRequired()])
 
     submit = SubmitField('Register')
@@ -54,5 +55,6 @@ class AddNewUserForm(FlaskForm):
             raise ValidationError('Email already registered. (Did you mean to '
                                     '<a href="{}">log in</a> instead?)'.format(
                                         url_for('account.index')))
+    #raise ValidationError('Invalid email format. Please enter a valid email address.')
     
     
