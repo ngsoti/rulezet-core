@@ -36,6 +36,9 @@ def rule():
 
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
+
+        form_dict['author'] =  current_user.first_name
+
         RuleModel.add_rule_core(form_dict)
         flash('Rule added !', 'success')
         

@@ -21,7 +21,7 @@ class AddNewRuleForm(FlaskForm):
     license = SelectField("License", choices=[], validators=[DataRequired()])
     description = TextAreaField('Description', validators=[InputRequired()])
     source = StringField('Source', validators=[InputRequired()])
-    author = StringField('Author', validators=[InputRequired()])
+    #author = current_user.get_first_name()  StringField('Author', validators=[InputRequired()])
     version = StringField('Version', validators=[InputRequired()])
     to_string = TextAreaField('Content rule', validators=[InputRequired()])
 

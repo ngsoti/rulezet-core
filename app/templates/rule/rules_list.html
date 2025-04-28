@@ -248,11 +248,8 @@
         const data = await res.json()
         const updatedRule = rules_list.value.rule.find(rule => rule.id === ruleId)
         if (updatedRule) {
-          if (voteType === 'up') {
-            updatedRule.vote_up = data.vote_up
-          } else if (voteType === 'down') {
-            updatedRule.vote_down = data.vote_down
-          }
+          updatedRule.vote_up = data.vote_up
+          updatedRule.vote_down = data.vote_down
         }
       }
 

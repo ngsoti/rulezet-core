@@ -55,19 +55,6 @@
                             {% endif %}
                         </div>
                     </div>
-                    
-                    
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.author.label(class_="col-form-label") }}
-                            {{ form.author(class_="form-control") }}
-                            {% if form.author.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.author.errors[0] | safe }}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
                     <div class="col-md-6">
                         <div class="form-group">
                             {{ form.version.label(class_="col-form-label") }}
