@@ -124,6 +124,21 @@ def get_rules_page_owner():
 
 
 
+@rule_blueprint.route("/get_current_rule", methods=['GET'])
+def get_current_rule():
+    rule_id = request.args.get('rule_id', 1, type=int)
+    rule = RuleModel.get_rule(rule_id)
+    print("oui")
+   
+    if rule:
+        return {"rule": rule.to_json()}
+    return {"message": "No Rule"}, 404
+
+
+
+
+
+
 
 @rule_blueprint.route("/delete_rule", methods=['POST'])
 @login_required

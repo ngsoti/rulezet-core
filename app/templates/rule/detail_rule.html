@@ -144,11 +144,16 @@
 
                     <!-- Votes -->
                     <div class="text-center">
-                        <strong>Votes :</strong>
-                        <div>
-                            <span class="text-success">Positive Vote : {{ rule.vote_up }}</span> | 
-                            <span class="text-danger">Negative Vote : {{ rule.vote_down }}</span>
+                        {% if current_user.is_authenticated %}
+                        <div class="mt-3">
+                        <button @click="vote('up')" class="btn btn-success btn-sm">
+                            <i class="fas fa-thumbs-up"></i> [[ currentRule.vote_up ]]
+                        </button>
+                        <button @click="vote('down')" class="btn btn-danger btn-sm">
+                            <i class="fas fa-thumbs-down"></i> [[ currentRule.vote_down ]]
+                        </button>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -367,6 +372,29 @@
             const current_user_is_admin = ref()
             const newCommentContent = ref("");
             const modifiedRuleContent = ref('{{ rule_content | tojson }}');
+            const currentRule = ref(0)
+
+
+            async function fetchCurrentRule(){
+                const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
+                if (response.ok) {
+                    const data = await response.json();
+                    currentRule.value = data.rule; 
+                } else {
+                    alert('Error while adding comment.');
+                }
+            }
+
+            async function vote(voteType) {
+                const res = await fetch(`/rule/vote_rule?id=${rule_id}&vote_type=${voteType}`, { method: 'GET' })
+                const data = await res.json()
+                
+                currentRule.value.vote_up = data.vote_up
+                currentRule.value.vote_down = data.vote_down
+            }
+
+
+
 
 
             onMounted(() => {
@@ -458,6 +486,7 @@
 
             fetchComments(1)
             fetchCurrentUser()
+            fetchCurrentRule()
 
 
             return {
@@ -472,7 +501,10 @@
                 deleteComment,
                 submitComment,
                 newCommentContent,
-                modifiedRuleContent
+                modifiedRuleContent,
+                currentRule,
+                fetchCurrentRule,
+                vote
             };
         }
     }).mount('#main-container');
