@@ -187,17 +187,21 @@ class Request(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  
+    user_id_owner_rule = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  
     title = db.Column(db.String(128), nullable=False)
     content = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(32), default="pending")  # Ex: pending, reviewed, closed
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
 
-    # Define the relationship with the User model
-    user = db.relationship('User', backref=db.backref('requests', lazy='dynamic'))
-    
-    # Define the relationship with the Rule model
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('requests', lazy='dynamic'))
+
+
+    user_owner_rule = db.relationship('User', foreign_keys=[user_id_owner_rule], backref=db.backref('owned_requests', lazy='dynamic'))
+
+
     rule = db.relationship('Rule', backref=db.backref('requests', lazy='dynamic'))
 
     def to_json(self):
@@ -210,8 +214,10 @@ class Request(db.Model):
             "status": self.status,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
             "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M'),
-            "rule_id": self.rule_id
+            "rule_id": self.rule_id,
+            "user_id_owner_rule": self.user_id_owner_rule
         }
+
 
 
 class RuleEditProposal(db.Model):

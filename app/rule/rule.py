@@ -128,7 +128,7 @@ def get_rules_page_owner():
 def get_current_rule():
     rule_id = request.args.get('rule_id', 1, type=int)
     rule = RuleModel.get_rule(rule_id)
-    print("oui")
+
    
     if rule:
         return {"rule": rule.to_json()}
@@ -144,7 +144,6 @@ def get_current_rule():
 @login_required
 def delete_rule():
     data = request.get_json()
-    # rule_id = request.args.get('id', 1, int)
     rule_id = data.get('id')
     user_id = RuleModel.get_rule_user_id(rule_id)
 
@@ -156,22 +155,22 @@ def delete_rule():
 
 
 
-@rule_blueprint.route("/delete_selected_rules", methods=['POST'])
-@login_required
-def delete_selected_rules():
-    data = request.get_json()
-    rule_id = data.get('id')
-    user_id = RuleModel.get_rule_user_id(rule_id)  # Get the user who created the rule
+# @rule_blueprint.route("/delete_selected_rules", methods=['POST'])
+# @login_required
+# def delete_selected_rules():
+#     data = request.get_json()
+#     rule_id = data.get('id')
+#     user_id = RuleModel.get_rule_user_id(rule_id)  # Get the user who created the rule
 
-    # Check if the current user is either the owner or an admin
-    if current_user.id == user_id or current_user.is_admin():
-        success = RuleModel.delete_rule_core(rule_id)
-        if success:
-            return jsonify({"success": True, "message": "Rule deleted!"})
-        else:
-            return jsonify({"success": False, "message": "Failed to delete the rule!"})
+#     # Check if the current user is either the owner or an admin
+#     if current_user.id == user_id or current_user.is_admin():
+#         success = RuleModel.delete_rule_core(rule_id)
+#         if success:
+#             return jsonify({"success": True, "message": "Rule deleted!"})
+#         else:
+#             return jsonify({"success": False, "message": "Failed to delete the rule!"})
     
-    return render_template("access_denied.html")
+#     return render_template("access_denied.html")
 
 
 

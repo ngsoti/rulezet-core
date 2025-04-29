@@ -1,3 +1,7 @@
+from flask_login import current_user
+
+from ..rule import rule_core as RuleModel
+
 from .. import db
 from app.db_class.db import Request
 from datetime import datetime
@@ -9,7 +13,7 @@ def create_request(rule, user_id, current_user):
     existing_request = Request.query.filter_by(user_id=user_id, title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.author}").first()
 
     if existing_request:
-
+        existing_request.user_id_owner_rule = rule.user_id
         existing_request.content = f"{current_user.first_name} {current_user.last_name} (ID: {current_user.id}) wants to become the owner of '{rule.title}'"
         existing_request.status = "pending"
         existing_request.updated_at = datetime.utcnow()
@@ -18,6 +22,7 @@ def create_request(rule, user_id, current_user):
 
 
     new_request = Request(
+        user_id_owner_rule = rule.user_id,
         user_id=user_id,
         title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.author}",
         content=f"{current_user.first_name} {current_user.last_name} (ID: {current_user.id}) wants to become the owner of '{rule.title}'",
@@ -75,5 +80,24 @@ def get_total_requests():
 
 
 def get_total_requests_to_check():
-    """Return the total count of requests not check yet."""
-    return Request.query.filter_by(status="pending").count()
+    """Return the total count of pending requests for rules owned by the current user."""
+    return Request.query.filter(
+        Request.status == "pending",
+        Request.user_id_owner_rule == current_user.id
+    ).count()
+
+
+
+
+def get_requests_page_user(page):
+    """Return all requests for the current user filtered by user_id_owner_rule"""
+    return Request.query.filter(Request.user_id_owner_rule == current_user.id).paginate(page=page, per_page=60, max_per_page=70)
+
+
+
+def is_the_owner(request_id):
+    """Return True if the current user is the owner of the request"""
+    request = Request.query.get(request_id)
+    if request and request.user_id_owner_rule == current_user.id:
+        return True
+    return False

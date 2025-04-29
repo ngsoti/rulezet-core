@@ -1,5 +1,5 @@
 <!-- Main Navigation -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3 px-4 rounded-bottom">
+<nav class="container navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3 px-4 rounded-bottom">
     <div class="container-fluid d-flex justify-content-between align-items-center">
         <a href="/" class="navbar-brand d-flex align-items-center">
             <img src="{{ url_for('static', filename='image/crolle.png') }}" height="50" alt="RULEZET Logo" class="me-3">
@@ -42,20 +42,22 @@
                 </div>
             </li>
 
-            {% if current_user.is_authenticated and current_user.is_admin() %}
                 <li class="nav-item mx-2 position-relative">
                     <a href="/admin/request" class="nav-link d-flex align-items-center text-dark fw-semibold">
                         <i class="fa-solid fa-envelope fa-fw me-1"></i>
                         Requests
-                        {% if requests_to_validate > 0 %}
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                {{ requests_to_validate }}
+                        <template v-if="requests_to_validate">
+                            <span v-if="requests_to_validate > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                [[ requests_to_validate ]]
                                 <span class="visually-hidden">unread messages</span>
                             </span>
-                        {% endif %}
+                        </template>
+                        
+                        
+                        
                     </a>
                 </li>
-            {% endif %}
+
 
             <!-- Profile Dropdown -->
             <li class="nav-item dropdown mx-2">
@@ -102,3 +104,31 @@
         </ul>
     </div>
 </nav>
+
+        <script type="module">
+            const {createApp, ref, onMounted} = Vue
+            createApp({
+                delimiters: ['[[', ']]'],
+                setup() {
+                    
+                    const requests_to_validate = ref()
+
+
+                    onMounted(() => {
+                        getNbRequestAdmin()
+                    });
+                    async function getNbRequestAdmin() {
+                        const res = await fetch('/request_to_check')
+                        const data = await res.json()
+                        console.log(data.count)
+                        requests_to_validate.value = data.count
+                    }
+                   
+                    return {
+                        requests_to_validate
+                    }},
+            }).mount('.navbar')
+        </script>
+
+
+

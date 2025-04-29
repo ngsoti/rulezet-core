@@ -32,14 +32,15 @@
     </head>
 
     <body>
+        {% include 'sidebar.html' %}
         <div class="d-flex flex-column min-vh-100">
             <div class="flex-grow-1 container" id="main-container">
-                {% include 'sidebar.html' %}
+                
 
                 <!--Main layout-->
                 <main class="col ps-md-4 pt-2">
                     {% include 'macros/_flashes.html' %}
-
+                    
                     <div aria-live="polite" aria-atomic="true" class="">
                         <div class="toast-container start-50 translate-middle-x top-0 p-3" style="position: fixed;">
                             <template v-if="message_list">
@@ -58,7 +59,6 @@
                             </template>
                         </div>
                     </div>
-
                     {% block content %}
                     {% endblock %}
                 </main>
@@ -90,7 +90,7 @@
                             </a>
                             <a href="https://www.facebook.com/circlcom/" target="_blank" class="btn btn-outline-light me-1">
                                 <img src="https://img.icons8.com/?size=100&id=118468&format=png" alt="Facebook" class="footer-icon">
-                            </a>
+                            </a>request 
                             <a href="https://circl.lu/" target="_blank" class="btn btn-outline-light">
                                 <i class="fa-solid fa-link"></i> CIRCL
                             </a>
@@ -119,7 +119,7 @@
 
         {% block script %}
         <script type="module">
-            const {createApp} = Vue
+            const {createApp, ref} = Vue
             createApp({
                 delimiters: ['[[', ']]'],
                 setup() {},
@@ -140,6 +140,9 @@
                     if (sec) $el.T = setTimeout(triggerRemove, sec * 1000);
                 });
             });
+
+
+            
 
             const scrollToTopBtn = document.getElementById('scrollToTopBtn');
             window.addEventListener('scroll', () => {

@@ -21,6 +21,7 @@ from .request import request_core as RequestModel
 
 
 
+
 home_blueprint = Blueprint(
     'home',
     __name__,
@@ -29,6 +30,21 @@ home_blueprint = Blueprint(
 )
 
 #-----------------------------------------------------------Rules_pages_home-----------------------------------------------------------#
+
+@home_blueprint.route("/request_to_check")
+def inject_requests_to_validate():
+    try:
+        count = RequestModel.get_total_requests_to_check()
+    except:
+        count = 0
+    return jsonify({"count": count})
+
+
+
+
+
+
+
 
 @home_blueprint.route("/")
 def home():
@@ -78,16 +94,17 @@ def owner_request():
 @home_blueprint.route("/admin/request", methods=["POST", "GET"])
 @login_required
 def admin_requests():
-    if not current_user.is_admin():
-        return render_template("access_denied.html")
-
     return render_template("admin/request.html")
 
 
 @home_blueprint.route("/get_requests_page", methods=['GET'])
+@login_required
 def get_requests_page(): 
     page = request.args.get('page', 1, type=int)
-    requests_paginated = RequestModel.get_requests_page(page)
+    if current_user.is_admin():
+        requests_paginated = RequestModel.get_requests_page(page)
+    else:
+        requests_paginated = RequestModel.get_requests_page_user(page)
     total_requests = RequestModel.get_total_requests()
 
     if requests_paginated.items:
@@ -118,7 +135,8 @@ from .account import account_core as AccountModel
 def update_request_status():
     request_id = request.args.get('request_id')
     status = request.args.get('status')
-    if current_user.is_admin():
+    is_the_owner = RequestModel.is_the_owner(request_id)
+    if current_user.is_admin() or is_the_owner:
         updated = RequestModel.update_request_status(request_id, status)
         
         if updated and status == "approved":
