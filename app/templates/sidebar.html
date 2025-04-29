@@ -20,6 +20,12 @@
                     <a class="nav-link dropdown-toggle text-dark fw-semibold" type="button" id="rulesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fa-solid fa-book fa-fw me-1"></i> Rules
                     </a>
+                    <template v-if="changes_to_validate">
+                        <span v-if="changes_to_validate > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            [[ changes_to_validate ]]
+                            <span class="visually-hidden">unread messages</span>
+                        </span>
+                    </template>
                     <ul class="dropdown-menu" aria-labelledby="rulesDropdown">
                         <li>
                             <a class="dropdown-item" href="/rule/rules_list">
@@ -30,6 +36,7 @@
                             <li>
                                 <a class="dropdown-item" href="/rule/rule_propose_edit">
                                     <i class="fa-solid fa-pen-to-square fa-fw me-2"></i> Rule Proposal
+                                    
                                 </a>
                             </li>
                             <li>
@@ -112,10 +119,11 @@
                 setup() {
                     
                     const requests_to_validate = ref()
-
+                    const changes_to_validate = ref()
 
                     onMounted(() => {
                         getNbRequestAdmin()
+                        getNbChanges()
                     });
                     async function getNbRequestAdmin() {
                         const res = await fetch('/request_to_check')
@@ -123,9 +131,17 @@
                         console.log(data.count)
                         requests_to_validate.value = data.count
                     }
+
+                    async function getNbChanges() {
+                        const res = await fetch('/rule/change_to_check')
+                        const data = await res.json()
+                        console.log(data.count)
+                        changes_to_validate.value = data.count
+                    }
                    
                     return {
-                        requests_to_validate
+                        requests_to_validate,
+                        changes_to_validate
                     }},
             }).mount('.navbar')
         </script>

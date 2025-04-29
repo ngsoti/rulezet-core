@@ -34,11 +34,13 @@ home_blueprint = Blueprint(
 @home_blueprint.route("/request_to_check")
 def inject_requests_to_validate():
     try:
-        count = RequestModel.get_total_requests_to_check()
+        if current_user.is_admin():
+            count = RequestModel.get_total_requests_to_check_admin()
+        else:
+            count = RequestModel.get_total_requests_to_check()
     except:
         count = 0
     return jsonify({"count": count})
-
 
 
 
@@ -105,7 +107,7 @@ def get_requests_page():
         requests_paginated = RequestModel.get_requests_page(page)
     else:
         requests_paginated = RequestModel.get_requests_page_user(page)
-    total_requests = RequestModel.get_total_requests()
+    total_requests = RequestModel.get_total_requests_to_check_admin()
 
     if requests_paginated.items:
         requests_list = []

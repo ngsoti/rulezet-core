@@ -402,6 +402,18 @@ def delete_comment_route(comment_id):
 
 
 #-----------------------------------------------------------propose_edit-----------------------------------------------------------#
+@rule_blueprint.route("/change_to_check")
+def change_to_check():
+    try:
+        if current_user.is_admin():
+            count = RuleModel.get_total_change_to_check_admin()
+        else:
+            count = RuleModel.get_total_change_to_check()
+    except:
+        count = 0
+    return jsonify({"count": count})
+
+
 
 
 @rule_blueprint.route("/rule_propose_edit", methods=["POST", "GET"])
@@ -414,9 +426,13 @@ def rule_propose_edit():
 @rule_blueprint.route("/get_rules_propose_edit_page", methods=['GET'])
 def get_rules_propose_edit_page():
     page = request.args.get('page', 1, type=int)
-    rules_propose = RuleModel.get_rules_edit_propose_page(page)
-    rules_pendings = RuleModel.get_rules_edit_propose_page_pending(page)
     
+    if current_user.is_admin():
+        rules_propose = RuleModel.get_rules_edit_propose_page_admin(page)
+        rules_pendings = RuleModel.get_rules_edit_propose_page_pending_admin(page)
+    else:
+        rules_propose = RuleModel.get_rules_edit_propose_page(page)
+        rules_pendings = RuleModel.get_rules_edit_propose_page_pending(page)
     
     if rules_propose and rules_pendings:
         rules_list = list()

@@ -201,6 +201,47 @@ def get_rules_edit_propose_page_pending(page):
 
 
 
+
+
+def get_rules_edit_propose_page_admin(page):
+    """Return all rule edit proposals (admin view, no user filter)"""
+    return RuleEditProposal.query.options(
+        joinedload(RuleEditProposal.rule)
+    ).paginate(
+        page=page,
+        per_page=60,
+        max_per_page=70
+    )
+
+
+def get_rules_edit_propose_page_pending_admin(page):
+    """Return all pending rule edit proposals (admin view, no user filter)"""
+    return RuleEditProposal.query.filter(
+        RuleEditProposal.status == 'pending'
+    ).options(
+        joinedload(RuleEditProposal.rule)
+    ).paginate(
+        page=page,
+        per_page=60,
+        max_per_page=70
+    )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def get_rule_proposal(id):
     """Return the rule"""
     return RuleEditProposal.query.get(id)
@@ -322,3 +363,17 @@ def filter_rules(user_id, search=None, author=None, sort_by=None, rule_type=None
 
     return query
 
+
+
+def get_total_change_to_check():
+    """Return the count of pending RuleEdit proposals for rules owned by current user."""
+    return RuleEditProposal.query.join(Rule, RuleEditProposal.rule_id == Rule.id) \
+        .filter(
+            Rule.user_id == current_user.id,
+            RuleEditProposal.status == "pending"
+        ).count()
+
+
+def get_total_change_to_check_admin():
+    """Return the total count of all pending rule edit proposals (for admins)."""
+    return RuleEditProposal.query.filter_by(status="pending").count()

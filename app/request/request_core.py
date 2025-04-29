@@ -73,9 +73,6 @@ def get_request_user_id(request_id):
         return request_obj.user_id
     return None
 
-def get_total_requests():
-    """Return the total count of requests."""
-    return Request.query.count()
 
 
 
@@ -101,3 +98,10 @@ def is_the_owner(request_id):
     if request and request.user_id_owner_rule == current_user.id:
         return True
     return False
+
+
+
+
+def get_total_requests_to_check_admin():
+    """Return the total count of requests with status 'pending'."""
+    return Request.query.filter_by(status="pending").count()

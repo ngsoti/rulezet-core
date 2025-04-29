@@ -54,15 +54,7 @@ def create_app():
     app.register_blueprint(account_blueprint, url_prefix="/account")
     app.register_blueprint(rule_blueprint, url_prefix="/rule")
    
-    # from .request import request_core as RequestModel
-    # @app.context_processor
-    # def inject_requests_to_validate():
-    #     try:
-    #         count = RequestModel.get_total_requests_to_check()
-    #     except:
-    #         count = 0
-    #     return dict(requests_to_validate=count)
-    
+
 
 
     return app
