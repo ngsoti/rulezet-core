@@ -43,7 +43,11 @@ def rule():
         form_dict = form_to_dict(form)
 
         form_dict['author'] =  current_user.first_name
-
+        if form_dict['description'] == '':
+            form_dict['description'] = "No description for the rule"
+        if form_dict['source'] == '':
+            form_dict['source'] = current_user.first_name + " , " + current_user.last_name
+        
         RuleModel.add_rule_core(form_dict)
         flash('Rule added !', 'success')
         
@@ -132,6 +136,25 @@ def delete_rule():
     if current_user.id == user_id or current_user.is_admin():
         RuleModel.delete_rule_core(rule_id)
         return jsonify({"success": True, "message": "Rule deleted!"})
+    
+    return render_template("access_denied.html")
+
+
+
+@rule_blueprint.route("/delete_selected_rules", methods=['POST'])
+@login_required
+def delete_selected_rules():
+    data = request.get_json()
+    rule_id = data.get('id')
+    user_id = RuleModel.get_rule_user_id(rule_id)  # Get the user who created the rule
+
+    # Check if the current user is either the owner or an admin
+    if current_user.id == user_id or current_user.is_admin():
+        success = RuleModel.delete_rule_core(rule_id)
+        if success:
+            return jsonify({"success": True, "message": "Rule deleted!"})
+        else:
+            return jsonify({"success": False, "message": "Failed to delete the rule!"})
     
     return render_template("access_denied.html")
 
