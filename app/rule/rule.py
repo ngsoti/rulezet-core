@@ -472,7 +472,7 @@ def validate_proposal():
     user_id = RuleModel.get_rule_user_id(rule_id)
 
 
-    if user_id == current_user.id:
+    if user_id == current_user.id or current_user.is_admin():
         if rule_id and decision and rule_proposal_id:
             # the rule modified
             rule_proposal = RuleModel.get_rule_proposal(rule_proposal_id)
@@ -491,6 +491,25 @@ def validate_proposal():
         return jsonify({"message": message})
     else:
         return render_template("access_denied.html")
+
+
+
+
+
+
+@rule_blueprint.route('/proposal_content_discuss', methods=['POST', 'GET'])
+@login_required
+def proposal_content_discuss():
+    return render_template("rule/proposal_content_discuss.html")
+
+
+
+
+
+
+
+
+
 
 
 #----------------------------------------------------------------------------------Import_from_github-----------------------------------------------------------------------------------------------

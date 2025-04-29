@@ -128,17 +128,15 @@
                     async function getNbRequestAdmin() {
                         const res = await fetch('/request_to_check')
                         const data = await res.json()
-                        console.log(data.count)
                         requests_to_validate.value = data.count
                     }
 
                     async function getNbChanges() {
                         const res = await fetch('/rule/change_to_check')
                         const data = await res.json()
-                        console.log(data.count)
                         changes_to_validate.value = data.count
                     }
-                   
+                
                     return {
                         requests_to_validate,
                         changes_to_validate

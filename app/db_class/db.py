@@ -138,7 +138,7 @@ class RuleFavoriteUser(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime)
 
     # Define the relationships with cascade option
-    user = db.relationship('User', backref=db.backref('favorites', lazy='dynamic'))
+    user = db.relationship('User', backref=db.backref('favorites', lazy='dynamic' , cascade='all, delete-orphan'))
     rule = db.relationship('Rule', backref=db.backref('favorited_by', lazy='dynamic', cascade='all, delete-orphan'))
 
     def to_json(self):
@@ -163,7 +163,7 @@ class Comment(db.Model):
     dislikes = db.Column(db.Integer, default=0)
 
     # Relations
-    user = db.relationship('User', backref=db.backref('comments', lazy='dynamic'))
+    user = db.relationship('User', backref=db.backref('comments', lazy='dynamic' , cascade='all, delete-orphan'))
     rule = db.relationship('Rule', backref=db.backref('comments', lazy='dynamic', cascade='all, delete-orphan'))
 
     def to_json(self):
@@ -196,10 +196,10 @@ class Request(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
 
 
-    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('requests', lazy='dynamic'))
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('requests', lazy='dynamic',  cascade='all, delete-orphan'))
 
 
-    user_owner_rule = db.relationship('User', foreign_keys=[user_id_owner_rule], backref=db.backref('owned_requests', lazy='dynamic'))
+    user_owner_rule = db.relationship('User', foreign_keys=[user_id_owner_rule], backref=db.backref('owned_requests', lazy='dynamic' , cascade='all, delete-orphan'))
 
 
     rule = db.relationship('Rule', backref=db.backref('requests', lazy='dynamic'))
@@ -230,7 +230,7 @@ class RuleEditProposal(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String, default="pending")
 
-    rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic'))
+    rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic',  cascade='all, delete-orphan'))
     user = db.relationship('User', backref=db.backref('proposed_edits', lazy='dynamic', cascade='all, delete-orphan'))
 
 
@@ -256,7 +256,7 @@ class RuleVote(db.Model):
     vote_type = db.Column(db.String(10), nullable=False)  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user = db.relationship('User', backref=db.backref('rule_votes', lazy='dynamic'))
+    user = db.relationship('User', backref=db.backref('rule_votes', lazy='dynamic', cascade='all, delete-orphan'))
     rule = db.relationship('Rule', backref=db.backref('votes', lazy='dynamic', cascade='all, delete-orphan'))
 
     def to_json(self):
