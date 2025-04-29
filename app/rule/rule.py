@@ -8,6 +8,7 @@ from app.db_class.db import Rule, RuleFavoriteUser
 from app.favorite.favorite_core import add_favorite
 from app.import_github_project.read_github_Sigma import get_sigma_files_from_repo, load_sigma_rules, read_and_parse_all_sigma_rules_from_folder
 from app.import_github_project.read_github_YARA import  read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
+from app.import_github_project.read_github_Yaml import parse_yaml_rules
 from app.import_github_project.read_github_suricata import parse_rule_suricata
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_license_name
 
@@ -581,20 +582,12 @@ def import_rules_from_github():
 
 
 
-# suricata
-
-# @rule_blueprint.route("/test_suricata_rules_parse", methods=['GET', 'POST'])
-# @login_required
-# def test_suricata_rules_parse():
-#     rule_parser = parse_rule_suricata()
-
-#     rule_text = 'alert tcp any any -> any any (msg:"Test rule"; sid:1000001;)'
-
-#     parsed = rule_parser.parseString(rule_text)
-
-#     print(parsed.dump())
 
 
-
-
-#     return redirect(url_for("rule.rules_list"))
+@rule_blueprint.route("/test_yaml_rules_parse", methods=['GET', 'POST'])
+@login_required
+def test_yaml_rules_parse():
+    rules = parse_yaml_rules("app/sigma_test/nlabla.yaml")
+    for rule in rules:
+        print(f"{rule['rule_id']}: {rule['description']}")
+    return redirect(url_for("rule.rules_list"))

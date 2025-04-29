@@ -1,0 +1,8 @@
+- rule_id: BLOCK_UNSAFE_PORTS
+  description: Interdit l'ouverture des ports non sécurisés.
+  severity: high
+  ports_blocked:
+    - 23
+    - 21
+    - 3389
+

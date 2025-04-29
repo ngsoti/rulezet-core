@@ -59,7 +59,7 @@ def read_and_parse_all_sigma_rules_from_folder(repo_dir,url_github,license_from_
         rule_dict = {
             "format": "Sigma",  
             "title": rule.get("title", "Untitled"), 
-            "license": license_from_github or  rule.get("license"), 
+            "license": rule.get("license") or license_from_github, 
             "description": rule.get("description", "No description provided"),
             "source": url_github ,# rule.get("source", "No source available"),
             "version": rule.get("version", "1.0"), 
