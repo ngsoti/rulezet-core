@@ -17,7 +17,7 @@ from ..db_class.db import Rule
 class AddNewRuleForm(FlaskForm):
     
     # format = StringField('Format', validators=[InputRequired()])
-    format = SelectField('Format',choices=[('yara', 'YARA rule'), ('sigma', 'SIGMA rule')],validators=[InputRequired()])
+    format = SelectField('Format',choices=[('yara', 'YARA rule'), ('sigma', 'SIGMA rule'),  ('zeek', 'ZEEK rule')],validators=[InputRequired()])
     title = StringField('Title', validators=[InputRequired()])
     license = SelectField("License", choices=[], validators=[DataRequired()])
     description = TextAreaField('Description')
@@ -39,7 +39,7 @@ class AddNewRuleForm(FlaskForm):
 class EditRuleForm(FlaskForm):
     # format = StringField('Format', validators=[InputRequired()])
     title = StringField('Title', validators=[InputRequired()])
-    format = SelectField('Format',choices=[('yara', 'YARA rule'), ('sigma', 'SIGMA rule')],validators=[InputRequired()])
+    format = SelectField('Format',choices=[('yara', 'YARA rule'), ('sigma', 'SIGMA rule'), ('zeek', 'ZEEK rule')],validators=[InputRequired()])
     
     license = SelectField('License', choices=[], validators=[InputRequired()])
     description = TextAreaField('Description')

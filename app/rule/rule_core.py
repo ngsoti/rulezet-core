@@ -347,9 +347,9 @@ def filter_rules(user_id, search=None, author=None, sort_by=None, rule_type=None
         query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
 
     if rule_type:
-        query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))  # <-- ajouté ici
+        query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))  
 
-    # Ajout du tri
+
     if sort_by == "newest":
         query = query.order_by(Rule.creation_date.desc())
     elif sort_by == "oldest":

@@ -4,13 +4,13 @@
 {% block content %}
 <div class="container my-5">
   <h1 class="text-center mb-5">
-    <i class="fas fa-book-open me-2"></i> Understanding Security Rules: YARA & SIGMA
+    <i class="fas fa-book-open me-2"></i> Understanding Security Rules: YARA, SIGMA, and Zeek
   </h1>
 
   <!-- Intro section -->
   <div class="alert alert-info shadow-sm">
     <i class="fas fa-info-circle me-2"></i>
-    Security rules are essential tools in cybersecurity to detect threats, malware, and suspicious behavior. Below are two major formats used in real-world detection: <strong>YARA</strong> and <strong>SIGMA</strong>.
+    Security rules are essential tools in cybersecurity to detect threats, malware, and suspicious behavior. Below are three major formats used in real-world detection: <strong>YARA</strong>, <strong>SIGMA</strong>, and <strong>Zeek</strong>.
   </div>
 
   <div class="row">
@@ -20,8 +20,9 @@
         <nav class="nav nav-pills flex-column">
           <a class="nav-link" href="#item-1">YARA Rule</a>
           <a class="nav-link" href="#item-2">SIGMA Rule</a>
-          <a class="nav-link" href="#item-3">YARA vs SIGMA Comparison</a>
-          <a class="nav-link" href="#item-4">Coming Soon: Suricata, YAML, Zeek, CRS</a>
+          <a class="nav-link" href="#item-3">Zeek Rule</a>
+          <a class="nav-link" href="#item-4">YARA vs SIGMA Comparison</a>
+          <a class="nav-link" href="#item-5">Coming Soon: Suricata, YAML, CRS</a>
         </nav>
       </nav>
     </div>
@@ -113,15 +114,55 @@ description: Detects PowerShell commands used to download files from the interne
           </a>
         </div>
         <hr/>
-        <!-- Comparison Table -->
+        <!-- Zeek section -->
         <div id="item-3" class="mt-3 mb-3">
-          <h4>YARA vs SIGMA Comparison</h4>
+          <h4>What is a Zeek Rule?</h4>
+          <p>
+            Zeek is a powerful network monitoring tool and a framework for writing security scripts. Zeek rules are used for network analysis and can detect patterns or anomalies in network traffic.
+          </p>
+          <p>
+            Zeek rules are written in Zeek scripting language, allowing for highly customizable and precise network monitoring. Below is an example of a Zeek rule for detecting a suspicious connection attempt.
+          </p>
+
+          <h5><i class="fas fa-network-wired me-2"></i> Zeek Rule Structure</h5>
+          <ul>
+            <li><strong>Event:</strong> Defines the event to capture (e.g., connection attempt, HTTP request)</li>
+            <li><strong>Condition:</strong> Defines the logic to trigger the rule</li>
+            <li><strong>Action:</strong> What happens when the rule is triggered (e.g., log, alert)</li>
+          </ul>
+
+          <h6 class="mt-4">Example Zeek Rule:</h6>
+          <pre class="bg-light p-3"><code>rule suspicious_connection
+{
+    meta:
+        description = "Detects suspicious connection attempts"
+        author = "Network Analyst"
+        date = "2023-05-01"
+    
+    condition:
+        tcp_src == 80 and content == "malicious-pattern"
+    
+    action:
+        Log::write(fmt("Suspicious connection from %s", src_ip))
+}</code></pre>
+
+          <p>This Zeek rule triggers an alert if it detects suspicious traffic on TCP port 80 containing a specific pattern. When the rule is triggered, it writes a log with the source IP address of the connection.</p>
+
+          <a href="https://zeek.org/" target="_blank" class="btn btn-outline-info mt-3">
+            <i class="fas fa-globe me-1"></i> Learn more about Zeek
+          </a>
+        </div>
+        <hr/>
+        <!-- Comparison Table -->
+        <div id="item-4" class="mt-3 mb-3">
+          <h4>YARA vs SIGMA vs Zeek Comparison</h4>
           <table class="table table-bordered text-center">
             <thead class="table-secondary">
               <tr>
                 <th></th>
                 <th>YARA</th>
                 <th>SIGMA</th>
+                <th>Zeek</th>
               </tr>
             </thead>
             <tbody>
@@ -129,34 +170,37 @@ description: Detects PowerShell commands used to download files from the interne
                 <td><i class="fas fa-bullseye"></i> Purpose</td>
                 <td>File/Memory-based threat detection</td>
                 <td>Log-based behavior detection</td>
+                <td>Network traffic analysis</td>
               </tr>
               <tr>
                 <td><i class="fas fa-cogs"></i> Usage Context</td>
                 <td>Malware analysis, antivirus, incident response</td>
                 <td>SIEM systems, SOC monitoring</td>
+                <td>Network security monitoring</td>
               </tr>
               <tr>
                 <td><i class="fas fa-code"></i> Format</td>
                 <td>Custom YARA language</td>
                 <td>YAML</td>
+                <td>Zeek scripting language</td>
               </tr>
               <tr>
                 <td><i class="fas fa-file-alt"></i> Output</td>
                 <td>Match (true/false) per scanned file</td>
                 <td>Match (alert) per log line</td>
+                <td>Alert or log based on network traffic</td>
               </tr>
             </tbody>
           </table>
         </div>
         <hr/>
         <!-- Coming Soon -->
-        <div id="item-4" class="mt-3 mb-3">
+        <div id="item-5" class="mt-3 mb-3">
           <div class="alert alert-info mt-4">
             <i class="fas fa-tools me-2"></i>
             <strong>Coming soon!</strong> We're currently working on support for additional detection rule formats including 
             <span class="badge bg-secondary">Suricata</span>, 
             <span class="badge bg-secondary">YAML</span>, 
-            <span class="badge bg-secondary">Zeek</span>, and 
             <span class="badge bg-secondary">CRS</span> (Core Rule Set).
             Stay tuned — new rule types and advanced features are on the way!
           </div>
@@ -169,7 +213,7 @@ description: Detects PowerShell commands used to download files from the interne
   <!-- Footer callout -->
   <div class="alert alert-warning mt-5">
     <i class="fas fa-lightbulb me-2"></i>
-    Want to try writing your own YARA or SIGMA rule?  
+    Want to try writing your own YARA, SIGMA, or Zeek rule?  
     <strong>You can do it right here on our platform!</strong><br>
     <ul class="mt-2 mb-0">
       <li>
@@ -185,7 +229,6 @@ description: Detects PowerShell commands used to download files from the interne
 
 </div>
 {% endblock %}
-
 
 {% block script %}
 <script type="module">
