@@ -339,7 +339,8 @@ def filter_rules(user_id, search=None, author=None, sort_by=None, rule_type=None
                 Rule.title.ilike(search_lower),
                 Rule.description.ilike(search_lower),
                 Rule.format.ilike(search_lower),
-                Rule.author.ilike(search_lower)
+                Rule.author.ilike(search_lower),
+                Rule.to_string.ilike(search_lower)
             )
         )
 

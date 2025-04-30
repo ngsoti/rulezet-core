@@ -80,12 +80,13 @@ def read_and_parse_all_zeek_scripts_from_folder(repo_dir, url_github, license_fr
             # Remove the ".zeek" from the title if it ends with that
             if title:
                 title_text = title.group(1)
-                if title_text.endswith('.zeek'):
-                    title_text = title_text[:-5]  # Remove the last 5 characters (i.e., ".zeek")\
-                elif title_text.endswith('.bro'):
-                    title_text = title_text[:-4]  # Remove the last 4 characters (i.e., ".bro")\
             else:
                 title_text = os.path.basename(file)
+                
+            if title_text.endswith('.zeek'):
+                    title_text = title_text[:-5]  # Remove the last 5 characters (i.e., ".zeek")\
+            elif title_text.endswith('.bro'):
+                    title_text = title_text[:-4]  # Remove the last 4 characters (i.e., ".bro")\
 
             # Prepare the parsed data
             rule_dict = {

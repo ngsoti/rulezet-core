@@ -164,10 +164,16 @@ def read_and_parse_all_yara_rules_from_folder(license_from_github,folder_path="a
             for line in lines:
                 line = line.strip()
 
+                # if line.lower().startswith("rule "):
+                #     title_match = re.match(r'^\s*rule\s+([^\s{]+)', line, re.IGNORECASE)
+                #     if title_match:
+                #         title = title_match.group(1).strip()
                 if line.lower().startswith("rule "):
                     title_match = re.match(r'^\s*rule\s+([^\s{]+)', line, re.IGNORECASE)
                     if title_match:
                         title = title_match.group(1).strip()
+                        if ':' in title:
+                            title = title.split(':')[0].strip()
 
                 elif line.lower().startswith("rule:"):
                     title_match = re.match(r'^\s*rule\s*:?\s*([^\s{]+)', line, re.IGNORECASE)
