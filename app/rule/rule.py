@@ -163,22 +163,26 @@ def delete_rule():
 
 
 
-# @rule_blueprint.route("/delete_selected_rules", methods=['POST'])
-# @login_required
-# def delete_selected_rules():
-#     data = request.get_json()
-#     rule_id = data.get('id')
-#     user_id = RuleModel.get_rule_user_id(rule_id)  # Get the user who created the rule
+@rule_blueprint.route("/delete_rule_list", methods=['POST'])
+@login_required
+def delete_selected_rules():
+    data = request.get_json()
+    errorDEL = 0
+    for rule_id in data['ids']:
+        user_id = RuleModel.get_rule_user_id(rule_id)  # Get the user who created the rule
 
-#     # Check if the current user is either the owner or an admin
-#     if current_user.id == user_id or current_user.is_admin():
-#         success = RuleModel.delete_rule_core(rule_id)
-#         if success:
-#             return jsonify({"success": True, "message": "Rule deleted!"})
-#         else:
-#             return jsonify({"success": False, "message": "Failed to delete the rule!"})
-    
-#     return render_template("access_denied.html")
+        #Check if the current user is either the owner or an admin
+        if current_user.id == user_id or current_user.is_admin():
+            success = RuleModel.delete_rule_core(rule_id)
+            if not success:
+                errorDEL += 1
+        else:
+            return render_template("access_denied.html") 
+    if errorDEL >= 1:
+        return jsonify({"success": False, "message": "Failed to delete the rules!"})
+    else:
+        return jsonify({"success": True, "message": "Rules deleted!"})
+        
 
 
 

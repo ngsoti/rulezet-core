@@ -202,7 +202,7 @@ class Request(db.Model):
     user_owner_rule = db.relationship('User', foreign_keys=[user_id_owner_rule], backref=db.backref('owned_requests', lazy='dynamic' , cascade='all, delete-orphan'))
 
 
-    rule = db.relationship('Rule', backref=db.backref('requests', lazy='dynamic'))
+    rule = db.relationship('Rule', backref=db.backref('requests', lazy='dynamic', cascade='all, delete-orphan'))
 
     def to_json(self):
         """Serialize the request to JSON."""

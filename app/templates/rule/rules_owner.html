@@ -137,11 +137,11 @@ createApp({
             const selectedRuleIds = selectedRules.value;  
 
             if (selectedRuleIds.length === 0) {
-                message_list.error('No rules selected for deletion!');
+                alert('No rules selected for deletion!')
                 return;
             }
 
-            const res = await fetch('/rule/delete_rule', {
+            const res = await fetch('/rule/delete_rule_list', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -155,20 +155,8 @@ createApp({
             if (data.success) {
                 selectedRules.value = [];  
                 fetchRules(current_page.value);  
-                message_list.success(data.message);
-            } else {
-                message_list.error(data.message);
-            }
+            } 
         }
-
-
-
-
-
-
-
-
-
 
 
 

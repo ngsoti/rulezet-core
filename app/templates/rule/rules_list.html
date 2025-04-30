@@ -5,7 +5,7 @@
 <div class="container mt-4">
 
 
-  {% with messages = get_flashed_messages(with_categories=True) %}
+  <!-- {% with messages = get_flashed_messages(with_categories=True) %}
     {% if messages %}
       {% for category, message in messages %}
         <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
@@ -14,7 +14,7 @@
         </div>
       {% endfor %}
     {% endif %}
-  {% endwith %}
+  {% endwith %} -->
 
   <!-- <a :href="`/rule/test_yaml_rules_parse`" class="btn btn-warning btn-sm me-2" title="Edit Rule">
     <i class="fas fa-pen"></i>
@@ -40,7 +40,7 @@
   <div class="tab-content" id="myTabContent">
     <div class="tab-pane fade" id="addProject" role="tabpanel" aria-labelledby="addProject-tab">
       <div class="card p-4 shadow-sm bg-light mb-3">
-        <h5><label for="url" class="form-label">URL for a Github project to add (all rules types) </label></h5>
+        <h5><label for="url" class="form-label">URL for a Github project to add (YARA / Zeek / Sigma) </label></h5>
         <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           <div class="mb-3 flex-grow-1 me-2">
