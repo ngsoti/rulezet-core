@@ -62,7 +62,6 @@ def rules_list():
 
 
 @rule_blueprint.route("/rules_info", methods=['GET', 'POST'])
-@login_required
 def rules_info():        
     return render_template("rule/rules_info.html")
 

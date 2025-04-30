@@ -13,171 +13,158 @@
     Security rules are essential tools in cybersecurity to detect threats, malware, and suspicious behavior. Below are two major formats used in real-world detection: <strong>YARA</strong> and <strong>SIGMA</strong>.
   </div>
 
-  <!-- YARA section -->
-<div class="card border-primary mb-5">
-    <div class="card-header bg-primary text-white">
-      <i class="fas fa-bug me-2"></i> What is a YARA Rule?
+  <div class="row">
+    <!-- Navigation sidebar -->
+    <div class="col-3">
+      <nav id="navbar-example3" class="h-100 flex-column align-items-stretch pe-4 border-end">
+        <nav class="nav nav-pills flex-column">
+          <a class="nav-link" href="#item-1">YARA Rule</a>
+          <a class="nav-link" href="#item-2">SIGMA Rule</a>
+          <a class="nav-link" href="#item-3">YARA vs SIGMA Comparison</a>
+          <a class="nav-link" href="#item-4">Coming Soon: Suricata, YAML, Zeek, CRS</a>
+        </nav>
+      </nav>
     </div>
-    <div class="card-body">
-      <p>
-        YARA (Yet Another Ridiculous Acronym) is a powerful pattern-matching tool used to identify and classify malware samples by searching for specific patterns of bytes, strings, or behaviors in files or memory.
-      </p>
-      <p>
-        It is widely adopted by malware analysts, threat hunters, and antivirus vendors to automate the detection of known and unknown threats.
-      </p>
-      
-      <h5><i class="fas fa-cubes me-2"></i> Components of a YARA Rule</h5>
-      <ul>
-        <li><strong>Meta:</strong> Descriptive metadata (author, description, reference, etc.).</li>
-        <li><strong>Strings:</strong> Patterns to match (ASCII, hex, regex).</li>
-        <li><strong>Condition:</strong> Boolean logic defining how strings must match.</li>
-      </ul>
-  
-      <h6 class="mt-4">Example YARA Rule:</h6>
-      <pre class="bg-light p-3"><code>rule SilentBanker
-  {
-      meta:
-          description = "Detects Silent Banker Trojan"
-          author = "Security Analyst"
-          date = "2023-02-10"
-          reference = "https://example.com/silentbanker-analysis"
-      
-      strings:
-          $a = "Banking Trojan"                     // ASCII string
-          $b = {6A 40 68 00 30 00 00 6A 14 8D 91}   // Hex pattern
-          $c = /Trojan:[A-Z]+/                     // Regex pattern
-      
-      condition:
-          any of them
-  }</code></pre>
-  
-      <p>This rule detects samples containing indicators associated with the SilentBanker trojan. The condition <code>any of them</code> means the rule will trigger if at least one string matches.</p>
-  
-      <h5 class="mt-4"><i class="fas fa-tools me-2"></i> Common Use Cases</h5>
-      <ul>
-        <li>Detecting malware in sandboxed environments</li>
-        <li>Scanning binaries at scale across endpoints</li>
-        <li>Threat intelligence sharing (YARA rules are widely used in CTI reports)</li>
-      </ul>
-  
-      <h5 class="mt-4"><i class="fas fa-plug me-2"></i> Integration</h5>
-      <ul>
-        <li>Can be integrated with tools like <code>VirusTotal</code>, <code>PEStudio</code>, <code>Cuckoo Sandbox</code></li>
-        <li>Used in SIEM and EDR pipelines</li>
-      </ul>
-  
-      <a href="https://yara.readthedocs.io/en/latest/" target="_blank" class="btn btn-outline-primary mt-3">
-        <i class="fas fa-book me-1"></i> Learn more about YARA
-      </a>
-    </div>
-  </div>
-  
 
- <!-- SIGMA section -->
-<div class="card border-success mb-5">
-    <div class="card-header bg-success text-white">
-      <i class="fas fa-search me-2"></i> What is a SIGMA Rule?
-    </div>
-    <div class="card-body">
-      <p>
-        SIGMA is an open standard for writing detection rules on top of event logs. It acts as the "YARA for logs" and is designed to be platform-agnostic and readable.
-      </p>
-      <p>
-        A SIGMA rule describes a suspicious activity in a standardized YAML format and can be converted into queries for specific SIEMs like Splunk, ElasticSearch, Microsoft Sentinel, etc.
-      </p>
-  
-      <h5><i class="fas fa-layer-group me-2"></i> SIGMA Rule Structure</h5>
-      <ul>
-        <li><strong>Title:</strong> Human-readable name of the rule</li>
-        <li><strong>Logsource:</strong> The type of log where the rule applies (e.g., Windows process creation)</li>
-        <li><strong>Detection:</strong> Logic based on fields and values to match</li>
-        <li><strong>Level:</strong> Severity or confidence (low, medium, high, critical)</li>
-      </ul>
-  
-      <h6 class="mt-4">Example SIGMA Rule:</h6>
-      <pre class="bg-light p-3"><code>title: Suspicious PowerShell Download
-  id: a1b2c3d4-5678-9012-ef34-567890abcdef
-  status: experimental
-  logsource:
-    product: windows
-    category: process_creation
-  detection:
-    selection:
-      CommandLine|contains:
-        - "Invoke-WebRequest"
-        - "wget"
-    condition: selection
-  level: high
-  description: Detects PowerShell commands used to download files from the internet</code></pre>
-  
-      <p>This rule looks for PowerShell commands that use tools like <code>Invoke-WebRequest</code> or <code>wget</code>, often used in initial infection stages.</p>
-  
-      <h5 class="mt-4"><i class="fas fa-tools me-2"></i> Use Cases</h5>
-      <ul>
-        <li>Detect lateral movement and privilege escalation</li>
-        <li>Identify common TTPs (MITRE ATT&CK techniques)</li>
-        <li>Feed into SOAR tools for automated response</li>
-      </ul>
-  
-      <h5 class="mt-4"><i class="fas fa-exchange-alt me-2"></i> Conversion Tools</h5>
-      <ul>
-        <li><code>sigmac</code> (official SIGMA converter)</li>
-        <li><code>uncoder.io</code> (GUI for rule creation and conversion)</li>
-        <li>Custom pipelines using Python or SIEM native parsers</li>
-      </ul>
-  
-      <a href="https://sigmahq.io/" target="_blank" class="btn btn-outline-success mt-3">
-        <i class="fas fa-globe me-1"></i> Learn more about SIGMA
-      </a>
-    </div>
-  </div>
-  
+    <!-- Content area -->
+    <div class="col-8">
+      <div data-bs-spy="scroll" data-bs-target="#navbar-example3" data-bs-smooth-scroll="true" class="scrollspy-example-2" tabindex="0">
+        
+        <!-- YARA section -->
+        <div id="item-1" class="mt-3 mb-3"></div>
+          <h4>What is a YARA Rule?</h4>
+          <p>
+            YARA (Yet Another Ridiculous Acronym) is a powerful pattern-matching tool used to identify and classify malware samples by searching for specific patterns of bytes, strings, or behaviors in files or memory.
+          </p>
+          <p>
+            It is widely adopted by malware analysts, threat hunters, and antivirus vendors to automate the detection of known and unknown threats.
+          </p>
+          
+          <h5><i class="fas fa-cubes me-2"></i> Components of a YARA Rule</h5>
+          <ul>
+            <li><strong>Meta:</strong> Descriptive metadata (author, description, reference, etc.).</li>
+            <li><strong>Strings:</strong> Patterns to match (ASCII, hex, regex).</li>
+            <li><strong>Condition:</strong> Boolean logic defining how strings must match.</li>
+          </ul>
 
-  <!-- Comparison Table -->
-  <h2 class="text-center my-4">
-    <i class="fas fa-balance-scale me-2"></i> YARA vs SIGMA Comparison
-  </h2>
-  <table class="table table-bordered text-center">
-    <thead class="table-secondary">
-      <tr>
-        <th></th>
-        <th>YARA</th>
-        <th>SIGMA</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><i class="fas fa-bullseye"></i> Purpose</td>
-        <td>File/Memory-based threat detection</td>
-        <td>Log-based behavior detection</td>
-      </tr>
-      <tr>
-        <td><i class="fas fa-cogs"></i> Usage Context</td>
-        <td>Malware analysis, antivirus, incident response</td>
-        <td>SIEM systems, SOC monitoring</td>
-      </tr>
-      <tr>
-        <td><i class="fas fa-code"></i> Format</td>
-        <td>Custom YARA language</td>
-        <td>YAML</td>
-      </tr>
-      <tr>
-        <td><i class="fas fa-file-alt"></i> Output</td>
-        <td>Match (true/false) per scanned file</td>
-        <td>Match (alert) per log line</td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="alert alert-info mt-4">
-    <i class="fas fa-tools me-2"></i>
-    <strong>Coming soon!</strong> We're currently working on support for additional detection rule formats including 
-    <span class="badge bg-secondary">Suricata</span>, 
-    <span class="badge bg-secondary">YAML</span>, 
-    <span class="badge bg-secondary">Zeek</span>, and 
-    <span class="badge bg-secondary">CRS</span> (Core Rule Set).
-    Stay tuned — new rule types and advanced features are on the way!
+          <h6 class="mt-4">Example YARA Rule:</h6>
+          <pre class="bg-light p-3"><code>rule SilentBanker
+{
+    meta:
+        description = "Detects Silent Banker Trojan"
+        author = "Security Analyst"
+        date = "2023-02-10"
+        reference = "https://example.com/silentbanker-analysis"
+    
+    strings:
+        $a = "Banking Trojan"                     // ASCII string
+        $b = {6A 40 68 00 30 00 00 6A 14 8D 91}   // Hex pattern
+        $c = /Trojan:[A-Z]+/                     // Regex pattern
+    
+    condition:
+        any of them
+}</code></pre>
+        
+          <p>This rule detects samples containing indicators associated with the SilentBanker trojan. The condition <code>any of them</code> means the rule will trigger if at least one string matches.</p>
+
+          <a href="https://yara.readthedocs.io/en/latest/" target="_blank" class="btn btn-outline-primary mt-3">
+            <i class="fas fa-book me-1"></i> Learn more about YARA
+          </a>
+        </div>
+        <hr/>
+        <!-- SIGMA section -->
+        <div id="item-2" class="mt-3 mb-3">
+          <h4>What is a SIGMA Rule?</h4>
+          <p>
+            SIGMA is an open standard for writing detection rules on top of event logs. It acts as the "YARA for logs" and is designed to be platform-agnostic and readable.
+          </p>
+          <p>
+            A SIGMA rule describes a suspicious activity in a standardized YAML format and can be converted into queries for specific SIEMs like Splunk, ElasticSearch, Microsoft Sentinel, etc.
+          </p>
+
+          <h5><i class="fas fa-layer-group me-2"></i> SIGMA Rule Structure</h5>
+          <ul>
+            <li><strong>Title:</strong> Human-readable name of the rule</li>
+            <li><strong>Logsource:</strong> The type of log where the rule applies (e.g., Windows process creation)</li>
+            <li><strong>Detection:</strong> Logic based on fields and values to match</li>
+            <li><strong>Level:</strong> Severity or confidence (low, medium, high, critical)</li>
+          </ul>
+
+          <h6 class="mt-4">Example SIGMA Rule:</h6>
+          <pre class="bg-light p-3"><code>title: Suspicious PowerShell Download
+id: a1b2c3d4-5678-9012-ef34-567890abcdef
+status: experimental
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    CommandLine|contains:
+      - "Invoke-WebRequest"
+      - "wget"
+  condition: selection
+level: high
+description: Detects PowerShell commands used to download files from the internet</code></pre>
+          
+          <p>This rule looks for PowerShell commands that use tools like <code>Invoke-WebRequest</code> or <code>wget</code>, often used in initial infection stages.</p>
+
+          <a href="https://sigmahq.io/" target="_blank" class="btn btn-outline-success mt-3">
+            <i class="fas fa-globe me-1"></i> Learn more about SIGMA
+          </a>
+        </div>
+        <hr/>
+        <!-- Comparison Table -->
+        <div id="item-3" class="mt-3 mb-3">
+          <h4>YARA vs SIGMA Comparison</h4>
+          <table class="table table-bordered text-center">
+            <thead class="table-secondary">
+              <tr>
+                <th></th>
+                <th>YARA</th>
+                <th>SIGMA</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><i class="fas fa-bullseye"></i> Purpose</td>
+                <td>File/Memory-based threat detection</td>
+                <td>Log-based behavior detection</td>
+              </tr>
+              <tr>
+                <td><i class="fas fa-cogs"></i> Usage Context</td>
+                <td>Malware analysis, antivirus, incident response</td>
+                <td>SIEM systems, SOC monitoring</td>
+              </tr>
+              <tr>
+                <td><i class="fas fa-code"></i> Format</td>
+                <td>Custom YARA language</td>
+                <td>YAML</td>
+              </tr>
+              <tr>
+                <td><i class="fas fa-file-alt"></i> Output</td>
+                <td>Match (true/false) per scanned file</td>
+                <td>Match (alert) per log line</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <hr/>
+        <!-- Coming Soon -->
+        <div id="item-4" class="mt-3 mb-3">
+          <div class="alert alert-info mt-4">
+            <i class="fas fa-tools me-2"></i>
+            <strong>Coming soon!</strong> We're currently working on support for additional detection rule formats including 
+            <span class="badge bg-secondary">Suricata</span>, 
+            <span class="badge bg-secondary">YAML</span>, 
+            <span class="badge bg-secondary">Zeek</span>, and 
+            <span class="badge bg-secondary">CRS</span> (Core Rule Set).
+            Stay tuned — new rule types and advanced features are on the way!
+          </div>
+        </div>
+
+      </div>
+    </div>
   </div>
-  
 
   <!-- Footer callout -->
   <div class="alert alert-warning mt-5">
@@ -195,9 +182,10 @@
       </li>
     </ul>
   </div>
-  
+
 </div>
 {% endblock %}
+
 
 {% block script %}
 <script type="module">
