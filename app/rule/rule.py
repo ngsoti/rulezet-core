@@ -25,6 +25,7 @@ rule_blueprint = Blueprint(
 )
 
 
+
 @rule_blueprint.route("/", methods=['GET', 'POST'])
 @login_required
 def rule():
@@ -57,6 +58,13 @@ def rule():
 @login_required
 def rules_list():        
     return render_template("rule/rules_list.html")
+
+
+
+@rule_blueprint.route("/rules_info", methods=['GET', 'POST'])
+@login_required
+def rules_info():        
+    return render_template("rule/rules_info.html")
 
 # without search
 @rule_blueprint.route("/get_rules_page", methods=['GET'])
@@ -609,6 +617,7 @@ def import_rules_from_github():
         repo_url = request.form.get('url')
 
         try:
+            
             repo_dir = clone_or_access_repo(repo_url) 
             if not repo_dir:
                 flash("Failed to clone or access the repository.", "danger")
@@ -616,7 +625,7 @@ def import_rules_from_github():
 
             save_yara_rules_as_is(repo_url)
 
-
+            
 
 
 
@@ -646,6 +655,7 @@ def import_rules_from_github():
                     skipped += 1
 
             flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
+            delete_existing_repo_folder("app/rule/output_rules/Yara")
         except Exception as e:
             flash("Failed to import rules: URL ", "danger")
 

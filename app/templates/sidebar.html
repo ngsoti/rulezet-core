@@ -18,35 +18,40 @@
             <li class="nav-item mx-2">
                 <div class="dropdown">
                     <a class="nav-link dropdown-toggle text-dark fw-semibold" type="button" id="rulesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fa-solid fa-book fa-fw me-1"></i> Rules
+                        <i class="fa-solid fa-shield-halved fa-fw me-1"></i> Security Rules
                     </a>
                     <template v-if="changes_to_validate">
                         <span v-if="changes_to_validate > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                             [[ changes_to_validate ]]
-                            <span class="visually-hidden">unread messages</span>
+                            <span class="visually-hidden">Pending changes</span>
                         </span>
                     </template>
                     <ul class="dropdown-menu" aria-labelledby="rulesDropdown">
                         <li>
                             <a class="dropdown-item" href="/rule/rules_list">
-                                <i class="fa-solid fa-book-open fa-fw me-2"></i> Rules
+                                <i class="fa-solid fa-list fa-fw me-2"></i> All Rules
                             </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/rule/rules_info">
+                                <i class="fa-solid fa-circle-question fa-fw me-2"></i> What is a Rule?
+                            </a>    
                         </li>
                         {% if current_user.is_authenticated %}
                             <li>
                                 <a class="dropdown-item" href="/rule/rule_propose_edit">
-                                    <i class="fa-solid fa-pen-to-square fa-fw me-2"></i> Rule Proposal
-                                    
+                                    <i class="fa-solid fa-lightbulb fa-fw me-2"></i> Rule proposal
                                 </a>
                             </li>
                             <li>
                                 <a class="dropdown-item" href="/rule/owner_rules">
-                                    <i class="fa-solid fa-clipboard-list fa-fw me-2"></i> My rules
+                                    <i class="fa-solid fa-user-shield fa-fw me-2"></i> My Rules
                                 </a>
                             </li>
                         {% endif %}
                     </ul>
                 </div>
+                
             </li>
 
                 <li class="nav-item mx-2 position-relative">

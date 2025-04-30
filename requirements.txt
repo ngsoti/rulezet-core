@@ -16,3 +16,4 @@ gunicorn
 jsonschema
 requests
 gitpython
+yaml

@@ -111,66 +111,84 @@
         
 
         <div class="tab-pane fade" id="history" role="tabpanel">
-            <div class="row">
-                <template v-if="rules_list && rules_list.length > 0">
-                    <div class="col-md-12" v-for="rule in rules_list" :key="rule.id">
-                        <div class="card mb-3 shadow-sm">
-                            <div class="card-body">
-                                <h5 class="card-title">Rule ID [[ rule.rule_id ]]</h5>
-                                <p class="card-text mb-2">
-                                    <strong>Status:</strong>
-                                    <span :class="{
-                                        'badge bg-secondary': rule.status === 'pending',
-                                        'badge bg-success': rule.status === 'accepted',
-                                        'badge bg-danger': rule.status === 'rejected'
-                                    }">
-                                        [[ rule.status ]]
-                                    </span>
-                                </p>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <p class="card-text">
-                                            <strong>Proposed Content:</strong>
-                                            <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
-                                                <div v-for="(line, index) in getProposedContentLines(rule.proposed_content)" :key="index">
-                                                    <span v-if="line.trim() !== ''" :class="{
-                                                        'text-success': isLineNew(line, rule.old_content),
-                                                        'text-warning': isLineIdentical(line, rule.old_content)
-                                                    }" class="d-block p-2">
-                                                        [[ line ]]
-                                                    </span>
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Rule ID</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">View</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template v-if="rules_list && rules_list.length > 0">
+                            <template v-for="(rule, index) in rules_list" :key="rule.id">
+                                <!-- Clickable Row -->
+                                <tr data-bs-toggle="collapse" :data-bs-target="'#collapseHistory' + rule.id"
+                                    aria-expanded="false" :aria-controls="'collapseHistory' + rule.id"
+                                    style="cursor: pointer;">
+                                    <td>[[ index + 1 ]]</td>
+                                    <td>[[ rule.rule_id ]]</td>
+                                    <td>
+                                        <span :class="{
+                                            'badge bg-secondary': rule.status === 'pending',
+                                            'badge bg-success': rule.status === 'accepted',
+                                            'badge bg-danger': rule.status === 'rejected'
+                                        }">
+                                            [[ rule.status ]]
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <i class="fas fa-chevron-down text-muted"></i>
+                                    </td>
+                                </tr>
+        
+                                <!-- Expandable Detail Row -->
+                                <tr class="collapse bg-light" :id="'collapseHistory' + rule.id">
+                                    <td colspan="4">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <strong>Proposed Content:</strong>
+                                                <div class="bg-white p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
+                                                    <div v-for="(line, index) in getProposedContentLines(rule.proposed_content)" :key="index">
+                                                        <span v-if="line.trim() !== ''" :class="{
+                                                            'text-success': isLineNew(line, rule.old_content),
+                                                            'text-warning': isLineIdentical(line, rule.old_content)
+                                                        }" class="d-block p-2">
+                                                            [[ line ]]
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </p>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <p class="card-text">
-                                            <strong>Old Content:</strong>
-                                            <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
-                                                <div v-for="(line, index) in getOldContentLines(rule.old_content)" :key="index">
-                                                    <span v-if="line.trim() !== ''" :class="{
-                                                        'text-danger': isLineDeleted(line, rule.proposed_content),
-                                                        'text-warning': isLineIdentical(line, rule.proposed_content)
-                                                    }" class="d-block p-2">
-                                                        [[ line ]]
-                                                    </span>
+                                            <div class="col-md-6 mb-3">
+                                                <strong>Old Content:</strong>
+                                                <div class="bg-white p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
+                                                    <div v-for="(line, index) in getOldContentLines(rule.old_content)" :key="index">
+                                                        <span v-if="line.trim() !== ''" :class="{
+                                                            'text-danger': isLineDeleted(line, rule.proposed_content),
+                                                            'text-warning': isLineIdentical(line, rule.proposed_content)
+                                                        }" class="d-block p-2">
+                                                            [[ line ]]
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    </div>
-                </template>
-                <template v-else>
-                    <div class="text-center mt-5">
-                        <p class="text-muted">No decisions found.</p>
-                    </div>
-                </template>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </template>
+                        <template v-else>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No decisions found.</td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
             </div>
+        </div>
+        
         </div>
     </div>
 </div>
