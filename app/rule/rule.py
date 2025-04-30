@@ -181,7 +181,7 @@ def delete_selected_rules():
     if errorDEL >= 1:
         return jsonify({"success": False, "message": "Failed to delete the rules!"})
     else:
-        return jsonify({"success": True, "message": "Rules deleted!"})
+        return jsonify({"success": True, "message": "Rule deleted!"}) 
         
 
 

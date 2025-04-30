@@ -17,6 +17,9 @@
             <span class="badge bg-success m-1">YARA</span> 
             <span class="badge bg-success m-1">Zeek</span> 
             <span class="badge bg-success m-1">Sigma</span>
+            <span>
+                <a class="fa-solid fa-circle-question" title="learn more about" href="/rule/rules_info" ></a> 
+            </span>
         </div>
         <span class="badge bg-warning text-dark">
             In process: <i class="fas fa-cogs"></i> Suricata, YAML, CRS etc.
@@ -38,6 +41,24 @@
     <p class="mt-4">
       This platform enhances the accuracy and reliability of cybersecurity rules, allowing for a more effective response to threats.
     </p>
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h5 class="card-title" data-bs-toggle="collapse" href="#collapseRuleInfo" role="button" aria-expanded="false" aria-controls="collapseRuleInfo">
+          <i class="fa-solid fa-circle-question me-2"></i> What is a Security Rule?
+        </h5>
+        <div class="collapse" id="collapseRuleInfo">
+          <p class="card-text">
+            A security rule is a pattern or logic used to detect threats, anomalies, or policy violations
+            in files, systems, or network traffic. Click below to learn more.
+          </p>
+          <a href="/rule/rules_info" class="btn btn-primary">
+            Learn More
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    
   </div>
   <hr/>
   <header class="d-flex justify-content-between align-items-center mb-4">
@@ -62,14 +83,14 @@
             <h5 class="mb-2" style="max-width: 75%; word-break: break-word;">[[ rule.title ]]</h5>
             <div class="d-flex ms-auto">
                 <template v-if="parseInt('{{current_user.id}}') === rule.user_id || current_user_is_admin">
-                    <a :href="`rule/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2">
+                    <a :href="`rule/edit_rule/${rule.id}`" title="edit the rule" class="btn btn-warning btn-sm me-2">
                         <i class="fas fa-pen"></i>
                     </a>
-                    <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2">
+                    <button @click="deleteRule(rule.id, index)" title="delete the rule" class="btn btn-danger btn-sm me-2">
                         <i class="fas fa-trash"></i>
                     </button>
                 </template>
-                <a :href="`rule/favorite/${rule.id}`" class="btn btn-success btn-sm">
+                <a :href="`rule/favorite/${rule.id}`" title="add to favorite" class="btn btn-success btn-sm">
                     <i class="fas fa-star"></i>
                 </a>
             </div>
@@ -80,9 +101,9 @@
                 <p><strong>Author:</strong> [[ rule.author ]]</p>
                 <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
                 <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
-                <a :href="`rule/detail_rule/${rule.id}`" class="btn btn-secondary btn-sm">View more</a>
-                <button @click="vote('up', rule.id)" class="btn btn-success btn-sm mx-2"><i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]</button>
-                <button @click="vote('down', rule.id)" class="btn btn-danger btn-sm"><i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]</button>
+                <a :href="`rule/detail_rule/${rule.id}`" title="view more detail about this rule" class="btn btn-secondary btn-sm">View more</a>
+                <button @click="vote('up', rule.id)" title="like this rule" class="btn btn-success btn-sm mx-2"><i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]</button>
+                <button @click="vote('down', rule.id)" title="dislike this rule" class="btn btn-danger btn-sm"><i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]</button>
             </div>
         </div>
     </div>
