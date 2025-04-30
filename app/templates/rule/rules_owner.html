@@ -67,8 +67,12 @@
                             <i class="fas fa-trash"></i>
                         </button>
                     </template>
-                    <a :href="`/rule/favorite/${rule.id}`" class="btn btn-success btn-sm me-2" title="Add to Favorites">
-                        <i class="fas fa-star"></i>
+                    <a :href="`/rule/favorite/${rule.id}`"
+                        class="btn btn-success btn-sm me-2"
+                        :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
+                        <i class="fa-solid fa-star"
+                        :class="rule.is_favorited ? 'text-warning' : 'text-white'">
+                        </i>
                     </a>
                     {% endif %}
                 </td>

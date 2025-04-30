@@ -1,7 +1,7 @@
 import datetime
 from .. import db, login_manager
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask_login import UserMixin, AnonymousUserMixin
+from flask_login import UserMixin, AnonymousUserMixin, current_user
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -111,6 +111,11 @@ class Rule(db.Model):
 
 
     def to_json(self):
+        is_favorited = False
+        user_id = current_user.id
+        if user_id:
+            is_favorited = RuleFavoriteUser.query.filter_by(user_id=user_id, rule_id=self.id).first() is not None
+
         return {
             "id": self.id,
             "format": self.format,
@@ -126,7 +131,8 @@ class Rule(db.Model):
             "vote_down": self.vote_down,
             "user_id": self.user_id,
             "version": self.version,
-            "to_string": self.to_string
+            "to_string": self.to_string,
+            "is_favorited": is_favorited
         }
 
 class RuleFavoriteUser(db.Model):

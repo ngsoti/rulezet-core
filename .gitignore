@@ -27,3 +27,4 @@ __pycache__/
 .env.local
 tmp/
 Rules_Github/*
+rule/output_rules/*

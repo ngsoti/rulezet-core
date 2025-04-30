@@ -5,7 +5,7 @@ from flask import Blueprint, Response, jsonify, redirect, request,render_templat
 from flask_login import current_user, login_required
 
 from app.db_class.db import Rule, RuleFavoriteUser
-from app.favorite.favorite_core import add_favorite
+from app.favorite.favorite_core import add_favorite, remove_favorite
 from app.import_github_project.read_github_Sigma import get_sigma_files_from_repo, load_sigma_rules, read_and_parse_all_sigma_rules_from_folder
 from app.import_github_project.read_github_YARA import  read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
 from app.import_github_project.read_github_Yaml import parse_yaml_rules
@@ -339,7 +339,8 @@ def add_favorite_rule(rule_id):
 
     existing = RuleFavoriteUser.query.filter_by(user_id=current_user.id, rule_id=rule_id).first()
     if existing:
-        flash("This rule is already in your favorites.", "info")
+        fav = remove_favorite(user_id=current_user.id, rule_id=rule_id)
+        flash("Rule remove from favorites!", "success")
     else:
         fav = add_favorite(user_id=current_user.id, rule_id=rule_id)
         flash("Rule added to favorites!", "success")
