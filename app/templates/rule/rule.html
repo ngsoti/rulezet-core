@@ -22,7 +22,7 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             {{ form.format.label(class_="col-form-label") }}
-                            {{ form.format(class_="form-control") }}
+                            {{ form.format(class_="form-select") }}
                             {% if form.format.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.format.errors[0] | safe }}

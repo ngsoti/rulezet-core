@@ -11,22 +11,22 @@
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="form-group">
-                        {{ form.format.label(class_="col-form-label") }}
-                        {{ form.format(class_="form-control") }}
-                        {% if form.format.errors %}
+                        {{ form.title.label(class_="col-form-label") }}
+                        {{ form.title(class_="form-control") }}
+                        {% if form.title.errors %}
                             <div class="invalid-feedback d-block">
-                                {{ form.format.errors[0] | safe }}
+                                {{ form.title.errors[0] | safe }}
                             </div>
                         {% endif %}
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        {{ form.title.label(class_="col-form-label") }}
-                        {{ form.title(class_="form-control") }}
-                        {% if form.title.errors %}
+                        {{ form.format.label(class_="col-form-label") }}
+                        {{ form.format(class_="form-select") }}
+                        {% if form.format.errors %}
                             <div class="invalid-feedback d-block">
-                                {{ form.title.errors[0] | safe }}
+                                {{ form.format.errors[0] | safe }}
                             </div>
                         {% endif %}
                     </div>

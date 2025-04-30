@@ -280,6 +280,7 @@ def edit_rule(rule_id):
         if form.validate_on_submit():
             form_dict = form_to_dict(form)
             RuleModel.edit_rule_core(form_dict, rule_id)
+            flash("Rule modified with success!", "success")
             return redirect("/rule/rules_list")
         else:
             form.format.data = rule.format
@@ -290,7 +291,7 @@ def edit_rule(rule_id):
             form.version.data = rule.version
             form.to_string.data = rule.to_string
             rule.last_modif = datetime.now(timezone.utc)
-
+        
         return render_template("rule/edit_rule.html", form=form, rule=rule)
     else:
         return render_template("access_denied.html")

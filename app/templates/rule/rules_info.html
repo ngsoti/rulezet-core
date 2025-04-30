@@ -168,12 +168,34 @@
       </tr>
     </tbody>
   </table>
+  <div class="alert alert-info mt-4">
+    <i class="fas fa-tools me-2"></i>
+    <strong>Coming soon!</strong> We're currently working on support for additional detection rule formats including 
+    <span class="badge bg-secondary">Suricata</span>, 
+    <span class="badge bg-secondary">YAML</span>, 
+    <span class="badge bg-secondary">Zeek</span>, and 
+    <span class="badge bg-secondary">CRS</span> (Core Rule Set).
+    Stay tuned — new rule types and advanced features are on the way!
+  </div>
+  
 
   <!-- Footer callout -->
   <div class="alert alert-warning mt-5">
     <i class="fas fa-lightbulb me-2"></i>
-    Want to try writing your own YARA or SIGMA rule? Visit the official documentation or try using a rule builder tool online!
+    Want to try writing your own YARA or SIGMA rule?  
+    <strong>You can do it right here on our platform!</strong><br>
+    <ul class="mt-2 mb-0">
+      <li>
+        <i class="fas fa-pen-to-square me-1 text-primary"></i>
+        <a href="/rule" class="alert-link text-decoration-underline">Create a new rule</a>
+      </li>
+      <li>
+        <i class="fas fa-book-open me-1 text-success"></i>
+        <a href="/rule/rules_list" class="alert-link text-decoration-underline">Browse existing rules</a>
+      </li>
+    </ul>
   </div>
+  
 </div>
 {% endblock %}
 
