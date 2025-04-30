@@ -9,6 +9,7 @@ from app.favorite.favorite_core import add_favorite
 from app.import_github_project.read_github_Sigma import get_sigma_files_from_repo, load_sigma_rules, read_and_parse_all_sigma_rules_from_folder
 from app.import_github_project.read_github_YARA import  read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
 from app.import_github_project.read_github_Yaml import parse_yaml_rules
+from app.import_github_project.read_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
 from app.import_github_project.read_github_suricata import parse_rule_suricata
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_license_name
 
@@ -522,89 +523,138 @@ def proposal_content_discuss():
 
 #----------------------------------------------------------------------------------Import_from_github-----------------------------------------------------------------------------------------------
 
-# import only yara rules 
-@rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
-@login_required
-def test_yara_python_url():
-    if request.method == 'POST':
-        repo_url = request.form.get('url')
+# # import only yara rules 
+# @rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
+# @login_required
+# def test_yara_python_url():
+#     if request.method == 'POST':
+#         repo_url = request.form.get('url')
 
-        try:
+#         try:
 
-            repo_dir = save_yara_rules_as_is(repo_url)
+#             repo_dir = save_yara_rules_as_is(repo_url)
 
-            owner, repo = extract_owner_repo(repo_url)
-            license_from_github = get_license_name(owner,repo)
+#             owner, repo = extract_owner_repo(repo_url)
+#             license_from_github = get_license_name(owner,repo)
 
 
 
-            all_rules = read_and_parse_all_yara_rules_from_folder(license_from_github,repo_url=repo_url)
+#             all_rules = read_and_parse_all_yara_rules_from_folder(license_from_github,repo_url=repo_url)
             
 
-            imported = 0
-            skipped = 0
-            for rule_dict in all_rules:
-                success = RuleModel.add_rule_core(rule_dict)
+#             imported = 0
+#             skipped = 0
+#             for rule_dict in all_rules:
+#                 success = RuleModel.add_rule_core(rule_dict)
 
-                if success:
-                    imported += 1
-                else:
-                    skipped += 1
+#                 if success:
+#                     imported += 1
+#                 else:
+#                     skipped += 1
 
-            flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
-        except Exception as e:
-            flash("Failed to import rules: URL ", "danger")
+#             flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
+#         except Exception as e:
+#             flash("Failed to import rules: URL ", "danger")
 
-    return redirect(url_for("rule.rules_list"))
+#     return redirect(url_for("rule.rules_list"))
 
 
-# Import only sigma rules
-@rule_blueprint.route("/test_sigma_rules_parse", methods=['GET', 'POST'])
-@login_required
-def test_sigma_rules_parse():
-    """Route to test parsing Sigma rules from a GitHub project URL."""
-    if request.method == 'POST':
-        repo_url = request.form.get('url')        
+# # Import only sigma rules
+# @rule_blueprint.route("/test_sigma_rules_parse", methods=['GET', 'POST'])
+# @login_required
+# def test_sigma_rules_parse():
+#     """Route to test parsing Sigma rules from a GitHub project URL."""
+#     if request.method == 'POST':
+#         repo_url = request.form.get('url')        
 
-        repo_dir = clone_or_access_repo(repo_url) 
+#         repo_dir = clone_or_access_repo(repo_url) 
         
-        if not repo_dir:
-            flash("Failed to clone or access the repository.", "danger")
-            return redirect(url_for("rule.rules_list"))
-        
-
-        owner, repo = extract_owner_repo(repo_url)
-        license_from_github = get_license_name(owner,repo)
-
-        # Get and parse all Sigma rules from the folder
-        rule_dicts = read_and_parse_all_sigma_rules_from_folder(repo_dir,repo_url,license_from_github)
+#         if not repo_dir:
+#             flash("Failed to clone or access the repository.", "danger")
+#             return redirect(url_for("rule.rules_list"))
         
 
-        imported = 0
-        skipped = 0
-        
-        if rule_dicts:
+#         owner, repo = extract_owner_repo(repo_url)
+#         license_from_github = get_license_name(owner,repo)
 
-            for rule_dict in rule_dicts:
-                success = RuleModel.add_rule_core(rule_dict)
-
-                if success:
-                    imported += 1
-                else:
-                    skipped += 1
+#         # Get and parse all Sigma rules from the folder
+#         rule_dicts = read_and_parse_all_sigma_rules_from_folder(repo_dir,repo_url,license_from_github)
         
 
-            print(f"Successfully imported {imported} rules.")
-            print(f"Skipped {skipped} rules.")
-            flash(f"Successfully imported {imported} rules.", "success")
-            if skipped > 0:
-                flash(f"Skipped {skipped} rules.", "warning")
-        else:
-            flash("No Sigma rules found to parse.", "warning")
+#         imported = 0
+#         skipped = 0
+        
+#         if rule_dicts:
+
+#             for rule_dict in rule_dicts:
+#                 success = RuleModel.add_rule_core(rule_dict)
+
+#                 if success:
+#                     imported += 1
+#                 else:
+#                     skipped += 1
+        
+
+#             print(f"Successfully imported {imported} rules.")
+#             print(f"Skipped {skipped} rules.")
+#             flash(f"Successfully imported {imported} rules.", "success")
+#             if skipped > 0:
+#                 flash(f"Skipped {skipped} rules.", "warning")
+#         else:
+#             flash("No Sigma rules found to parse.", "warning")
 
 
 
-    return redirect(url_for("rule.rules_list"))
+#     return redirect(url_for("rule.rules_list"))
+
+
+# #zeek
+# @rule_blueprint.route("/test_zeek_rules_parse", methods=['GET', 'POST'])
+# @login_required
+# def test_zeek_rules_parse():
+#     """Route to test parsing Sigma rules from a GitHub project URL."""
+#     if request.method == 'POST':
+#         repo_url = request.form.get('url')        
+
+#         repo_dir = clone_or_access_repo(repo_url) 
+        
+#         if not repo_dir:
+#             flash("Failed to clone or access the repository.", "danger")
+#             return redirect(url_for("rule.rules_list"))
+        
+
+#         owner, repo = extract_owner_repo(repo_url)
+#         license_from_github = get_license_name(owner,repo)
+
+#         # Get and parse all Sigma rules from the folder
+#         rule_dicts = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github)
+        
+
+#         imported = 0
+#         skipped = 0
+        
+#         if rule_dicts:
+
+#             for rule_dict in rule_dicts:
+#                 success = RuleModel.add_rule_core(rule_dict)
+
+#                 if success:
+#                     imported += 1
+#                 else:
+#                     skipped += 1
+        
+
+#             print(f"Successfully imported {imported} rules.")
+#             print(f"Skipped {skipped} rules.")
+#             flash(f"Successfully imported {imported} rules.", "success")
+#             if skipped > 0:
+#                 flash(f"Skipped {skipped} rules.", "warning")
+#         else:
+#             flash("No Zeek rules found to parse.", "warning")
+
+
+
+#     return redirect(url_for("rule.rules_list"))
 
 
 
@@ -635,25 +685,34 @@ def import_rules_from_github():
 
             rule_dicts_Sigma = read_and_parse_all_sigma_rules_from_folder(repo_dir,repo_url,license_from_github)
             rule_dicts_Yara = read_and_parse_all_yara_rules_from_folder(license_from_github,repo_url=repo_url)
+            rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github)
 
             imported = 0
             skipped = 0
-            
-            for rule_dict in rule_dicts_Sigma:
-                success = RuleModel.add_rule_core(rule_dict)
+            if rule_dicts_Sigma:
+                for rule_dict in rule_dicts_Sigma:
+                    success = RuleModel.add_rule_core(rule_dict)
 
-                if success:
-                    imported += 1
-                else:
-                    skipped += 1
-            for rule_dic2 in rule_dicts_Yara:
-                success = RuleModel.add_rule_core(rule_dic2)
+                    if success:
+                        imported += 1
+                    else:
+                        skipped += 1
+            if rule_dicts_Yara:
+                for rule_dic2 in rule_dicts_Yara:
+                    success = RuleModel.add_rule_core(rule_dic2)
 
-                if success:
-                    imported += 1
-                else:
-                    skipped += 1
+                    if success:
+                        imported += 1
+                    else:
+                        skipped += 1
+            if rule_dicts_Zeek:
+                for rule_dic3 in rule_dicts_Zeek:
+                    success = RuleModel.add_rule_core(rule_dic3)
 
+                    if success:
+                        imported += 1
+                    else:
+                        skipped += 1
             flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
             delete_existing_repo_folder("app/rule/output_rules/Yara")
         except Exception as e:
