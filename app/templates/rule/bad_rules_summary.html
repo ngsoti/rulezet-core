@@ -13,30 +13,47 @@
 {% endwith %}
 
 <div id="container" class="mt-5">
-  <h2 class="mb-4 text-center"><i class="fas fa-exclamation-triangle text-danger me-2"></i>Invalid or Non-Conforming Rules</h2>
+  <h2 class="mb-2 text-center">
+    <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+    Invalid or Non-Conforming Rules
+  </h2>
+  <p class="text-center text-muted mb-4">
+    The following rules are invalid because they did not pass syntax parsing validation.
+  </p>
 
   <div v-if="rules_list.length > 0" class="row row-cols-1 row-cols-md-2 g-4">
     <div class="col" v-for="rule in rules_list" :key="rule.id">
       <div class="card h-100 shadow-sm border-danger">
         <div class="card-body">
-          <h5 class="card-title"><i class="fas fa-file-alt me-1 text-secondary"></i>[[ rule.file_name ]]</h5>
-          <p class="card-text text-danger"><strong><i class="fas fa-bug me-1"></i>Error:</strong> [[ rule.error_message ]]</p>
-          <p class="card-text"><i class="far fa-calendar-alt me-1"></i><strong>Date:</strong> [[ rule.created_at ]]</p>
-          <p class="card-text"><i class="fas fa-user me-1"></i><strong>User:</strong> [[ user ]]</p>
+          <h5 class="card-title">
+            <i class="fas fa-file-alt me-1 text-secondary"></i>[[ rule.file_name ]]
+          </h5>
+          <p class="card-text text-danger">
+            <strong><i class="fas fa-bug me-1"></i>Error:</strong> [[ rule.error_message ]]
+          </p>
+          <p class="card-text">
+            <i class="far fa-calendar-alt me-1"></i><strong>Date:</strong> [[ rule.created_at ]]
+          </p>
+          <p class="card-text">
+            <i class="fas fa-user me-1"></i><strong>User:</strong> [[ user ]]
+          </p>
           <details>
-            <summary class="text-primary mt-2"><i class="fas fa-code me-1"></i>View raw content</summary>
-            <pre class="bg-light border rounded p-2 mt-2 " >[[ rule.raw_content ]]</pre>
+            <summary class="text-primary mt-2">
+              <i class="fas fa-code me-1"></i>View raw content
+            </summary>
+            <pre class="bg-light border rounded p-2 mt-2">[[ rule.raw_content ]]</pre>
           </details>
           <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-sm btn-warning mt-2">
             <i class="fas fa-edit"></i> Edit
           </a>
-          
         </div>
       </div>
     </div>
   </div>
 
-  <p v-else class="text-center mt-4 text-muted"><i class="fas fa-check-circle me-2"></i>No invalid rules found.</p>
+  <p v-else class="text-center mt-4 text-muted">
+    <i class="fas fa-check-circle me-2"></i>No invalid rules found.
+  </p>
 
   <nav class="mt-5 d-flex justify-content-center align-items-center">
     <button class="btn btn-outline-secondary me-2" :disabled="current_page <= 1" @click="changePage(current_page - 1)">
@@ -62,7 +79,6 @@
   const { createApp, ref, computed } = Vue
   import { message_list } from '/static/js/toaster.js'
 
-
   createApp({
     delimiters: ['[[', ']]'],
     setup() {
@@ -73,14 +89,13 @@
       const total_pages = ref(1)
       const user = ref()
 
-
       async function fetchRules() {
         const res = await fetch(`get_bad_rule`);
-          const data = await res.json();
-          rules_list.value = data.rules || [];
-          current_page.value = data.current_page || 1;
-          total_pages.value = data.total_pages || 1;
-          user.value = data.user ;
+        const data = await res.json();
+        rules_list.value = data.rules || [];
+        current_page.value = data.current_page || 1;
+        total_pages.value = data.total_pages || 1;
+        user.value = data.user ;
       }
 
       fetchRules()

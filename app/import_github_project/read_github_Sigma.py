@@ -1,7 +1,7 @@
 import os
 import yaml
 
-# utiliser le meme pour NOVA / Yaml et sigma mais differencier 
+#---------------------------------------------------------OLD_Version------------------------------------------------
 
 
 def get_sigma_files_from_repo(repo_dir):

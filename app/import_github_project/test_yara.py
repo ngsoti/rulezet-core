@@ -119,10 +119,11 @@ def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules/Yara"):
     return repo_dir
 
 
-def read_and_parse_all_yara_rules_from_folder_test(folder_path="app/rule/output_rules/Yara"):
+def read_and_parse_all_yara_rules_from_folder_test(license_from_github, repo_url):
     """
     Read all .yar files in the folder, validate and extract metadata into JSON format.
     """
+    folder_path="app/rule/output_rules/Yara"
     rules_json = []
     bad_rules = []
     if not os.path.isdir(folder_path):
@@ -157,10 +158,10 @@ def read_and_parse_all_yara_rules_from_folder_test(folder_path="app/rule/output_
 
             title = extract_first_match(raw_content, ["title", "Title"]) or clean_rule_filename_Yara(filename)
             description = extract_first_match(raw_content, ["description", "Description"])
-            license = extract_first_match(raw_content, ["license", "License"]) or "test"
+            license = extract_first_match(raw_content, ["license", "License"]) or license_from_github
             author = extract_first_match(raw_content, ["author", "Author"])
             version = extract_first_match(raw_content, ["version", "Version"])
-            source_url = "manual_upload"
+            source_url = repo_url
 
 
             rule_dict = {

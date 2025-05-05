@@ -284,6 +284,8 @@ class InvalidRuleModel(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     rule_type = db.Column(db.String(50), default="Sigma") 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    url = db.Column(db.Text, nullable=False)
+    license = db.Column(db.Text)
 
     user = db.relationship('User', backref=db.backref('user', lazy='dynamic', cascade='all, delete-orphan'))
 
@@ -295,5 +297,7 @@ class InvalidRuleModel(db.Model):
             'raw_content': self.raw_content,
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M'),
             'rule_type': self.rule_type,
-            "user_id": self.user_id
+            "user_id": self.user_id,
+            "url": self.url,
+            "license": self.license
         }

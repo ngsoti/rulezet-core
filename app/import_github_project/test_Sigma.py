@@ -31,7 +31,7 @@ def get_rule_files_from_repo(repo_dir):
     print(f"Files found: {len(rule_files)} .yml or .yaml files.")
     return rule_files
 
-def load_rule_files(repo_dir):
+def load_rule_files(repo_dir, license_from_github, repo_url):
     """Load and parse rule files from the given repository directory."""
     print("Loading rule files...")
 
@@ -77,9 +77,9 @@ def load_rule_files(repo_dir):
         rule_dict = {
             "format": "Sigma",  
             "title": rule.get("title", "Untitled"), 
-            "license": rule.get("license", "oui"), 
+            "license": rule.get("license", license_from_github), 
             "description": rule.get("description", "No description provided"),
-            "source": "test",
+            "source": repo_url,
             "version": rule.get("version", "1.0"), 
             "author": rule.get("author", "Unknown"),  
             # "to_string": json.dumps(rule, indent=2, default=str) json format

@@ -399,7 +399,7 @@ def get_total_change_to_check_admin():
     return RuleEditProposal.query.filter_by(status="pending").count()
 
 
-def save_invalid_rules(bad_rules, rule_type="Sigma"):
+def save_invalid_rules(bad_rules, rule_type ,repo_url, license):
     """
     Save a list of invalid rules to the database if not already existing.
     
@@ -427,7 +427,9 @@ def save_invalid_rules(bad_rules, rule_type="Sigma"):
             error_message=error_message,
             raw_content=raw_content,
             rule_type=rule_type,
-            user_id=current_user.id
+            user_id=current_user.id,
+            url=repo_url,
+            license=license
         )
         db.session.add(new_invalid_rule)
 
@@ -451,17 +453,17 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content):
 
             title = extract_first_match(raw_content, ["title", "Title"]) or clean_rule_filename_Yara(bad_rule_obj.file_name)
             description = extract_first_match(raw_content, ["description", "Description"])
-            license = extract_first_match(raw_content, ["license", "License"]) or "test"
+            license = extract_first_match(raw_content, ["license", "License"]) or bad_rule_obj.license
             author = extract_first_match(raw_content, ["author", "Author"])
             version = extract_first_match(raw_content, ["version", "Version"])
-            source_url = "manual_upload"
+            source_url = bad_rule_obj.url
 
             rule_dict = {
                 "format": "YARA",
                 "title": title,
                 "license": license,
                 "description": description,
-                "source": "manual_fix",
+                "source": source_url,
                 "version": version or "1.0",
                 "author": author or "Unknown",
                 "to_string": raw_content
@@ -476,9 +478,9 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content):
             rule_dict = {
                 "format": "Sigma",
                 "title": rule.get("title", "Untitled"),
-                "license": rule.get("license", "oui"),
+                "license": rule.get("license", bad_rule_obj.license),
                 "description": rule.get("description", "No description provided"),
-                "source": "manual_fix",
+                "source": bad_rule_obj.url,
                 "version": rule.get("version", "1.0"),
                 "author": rule.get("author", "Unknown"),
                 "to_string": raw_content

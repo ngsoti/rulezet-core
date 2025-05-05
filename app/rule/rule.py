@@ -470,9 +470,14 @@ def propose_edit(rule_id):
     proposed_content = data.get('proposed_content')
     message = data.get('message')
 
-    success = RuleModel.propose_edit_core(rule_id, proposed_content, message)
+    print(data)
 
-    flash("Request sended.", "success")
+    success = RuleModel.propose_edit_core(rule_id, proposed_content, message)
+    if success:
+        flash("Request sended.", "success")
+    else:
+        flash("Request sended but fail.", "danger")
+        print("ha")
     return redirect(url_for('rule.detail_rule', rule_id=rule_id))
 
 
@@ -786,9 +791,9 @@ def test_yara_python_url():
             owner, repo = extract_owner_repo(repo_url)
             license_from_github = get_license_name(owner,repo)
 
-            rule_dicts_Sigma , bad_rule_dicts_Sigma , nb_bad_rules_sigma= load_rule_files(repo_dir)
+            rule_dicts_Sigma , bad_rule_dicts_Sigma , nb_bad_rules_sigma= load_rule_files(repo_dir, license_from_github, repo_url)
             rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github)
-            rule_dicts_Yara , bad_rule_dicts_Yara, nb_bad_rules_yara = read_and_parse_all_yara_rules_from_folder_test()
+            rule_dicts_Yara , bad_rule_dicts_Yara, nb_bad_rules_yara = read_and_parse_all_yara_rules_from_folder_test(license_from_github, repo_url)
             
             imported = 0
             skipped = 0
@@ -822,14 +827,15 @@ def test_yara_python_url():
 
             if bad_rule_dicts_Yara:
                 flash(f"Failed to import {nb_bad_rules_yara} rules:  ", "danger")
-                RuleModel.save_invalid_rules(bad_rule_dicts_Yara, rule_type="YARA")
+                RuleModel.save_invalid_rules(bad_rule_dicts_Yara, "YARA", repo_url, license_from_github)
             if bad_rule_dicts_Sigma:
                 flash(f"Failed to import {nb_bad_rules_sigma} rules:  ", "danger")
-                RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, rule_type="Sigma")
+                RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github)
             if bad_rule_dicts_Sigma or bad_rule_dicts_Yara:
                 return redirect(url_for("rule.bad_rules_summary"))
 
         except Exception as e:
+            print("good")
             flash("Failed to import rules: URL ", "danger")
 
     return redirect(url_for("rule.rules_list"))
