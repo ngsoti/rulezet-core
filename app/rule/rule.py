@@ -9,7 +9,8 @@ from app.favorite.favorite_core import add_favorite, remove_favorite
 from app.import_github_project.read_github_Sigma import get_sigma_files_from_repo, load_sigma_rules, read_and_parse_all_sigma_rules_from_folder
 from app.import_github_project.read_github_YARA import  read_and_parse_all_yara_rules_from_folder, save_yara_rules_as_is
 from app.import_github_project.read_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
-from app.import_github_project.test import load_rule_files
+from app.import_github_project.test_Sigma import load_rule_files
+from app.import_github_project.test_yara import read_and_parse_all_yara_rules_from_folder_test
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_license_name
 
 from .rule_form import AddNewRuleForm, EditRuleForm
@@ -527,40 +528,6 @@ def proposal_content_discuss():
 
 #----------------------------------------------------------------------------------Import_from_github-----------------------------------------------------------------------------------------------
 
-# # import only yara rules 
-# @rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
-# @login_required
-# def test_yara_python_url():
-#     if request.method == 'POST':
-#         repo_url = request.form.get('url')
-
-#         try:
-
-#             repo_dir = save_yara_rules_as_is(repo_url)
-
-#             owner, repo = extract_owner_repo(repo_url)
-#             license_from_github = get_license_name(owner,repo)
-
-
-
-#             all_rules = read_and_parse_all_yara_rules_from_folder(license_from_github,repo_url=repo_url)
-            
-
-#             imported = 0
-#             skipped = 0
-#             for rule_dict in all_rules:
-#                 success = RuleModel.add_rule_core(rule_dict)
-
-#                 if success:
-#                     imported += 1
-#                 else:
-#                     skipped += 1
-
-#             flash(f"{imported} YARA rules imported. {skipped} ignored (already exist).", "success")
-#         except Exception as e:
-#             flash("Failed to import rules: URL ", "danger")
-
-#     return redirect(url_for("rule.rules_list"))
 
 
 # # Import only sigma rules
@@ -662,8 +629,8 @@ def proposal_content_discuss():
 
 
 
-
-# All the rules 
+##########################################################################################################################
+# All the rules V1
 @rule_blueprint.route("/import_rules_from_github", methods=['GET', 'POST'])
 @login_required
 def import_rules_from_github():
@@ -751,7 +718,7 @@ def import_rules_from_github_test():
             license_from_github = get_license_name(owner,repo)
 
 
-            rule_dicts_Sigma , bad_rule_dicts_Sigma = load_rule_files(repo_dir)
+            rule_dicts_Sigma , bad_rule_dicts_Sigma , nb_bad_rules= load_rule_files(repo_dir)
             rule_dicts_Yara = read_and_parse_all_yara_rules_from_folder(license_from_github,repo_url=repo_url)
             rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github)
   
@@ -785,6 +752,7 @@ def import_rules_from_github_test():
             delete_existing_repo_folder("app/rule/output_rules/Yara")
 
             if bad_rule_dicts_Sigma:
+                flash(f"Failed to import {nb_bad_rules} rules:  ", "danger")
                 RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, rule_type="Sigma")
                 return redirect(url_for("rule.bad_rules_summary"))
             
@@ -793,6 +761,78 @@ def import_rules_from_github_test():
 
     return redirect(url_for("rule.rules_list"))
 
+##########################################################################################################################
+
+
+
+@rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
+@login_required
+def test_yara_python_url():
+    if request.method == 'POST':
+        repo_url = request.form.get('url')
+
+        try:
+
+            repo_dir = clone_or_access_repo(repo_url) 
+            if not repo_dir:
+                flash("Failed to clone or access the repository.", "danger")
+                return redirect(url_for("rule.rules_list"))
+
+            # save all the yara rules 
+            save_yara_rules_as_is(repo_url) 
+
+
+            #license 
+            owner, repo = extract_owner_repo(repo_url)
+            license_from_github = get_license_name(owner,repo)
+
+            rule_dicts_Sigma , bad_rule_dicts_Sigma , nb_bad_rules_sigma= load_rule_files(repo_dir)
+            rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github)
+            rule_dicts_Yara , bad_rule_dicts_Yara, nb_bad_rules_yara = read_and_parse_all_yara_rules_from_folder_test()
+            
+            imported = 0
+            skipped = 0
+            if rule_dicts_Sigma:
+                for rule_dict in rule_dicts_Sigma:
+                    success = RuleModel.add_rule_core(rule_dict)
+
+                    if success:
+                        imported += 1
+                    else:
+                        skipped += 1
+            if rule_dicts_Yara:
+                for rule_dic2 in rule_dicts_Yara:
+                    success = RuleModel.add_rule_core(rule_dic2)
+
+                    if success:
+                        imported += 1
+                    else:
+                        skipped += 1
+            if rule_dicts_Zeek:
+                for rule_dic3 in rule_dicts_Zeek:
+                    success = RuleModel.add_rule_core(rule_dic3)
+
+                    if success:
+                        imported += 1
+                    else:
+                        skipped += 1
+            flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
+            delete_existing_repo_folder("app/rule/output_rules/Yara")
+
+
+            if bad_rule_dicts_Yara:
+                flash(f"Failed to import {nb_bad_rules_yara} rules:  ", "danger")
+                RuleModel.save_invalid_rules(bad_rule_dicts_Yara, rule_type="YARA")
+            if bad_rule_dicts_Sigma:
+                flash(f"Failed to import {nb_bad_rules_sigma} rules:  ", "danger")
+                RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, rule_type="Sigma")
+            if bad_rule_dicts_Sigma or bad_rule_dicts_Yara:
+                return redirect(url_for("rule.bad_rules_summary"))
+
+        except Exception as e:
+            flash("Failed to import rules: URL ", "danger")
+
+    return redirect(url_for("rule.rules_list"))
 
 
 @rule_blueprint.route("/bad_rules_summary")
@@ -815,3 +855,26 @@ def get_bad_rule():
         return {"rules": rules_list  , "user": current_user.first_name}
     
     return {"message": "No Rule"}, 404
+
+
+@rule_blueprint.route('/bad_rule/<int:rule_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_bad_rule(rule_id):
+    bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
+    user_bad_rule = RuleModel.get_user_id_of_bad_rule(rule_id)
+    if current_user.is_admin() or current_user.id == user_bad_rule :
+        if request.method == 'POST':
+            new_content = request.form.get('raw_content')
+            success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content)
+
+            if success:
+                flash("Rule fixed and imported successfully.", "success")
+                return redirect(url_for('rule.bad_rules_summary'))
+            else:
+                flash(f"Error: {error}", "danger")
+                return render_template('rule/edit_bad_rule.html', rule=bad_rule, new_content=new_content)
+                
+
+        return render_template('rule/edit_bad_rule.html', rule=bad_rule)
+    else:
+        return render_template("access_denied.html")

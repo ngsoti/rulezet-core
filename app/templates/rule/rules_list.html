@@ -53,8 +53,8 @@
 
 
       <div class="card p-4 shadow-sm bg-light mb-3">
-        <h5><label for="url" class="form-label">test</label></h5>
-        <form method="POST" action="{{ url_for('rule.import_rules_from_github_test') }}" class="d-flex">
+        <h5><label for="url" class="form-label">GitHub project URL (YARA / Zeek / Sigma) — format verified</label></h5>
+        <form method="POST" action="{{ url_for('rule.test_yara_python_url') }}" class="d-flex">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           <div class="mb-3 flex-grow-1 me-2">
             <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>

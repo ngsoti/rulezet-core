@@ -1,33 +1,61 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Invalid or Non-Conforming Rules</h2>
+{% with messages = get_flashed_messages(with_categories=True) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show mt-3" role="alert">
+        <i class="fas fa-info-circle me-2"></i>{{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
 
-<div id="main-container">
-  <ul class="list-group" v-if="rules_list.length > 0">
-    <li class="list-group-item" v-for="rule in rules_list" :key="rule.id">
-      <strong>File:</strong> [[ rule.file_name ]]<br>
-      <strong>Error:</strong> [[ rule.error_message ]]<br>
-      <strong>Date:</strong> [[ rule.created_at ]]<br>
-      <strong>user:</strong> [[ user ]]<br>
-      <details>
-        <summary>View raw content</summary>
-        <pre>[[ rule.raw_content ]]</pre>
-      </details>
-    </li>
-  </ul>
+<div id="container" class="mt-5">
+  <h2 class="mb-4 text-center"><i class="fas fa-exclamation-triangle text-danger me-2"></i>Invalid or Non-Conforming Rules</h2>
 
-  <p v-else>No invalid rules found.</p>
+  <div v-if="rules_list.length > 0" class="row row-cols-1 row-cols-md-2 g-4">
+    <div class="col" v-for="rule in rules_list" :key="rule.id">
+      <div class="card h-100 shadow-sm border-danger">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fas fa-file-alt me-1 text-secondary"></i>[[ rule.file_name ]]</h5>
+          <p class="card-text text-danger"><strong><i class="fas fa-bug me-1"></i>Error:</strong> [[ rule.error_message ]]</p>
+          <p class="card-text"><i class="far fa-calendar-alt me-1"></i><strong>Date:</strong> [[ rule.created_at ]]</p>
+          <p class="card-text"><i class="fas fa-user me-1"></i><strong>User:</strong> [[ user ]]</p>
+          <details>
+            <summary class="text-primary mt-2"><i class="fas fa-code me-1"></i>View raw content</summary>
+            <pre class="bg-light border rounded p-2 mt-2 " >[[ rule.raw_content ]]</pre>
+          </details>
+          <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-sm btn-warning mt-2">
+            <i class="fas fa-edit"></i> Edit
+          </a>
+          
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <nav class="mt-4 d-flex justify-content-between align-items-center">
-    <button class="btn btn-outline-primary" :disabled="current_page <= 1" @click="changePage(current_page - 1)">Previous</button>
-    <span>Page [[ current_page ]] of [[ total_pages ]]</span>
-    <button class="btn btn-outline-primary" :disabled="current_page >= total_pages" @click="changePage(current_page + 1)">Next</button>
+  <p v-else class="text-center mt-4 text-muted"><i class="fas fa-check-circle me-2"></i>No invalid rules found.</p>
+
+  <nav class="mt-5 d-flex justify-content-center align-items-center">
+    <button class="btn btn-outline-secondary me-2" :disabled="current_page <= 1" @click="changePage(current_page - 1)">
+      <i class="fas fa-chevron-left"></i> Previous
+    </button>
+    <span class="mx-3">Page [[ current_page ]] of [[ total_pages ]]</span>
+    <button class="btn btn-outline-secondary ms-2" :disabled="current_page >= total_pages" @click="changePage(current_page + 1)">
+      Next <i class="fas fa-chevron-right"></i>
+    </button>
   </nav>
 
-  <a href="{{ url_for('rule.rules_list') }}" class="btn btn-primary mt-4">Back to Rules List</a>
+  <div class="text-center mt-4">
+    <a href="{{ url_for('rule.rules_list') }}" class="btn btn-primary">
+      <i class="fas fa-arrow-left me-1"></i>Back to Rules List
+    </a>
+  </div>
 </div>
 {% endblock %}
+
 
 {% block script %}
 <script type="module">

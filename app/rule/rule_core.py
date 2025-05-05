@@ -2,11 +2,19 @@ import json
 import uuid
 import datetime
 
+from flask import abort
 from flask_login import current_user
+from jsonschema import ValidationError, validate
 from sqlalchemy import asc, case, desc, func, or_
+import yaml
+
+from app.import_github_project.test_Sigma import load_json_schema
+from app.import_github_project.test_yara import extract_first_match, extract_metadata_value
+from app.import_github_project.untils_import import clean_rule_filename_Yara
 
 from .. import db
 from ..db_class.db import *
+from . import rule_core as RuleModel
 
 
 
@@ -393,18 +401,111 @@ def get_total_change_to_check_admin():
 
 def save_invalid_rules(bad_rules, rule_type="Sigma"):
     """
-    Save a list of invalid rules to the database.
+    Save a list of invalid rules to the database if not already existing.
     
     :param bad_rules: List of dicts with 'file', 'error', and optional 'content'
     :param rule_type: Type of the rule, default is 'Sigma'
     """
     for bad_rule in bad_rules:
-        new_invalid_rule = InvalidRuleModel(
-            file_name=bad_rule["file"],
-            error_message=bad_rule["error"],
-            raw_content=json.dumps(bad_rule.get("content", {}), indent=2, default=str),
+        file_name = bad_rule.get("file")
+        error_message = str(bad_rule.get("error"))
+        raw_content = bad_rule.get("content", "")
+
+        existing = InvalidRuleModel.query.filter_by(
+            file_name=file_name,
+            error_message=error_message,
+            raw_content=raw_content,
             rule_type=rule_type,
-            user_id = current_user.id
+            user_id=current_user.id
+        ).first()
+
+        if existing:
+            continue
+
+        new_invalid_rule = InvalidRuleModel(
+            file_name=file_name,
+            error_message=error_message,
+            raw_content=raw_content,
+            rule_type=rule_type,
+            user_id=current_user.id
         )
         db.session.add(new_invalid_rule)
+
     db.session.commit()
+
+
+import yara
+
+
+def process_and_import_fixed_rule(bad_rule_obj, raw_content):
+    
+    try:
+        print(f"Traitement de la règle invalide : {bad_rule_obj.file_name}")
+        rule_type = bad_rule_obj.rule_type 
+
+        if rule_type.upper() == "YARA":
+            try:
+                yara.compile(source=raw_content)
+            except yara.SyntaxError as e:
+                return False, str(e)
+
+            title = extract_first_match(raw_content, ["title", "Title"]) or clean_rule_filename_Yara(bad_rule_obj.file_name)
+            description = extract_first_match(raw_content, ["description", "Description"])
+            license = extract_first_match(raw_content, ["license", "License"]) or "test"
+            author = extract_first_match(raw_content, ["author", "Author"])
+            version = extract_first_match(raw_content, ["version", "Version"])
+            source_url = "manual_upload"
+
+            rule_dict = {
+                "format": "YARA",
+                "title": title,
+                "license": license,
+                "description": description,
+                "source": "manual_fix",
+                "version": version or "1.0",
+                "author": author or "Unknown",
+                "to_string": raw_content
+            }
+        # elif rule_type.upper() == "Sigma":
+        else: 
+            rule = yaml.safe_load(raw_content)
+            rule_json = json.loads(json.dumps(rule, indent=2, default=str))
+            schema = load_json_schema("app/import_github_project/sigma_format.json")
+            validate(instance=rule_json, schema=schema)
+
+            rule_dict = {
+                "format": "Sigma",
+                "title": rule.get("title", "Untitled"),
+                "license": rule.get("license", "oui"),
+                "description": rule.get("description", "No description provided"),
+                "source": "manual_fix",
+                "version": rule.get("version", "1.0"),
+                "author": rule.get("author", "Unknown"),
+                "to_string": raw_content
+            }
+
+
+        success = RuleModel.add_rule_core(rule_dict)
+        if success:
+            db.session.delete(bad_rule_obj)
+            db.session.commit()
+            print("Règle corrigée et importée avec succès.")
+            return True, False
+
+        return False, "Rule already exists or failed to insert."
+
+    except Exception as e:
+        print(f"Erreur pendant le traitement : {e}")
+        db.session.rollback()
+        return False, str(e)
+
+def get_invalid_rule_by_id(rule_id):
+    """Retrieve an invalid rule by its ID or abort with 404."""
+    rule = InvalidRuleModel.query.get(rule_id)
+    if not rule:
+        return None
+    return rule
+
+def get_user_id_of_bad_rule(rule_id):
+    rule = InvalidRuleModel.query.get(rule_id)
+    return rule.user_id

@@ -80,6 +80,12 @@ def get_license_file_from_github_repo(repo_dir):
     
     return "(No license file found)"
 
+def clean_rule_filename_Yara(filename):
+    if filename.lower().endswith(('.yar', '.yara')):
+        return filename.rsplit('.', 1)[0]
+    return filename
+
+
 #----------------------------------------------------------------------------------------LICENSE--------------------------------------------------------------------------------------------------------------------#
 
 # use API GITHUB 

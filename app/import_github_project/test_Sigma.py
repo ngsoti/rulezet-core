@@ -46,8 +46,7 @@ def load_rule_files(repo_dir):
                 with open(file, 'r', encoding='utf-8') as f:
                     rule = yaml.safe_load(f)
                     rule_json_string = json.dumps(rule, indent=2 , default=str)
-                    rule_json_object = json.loads(rule_json_string)
-
+                    rule_json_object = json.loads(rule_json_string)               
                     if rule:
                         try:
                             validate(instance=rule_json_object, schema=sigma_schema)
@@ -55,10 +54,11 @@ def load_rule_files(repo_dir):
                             all_rules.append(rule)
                         except ValidationError as e:
                             print(f"Not a valid Sigma rule: {e.message}")
+                            bad_rule_content = yaml.safe_dump(rule, sort_keys=False, allow_unicode=True)
                             bad_rules.append({
                                 "file": file,
                                 "error": e.message,
-                                "content": rule
+                                "content": bad_rule_content
                             })
                     else:
                         print(f"The file {file} does not contain any rules.")
@@ -82,10 +82,11 @@ def load_rule_files(repo_dir):
             "source": "test",
             "version": rule.get("version", "1.0"), 
             "author": rule.get("author", "Unknown"),  
-            "to_string": json.dumps(rule, indent=2, default=str) 
+            # "to_string": json.dumps(rule, indent=2, default=str) json format
+            "to_string": yaml.safe_dump(rule, sort_keys=False, allow_unicode=True)
         }
         rule_dict_list.append(rule_dict)
 
     print(f"{len(all_rules)} valid rules loaded.")
     print(f"{len(bad_rules)} invalid or non-Sigma rules found.")
-    return rule_dict_list, bad_rules
+    return rule_dict_list, bad_rules , len(bad_rules)
