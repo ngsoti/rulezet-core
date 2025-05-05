@@ -1,3 +1,4 @@
+import json
 import uuid
 import datetime
 
@@ -95,7 +96,17 @@ def get_rules_page(page):
     return Rule.query.paginate(page=page, per_page=1000, max_per_page=1700)
 
 
+def get_bad_rules_page(page=1, per_page=20):
+    """
+    Returns paginated invalid rules. If current user is admin, returns all.
+    Otherwise, returns only the current user's invalid rules.
+    """
+    query = InvalidRuleModel.query.order_by(InvalidRuleModel.created_at.desc())
 
+    if not current_user.is_admin():
+        query = query.filter_by(user_id=current_user.id)
+
+    return query.paginate(page=page, per_page=per_page, error_out=False)
 
 
 
@@ -378,3 +389,22 @@ def get_total_change_to_check():
 def get_total_change_to_check_admin():
     """Return the total count of all pending rule edit proposals (for admins)."""
     return RuleEditProposal.query.filter_by(status="pending").count()
+
+
+def save_invalid_rules(bad_rules, rule_type="Sigma"):
+    """
+    Save a list of invalid rules to the database.
+    
+    :param bad_rules: List of dicts with 'file', 'error', and optional 'content'
+    :param rule_type: Type of the rule, default is 'Sigma'
+    """
+    for bad_rule in bad_rules:
+        new_invalid_rule = InvalidRuleModel(
+            file_name=bad_rule["file"],
+            error_message=bad_rule["error"],
+            raw_content=json.dumps(bad_rule.get("content", {}), indent=2, default=str),
+            rule_type=rule_type,
+            user_id = current_user.id
+        )
+        db.session.add(new_invalid_rule)
+    db.session.commit()

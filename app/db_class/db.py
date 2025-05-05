@@ -273,3 +273,27 @@ class RuleVote(db.Model):
             "vote_type": self.vote_type,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M')
         }
+
+
+
+class InvalidRuleModel(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    file_name = db.Column(db.String(512), nullable=False)
+    error_message = db.Column(db.Text, nullable=False)
+    raw_content = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    rule_type = db.Column(db.String(50), default="Sigma") 
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    user = db.relationship('User', backref=db.backref('user', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'file_name': self.file_name,
+            'error_message': self.error_message,
+            'raw_content': self.raw_content,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M'),
+            'rule_type': self.rule_type,
+            "user_id": self.user_id
+        }

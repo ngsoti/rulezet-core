@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Invalid or Non-Conforming Rules</h2>
+
+<div id="main-container">
+  <ul class="list-group" v-if="rules_list.length > 0">
+    <li class="list-group-item" v-for="rule in rules_list" :key="rule.id">
+      <strong>File:</strong> [[ rule.file_name ]]<br>
+      <strong>Error:</strong> [[ rule.error_message ]]<br>
+      <strong>Date:</strong> [[ rule.created_at ]]<br>
+      <strong>user:</strong> [[ user ]]<br>
+      <details>
+        <summary>View raw content</summary>
+        <pre>[[ rule.raw_content ]]</pre>
+      </details>
+    </li>
+  </ul>
+
+  <p v-else>No invalid rules found.</p>
+
+  <nav class="mt-4 d-flex justify-content-between align-items-center">
+    <button class="btn btn-outline-primary" :disabled="current_page <= 1" @click="changePage(current_page - 1)">Previous</button>
+    <span>Page [[ current_page ]] of [[ total_pages ]]</span>
+    <button class="btn btn-outline-primary" :disabled="current_page >= total_pages" @click="changePage(current_page + 1)">Next</button>
+  </nav>
+
+  <a href="{{ url_for('rule.rules_list') }}" class="btn btn-primary mt-4">Back to Rules List</a>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+  const { createApp, ref, computed } = Vue
+  import { message_list } from '/static/js/toaster.js'
+
+
+  createApp({
+    delimiters: ['[[', ']]'],
+    setup() {
+      const csrf_token = '{{ csrf_token() }}';
+      const rules_list = ref([])
+      const total_rules = ref(0)
+      const current_page = ref(1)
+      const total_pages = ref(1)
+      const user = ref()
+
+
+      async function fetchRules() {
+        const res = await fetch(`get_bad_rule`);
+          const data = await res.json();
+          rules_list.value = data.rules || [];
+          current_page.value = data.current_page || 1;
+          total_pages.value = data.total_pages || 1;
+          user.value = data.user ;
+      }
+
+      fetchRules()
+
+      return {
+        csrf_token,
+        rules_list,
+        total_rules,
+        current_page,
+        total_pages,
+        fetchRules,
+        user
+      }
+    }
+  }).mount('#main-container')
+</script>
+{% endblock %}

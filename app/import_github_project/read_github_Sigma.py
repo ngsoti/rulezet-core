@@ -1,6 +1,9 @@
 import os
 import yaml
 
+# utiliser le meme pour NOVA / Yaml et sigma mais differencier 
+
+
 def get_sigma_files_from_repo(repo_dir):
     """Retrieve all .yml files from a local repository."""
     sigma_files = []
@@ -69,3 +72,4 @@ def read_and_parse_all_sigma_rules_from_folder(repo_dir,url_github,license_from_
         rule_dict_list.append(rule_dict)
 
     return rule_dict_list
+
