@@ -68,16 +68,9 @@
     </a>
   </header>
 
-  
-  
-  <div class="mb-3 input-group">
-    <span class="input-group-text"><i class="fas fa-search"></i></span>
-    <input type="text" v-model="searchQuery" class="form-control" placeholder="Search...">
-  </div>
-
   <div class="row">
-    <template v-if="filteredRules.length > 0">
-      <div class="col-md-6 mb-3" v-for="(rule, index) in filteredRules" :key="rule.uuid">
+    <template v-if="rules_list.length > 0">
+      <div class="col-md-6 mb-3" v-for="(rule, index) in rules_list" :key="rule.uuid">
         <div class="card card-body">
           <div class="card-header text-white d-flex justify-content-between align-items-start flex-wrap" style="background-color:#1371ff">
             <h5 class="mb-2" style="max-width: 75%; word-break: break-word;">[[ rule.title ]]</h5>
@@ -144,21 +137,9 @@
     setup() {
       const csrf_token = '{{ csrf_token() }}';
       const rules_list = ref([])
-      const searchQuery = ref('')
       const current_user_is_admin = ref(false)
       const current_user_is_connected = ref(false)
 
-
-      const filteredRules = computed(() => {
-        return rules_list.value.filter(rule => {
-          const q = searchQuery.value.toLowerCase()
-          return (
-            rule.title.toLowerCase().includes(q) ||
-            rule.description.toLowerCase().includes(q) ||
-            rule.author.toLowerCase().includes(q)
-          )
-        })
-      })
 
       async function fetchRecentRules() {
         const res = await fetch('/get_last_rules')
@@ -216,7 +197,6 @@
             updated.vote_down = data.vote_down;
           }
         }else{
-          alert("you have to connect to access this fonction")
           window.location.href = `/account/login`;
         }
         
@@ -228,8 +208,6 @@
 
       return {
         rules_list,
-        searchQuery,
-        filteredRules,
         current_user_is_admin,
         deleteRule,
         vote,
