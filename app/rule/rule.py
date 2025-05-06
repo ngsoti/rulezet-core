@@ -884,3 +884,24 @@ def edit_bad_rule(rule_id):
         return render_template('rule/edit_bad_rule.html', rule=bad_rule)
     else:
         return render_template("access_denied.html")
+    
+
+@rule_blueprint.route('/bad_rule/<int:rule_id>/delete', methods=['GET', 'POST'])
+@login_required
+def delete_bad_rule(rule_id):
+    bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
+    user_bad_rule = RuleModel.get_user_id_of_bad_rule(rule_id)
+    if current_user.is_admin() or current_user.id == user_bad_rule :
+        if request.method == 'POST':
+            success = RuleModel.delete_bad_rule(rule_id)
+
+            if success:
+                return jsonify({"success": True, "message": "Rule deleted!"})
+                
+
+        return render_template('rule/edit_bad_rule.html', rule=bad_rule)
+    else:
+        return render_template("access_denied.html")
+
+
+

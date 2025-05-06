@@ -306,7 +306,7 @@
 
                         <div class="form-group mb-4">
                             <label for="code_preview" class="font-weight-bold">Code Preview</label>
-                            <pre><code id="code_preview">[[ modifiedRuleContent ]]</code></pre>
+                            <pre><code id="code_preview" >[[ modifiedRuleContent ]]</code></pre>
                         </div>
                         
                         
@@ -378,9 +378,11 @@
             const total_comments = ref(0)
             const current_user_is_admin = ref()
             const newCommentContent = ref("");
-            const modifiedRuleContent = ref('{{ rule_content }}');
+            const modifiedRuleContent = ref('{{ rule_content | tojson }}');
             const currentRule = ref(0)
 
+
+           
 
             function onInput(e) {
                 modifiedRuleContent.value = e.target.value

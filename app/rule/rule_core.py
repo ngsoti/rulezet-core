@@ -511,3 +511,17 @@ def get_invalid_rule_by_id(rule_id):
 def get_user_id_of_bad_rule(rule_id):
     rule = InvalidRuleModel.query.get(rule_id)
     return rule.user_id
+
+
+def delete_bad_rule(rule_id):
+    rule = get_invalid_rule_by_id(rule_id)
+    if rule:
+        db.session.delete(rule)
+        db.session.commit()
+        return True
+    else:
+        return False
+
+
+
+    
