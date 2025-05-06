@@ -34,8 +34,8 @@ def add_rule_core(form_dict):
         author=form_dict["author"],
         version=form_dict["version"],
         user_id=current_user.id,
-        creation_date = datetime.now(),
-        last_modif = datetime.now(),
+        creation_date = datetime.datetime.now(tz=datetime.timezone.utc),
+        last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
         vote_up=0,
         vote_down=0,
         to_string = form_dict["to_string"]
@@ -70,7 +70,7 @@ def edit_rule_core(form_dict, id) -> None:
     rule.source = form_dict["source"]
     rule.version = form_dict["version"]
     rule.to_string = form_dict["to_string"]
-    rule.last_modif = datetime.now()
+    rule.last_modif = datetime.datetime.now(tz=datetime.timezone.utc)
 
     db.session.commit()
 
@@ -139,22 +139,18 @@ def get_total_rules_count():
 
 
 def get_rule_user_id(rule_id: int):
-    rule = Rule.query.filter_by(id=rule_id).first()
+    rule = get_rule(rule_id)
     if rule:
         return rule.user_id  
     return None  
 
 def get_rules_page_favorite(page, id_user, per_page=10):
-    favorites_query = (
-        Rule.query
-        .join(RuleFavoriteUser, Rule.id == RuleFavoriteUser.rule_id)
-        .filter(RuleFavoriteUser.user_id == id_user)
+    favorites_query = Rule.query\
+        .join(RuleFavoriteUser, Rule.id == RuleFavoriteUser.rule_id)\
+        .filter(RuleFavoriteUser.user_id == id_user)\
         .order_by(RuleFavoriteUser.created_at.desc())
-    )
     
-    paginated_rules = favorites_query.paginate(page=page, per_page=per_page, error_out=False)
-    return paginated_rules
-
+    return favorites_query.paginate(page=page, per_page=per_page, error_out=False)
 
 
 def set_user_id(rule_id, user_id):

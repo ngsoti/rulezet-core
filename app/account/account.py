@@ -90,8 +90,6 @@ def add_user():
 @login_required
 def favorite():
     """favorite page"""
-    # rules = FavoriteModel.get_all_user_favorites_with_rules(current_user.id)
-    # rules_list = [r.to_json() for r in rules]
     return render_template("account/favorite_user.html")
 
 @account_blueprint.route("/profil")
@@ -114,21 +112,19 @@ def profil():
 
 
 
+
+############
+# Favorite #
+############
+
 @account_blueprint.route("/favorite/get_rules_page_favorite",  methods=['GET','POST'])
 @login_required
 def get_rules_page_favorite():
     page = request.args.get('page', 1, type=int)
-    id_user = current_user.id
-    rules = RuleModel.get_rules_page_favorite(page, id_user)
-    # total_rules = RuleModel.get_total_rules_favorites_count()
-    if rules:
-        rules_list = list()
-        for rule in rules:
-            u = rule.to_json()
-            rules_list.append(u)
+    rules = RuleModel.get_rules_page_favorite(page, current_user.id)
 
-        return {"rule": rules_list, "total_pages": rules.pages}
-    
+    if rules:
+        return {"rule": [rule.to_json() for rule in rules], "total_pages": rules.pages}
     return {"message": "No Rule"}, 404
 
 
@@ -136,15 +132,9 @@ def get_rules_page_favorite():
 @login_required
 def remove_rule_favorite():
     rule_id = request.args.get('id', 1, type=int)
-    user_id = current_user.id
-    if current_user.id == user_id or current_user.is_admin():
-        rep = remove_favorite(user_id, rule_id)
-        if rep:
-            return jsonify({"success": True, "message": "Rule deleted!"})
-
+    rep = remove_favorite(current_user.id, rule_id)
+    if rep:
+        return jsonify({"success": True, "message": "Rule deleted!"})
     return jsonify({"success": False, "message": "Access denied"}), 403
-
-    
-
 
 

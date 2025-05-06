@@ -6,7 +6,7 @@ flask-sqlalchemy
 Flask-Migrate
 Flask-WTF
 WTForms
-Werkzeug==2.3.8
+Werkzeug
 flask-restx
 email_validator
 python-dateutil
@@ -16,4 +16,5 @@ gunicorn
 jsonschema
 requests
 gitpython
-yaml
+pyyaml
+yara-python

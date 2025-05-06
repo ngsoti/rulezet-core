@@ -483,6 +483,7 @@ def propose_edit(rule_id):
 
 
 @rule_blueprint.route("/validate_proposal", methods=['GET'])
+@login_required
 def validate_proposal():
     rule_id = request.args.get('ruleId', type=int) # id of the real rule 
     decision = request.args.get('decision', type=str)
@@ -495,8 +496,6 @@ def validate_proposal():
         if rule_id and decision and rule_proposal_id:
             # the rule modified
             rule_proposal = RuleModel.get_rule_proposal(rule_proposal_id)
-            # the real rule
-            rule = RuleModel.get_rule(rule_id)
 
             if decision == "accepted":
                 RuleModel.set_status(rule_proposal_id,"accepted")
@@ -514,19 +513,10 @@ def validate_proposal():
 
 
 
-
-
 @rule_blueprint.route('/proposal_content_discuss', methods=['POST', 'GET'])
 @login_required
 def proposal_content_discuss():
     return render_template("rule/proposal_content_discuss.html")
-
-
-
-
-
-
-
 
 
 
@@ -836,6 +826,7 @@ def test_yara_python_url():
 
         except Exception as e:
             print("good")
+            print(e)
             flash("Failed to import rules: URL ", "danger")
 
     return redirect(url_for("rule.rules_list"))
@@ -866,9 +857,9 @@ def get_bad_rule():
 @rule_blueprint.route('/bad_rule/<int:rule_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_bad_rule(rule_id):
-    bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
     user_bad_rule = RuleModel.get_user_id_of_bad_rule(rule_id)
     if current_user.is_admin() or current_user.id == user_bad_rule :
+        bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
         if request.method == 'POST':
             new_content = request.form.get('raw_content')
             success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content)
@@ -889,9 +880,9 @@ def edit_bad_rule(rule_id):
 @rule_blueprint.route('/bad_rule/<int:rule_id>/delete', methods=['GET', 'POST'])
 @login_required
 def delete_bad_rule(rule_id):
-    bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
     user_bad_rule = RuleModel.get_user_id_of_bad_rule(rule_id)
     if current_user.is_admin() or current_user.id == user_bad_rule :
+        bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
         if request.method == 'POST':
             success = RuleModel.delete_bad_rule(rule_id)
 

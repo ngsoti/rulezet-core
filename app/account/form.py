@@ -1,5 +1,4 @@
-import re
-from flask import url_for, flash
+from flask import url_for
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import ValidationError
@@ -10,7 +9,7 @@ from wtforms.fields import (
     SubmitField,
     EmailField
 )
-from wtforms.validators import Email, InputRequired, Length
+from wtforms.validators import Email, InputRequired
 
 from ..db_class.db import User
 

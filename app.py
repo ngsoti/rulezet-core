@@ -24,9 +24,6 @@ def error_page_not_found(e):
     return render_template('404.html'), 404
     
 
-
-    
-
 if args.init_db:
     with app.app_context():
         db.create_all()

@@ -39,7 +39,7 @@ def get_rules_favorites_page(page):
 # DELETE
 
 def remove_favorite(user_id: int, rule_id: int) -> bool:
-    """Deletes a favorite if found"""
+    """Delete a favorite if found"""
     favorite = RuleFavoriteUser.query.filter_by(user_id=user_id, rule_id=rule_id).first()
     if favorite:
         db.session.delete(favorite)

@@ -14,8 +14,8 @@ def add_comment_core(rule_id, content):
         user_id=current_user.id,
         user_name= current_user.first_name,
         content=content.strip(),
-        created_at=datetime.datetime.utcnow(),
-        updated_at=datetime.datetime.utcnow()
+        created_at=datetime.datetime.now(tz=datetime.timezone.utc),
+        updated_at=datetime.datetime.now(tz=datetime.timezone.utc)
     )
     db.session.add(comment)
     db.session.commit()
@@ -24,10 +24,6 @@ def add_comment_core(rule_id, content):
 
 def get_comment_by_id(comment_id):
     return Comment.query.get(comment_id)
-
-def get_user_id(comment_id):
-    comment = Comment.query.get(comment_id)
-    return comment.user_id 
 
 
 def update_comment(comment_id, new_content):
@@ -61,8 +57,7 @@ def dislike_comment(comment_id):
     db.session.commit()
 
 def get_username_comment(comment_id):
-    comment = get_comment_by_id(comment_id)
-    user = get_user(comment.id)
+    user = get_user(comment_id)
     return f"{user.first_name} {user.last_name}"
 
 def get_comment_page(page, rule_id):
@@ -74,9 +69,8 @@ def get_total_comments_count():
     return Comment.query.count()
 
 def get_latest_comment_for_user_and_rule(user_id: int, rule_id: int):
-    return (
-        Comment.query
-        .filter_by(user_id=user_id, rule_id=rule_id)
-        .order_by(Comment.id.desc())
+    return Comment.query\
+        .filter_by(user_id=user_id, rule_id=rule_id)\
+        .order_by(Comment.id.desc())\
         .first()
-    )
+    

@@ -106,8 +106,12 @@
                 <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
                 <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
                 <a :href="`rule/detail_rule/${rule.id}`" title="view more detail about this rule" class="btn btn-secondary btn-sm">View more</a>
-                <button @click="vote('up', rule.id)" title="like this rule" class="btn btn-success btn-sm mx-2"><i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]</button>
-                <button @click="vote('down', rule.id)" title="dislike this rule" class="btn btn-danger btn-sm"><i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]</button>
+                <button @click="vote('up', rule.id)" title="like this rule" class="btn btn-success btn-sm mx-2">
+                    <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
+                </button>
+                <button @click="vote('down', rule.id)" title="dislike this rule" class="btn btn-danger btn-sm">
+                    <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
+                </button>
             </div>
         </div>
     </div>
@@ -230,7 +234,6 @@
         deleteRule,
         vote,
         checkIfUserIsConnected,
-        current_user_is_connected,
         csrf_token
       }
     }

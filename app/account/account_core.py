@@ -60,15 +60,8 @@ def get_users_page(page):
     return User.query.paginate(page=page, per_page=20, max_per_page=50)
 
 
-def get_user(id):
-    """Return the user"""
-    return User.query.get(id)
-
 def get_user_by_lastname(lastname):
     return User.query.filter_by(last_name=lastname).all()
-
-def get_user_by_matrix_id(matrix_id):
-    return User.query.filter_by(matrix_id=matrix_id).first()
 
 def get_username_by_id(user_id):
     user = get_user(user_id)

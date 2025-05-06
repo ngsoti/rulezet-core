@@ -1,9 +1,9 @@
 import shutil
-from flask import Flask, jsonify
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
 from flask_migrate import Migrate
-from flask_login import LoginManager, current_user, login_required
+from flask_login import LoginManager
 from flask_session import Session
 
 from app.rule.import_licenses.rule_licence import fetch_and_save_licenses
@@ -16,9 +16,6 @@ csrf = CSRFProtect()
 migrate = Migrate()
 login_manager = LoginManager()
 sess = Session()
-
-
-
 
 
 def create_app():
@@ -38,7 +35,7 @@ def create_app():
     sess.init_app(app)
 
     # take all the licenses 
-    fetch_and_save_licenses()
+    # fetch_and_save_licenses()
 
     # remove the previous rule
    #  REPO_DIR = "Rules_Github"
@@ -53,9 +50,6 @@ def create_app():
     app.register_blueprint(home_blueprint, url_prefix="/")
     app.register_blueprint(account_blueprint, url_prefix="/account")
     app.register_blueprint(rule_blueprint, url_prefix="/rule")
-   
-
-
 
     return app
     

@@ -113,8 +113,7 @@ class Rule(db.Model):
     def to_json(self):
         is_favorited = False
         if not current_user.is_anonymous:
-            user_id = current_user.id
-            is_favorited = RuleFavoriteUser.query.filter_by(user_id=user_id, rule_id=self.id).first() is not None
+            is_favorited = RuleFavoriteUser.query.filter_by(user_id=current_user.id, rule_id=self.id).first() is not None
 
         return {
             "id": self.id,
@@ -139,8 +138,8 @@ class RuleFavoriteUser(db.Model):
     """Association table for User and Rule favorites."""
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'))
     created_at = db.Column(db.DateTime, default=datetime.datetime)
 
     # Define the relationships with cascade option
@@ -186,7 +185,7 @@ class Comment(db.Model):
         }
 
 
-from datetime import datetime
+
 
 class Request(db.Model):
     """Model for user-submitted requests visible by admins."""
@@ -198,15 +197,11 @@ class Request(db.Model):
     title = db.Column(db.String(128), nullable=False)
     content = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(32), default="pending")  # Ex: pending, reviewed, closed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
-
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc), index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc), onupdate=datetime.datetime.now(tz=datetime.timezone.utc), index=True)
 
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('requests', lazy='dynamic',  cascade='all, delete-orphan'))
-
-
     user_owner_rule = db.relationship('User', foreign_keys=[user_id_owner_rule], backref=db.backref('owned_requests', lazy='dynamic' , cascade='all, delete-orphan'))
-
 
     rule = db.relationship('Rule', backref=db.backref('requests', lazy='dynamic', cascade='all, delete-orphan'))
 
@@ -233,7 +228,7 @@ class RuleEditProposal(db.Model):
     proposed_content = db.Column(db.Text, nullable=False)
     old_content = db.Column(db.String)
     message = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
     status = db.Column(db.String, default="pending")
 
     rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic',  cascade='all, delete-orphan'))
@@ -260,7 +255,7 @@ class RuleVote(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
     vote_type = db.Column(db.String(10), nullable=False)  
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
 
     user = db.relationship('User', backref=db.backref('rule_votes', lazy='dynamic', cascade='all, delete-orphan'))
     rule = db.relationship('Rule', backref=db.backref('votes', lazy='dynamic', cascade='all, delete-orphan'))
@@ -281,7 +276,7 @@ class InvalidRuleModel(db.Model):
     file_name = db.Column(db.String(512), nullable=False)
     error_message = db.Column(db.Text, nullable=False)
     raw_content = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
     rule_type = db.Column(db.String(50), default="Sigma") 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     url = db.Column(db.Text, nullable=False)

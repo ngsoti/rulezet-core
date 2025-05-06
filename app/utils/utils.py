@@ -25,18 +25,6 @@ def verif_api_key(headers):
         return {"message": "API key not found"}, 403
     return {}
 
-def form_to_dict(form):
-    loc_dict = dict()
-    for field in form._fields:
-        if field == "files_upload":
-            loc_dict[field] = dict()
-            loc_dict[field]["data"] = form._fields[field].data
-            loc_dict[field]["name"] = form._fields[field].name
-        elif not field == "submit" and not field == "csrf_token":
-            loc_dict[field] = form._fields[field].data
-    return loc_dict
-
-
 def create_specific_dir(specific_dir):
     if not os.path.isdir(specific_dir):
         os.mkdir(specific_dir)
