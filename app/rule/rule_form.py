@@ -1,28 +1,16 @@
-from flask import url_for, flash
-from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import  ValidationError, SelectField
-from wtforms.fields import (
-    BooleanField,
-    PasswordField,
-    StringField,
-    SubmitField,
-    TextAreaField,
-    EmailField
-)
-from wtforms.validators import Email, InputRequired, DataRequired
-
+from wtforms.fields import StringField, SubmitField, TextAreaField
+from wtforms.validators import  InputRequired, DataRequired
 from ..db_class.db import Rule
 
 class AddNewRuleForm(FlaskForm):
-    
-    # format = StringField('Format', validators=[InputRequired()])
+    """Form to add a new rule"""
     format = SelectField('Format',choices=[('yara', 'YARA rule'), ('sigma', 'SIGMA rule'),  ('zeek', 'ZEEK rule')],validators=[InputRequired()])
     title = StringField('Title', validators=[InputRequired()])
     license = SelectField("License", choices=[], validators=[DataRequired()])
     description = TextAreaField('Description')
     source = StringField('Source')
-    #author = current_user.get_first_name()  StringField('Author', validators=[InputRequired()])
     version = StringField('Version', validators=[InputRequired()])
     to_string = TextAreaField('Content rule', validators=[InputRequired()])
 
@@ -31,13 +19,10 @@ class AddNewRuleForm(FlaskForm):
             if Rule.query.filter_by(title=field.data).first():
                 raise ValidationError('Rule already registered.')
 
-
     submit = SubmitField('Register')
 
-
-
 class EditRuleForm(FlaskForm):
-    # format = StringField('Format', validators=[InputRequired()])
+    """Form to edit an existing rule"""
     title = StringField('Title', validators=[InputRequired()])
     format = SelectField('Format',choices=[('yara', 'YARA rule'), ('sigma', 'SIGMA rule'), ('zeek', 'ZEEK rule')],validators=[InputRequired()])
     

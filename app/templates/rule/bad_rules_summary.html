@@ -45,7 +45,7 @@
             <pre class="bg-light border rounded p-2 mt-2">[[ rule.raw_content ]]</pre>
           </details>
           <div class="d-flex align-items-center gap-2 mt-2">
-            <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-sm btn-warning">
+            <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-sm btn-dark">
               <i class="fas fa-edit"></i> Edit
             </a>
             <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm" title="Delete Rule">

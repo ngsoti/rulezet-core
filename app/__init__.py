@@ -1,4 +1,5 @@
 import shutil
+from app.rule.import_licenses.rule_licence import fetch_and_save_licenses
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
@@ -6,7 +7,6 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_session import Session
 
-from app.rule.import_licenses.rule_licence import fetch_and_save_licenses
 from config import config as Config
 import os
 

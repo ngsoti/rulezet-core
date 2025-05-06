@@ -25,7 +25,7 @@
                         </div>
                         <div class="col-3 text-end">
                             {% if current_user.id == rule.user_id or current_user_is_admin %}
-                            <a :href="`/rule/edit_rule/{{rule.id}}`" class="btn btn-warning btn-sm">
+                            <a :href="`/rule/edit_rule/{{rule.id}}`" class="btn btn-dark btn-sm">
                                 <i class="fas fa-pen"></i>
                             </a>
                             {% endif %}

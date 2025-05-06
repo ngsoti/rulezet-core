@@ -1,104 +1,142 @@
 {% extends 'base.html' %}
 {% block content %}
-    <div class="container mt-4">
-        <h1 class="ui dividing header text-center mb-4">Create a Rule</h1>
-
-        <div class="card card-body shadow-sm" id="main-container">
-            <form action="" method="post" id="form">
-                {{ form.hidden_tag() }}
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.title.label(class_="col-form-label") }}
-                            {{ form.title(class_="form-control") }}
-                            {% if form.title.errors %}
+<div class="container mt-4">
+    <h1 class="ui dividing header text-center mb-4">Create a Rule</h1>
+        <!-- Tabs navigation -->
+    <ul class="nav nav-tabs mb-3" id="ruleTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual" type="button" role="tab">
+                <i class="fas fa-edit me-1"></i> Manual Submission
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link " id="github-tab" data-bs-toggle="tab" data-bs-target="#github" type="button" role="tab">
+                <i class="fab fa-github me-1"></i> GitHub URL
+            </button>
+        </li>
+    </ul>
+    <!-- Tabs content -->
+    <div class="tab-content" id="ruleTabContent">
+        
+        <!-- Manual rule submission tab -->
+        <div class="tab-pane fade show active" id="manual" role="tabpanel">
+            <div class="card card-body shadow-sm" id="main-container">
+                <form action="" method="post" id="form">
+                    {{ form.hidden_tag() }}
+            
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.title.label(class_="col-form-label") }}
+                                {{ form.title(class_="form-control") }}
+                                {% if form.title.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.title.errors[0] | safe }}
                                 </div>
-                            {% endif %}
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.format.label(class_="col-form-label") }}
-                            {{ form.format(class_="form-select") }}
-                            {% if form.format.errors %}
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.format.label(class_="col-form-label") }}
+                                {{ form.format(class_="form-select") }}
+                                {% if form.format.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.format.errors[0] | safe }}
                                 </div>
-                            {% endif %}
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.license.label(class_="col-form-label") }}
-                            {{ form.license(class_="form-control", id="license-select") }}
-                            {% if form.license.errors %}
+            
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.license.label(class_="col-form-label") }}
+                                {{ form.license(class_="form-control", id="license-select") }}
+                                {% if form.license.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.license.errors[0] | safe }}
                                 </div>
-                            {% endif %}
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.source.label(class_="col-form-label") }}       
-                                {{ form.source(class_="form-control") }}                            
-                            {% if form.source.errors %}
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.source.label(class_="col-form-label") }}
+                                {{ form.source(class_="form-control") }}
+                                {% if form.source.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.source.errors[0] | safe }}
                                 </div>
-                            {% endif %}
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.version.label(class_="col-form-label") }}
-                            {{ form.version(class_="form-control") }}
-                            {% if form.version.errors %}
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.version.label(class_="col-form-label") }}
+                                {{ form.version(class_="form-control") }}
+                                {% if form.version.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.version.errors[0] | safe }}
                                 </div>
-                            {% endif %}
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col">
-                        <div class="form-group">
-                            {{ form.description.label(class_="col-form-label") }}
-                            {{ form.description(class_="form-control", rows=4) }}
-                            {% if form.description.errors %}
+            
+                    <div class="row mb-3">
+                        <div class="col">
+                            <div class="form-group">
+                                {{ form.description.label(class_="col-form-label") }}
+                                {{ form.description(class_="form-control", rows=4) }}
+                                {% if form.description.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.description.errors[0] | safe }}
                                 </div>
-                            {% endif %}
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="mb-3">
-                    <div class="form-group">
+            
+                    <div class="mb-3">
+                        <div class="form-group">
                         {{ form.to_string.label(class_="col-form-label") }}
                         {{ form.to_string(class_="form-control", rows=4) }}
                         {% if form.to_string.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.to_string.errors[0] | safe }}
-                            </div>
+                        <div class="invalid-feedback d-block">
+                            {{ form.to_string.errors[0] | safe }}
+                        </div>
                         {% endif %}
+                        </div>
                     </div>
-                </div>
+            
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
-                <div class="text-center">
-                    <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
-                </div>
-            </form>
+        <!-- GitHub project URL tab -->
+        <div class="tab-pane fade " id="github" role="tabpanel">
+            <div class="card p-4 shadow-sm bg-light mb-3">
+                <h5><label for="url" class="form-label">GitHub project URL (YARA / Zeek / Sigma) — format verified</label></h5>
+                <form method="POST" action="{{ url_for('rule.test_yara_python_url') }}" class="d-flex">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-3 flex-grow-1 me-2">
+                        <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Send
+                        </button>
+                    </div>
+                </form>        
+            </div>
         </div>
     </div>
+</div>
 {% endblock %}
 
 

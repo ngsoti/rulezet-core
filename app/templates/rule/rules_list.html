@@ -19,60 +19,12 @@
   
   <header class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="text-dark m-0"><i class="fas fa-cogs"></i> Rule Set</h1>
-    <a href="/rule" class="btn btn-warning btn-sm">
+    <a href="/rule" class="btn btn-dark btn-sm">
       <i class="fas fa-hammer"></i> Add Rule
     </a>
   </header>
 
-  <ul class="nav nav-tabs" id="myTab" role="tablist">
-    <li class="nav-item" role="presentation">
-      <a class="nav-link active" id="filters-tab" data-bs-toggle="tab" href="#filters" role="tab" aria-controls="filters" aria-selected="false">Filters</a>
-    </li>
-    <li class="nav-item" role="presentation">
-      <a class="nav-link" id="addProject-tab" data-bs-toggle="tab" href="#addProject" role="tab" aria-controls="addProject" aria-selected="true">Add a Github Project</a>
-    </li>
-  </ul>
-  
-  <div class="tab-content" id="myTabContent">
-    <div class="tab-pane fade" id="addProject" role="tabpanel" aria-labelledby="addProject-tab">
-      <div class="card p-4 shadow-sm bg-light mb-3">
-        <h5><label for="url" class="form-label">URL for a Github project to add (YARA / Zeek / Sigma) </label></h5>
-        <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-          <div class="mb-3 flex-grow-1 me-2">
-            <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>
-          </div>
-          <div class="d-flex align-items-center" style="height: 100%;">
-            <button type="submit" class="btn btn-primary" style="max-width: fit-content; height: 100%;">
-              <i class="fas fa-paper-plane"></i> Send
-            </button>
-          </div>
-        </form>        
-      </div>
-      
-
-
-      <div class="card p-4 shadow-sm bg-light mb-3">
-        <h5><label for="url" class="form-label">GitHub project URL (YARA / Zeek / Sigma) — format verified</label></h5>
-        <form method="POST" action="{{ url_for('rule.test_yara_python_url') }}" class="d-flex">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-          <div class="mb-3 flex-grow-1 me-2">
-            <input type="text" name="url" class="form-control" id="url" placeholder="https://github.com/your_username/name_project.git" required>
-          </div>
-          <div class="d-flex align-items-center" style="height: 100%;">
-            <button type="submit" class="btn btn-primary" style="max-width: fit-content; height: 100%;">
-              <i class="fas fa-paper-plane"></i> Send
-            </button>
-          </div>
-        </form>        
-      </div>
-
-
-
-
-      <!-- categorize_and_parse_rules -->
-    </div>
-    
+  <div id="myTabContent">
     <div class="tab-pane fade show active" id="filters" role="tabpanel" aria-labelledby="filters-tab">
       <div class="card p-4 shadow-sm bg-light mb-3" >
         <h5 class="mb-4">Filters</h5>
@@ -115,7 +67,7 @@
   </div>
   
     
-  </div>
+  
   
 
 
@@ -127,7 +79,7 @@
         {% if current_user.is_authenticated %}
         <div class="d-flex">
           <template v-if="parseInt('{{current_user.id}}') == rule.user_id || current_user_is_admin">
-            <a :href="`/rule/edit_rule/${rule.id}`" class="btn btn-warning btn-sm me-2" title="Edit Rule">
+            <a :href="`/rule/edit_rule/${rule.id}`" class="btn btn-dark btn-sm me-2" title="Edit Rule">
               <i class="fas fa-pen"></i>
             </a>
             <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2" title="Delete Rule">
@@ -204,6 +156,7 @@
     </nav>
   </template>
   <i v-else class="text-muted">No rules found.</i>
+</div>
 </div>
 {% endblock %}
 
