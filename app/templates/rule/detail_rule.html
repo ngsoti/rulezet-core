@@ -292,13 +292,13 @@
                         <div class="form-group mb-4">
                             <label for="proposed_content" class="font-weight-bold">Modified Rule Content</label>
                             <textarea
-                                v-model="modifiedRuleContent"
+                                @input="onInput"
                                 id="proposed_content"
                                 name="proposed_content"
                                 class="form-control"
                                 placeholder="Paste your modified version of the rule here"
                                 style="white-space: pre-wrap;   min-height: 400px;"
-                            ></textarea>
+                            >{{ rule_content }}</textarea>
                         </div>
                         <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
                         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
@@ -306,11 +306,11 @@
 
                         <div class="form-group mb-4">
                             <label for="code_preview" class="font-weight-bold">Code Preview</label>
-                            <pre><code id="code_preview" class="language-bash">[[ modifiedRuleContent ]]</code></pre>
+                            <pre><code id="code_preview">[[ modifiedRuleContent ]]</code></pre>
                         </div>
                         
                         
-            
+                        
                         
                         
                     
@@ -378,8 +378,16 @@
             const total_comments = ref(0)
             const current_user_is_admin = ref()
             const newCommentContent = ref("");
-            const modifiedRuleContent = ref('{{ rule_content | tojson }}');
+            const modifiedRuleContent = ref('{{ rule_content }}');
             const currentRule = ref(0)
+
+
+            function onInput(e) {
+                modifiedRuleContent.value = e.target.value
+            }
+                
+
+
 
 
             async function fetchCurrentRule(){
@@ -511,7 +519,8 @@
                 modifiedRuleContent,
                 currentRule,
                 fetchCurrentRule,
-                vote
+                vote,
+                onInput
             };
         }
     }).mount('#main-container');
