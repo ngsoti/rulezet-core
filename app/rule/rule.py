@@ -395,22 +395,29 @@ def get_rules_propose_edit_page() -> jsonify:
     """Get all the changes propose"""
     page = request.args.get('page', 1, type=int)
     if current_user.is_admin():
-        rules_propose = RuleModel.get_rules_edit_propose_page_admin(page)
+        rules_propose = RuleModel.get_rules_edit_propose_page_admin()
         rules_pendings = RuleModel.get_rules_edit_propose_page_pending_admin(page)
+        total_rules_pending = RuleModel.get_total_change_to_check_admin()
     else:
-        rules_propose = RuleModel.get_rules_edit_propose_page(page)
+        rules_propose = RuleModel.get_rules_edit_propose_page()
         rules_pendings = RuleModel.get_rules_edit_propose_page_pending(page)
+        total_rules_pending = RuleModel.get_total_change_to_check()
+
     if rules_propose and rules_pendings:
-        rules_list = list()
-        for rule in rules_propose:
-            u = rule.to_json()
-            rules_list.append(u)
-        rules_pendings_list = list()
-        for rule_pending in rules_pendings:
-            m = rule_pending.to_json()
-            rules_pendings_list.append(m)
-        return {"rules_list": rules_list, "total_pages": rules_propose.pages, "rules_pendings_list": rules_pendings_list}
-    return {"message": "No Rule"}, 404
+        rules_list = [rule.to_json() for rule in rules_propose]
+        rules_pendings_list = [rule_pending.to_json() for rule_pending in rules_pendings]
+        return jsonify({
+            "rules_list": rules_list,
+            "total_pages_pending": rules_pendings.pages,
+            "rules_pendings_list": rules_pendings_list,
+            "total_rules_pending": total_rules_pending
+        })
+    return jsonify({"message": "No Rule"})
+
+
+
+
+
 
 @rule_blueprint.route('/propose_edit/<int:rule_id>', methods=['POST'])
 @login_required
@@ -548,13 +555,15 @@ def bad_rules_summary() -> render_template:
 @login_required
 def get_bad_rule() -> jsonify:
     """Get all the bad rules ( rule with incorrect format)"""
-    bad_rules = RuleModel.get_bad_rules_page()
+    page = request.args.get('page', 1, type=int)
+    bad_rules = RuleModel.get_bad_rules_page(page)
+    total_rules = RuleModel.get_count_bad_rules_page()
     if bad_rules:
         rules_list = list()
         for rule in bad_rules:
             u = rule.to_json()
             rules_list.append(u)
-        return {"rules": rules_list  , "user": current_user.first_name}
+        return {"rules": rules_list  , "user": current_user.first_name, "total_pages": bad_rules.pages, "total_rules": total_rules} 
     return {"message": "No Rule"}, 404
 
 

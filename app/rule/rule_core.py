@@ -225,7 +225,7 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content) -> bool:
 
 # Read
 
-def get_bad_rules_page(page=1, per_page=20) -> InvalidRuleModel:
+def get_bad_rules_page(page, per_page=20) -> InvalidRuleModel:
     """
     Returns paginated invalid rules. If current user is admin, returns all.
     Otherwise, returns only the current user's invalid rules.
@@ -246,6 +246,10 @@ def get_user_id_of_bad_rule(rule_id) -> id:
     """Get the user id of a bad rule with his id"""
     rule = InvalidRuleModel.query.get(rule_id)
     return rule.user_id
+
+def get_count_bad_rules_page() -> int:
+    """Return the count of bad rules"""
+    return InvalidRuleModel.query.count()
 
 # Delete
 
@@ -309,7 +313,10 @@ def propose_edit_core(rule_id, proposed_content, message=None) -> bool:
     db.session.commit()
     return True
 
-def get_rules_edit_propose_page(page) -> RuleEditProposal:
+# Read
+
+
+def get_rules_edit_propose_page(page = 1) -> RuleEditProposal:
     """Return all rule proposals where the original rule belongs to current user (simple join version)"""
     return RuleEditProposal.query.join(RuleEditProposal.rule).filter(
         Rule.user_id == current_user.id,
@@ -319,7 +326,6 @@ def get_rules_edit_propose_page(page) -> RuleEditProposal:
         per_page=20,
         max_per_page=20
     )
-
 
 def get_rules_edit_propose_page_pending(page) -> RuleEditProposal:
     """Return all pending rule proposals where the original rule belongs to current user"""
@@ -333,8 +339,9 @@ def get_rules_edit_propose_page_pending(page) -> RuleEditProposal:
     )
 
 
-def get_rules_edit_propose_page_admin(page) -> RuleEditProposal:
+def get_rules_edit_propose_page_admin() -> RuleEditProposal:
     """Return all non-pending rule edit proposals (admin view, no user filter)"""
+    page=1
     return RuleEditProposal.query.join(RuleEditProposal.rule).filter(
         RuleEditProposal.status != 'pending'
     ).paginate(
