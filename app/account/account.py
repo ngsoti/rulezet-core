@@ -23,7 +23,7 @@ def index() -> render_template:
     """Redirect to the user section"""
     return render_template("account/account_index.html", user=current_user)
 
-@account_blueprint.route("/edit", methods=['GET'])
+@account_blueprint.route("/edit", methods=['GET', "POST"])
 @login_required
 def edit_user() -> redirect:
     """Edit the user"""

@@ -1,7 +1,7 @@
 import datetime
 from flask_login import current_user
 from .. import db
-from ..db_class.db import Request, Rule, RuleFavoriteUser, User
+from ..db_class.db import RequestOwnerRule, Rule, RuleFavoriteUser, User
 from ..utils.utils import generate_api_key
 
 #####################
@@ -140,7 +140,7 @@ def get_all_user_favorites_with_rules(user_id: int):
 
 def create_request(rule, user_id, current_user):
     """Create or update an ownership request."""
-    existing_request = Request.query.filter_by(user_id=user_id, title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.author}").first()
+    existing_request = RequestOwnerRule.query.filter_by(user_id=user_id, title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.author}").first()
 
     if existing_request:
         existing_request.user_id_owner_rule = rule.user_id
@@ -151,7 +151,7 @@ def create_request(rule, user_id, current_user):
         return existing_request
 
 
-    new_request = Request(
+    new_request = RequestOwnerRule(
         user_id_owner_rule = rule.user_id,
         user_id=user_id,
         title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.author}",
@@ -168,10 +168,10 @@ def create_request(rule, user_id, current_user):
 
 def get_requests_page(page):
     """Return all requets by page"""
-    return Request.query.paginate(page=page, per_page=20, max_per_page=20)
+    return RequestOwnerRule.query.paginate(page=page, per_page=20, max_per_page=20)
 
 def update_request_status(request_id, status):
-    req = Request.query.get(request_id)
+    req = RequestOwnerRule.query.get(request_id)
     if req:
         req.status = status
         db.session.commit()
@@ -179,7 +179,7 @@ def update_request_status(request_id, status):
     return False
 
 def delete_request(request_id):
-    req = Request.query.get(request_id)
+    req = RequestOwnerRule.query.get(request_id)
     if req:
         db.session.delete(req)
         db.session.commit()
@@ -189,16 +189,16 @@ def delete_request(request_id):
 def get_request_by_id(request_id):
     if not request_id:
         return None
-    return Request.query.get(request_id)
+    return RequestOwnerRule.query.get(request_id)
 
 def get_request_rule_id(request_id):
     if not request_id:
         return None
-    request_obj = Request.query.get(request_id)
+    request_obj = RequestOwnerRule.query.get(request_id)
     return request_obj.rule_id if request_obj else None
 
 def get_request_user_id(request_id):
-    request_obj = Request.query.get(request_id)
+    request_obj = RequestOwnerRule.query.get(request_id)
     if request_obj:
         return request_obj.user_id
     return None
@@ -206,20 +206,20 @@ def get_request_user_id(request_id):
 
 def get_total_requests_to_check():
     """Return the total count of pending requests for rules owned by the current user."""
-    return Request.query.filter(
-        Request.status == "pending",
-        Request.user_id_owner_rule == current_user.id
+    return RequestOwnerRule.query.filter(
+        RequestOwnerRule.status == "pending",
+        RequestOwnerRule.user_id_owner_rule == current_user.id
     ).count()
 
 
 def get_requests_page_user(page):
     """Return all requests for the current user filtered by user_id_owner_rule"""
-    return Request.query.filter(Request.user_id_owner_rule == current_user.id).paginate(page=page, per_page=60, max_per_page=70)
+    return RequestOwnerRule.query.filter(RequestOwnerRule.user_id_owner_rule == current_user.id).paginate(page=page, per_page=60, max_per_page=70)
 
 
 def is_the_owner(request_id):
     """Return True if the current user is the owner of the request"""
-    request = Request.query.get(request_id)
+    request = RequestOwnerRule.query.get(request_id)
     if request and request.user_id_owner_rule == current_user.id:
         return True
     return False
@@ -227,4 +227,4 @@ def is_the_owner(request_id):
 
 def get_total_requests_to_check_admin():
     """Return the total count of requests with status 'pending'."""
-    return Request.query.filter_by(status="pending").count()
+    return RequestOwnerRule.query.filter_by(status="pending").count()

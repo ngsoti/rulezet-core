@@ -52,7 +52,6 @@ def get_current_user_connected() -> jsonify:
     if current_user.is_authenticated:
         return jsonify({"is_authenticated": True, "user_id": current_user.id})
     else:
-        print(current_user.is_authenticated)
         return jsonify({"is_authenticated": False})
 
 ######################

@@ -289,34 +289,55 @@
                 <div class="card-body">
                     <form action="{{ url_for('rule.propose_edit', rule_id=rule.id) }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <div class="form-group mb-4">
-                            <label for="proposed_content" class="font-weight-bold">Modified Rule Content</label>
-                            <textarea
-                                @input="onInput"
-                                id="proposed_content"
-                                name="proposed_content"
-                                class="form-control"
-                                placeholder="Paste your modified version of the rule here"
-                                style="white-space: pre-wrap;   min-height: 400px;"
-                            >{{ rule_content }}</textarea>
+
+                        <!-- Tabs nav -->
+                        <ul class="nav nav-tabs mb-3" id="editTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab" aria-controls="edit" aria-selected="true">
+                                    <i class="fas fa-edit"></i> Modify Content
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-controls="preview" aria-selected="false">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Tabs content -->
+                        <div class="tab-content" id="editTabsContent">
+                            <!-- Modify Content Tab -->
+                            <div class="tab-pane fade show active" id="edit" role="tabpanel" aria-labelledby="edit-tab">
+                                <div class="form-group mb-4">
+                                    <label for="proposed_content" class="fw-bold">Modified Rule Content</label>
+                                    <textarea
+                                        @input="onInput"
+                                        id="proposed_content"
+                                        name="proposed_content"
+                                        class="form-control"
+                                        placeholder="Paste your modified version of the rule here"
+                                        style="white-space: pre-wrap; min-height: 400px;"
+                                    >{{ rule_content }}</textarea>
+                                </div>
+                            </div>
+
+                            <!-- Preview Tab -->
+                            <div class="tab-pane fade" id="preview" role="tabpanel" aria-labelledby="preview-tab">
+                                <div class="form-group mb-4">
+                                    <label for="code_preview" class="fw-bold">Code Preview</label>
+                                    <pre><code id="code_preview" class="language-bash">[[ modifiedRuleContent ]]</code></pre>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- PrismJS for syntax highlighting -->
                         <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
                         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
                         <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
 
+                        <!-- Optional message -->
                         <div class="form-group mb-4">
-                            <label for="code_preview" class="font-weight-bold">Code Preview</label>
-                            <pre><code id="code_preview" >[[ modifiedRuleContent ]]</code></pre>
-                        </div>
-                        
-                        
-                        
-                        
-                        
-                    
-                        
-                        <div class="form-group mb-4">
-                            <label for="message" class="font-weight-bold">Message or Justification (optional)</label>
+                            <label for="message" class="fw-bold">Message or Justification (optional)</label>
                             <input 
                                 id="message" 
                                 type="text" 
@@ -325,6 +346,8 @@
                                 placeholder="Explain the changes you made or provide any additional context"
                             >
                         </div>
+
+                        <!-- Submit button -->
                         <div class="d-flex justify-content-end">
                             <button type="submit" class="btn btn-warning">
                                 <i class="fas fa-paper-plane"></i> Submit Proposal
@@ -340,6 +363,7 @@
                 </div>
             </div>
             {% endif %}
+
             
         </div>     
         <div class="text-center mt-4 mb-5">

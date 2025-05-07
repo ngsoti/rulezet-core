@@ -1,4 +1,5 @@
 import shutil
+from app.import_github_project.untils_import import delete_existing_repo_folder
 from app.rule.import_licenses.rule_licence import fetch_and_save_licenses
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -33,6 +34,8 @@ def create_app():
     login_manager.init_app(app)
     app.config["SESSION_SQLALCHEMY"] = db
     sess.init_app(app)
+
+    delete_existing_repo_folder("Rules_Github")
 
     # take all the licenses 
     # fetch_and_save_licenses()

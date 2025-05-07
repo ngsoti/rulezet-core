@@ -16,61 +16,61 @@
 
     <div class="tab-content mt-4">
         <div class="tab-pane fade show active" id="pending" role="tabpanel">
-            <div class="row">
-                <template v-if="rules_pendings_list && rules_pendings_list.length > 0">
-                    <div class="col-md-6 mb-3" v-for="(rule, index) in rules_pendings_list" :key="rule.id">
-                        <div class="card shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h5 class="card-title mb-0">
-                                        Rule # [[ rule.rule_id ]]
-                                    </h5>
-                                    <span class="badge"
-                                        :class="{
-                                            'bg-secondary': rule.status === 'pending',
-                                            'bg-success': rule.status === 'accepted',
-                                            'bg-danger': rule.status === 'rejected'
-                                        }">
-                                        [[ rule.status ]]
-                                    </span>
-                                </div>
-        
-                                <p class="text-muted small mb-2">A new edit has been proposed.</p>
-        
-                                <div class="d-flex flex-wrap gap-2 mb-2">
-                                    <!-- Accept Button -->
-                                    <button class="btn btn-outline-success btn-sm d-inline-flex align-items-center"
-                                            @click="handleDecision(rule.id, 'accepted', rule.rule_id, index)">
-                                        <i class="fas fa-check me-1"></i> Accept
-                                    </button>
-                                
-                                    <!-- Reject Button -->
-                                    <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center"
-                                            @click="handleDecision(rule.id, 'rejected', rule.rule_id, index)">
-                                        <i class="fas fa-times me-1"></i> Reject
-                                    </button>
-                                
-                                    <!-- Toggle Details Button -->
-                                    <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center"
-                                            type="button"
-                                            data-bs-toggle="collapse"
-                                            :data-bs-target="'#collapseDetails' + rule.id"
-                                            aria-expanded="false"
-                                            :aria-controls="'collapseDetails' + rule.id">
-                                        <i class="fas fa-eye me-1"></i> Details
-                                    </button>
-                                
-                                    <!-- Discuss Content Link -->
-                                    <a :href="'/rule/proposal_content_discuss'"
-                                        class="btn btn-outline-primary btn-sm d-inline-flex align-items-center">
-                                        <i class="fas fa-comments me-1 text-info"></i> Discuss
-                                    </a>
-                                </div>
-                                
-        
-                                <!-- COLLAPSIBLE DETAILS -->
-                                <div class="collapse" :id="'collapseDetails' + rule.id">
-                                    <div class="mt-3">
+            <template v-if="rules_pendings_list && rules_pendings_list.length > 0">
+                <div  v-for="(rule, index) in rules_pendings_list" :key="rule.id">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">
+                                    Rule # [[ rule.rule_id ]]
+                                </h5>
+                                <span class="badge"
+                                    :class="{
+                                        'bg-secondary': rule.status === 'pending',
+                                        'bg-success': rule.status === 'accepted',
+                                        'bg-danger': rule.status === 'rejected'
+                                    }">
+                                    [[ rule.status ]]
+                                </span>
+                            </div>
+    
+                            <p class="text-muted small mb-2">A new edit has been proposed.</p>
+    
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <!-- Accept Button -->
+                                <button class="btn btn-outline-success btn-sm d-inline-flex align-items-center"
+                                        @click="handleDecision(rule.id, 'accepted', rule.rule_id, index)">
+                                    <i class="fas fa-check me-1"></i> Accept
+                                </button>
+                            
+                                <!-- Reject Button -->
+                                <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center"
+                                        @click="handleDecision(rule.id, 'rejected', rule.rule_id, index)">
+                                    <i class="fas fa-times me-1"></i> Reject
+                                </button>
+                            
+                                <!-- Toggle Details Button -->
+                                <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        :data-bs-target="'#collapseDetails' + rule.id"
+                                        aria-expanded="false"
+                                        :aria-controls="'collapseDetails' + rule.id">
+                                    <i class="fas fa-eye me-1"></i> Details
+                                </button>
+                            
+                                <!-- Discuss Content Link -->
+                                <a :href="'/rule/proposal_content_discuss'"
+                                    class="btn btn-outline-primary btn-sm d-inline-flex align-items-center">
+                                    <i class="fas fa-comments me-1 text-info"></i> Discuss
+                                </a>
+                            </div>
+                            
+    
+                            <!-- COLLAPSIBLE DETAILS -->
+                            <div class="collapse" :id="'collapseDetails' + rule.id">
+                                <div class="row mt-3">
+                                    <div class="col-md-6 mb-3">
                                         <strong>Proposed Content:</strong>
                                         <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
                                             <div v-for="(line, i) in getProposedContentLines(rule.proposed_content)" :key="i">
@@ -82,8 +82,10 @@
                                                 </span>
                                             </div>
                                         </div>
-        
-                                        <strong class="mt-3 d-block">Old Content:</strong>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <strong>Old Content:</strong>
                                         <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
                                             <div v-for="(line, i) in getOldContentLines(rule.old_content)" :key="i">
                                                 <span v-if="line.trim() !== ''" :class="{
@@ -97,19 +99,18 @@
                                     </div>
                                 </div>
                             </div>
+                            
                         </div>
                     </div>
-                </template>
-        
-                <template v-else>
-                    <div class="text-center mt-5">
-                        <p class="text-muted">No proposed edits found.</p>
-                    </div>
-                </template>
-            </div>
+                </div>
+            </template>
+    
+            <template v-else>
+                <div class="text-center mt-5">
+                    <p class="text-muted">No proposed edits found.</p>
+                </div>
+            </template>
         </div>
-        
-
         <div class="tab-pane fade" id="history" role="tabpanel">
             <div class="table-responsive">
                 <table class="table table-bordered align-middle">
@@ -187,8 +188,6 @@
                     </tbody>
                 </table>
             </div>
-        </div>
-        
         </div>
     </div>
 </div>

@@ -15,23 +15,17 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(64), index=True)
     last_name = db.Column(db.String(64), index=True)
     email = db.Column(db.String(64), unique=True, index=True)
-    role_id = db.Column(db.Integer, index=True)
+    admin = db.Column(db.Boolean, default=False, index=True)
     password_hash = db.Column(db.String(128))
     api_key = db.Column(db.String(60), index=True)
 
     def is_admin(self):
         """Check if the user has admin privileges."""
-        role = Role.query.get(self.role_id)
-        return role.admin if role else False
+        return self.admin
     
     
     def get_first_name(self):
         return self.first_name 
-
-    def is_read_only(self):
-        """Check if the user has read-only access."""
-        role = Role.query.get(self.role_id)
-        return role.read_only if role else False
 
     @property
     def password(self):
@@ -52,7 +46,7 @@ class User(UserMixin, db.Model):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "email": self.email,
-            "role_id": self.role_id
+            "admin": self.admin
         }
 
 class AnonymousUser(AnonymousUserMixin):
@@ -67,23 +61,6 @@ class AnonymousUser(AnonymousUserMixin):
 # Register AnonymousUser as the default for anonymous visitors
 login_manager.anonymous_user = AnonymousUser
 
-class Role(db.Model):
-    """Role model that defines user permissions."""
-    
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String(64), index=True, unique=True)
-    description = db.Column(db.String, nullable=True)
-    admin = db.Column(db.Boolean, default=False)
-    read_only = db.Column(db.Boolean, default=False)
-
-    def to_json(self):
-        return {
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "admin": self.admin,
-            "read_only": self.read_only
-        }
 
 class Rule(db.Model):
     """Rule model to store and describe various rules."""
@@ -187,7 +164,7 @@ class Comment(db.Model):
 
 
 
-class Request(db.Model):
+class RequestOwnerRule(db.Model):
     """Model for user-submitted requests visible by admins."""
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

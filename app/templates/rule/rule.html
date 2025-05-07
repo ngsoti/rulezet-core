@@ -121,7 +121,7 @@
         <!-- GitHub project URL tab -->
         <div class="tab-pane fade " id="github" role="tabpanel">
             <div class="card p-4 shadow-sm bg-light mb-3">
-                <h5><label for="url" class="form-label">GitHub project URL (YARA / Zeek / Sigma) — format verified</label></h5>
+                <h5><label for="url" class="form-label">GitHub project URL (YARA / Zeek / Sigma) — format verified (HTTPS)</label></h5>
                 <form method="POST" action="{{ url_for('rule.test_yara_python_url') }}" class="d-flex">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-3 flex-grow-1 me-2">
