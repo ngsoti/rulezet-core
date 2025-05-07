@@ -52,8 +52,8 @@ def count_braces_outside_strings(line):
 def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules/Yara"):
     """
     Retrieve all YARA rules from a Git repository and save each rule exactly as it is
-    without any modification.
-    Each rule is saved in a file named after the rule's title.
+    without any modification. Each rule is saved in a file named after the rule's title.
+    If there are any imports in the YARA file, they will be included before the rule itself.
     """
     
     # Clone or access the given repository
@@ -74,13 +74,20 @@ def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules/Yara"):
         brace_count = 0
         current_rule_lines = []
         rule_index = 0
+        imports = []
 
         # Read each line of the YARA file
         for line in lines:
             stripped = line.strip()
 
+            # Detect imports in the file and store them
+            if re.match(r'^\s*import\s+', stripped):
+                imports.append(stripped)
+                continue  
+
             # Check if the line starts a new rule
             if not inside_rule and re.match(r'^\s*rule\b', stripped):
+
                 inside_rule = True
                 brace_count = 0
                 current_rule_lines = [line]
@@ -105,23 +112,96 @@ def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules/Yara"):
                     else:
                         rule_title_final = f"Untitled_{rule_index}"
 
+                    # Prepare the final rule with imports included at the top if any
+                    final_rule = '\n'.join(imports) + '\n' + raw_rule.strip()
+
                     # Generate a safe file name using the rule title
                     file_name = f"{rule_title_final}.yar"
                     file_path = os.path.join(output_dir, file_name)
 
-                    # Write the rule to a new file
+                    # Write the rule (including imports) to a new file
                     with open(file_path, 'w', encoding="utf-8") as output_file:
-                        output_file.write(raw_rule.strip())
+                        output_file.write(final_rule)
 
                     rule_index += 1
                     inside_rule = False
                     current_rule_lines = []
+
+
     return repo_dir
+# def save_yara_rules_as_is(repo_url, output_dir="app/rule/output_rules/Yara"):
+#     """
+#     Retrieve all YARA rules from a Git repository and save each rule exactly as it is
+#     without any modification.
+#     Each rule is saved in a file named after the rule's title.
+#     """
+    
+#     # Clone or access the given repository
+#     repo_dir = clone_or_access_repo(repo_url)
+    
+#     # Get the list of YARA files from the repository
+#     yara_files = get_yara_files_from_repo(repo_dir)
+
+#     # Ensure the output directory exists
+#     os.makedirs(output_dir, exist_ok=True)
+
+#     # Process each YARA file
+#     for yara_file in yara_files:
+#         with open(yara_file, 'r', encoding="utf-8", errors="ignore") as file:
+#             lines = file.readlines()
+
+#         inside_rule = False
+#         brace_count = 0
+#         current_rule_lines = []
+#         rule_index = 0
+
+#         # Read each line of the YARA file
+#         for line in lines:
+#             stripped = line.strip()
+
+#             # Check if the line starts a new rule
+#             if not inside_rule and re.match(r'^\s*rule\b', stripped):
+#                 inside_rule = True
+#                 brace_count = 0
+#                 current_rule_lines = [line]
+
+#                 # Count braces on the first line outside of quotes
+#                 brace_count += count_braces_outside_strings(line)
+
+#             # Process lines inside the rule
+#             elif inside_rule:
+#                 current_rule_lines.append(line)
+#                 brace_count += count_braces_outside_strings(line)
+
+#                 # If brace count reaches zero, the rule is complete
+#                 if brace_count == 0:
+#                     # Join all lines of the rule
+#                     raw_rule = ''.join(current_rule_lines)
+
+#                     # Extract the rule title, supporting both "rule" and "rule:"
+#                     title_match = re.search(r'\brule\s*:?\s*([^\s{(]+)', raw_rule)
+#                     if title_match:
+#                         rule_title_final = title_match.group(1).strip()
+#                     else:
+#                         rule_title_final = f"Untitled_{rule_index}"
+
+#                     # Generate a safe file name using the rule title
+#                     file_name = f"{rule_title_final}.yar"
+#                     file_path = os.path.join(output_dir, file_name)
+
+#                     # Write the rule to a new file
+#                     with open(file_path, 'w', encoding="utf-8") as output_file:
+#                         output_file.write(raw_rule.strip())
+
+#                     rule_index += 1
+#                     inside_rule = False
+#                     current_rule_lines = []
+#     return repo_dir
 
 
 def read_and_parse_all_yara_rules_from_folder_test(license_from_github, repo_url):
     """
-    Read all .yar files in the folder, validate and extract metadata into JSON format.
+    Read all .yar files in the folder, validate and extract metadata into JSON format. 
     """
     folder_path="app/rule/output_rules/Yara"
     rules_json = []
