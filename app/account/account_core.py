@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from flask_login import current_user
 from .. import db
 from ..db_class.db import Request, Rule, RuleFavoriteUser, User
@@ -168,7 +168,7 @@ def create_request(rule, user_id, current_user):
 
 def get_requests_page(page):
     """Return all requets by page"""
-    return Request.query.paginate(page=page, per_page=60, max_per_page=70)
+    return Request.query.paginate(page=page, per_page=20, max_per_page=20)
 
 def update_request_status(request_id, status):
     req = Request.query.get(request_id)

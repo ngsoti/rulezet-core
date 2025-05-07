@@ -117,17 +117,16 @@ createApp({
         });
 
         async function fetchRequests(page = 1) {
-            try {
-                const res = await fetch(`/get_requests_page?page=${page}`);
-                if (!res.ok) throw new Error("Failed to load requests");
+            const res = await fetch(`/get_requests_page?page=${page}`);
+            if(res){
                 const data = await res.json();
                 requests_list.value = data.requests_list;
                 totalPages.value = data.requests_pages;
                 currentPage.value = page;
                 total_requests.value = total_requests;
-            } catch (error) {
-                message_list("Failed to load requests.", "danger");
             }
+            
+   
         }
 
         async function updateStatus(request_id, status) {

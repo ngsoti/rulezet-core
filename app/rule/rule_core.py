@@ -309,28 +309,17 @@ def propose_edit_core(rule_id, proposed_content, message=None) -> bool:
     db.session.commit()
     return True
 
-# def get_rules_edit_propose_page(page):
-#     """Return all rules by page"""
-#     return RuleEditProposal.query.paginate(page=page, per_page=60, max_per_page=70)
-
-# def get_rules_edit_propose_page_pending(page):
-#     return RuleEditProposal.query.filter_by(status='pending').paginate(
-#         page=page,
-#         per_page=60,
-#         max_per_page=70
-#     )
-
-# Read
-
 def get_rules_edit_propose_page(page) -> RuleEditProposal:
-    """Return all rule proposals where the original rule belongs to current user"""
-    return RuleEditProposal.query.join(Rule).filter(
-        Rule.user_id == current_user.id
-    ).options(joinedload(RuleEditProposal.rule)).paginate(
+    """Return all rule proposals where the original rule belongs to current user (simple join version)"""
+    return RuleEditProposal.query.join(RuleEditProposal.rule).filter(
+        Rule.user_id == current_user.id,
+        RuleEditProposal.status != 'pending'
+    ).paginate(
         page=page,
         per_page=20,
         max_per_page=20
     )
+
 
 def get_rules_edit_propose_page_pending(page) -> RuleEditProposal:
     """Return all pending rule proposals where the original rule belongs to current user"""
@@ -343,10 +332,11 @@ def get_rules_edit_propose_page_pending(page) -> RuleEditProposal:
         max_per_page=20
     )
 
+
 def get_rules_edit_propose_page_admin(page) -> RuleEditProposal:
-    """Return all rule edit proposals (admin view, no user filter)"""
-    return RuleEditProposal.query.options(
-        joinedload(RuleEditProposal.rule)
+    """Return all non-pending rule edit proposals (admin view, no user filter)"""
+    return RuleEditProposal.query.join(RuleEditProposal.rule).filter(
+        RuleEditProposal.status != 'pending'
     ).paginate(
         page=page,
         per_page=20,
@@ -355,16 +345,13 @@ def get_rules_edit_propose_page_admin(page) -> RuleEditProposal:
 
 def get_rules_edit_propose_page_pending_admin(page) -> RuleEditProposal:
     """Return all pending rule edit proposals (admin view, no user filter)"""
-    return RuleEditProposal.query.filter(
+    return RuleEditProposal.query.join(Rule).filter(
         RuleEditProposal.status == 'pending'
-    ).options(
-        joinedload(RuleEditProposal.rule)
     ).paginate(
         page=page,
         per_page=20,
         max_per_page=20
     )
-
 
 def get_rule_proposal(id) -> RuleEditProposal:
     """Return the rule"""

@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 from .rule import rule_core as RuleModel
 from .account import account_core as AccountModel
 
+
 home_blueprint = Blueprint(
     'home',
     __name__,
@@ -58,7 +59,7 @@ def get_current_user_connected() -> jsonify:
 #   Request section  #
 ######################
 
-@home_blueprint.route("/owner_request", methods=["POST"])
+@home_blueprint.route("/owner_request", methods=["POST", "GET"])
 @login_required
 def owner_request() -> redirect:
     """Get all the request to validate"""
@@ -77,7 +78,7 @@ def owner_request() -> redirect:
         flash("An error occurred while submitting the request.", "danger")
     return redirect(url_for("home.home"))
 
-@home_blueprint.route("/admin/request", methods=["POST"])
+@home_blueprint.route("/admin/request", methods=["POST", "GET"])
 @login_required
 def admin_requests() -> render_template:
     """Redirect to request section"""
@@ -106,9 +107,9 @@ def get_requests_page() -> json:
             "requests_pages": requests_paginated.pages,  
             "total_requests": total_requests
         }
-    return {"message": "No requests found"}, 404
+    return {"message": "No requests found"}
 
-@home_blueprint.route("/update_request", methods=["POST"])
+@home_blueprint.route("/update_request", methods=["POST","GET" ])
 @login_required
 def update_request_status() -> jsonify:
     """Update the request for vue JS"""
