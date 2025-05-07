@@ -7,8 +7,8 @@ from sqlalchemy import case, or_
 import yaml
 import yara
 from app.account.account_core import get_user
-from app.import_github_project.test_Sigma import load_json_schema
-from app.import_github_project.test_yara import extract_first_match
+from app.import_github_project.import_github_sigma import load_json_schema
+from app.import_github_project.import_github_yara import extract_first_match
 from app.import_github_project.untils_import import clean_rule_filename_Yara
 from .. import db
 from ..db_class.db import *

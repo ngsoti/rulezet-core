@@ -9,20 +9,27 @@ from git import Repo
 import requests
 
 
+# def get_repo_name_from_url(repo_url):
+#     """Extract the repository name from its Git URL."""
+#     # delete the last /  if there is and we split with /  the different part of the url to take the last ( the titile ) "https://github.com/user/repo" → ["https:", "", "github.com", "user", "repo"]
+#     name = repo_url.rstrip('/').split('/')[-1]
+#     # in many case there is .hit juste after the title 
+#     if name.endswith('.git'):
+#         name = name[:-4] #remove the 4 last letter .git to have the complete title
+#     return name
 def get_repo_name_from_url(repo_url):
-    """Extract the repository name from its Git URL."""
-    # delete the last /  if there is and we split with /  the different part of the url to take the last ( the titile ) "https://github.com/user/repo" → ["https:", "", "github.com", "user", "repo"]
-    name = repo_url.rstrip('/').split('/')[-1]
-    # in many case there is .hit juste after the title 
-    if name.endswith('.git'):
-        name = name[:-4] #remove the 4 last letter .git to have the complete title
-    return name
-    
+    """Extract the full repository path (owner/repo) from its Git URL."""
+    parts = repo_url.rstrip('/').split('/')
+    if len(parts) < 2:
+        return None  # URL invalide
+    owner = parts[-2]
+    repo = parts[-1]
+    if repo.endswith('.git'):
+        repo = repo[:-4]
+    return f"{owner}/{repo}"
+  
     # get_repo_name_from_url("https://github.com/user/mon-depot.git")
-    # Résultat : "mon-depot"
-
-    # get_repo_name_from_url("https://github.com/user/mon-depot/")
-    # Résultat : "mon-depot"
+    # result : "mon-depot"
 
 
 
@@ -57,29 +64,6 @@ def delete_existing_repo_folder(local_dir):
     if os.path.exists(local_dir):
         shutil.rmtree(local_dir)
 
-
-
-def get_license_file_from_github_repo(repo_dir):
-    """Retrieve the first line of the license from a GitHub repository folder."""
-
-    # list of differents names of license file
-    possible_filenames = [
-        "LICENSE", "LICENSE.txt", "LICENSE.md", "LICENSE.rst",
-        "COPYING", "COPYING.txt", "COPYING.md"
-    ]
-
-    for filename in possible_filenames:
-        license_path = os.path.join(repo_dir, filename)
-        if os.path.isfile(license_path):
-            with open(license_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    first_line = line.strip()
-                    if first_line:  # Ignore blank lines
-                        return first_line
-                return "(Empty license file)"
-    
-    return "(No license file found)"
-
 def clean_rule_filename_Yara(filename):
     if filename.lower().endswith(('.yar', '.yara')):
         return filename.rsplit('.', 1)[0]
@@ -111,4 +95,23 @@ def get_license_name(owner, repo):
     else:
         return f"(Error: {response.status_code})"
 
+def get_license_file_from_github_repo(repo_dir):
+    """Retrieve the first line of the license from a GitHub repository folder."""
 
+    # list of differents names of license file
+    possible_filenames = [
+        "LICENSE", "LICENSE.txt", "LICENSE.md", "LICENSE.rst",
+        "COPYING", "COPYING.txt", "COPYING.md"
+    ]
+
+    for filename in possible_filenames:
+        license_path = os.path.join(repo_dir, filename)
+        if os.path.isfile(license_path):
+            with open(license_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    first_line = line.strip()
+                    if first_line:  # Ignore blank lines
+                        return first_line
+                return "(Empty license file)"
+    
+    return "(No license file found)"

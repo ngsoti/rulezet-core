@@ -4,10 +4,9 @@ from flask import Blueprint, Response, jsonify, redirect, request, render_templa
 from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
 from app.db_class.db import RuleFavoriteUser
-from app.import_github_project.read_github_YARA import save_yara_rules_as_is
-from app.import_github_project.read_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
-from app.import_github_project.test_Sigma import load_rule_files
-from app.import_github_project.test_yara import read_and_parse_all_yara_rules_from_folder_test
+from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
+from app.import_github_project.import_github_sigma import load_rule_files
+from app.import_github_project.import_github_yara import read_and_parse_all_yara_rules_from_folder_test, save_yara_rules_as_is
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_license_name
 from .rule_form import AddNewRuleForm, EditRuleForm
 from ..utils.utils import form_to_dict
