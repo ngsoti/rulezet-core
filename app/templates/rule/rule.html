@@ -124,29 +124,44 @@
             </div>
         </div>
 
-        <!-- GitHub project URL tab -->
-        <div class="tab-pane fade " id="github" role="tabpanel">
+
+        <div class="tab-pane fade" id="github" role="tabpanel">
             <div class="card p-4 shadow-sm bg-light mb-3">
-                <h5><label for="url" class="form-label">GitHub project URL (YARA / Zeek / Sigma) — format verified (HTTPS)</label></h5>
-                <form method="POST" action="{{ url_for('rule.test_yara_python_url') }}" class="d-flex flex-column">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <h5>
+                <label for="url" class="form-label">
+                GitHub project URL (YARA / Zeek / Sigma) — format verified (HTTPS)
+                </label>
+            </h5>
+            
+            <form method="POST" action="{{ url_for('rule.test_yara_python_url') }}" class="d-flex flex-column" id="github-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+                <div class="mb-3 d-flex">
+                <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/name_project.git" required>
+                </div>
+        
+                <div id="dynamic-fields" class="mb-3"></div>
+        
+                <div class="mb-3">
+                <button type="button" class="btn btn-secondary" onclick="addField(2)">
+                    Add external variables
+                </button>
+                </div>
+        
+                <div class="d-flex align-items-center">
+                <button type="submit" class="btn btn-primary" id="submit-button">
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
                 
-                    <div class="mb-3 d-flex">
-                        <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/name_project.git" required>
+                <!-- Spinner hidden by default -->
+                <div id="loading-spinner" class="ms-3" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                     </div>
-                
-                    <div id="dynamic-fields" class="mb-3"></div>
-                
-                    <div class="mb-3">
-                        <button type="button" class="btn btn-secondary" onclick="addField(2)" title="Compile the YARA rules with external variables will cause errors stating an undefined identifier. Please click this button to add as many external variables as you need.">add external variables</button>
-                    </div>
-                
-                    <div class="d-flex align-items-center">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-paper-plane"></i> Send
-                        </button>
-                    </div>
-                </form>     
+                    <strong>Processing rules...</strong>
+                </div>
+                </div>
+            </form>
             </div>
         </div>
     </div>
@@ -202,9 +217,20 @@
 
     container.appendChild(row);
 }
-
 </script>
+<script>
+    // spin for the github import
+    document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("github-form");
+    const spinner = document.getElementById("loading-spinner");
+    const button = document.getElementById("submit-button");
 
+    form.addEventListener("submit", function () {
+        spinner.style.display = "block";      
+        button.disabled = true;               
+    });
+    });
+</script>
 <script type="module">
     // Import Vue and custom toaster messages
     const { createApp, ref } = Vue;

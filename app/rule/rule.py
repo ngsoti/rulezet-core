@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from math import ceil
-from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for
+import threading
+from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, session, url_for
 from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
 from app.db_class.db import RuleFavoriteUser
@@ -691,6 +692,4 @@ def delete_bad_rule(rule_id) -> jsonify:
         return render_template('rule/edit_bad_rule.html', rule=bad_rule)
     else:
         return render_template("access_denied.html")
-
-
 

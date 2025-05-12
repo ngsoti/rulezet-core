@@ -59,7 +59,7 @@ def parse_suricata_rules_from_file(repo_dir, license_from_github, repo_url, info
 
 
 
-
+###########################################################--------don't-work-----------####################################
 def test_suricata_rule(rule_file) -> bool:
     """test if the rule is"""
     command = [
