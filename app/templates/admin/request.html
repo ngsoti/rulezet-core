@@ -139,10 +139,10 @@ createApp({
             const res = await fetch(`/get_requests_page?page=${page}`);
             if(res){
                 const data = await res.json();
-                requests_list.value = data.requests_list;
+                requests_list.value = data.requests_list || [];
                 totalPages.value = data.requests_pages;
                 currentPage.value = page;
-                total_requests.value = total_requests;
+                total_requests.value = data.total_requests;
             }
             
    

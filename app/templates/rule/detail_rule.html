@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% import 'macros/form_macros.html' as f %}
 
 {% block content %}
@@ -279,7 +279,7 @@
             </div>            
             <div id="rule_id" data-rule-id="{{ rule.id }}"></div>
         </div>
-        <textarea id="ruleContentToCopy" style="display: none;">{{ rule.to_string }}</textarea>
+        
         <div class="tab-pane fade" id="2" role="tabpanel">
             {% if current_user.is_authenticated %}
             <div class="card shadow-sm mb-4">
@@ -293,12 +293,12 @@
                         <!-- Tabs nav -->
                         <ul class="nav nav-tabs mb-3" id="editTabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab" aria-controls="edit" aria-selected="true">
+                                <button class="nav-link " id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab" aria-controls="edit" aria-selected="true">
                                     <i class="fas fa-edit"></i> Modify Content
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-controls="preview" aria-selected="false">
+                                <button class="nav-link active" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-controls="preview" aria-selected="false">
                                     <i class="fas fa-eye"></i> Preview
                                 </button>
                             </li>
@@ -307,33 +307,59 @@
                         <!-- Tabs content -->
                         <div class="tab-content" id="editTabsContent">
                             <!-- Modify Content Tab -->
-                            <div class="tab-pane fade show active" id="edit" role="tabpanel" aria-labelledby="edit-tab">
+                            <div class="tab-pane fade" id="edit" role="tabpanel" aria-labelledby="edit-tab">
                                 <div class="form-group mb-4">
                                     <label for="proposed_content" class="fw-bold">Modified Rule Content</label>
-                                    <textarea
-                                        @input="onInput"
-                                        id="proposed_content"
-                                        name="proposed_content"
-                                        class="form-control"
-                                        placeholder="Paste your modified version of the rule here"
-                                        style="white-space: pre-wrap; min-height: 400px;"
-                                    >{{ rule_content }}</textarea>
+                                    <div class="container mt-4">
+                                        <div class="form-group mb-3">
+                                            <label for="languageSelect">Langage :</label>
+                                            <select class="form-select" id="languageSelect">
+                                                <option value="javascript">JavaScript</option>
+                                                <option value="python">Python</option>
+                                                <option value="css">CSS</option>
+                                                <option value="xml">HTML/XML</option>
+                                            </select>
+                                        </div>
+                                    
+                                        <div class="form-group mb-3">
+                                            <label for="themeSelect">Theme :</label>
+                                            <select class="form-select" id="themeSelect">
+                                                <option value="default">Default</option>
+                                                <option value="dracula">Dracula</option>
+                                                <option value="monokai">Monokai</option>
+                                                <option value="eclipse">Eclipse</option>
+                                                <option value="material">Material</option>
+                                            </select>
+                                        </div>
+                                    
+                                        <div class="editorContainer" style="min-height: 300px;" ></div>
+                                    </div>
+                                    
+                                    <style>
+                                        .CodeMirror {
+                                            height: 500px;
+                                            border: 1px solid #ddd;
+                                            margin-top: 20px;
+                                            font-size: 14px;
+                                        }
+                                    </style>
+                                    <!-- Hidden textarea to submit editor content -->
+                                    <textarea name="proposed_content" id="proposed_content" hidden></textarea>
+
                                 </div>
                             </div>
 
                             <!-- Preview Tab -->
-                            <div class="tab-pane fade" id="preview" role="tabpanel" aria-labelledby="preview-tab">
+                            <div class="tab-pane fade show active" id="preview" role="tabpanel" aria-labelledby="preview-tab">
                                 <div class="form-group mb-4">
                                     <label for="code_preview" class="fw-bold">Code Preview</label>
-                                    <pre><code id="code_preview" class="language-bash">[[ modifiedRuleContent ]]</code></pre>
+                                    <pre><code id="code_preview" class="language-bash"></code></pre>
                                 </div>
                             </div>
+                            
                         </div>
 
-                        <!-- PrismJS for syntax highlighting -->
-                        <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
-                        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-                        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+                        <textarea id="ruleRaw" hidden>{{ rule.to_string }}</textarea>
 
                         <!-- Optional message -->
                         <div class="form-group mb-4">
@@ -355,6 +381,7 @@
                         </div>
                     </form>
                 </div>
+                
             </div>
             {% else %}
             <div class="card shadow-sm mb-4">
@@ -376,22 +403,79 @@
         </div>
             
     </div>
-    
-        
+    </div>
 </div>
-
-
-
-
-
-
-
-
 {% endblock %}
 
 {% block script %}
+<script>
+    const ruleContent = document.getElementById('ruleRaw').value;
+    let editor = null;
+
+    function initEditor() {
+        const container = document.querySelector('.editorContainer');
+        if (!container || container.children.length > 0) return;
+
+        editor = CodeMirror(container, {
+            lineNumbers: true,
+            mode: 'python', 
+            theme: 'default',
+            value:  ruleContent
+        });
+
+        editor.on('change', () => {
+            const proposedField = document.getElementById('proposed_content');
+            if (editor) {
+                proposedField.value = editor.getValue();
+            }
+            
+        });
+
+        function updatePreview() {
+            const previewElement = document.getElementById('code_preview');
+            if (previewElement && editor) {
+                previewElement.textContent = editor.getValue();
+            }
+        }
+
+        // first attempt to init the preview
+        if (editor) {
+            editor.on('change', updatePreview);
+            updatePreview(); 
+        }
+
+        
+        setTimeout(() => {
+            if (editor) {
+                const currentValue = editor.getValue();
+                editor.setValue(currentValue + ' ');  
+                editor.setValue(currentValue);        
+                editor.refresh();                     
+            }
+        }, 300); 
+    }
+
+    
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initEditor();
+
+        document.querySelector('#edit-tab').addEventListener('shown.bs.tab', () => {
+            if (editor) editor.refresh();
+        });
+
+
+        document.getElementById('languageSelect').addEventListener('change', function () {
+            if (editor) editor.setOption('mode', this.value);
+        });
+
+        document.getElementById('themeSelect').addEventListener('change', function () {
+            if (editor) editor.setOption('theme', this.value);
+        });
+    });
+</script>
 <script type="module">
-    const { createApp, ref ,onMounted} = Vue;
+    const { createApp, ref } = Vue;
     import { message_list } from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
     createApp({
@@ -402,19 +486,7 @@
             const total_comments = ref(0)
             const current_user_is_admin = ref()
             const newCommentContent = ref("");
-            const modifiedRuleContent = ref('{{ rule_content | tojson }}');
             const currentRule = ref(0)
-
-
-           
-
-            function onInput(e) {
-                modifiedRuleContent.value = e.target.value
-            }
-                
-
-
-
 
             async function fetchCurrentRule(){
                 const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
@@ -434,13 +506,6 @@
                 currentRule.value.vote_down = data.vote_down
             }
 
-
-
-
-
-            onMounted(() => {
-                Prism.highlightElement(document.getElementById('code_preview'));  
-            });
 
 
 
@@ -542,15 +607,15 @@
                 deleteComment,
                 submitComment,
                 newCommentContent,
-                modifiedRuleContent,
                 currentRule,
                 fetchCurrentRule,
-                vote,
-                onInput
+                vote
             };
         }
     }).mount('#main-container');
 
 </script>
+
+
 {% endblock %}
 

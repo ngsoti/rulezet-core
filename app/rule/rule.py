@@ -29,22 +29,52 @@ def rule() -> render_template:
     """Create a new rule"""
     form = AddNewRuleForm()
     licenses = []
+    
+    # Charger les licences depuis le fichier
     with open("app/rule/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
                 licenses.append(line)
+    
     form.license.choices = [(lic, lic) for lic in licenses]
+
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
-        form_dict['author'] =  current_user.first_name
+
+        external_vars = []
+        index = 0
+        while True:
+            var_type = request.form.get(f'fields[{index}][type]')
+            var_name = request.form.get(f'fields[{index}][name]')
+            
+            if var_type and var_name:  
+                external_vars.append({'type': var_type, 'name': var_name})
+                index += 1
+            else:
+                break  
+
+        form_dict['author'] = current_user.first_name
         if form_dict['description'] == '':
             form_dict['description'] = "No description for the rule"
         if form_dict['source'] == '':
             form_dict['source'] = current_user.first_name + " , " + current_user.last_name
+        if form_dict['format'] == 'yara' :
+            valide , to_string , error = RuleModel.compile_yara(external_vars,form_dict)
+            if valide == False:
+                RuleModel.save_invalid_rule(form_dict, to_string, "YARA" , error)
+                return redirect(url_for("rule.bad_rules_summary"))
+        elif form_dict['format'] == 'sigma':
+            valide , to_string , error = RuleModel.compile_sigma(form_dict)
+            if valide == False:
+                RuleModel.save_invalid_rule(form_dict, to_string, "Sigma" , error)
+                return redirect(url_for("rule.bad_rules_summary"))
+
         RuleModel.add_rule_core(form_dict)
         flash('Rule added !', 'success')
+    
     return render_template("rule/rule.html", form=form)
+
 
 @rule_blueprint.route("/rules_list", methods=['GET'])
 @login_required
@@ -176,6 +206,19 @@ def edit_rule(rule_id) -> render_template:
 
         if form.validate_on_submit():
             form_dict = form_to_dict(form)
+
+            # try to compile
+            if form_dict['format'] == 'yara' :
+                valide , to_string , error = RuleModel.compile_yara([],form_dict)
+                if valide == False:
+                    return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
+            elif form_dict['format'] == 'sigma':
+                valide , to_string , error = RuleModel.compile_sigma(form_dict)
+                if valide == False:
+                    return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
+
+
+
             RuleModel.edit_rule_core(form_dict, rule_id)
             flash("Rule modified with success!", "success")
             return redirect("/rule/rules_list")
@@ -414,11 +457,6 @@ def get_rules_propose_edit_page() -> jsonify:
         })
     return jsonify({"message": "No Rule"})
 
-
-
-
-
-
 @rule_blueprint.route('/propose_edit/<int:rule_id>', methods=['POST'])
 @login_required
 def propose_edit(rule_id) -> redirect:
@@ -426,7 +464,7 @@ def propose_edit(rule_id) -> redirect:
     data = request.form
     proposed_content = data.get('proposed_content')
     message = data.get('message')
-
+    print(proposed_content)
     success = RuleModel.propose_edit_core(rule_id, proposed_content, message)
     if success:
         flash("Request sended.", "success")
@@ -476,18 +514,36 @@ def proposal_content_discuss() -> render_template:
 def test_yara_python_url() -> redirect:
     """Import all the rules from github Repo"""
     if request.method == 'POST':
+        # take the different param (url and external var if existe)
         repo_url = request.form.get('url')
+        external_vars = []
+        index = 0
+        while True:
+            var_type = request.form.get(f'fields[{index}][type]')
+            var_name = request.form.get(f'fields[{index}][name]')
+            if var_type and var_name:
+                external_vars.append({'type': var_type, 'name': var_name})
+                index += 1
+            else:
+                break
+
 
         try:
 
-            repo_dir = clone_or_access_repo(repo_url) 
+            repo_dir , existe  = clone_or_access_repo(repo_url) 
+
             if not repo_dir:
                 flash("Failed to clone or access the repository.", "danger")
                 return redirect(url_for("rule.rules_list"))
+            print("oui")
+            if existe == True:
+                print("oui")
+                # delete in bad_rule all the bad rule with url == repo_dir
+                #check = RuleModel.delete_bad_rule_from_url(existe)
 
+            
             # save all the yara rules 
             save_yara_rules_as_is(repo_url) 
-
 
             #license 
             owner, repo = extract_owner_repo(repo_url)
@@ -495,7 +551,7 @@ def test_yara_python_url() -> redirect:
 
             rule_dicts_Sigma , bad_rule_dicts_Sigma , nb_bad_rules_sigma= load_rule_files(repo_dir, license_from_github, repo_url)
             rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github)
-            rule_dicts_Yara , bad_rule_dicts_Yara, nb_bad_rules_yara = read_and_parse_all_yara_rules_from_folder_test(license_from_github, repo_url)
+            rule_dicts_Yara , bad_rule_dicts_Yara, nb_bad_rules_yara = read_and_parse_all_yara_rules_from_folder_test(license_from_github, repo_url, external_vars)
             
             imported = 0
             skipped = 0
@@ -526,15 +582,16 @@ def test_yara_python_url() -> redirect:
             flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
             delete_existing_repo_folder("app/rule/output_rules/Yara")
 
-
-            if bad_rule_dicts_Yara:
-                flash(f"Failed to import {nb_bad_rules_yara} rules:  ", "danger")
-                RuleModel.save_invalid_rules(bad_rule_dicts_Yara, "YARA", repo_url, license_from_github)
-            if bad_rule_dicts_Sigma:
-                flash(f"Failed to import {nb_bad_rules_sigma} rules:  ", "danger")
-                RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github)
-            if bad_rule_dicts_Sigma or bad_rule_dicts_Yara:
-                return redirect(url_for("rule.bad_rules_summary"))
+            # if an other user attempt to import the same depot, he can't have acces to the bad rule 
+            if existe == False:
+                if bad_rule_dicts_Yara:
+                    flash(f"Failed to import {nb_bad_rules_yara} YARA rules:  ", "danger")
+                    RuleModel.save_invalid_rules(bad_rule_dicts_Yara, "YARA", repo_url, license_from_github)
+                if bad_rule_dicts_Sigma:
+                    flash(f"Failed to import {nb_bad_rules_sigma} Sigma rules:  ", "danger")
+                    RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github)
+                if bad_rule_dicts_Sigma or bad_rule_dicts_Yara:
+                    return redirect(url_for("rule.bad_rules_summary"))
 
         except Exception as e:
             flash("Failed to import rules: URL ", "danger")
@@ -565,6 +622,27 @@ def get_bad_rule() -> jsonify:
             rules_list.append(u)
         return {"rules": rules_list  , "user": current_user.first_name, "total_pages": bad_rules.pages, "total_rules": total_rules} 
     return {"message": "No Rule"}, 404
+
+
+@rule_blueprint.route("/get_bads_rules_page_filter", methods=["GET"])
+@login_required
+def get_bads_rules_page_filter():
+    """Get all the bad rules with filter and pagination."""
+    page = int(request.args.get("page", 1))
+    per_page = 10
+    search = request.args.get("search", "")
+
+    query = RuleModel.get_filtered_bad_rules_query(search)
+    total_rules = query.count()
+    paginated = query.paginate(page=page, per_page=per_page)
+
+    return jsonify({
+        "rule": [r.to_json() for r in paginated.items],
+        "total_rules": total_rules,
+        "total_pages": ceil(total_rules / per_page),
+        "user": current_user.first_name
+    })
+
 
 
 @rule_blueprint.route('/bad_rule/<int:rule_id>/edit', methods=['GET', 'POST'])

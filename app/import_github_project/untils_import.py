@@ -45,13 +45,14 @@ def clone_or_access_repo(repo_url):
 
     # build the complete path 
     repo_dir = os.path.join(base_dir, repo_name)
-
+    existe = False
     if not os.path.exists(repo_dir):
+        existe = True
         Repo.clone_from(repo_url, repo_dir)
     else:
         pass
 
-    return repo_dir
+    return repo_dir , existe
 
 def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt"):
     """load all the licenses in  licenses.txt."""
@@ -69,6 +70,21 @@ def clean_rule_filename_Yara(filename):
         return filename.rsplit('.', 1)[0]
     return filename
 
+# take all the external param
+def build_externals_dict(vars_list):
+    externals = {}
+    for var in vars_list:
+        var_name = var['name']
+        var_type = var['type']
+        if var_type == 'int':
+            externals[var_name] = 0
+        elif var_type == 'bool':
+            externals[var_name] = False
+        elif var_type == 'bytes':
+            externals[var_name] = b""
+        else:
+            externals[var_name] = ""
+    return externals
 
 #----------------------------------------------------------------------------------------LICENSE--------------------------------------------------------------------------------------------------------------------#
 

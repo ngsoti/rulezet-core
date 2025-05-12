@@ -21,11 +21,17 @@ def get_rule_files_from_repo(repo_dir):
         return rule_files
 
     for root, dirs, files in os.walk(repo_dir):
+        dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
         for file in files:
+            if file.startswith('.') or file.startswith('_'):
+                continue
             if file.endswith(('.yml', '.yaml')):
                 rule_files.append(os.path.join(root, file))
 
     return rule_files
+
+
+
 
 def load_rule_files(repo_dir, license_from_github, repo_url):
     """Load and parse rule files from the given repository directory."""

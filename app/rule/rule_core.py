@@ -1,15 +1,16 @@
 import json
+import re
 import uuid
 import datetime
 from flask_login import current_user
-from jsonschema import  validate
+from jsonschema import  ValidationError, validate
 from sqlalchemy import case, or_
 import yaml
 import yara
 from app.account.account_core import get_user
 from app.import_github_project.import_github_sigma import load_json_schema
 from app.import_github_project.import_github_yara import extract_first_match
-from app.import_github_project.untils_import import clean_rule_filename_Yara
+from app.import_github_project.untils_import import build_externals_dict, clean_rule_filename_Yara
 from .. import db
 from ..db_class.db import *
 from . import rule_core as RuleModel
@@ -89,6 +90,57 @@ def set_user_id(rule_id, user_id) -> bool:
         return True
     return False
 
+def compile_yara(external_vars, form_dict) -> tuple[bool, dict]:
+    """Try to compile a YARA rule with external variables. Return updated form_dict if success."""
+    external_vars_temp = external_vars.copy()
+    externals = build_externals_dict(external_vars_temp)
+    rule_str = form_dict["to_string"]
+    while True:
+        try:
+            yara.compile(source=rule_str, externals=externals)
+            form_dict["to_string"] = rule_str
+            return True, form_dict , 'no error'
+        except yara.SyntaxError as e:
+
+            error_msg = str(e)
+            match = re.search(r'undefined identifier "(.*?)"', error_msg)
+            if match:
+                # try to parse it with the new content
+                missing_var = match.group(1)
+                external_vars_temp.append({"type": "string", "name": missing_var})
+                externals = build_externals_dict(external_vars_temp)
+            else:
+                return False , form_dict["to_string"] , error_msg
+     
+def compile_sigma(form_dict) -> tuple[bool, dict]:
+    """
+    Try to compile and validate a Sigma rule using JSON Schema.
+    
+    :param external_vars: Not used here but kept for symmetry with compile_yara
+    :param form_dict: Dict containing the Sigma rule in form_dict["to_string"]
+    :return: (success: bool, possibly modified form_dict)
+    """
+    sigma_schema = load_json_schema("app/import_github_project/sigma_format.json")
+    rule_string = form_dict['to_string']
+
+    try:
+        rule = yaml.safe_load(rule_string)
+        if not rule:
+            raise ValueError("Empty or invalid YAML structure.")
+
+        rule_json_string = json.dumps(rule, indent=2, default=str)
+        rule_json_object = json.loads(rule_json_string)
+
+        validate(instance=rule_json_object, schema=sigma_schema)
+        return True, form_dict["to_string"] , 'no error'
+
+    except ValidationError as e:
+        error_msg = str(e)
+        return False, form_dict["to_string"] , error_msg
+
+    except Exception as e:
+        error_msg = str(e)
+        return False, form_dict["to_string"] , error_msg
 
 # Read
 
@@ -164,12 +216,46 @@ def save_invalid_rules(bad_rules, rule_type ,repo_url, license) -> None:
         db.session.add(new_invalid_rule)
     db.session.commit()
 
+def save_invalid_rule(form_dict, to_string ,rule_type, error) -> None:
+    """
+    Save an invalid rule to the database if not already existing.
+    
+    :param form_dict: Dict containing at least 'title', 'to_string' (content), 'error' and optionally 'url' and 'license'
+    :param rule_type: Type of the rule (e.g., 'YARA', 'SIGMA')
+    """
+    file_name = str(form_dict["title"]) 
+    error_message = str(error)
+    raw_content = str(to_string)
+    repo_url = str(form_dict["source"])
+    license = str(form_dict["license"])
+    existing = InvalidRuleModel.query.filter_by(
+        file_name=file_name,
+        error_message=error_message,
+        raw_content=raw_content,
+        rule_type=rule_type,
+        user_id=current_user.id
+    ).first()
+    if existing:
+        return
+
+    new_invalid_rule = InvalidRuleModel(
+        file_name=file_name,
+        error_message=error_message,
+        raw_content=raw_content,
+        rule_type=rule_type,
+        user_id=current_user.id,
+        url=repo_url,
+        license=license
+    )
+
+    db.session.add(new_invalid_rule)
+    db.session.commit()
+
 # Create
 
 def process_and_import_fixed_rule(bad_rule_obj, raw_content) -> bool:
     """Porcess the bad rule and the new content to attempt to create the rule"""
     try:
-        print(f"Traitement de la règle invalide : {bad_rule_obj.file_name}")
         rule_type = bad_rule_obj.rule_type 
 
         if rule_type.upper() == "YARA":
@@ -251,6 +337,10 @@ def get_count_bad_rules_page() -> int:
     """Return the count of bad rules"""
     return InvalidRuleModel.query.count()
 
+def get_bad_rule_with_url(url) -> InvalidRuleModel:
+    """Return all the bad rule with this url"""
+    return(InvalidRuleModel.query.filter_by(url=url).all())
+
 # Delete
 
 def delete_bad_rule(rule_id) -> bool:
@@ -261,6 +351,32 @@ def delete_bad_rule(rule_id) -> bool:
         db.session.commit()
         return True
     else:
+        return False
+    
+
+
+def delete_bad_rule_from_url(url: str, current_user_id: int) -> bool:
+    """
+    Delete all InvalidRuleModel entries with the given URL
+    only if they belong to the current user.
+    """
+    try:
+        rules_to_delete = get_bad_rule_with_url(url)
+        deleted = False
+
+        for rule in rules_to_delete:
+            if rule.user_id == current_user_id:
+                db.session.delete(rule)
+                deleted = True 
+
+        if deleted:
+            db.session.commit()
+            return True
+        else:
+            db.session.rollback()
+            return False
+    except Exception as e:
+        db.session.rollback()
         return False
 
 
@@ -483,6 +599,23 @@ def filter_rules(user_id, search=None, author=None, sort_by=None, rule_type=None
     else:
         query = query.order_by(Rule.creation_date.desc())
     return query
+
+def get_filtered_bad_rules_query(search=None) -> InvalidRuleModel:
+    """Return a SQLAlchemy query for filtered bad rules belonging to the current user."""
+    query = InvalidRuleModel.query.filter_by(user_id=current_user.id)
+
+    if search:
+        search_pattern = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                InvalidRuleModel.file_name.ilike(search_pattern),
+                InvalidRuleModel.error_message.ilike(search_pattern),
+                InvalidRuleModel.raw_content.ilike(search_pattern),
+                InvalidRuleModel.url.ilike(search_pattern)
+            )
+        )
+
+    return query.order_by(InvalidRuleModel.created_at.desc())
 
 ############################
 #   Owner Request section  #

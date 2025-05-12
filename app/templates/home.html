@@ -63,7 +63,7 @@
   <hr/>
   <header class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="text-dark m-0"><i class="fas fa-cogs"></i> Recent Rules</h1>
-    <a href="/rule" class="btn btn-dark btn-sm">
+    <a href="/rule" class="btn btn-primary btn-sm">
       <i class="fas fa-hammer"></i> Add Rule
     </a>
   </header>
@@ -76,7 +76,7 @@
             <h5 class="mb-2" style="max-width: 75%; word-break: break-word;">[[ rule.title ]]</h5>
             <div class="d-flex ms-auto">
                 <template v-if="parseInt('{{current_user.id}}') === rule.user_id || current_user_is_admin">
-                    <a :href="`rule/edit_rule/${rule.id}`" title="edit the rule" class="btn btn-dark btn-sm me-2">
+                    <a :href="`rule/edit_rule/${rule.id}`" title="edit the rule" class="btn btn-secondary btn-sm me-2">
                         <i class="fas fa-pen"></i>
                     </a>
                     <button @click="deleteRule(rule.id, index)" title="delete the rule" class="btn btn-danger btn-sm me-2">
@@ -98,7 +98,7 @@
                 <p><strong>Author:</strong> [[ rule.author ]]</p>
                 <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
                 <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
-                <a :href="`rule/detail_rule/${rule.id}`" title="view more detail about this rule" class="btn btn-secondary btn-sm">View more</a>
+                <a :href="`rule/detail_rule/${rule.id}`" title="view more detail about this rule" class="btn btn-primary btn-sm">View more</a>
                 <button @click="vote('up', rule.id)" title="like this rule" class="btn btn-success btn-sm mx-2">
                     <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
                 </button>

@@ -20,70 +20,94 @@
   <p class="text-center text-muted mb-4">
     The following rules are invalid because they did not pass syntax parsing validation.
   </p>
-
-  <div v-if="rules_list.length > 0" class="row row-cols-1 row-cols-md-2 g-4">
-    
-    <div class="col" v-for="(rule, index) in rules_list" :key="rule.id">
-      <div class="card h-100 shadow-sm border-danger">
-        <div class="card-body">
-          <h5 class="card-title">
-            <i class="fas fa-file-alt me-1 text-secondary"></i>[[ rule.file_name ]]
-          </h5>
-          <p class="card-text text-danger">
-            <strong><i class="fas fa-bug me-1"></i>Error:</strong> [[ rule.error_message ]]
-          </p>
-          <p class="card-text">
-            <i class="far fa-calendar-alt me-1"></i><strong>Date:</strong> [[ rule.created_at ]]
-          </p>
-          <p class="card-text">
-            <i class="fas fa-user me-1"></i><strong>User:</strong> [[ user ]]
-          </p>
-          <details>
-            <summary class="text-primary mt-2">
-              <i class="fas fa-code me-1"></i>View raw content
-            </summary>
-            <pre class="bg-light border rounded p-2 mt-2">[[ rule.raw_content ]]</pre>
-          </details>
-          <div class="d-flex align-items-center gap-2 mt-2">
-            <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-sm btn-dark">
-              <i class="fas fa-edit"></i> Edit
-            </a>
-            <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm" title="Delete Rule">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-          
-        </div>
+  <div class="card p-4 shadow-sm bg-light mb-3" >
+    <h5 class="mb-4">Filters</h5>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <input
+          type="text"
+          v-model="searchQuery"
+          @input="onSearchInput"
+          @keyup.enter="onEnterKey"
+          class="form-control"
+          placeholder="Search by title, description..."
+        >
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100" @click="fetchRules(1)">
+          <i class="fas fa-filter"></i> Filter
+        </button>
       </div>
     </div>
   </div>
-
+  
+  <div v-if="rules_list.length > 0">
+    <div  class="row row-cols-1 row-cols-md-2 g-4 mt-2">
+    
+      <div class="col" v-for="(rule, index) in rules_list" :key="rule.id">
+        <div class="card h-100 shadow-sm border-danger">
+          <div class="card-body">
+            <h5 class="card-title">
+              <i class="fas fa-file-alt me-1 text-secondary"></i>[[ rule.file_name ]]
+            </h5>
+            <p class="card-text text-danger">
+              <strong><i class="fas fa-bug me-1"></i>Error:</strong> [[ rule.error_message ]]
+            </p>
+            <p class="card-text">
+              <i class="far fa-calendar-alt me-1"></i><strong>Date:</strong> [[ rule.created_at ]]
+            </p>
+            <p class="card-text">
+              <i class="far fa-paperclip me-1"></i><strong>Source:</strong> [[ rule.url ]]
+            </p>
+            <p class="card-text">
+              <i class="fas fa-user me-1"></i><strong>User:</strong> [[ user ]]
+            </p>
+            <details>
+              <summary class="text-primary mt-2">
+                <i class="fas fa-code me-1"></i>View raw content
+              </summary>
+              <pre class="bg-light border rounded p-2 mt-2">[[ rule.raw_content ]]</pre>
+            </details>
+            <div class="d-flex align-items-center gap-2 mt-2">
+              <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-sm btn-dark">
+                <i class="fas fa-edit"></i> Edit
+              </a>
+              <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm" title="Delete Rule">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav aria-label="Page navigation" class="mt-5">
+      <ul class="pagination">
+        <li class="page-item" :class="{ disabled: current_page === 1 }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
+            <i class="fas fa-arrow-left"></i> Previous
+          </a>
+        </li>
+        <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: current_page === page, disabled: page === '...' }">
+          <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+          <span v-else class="page-link">...</span>
+        </li>
+        <li class="page-item" :class="{ disabled: current_page === total_pages }">
+          <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
+            Next <i class="fas fa-arrow-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
   <p v-else class="text-center mt-4 text-muted">
     <i class="fas fa-check-circle me-2"></i>No invalid rules found.
   </p>
 
-  <nav aria-label="Page navigation">
-    <ul class="pagination">
-      <li class="page-item" :class="{ disabled: current_page === 1 }">
-        <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
-          <i class="fas fa-arrow-left"></i> Previous
-        </a>
-      </li>
-      <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: current_page === page, disabled: page === '...' }">
-        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
-        <span v-else class="page-link">...</span>
-      </li>
-      <li class="page-item" :class="{ disabled: current_page === total_pages }">
-        <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
-          Next <i class="fas fa-arrow-right"></i>
-        </a>
-      </li>
-    </ul>
-  </nav>
 
-  <div class="text-center mt-4">
+  <div class="text-center mt-4  mb-4">
     <a href="{{ url_for('rule.rules_list') }}" class="btn btn-primary">
-      <i class="fas fa-arrow-left me-1"></i>Back to Rules List
+      <i class="fas fa-arrow-left" ></i>Back to Rules List
     </a>
   </div>
 </div>
@@ -104,15 +128,53 @@
       const current_page = ref(1)
       const total_pages = ref(1)
       const user = ref()
+      const searchQuery = ref('')
+      const authorFilter = ref('')
+      const sortBy = ref('newest')
+
 
       async function fetchRules(page) {
-        const res = await fetch(`get_bad_rule?page=`+page );
-        const data = await res.json();
-        rules_list.value = data.rules || [];
+        const params = new URLSearchParams({
+          page,
+          search: searchQuery.value
+        })
+
+        const res = await fetch('/rule/get_bads_rules_page_filter?' + params.toString())
+        const data = await res.json()
+        rules_list.value = data.rule
+        total_pages.value = data.total_pages
+        total_rules.value = data.total_rules
         current_page.value = page
-        total_pages.value = data.total_pages || 1;
         user.value = data.user ;
       }
+
+
+
+
+      async function onSearchInput() {
+        if (searchQuery.value.trim() === "") {
+          await fetchRules(1)
+        } else {
+          await fetchRules(1)
+        }
+      }
+
+      async function onEnterKey() {
+        await fetchRules(1)
+      }
+
+
+
+
+
+      // async function fetchRules(page) {
+      //   const res = await fetch(`get_bad_rule?page=`+page );
+      //   const data = await res.json();
+      //   rules_list.value = data.rules || [];
+      //   current_page.value = page
+      //   total_pages.value = data.total_pages || 1;
+      //   user.value = data.user ;
+      // }
 
       async function deleteRule(id, index) {
         const res = await fetch(`/rule/bad_rule/${id}/delete`, {
@@ -160,7 +222,10 @@
         fetchRules,
         user,
         deleteRule,
-        visiblePages
+        visiblePages,
+        searchQuery,
+        onEnterKey,
+        onSearchInput
       }
     }
   }).mount('#main-container')

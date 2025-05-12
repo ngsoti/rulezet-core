@@ -22,7 +22,7 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center">
                                 <h5 class="card-title mb-0">
-                                    Rule # [[ rule.rule_id ]]
+                                    Rule # [[ rule.rule_name ]]
                                 </h5>
                                 <span class="badge"
                                     :class="{
@@ -135,7 +135,7 @@
                     <thead class="table-light">
                         <tr>
                             <th scope="col">#</th>
-                            <th scope="col">Rule ID</th>
+                            <th scope="col">Rule</th>
                             <th scope="col">Status</th>
                             <th scope="col">View</th>
                         </tr>
@@ -148,7 +148,7 @@
                                     aria-expanded="false" :aria-controls="'collapseHistory' + rule.id"
                                     style="cursor: pointer;">
                                     <td>[[ index + 1 ]]</td>
-                                    <td>[[ rule.rule_id ]]</td>
+                                    <td>[[ rule.rule_name ]]</td>
                                     <td>
                                         <span :class="{
                                             'badge bg-secondary': rule.status === 'pending',
@@ -209,6 +209,7 @@
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block script %}
@@ -224,6 +225,7 @@
             const current_page = ref(1);
             const total_pages = ref(1);
             const total_pages_pending = ref(1);
+
 
             async function fetchRules(page) {
                 const res = await fetch('/rule/get_rules_propose_edit_page?page='+page);

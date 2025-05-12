@@ -44,7 +44,6 @@
                     {% endif %}
                 </div>
             </div>
-            
 
             <div class="mb-3">
                 <div class="form-group">
@@ -69,6 +68,7 @@
                     {% endif %}
                 </div>
             </div>
+
             <div class="mb-3">
                 <div class="form-group">
                     {{ form.description.label(class_="col-form-label") }}
@@ -80,10 +80,18 @@
                     {% endif %}
                 </div>
             </div>
+
             <div class="mb-3">
+                {% if error %}
+                    <span style="color:red">{{ error }}</span>    
+                {% endif %}
                 <div class="form-group">
                     {{ form.to_string.label(class_="col-form-label") }}
-                    {{ form.to_string(class_="form-control", rows=4) }}
+                    
+                    {{ form.to_string(class_="d-none", id="code-input") }}  
+
+                    <textarea id="editor">{{ form.to_string.data | e }}</textarea>
+                    
                     {% if form.to_string.errors %}
                         <div class="invalid-feedback d-block">
                             {{ form.to_string.errors[0] | safe }}
@@ -99,12 +107,34 @@
     </form>
 </div>
 {% endblock %}
+
 {% block script %}
+<!-- CodeMirror CSS & JS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
+
 <script>
     $(document).ready(function() {
         $('#license-select').select2({
             placeholder: "Search for a license",
             allowClear: true
+        });
+
+        const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+            lineNumbers: true,
+            mode: "yaml",  // Tu peux changer en "python", "text/x-yara", etc.
+            theme: "eclipse",
+            matchBrackets: true,
+            autoRefresh: true
+        });
+
+        // Mise à jour du champ WTForm caché à chaque modification
+        editor.on("change", function(cm) {
+            document.getElementById("code-input").value = cm.getValue();
         });
     });
 </script>

@@ -1,4 +1,5 @@
 import datetime
+
 from .. import db, login_manager
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin, AnonymousUserMixin, current_user
@@ -211,12 +212,18 @@ class RuleEditProposal(db.Model):
     rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic',  cascade='all, delete-orphan'))
     user = db.relationship('User', backref=db.backref('proposed_edits', lazy='dynamic', cascade='all, delete-orphan'))
 
+    def get_rule_title(self):
+        rule = Rule.query.get(self.rule_id)  
+        return rule.title if rule else None
+
+
 
 
     def to_json(self):
         return {
             'id': self.id,
             'rule_id': self.rule_id,
+            'rule_name': self.get_rule_title(),
             'old_content': self.old_content,
             'user_id': self.user_id,
             'proposed_content': self.proposed_content,
