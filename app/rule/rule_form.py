@@ -6,7 +6,7 @@ from ..db_class.db import Rule
 
 class AddNewRuleForm(FlaskForm):
     """Form to add a new rule"""
-    format = SelectField('Format',choices=[('yara', 'YARA rule'), ('sigma', 'SIGMA rule'),  ('zeek', 'ZEEK rule'), ('suricata', 'SURICATA rule')],validators=[InputRequired()])
+    format = SelectField('Format',choices=[('yara', 'Yara'), ('sigma', 'Sigma'), ('zeek', 'Zeek'), ('suricata', 'Suricata')],validators=[InputRequired()])
     title = StringField('Title', validators=[InputRequired()])
     license = SelectField("License", choices=[], validators=[DataRequired()])
     description = TextAreaField('Description')
@@ -24,7 +24,7 @@ class AddNewRuleForm(FlaskForm):
 class EditRuleForm(FlaskForm):
     """Form to edit an existing rule"""
     title = StringField('Title', validators=[InputRequired()])
-    format = SelectField('Format',choices=[('yara', 'YARA rule'), ('sigma', 'SIGMA rule'), ('zeek', 'ZEEK rule'), ('suricata', 'SURICATA rule')],validators=[InputRequired()])
+    format = SelectField('Format',choices=[('yara', 'Yara'), ('sigma', 'Sigma'), ('zeek', 'Zeek'), ('suricata', 'Suricata')],validators=[InputRequired()])
     
     license = SelectField('License', choices=[], validators=[InputRequired()])
     description = TextAreaField('Description')

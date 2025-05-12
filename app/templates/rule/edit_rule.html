@@ -87,11 +87,12 @@
                 {% endif %}
                 <div class="form-group">
                     {{ form.to_string.label(class_="col-form-label") }}
-                    
-                    {{ form.to_string(class_="d-none", id="code-input") }}  
+            
+                    <input type="hidden" name="to_string" id="code-input" value="{{ form.to_string.data | e }}">  
+            
 
                     <textarea id="editor">{{ form.to_string.data | e }}</textarea>
-                    
+            
                     {% if form.to_string.errors %}
                         <div class="invalid-feedback d-block">
                             {{ form.to_string.errors[0] | safe }}
@@ -109,33 +110,34 @@
 {% endblock %}
 
 {% block script %}
-<!-- CodeMirror CSS & JS -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
+
 
 <script>
     $(document).ready(function() {
-        $('#license-select').select2({
-            placeholder: "Search for a license",
-            allowClear: true
-        });
-
-        const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-            lineNumbers: true,
-            mode: "yaml",  
-            theme: "eclipse",
-            matchBrackets: true,
-            autoRefresh: true
-        });
-
-
-        editor.on("change", function(cm) {
-            document.getElementById("code-input").value = cm.getValue();
-        });
+    $('#license-select').select2({
+        placeholder: "Search for a license",
+        allowClear: true
     });
+
+    const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+        lineNumbers: true,
+        mode: "yaml",  
+        theme: "eclipse",
+        matchBrackets: true,
+        autoRefresh: true
+    });
+
+
+    editor.on("change", function(cm) {
+        document.getElementById("code-input").value = cm.getValue();
+    });
+
+    $("form").on("submit", function(event) {
+        if ($("#code-input").val() === "") {
+            event.preventDefault();
+            alert("Please fill in the content for the rule.");
+        }
+    });
+});
 </script>
 {% endblock %}

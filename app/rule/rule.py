@@ -61,16 +61,15 @@ def rule() -> render_template:
             form_dict['description'] = "No description for the rule"
         if form_dict['source'] == '':
             form_dict['source'] = current_user.first_name + " , " + current_user.last_name
+
         if form_dict['format'] == 'yara' :
             valide , to_string , error = RuleModel.compile_yara(external_vars,form_dict)
             if valide == False:
-                RuleModel.save_invalid_rule(form_dict, to_string, "YARA" , error)
-                return redirect(url_for("rule.bad_rules_summary"))
+                return render_template("rule/rule.html",error=error, form=form, rule=rule)
         elif form_dict['format'] == 'sigma':
             valide , to_string , error = RuleModel.compile_sigma(form_dict)
             if valide == False:
-                RuleModel.save_invalid_rule(form_dict, to_string, "Sigma" , error)
-                return redirect(url_for("rule.bad_rules_summary"))
+                return render_template("rule/rule.html",error=error, form=form, rule=rule)
 
         RuleModel.add_rule_core(form_dict)
         flash('Rule added !', 'success')
