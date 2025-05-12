@@ -1,67 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Éditeur CodeMirror avec sélection de langue et thème</h2>
 
-    <div class="form-group mb-3">
-        <label for="languageSelect">Langage :</label>
-        <select class="form-select" id="languageSelect">
-            <option value="javascript">JavaScript</option>
-            <option value="python">Python</option>
-            <option value="css">CSS</option>
-            <option value="xml">HTML/XML</option>
-        </select>
-    </div>
-
-    <div class="form-group mb-3">
-        <label for="themeSelect">Thème :</label>
-        <select class="form-select" id="themeSelect">
-            <option value="default">Default</option>
-            <option value="dracula">Dracula</option>
-            <option value="monokai">Monokai</option>
-            <option value="eclipse">Eclipse</option>
-            <option value="material">Material</option>
-        </select>
-    </div>
-
-    <div class="editorContainer" style="min-height: 300px;"></div>
-</div>
-
-<style>
-    .CodeMirror {
-        height: 500px;
-        border: 1px solid #ddd;
-        margin-top: 20px;
-        font-size: 14px;
-    }
-</style>
 {% endblock %}
 
-{% block script %}
-{{ super() }}
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const container = document.querySelector('.editorContainer');
-        if (!container) {
-            console.error("Conteneur CodeMirror non trouvé !");
-            return;
-        }
 
-        const editor = CodeMirror(container, {
-            lineNumbers: true,
-            mode: 'javascript',
-            theme: 'default',
-            value: '// Écris ton code ici...'
-        });
-
-        document.getElementById('languageSelect').addEventListener('change', function () {
-            editor.setOption('mode', this.value);
-        });
-
-        document.getElementById('themeSelect').addEventListener('change', function () {
-            editor.setOption('theme', this.value);
-        });
-    });
-</script>
-{% endblock %}

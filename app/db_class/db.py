@@ -202,7 +202,7 @@ class RequestOwnerRule(db.Model):
 class RuleEditProposal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # the user who made the request
     proposed_content = db.Column(db.Text, nullable=False)
     old_content = db.Column(db.String)
     message = db.Column(db.Text)
@@ -231,6 +231,14 @@ class RuleEditProposal(db.Model):
             "status": self.status,
             'timestamp': self.timestamp.isoformat(),
         }
+
+# class discussContent (db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     rule_proposal_id = db.Column(db.Integer, db.ForeignKey('RuleEditProposal.id'), nullable=False)
+#     users_id = # all the user id who speak about this rule  (admin , rule owner and the user who propose a change)
+#     messages = # all the message new table ? whit id , user_id  and the content
+#     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+
 
 
 
@@ -280,3 +288,5 @@ class InvalidRuleModel(db.Model):
             "url": self.url,
             "license": self.license
         }
+    
+

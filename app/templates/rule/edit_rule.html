@@ -126,13 +126,13 @@
 
         const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
             lineNumbers: true,
-            mode: "yaml",  // Tu peux changer en "python", "text/x-yara", etc.
+            mode: "yaml",  
             theme: "eclipse",
             matchBrackets: true,
             autoRefresh: true
         });
 
-        // Mise à jour du champ WTForm caché à chaque modification
+
         editor.on("change", function(cm) {
             document.getElementById("code-input").value = cm.getValue();
         });

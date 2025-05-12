@@ -1,4 +1,3 @@
-
 #---------------------------------------------------------------------------------------For_all_rules_types----------------------------------------------------------------------------------------------------------#
 
 import os
@@ -8,15 +7,6 @@ from urllib.parse import urlparse
 from git import Repo
 import requests
 
-
-# def get_repo_name_from_url(repo_url):
-#     """Extract the repository name from its Git URL."""
-#     # delete the last /  if there is and we split with /  the different part of the url to take the last ( the titile ) "https://github.com/user/repo" → ["https:", "", "github.com", "user", "repo"]
-#     name = repo_url.rstrip('/').split('/')[-1]
-#     # in many case there is .hit juste after the title 
-#     if name.endswith('.git'):
-#         name = name[:-4] #remove the 4 last letter .git to have the complete title
-#     return name
 def get_repo_name_from_url(repo_url):
     """Extract the full repository path (owner/repo) from its Git URL."""
     parts = repo_url.rstrip('/').split('/')
@@ -45,9 +35,9 @@ def clone_or_access_repo(repo_url):
 
     # build the complete path 
     repo_dir = os.path.join(base_dir, repo_name)
-    existe = False
+    existe = True
     if not os.path.exists(repo_dir):
-        existe = True
+        existe = False
         Repo.clone_from(repo_url, repo_dir)
     else:
         pass
@@ -85,6 +75,30 @@ def build_externals_dict(vars_list):
         else:
             externals[var_name] = ""
     return externals
+
+
+
+def get_github_repo_author(repo_url):
+    # Extraire owner et repo depuis l’URL
+    parts = repo_url.rstrip(".git").split("/")
+    owner, repo = parts[-2], parts[-1]
+
+    api_url = f"https://api.github.com/repos/{owner}/{repo}"
+    response = requests.get(api_url)
+
+    if response.status_code == 200:
+        data = response.json()
+        return {
+            "author": data.get("owner", {}).get("login"),
+            "html_url": data.get("owner", {}).get("html_url"),
+            "description": data.get("description"),
+            "created_at": data.get("created_at"),
+        }
+    else:
+        return {"error": f"Failed to fetch repo info (status: {response.status_code})"}
+
+
+
 
 #----------------------------------------------------------------------------------------LICENSE--------------------------------------------------------------------------------------------------------------------#
 

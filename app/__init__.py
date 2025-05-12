@@ -54,6 +54,10 @@ def create_app():
     app.register_blueprint(account_blueprint, url_prefix="/account")
     app.register_blueprint(rule_blueprint, url_prefix="/rule")
 
+
+    from .rule.rule_api import api_rule_blueprint
+    app.register_blueprint(api_rule_blueprint, url_prefix="/api/case")
+
     return app
     
     

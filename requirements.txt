@@ -18,3 +18,5 @@ requests
 gitpython
 pyyaml
 yara-python
+idstools
+suricataparser

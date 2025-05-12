@@ -17,6 +17,18 @@ def generate_api_key(length=60):
 def get_user_api(api_key):
     return User.query.filter_by(api_key=api_key).first()
 
+def get_user_from_api(headers):
+    """Try to get bot user by matrix id. If not, get basic user"""
+    if "MATRIX-ID" in headers:
+        bot = User.query.filter_by(last_name="Bot", first_name="Matrix").first()
+        if bot:
+            if bot.api_key == headers["X-API-KEY"]:
+                user = User.query.filter_by(matrix_id=headers["MATRIX-ID"]).first()
+                if user:
+                    return user
+    return get_user_api(headers["X-API-KEY"])
+
+
 def verif_api_key(headers):
     if not "X-API-KEY" in headers:
         return {"message": "Error no API key pass"}, 403

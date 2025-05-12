@@ -15,17 +15,19 @@
 
   <div class="row">
     <!-- Navigation sidebar -->
-    <div class="col-2">
-      <nav id="navbar-example3" class="h-100 flex-column align-items-stretch pe-4 border-end">
+    <div class="col-2  top-0 pe-4 border-end" >
+      <nav id="navbar-example3" class="flex-column align-items-stretch">
         <nav class="nav nav-pills flex-column">
           <a class="nav-link" href="#item-1">YARA Rule</a>
           <a class="nav-link" href="#item-2">SIGMA Rule</a>
           <a class="nav-link" href="#item-3">Zeek Rule</a>
+          <a class="nav-link" href="#item-6">Suricata Rule</a> 
           <a class="nav-link" href="#item-4">Rules Comparison</a>
-          <a class="nav-link" href="#item-5">Coming Soon: Suricata, YAML, CRS</a>
+          <a class="nav-link" href="#item-5">Coming Soon: Suricata, YAML, CRS</a> 
         </nav>
       </nav>
     </div>
+
 
     <!-- Content area -->
     <div class="col-8" style="box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 2px 10px 0 rgba(0, 0, 0, 0.19); background-color: white;">
@@ -153,53 +155,86 @@ description: Detects PowerShell commands used to download files from the interne
           </a>
         </div>
         <hr/>
-        <!-- Comparison Table -->
-        <div id="item-4" class="mt-3 mb-3">
-          <h4>Rules Comparison</h4>
-          <table class="table table-bordered text-center">
-            <thead class="table-secondary">
-              <tr>
-                <th></th>
-                <th>YARA</th>
-                <th>SIGMA</th>
-                <th>Zeek</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><i class="fas fa-bullseye"></i> Purpose</td>
-                <td>File/Memory-based threat detection</td>
-                <td>Log-based behavior detection</td>
-                <td>Network traffic analysis</td>
-              </tr>
-              <tr>
-                <td><i class="fas fa-cogs"></i> Usage Context</td>
-                <td>Malware analysis, antivirus, incident response</td>
-                <td>SIEM systems, SOC monitoring</td>
-                <td>Network security monitoring</td>
-              </tr>
-              <tr>
-                <td><i class="fas fa-code"></i> Format</td>
-                <td>Custom YARA language</td>
-                <td>YAML</td>
-                <td>Zeek scripting language</td>
-              </tr>
-              <tr>
-                <td><i class="fas fa-file-alt"></i> Output</td>
-                <td>Match (true/false) per scanned file</td>
-                <td>Match (alert) per log line</td>
-                <td>Alert or log based on network traffic</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Suricata section -->
+        <div id="item-6" class="mt-3 mb-3">
+          <h4>What is a Suricata Rule?</h4>
+          <p>
+            Suricata is an open-source threat detection engine capable of real-time intrusion detection (IDS), inline intrusion prevention (IPS), and network security monitoring (NSM).
+          </p>
+          <p>
+            Suricata rules are used to define traffic signatures that identify suspicious or malicious behavior in network packets.
+          </p>
+
+          <h5><i class="fas fa-shield-alt me-2"></i> Suricata Rule Components</h5>
+          <ul>
+            <li><strong>Action:</strong> What to do when the rule matches (e.g., alert, drop, pass)</li>
+            <li><strong>Protocol:</strong> Layer 3 or 4 protocol (e.g., TCP, UDP, HTTP)</li>
+            <li><strong>Source/Destination:</strong> IP and port specifications</li>
+            <li><strong>Options:</strong> Rule body with match criteria (content, http_uri, metadata, etc.)</li>
+          </ul>
+
+          <h6 class="mt-4">Example Suricata Rule:</h6>
+          <pre class="bg-light p-3"><code>alert http any any -> any any (msg:"Suspicious robots.txt access"; content:"/robots.txt"; http_uri; classtype:attempted-recon; sid:1000001; rev:1;)</code></pre>
+
+          <p>This rule alerts on HTTP requests accessing <code>/robots.txt</code>, a common behavior during web reconnaissance phases.</p>
+
+          <a href="https://suricata.io/" target="_blank" class="btn btn-outline-danger mt-3">
+            <i class="fas fa-globe me-1"></i> Learn more about Suricata
+          </a>
         </div>
         <hr/>
+        <!-- Comparison Table -->
+      <div id="item-4" class="mt-3 mb-3">
+        <h4>Rules Comparison</h4>
+        <table class="table table-bordered text-center">
+          <thead class="table-secondary">
+            <tr>
+              <th></th>
+              <th>YARA</th>
+              <th>SIGMA</th>
+              <th>Zeek</th>
+              <th>Suricata</th> 
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><i class="fas fa-bullseye"></i> Purpose</td>
+              <td>File/Memory-based threat detection</td>
+              <td>Log-based behavior detection</td>
+              <td>Network traffic analysis</td>
+              <td>Network traffic analysis and IDS/IPS</td> 
+            </tr>
+            <tr>
+              <td><i class="fas fa-cogs"></i> Usage Context</td>
+              <td>Malware analysis, antivirus, incident response</td>
+              <td>SIEM systems, SOC monitoring</td>
+              <td>Network security monitoring</td>
+              <td>Network security, Intrusion Detection/Prevention Systems (IDS/IPS)</td>
+            </tr>
+            <tr>
+              <td><i class="fas fa-code"></i> Format</td>
+              <td>Custom YARA language</td>
+              <td>YAML</td>
+              <td>Zeek scripting language</td>
+              <td>Suricata rule format</td> 
+            </tr>
+            <tr>
+              <td><i class="fas fa-file-alt"></i> Output</td>
+              <td>Match (true/false) per scanned file</td>
+              <td>Match (alert) per log line</td>
+              <td>Alert or log based on network traffic</td>
+              <td>Alert or log based on network traffic</td> 
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <hr/>
+
         <!-- Coming Soon -->
         <div id="item-5" class="mt-3 mb-3">
           <div class="alert alert-info mt-4">
             <i class="fas fa-tools me-2"></i>
             <strong>Coming soon!</strong> We're currently working on support for additional detection rule formats including 
-            <span class="badge bg-secondary">Suricata</span>, 
             <span class="badge bg-secondary">YAML</span>, 
             <span class="badge bg-secondary">CRS</span> (Core Rule Set).
             Stay tuned — new rule types and advanced features are on the way!
@@ -213,12 +248,12 @@ description: Detects PowerShell commands used to download files from the interne
   <!-- Footer callout -->
   <div class="alert alert-warning mt-5">
     <i class="fas fa-lightbulb me-2"></i>
-    Want to try writing your own YARA, SIGMA, or Zeek rule?  
+    Want to try writing your own YARA, SIGMA, Suricata, or Zeek rule?  
     <strong>You can do it right here on our platform!</strong><br>
     <ul class="mt-2 mb-0">
       <li>
         <i class="fas fa-pen-to-square me-1 text-primary"></i>
-        <a href="/rule" class="alert-link text-decoration-underline">Create a new rule</a>
+        <a href="/rule/create_rule" class="alert-link text-decoration-underline">Create a new rule</a>
       </li>
       <li>
         <i class="fas fa-book-open me-1 text-success"></i>

@@ -6,8 +6,9 @@ from app.account.account_core import add_favorite, remove_favorite
 from app.db_class.db import RuleFavoriteUser
 from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
 from app.import_github_project.import_github_sigma import load_rule_files
+from app.import_github_project.import_github_suricata import  parse_suricata_rules_from_file
 from app.import_github_project.import_github_yara import read_and_parse_all_yara_rules_from_folder_test, save_yara_rules_as_is
-from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_license_name
+from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name
 from .rule_form import AddNewRuleForm, EditRuleForm
 from ..utils.utils import form_to_dict
 from . import rule_core as RuleModel
@@ -23,7 +24,7 @@ rule_blueprint = Blueprint(
 #   Rule List       #
 #####################
 
-@rule_blueprint.route("/", methods=['GET', 'POST'])
+@rule_blueprint.route("/create_rule", methods=['GET', 'POST'])
 @login_required
 def rule() -> render_template:
     """Create a new rule"""
@@ -529,15 +530,15 @@ def test_yara_python_url() -> redirect:
 
 
         try:
-
+            info = get_github_repo_author(repo_url)
             repo_dir , existe  = clone_or_access_repo(repo_url) 
 
             if not repo_dir:
                 flash("Failed to clone or access the repository.", "danger")
                 return redirect(url_for("rule.rules_list"))
-            print("oui")
+
             if existe == True:
-                print("oui")
+                print("")
                 # delete in bad_rule all the bad rule with url == repo_dir
                 #check = RuleModel.delete_bad_rule_from_url(existe)
 
@@ -549,10 +550,12 @@ def test_yara_python_url() -> redirect:
             owner, repo = extract_owner_repo(repo_url)
             license_from_github = get_license_name(owner,repo)
 
+            # parse rules
             rule_dicts_Sigma , bad_rule_dicts_Sigma , nb_bad_rules_sigma= load_rule_files(repo_dir, license_from_github, repo_url)
             rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github)
             rule_dicts_Yara , bad_rule_dicts_Yara, nb_bad_rules_yara = read_and_parse_all_yara_rules_from_folder_test(license_from_github, repo_url, external_vars)
-            
+            rule_dicts_Suricata = parse_suricata_rules_from_file(repo_dir ,license_from_github, repo_url ,info)
+
             imported = 0
             skipped = 0
             if rule_dicts_Sigma:
@@ -579,6 +582,14 @@ def test_yara_python_url() -> redirect:
                         imported += 1
                     else:
                         skipped += 1
+            if rule_dicts_Suricata:
+                for rule_dict4 in rule_dicts_Suricata:
+                    success = RuleModel.add_rule_core(rule_dict4)
+
+                    if success:
+                        imported += 1
+                    else:
+                        skipped += 1
             flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
             delete_existing_repo_folder("app/rule/output_rules/Yara")
 
@@ -594,7 +605,8 @@ def test_yara_python_url() -> redirect:
                     return redirect(url_for("rule.bad_rules_summary"))
 
         except Exception as e:
-            flash("Failed to import rules: URL ", "danger")
+            print(e)
+            flash("Failed to import rules: URL  ", "danger")
 
     return redirect(url_for("rule.rules_list"))
 
