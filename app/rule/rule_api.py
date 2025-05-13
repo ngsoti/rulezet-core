@@ -1,26 +1,26 @@
-
 from flask import Blueprint, request
 from flask_restx import Api, Resource
 
-from app.utils.decorators import api_required
-
-
+from app.utils.decorators import api_required 
 
 
 api_rule_blueprint = Blueprint('api_rule', __name__)
+
+
 api = Api(api_rule_blueprint,
-        title='rulezet API', 
-        description='API to manage a rule management instance.', 
-        version='0.1', 
-        default='GenericAPI', 
-        default_label='Generic rulezet API', 
-        doc='/doc/'
-    )
+          title='Rulezet API',
+          description='API to manage a rule management instance.',
+          version='0.1',
+          default='Rules API',
+          default_label='rules / bad_rule  API',
+          doc='/doc/') 
+
 
 @api.route('/create_rule')
 @api.doc(description='Create a rule')
 class CreateRule(Resource):
-    method_decorators = [api_required]
+    method_decorators = [api_required]  
+
     @api.doc(params={
         "title": "Required. Title for the rule",
         "description": "Description of the rule",
@@ -38,4 +38,5 @@ class CreateRule(Resource):
         "user_id": "ID of the user who imported the rule"
     })
     def get(self):
-        return {"hello": "oui"}
+        print("goood")
+        return {"message": "Rule endpoint is accessible"}

@@ -1,4 +1,3 @@
-import shutil
 from app.import_github_project.untils_import import delete_existing_repo_folder
 from app.rule.import_licenses.rule_licence import fetch_and_save_licenses
 from flask import Flask
@@ -54,9 +53,16 @@ def create_app():
     app.register_blueprint(account_blueprint, url_prefix="/account")
     app.register_blueprint(rule_blueprint, url_prefix="/rule")
 
-
     from .rule.rule_api import api_rule_blueprint
-    app.register_blueprint(api_rule_blueprint, url_prefix="/api/case")
+    from app.account.account_api import api_account_blueprint
+
+    csrf.exempt(api_rule_blueprint)
+    csrf.exempt(api_account_blueprint)
+
+
+    app.register_blueprint(api_rule_blueprint, url_prefix="/api/rule")
+    app.register_blueprint(api_account_blueprint, url_prefix="/api/account")
+
 
     return app
     

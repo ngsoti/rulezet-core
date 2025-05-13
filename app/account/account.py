@@ -13,6 +13,8 @@ account_blueprint = Blueprint(
     static_folder='static'
 )
 
+
+
 ###############
 # User action #
 ###############

@@ -66,7 +66,13 @@
                         </div>
                         <div class="col-md-6">
                             <strong>Source :</strong>
-                            <p><a href="{{ rule.source }}" target="_blank">{{ rule.source }}</a></p>                          
+                            <p>
+                                {% if rule.source.startswith('http') %}
+                                    <a href="{{ rule.source }}" target="_blank">{{ rule.source }}</a>
+                                {% else %}
+                                    {{ rule.source }}
+                                {% endif %}
+                            </p>
                         </div>
                     </div>
 
@@ -97,13 +103,21 @@
 
             <!-- Rule Content Card -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="fas fa-file-alt"></i> Rule Content</h5>
+                <div class="card-header bg-light position-relative">
+                <h5 class="mb-0"><i class="fas fa-file-alt"></i> Rule Content</h5>
+            
+                <!-- Copy button -->
+                <button id="copyBtn" class="btn  me-3 px-4 py-2 mb-2 position-absolute top-0 end-0" onclick="copyToClipboard()">
+                    <i id="copyIcon" class="fas fa-copy me-1"></i>
+                    <span id="copyText"></span>
+                </button>
                 </div>
+            
                 <div class="card-body">
-                    <pre class="bg-light p-3 rounded-3 border" style="white-space: pre-wrap;">{{ rule.to_string }}</pre>
+                <pre class="bg-light p-3 rounded-3 border" style="white-space: pre-wrap;">{{ rule.to_string }}</pre>
                 </div>
             </div>
+
 
             <!-- Actions Card -->
             <div class="card shadow-sm">
@@ -121,34 +135,7 @@
                             <i class="fas fa-user-shield me-1"></i> Request Ownership
                         </button>
                         {% endif%}
-                        <!-- Copy button -->
-                        <button class="btn btn-outline-info me-3 px-4 py-2 mb-2" onclick="copyToClipboard()">
-                            <i class="fas fa-copy me-1"></i> Copy
-                        </button>
-                    
-                        <!-- Copy message -->
-                        <span id="copyMessage" class="text-success ms-2" style="display: none; font-size: 0.875rem;">
-                            Content copied to clipboard!
-                        </span>
                     </div>
-                    
-                    <script>
-                        function copyToClipboard() {
-                            const textarea = document.getElementById('ruleContentToCopy');
-                            textarea.style.display = 'block'; 
-                            textarea.select();
-                            document.execCommand("copy");
-                            textarea.style.display = 'none';
-                    
-                            var copyMessage = document.getElementById('copyMessage');
-                            copyMessage.style.display = 'inline'; 
-                    
-                            setTimeout(function() {
-                                copyMessage.style.display = 'none';
-                            }, 2000);
-                        }
-                    </script>
-
                     <!-- Votes -->
                     <div class="text-center">
                         {% if current_user.is_authenticated %}
@@ -334,16 +321,9 @@
                                         <div class="editorContainer" style="min-height: 300px;" ></div>
                                     </div>
                                     
-                                    <style>
-                                        .CodeMirror {
-                                            height: 500px;
-                                            border: 1px solid #ddd;
-                                            margin-top: 20px;
-                                            font-size: 14px;
-                                        }
-                                    </style>
+                                    
                                     <!-- Hidden textarea to submit editor content -->
-                                    <textarea name="proposed_content" id="proposed_content" hidden></textarea>
+                                    <textarea name="proposed_content" id="proposed_content" hidden ></textarea>
 
                                 </div>
                             </div>
@@ -408,6 +388,27 @@
 
 {% block script %}
 <script>
+    function copyToClipboard() {
+      const text = document.querySelector('pre').innerText;
+      const copyIcon = document.getElementById("copyIcon");
+      const copyText = document.getElementById("copyText");
+    
+      navigator.clipboard.writeText(text).then(() => {
+        copyIcon.classList.remove("fa-copy");
+        copyIcon.classList.add("fa-check");
+        copyText.textContent = "Copied";
+    
+        setTimeout(() => {
+          copyIcon.classList.remove("fa-check");
+          copyIcon.classList.add("fa-copy");
+          copyText.textContent = "Copy";
+        }, 2000);
+      }).catch(() => {
+        alert("Failed to copy text.");
+      });
+    }
+    </script>
+<script>
     const ruleContent = document.getElementById('ruleRaw').value;
     let editor = null;
 
@@ -421,6 +422,7 @@
             theme: 'default',
             value:  ruleContent
         });
+        editor.setSize("100%", "700px"); 
 
         editor.on('change', () => {
             const proposedField = document.getElementById('proposed_content');

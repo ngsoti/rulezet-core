@@ -21,15 +21,15 @@ def create_admin():
 
 def create_user_test():
     # Admin user
-    user = User(
-        first_name="admin",
-        last_name="admin",
-        email="admin@admin.admin",
-        password="admin",
+    user1 = User(
+        first_name="theo",
+        last_name="theo",
+        email="t@t.t",
+        password="t",
         admin=True,
-        api_key = "admin_api_key"
+        api_key = generate_api_key()
     )
-    db.session.add(user)
+    db.session.add(user1)
     db.session.commit()
 
     user = User(

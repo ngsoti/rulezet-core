@@ -6,19 +6,20 @@ from app.utils.utils import verif_api_key
 
 
 def verification_required():
-    """Restrict an api access to users without a key"""
+    """Restrict API access to users without a valid key"""
 
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if request.path.startswith("/api/"):
-                if verif_api_key(request.headers):
-                    abort(403)
+                if not verif_api_key(request.headers): 
+                    abort(403)  
             return f(*args, **kwargs)
 
         return decorated_function
 
     return decorator
+
 
 
 

@@ -4,7 +4,7 @@ from flask import render_template, request, Response
 import json
 import os
 
-from app.utils.init_db import create_admin
+from app.utils.init_db import create_admin, create_user_test
 
 
 parser = argparse.ArgumentParser()
@@ -28,11 +28,13 @@ if args.init_db:
     with app.app_context():
         db.create_all()
         create_admin()
+        create_user_test()
 elif args.recreate_db:
     with app.app_context():
         db.drop_all()
         db.create_all()
         create_admin()
+        create_user_test()
 elif args.delete_db:
     with app.app_context():
         db.drop_all()

@@ -1,6 +1,5 @@
-from datetime import datetime, time, timezone
+from datetime import datetime,  timezone
 from math import ceil
-import threading
 from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, session, url_for
 from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
@@ -672,6 +671,7 @@ def edit_bad_rule(rule_id) -> render_template:
                 return redirect(url_for('rule.bad_rules_summary'))
             else:
                 flash(f"Error: {error}", "danger")
+                bad_rule.error_message = error
                 return render_template('rule/edit_bad_rule.html', rule=bad_rule, new_content=new_content)
         return render_template('rule/edit_bad_rule.html', rule=bad_rule)
     else:

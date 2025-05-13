@@ -1,6 +1,8 @@
 import sys
 import os
 sys.path.append(os.getcwd())
+
+from app.db_class.db import User
 from app import create_app, db
 from app.utils.init_db import create_user_test
 import pytest
@@ -29,3 +31,35 @@ def client(app):
 @pytest.fixture()
 def runner(app):
     return app.test_cli_runner()
+    
+
+@pytest.fixture
+def new_user(app):  
+    with app.app_context():
+        other_user = User(
+            email="existing@example.com",
+            first_name="Existing",
+            last_name="User"
+        )
+        other_user.password = "password"  
+        db.session.add(other_user)
+        db.session.commit()
+
+        yield other_user
+
+@pytest.fixture
+def logged_in_client(client, new_user):  
+    client.post("/api/account/register", json={
+        "email": "test@example.com",
+        "password": "password",
+        "first_name": "Test",
+        "last_name": "User"
+    })
+    
+    # Connecter l'utilisateur
+    response = client.post("/api/account/login", json={
+        "email": "test@example.com",
+        "password": "password"
+    })
+
+    yield client  

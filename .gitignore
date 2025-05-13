@@ -28,3 +28,5 @@ __pycache__/
 tmp/
 Rules_Github/*
 rule/output_rules/*
+
+flask_session
