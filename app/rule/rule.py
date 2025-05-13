@@ -31,7 +31,6 @@ def rule() -> render_template:
     form = AddNewRuleForm()
     licenses = []
     
-    # Charger les licences depuis le fichier
     with open("app/rule/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -73,7 +72,7 @@ def rule() -> render_template:
         RuleModel.add_rule_core(form_dict)
         flash('Rule added !', 'success')
     
-    return render_template("rule/rule.html", form=form)
+    return render_template("rule/rule.html", form=form )
 
 
 @rule_blueprint.route("/rules_list", methods=['GET'])
@@ -509,6 +508,18 @@ def proposal_content_discuss() -> render_template:
 #   Import from Github  #
 #########################
 
+@rule_blueprint.route("/get_license", methods=['GET'])
+@login_required
+def get_license() -> jsonify:
+    """Import license"""
+    licenses = []
+    with open("app/rule/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                licenses.append(line)
+    return jsonify({"licenses": licenses})
+
 @rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
 @login_required
 def test_yara_python_url() -> redirect:
@@ -516,6 +527,7 @@ def test_yara_python_url() -> redirect:
     if request.method == 'POST':
         # take the different param (url and external var if existe)
         repo_url = request.form.get('url')
+        selected_license = request.form.get('license')
         external_vars = []
         index = 0
         while True:
@@ -536,8 +548,8 @@ def test_yara_python_url() -> redirect:
                 flash("Failed to clone or access the repository.", "danger")
                 return redirect(url_for("rule.rules_list"))
 
-            if existe == True:
-                print("")
+            # if existe == True:
+            #     print("")
                 # delete in bad_rule all the bad rule with url == repo_dir
                 #check = RuleModel.delete_bad_rule_from_url(existe)
 
@@ -547,7 +559,10 @@ def test_yara_python_url() -> redirect:
 
             #license 
             owner, repo = extract_owner_repo(repo_url)
-            license_from_github = get_license_name(owner,repo)
+            if selected_license:
+                license_from_github = selected_license
+            else:
+                license_from_github = get_license_name(owner,repo)
 
             # parse rules
             rule_dicts_Sigma , bad_rule_dicts_Sigma , nb_bad_rules_sigma= load_rule_files(repo_dir, license_from_github, repo_url)
@@ -604,7 +619,6 @@ def test_yara_python_url() -> redirect:
                     return redirect(url_for("rule.bad_rules_summary"))
 
         except Exception as e:
-            print(e)
             flash("Failed to import rules: URL  ", "danger")
 
     return redirect(url_for("rule.rules_list"))

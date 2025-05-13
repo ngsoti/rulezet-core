@@ -21,14 +21,9 @@ def load_zeek_scripts(files):
                             "content": content
                         }
                         all_scripts.append(script_data)
-                    else:
-                        print(f"The file {file} is empty.")
             except Exception as e:
                 print(f"Error reading the file {file}: {e}")
-    else:
-        print("No files found to process.")
     
-    print(f"{len(all_scripts)} Zeek scripts loaded.")
     return all_scripts
 
 
@@ -39,7 +34,6 @@ def get_zeek_files_from_repo(repo_dir):
 
     # Check if the directory exists
     if not os.path.exists(repo_dir):
-        print(f"Error: The directory {repo_dir} does not exist.")
         return zeek_files
 
     # Traverse all files in the directory
@@ -47,8 +41,6 @@ def get_zeek_files_from_repo(repo_dir):
         for file in files:
             if file.endswith('.zeek'):
                 zeek_files.append(os.path.join(root, file))
-
-    print(f"Files found: {len(zeek_files)} .zeek files.")
     return zeek_files
 
 def read_and_parse_all_zeek_scripts_from_folder(repo_dir, url_github, license_from_github):

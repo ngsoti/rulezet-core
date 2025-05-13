@@ -149,8 +149,16 @@
                 <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/name_project.git" required>
                 </div>
         
+                <div class="mb-3">
+                    <label for="license-select" class="form-label">License</label>
+                    <select id="license-select" name="license" class="form-control" v-model="selectedLicense">
+                        <option disabled value="">-- Choose a license --</option>
+                        <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
+                    </select>
+                </div>                
                 <div id="dynamic-fields" class="mb-3"></div>
         
+
                 <div class="mb-3">
                 <button type="button" class="btn btn-secondary" onclick="addField(2)">
                     Add external variables
@@ -271,16 +279,25 @@
     });
 </script>
 <script type="module">
-    // Import Vue and custom toaster messages
     const { createApp, ref } = Vue;
     import { message_list } from '/static/js/toaster.js';
-
-    // Initialize Vue app
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
+
+            const license = ref([])
+            const selectedLicense = ref("");
+
+            async function fetchRules() {
+                const res = await fetch('/rule/get_license')
+                const data = await res.json()
+                license.value = data.licenses
+            }
+            fetchRules()
             return {
                 message_list,
+                license,
+                selectedLicense
             };
         }
     }).mount('#main-container');
