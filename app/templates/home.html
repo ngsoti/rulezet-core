@@ -68,7 +68,6 @@
       <i class="fas fa-hammer"></i> Add Rule
     </a>
   </header>
-
   <div class="row">
     <template v-if="rules_list.length > 0">
       <div class="col-md-6 mb-3" v-for="(rule, index) in rules_list" :key="rule.uuid">
@@ -138,7 +137,7 @@
     setup() {
       const csrf_token = '{{ csrf_token() }}';
       const rules_list = ref([])
-      const current_user_is_admin = ref(false)
+      const current_user_is_admin = ref()
       const current_user_is_connected = ref(false)
 
 
@@ -153,6 +152,8 @@
           const res = await fetch('/rule/get_current_user')
           const data = await res.json()
           current_user_is_admin.value = data.user
+        }else{
+          alert("ahhh")
         }
         
       }
@@ -160,6 +161,9 @@
         const res = await fetch('/get_current_user_connected');
         const data = await res.json();
         current_user_is_connected.value = data.is_authenticated;
+        if(data.is_authenticated == true){
+          fetchCurrentUser()
+        }
     }
 
 
@@ -205,7 +209,7 @@
 
       checkIfUserIsConnected()
       fetchRecentRules()
-      fetchCurrentUser()
+      
 
       return {
         rules_list,
@@ -213,7 +217,8 @@
         deleteRule,
         vote,
         checkIfUserIsConnected,
-        csrf_token
+        csrf_token,
+        fetchCurrentUser
       }
     }
   }).mount('#main-container')
