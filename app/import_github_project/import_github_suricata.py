@@ -41,7 +41,7 @@ def parse_suricata_rules_from_file(repo_dir, license_from_github, repo_url, info
                 rules = parse_rules(rules_content)  
                 for rule in rules:
                     rule_dict = {
-                        "format": "Suricata",  
+                        "format": "suricata",  
                         "title": rule.msg or file  ,  # msg = title of the rule
                         "license": license_from_github, 
                         "description": info.get("description", "No description provided"),

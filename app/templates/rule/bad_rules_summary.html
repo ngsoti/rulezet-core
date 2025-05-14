@@ -20,28 +20,29 @@
   <p class="text-center text-muted mb-4">
     The following rules are invalid because they did not pass syntax parsing validation.
   </p>
-  <div class="card p-4 shadow-sm bg-light mb-3" >
-    <h5 class="mb-4">Filters</h5>
-    <div class="row g-3">
-      <div class="col-md-4">
-        <input
-          type="text"
-          v-model="searchQuery"
-          @input="onSearchInput"
-          @keyup.enter="onEnterKey"
-          class="form-control"
-          placeholder="Search by title, description..."
-        >
-      </div>
-      <div class="col-md-2">
-        <button class="btn btn-primary w-100" @click="fetchRules(1)">
-          <i class="fas fa-filter"></i> Filter
-        </button>
-      </div>
-    </div>
-  </div>
+  
   
   <div v-if="rules_list.length > 0">
+    <div class="card p-4 shadow-sm bg-light mb-3" >
+      <h5 class="mb-4">Filters</h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <input
+            type="text"
+            v-model="searchQuery"
+            @input="onSearchInput"
+            @keyup.enter="onEnterKey"
+            class="form-control"
+            placeholder="Search by title, description..."
+          >
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-primary w-100" @click="fetchRules(1)">
+            <i class="fas fa-filter"></i> Filter
+          </button>
+        </div>
+      </div>
+    </div>
     <div  class="row row-cols-1 row-cols-md-2 g-4 mt-2">
     
       <div class="col" v-for="(rule, index) in rules_list" :key="rule.id">

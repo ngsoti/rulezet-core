@@ -40,11 +40,9 @@ def create_app():
     # fetch_and_save_licenses()
 
     # remove the previous rule
-   #  REPO_DIR = "Rules_Github"
-   #  if os.path.exists(REPO_DIR):
-   #     shutil.rmtree(REPO_DIR)
-
-    
+    #  REPO_DIR = "Rules_Github"
+    #  if os.path.exists(REPO_DIR):
+    #     shutil.rmtree(REPO_DIR)
 
     from .home import home_blueprint
     from .account.account import account_blueprint
@@ -59,10 +57,8 @@ def create_app():
     csrf.exempt(api_rule_blueprint)
     csrf.exempt(api_account_blueprint)
 
-
     app.register_blueprint(api_rule_blueprint, url_prefix="/api/rule")
     app.register_blueprint(api_account_blueprint, url_prefix="/api/account")
-
 
     return app
     

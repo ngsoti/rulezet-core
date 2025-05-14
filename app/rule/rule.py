@@ -456,6 +456,21 @@ def get_rules_propose_edit_page() -> jsonify:
         })
     return jsonify({"message": "No Rule"})
 
+@rule_blueprint.route("/get_rules_propose_page", methods=['GET'])
+def get_rules_propose_page() -> jsonify:
+    """Get all the changes propose"""
+    page = request.args.get('page', 1, type=int)
+    rule_id = request.args.get('rule_id', 1, type=int)
+    all_rules_propose = RuleModel.get_all_rules_edit_propose_page(page , rule_id)
+
+    if all_rules_propose:
+        rules_list = [rule.to_json() for rule in all_rules_propose]
+        return jsonify({
+            "rules_list": rules_list,
+            "total_pages_pending": all_rules_propose.pages,
+        })
+    return jsonify({"message": "No Rule"})
+
 @rule_blueprint.route('/propose_edit/<int:rule_id>', methods=['POST'])
 @login_required
 def propose_edit(rule_id) -> redirect:
@@ -502,7 +517,67 @@ def validate_proposal() -> jsonify:
 @login_required
 def proposal_content_discuss() -> render_template:
     """Redirect to porposal content discuss"""
-    return render_template("rule/proposal_content_discuss.html")
+    rule_edit_id = request.args.get('id', type=int)
+    return render_template("rule/proposal_content_discuss.html" , rule_edit_id = rule_edit_id)
+
+
+@rule_blueprint.route('/discuss', methods=['GET'])
+@login_required
+def get_rule_edit_comments() -> jsonify:
+    """Get all the discuss"""
+    proposal_id = request.args.get('id', type=int)
+    comments = RuleModel.get_comments_by_proposal_id(proposal_id)
+    return jsonify([comment.to_json() for comment in comments])
+
+@rule_blueprint.route('/add_comment_discuss', methods=['GET'])
+@login_required
+def post_rule_edit_comment() -> jsonify:
+    """Create a comment in the discuss section"""
+    proposal_id = request.args.get('id', type=int)
+    content = request.args.get('content')
+
+    if not content:
+        return jsonify({'error': 'Content is required'}), 400
+
+    try:
+        new_comment = RuleModel.create_comment_discuss(proposal_id, current_user.id, content)
+        return jsonify(new_comment.to_json()), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@rule_blueprint.route('/delete_comment', methods=['GET'])
+@login_required
+def delete_comment_discuss() -> jsonify:
+    """Delete a comment in the discuss section"""
+    comment_id = request.args.get('id', type=int)
+    success = RuleModel.delete_comment_discuss(comment_id, current_user.id)
+    if success:
+        return jsonify({"message": "Comment deleted."}), 200
+    else:
+        return jsonify({"error": "Not authorized or comment not found."}), 403
+
+@rule_blueprint.route('/get_proposal', methods=['GET'])
+@login_required
+def get_proposal() -> jsonify:
+    """Get the detail porposal"""
+    proposalId = request.args.get('id', type=int)
+    proposal = RuleModel.get_rule_proposal(proposalId)
+    return proposal.to_json()
+
+@rule_blueprint.route('/get_discuss_part_from', methods=['GET'])
+@login_required
+def get_discuss_part_from() -> jsonify:
+    """Get all the discuss  where the current user speak"""
+    page = request.args.get('page', type=int)
+    all_discuss_proposal = RuleModel.get_all_rules_edit_propose_user_par_frompage(page , current_user.id)
+
+    if all_discuss_proposal:
+        discuss_list = [rule.to_json() for rule in all_discuss_proposal]
+        return jsonify({
+            "discuss_list": discuss_list,
+            "total_page_discuss": all_discuss_proposal.pages,
+        })
+    return jsonify({"message": "No Discuss"})
 
 #########################
 #   Import from Github  #
@@ -682,6 +757,10 @@ def edit_bad_rule(rule_id) -> render_template:
             success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content)
             if success:
                 flash("Rule fixed and imported successfully.", "success")
+                # delete the bad rule
+                # delete = RuleModel.delete_bad_rule(rule_id)
+                # if delete:
+                #     return redirect(url_for('rule.bad_rules_summary'))
                 return redirect(url_for('rule.bad_rules_summary'))
             else:
                 flash(f"Error: {error}", "danger")

@@ -12,6 +12,9 @@
         <li class="nav-item">
             <a class="nav-link" data-bs-toggle="tab" href="#history" role="tab">History</a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#discuss" role="tab">Discuss</a>
+        </li>
     </ul>
 
     <div class="tab-content mt-4">
@@ -60,10 +63,10 @@
                                 </button>
                             
                                 <!-- Discuss Content Link -->
-                                <!-- <a :href="'/rule/proposal_content_discuss'"
+                                <a :href="'/rule/proposal_content_discuss?id=' + rule.id"
                                     class="btn btn-outline-primary btn-sm d-inline-flex align-items-center">
                                     <i class="fas fa-comments me-1 text-info"></i> Discuss
-                                </a> -->
+                                </a>
                             </div>
                             
     
@@ -207,6 +210,67 @@
                 </table>
             </div>
         </div>
+        <div class="tab-pane fade" id="discuss" role="tabpanel">
+            <div class="mt-3">
+                <h5 class="mb-3">Your Discussions</h5>
+        
+                <div v-if="discuss_list.length === 0" class="alert alert-secondary">
+                    You haven't participated in any discussions yet.
+                </div>
+        
+                <div v-else>
+                    <div v-for="proposal in uniqueDiscussList" :key="proposal.id" class="card mb-3 shadow-sm">
+
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-comments me-2 text-primary"></i>
+                                [[ proposal.rule_name || 'Untitled Rule' ]]
+                                <span v-if="proposal.user_id === currentUserId" class="badge bg-primary ms-2">
+                                    You submitted this request
+                                </span>
+                    
+                                <span v-else class="badge bg-success ms-2">
+                                    You participated in this discussion
+                                </span>
+                            </h5>
+        
+                            <p class="card-text text-muted mb-2">
+                                <strong>Status:</strong> [[ proposal.status ]] <br>
+                                <strong>Submitted by:</strong> [[ proposal.user_name ]] <br>
+                                <strong>Date:</strong> [[ proposal.timestamp ]]
+                            </p>
+        
+                            <p class="card-text">
+                                <strong>Message:</strong><br>
+                                [[ proposal.message || 'No message provided.' ]]
+                            </p>
+        
+                            <a class="btn btn-outline-primary btn-sm mt-2" :href="'/rule/proposal_content_discuss?id=' + proposal.id">
+                                View Proposal
+                            </a>
+                        </div>
+                    </div>
+        
+                    <!-- Pagination Controls -->
+                    <nav class="mt-3">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item" :class="{ disabled: current_page_discuss === 1 }">
+                                <a class="page-link" href="#" @click.prevent="fetchDiscussPart(current_page_discuss - 1)">Previous</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">
+                                    Page [[ current_page_discuss ]] of [[ total_page_discuss ]]
+                                </span>
+                            </li>
+                            <li class="page-item" :class="{ disabled: current_page_discuss === total_page_discuss }">
+                                <a class="page-link" href="#" @click.prevent="fetchDiscussPart(current_page_discuss + 1)">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        
     </div>
 </div>
 
@@ -225,6 +289,39 @@
             const current_page = ref(1);
             const total_pages = ref(1);
             const total_pages_pending = ref(1);
+            const currentUserId = parseInt('{{ current_user.id }}');
+
+
+            
+
+
+             // all the discuss who the current_user has comment
+            const discuss_list = ref([]);
+            const total_page_discuss = ref(1);
+            const current_page_discuss = ref(1);
+
+            async function fetchDiscussPart(page) {
+                const res = await fetch('/rule/get_discuss_part_from?page='+page);
+                if(res){
+                    const data = await res.json();
+                    if(data){
+                        discuss_list.value = data.discuss_list;
+                        total_page_discuss.value = data.total_page_discuss;
+                        current_page_discuss.value = page;
+                    }
+                    
+                }
+            }
+            fetchDiscussPart(1)
+
+            const uniqueDiscussList = computed(() => {
+                const seenTitles = new Set();
+                return discuss_list.value.filter(proposal => {
+                    if (seenTitles.has(proposal.rule_name)) return false;
+                    seenTitles.add(proposal.rule_name);
+                    return true;
+                });
+            });
 
 
             async function fetchRules(page) {
@@ -325,7 +422,12 @@
                 isLineDeleted,
                 isLineIdentical,
                 visiblePages,
-                total_pages_pending
+                total_pages_pending,
+                discuss_list,
+                fetchDiscussPart,
+                total_page_discuss,
+                uniqueDiscussList,
+                currentUserId
             };
         }
     }).mount('#main-container');

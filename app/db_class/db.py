@@ -198,50 +198,6 @@ class RequestOwnerRule(db.Model):
         }
 
 
-
-class RuleEditProposal(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # the user who made the request
-    proposed_content = db.Column(db.Text, nullable=False)
-    old_content = db.Column(db.String)
-    message = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
-    status = db.Column(db.String, default="pending")
-
-    rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic',  cascade='all, delete-orphan'))
-    user = db.relationship('User', backref=db.backref('proposed_edits', lazy='dynamic', cascade='all, delete-orphan'))
-
-    def get_rule_title(self):
-        rule = Rule.query.get(self.rule_id)  
-        return rule.title if rule else None
-
-
-
-
-    def to_json(self):
-        return {
-            'id': self.id,
-            'rule_id': self.rule_id,
-            'rule_name': self.get_rule_title(),
-            'old_content': self.old_content,
-            'user_id': self.user_id,
-            'proposed_content': self.proposed_content,
-            'message': self.message,
-            "status": self.status,
-            'timestamp': self.timestamp.isoformat(),
-        }
-
-# class discussContent (db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     rule_proposal_id = db.Column(db.Integer, db.ForeignKey('RuleEditProposal.id'), nullable=False)
-#     users_id = # all the user id who speak about this rule  (admin , rule owner and the user who propose a change)
-#     messages = # all the message new table ? whit id , user_id  and the content
-#     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
-
-
-
-
 class RuleVote(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -289,4 +245,60 @@ class InvalidRuleModel(db.Model):
             "license": self.license
         }
     
+
+
+class RuleEditProposal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # the user who made the request
+    proposed_content = db.Column(db.Text, nullable=False)
+    old_content = db.Column(db.String)
+    message = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+    status = db.Column(db.String, default="pending")
+
+    rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic',  cascade='all, delete-orphan'))
+    user = db.relationship('User', backref=db.backref('proposed_edits', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def get_rule_title(self):
+        rule = Rule.query.get(self.rule_id)  
+        return rule.title if rule else None
+
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'rule_id': self.rule_id,
+            'rule_name': self.get_rule_title(),
+            'user_id': self.user_id,
+            'user_name': self.user.first_name if self.user else None,
+            'proposed_content': self.proposed_content,
+            'old_content': self.old_content,
+            'message': self.message,
+            'status': self.status,
+            'timestamp': self.timestamp.isoformat(),      #2021-07-27#16:01:12.090202        DateTime_in_ISOFormat.isoformat("#", "auto")
+            'comments': [comment.to_json() for comment in self.comments.order_by(RuleEditComment.created_at.asc())]  # take all the message which was concerne by this pull request with date order
+        }
+
+
+
+class RuleEditComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    proposal_id = db.Column(db.Integer, db.ForeignKey('rule_edit_proposal.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+
+    proposal = db.relationship('RuleEditProposal', backref=db.backref('comments', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User')
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'proposal_id': self.proposal_id,
+            'user_id': self.user_id,
+            'user_name': self.user.first_name if self.user else None,
+            'content': self.content,
+            'created_at': self.created_at.isoformat()
+        }
 

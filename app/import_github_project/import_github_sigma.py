@@ -67,7 +67,7 @@ def load_rule_files(repo_dir, license_from_github, repo_url):
     rule_dict_list = []
     for rule in all_rules:
         rule_dict = {
-            "format": "Sigma",  
+            "format": "sigma",  
             "title": rule.get("title", "Untitled"), 
             "license": rule.get("license", license_from_github), 
             "description": rule.get("description", "No description provided"),

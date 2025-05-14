@@ -391,7 +391,7 @@ def read_and_parse_all_yara_rules_from_folder_test(license_from_github, repo_url
             source_url = repo_url
 
             rule_dict = {
-                "format": "YARA",
+                "format": "yara",
                 "title": title,
                 "license": license,
                 "description": description,

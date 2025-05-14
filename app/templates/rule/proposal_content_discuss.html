@@ -1,7 +1,167 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="container my-4" id="main-container">
+    <h2 class="mb-4">
+        <i class="fas fa-code-branch me-2 text-primary"></i>
+        Proposal [[ proposal.rule_name ]]
+    </h2>
 
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">
+                <i class="fas fa-user me-2 text-secondary"></i> Proposed by [[ proposal.user_name ]]
+            </h5>
+            <p class="card-text">
+                <i class="fas fa-comment-dots me-2"></i>
+                <strong>Message:</strong> <template v-if="proposal.message != '' " >[[ proposal.message ]] </template> <template v-else> no message</template>
+    
+            </p>
+            <p class="card-text">
+                <i class="fas fa-clock me-2"></i>
+                <strong>Submitted:</strong> [[ new Date(proposal.timestamp).toLocaleString() ]]
+            </p>
+            <p class="card-text">
+                <i class="fas fa-flag me-2"></i>
+                <strong>Status:</strong>
+                <span class="badge bg-success" v-if="proposal.status === 'accepted'">Accepted</span>
+                <span class="badge bg-warning text-dark" v-else-if="proposal.status === 'pending'">Pending</span>
+                <span class="badge bg-danger" v-else>Rejected</span>
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <i class="fas fa-file-alt me-2"></i>Old Rule Content
+                </div>
+                <div class="card-body">
+                    <pre style="white-space: pre-wrap;">[[ proposal.old_content ]]</pre>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-edit me-2"></i>Proposed Rule Content
+                </div>
+                <div class="card-body">
+                    <pre style="white-space: pre-wrap;">[[ proposal.proposed_content ]]</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div v-if="comments.length === 0" class="alert alert-secondary">
+        No comments yet.
+    </div>
+
+    <ul class="list-group mb-4" v-else>
+        <li v-for="comment in comments" :key="comment.id" class="list-group-item d-flex justify-content-between align-items-start">
+            <div>
+                <h6 class="mb-1">
+                    <i class="fas fa-user-circle text-primary me-2"></i>
+                    [[ comment.user_name ]]
+                </h6>
+                <p class="mb-1">[[ comment.content ]]</p>
+                <small class="text-muted">[[ comment.created_at ]]</small>
+            </div>
+            <template v-if="parseInt('{{current_user.id}}') == comment.user_id">
+                <button class="btn btn-sm btn-outline-danger ms-3" @click="deleteComment(comment.id)">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </template>          
+        </li>
+    </ul>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Add a Comment</h5>
+            <textarea v-model="newComment" class="form-control" rows="3" placeholder="Write your comment here..."></textarea>
+            <button @click="submitComment" class="btn btn-primary mt-2">
+                <i class="fas fa-paper-plane"></i> Submit
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
+{% block script %}
+<script type="module">
+    const { createApp, ref } = Vue;
+    import { message_list } from '/static/js/toaster.js';
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const proposalId = parseInt("{{ rule_edit_id }}");
+            const proposal = ref(null)
+            const comments = ref([]);
+            const newComment = ref('');
+            const current_user_is_admin = ref()
 
+            async function fetchCurrentUser() {
+                const res = await fetch('get_current_user')
+                const data = await res.json()
+                current_user_is_admin.value = data.user
+            }
+
+            async function fetchComments() {
+                try {
+                    const res = await fetch(`/rule/discuss?id=`+proposalId);
+                    if (res.ok) {
+                        comments.value = await res.json();
+                    } 
+                } catch (err) {
+                    alert(err)
+                }
+            }
+
+            async function submitComment() {
+                const content = newComment.value.trim()
+                console.log(content)
+                if(content != ""){
+                    const res = await fetch(`/rule/add_comment_discuss?id=`+proposalId+'&content='+content )
+                    if (res.ok) {
+                        const comment = await res.json();
+                        comments.value.push(comment);
+                        newComment.value = '';
+                    } 
+                }
+            }
+
+            async function deleteComment(commentId) {
+                const res = await fetch('/rule/delete_comment?id='+commentId)
+                if (res.ok) {
+                    comments.value = comments.value.filter(c => c.id !== commentId);
+                } else {
+                    const data = await res.json();
+                }
+            }
+
+
+            async function fetchRuleProposal() {
+                const res = await fetch('/rule/get_proposal?id='+proposalId)
+                proposal.value = await res.json()
+            }
+
+
+            fetchComments();
+            fetchRuleProposal();
+
+            return {
+                comments,
+                newComment,
+                proposalId,
+                fetchComments,
+                submitComment,
+                fetchCurrentUser,
+                current_user_is_admin,
+                deleteComment,
+                fetchRuleProposal,
+                proposal
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

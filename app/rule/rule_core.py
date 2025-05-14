@@ -466,6 +466,16 @@ def get_rules_edit_propose_page_admin() -> RuleEditProposal:
         max_per_page=20
     )
 
+def get_all_rules_edit_propose_page(page , rule_id) -> RuleEditProposal:
+    """Return all rule edit proposals"""
+    return RuleEditProposal.query.join(RuleEditProposal.rule).filter(
+        RuleEditProposal.rule_id == rule_id
+    ).paginate(
+        page=page,
+        per_page=20,
+        max_per_page=20
+    )
+
 def get_rules_edit_propose_page_pending_admin(page) -> RuleEditProposal:
     """Return all pending rule edit proposals (admin view, no user filter)"""
     return RuleEditProposal.query.join(Rule).filter(
@@ -479,6 +489,25 @@ def get_rules_edit_propose_page_pending_admin(page) -> RuleEditProposal:
 def get_rule_proposal(id) -> RuleEditProposal:
     """Return the rule"""
     return RuleEditProposal.query.get(id)
+
+def get_all_rules_edit_propose_user_par_frompage(page, user_id, per_page=20)-> RuleEditProposal:
+        """Get all the rule edit porposal where the current user has part of """
+
+        commented_ids = db.session.query(RuleEditComment.proposal_id)\
+            .filter(RuleEditComment.user_id == user_id)\
+            .distinct()
+
+        pagination = RuleEditProposal.query\
+            .filter(
+                or_(
+                    RuleEditProposal.user_id == user_id,
+                    RuleEditProposal.id.in_(commented_ids)
+                )
+            )\
+            .order_by(RuleEditProposal.timestamp.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+
+        return pagination
 
 # Update
 
@@ -503,7 +532,37 @@ def set_status(proposal_id, status) -> json:
     db.session.commit()
     return {'success': True, 'new_status': status}, 200
 
+##############
+#   discuss  #
+##############
 
+
+def get_comments_by_proposal_id(proposal_id) -> RuleEditComment:
+    """Get all the discuss"""
+    return RuleEditComment.query \
+        .filter_by(proposal_id=proposal_id) \
+        .order_by(RuleEditComment.created_at.asc()) \
+        .all()
+
+def create_comment_discuss(proposal_id, user_id, content) -> RuleEditComment:
+        """Create a new comment in the discuss"""
+        new_comment = RuleEditComment(
+            proposal_id=proposal_id,
+            user_id=user_id,
+            content=content
+        )
+        db.session.add(new_comment)
+        db.session.commit()
+        return new_comment
+
+def delete_comment_discuss(comment_id, user_id) -> bool:
+        """Delete a comment in the discuss"""
+        comment = RuleEditComment.query.get(comment_id)
+        if comment and comment.user_id == user_id:
+            db.session.delete(comment)
+            db.session.commit()
+            return True
+        return False
 
 ####################
 #   Vote section   #

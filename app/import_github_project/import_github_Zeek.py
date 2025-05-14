@@ -82,7 +82,7 @@ def read_and_parse_all_zeek_scripts_from_folder(repo_dir, url_github, license_fr
 
             # Prepare the parsed data
             rule_dict = {
-                "format": "Zeek",
+                "format": "zeek",
                 "title": title_text,
                 "license": license_from_github,
                 "description": description.group(1) if description else "No description provided",
