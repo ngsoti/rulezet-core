@@ -19,7 +19,7 @@ def add_user_core(form_dict) -> User :
         last_name=form_dict["last_name"],
         email=form_dict["email"],
         password=form_dict["password"],
-        api_key = generate_api_key()
+        api_key = form_dict["key"] or generate_api_key()
     )
     db.session.add(user)
     db.session.commit()

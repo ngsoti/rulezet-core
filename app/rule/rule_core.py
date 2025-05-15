@@ -24,7 +24,7 @@ from sqlalchemy.orm import joinedload
 
 # Create
 
-def add_rule_core(form_dict) -> bool:
+def add_rule_core(form_dict , user) -> bool:
     """Add a rule"""
     title = form_dict["title"].strip()
 
@@ -155,6 +155,12 @@ def get_rule(id) -> int:
 def get_rule_by_title(title) -> str:
     """Return the rule from the title"""
     return Rule.query.filter_by(title=title).all()
+
+def get_rule_id_by_title(title) -> int:
+    """Return the rule ID from the title"""
+    rule = Rule.query.filter_by(title=title).first()
+    return rule.id if rule else None
+
 
 def get_total_rules_count() -> int:
     """Return the count of rules"""
@@ -298,7 +304,7 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content) -> bool:
                 "author": rule.get("author", "Unknown"),
                 "to_string": raw_content
             }
-        success = RuleModel.add_rule_core(rule_dict)
+        success = RuleModel.add_rule_core(rule_dict , current_user)
         if success:
             db.session.delete(bad_rule_obj)
             db.session.commit()
@@ -579,9 +585,9 @@ def has_already_vote(rule_id, user_id) -> bool:
         return True , vote.vote_type
     return False , None
 
-def has_voted(vote,rule_id) -> bool:
+def has_voted(vote,rule_id , id) -> bool:
     """Set a vote"""
-    user_id = current_user.id
+    user_id = id or current_user.id
     vote = RuleVote(rule_id=rule_id, user_id=user_id, vote_type=vote)
     db.session.add(vote)    
     db.session.commit()
@@ -615,9 +621,9 @@ def remove_one_to_decrement_up(id) -> None:
 
 # Remove
 
-def remove_has_voted(vote, rule_id) -> bool:
+def remove_has_voted(vote, rule_id , id) -> bool:
     """Remove a vote"""
-    user_id = current_user.id
+    user_id = id or current_user.id
     existing_vote = RuleVote.query.filter_by(rule_id=rule_id, user_id=user_id, vote_type=vote).first()
     if existing_vote:
         db.session.delete(existing_vote)
@@ -629,7 +635,7 @@ def remove_has_voted(vote, rule_id) -> bool:
 #   Filter  #
 #############
 
-def filter_rules(user_id, search=None, author=None, sort_by=None, rule_type=None) -> Rule:
+def filter_rules(search=None, author=None, sort_by=None, rule_type=None) -> Rule:
     """Filter the rules"""
     query = Rule.query
     if search:

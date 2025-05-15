@@ -27,10 +27,12 @@
                             <h1 class="mb-0 text-truncate" style="white-space: normal;">{{ rule.title }}</h1>
                         </div>
                         <div class="col-3 text-end">
-                            {% if current_user.id == rule.user_id or current_user.is_admin %}
-                            <a :href="`/rule/edit_rule/{{rule.id}}`" class="btn btn-dark btn-sm">
-                                <i class="fas fa-pen"></i>
-                            </a>
+                            {% if current_user.is_authenticated %}
+                                {% if current_user.id == rule.user_id or current_user.is_admin %}
+                                <a :href="`/rule/edit_rule/{{rule.id}}`" class="btn btn-dark btn-sm">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                {% endif %}
                             {% endif %}
                         </div>
                     </div>
@@ -131,17 +133,18 @@
                         <a href="{{ url_for('rule.download_rule', rule_id=rule.id) }}" class="btn btn-success me-3 px-4 py-2 mb-2">
                             <i class="fas fa-download me-1"></i> Download
                         </a>
-                    
-                        <!-- Request Ownership button -->
-                        {% if rule.user_id != current_user.id%}
-                        <button class="btn btn-outline-warning me-3 px-4 py-2 mb-2" @click="Ownership({{rule.id}})">
-                            <i class="fas fa-user-shield me-1"></i> Request Ownership
-                        </button>
+                        {% if current_user.is_authenticated %}
+                            <!-- Request Ownership button -->
+                            {% if rule.user_id != current_user.id%}
+                            <button class="btn btn-outline-warning me-3 px-4 py-2 mb-2" @click="Ownership({{rule.id}})">
+                                <i class="fas fa-user-shield me-1"></i> Request Ownership
+                            </button>
+                            {% endif%}
                         {% endif%}
                     </div>
                     <!-- Votes -->
                     <div class="text-center">
-                        {% if current_user.is_authenticated %}
+                       
                         <div class="mt-3">
                         <button @click="vote('up')" class="btn btn-success btn-sm">
                             <i class="fas fa-thumbs-up"></i> [[ currentRule.vote_up ]]
@@ -150,7 +153,7 @@
                             <i class="fas fa-thumbs-down"></i> [[ currentRule.vote_down ]]
                         </button>
                         </div>
-                        {% endif %}
+
                     </div>
                 </div>
             </div>
@@ -191,7 +194,7 @@
                     
                     {% else %}
                     <div class="alert alert-info">
-                        <i class="fas fa-sign-in-alt"></i> Please <a href="{{ url_for('auth.login') }}">log in</a> to post a comment.
+                        <i class="fas fa-sign-in-alt"></i> Please <a href="{{ url_for('account.login') }}">log in</a> to post a comment.
                     </div>
                     {% endif %}
 
@@ -368,7 +371,7 @@
             {% else %}
             <div class="card shadow-sm mb-4">
                 <div class="card-body text-center">
-                    <p class="text-muted">Please <a href="{{ url_for('auth.login') }}" class="text-primary">log in</a> to propose an edit.</p>
+                    <p class="text-muted">Please <a href="{{ url_for('account.login') }}" class="text-primary">log in</a> to propose an edit.</p>
                 </div>
             </div>
             {% endif %}    
@@ -448,6 +451,7 @@
             const current_user_is_admin = ref()
             const newCommentContent = ref("");
             const currentRule = ref(0)
+            const current_user_is_connected = ref(false)
 
             const pull_request_list = ref([]);
             const current_page = ref(1);
@@ -472,6 +476,16 @@
                 alert('In building.');
             }
 
+
+            async function checkIfUserIsConnected() {
+                const res = await fetch('/get_current_user_connected');
+                const data = await res.json();
+                current_user_is_connected.value = data.is_authenticated;
+                if(data.is_authenticated == true){
+                fetchCurrentUser()
+                }
+            }
+
             async function fetchCurrentRule(){
                 const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
                 if (response.ok) {
@@ -483,11 +497,16 @@
             }
 
             async function vote(voteType) {
-                const res = await fetch(`/rule/vote_rule?id=${rule_id}&vote_type=${voteType}`, { method: 'GET' })
-                const data = await res.json()
-                
-                currentRule.value.vote_up = data.vote_up
-                currentRule.value.vote_down = data.vote_down
+                if(current_user_is_connected.value == true){
+                    const res = await fetch(`/rule/vote_rule?id=${rule_id}&vote_type=${voteType}`, { method: 'GET' })
+                    const data = await res.json()
+                    
+                    currentRule.value.vote_up = data.vote_up
+                    currentRule.value.vote_down = data.vote_down
+                }else{
+                    window.location.href = `/account/login`;
+                }
+               
             }
 
             async function Ownership(rule_id){
@@ -561,7 +580,7 @@
             }
 
             fetchComments(1)
-            fetchCurrentUser()
+            checkIfUserIsConnected()
             fetchCurrentRule()
 
             return {

@@ -15,6 +15,7 @@ def generate_api_key(length=60):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
 
 def get_user_api(api_key):
+    """Get a user by its api key"""
     return User.query.filter_by(api_key=api_key).first()
 
 def get_user_from_api(headers):
@@ -30,12 +31,12 @@ def get_user_from_api(headers):
 
 
 def verif_api_key(headers):
-    if not "X-API-KEY" in headers:
-        return {"message": "Error no API key pass"}, 403
-    user = get_user_api(headers["X-API-KEY"])
-    if not user:
-        return {"message": "API key not found"}, 403
-    return {}
+    key = headers.get("X-API-KEY")
+    if not key:
+        return False
+    user = get_user_api(key)
+    return user is not None
+
 
 def create_specific_dir(specific_dir):
     if not os.path.isdir(specific_dir):

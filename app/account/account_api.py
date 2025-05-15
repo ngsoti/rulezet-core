@@ -31,6 +31,10 @@ class Register(Resource):
         'last_name': 'Last name'
     })
     def post(self):
+        api_key = request.headers.get("X-API-KEY")
+        if not api_key:
+            return {"message": "Missing API key"}, 401
+
         data = request.get_json(silent=True)
         if not data:
             data = request.args.to_dict()
@@ -52,7 +56,8 @@ class Register(Resource):
             'email': data.get("email"),
             'password': data.get("password"),
             'first_name': data.get("first_name"),
-            'last_name': data.get("last_name")
+            'last_name': data.get("last_name"),
+            'key': request.headers["X-API-KEY"]
         }
 
         AccountModel.add_user_core(form_dict)
@@ -69,6 +74,9 @@ class Login(Resource):
         'remember_me': 'Boolean to keep the user logged in'
     })
     def post(self):
+        api_key = request.headers.get("X-API-KEY")
+        if not api_key:
+            return {"message": "Missing API key"}, 401
         data = request.get_json(silent=True)
         if not data:
             data = request.args.to_dict()

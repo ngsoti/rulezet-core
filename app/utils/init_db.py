@@ -1,4 +1,7 @@
-from ..db_class.db import User, db
+import datetime
+import uuid
+from flask_login import current_user
+from ..db_class.db import Rule, User, db
 from .utils import generate_api_key
 
 
@@ -13,44 +16,54 @@ def create_admin():
         email="admin@admin.admin",
         password="admin",
         admin=True,
-        api_key = generate_api_key()
+        api_key = "admin_api_key"
     )
     db.session.add(user)
     db.session.commit()
 
 
+
 def create_user_test():
-    # Admin user
-    user1 = User(
+    user = User(
+        first_name="Matrix",
+        last_name="Bot",
+        email="neo@admin.admin",
+        password=generate_api_key(),
+        api_key = "user_api_key"
+    )
+    db.session.add(user)
+    db.session.commit()
+
+    user2 = User(
         first_name="theo",
         last_name="theo",
         email="t@t.t",
         password="t",
-        admin=True,
-        api_key = generate_api_key()
+        admin=False,
+        api_key = "user2_api_key"
     )
-    db.session.add(user1)
+    db.session.add(user2)
     db.session.commit()
 
-    user = User(
-        first_name="editor",
-        last_name="editor",
-        email="editor@editor.editor",
-        password="editor",
-        admin=False,
-        api_key = "editor_api_key"
-    )
-    db.session.add(user)
-    db.session.commit()
-
-    user = User(
-        first_name="read",
-        last_name="read",
-        email="read@read.read",
-        password="read",
-        admin=False,
-        api_key = "read_api_key"
-    )
-    db.session.add(user)
-    db.session.commit()
+def create_rule_test():
+    editor = User.query.filter_by(email="neo@admin.admin").first()
+    if editor :
+        rule = Rule(
+            format="test",
+            title="test",
+            license="test",
+            description="test",
+            uuid=str(uuid.uuid4()),
+            source="test",
+            author="test",
+            version=1,
+            user_id=editor.id,
+            creation_date = datetime.datetime.now(tz=datetime.timezone.utc),
+            last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
+            vote_up=0,
+            vote_down=0,
+            to_string ="rule test { condition: 1}"
+        )
+        db.session.add(rule)
+        db.session.commit()
 

@@ -152,10 +152,7 @@
           const res = await fetch('/rule/get_current_user')
           const data = await res.json()
           current_user_is_admin.value = data.user
-        }else{
-          alert("ahhh")
         }
-        
       }
       async function checkIfUserIsConnected() {
         const res = await fetch('/get_current_user_connected');
@@ -165,15 +162,6 @@
           fetchCurrentUser()
         }
     }
-
-
-      // async function deleteRule(id, index) {
-      //   const res = await fetch('/rule/delete_rule?id=' + id)
-      //   const data = await res.json()
-      //   if (data.success) {
-      //     rules_list.value.splice(index, 1)
-      //   }
-      // }
 
       async function deleteRule(id, index) {
         const res = await fetch('/rule/delete_rule', {

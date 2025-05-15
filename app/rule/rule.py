@@ -69,14 +69,13 @@ def rule() -> render_template:
             if valide == False:
                 return render_template("rule/rule.html",error=error, form=form, rule=rule)
 
-        RuleModel.add_rule_core(form_dict)
+        RuleModel.add_rule_core(form_dict , current_user)
         flash('Rule added !', 'success')
     
     return render_template("rule/rule.html", form=form )
 
 
 @rule_blueprint.route("/rules_list", methods=['GET'])
-@login_required
 def rules_list() -> render_template:   
     """Redirect to rules list"""     
     return render_template("rule/rules_list.html")
@@ -101,7 +100,6 @@ def get_rules_page() -> jsonify:
 
 # get page with filter
 @rule_blueprint.route("/get_rules_page_filter", methods=['GET'])
-@login_required
 def get_rules_page_filter() -> jsonify:
     """Get all the rules with filter"""
     page = int(request.args.get("page", 1))
@@ -111,7 +109,7 @@ def get_rules_page_filter() -> jsonify:
     sort_by = request.args.get("sort_by", "newest")
     rule_type = request.args.get("rule_type", None) 
 
-    query = RuleModel.filter_rules(current_user.id, search=search, author=author, sort_by=sort_by, rule_type=rule_type)
+    query = RuleModel.filter_rules( search=search, author=author, sort_by=sort_by, rule_type=rule_type)
     total_rules = query.count()
     rules = query.offset((page - 1) * per_page).limit(per_page).all()
 
@@ -140,7 +138,6 @@ def delete_rule() -> jsonify:
     return render_template("access_denied.html")
 
 @rule_blueprint.route("/get_current_user", methods=['GET'])
-@login_required
 def get_current_user() -> jsonify:
     """Is the current user admin or not for vue js"""
     return jsonify({'user': current_user.is_admin()})
@@ -157,33 +154,33 @@ def vote_rule() -> jsonify:
         if vote_type == 'up':  
             if alreadyVote == False:
                 RuleModel.increment_up(rule_id)
-                RuleModel.has_voted('up',rule_id)
+                RuleModel.has_voted('up',rule_id, current_user.id)
             elif already_vote_type == 'up':
                 RuleModel.remove_one_to_increment_up(rule_id)
-                RuleModel.remove_has_voted('up',rule_id)
+                RuleModel.remove_has_voted('up',rule_id, current_user.id)
             elif already_vote_type == 'down':
                 RuleModel.increment_up(rule_id) # +1 to up
                 RuleModel.remove_one_to_decrement_up(rule_id) # -1 to down
-                RuleModel.remove_has_voted('down',rule_id)
-                RuleModel.has_voted('up',rule_id)
+                RuleModel.remove_has_voted('down',rule_id, current_user.id)
+                RuleModel.has_voted('up',rule_id, current_user.id)
 
         elif vote_type == 'down':
             if alreadyVote == False:
                 RuleModel.decrement_up(rule_id)
-                RuleModel.has_voted('down',rule_id)
+                RuleModel.has_voted('down',rule_id, current_user.id)
             elif already_vote_type == 'down':
                 RuleModel.remove_one_to_decrement_up(rule_id)
-                RuleModel.remove_has_voted('down',rule_id)
+                RuleModel.remove_has_voted('down',rule_id, current_user.id)
             elif already_vote_type == 'up':
                 RuleModel.decrement_up(rule_id) # +1 to down
                 RuleModel.remove_one_to_increment_up(rule_id) # -1 to up
-                RuleModel.remove_has_voted('up',rule_id)
-                RuleModel.has_voted('down',rule_id)
+                RuleModel.remove_has_voted('up',rule_id , current_user.id)
+                RuleModel.has_voted('down',rule_id, current_user.id)
         return jsonify({
             'vote_up': rule.vote_up,
             'vote_down': rule.vote_down
-        })
-    return jsonify({"message": "Rule not found"})
+        }), 200
+    return jsonify({"message": "Rule not found"}), 404
 
 @rule_blueprint.route("/edit_rule/<int:rule_id>", methods=['GET' , 'POST'])
 @login_required
@@ -307,14 +304,12 @@ def get_current_rule() -> jsonify:
     return {"message": "No Rule"}, 404
 
 @rule_blueprint.route("/detail_rule/<int:rule_id>", methods=['GET'])
-@login_required
 def detail_rule(rule_id)-> render_template:
     """Get the detail of the current rule"""
     rule = RuleModel.get_rule(rule_id)
     return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string)
 
 @rule_blueprint.route("/download/<int:rule_id>", methods=['GET'])
-@login_required
 def download_rule(rule_id) -> Response:
     """Download a rule"""
     rule = RuleModel.get_rule(rule_id)
@@ -350,7 +345,6 @@ def add_favorite_rule(rule_id) -> redirect:
 #########################
 
 @rule_blueprint.route("/detail_rule/get_comments_page", methods=['GET'])
-@login_required
 def comment_rule() -> jsonify:
     """Get all the comment of the rule"""
     page = request.args.get('page', 1, type=int)
@@ -649,7 +643,7 @@ def test_yara_python_url() -> redirect:
             skipped = 0
             if rule_dicts_Sigma:
                 for rule_dict in rule_dicts_Sigma:
-                    success = RuleModel.add_rule_core(rule_dict)
+                    success = RuleModel.add_rule_core(rule_dict , current_user)
 
                     if success:
                         imported += 1
@@ -657,7 +651,7 @@ def test_yara_python_url() -> redirect:
                         skipped += 1
             if rule_dicts_Yara:
                 for rule_dic2 in rule_dicts_Yara:
-                    success = RuleModel.add_rule_core(rule_dic2)
+                    success = RuleModel.add_rule_core(rule_dic2 , current_user)
 
                     if success:
                         imported += 1
@@ -665,7 +659,7 @@ def test_yara_python_url() -> redirect:
                         skipped += 1
             if rule_dicts_Zeek:
                 for rule_dic3 in rule_dicts_Zeek:
-                    success = RuleModel.add_rule_core(rule_dic3)
+                    success = RuleModel.add_rule_core(rule_dic3 , current_user)
 
                     if success:
                         imported += 1
@@ -673,7 +667,7 @@ def test_yara_python_url() -> redirect:
                         skipped += 1
             if rule_dicts_Suricata:
                 for rule_dict4 in rule_dicts_Suricata:
-                    success = RuleModel.add_rule_core(rule_dict4)
+                    success = RuleModel.add_rule_core(rule_dict4 , current_user)
 
                     if success:
                         imported += 1
