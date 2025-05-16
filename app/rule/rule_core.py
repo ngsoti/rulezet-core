@@ -111,7 +111,21 @@ def compile_yara(external_vars, form_dict) -> tuple[bool, dict]:
                 externals = build_externals_dict(external_vars_temp)
             else:
                 return False , form_dict["to_string"] , error_msg
-     
+
+# sync methode 
+def load_json_schema_sync(schema_file):
+    """
+    Load a JSON schema synchronously from a file.
+    """
+    try:
+        with open(schema_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+            schema = json.loads(content)
+        return schema
+    except Exception:
+        return None
+
+
 def compile_sigma(form_dict) -> tuple[bool, dict]:
     """
     Try to compile and validate a Sigma rule using JSON Schema.
@@ -120,9 +134,8 @@ def compile_sigma(form_dict) -> tuple[bool, dict]:
     :param form_dict: Dict containing the Sigma rule in form_dict["to_string"]
     :return: (success: bool, possibly modified form_dict)
     """
-    sigma_schema = load_json_schema("app/import_github_project/sigma_format.json")
+    sigma_schema = load_json_schema_sync("app/import_github_project/sigma_format.json")
     rule_string = form_dict['to_string']
-
     try:
         rule = yaml.safe_load(rule_string)
         if not rule:
@@ -211,7 +224,7 @@ def save_invalid_rules(bad_rules, rule_type ,repo_url, license) -> None:
         if existing:
             continue
         new_invalid_rule = InvalidRuleModel(
-            file_name=file_name,
+            file_name=file_name or "invalide rule" ,
             error_message=error_message,
             raw_content=raw_content,
             rule_type=rule_type,
@@ -245,7 +258,7 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error) -> None:
         return
 
     new_invalid_rule = InvalidRuleModel(
-        file_name=file_name,
+        file_name=file_name or "invalide rule"+current_user.id ,
         error_message=error_message,
         raw_content=raw_content,
         rule_type=rule_type,
@@ -259,8 +272,8 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error) -> None:
 
 # Create
 
-def process_and_import_fixed_rule(bad_rule_obj, raw_content) -> bool:
-    """Porcess the bad rule and the new content to attempt to create the rule"""
+def process_and_import_fixed_rule(bad_rule_obj, raw_content) :
+    """Process the bad rule and the new content to attempt to create the rule"""
     try:
         rule_type = bad_rule_obj.rule_type 
 
@@ -287,12 +300,18 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content) -> bool:
                 "author": author or "Unknown",
                 "to_string": raw_content
             }
-        # elif rule_type.upper() == "Sigma":
-        else: 
+
+        else:  # Sigma or other types
             rule = yaml.safe_load(raw_content)
             rule_json = json.loads(json.dumps(rule, indent=2, default=str))
-            schema = load_json_schema("app/import_github_project/sigma_format.json")
-            validate(instance=rule_json, schema=schema)
+            schema = None
+            try:
+                # Load schema synchronously here
+                with open("app/import_github_project/sigma_format.json", 'r', encoding='utf-8') as f:
+                    schema = json.load(f)
+                validate(instance=rule_json, schema=schema)
+            except (ValidationError, FileNotFoundError) as e:
+                return False, str(e)
 
             rule_dict = {
                 "format": "Sigma",
@@ -304,16 +323,77 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content) -> bool:
                 "author": rule.get("author", "Unknown"),
                 "to_string": raw_content
             }
-        success = RuleModel.add_rule_core(rule_dict , current_user)
+
+        success = RuleModel.add_rule_core(rule_dict, current_user)
         if success:
             db.session.delete(bad_rule_obj)
             db.session.commit()
-            return True, False
+            return True, ""
 
         return False, "Rule already exists or failed to insert."
+
     except Exception as e:
         db.session.rollback()
         return False, str(e)
+
+
+
+# def process_and_import_fixed_rule(bad_rule_obj, raw_content) -> bool:
+#     """Porcess the bad rule and the new content to attempt to create the rule"""
+#     try:
+#         rule_type = bad_rule_obj.rule_type 
+
+#         if rule_type.upper() == "YARA":
+#             try:
+#                 yara.compile(source=raw_content)
+#             except yara.SyntaxError as e:
+#                 return False, str(e)
+
+#             title = extract_first_match(raw_content, ["title", "Title"]) or clean_rule_filename_Yara(bad_rule_obj.file_name)
+#             description = extract_first_match(raw_content, ["description", "Description"])
+#             license = extract_first_match(raw_content, ["license", "License"]) or bad_rule_obj.license
+#             author = extract_first_match(raw_content, ["author", "Author"])
+#             version = extract_first_match(raw_content, ["version", "Version"])
+#             source_url = bad_rule_obj.url
+
+#             rule_dict = {
+#                 "format": "YARA",
+#                 "title": title,
+#                 "license": license,
+#                 "description": description,
+#                 "source": source_url,
+#                 "version": version or "1.0",
+#                 "author": author or "Unknown",
+#                 "to_string": raw_content
+#             }
+#         # elif rule_type.upper() == "Sigma":
+#         else: 
+#             rule = yaml.safe_load(raw_content)
+#             rule_json = json.loads(json.dumps(rule, indent=2, default=str))
+#             schema = load_json_schema("app/import_github_project/sigma_format.json")
+#             validate(instance=rule_json, schema=schema)
+
+#             rule_dict = {
+#                 "format": "Sigma",
+#                 "title": rule.get("title", "Untitled"),
+#                 "license": rule.get("license", bad_rule_obj.license),
+#                 "description": rule.get("description", "No description provided"),
+#                 "source": bad_rule_obj.url,
+#                 "version": rule.get("version", "1.0"),
+#                 "author": rule.get("author", "Unknown"),
+#                 "to_string": raw_content
+#             }
+#         success = RuleModel.add_rule_core(rule_dict , current_user)
+#         if success:
+#             db.session.delete(bad_rule_obj)
+#             db.session.commit()
+#             return True, False
+
+#         return False, "Rule already exists or failed to insert."
+#     except Exception as e:
+#         db.session.rollback()
+#         return False, str(e)
+
 
 # Read
 

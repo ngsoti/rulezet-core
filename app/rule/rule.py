@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime,  timezone
 from math import ceil
 from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, session, url_for
@@ -589,6 +590,9 @@ def get_license() -> jsonify:
                 licenses.append(line)
     return jsonify({"licenses": licenses})
 
+
+
+
 @rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
 @login_required
 def test_yara_python_url() -> redirect:
@@ -616,39 +620,35 @@ def test_yara_python_url() -> redirect:
             if not repo_dir:
                 flash("Failed to clone or access the repository.", "danger")
                 return redirect(url_for("rule.rules_list"))
-
-            # if existe == True:
-            #     print("")
-                # delete in bad_rule all the bad rule with url == repo_dir
-                #check = RuleModel.delete_bad_rule_from_url(existe)
-
             
             # save all the yara rules 
             save_yara_rules_as_is(repo_url) 
-
+            
             #license 
             owner, repo = extract_owner_repo(repo_url)
             if selected_license:
                 license_from_github = selected_license
             else:
                 license_from_github = get_license_name(owner,repo)
-
             # parse rules
-            rule_dicts_Sigma , bad_rule_dicts_Sigma , nb_bad_rules_sigma= load_rule_files(repo_dir, license_from_github, repo_url)
+            # rule_dicts_Sigma , bad_rule_dicts_Sigma , nb_bad_rules_sigma= load_rule_files(repo_dir, license_from_github, repo_url)
+            bad_rule_dicts_Sigma, nb_bad_rules_sigma, imported_sigma, skipped_sigma = asyncio.run(
+                load_rule_files(repo_dir, license_from_github, repo_url, current_user)
+            )
             rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github)
             rule_dicts_Yara , bad_rule_dicts_Yara, nb_bad_rules_yara = read_and_parse_all_yara_rules_from_folder_test(license_from_github, repo_url, external_vars)
             rule_dicts_Suricata = parse_suricata_rules_from_file(repo_dir ,license_from_github, repo_url ,info)
 
-            imported = 0
-            skipped = 0
-            if rule_dicts_Sigma:
-                for rule_dict in rule_dicts_Sigma:
-                    success = RuleModel.add_rule_core(rule_dict , current_user)
+            imported = imported_sigma
+            skipped = skipped_sigma
+            # if rule_dicts_Sigma:
+            #     for rule_dict in rule_dicts_Sigma:
+            #         success = RuleModel.add_rule_core(rule_dict , current_user)
 
-                    if success:
-                        imported += 1
-                    else:
-                        skipped += 1
+            #         if success:
+            #             imported += 1
+            #         else:
+            #             skipped += 1
             if rule_dicts_Yara:
                 for rule_dic2 in rule_dicts_Yara:
                     success = RuleModel.add_rule_core(rule_dic2 , current_user)
@@ -737,32 +737,54 @@ def get_bads_rules_page_filter():
         "user": current_user.first_name
     })
 
-
-
 @rule_blueprint.route('/bad_rule/<int:rule_id>/edit', methods=['GET', 'POST'])
 @login_required
-def edit_bad_rule(rule_id) -> render_template:
+def edit_bad_rule(rule_id):
     """Edit a bad rule to correct it"""
     user_bad_rule = RuleModel.get_user_id_of_bad_rule(rule_id)
-    if current_user.is_admin() or current_user.id == user_bad_rule :
+    if current_user.is_admin() or current_user.id == user_bad_rule:
         bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
+
         if request.method == 'POST':
             new_content = request.form.get('raw_content')
             success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content)
+
             if success:
                 flash("Rule fixed and imported successfully.", "success")
-                # delete the bad rule
-                # delete = RuleModel.delete_bad_rule(rule_id)
-                # if delete:
-                #     return redirect(url_for('rule.bad_rules_summary'))
                 return redirect(url_for('rule.bad_rules_summary'))
             else:
                 flash(f"Error: {error}", "danger")
                 bad_rule.error_message = error
                 return render_template('rule/edit_bad_rule.html', rule=bad_rule, new_content=new_content)
+
         return render_template('rule/edit_bad_rule.html', rule=bad_rule)
     else:
         return render_template("access_denied.html")
+
+# @rule_blueprint.route('/bad_rule/<int:rule_id>/edit', methods=['GET', 'POST'])
+# @login_required
+# def edit_bad_rule(rule_id) -> render_template:
+#     """Edit a bad rule to correct it"""
+#     user_bad_rule = RuleModel.get_user_id_of_bad_rule(rule_id)
+#     if current_user.is_admin() or current_user.id == user_bad_rule :
+#         bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
+#         if request.method == 'POST':
+#             new_content = request.form.get('raw_content')
+#             success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content)
+#             if success:
+#                 flash("Rule fixed and imported successfully.", "success")
+#                 # delete the bad rule
+#                 # delete = RuleModel.delete_bad_rule(rule_id)
+#                 # if delete:
+#                 #     return redirect(url_for('rule.bad_rules_summary'))
+#                 return redirect(url_for('rule.bad_rules_summary'))
+#             else:
+#                 flash(f"Error: {error}", "danger")
+#                 bad_rule.error_message = error
+#                 return render_template('rule/edit_bad_rule.html', rule=bad_rule, new_content=new_content)
+#         return render_template('rule/edit_bad_rule.html', rule=bad_rule)
+#     else:
+#         return render_template("access_denied.html")
 
 @rule_blueprint.route('/bad_rule/<int:rule_id>/delete', methods=['GET', 'POST'])
 @login_required
