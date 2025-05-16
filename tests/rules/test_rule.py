@@ -266,3 +266,70 @@ def test_edit_bad_rule(client):
                            headers={"X-API-KEY":API_KEY_USER})
 
     assert response.status_code == 401
+
+#################
+#   Favorite    #
+#################
+
+def test_favorite_rule_toggle(client):
+    test_login_success(client)
+    rule_id = 1
+    headers = {"X-API-KEY": API_KEY_USER}
+
+    res_add = client.post(f'/api/rule/favorite_rule/{rule_id}', headers=headers)
+    assert res_add.status_code == 200
+    assert res_add.json['message'] == "Rule added to favorites"
+
+
+    res_remove = client.post(f'/api/rule/favorite_rule/{rule_id}', headers=headers)
+    assert res_remove.status_code == 200
+    assert res_remove.json['message'] == "Rule removed from favorites"
+
+##############
+#   Comment  #
+##############
+
+def test_add_comment_api(client):
+    test_login_success(client)
+    rule_id = 1
+    headers = {"X-API-KEY": API_KEY_USER}
+
+    response = client.post('/api/rule/comment_add', json={
+        "rule_id": rule_id,
+        "new_content": "Great rule!"
+    }, headers=headers)
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['success'] is True
+    assert data['comment']['content'] == "Great rule!"
+    assert data['comment']['user_id'] ==  1
+
+def test_edit_comment_api(client):
+    test_login_success(client)
+    test_add_comment_api(client)
+    headers = {"X-API-KEY": API_KEY_USER}
+
+    response = client.post('/api/rule/edit_comment', json={
+        "comment_id": 1,
+        "new_content": "Updated content"
+    }, headers=headers)
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['success'] is True
+    assert data['updated_comment']['content'] == "Updated content"
+    assert data['updated_comment']['id'] == 1
+
+def test_delete_comment_api(client):
+    test_login_success(client)
+    test_add_comment_api(client)
+    headers = {"X-API-KEY": API_KEY_USER}
+
+    response = client.delete(f'/api/rule/comment/{1}', headers=headers)
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["success"] is True
+    assert data["message"] == "Comment deleted"
+    assert data["rule_id"] == 1

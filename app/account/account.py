@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, render_template, redirect, url_for, reques
 from .form import LoginForm, EditUserForm, AddNewUserForm
 from ..rule import rule_core as RuleModel
 from . import account_core as AccountModel
-from ..utils.utils import form_to_dict
+from ..utils.utils import form_to_dict, generate_api_key
 from flask_login import current_user, login_required, login_user, logout_user
 
 account_blueprint = Blueprint(
@@ -69,6 +69,7 @@ def add_user() -> redirect:
     form = AddNewUserForm()
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
+        form_dict["key"] = generate_api_key()
         AccountModel.add_user_core(form_dict)
         flash('You are now register. You can connect !', 'success')
         return redirect("/account/login")

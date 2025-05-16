@@ -3,7 +3,7 @@ from math import ceil
 from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, session, url_for
 from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
-from app.db_class.db import RuleFavoriteUser
+from ..account import account_core as AccountModel
 from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
 from app.import_github_project.import_github_sigma import load_rule_files
 from app.import_github_project.import_github_suricata import  parse_suricata_rules_from_file
@@ -331,7 +331,7 @@ def download_rule(rule_id) -> Response:
 @login_required
 def add_favorite_rule(rule_id) -> redirect:
     """Add a rule to user's favorites via link."""
-    existing = RuleFavoriteUser.query.filter_by(user_id=current_user.id, rule_id=rule_id).first()
+    existing = AccountModel.is_rule_favorited_by_user(user_id=current_user.id, rule_id=rule_id)
     if existing:
         remove_favorite(user_id=current_user.id, rule_id=rule_id)
         flash("Rule remove from favorites!", "success")
@@ -365,7 +365,7 @@ def add_comment() -> jsonify:
     """Add a comment"""
     new_content = request.args.get('new_content', '', type=str)
     rule_id = request.args.get('rule_id', 1, type=int)
-    success, message = RuleModel.add_comment_core(rule_id, new_content)
+    success, message = RuleModel.add_comment_core(rule_id, new_content, current_user)
     flash(message, "success" if success else "danger")
     new_comment = RuleModel.get_latest_comment_for_user_and_rule(current_user.id, rule_id)
     return {

@@ -410,6 +410,9 @@ def get_rules_page_favorite(page, id_user, per_page=20) -> Rule:
         .order_by(RuleFavoriteUser.created_at.desc())
     return favorites_query.paginate(page=page, per_page=per_page, error_out=False)
 
+
+
+
 #########################
 #   Propose edit rule   #
 #########################
@@ -706,14 +709,14 @@ def get_total_change_to_check_admin() -> int:
 
 # Create
 
-def add_comment_core(rule_id, content) -> tuple[bool, str]:
+def add_comment_core(rule_id, content , user) -> tuple[bool, str, User]:
     """Add a new comment to a rule"""
     if not content.strip():
         return False, "Comment cannot be empty."
 
     comment = Comment(
         rule_id=rule_id,
-        user_id=current_user.id,
+        user_id=user.id or current_user.id,
         user_name=current_user.first_name,
         content=content.strip(),
         created_at=datetime.datetime.now(tz=datetime.timezone.utc),

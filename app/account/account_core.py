@@ -110,6 +110,8 @@ def get_rules_favorites_page(page):
     """Returns all rules by page"""
     return RuleFavoriteUser.query.paginate(page=page, per_page=3, max_per_page=3)
 
+
+
 # DELETE
 
 def remove_favorite(user_id: int, rule_id: int) -> bool:

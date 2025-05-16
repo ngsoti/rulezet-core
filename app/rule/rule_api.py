@@ -1,11 +1,10 @@
-from dataclasses import fields
 from flask import Blueprint, request
 from flask_restx import Api, Resource
-from sqlalchemy import true
 
 from app.db_class.db import Rule
 from app.utils import utils
 from ..rule import rule_core as RuleModel
+from ..account import account_core as AccountModel
 from app.utils.decorators import api_required
 
 api_rule_blueprint = Blueprint('api_rule', __name__)
@@ -204,3 +203,133 @@ class EditRule(Resource):
 
         RuleModel.edit_rule_core(data, rule_id)
         return {"success": True, "message": "Rule updated"}, 200
+
+@api.route('/favorite_rule/<int:rule_id>')
+@api.doc(description="Add or remove a rule from user's favorites")
+class FavoriteRule(Resource):
+    method_decorators = [api_required]
+
+    def post(self, rule_id):
+        user = utils.get_user_from_api(request.headers)
+        if not user:
+            return {"success": False, "message": "Unauthorized"}, 403
+
+        existing = AccountModel.is_rule_favorited_by_user(rule_id=rule_id, user_id=user.id)
+
+        if existing:
+            AccountModel.remove_favorite(rule_id=rule_id, user_id=user.id)
+            return {"success": True, "message": "Rule removed from favorites"}, 200
+        else:
+            AccountModel.add_favorite(rule_id=rule_id, user_id=user.id)
+            return {"success": True, "message": "Rule added to favorites"}, 200
+
+##############
+#   Comment  #
+##############
+
+@api.route('/comment_add')
+@api.doc(description="Add a comment to a rule")
+class AddComment(Resource):
+    method_decorators = [api_required]
+
+    @api.doc(params={
+        'rule_id': 'ID of the rule',
+        'new_content': 'Content of the comment'
+    })
+    def post(self):
+        user = utils.get_user_from_api(request.headers)
+        if not user:
+            return {"success": False, "message": "Unauthorized"}, 403
+
+        data = request.get_json(silent=True)
+        if not data:
+            return {"success": False, "message": "Missing JSON body"}, 400
+
+        new_content = data.get("new_content", "")
+        rule_id = data.get("rule_id", None)
+
+        if not rule_id or new_content.strip() == "":
+            return {"success": False, "message": "Missing or invalid parameters"}, 400
+
+        success, message = RuleModel.add_comment_core(rule_id, new_content, user)
+
+        if not success:
+            return {"success": False, "message": message}, 400
+
+        new_comment = RuleModel.get_latest_comment_for_user_and_rule(user.id, rule_id)
+
+        return {
+            "success": True,
+            "message": message,
+            "comment": {
+                "id": new_comment.id,
+                "content": new_comment.content,
+                "user_name": new_comment.user_name,
+                "user_id": new_comment.user.id,
+                "created_at": new_comment.created_at.strftime("%Y-%m-%d %H:%M")
+            }
+        }, 200
+
+@api.route('/edit_comment')
+@api.doc(description="Edit an existing comment")
+class EditComment(Resource):
+    method_decorators = [api_required]
+
+    @api.doc(params={
+        'comment_id': 'ID of the comment',
+        'new_content': 'New content of the comment'
+    })
+    def post(self):
+        user = utils.get_user_from_api(request.headers)
+        if not user:
+            return {"success": False, "message": "Unauthorized"}, 403
+
+        data = request.get_json(silent=True)
+        if not data:
+            return {"success": False, "message": "Missing JSON body"}, 400
+
+        comment_id = data.get("comment_id")
+        new_content = data.get("new_content", "").strip()
+
+        if not comment_id or not new_content:
+            return {"success": False, "message": "Missing or invalid parameters"}, 400
+
+        comment = RuleModel.get_comment_by_id(comment_id)
+
+        if not comment:
+            return {"success": False, "message": "Comment not found"}, 404
+
+        if comment.user_id != user.id and not user.is_admin():
+            return {"success": False, "message": "Access denied"}, 403
+
+        updated_comment = RuleModel.update_comment(comment_id, new_content)
+
+        return {
+            "success": True,
+            "updated_comment": updated_comment.to_json()
+        }, 200
+
+@api.route('/comment/<int:comment_id>')
+@api.doc(description="Delete a comment")
+class DeleteComment(Resource):
+    method_decorators = [api_required]
+
+    def delete(self, comment_id):
+        user = utils.get_user_from_api(request.headers)
+        if not user:
+            return {"success": False, "message": "Unauthorized"}, 403
+
+        comment = RuleModel.get_comment_by_id(comment_id)
+        if not comment:
+            return {"success": False, "message": "Comment not found"}, 404
+
+        if comment.user_id != user.id and not user.is_admin():
+            return {"success": False, "message": "Access denied"}, 403
+
+        RuleModel.delete_comment(comment_id)
+
+        return {
+            "success": True,
+            "message": "Comment deleted",
+            "rule_id": comment.rule_id
+        }, 200
