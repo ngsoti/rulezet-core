@@ -93,7 +93,7 @@ The platform includes a wide set of functionalities to manage and collaborate ar
 
 | Homepage | Rule Detail | Rule Management |
 |---------|--------------|-----------------|
-| ![Home](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_readme.png) | ![Detail](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_detail_readme.png) | ![Readme](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_create.png) |
+| ![Home](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_readme.png) | ![Detail](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_detail_readme.png) | ![Readme](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_invalid_rule.png) |
 
 ---
 
