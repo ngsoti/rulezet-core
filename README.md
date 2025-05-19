@@ -1,42 +1,57 @@
 # RULEZET
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet.png" width="300" alt="Rulezet logo">
+</p>
 
-<img title="MarkText logo" src="https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet.png" width="300" align="center">
+---
 
+## 🚀 Community-Driven Detection Rules Platform
 
-## Flask Application Template
+**Rulezet** is an open-source web platform for sharing, evaluating, improving, and managing cybersecurity detection rules (YARA, Sigma, Suricata, etc). It aims to foster collaboration among professionals and enthusiasts to improve the quality and reliability of detection rules.
 
-### What's Included?
+---
 
-- Vue.js 3
-- Blueprints
-- Flask-Login for user authentication
-- Flask-SQLAlchemy for database management
-- Flask-WTF for form handling
-- Flask-session for session management
-- Predefined roles for users
+## 🛠️ Technology Stack
 
-### Installation
+This project is built with:
 
-**It is strongly recommended to use a virtual environment**
+- ✅ **Flask** (Python)
+- ✅ **Vue.js 3**
+- ✅ **Flask Blueprints**
+- ✅ **Flask-Login** (Authentication)
+- ✅ **Flask-SQLAlchemy** (ORM)
+- ✅ **Flask-WTF** (Forms)
+- ✅ **Flask-Session** (Session Handling)
+- ✅ **PostgreSQL** (Database)
 
-To learn more about virtual environments, [Python's documentation](https://docs.python.org/3/tutorial/venv.html) will guide you through it.
+---
+
+## 📦 Installation
+
+> It is strongly recommended to use a **Python virtual environment**.
 
 ```bash
 pip install -r requirements.txt
-python3 app.py -i                            ## Initialize the database
+python3 app.py -i        # Initialize the database
 ```
 
-### Configuration
+---
+
+## ⚙️ Configuration
 
 Edit the `config.py` file:
 
-- `SECRET_KEY`: Secret key for the application
-- `FLASK_URL`: URL for the instance
-- `FLASK_PORT`: Port for the instance
-- `MISP_MODULE`: URL and port where the MISP module is running
+- `SECRET_KEY`: Flask secret key
+- `FLASK_URL`: Instance URL (default: localhost)
+- `FLASK_PORT`: Port to run the app
+- `MISP_MODULE`: Optional connection for MISP integration
 
-### Launching the Application
+You can also use a `.env` file to store sensitive variables.
+
+---
+
+## ▶️ Launching the Application
 
 ```bash
 ./launch.sh -l
@@ -44,30 +59,80 @@ Edit the `config.py` file:
 
 ---
 
-## Project Summary
+## 🌐 Features Overview
 
-This internship offers a unique opportunity to contribute to the development of a cutting-edge, open-source platform: a community-driven website designed for sharing, evaluating, and refining security detection rules. These rules, which are critical for identifying threats in cybersecurity, currently lack a central place for community validation. This project addresses that gap by creating a collaborative space where users can:
+The platform includes a wide set of functionalities to manage and collaborate around detection rules:
 
-- **Share Rules**: Contribute detection rules in various formats (YARA, Sigma, Suricata, and others), allowing for broad community access.
-- **Evaluate Rules**: Rate and comment on the effectiveness of rules, report false positives, and share practical experiences.
-- **Refine Rules**: Participate in the collaborative improvement of rules through feedback and proposed changes, enhancing their accuracy and reliability.
-- **Organize Rules**: Bundle rules into logical sets and classify them using tags and categories, improving searchability and usability.
+### 🧑‍💻 User Management
+- Admin panel to **manage users**  
+  ![Users management](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_users_gestion.png)
 
-Interns will play a key role in developing the website’s features and functionalities. This will involve implementing core features, exploring integrations with other security tools such as MISP and Suricata, and assisting in the development of a security rule data model for a standardized format to facilitate easy exchange. Interns will gain hands-on experience in open-source software development, web development, and practical cybersecurity applications. 
+### 📜 Rule Lifecycle
+- **Create**, **Edit**, and **Delete** rules  
+  ![Create a rule](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_create_rule.png)
+- **Assign ownership** to rules  
+  ![Owner section](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_owner_rule_section.png)
 
-This project offers a chance to make a real-world impact by improving the way security professionals interact with essential threat detection information. You will gain exposure to web development, APIs, data modeling, and security knowledge.
+### 🔍 Search & Browse
+- Powerful **search bar** and rule **filtering**  
+  ![Search rules](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_search_rules.png)
+- **View detailed rule** and download or copy it  
+  ![Detail rule](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_detail_rule.png)
+
+### 🔧 Community Collaboration
+- Propose **modifications** to existing rules via pull-request style edits  
+  ![Propose edit](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_propose_edit_rule.png)
+- **Comment**, **rate**, and **favorite** rules  
+  ![Favorite rules](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_favorite_rule.png)
+
+### 🔐 Rule Validity
+- Automatic **validation of imported rules**
+- Display and **manage invalid or malformed rules**  
+  ![Invalid rule](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_invalid_rule.png)
+
+### 🌍 GitHub Integration
+- **Import detection rules directly** from public GitHub repositories  
+  ![Import GitHub](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_import_rules_from_github.png)
 
 ---
 
-**Website for Sharing, Commenting, and Rating Rules (Crowdsourced Rules Website)**
+## 🖼️ UI Previews
 
-- Share rules and let the community vote and add comments (e.g., good, bad, generating false positives).
-- Users can register and have the following permissions:
-  - Add rules
-  - Comment on rules
-  - Bundle rules (like vulnerability lookup)
-  - Rate rules (including false-positive rates and reviewing taxonomy for rule evaluation)
+| Homepage | Rule Detail | Rule Management |
+|---------|--------------|-----------------|
+| ![Home](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_home.png) | ![Detail](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_detail_readme.png) | ![Readme](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_readme.png) |
 
 ---
 
-For the original website (Ptit Crolle), visit: [https://github.com/DavidCruciani/ptit-crolle](https://github.com/DavidCruciani/ptit-crolle)
+## 🎓 Project Context
+
+This project was initiated as part of a **cybersecurity internship**, aimed at building a collaborative and educational platform. The purpose is to centralize, validate, and improve community-driven detection rules, filling the gap left by the lack of public validation for such rules.
+
+Participants (interns and contributors) are involved in:
+- Building core features and interfaces
+- Creating the detection rule model and standard
+- Integrating with tools like MISP and Suricata
+- Ensuring rule quality and validation
+
+---
+
+## 🤝 Original Inspiration
+
+This project is inspired by [Ptit Crolle](https://github.com/DavidCruciani/ptit-crolle), and takes it further with a modern UI, collaborative features, and integration capabilities.
+
+---
+
+## 📬 Contributing
+
+We welcome contributions from the community. You can:
+- Submit pull requests for new features or bug fixes
+- Suggest enhancements via GitHub Issues
+- Help expand supported rule formats
+
+---
+
+## 📄 License
+
+MIT License — feel free to fork and build upon Rulezet for your own projects.
+
+---

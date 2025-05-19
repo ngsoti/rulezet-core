@@ -49,7 +49,7 @@ def add_rule_core(form_dict , user) -> bool:
 
     db.session.add(new_rule)
     db.session.commit()
-    return True
+    return new_rule
 
 # Delete
 

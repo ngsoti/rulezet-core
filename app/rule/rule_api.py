@@ -75,8 +75,7 @@ class CreateRule(Resource):
 
         verif = RuleModel.add_rule_core(form_dict , user)
         if verif:
-            if verif == True:
-                return {"message": "Rule add successfully"}, 200
+            return {"message": "Rule add successfully ", "rule": verif}, 200
             
         return {"message": "no rule added"}, 500      
    
