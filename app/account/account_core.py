@@ -3,6 +3,7 @@ from flask_login import current_user
 from .. import db
 from ..db_class.db import RequestOwnerRule, Rule, RuleFavoriteUser, User
 from ..utils.utils import generate_api_key
+from ..rule import rule_core as RuleModel
 
 #####################
 #   User actions    #
@@ -37,10 +38,28 @@ def edit_user_core(form_dict, id) -> None:
 
     db.session.commit()
 
+def connected(user) -> bool:
+    """connected an user"""
+    if not user.is_connected:
+        user.is_connected = True
+        db.session.commit()
+    return user.is_connected
+
+def disconnected(user) -> bool:
+    """disconnected an user"""
+    if user.is_connected:
+        user.is_connected = False
+        db.session.commit()
+    return not user.is_connected
+
 # Delete
 
 def delete_user_core(id) -> bool:
     """Delete the user to the DB"""
+    # give the right to admin 
+    rules = RuleModel.get_rules_of_user_with_id(id)
+    RuleModel.give_all_right_to_admin(rules)
+
     user = get_user(id)
     if user:
         db.session.delete(user)
@@ -51,6 +70,7 @@ def delete_user_core(id) -> bool:
 
 # Read
 
+
 def get_user(id) -> id:
     """Return the user"""
     return User.query.get(id)
@@ -58,6 +78,10 @@ def get_user(id) -> id:
 def get_all_users() -> range:
     """Return all users"""
     return User.query.all()
+
+def get_count_users() -> int:
+    """Return the count of all users"""
+    return User.query.count()
 
 def get_users_page(page) -> range:
     """Return all users by page"""

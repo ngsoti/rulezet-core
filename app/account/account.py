@@ -13,8 +13,6 @@ account_blueprint = Blueprint(
     static_folder='static'
 )
 
-
-
 ###############
 # User action #
 ###############
@@ -24,6 +22,46 @@ account_blueprint = Blueprint(
 def index() -> render_template:
     """Redirect to the user section"""
     return render_template("account/account_index.html", user=current_user)
+
+@account_blueprint.route("/all_users")
+@login_required
+def user_list() -> render_template:
+    """Redirect to the user section"""
+    return render_template("admin/user_list.html")
+
+@account_blueprint.route("/delete_user")
+@login_required
+def delete_user() -> render_template:
+    """Delete an user"""
+    user_id = request.args.get('id', 1, type=int)
+    print(user_id)
+    if current_user.is_admin():
+        delete = AccountModel.delete_user_core(user_id)
+        if delete:
+            return {"message": "User Deleted",  
+                    "success": True}, 200 
+        return {"message": "Failed to delete",
+                "success": False}, 500
+    else:
+        return render_template("access_denied.html")
+
+@account_blueprint.route("/get_all_users")
+@login_required
+def get_all_users() -> render_template:
+    """Get all the users"""
+    page = request.args.get('page', 1, type=int)
+    users = AccountModel.get_users_page(page)
+    total_user = AccountModel.get_count_users()
+    if current_user.is_admin():
+        if users:
+            return {"user": [user.to_json() for user in users], 
+                    "total_pages": users.pages, 
+                    "total_users": total_user , 
+                    "success": True}, 200 
+        return {"message": "No Rule",
+                "toast_class": "danger-subtle"}, 404
+    else:
+        return render_template("access_denied.html")
 
 @account_blueprint.route("/edit", methods=['GET', "POST"])
 @login_required
@@ -49,6 +87,7 @@ def login() -> redirect:
         user = User.query.filter_by(email=form.email.data).first()
         if user is not None and user.password_hash is not None and user.verify_password(form.password.data):
             login_user(user, form.remember_me.data)
+            AccountModel.connected(current_user)
             flash('You are now logged in. Welcome back!', 'success')
             return redirect( "/")
         else:
@@ -59,7 +98,9 @@ def login() -> redirect:
 @login_required
 def logout() -> redirect:
     "Log out an User"
+    AccountModel.disconnected(current_user)
     logout_user()
+    
     flash('You have been logged out.', 'info')
     return redirect(url_for('home.home'))
 

@@ -4,6 +4,10 @@ from .. import db, login_manager
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin, AnonymousUserMixin, current_user
 
+#############
+#   User    #
+#############
+
 @login_manager.user_loader
 def load_user(user_id):
     """Loads the user from the session."""
@@ -19,6 +23,7 @@ class User(UserMixin, db.Model):
     admin = db.Column(db.Boolean, default=False, index=True)
     password_hash = db.Column(db.String(128))
     api_key = db.Column(db.String(60), index=True)
+    is_connected = db.Column(db.Boolean, default=False, index=True)
 
     def is_admin(self):
         """Check if the user has admin privileges."""
@@ -47,7 +52,8 @@ class User(UserMixin, db.Model):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "email": self.email,
-            "admin": self.admin
+            "admin": self.admin,
+            "is_connected": self.is_connected
         }
 
 class AnonymousUser(AnonymousUserMixin):
@@ -62,10 +68,12 @@ class AnonymousUser(AnonymousUserMixin):
 # Register AnonymousUser as the default for anonymous visitors
 login_manager.anonymous_user = AnonymousUser
 
+#############
+#   Rule    #
+#############
 
 class Rule(db.Model):
     """Rule model to store and describe various rules."""
-    
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer) # the user who import the rule
     version = db.Column(db.String)
@@ -121,8 +129,9 @@ class RuleFavoriteUser(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime)
 
     # Define the relationships with cascade option
-    user = db.relationship('User', backref=db.backref('favorites', lazy='dynamic' , cascade='all, delete-orphan'))
-    rule = db.relationship('Rule', backref=db.backref('favorited_by', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User', backref=db.backref('favorite_rules_assocs', lazy='dynamic', cascade='all, delete-orphan'))
+    rule = db.relationship('Rule', backref=db.backref('favorited_by_users_assocs', lazy='dynamic', cascade='all, delete-orphan'))
+
 
     def to_json(self):
         return {
@@ -146,8 +155,8 @@ class Comment(db.Model):
     dislikes = db.Column(db.Integer, default=0)
 
     # Relations
-    user = db.relationship('User', backref=db.backref('comments', lazy='dynamic' , cascade='all, delete-orphan'))
-    rule = db.relationship('Rule', backref=db.backref('comments', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User', backref=db.backref('comments_user', lazy='dynamic' , cascade='all, delete-orphan'))
+    rule = db.relationship('Rule', backref=db.backref('comments_rule', lazy='dynamic', cascade='all, delete-orphan'))
 
     def to_json(self):
         return {
@@ -178,10 +187,37 @@ class RequestOwnerRule(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc), index=True)
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc), onupdate=datetime.datetime.now(tz=datetime.timezone.utc), index=True)
 
-    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('requests', lazy='dynamic',  cascade='all, delete-orphan'))
-    user_owner_rule = db.relationship('User', foreign_keys=[user_id_owner_rule], backref=db.backref('owned_requests', lazy='dynamic' , cascade='all, delete-orphan'))
+    # user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('requests', lazy='dynamic',  cascade='all, delete-orphan'))
+    # user_owner_rule = db.relationship('User', foreign_keys=[user_id_owner_rule], backref=db.backref('owned_requests', lazy='dynamic' , cascade='all, delete-orphan'))
+    # rule = db.relationship('Rule', backref=db.backref('requests', lazy='dynamic', cascade='all, delete-orphan'))
+    # Relationship to the User who submitted the request
+    
+    # - foreign_keys=[user_id]: explicitly tells SQLAlchemy to use 'user_id' as the foreign key
+    # - backref: adds a 'requests' attribute to the User model to access all submitted requests
+    # - lazy='dynamic': allows query operations like user.requests.filter(...)
+    # - cascade='all, delete-orphan': ensures related requests are deleted when the user is deleted
+    user = db.relationship(
+        'User',
+        foreign_keys=[user_id],
+        backref=db.backref('requests', lazy='dynamic', cascade='all, delete-orphan')
+    )
 
-    rule = db.relationship('Rule', backref=db.backref('requests', lazy='dynamic', cascade='all, delete-orphan'))
+    # Relationship to the User who owns the rule (i.e., the target of the request)
+    # - foreign_keys=[user_id_owner_rule]: uses this second FK to relate to the same User table
+    # - backref: adds an 'owned_requests' attribute to the User model to access all requests targeting their rules
+    user_owner_rule = db.relationship(
+        'User',
+        foreign_keys=[user_id_owner_rule],
+        backref=db.backref('owned_requests', lazy='dynamic', cascade='all, delete-orphan')
+    )
+
+    # Relationship to the Rule associated with the request
+    # - backref: adds a 'requests' attribute to the Rule model to access all related requests
+    rule = db.relationship(
+        'Rule',
+        backref=db.backref('requests', lazy='dynamic', cascade='all, delete-orphan')
+    )
+
 
     def to_json(self):
         """Serialize the request to JSON."""

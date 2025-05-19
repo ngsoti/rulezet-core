@@ -43,7 +43,7 @@ def get_zeek_files_from_repo(repo_dir):
                 zeek_files.append(os.path.join(root, file))
     return zeek_files
 
-def read_and_parse_all_zeek_scripts_from_folder(repo_dir, url_github, license_from_github):
+def read_and_parse_all_zeek_scripts_from_folder(repo_dir, url_github, license_from_github , info):
     """
     Reads and parses all Zeek script files in the given folder using regex,
     returning a list of dictionaries with metadata and parsed content.
@@ -68,7 +68,6 @@ def read_and_parse_all_zeek_scripts_from_folder(repo_dir, url_github, license_fr
             description = re.search(description_pattern, content)
             author = re.search(author_pattern, content)
             version = re.search(version_pattern, content)
-            print("oui")
             # Remove the ".zeek" from the title if it ends with that
             if title:
                 title_text = title.group(1)
@@ -85,10 +84,10 @@ def read_and_parse_all_zeek_scripts_from_folder(repo_dir, url_github, license_fr
                 "format": "zeek",
                 "title": title_text,
                 "license": license_from_github,
-                "description": description.group(1) if description else "No description provided",
+                "description": description.group(1) if description else info.get("description", "No description provided"),
                 "source": url_github,
                 "version": version.group(1) if version else "1.0",
-                "author": author.group(1) if author else "Unknown",
+                "author": author.group(1) if author else info.get("author", "No author provided"),
                 "to_string": content  
             }
 

@@ -9,7 +9,48 @@
     <i class="fas fa-hammer"></i> Add Rule
     </a>
 </header>
-
+<div id="myTabContent">
+    <div class="tab-pane fade show active" id="filters" role="tabpanel" aria-labelledby="filters-tab">
+      <div class="card p-4 shadow-sm bg-light mb-3" >
+        <h5 class="mb-4">Filters</h5>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <input
+              type="text"
+              v-model="searchQuery"
+              @input="onSearchInput"
+              @keyup.enter="onEnterKey"
+              class="form-control"
+              placeholder="Search by title, description..."
+            >
+          </div>
+          <div class="col-md-3">
+            <select v-model="sortBy" class="form-select">
+              <option value="newest">Most Recent</option>
+              <option value="oldest">Oldest</option>
+              <option value="most_likes">Most Likes</option>
+              <option value="least_likes">Least Likes</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select v-model="ruleType" class="form-select">
+              <option value="">All Types</option>
+              <option value="yara">Yara</option>
+              <option value="sigma">Sigma</option>
+              <option value="zeek">Zeek</option>
+              <option value="suricata">Suricata</option>
+            </select>
+          </div>
+          
+          <div class="col-md-2">
+            <button class="btn btn-primary w-100" @click="fetchRules(1)">
+              <i class="fas fa-filter"></i> Filter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <template v-if="rules_list && rules_list.rule.length > 0">
     <br/>
@@ -120,6 +161,12 @@ createApp({
         const current_user_is_admin = ref()
         const total_rules_liste = ref()
 
+        // search section
+        const searchQuery = ref('')
+        const authorFilter = ref('')
+        const sortBy = ref('newest')
+        const ruleType = ref("");
+
         const selectedRules = ref([]) // To store selected rule IDs
         const selectAll = ref(false) // To handle the master checkbox
 
@@ -171,19 +218,48 @@ createApp({
 
 
         function detailRule(rule_id) {
-            // fetch(`/rule/detail_rule/${rule_id}`) 
             window.location.href = `/rule/detail_rule/${rule_id}`;
         }
 
         async function fetchRules(page) {
-            const res = await fetch('get_rules_page_owner?page=' + page)
+            const params = new URLSearchParams({
+            page,
+            search: searchQuery.value,
+            author: authorFilter.value,
+            sort_by: sortBy.value,
+            rule_type: ruleType.value
+            })
+
+            const res = await fetch('/rule/get_my_rules_page_filter?' + params.toString())
             const data = await res.json()
             rules_list.value = data
             total_pages.value = data.total_pages
             total_rules.value = data.total_rules
-            total_rules_liste.value = data.total_rules // copy to have a dynamic value of total rules
+            total_rules_liste.value = data.total_rules
             current_page.value = page
         }
+
+        async function onSearchInput() {
+            if (searchQuery.value.trim() === "") {
+            await fetchRules(1)
+            } else {
+            await fetchRules(1)
+            }
+        }
+
+        async function onEnterKey() {
+            await fetchRules(1)
+        }
+
+        // async function fetchRules(page) {
+        //     const res = await fetch('get_rules_page_owner?page=' + page)
+        //     const data = await res.json()
+        //     rules_list.value = data
+        //     total_pages.value = data.total_pages
+        //     total_rules.value = data.total_rules
+        //     total_rules_liste.value = data.total_rules // copy to have a dynamic value of total rules
+        //     current_page.value = page
+        // }
 
         async function fetchCurrentUser() {
             const res = await fetch('get_current_user')
@@ -277,7 +353,14 @@ createApp({
             selectAll,
             allSelected,
             toggleSelectAll,
-            deleteSelectedRules
+            deleteSelectedRules,
+            onSearchInput,
+            onEnterKey,
+            ruleType,
+            searchQuery,
+            authorFilter,
+            csrf_token,
+            sortBy
         }
     }
 }).mount('#main-container')

@@ -7,23 +7,14 @@ from jsonschema import validate, ValidationError
 from ..rule import rule_core as RuleModel
 
 
+
 #################################################################__Version__async__#################################################################### 
 
 MAX_CONCURRENT_FILES = 100  # Limit the number of files processed concurrently to avoid resource exhaustion
 
-async def load_json_schema(schema_file):
-    """
-    Load a JSON schema asynchronously from a file.
-    Used to validate rules against the Sigma schema.
-    Returns the schema as a Python dict or None if loading fails.
-    """
-    try:
-        async with aiofiles.open(schema_file, 'r', encoding='utf-8') as f:
-            content = await f.read()
-            schema = json.loads(content)
-        return schema
-    except Exception:
-        return None
+def load_json_schema_sync(schema_file):
+    with open(schema_file, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 
 
@@ -61,8 +52,12 @@ async def _process_single_file(file, sigma_schema, semaphore):
             async with aiofiles.open(file, 'r', encoding='utf-8') as f:
                 content = await f.read()
                 rule = yaml.safe_load(content)
+
+
+
                 rule_json_string = json.dumps(rule, indent=2, default=str)
                 rule_json_object = json.loads(rule_json_string)
+
 
                 if rule:
                     try:
@@ -103,7 +98,7 @@ async def load_rule_files(repo_dir, license_from_github, repo_url, user):
     - Number of skipped rules (duplicates or failed insert).
     """
     files = await get_rule_files_from_repo(repo_dir)
-    sigma_schema = await load_json_schema("app/import_github_project/sigma_format.json")
+    sigma_schema =  load_json_schema_sync("app/import_github_project/sigma_format.json")
 
     if not sigma_schema:
         # If schema cannot be loaded, return empty results

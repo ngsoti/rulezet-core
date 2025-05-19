@@ -120,6 +120,7 @@ def get_rules_page_filter() -> jsonify:
         "total_pages": ceil(total_rules / per_page)
     })
 
+
 #####################
 #   Action on Rule  # 
 #####################
@@ -247,21 +248,43 @@ def rules_info()-> render_template:
 #   Rule owner  #
 #################
 
-@rule_blueprint.route("/get_rules_page_owner", methods=['GET'])
-def get_rules_page_owner() -> jsonify:
-    """Get all the rule of the user"""
-    page = request.args.get('page', 1, type=int)
-    rules = RuleModel.get_rules_page_owner(page)    
-    total_rules = RuleModel.get_total_rules_count_owner()  
+# @rule_blueprint.route("/get_rules_page_owner", methods=['GET'])
+# def get_rules_page_owner() -> jsonify:
+#     """Get all the rule of the user"""
+#     page = request.args.get('page', 1, type=int)
+#     rules = RuleModel.get_rules_page_owner(page)    
+#     total_rules = RuleModel.get_total_rules_count_owner()  
 
-    if rules:
-        rules_list = list()
-        for rule in rules:
-            u = rule.to_json()
-            rules_list.append(u)
-        return {"rule": rules_list, "total_pages": rules.pages, "total_rules": total_rules}
+#     if rules:
+#         rules_list = list()
+#         for rule in rules:
+#             u = rule.to_json()
+#             rules_list.append(u)
+#         return {"rule": rules_list, "total_pages": rules.pages, "total_rules": total_rules}
     
-    return {"message": "No Rule"}, 404
+#     return {"message": "No Rule"}, 404
+
+@rule_blueprint.route("/get_my_rules_page_filter", methods=['GET'])
+def get_rules_page_filter_owner() -> jsonify:
+    """Get all the rules of the current user with filter"""
+    page = int(request.args.get("page", 1))
+    per_page = 10
+    search = request.args.get("search", None)
+    author = request.args.get("author", None)
+    sort_by = request.args.get("sort_by", "newest")
+    rule_type = request.args.get("rule_type", None) 
+
+    query = RuleModel.filter_rules_owner( search=search, author=author, sort_by=sort_by, rule_type=rule_type)
+    total_rules = query.count()
+    rules = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    return jsonify({
+        "rule": [r.to_json() for r in rules],
+        "total_rules": total_rules,
+        "total_pages": ceil(total_rules / per_page)
+    })
+
+#get_my_rules_page_filter
 
 @rule_blueprint.route("/delete_rule_list", methods=['POST'])
 @login_required
@@ -635,12 +658,13 @@ def test_yara_python_url() -> redirect:
             bad_rule_dicts_Sigma, nb_bad_rules_sigma, imported_sigma, skipped_sigma = asyncio.run(
                 load_rule_files(repo_dir, license_from_github, repo_url, current_user)
             )
-            rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github)
+            rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github, info)
             rule_dicts_Yara , bad_rule_dicts_Yara, nb_bad_rules_yara = read_and_parse_all_yara_rules_from_folder_test(license_from_github, repo_url, external_vars)
             rule_dicts_Suricata = parse_suricata_rules_from_file(repo_dir ,license_from_github, repo_url ,info)
 
             imported = imported_sigma
             skipped = skipped_sigma
+            
             # if rule_dicts_Sigma:
             #     for rule_dict in rule_dicts_Sigma:
             #         success = RuleModel.add_rule_core(rule_dict , current_user)

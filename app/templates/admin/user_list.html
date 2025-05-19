@@ -1,0 +1,112 @@
+<!-- Get the list of all the user for action (delete, view profil)-->
+{% extends 'base.html' %}
+
+{% block content %}
+{% if current_user.is_admin() %}
+    <div class="container my-4" id="main-container">
+        <template v-if="users_list && users_list.length > 0">
+            <h4 class="mb-4">Users (<span class="text-primary">[[ total_users ]]</span>)</h4>
+
+            <div class="row row-cols-1 row-cols-md-2 g-4">
+                <div class="col" v-for="(user, index) in users_list" :key="user.id">
+                <div class="card shadow-sm h-100 border-0">
+                    <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-user me-2"></i>
+                        [[ user.first_name ]] [[ user.last_name || '' ]]
+                        <span class="badge bg-secondary float-end" v-if="user.admin">
+                        <i class="fas fa-user-shield me-1"></i> Admin
+                        </span>
+                    </h5>
+
+                    <p class="card-text mb-1">
+                        <i class="fas fa-envelope me-2"></i>[[ user.email ]]
+                    </p>
+
+                    <p class="card-text">
+                        <i :class="user.is_connected ? 'fas fa-circle text-success' : 'fas fa-circle text-secondary'"></i>
+                        [[ user.is_connected ? 'Online' : 'Offline' ]]
+                    </p>
+                    </div>
+
+                    <div class="card-footer bg-white border-0 d-flex justify-content-between">
+                    <button class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-eye me-1"></i> View Profile
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" @click="deleteUser(user.id, index)">
+                        <i class="fas fa-trash-alt me-1"></i> Delete
+                    </button>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </template>
+
+        <i v-else class="text-muted">No users found.</i>
+    </div>
+
+{% else %}
+    <!-- redirect to acces denied -->
+{% endif %}
+{% endblock %}
+
+{% block script %}
+<script type="module">
+const { createApp, ref, computed } = Vue;
+import { display_toast, prepare_toast, message_list } from '/static/js/toaster.js';
+
+createApp({
+    delimiters: ['[[', ']]'],
+    setup() {
+        // fetch section
+        const users_list = ref([])
+        const total_users = ref(0)
+        const total_pages = ref(0)
+        const current_page = ref(0)
+        
+        /******************fetch users section************************/
+        async function fetchUsers(page) {
+            // use URLSearchParams to add futur param for the filter (easy way)
+            const params = new URLSearchParams({
+                page
+            })
+                const res = await fetch('/account/get_all_users?' + params.toString())
+                if(await res.status == 200){ 
+                    const data = await res.json()
+                    if(data.success){
+                        users_list.value = data.user
+                        total_pages.value = data.total_pages
+                        total_users.value = data.total_users
+                        current_page.value = page
+                    }
+                }else{
+                    // display_toast(res);
+                    
+                }
+            }
+            fetchUsers(1)
+        /******************delete user section************************/
+        async function deleteUser(id, index) {
+            const params = new URLSearchParams({
+                id
+            })
+            const res = await fetch('/account/delete_user?' + params.toString())
+            const data = await res.json();
+            if (data.success) {
+                users_list.value.splice(index, 1)
+                total_users.value -= 1
+            }else{
+                //display_toast()
+            }
+        }
+
+
+        return {
+            total_users,
+            users_list,
+            deleteUser
+        };
+    }
+}).mount('#main-container');
+</script>
+{% endblock %}

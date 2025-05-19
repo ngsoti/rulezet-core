@@ -8,7 +8,6 @@ from sqlalchemy import case, or_
 import yaml
 import yara
 from app.account.account_core import get_user
-from app.import_github_project.import_github_sigma import load_json_schema
 from app.import_github_project.import_github_yara import extract_first_match
 from app.import_github_project.untils_import import build_externals_dict, clean_rule_filename_Yara
 from .. import db
@@ -160,6 +159,11 @@ def compile_sigma(form_dict) -> tuple[bool, dict]:
 def get_rules_page(page) -> Rule:
     """Return all rules by page"""
     return Rule.query.paginate(page=page, per_page=20, max_per_page=20)
+
+def get_rules_of_user_with_id(user__id) -> Rule:
+    """Get all the rule made by the user (with id)"""
+    return Rule.query.filter(Rule.user_id == user__id).all()
+
 
 def get_rule(id) -> int:
     """Return the rule from id"""
@@ -478,6 +482,12 @@ def get_total_rules_count_owner() -> int:
     """Return the total count of rules created by the current logged-in user"""
     return Rule.query.filter_by(user_id=current_user.id).count()
 
+def give_all_right_to_admin(rules) -> None:
+    """give all right for admin for each rule"""
+    for rule in rules:
+        rule.user_id = 1  
+    db.session.commit()
+
 #####################
 #   Favorite rule   #
 #####################
@@ -721,6 +731,36 @@ def remove_has_voted(vote, rule_id , id) -> bool:
 def filter_rules(search=None, author=None, sort_by=None, rule_type=None) -> Rule:
     """Filter the rules"""
     query = Rule.query
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                Rule.title.ilike(search_lower),
+                Rule.description.ilike(search_lower),
+                Rule.format.ilike(search_lower),
+                Rule.author.ilike(search_lower),
+                Rule.to_string.ilike(search_lower)
+            )
+        )
+    if author:
+        query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
+    if rule_type:
+        query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))  
+    if sort_by == "newest":
+        query = query.order_by(Rule.creation_date.desc())
+    elif sort_by == "oldest":
+        query = query.order_by(Rule.creation_date.asc())
+    elif sort_by == "most_likes":
+        query = query.order_by(Rule.vote_up.desc())
+    elif sort_by == "least_likes":
+        query = query.order_by(Rule.vote_down.desc())
+    else:
+        query = query.order_by(Rule.creation_date.desc())
+    return query
+
+def filter_rules_owner(search=None, author=None, sort_by=None, rule_type=None) -> Rule:
+    """Filter the rules"""
+    query = Rule.query.filter_by(user_id=current_user.id)
     if search:
         search_lower = f"%{search.lower()}%"
         query = query.filter(

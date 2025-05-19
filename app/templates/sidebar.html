@@ -89,6 +89,13 @@
                 {% endif %}
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
                     {% if current_user.is_authenticated %}
+                        {% if current_user.is_admin() %}
+                            <li>
+                                <a href="/account/all_users" class="dropdown-item">
+                                    <i class="fa-solid fa-users fa-fw me-2 text-primary"></i> All users
+                                </a>
+                            </li>
+                        {% endif %}
                         <li>
                             <a href="/account/" class="dropdown-item">
                                 <i class="fa-solid fa-user fa-fw me-2 text-primary"></i> Profil
