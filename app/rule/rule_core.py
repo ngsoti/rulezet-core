@@ -1,7 +1,10 @@
+from collections import Counter
 import json
 import re
+
 import uuid
 import datetime
+from flask import jsonify
 from flask_login import current_user
 from jsonschema import  ValidationError, validate
 from sqlalchemy import case, or_
@@ -14,6 +17,7 @@ from .. import db
 from ..db_class.db import *
 from . import rule_core as RuleModel
 from sqlalchemy.orm import joinedload
+from ..account import account_core as AccountModel
 
 ###################
 #   Rule action   #
@@ -164,10 +168,45 @@ def get_rules_of_user_with_id(user__id) -> Rule:
     """Get all the rule made by the user (with id)"""
     return Rule.query.filter(Rule.user_id == user__id).all()
 
+def get_rules_of_user_with_id_page(user__id , page) -> Rule:
+    """Get all the page rule made by the user (with id)"""
+    return Rule.query.filter(Rule.user_id == user__id).paginate(page=page, per_page=20, max_per_page=20)
+
+def get_rules_of_user_with_id_count(user__id) -> int:
+    """Return the count of rules"""
+    return Rule.query.filter(Rule.user_id == user__id).count()
 
 def get_rule(id) -> int:
     """Return the rule from id"""
     return Rule.query.get(id)
+
+def get_rule_type_count(user_id):
+    """Return JSON of the different rule types and total"""
+    rules = Rule.query.filter_by(user_id=user_id).all()
+    if not rules:
+        return jsonify({
+            "total": 0,
+            "types": {}
+        })
+
+    format_counts = {}
+    total = 0
+
+    for rule in rules:
+        if rule.format:
+            fmt = rule.format.strip().upper()
+            total += 1
+            if fmt in format_counts:
+                format_counts[fmt] += 1
+            else:
+                format_counts[fmt] = 1
+
+    return jsonify({
+        "total": total,
+        "types": format_counts
+    })
+
+    
 
 def get_rule_by_title(title) -> str:
     """Return the rule from the title"""
@@ -484,8 +523,10 @@ def get_total_rules_count_owner() -> int:
 
 def give_all_right_to_admin(rules) -> None:
     """give all right for admin for each rule"""
+    id_default =  AccountModel.get_default_user()
+    print(id_default)
     for rule in rules:
-        rule.user_id = 1  
+        rule.user_id = id_default.id   
     db.session.commit()
 
 #####################

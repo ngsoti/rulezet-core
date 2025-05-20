@@ -2,105 +2,152 @@
 
 {% block content %}
 {% if current_user.is_admin() %}
-<div class="container my-5" id="main-container">
-    <div v-if="current_user && current_user_donne" class="row g-4">
-        <!-- User Profile Card -->
-        <div class="col-md-6 card shadow p-4 mt-4 rounded-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h3 class="card-title mb-3"><i class="fas fa-user-circle me-2"></i>User Profile</h3>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item"><strong>ID:</strong> [[ current_user.id ]]</li>
-                        <li class="list-group-item"><strong>Name:</strong> [[ current_user.first_name ]] [[ current_user.last_name ]]</li>
-                        <li class="list-group-item"><strong>Email:</strong> [[ current_user.email ]]</li>
-                        <li class="list-group-item"><strong>Admin:</strong>
-                            <span class="badge" :class="current_user.admin ? 'bg-success' : 'bg-secondary'">
-                                [[ current_user.admin ? 'Yes' : 'No' ]]
-                            </span>
-                        </li>
-                        <li class="list-group-item"><strong>Connected:</strong>
-                            <span class="badge" :class="current_user.is_connected ? 'bg-success' : 'bg-danger'">
-                                [[ current_user.is_connected ? 'Yes' : 'No' ]]
-                            </span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
 
-        <!-- Activity Summary Card -->
-        <div class="col-md-6 card shadow p-4 mt-4 rounded-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h3 class="card-title mb-3"><i class="fas fa-chart-line me-2"></i>User Activity</h3>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item"><strong>Rules Created:</strong> [[ current_user_donne.rule_count ]]</li>
-                        <li class="list-group-item"><strong>Total Upvotes:</strong> [[ current_user_donne.total_upvotes ]]</li>
-                        <li class="list-group-item"><strong>Total Downvotes:</strong> [[ current_user_donne.total_downvotes ]]</li>
-                        <li class="list-group-item"><strong>Formats Used:</strong>
-                            <span v-for="fmt in current_user_donne.formats_used" class="badge bg-primary me-1">[[ fmt ]]</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="card shadow p-4 mt-4 rounded-3" v-if="current_user_donne && current_user_donne.rules.length">
-            <h3 class="mb-3"><i class="fas fa-scroll me-2"></i>User's Rules</h3>
-            
-            <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                            <th scope="col">Title</th>
-                            <th scope="col">Author</th>
-                            <th scope="col">Format</th>
-                            <th scope="col">Created</th>
-                            <th scope="col">License</th>
-                            <th scope="col">Votes</th>
-                            <th scope="col">Details</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="rule in current_user_donne.rules" :key="rule.id">
-                            <td>[[ rule.title ]]</td>
-                            <td>[[ rule.author ]]</td>
-                            <td><span class="badge bg-info text-dark">[[ rule.format ]]</span></td>
-                            <td>[[ rule.creation_date ]]</td>
-                            <td>[[ rule.license ]]</td>
-                            <td>
-                                <span class="text-success"><i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]</span>
-                                <span class="text-danger ms-2"><i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]</span>
-                            </td>
-                            <td>
-                                <a :href="'/rule/detail_rule/' + rule.id" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-
-        <!-- Graph Section -->
-        <div class="col-12 col-md-6 col-lg-4 mx-auto mt-4 card shadow p-4 mt-4 rounded-3" 
-            v-if="current_user_donne && (current_user_donne.total_upvotes + current_user_donne.total_downvotes > 0)">
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-3">
-                    <h3 class="card-title mb-3 text-center">
-                        <i class="fas fa-chart-pie me-2"></i>Activity Overview
-                    </h3>
-                    <div class="d-flex justify-content-center">
-                        <canvas id="votesChart" style="max-width: 250px; max-height: 250px;"></canvas>
+<div v-if="isLoading" class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
+    <div class="spinner-border text-primary" role="status"></div>
+    <span> Loading...</span>
+</div>
+<div v-else class="row g-4">
+    <div class="container my-5" id="main-container">
+        <div v-if="current_user && current_user_donne" class="row g-4">
+            <!-- User Profile Card -->
+            <div class="col-md-6 card shadow p-4 mt-4 rounded-3">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h3 class="card-title mb-3"><i class="fas fa-user-circle me-2"></i>User Profile</h3>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item"><strong>ID:</strong> [[ current_user.id ]]</li>
+                            <li class="list-group-item"><strong>Name:</strong> [[ current_user.first_name ]] [[ current_user.last_name ]]</li>
+                            <li class="list-group-item"><strong>Email:</strong> [[ current_user.email ]]</li>
+                            <li class="list-group-item"><strong>Admin:</strong>
+                                <span class="badge" :class="current_user.admin ? 'bg-success' : 'bg-secondary'">
+                                    [[ current_user.admin ? 'Yes' : 'No' ]]
+                                </span>
+                            </li>
+                            <li class="list-group-item"><strong>Connected:</strong>
+                                <span class="badge" :class="current_user.is_connected ? 'bg-success' : 'bg-danger'">
+                                    [[ current_user.is_connected ? 'Yes' : 'No' ]]
+                                </span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
-        </div>
 
+            <!-- Activity Summary Card -->
+            <div class="col-md-6 card shadow p-4 mt-4 rounded-3">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h3 class="card-title mb-3"><i class="fas fa-chart-line me-2"></i>User Activity</h3>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item"><strong>Rules Created:</strong> [[ current_user_donne.rule_count ]]</li>
+                            <li class="list-group-item"><strong>Total Upvotes:</strong> [[ current_user_donne.total_upvotes ]]</li>
+                            <li class="list-group-item"><strong>Total Downvotes:</strong> [[ current_user_donne.total_downvotes ]]</li>
+                            <li class="list-group-item"><strong>Formats Used:</strong>
+                                <template v-if="rules_list && rules_list.length > 0">
+                                    <span v-for="fmt in current_user_donne.formats_used" class="badge bg-primary me-1">[[ fmt ]]</span>
+                                </template>
+                                <span v-else> /</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <template v-if="rules_list && rules_list.length > 0">
+                <div class="card shadow p-4 mt-4 rounded-3">
+                    <h3 class="mb-3"><i class="fas fa-scroll me-2"></i>User's Rules</h3>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th scope="col" class="text-nowrap">Title</th>
+                                    <th scope="col" class="text-nowrap">Author</th>
+                                    <th scope="col" class="text-nowrap">Format</th>
+                                    <th scope="col" class="text-nowrap">Created</th>
+                                    <th scope="col" class="text-nowrap">License</th>
+                                    <th scope="col" class="text-nowrap">Votes</th>
+                                    <th scope="col" class="text-nowrap">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="rule in rules_list" :key="rule.id">
+                                    <td class="text-truncate" style="max-width: 200px;">[[ rule.title ]]</td>
+                                    <td class="text-truncate" style="max-width: 150px;">[[ rule.author ]]</td>
+                                    <td><span class="badge bg-info text-dark">[[ rule.format ]]</span></td>
+                                    <td class="text-nowrap">[[ rule.creation_date ]]</td>
+                                    <td class="text-truncate" style="max-width: 150px;">[[ rule.license ]]</td>
+                                    <td class="text-nowrap">
+                                        <span class="text-success"><i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]</span>
+                                        <span class="text-danger ms-2"><i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]</span>
+                                    </td>
+                                    <td>
+                                        <a :href="'/rule/detail_rule/' + rule.id" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination mt-3 justify-content-center">
+                            <li class="page-item" :class="{ disabled: current_page === 1 }">
+                            <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1 , )">
+                                <i class="fas fa-arrow-left"></i> Previous
+                            </a>
+                            </li>
+                            <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: current_page === page, disabled: page === '...' }">
+                            <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+                            <span v-else class="page-link">...</span>
+                            </li>
+                            <li class="page-item" :class="{ disabled: current_page === total_pages }">
+                            <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
+                                Next <i class="fas fa-arrow-right"></i>
+                            </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+
+                <!-- Graph Section -->
+                <div class="row mt-4">
+                    <!-- Votes -->
+                    <div class="col-md-6 mb-2">
+                        <div class="card shadow p-2 rounded-3 h-100">
+                            <div class="card-body p-3">
+                                <h3 class="card-title text-center">
+                                    <i class="fas fa-thumbs-up me-2"></i>Votes Activity
+                                </h3>
+                                <div class="d-flex align-items-center justify-content-center" style="width: 300px; height: 300px; margin: 0 auto;">
+                                    <canvas id="votesChart" style="width: 100%; height: auto;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formats -->
+                    <div class="col-md-6 mb-2">
+                        <div class="card shadow p-2 rounded-3 h-100">
+                            <div class="card-body p-3">
+                                <h3 class="card-title text-center">
+                                    <i class="fas fa-layer-group me-2"></i>Rule Formats
+                                </h3>
+                                <div class="d-flex align-items-center justify-content-center" style="width: 300px; height: 300px; margin: 0 auto;">
+                                    <canvas id="formatsChart" style="width: 100%; height: auto;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <span></span>
+        </div>
     </div>
 </div>
+
+
+
 {% endif %}
 {% endblock %}
 
@@ -109,7 +156,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
-const { createApp, ref, onMounted, watch , nextTick} = Vue;
+const { createApp, ref, onMounted, watch , nextTick, computed} = Vue;
 import { display_toast } from '/static/js/toaster.js';
 
 createApp({
@@ -117,6 +164,11 @@ createApp({
     setup() {
         const current_user = ref();
         const current_user_donne = ref();
+        const current_page = ref(0);
+        const total_pages = ref(1)
+        const rules_list = ref([])
+
+        const isLoading = ref(true);
         const userId = "{{ user_id }}";
 
         /******************fetch users section************************/
@@ -142,29 +194,75 @@ createApp({
             }
         }
 
+        async function fetchRules(page) {
+            const params = new URLSearchParams({
+                page,
+                userId
+            })
 
-        fetchUser(userId);
-        fetchUserInfo(userId);
+            const res = await fetch('/rule/get_rules_page_filter_with_id?' + params.toString())
+            if (res.status === 200) {
+                const data = await res.json();
+                if (data.success) {
+                    rules_list.value = data.rule
+                    total_pages.value = data.total_pages
+                    current_page.value = page
+                }
+            }
+        }
+
+        fetchRules(1).then(() => {
+            fetchUser(userId).then(() => {
+                fetchUserInfo(userId).then(() => {
+                    isLoading.value = false;  
+                });
+            });
+        });
+
+
+        const visiblePages = computed(() => {
+            const pages = []
+            const total = total_pages.value
+            const current = current_page.value
+            if (total <= 7) {
+            for (let i = 1; i <= total; i++) pages.push(i)
+            } else {
+            if (current <= 4) {
+                pages.push(1, 2, 3, 4, 5, '...', total)
+            } else if (current >= total - 3) {
+                pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+            } else {
+                pages.push(1, '...', current - 1, current, current + 1, '...', total)
+            }
+            }
+            return pages
+        })
+
         /******************fetch data section************************/
         function renderChart() {
-            if (!current_user_donne.value) return;
+            if (!current_user_donne.value){
+                return;
+            }
 
             const upvotes = current_user_donne.value.total_upvotes || 0;
             const downvotes = current_user_donne.value.total_downvotes || 0;
 
-            if ((upvotes + downvotes) === 0) return;
+            if ((upvotes + downvotes) === 0){
+                return;
+            }
 
             const ctx = document.getElementById('votesChart');
             if (!ctx) return;
 
-            const chart = new Chart(ctx.getContext('2d'), {
-                type: 'doughnut',
+            new Chart(ctx.getContext('2d'), {
+                type: 'bar',
                 data: {
                     labels: ['Upvotes', 'Downvotes'],
                     datasets: [{
                         label: 'Activity Stats',
                         data: [upvotes, downvotes],
                         backgroundColor: ['#28a745', '#dc3545'],
+                        borderColor: ['#218838', '#c82333'],
                         borderWidth: 1
                     }]
                 },
@@ -172,26 +270,111 @@ createApp({
                     responsive: true,
                     plugins: {
                         legend: {
-                            position: 'top',
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0 
+                            }
                         }
                     }
                 }
             });
         }
 
-        
-    
-        watch(current_user_donne, async (val) => {
-            if (val) {
+        function renderFormatsChart() {
+            const formatsData = current_user_donne.value.rule_detail.types
+            // {
+            //     "YARA": 5809,
+            //     "SIGMA": 6990,
+            //     "Suricata": 4456
+            // };
+
+            const labels = Object.keys(formatsData);
+            const values = Object.values(formatsData);
+
+            if (values.length === 0) return;
+
+            const ctx = document.getElementById('formatsChart');
+            if (!ctx) return;
+
+            if (window.formatsChartInstance) {
+                window.formatsChartInstance.destroy();
+            }
+
+            window.formatsChartInstance = new Chart(ctx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Formats utilisés',
+                        data: values,
+                        backgroundColor: [
+                            '#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#fd7e14'
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                generateLabels(chart) {
+                                    const data = chart.data;
+                                    if (!data.labels.length) return [];
+                                    return data.labels.map((label, i) => {
+                                        const value = data.datasets[0].data[i];
+                                        const bgColor = data.datasets[0].backgroundColor[i];
+                                        return {
+                                            text: `${label} (${value})`,
+                                            fillStyle: bgColor,
+                                            strokeStyle: '#fff',
+                                            lineWidth: 2,
+                                            hidden: isNaN(value) || chart.getDataVisibility(i) === false,
+                                            index: i
+                                        };
+                                    });
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    return `${label}: ${value}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        watch(isLoading, async (val) => {
+            if (!val) {
                 await nextTick();  
                 renderChart();
+                renderFormatsChart();
             }
         });
 
-
         return {
             current_user,
-            current_user_donne
+            current_user_donne,
+            rules_list,
+            fetchRules,
+            visiblePages,
+            isLoading,
+            renderFormatsChart
         };
     }
 }).mount('#main-container');

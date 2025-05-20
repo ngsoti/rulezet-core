@@ -21,6 +21,17 @@ def create_admin():
     db.session.add(user)
     db.session.commit()
 
+def create_default_user():
+    user = User(
+        first_name="no editor",
+        last_name="no editor",
+        email="default@default.default",
+        password=generate_api_key(),
+        admin=False,
+        api_key = "user_api_key"
+    )
+    db.session.add(user)
+    db.session.commit()
 
 
 def create_user_test():

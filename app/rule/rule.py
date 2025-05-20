@@ -99,6 +99,24 @@ def get_rules_page() -> jsonify:
     
     return {"message": "No Rule"}, 404
 
+
+@rule_blueprint.route("/get_rules_page_filter_with_id", methods=['GET'])
+def get_rules_page_with_user_id() -> jsonify:
+    """Get all the rules on a page"""
+    page = request.args.get('page', 1, type=int)
+    user_id = request.args.get('userId', 1, type=int)
+    rules = RuleModel.get_rules_of_user_with_id_page(user_id,page)
+    total_rules = RuleModel.get_rules_of_user_with_id_count(user_id)
+    if rules:
+        rules_list = list()
+        for rule in rules:
+            u = rule.to_json()
+            rules_list.append(u)
+
+        return {"success": True,"rule": rules_list, "total_pages": rules.pages, "total_rules": total_rules}
+    
+    return {"message": "No Rule"}, 404
+
 # get page with filter
 @rule_blueprint.route("/get_rules_page_filter", methods=['GET'])
 def get_rules_page_filter() -> jsonify:

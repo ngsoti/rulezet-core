@@ -4,7 +4,7 @@ from flask import render_template, request, Response
 import json
 import os
 
-from app.utils.init_db import create_admin, create_rule_test, create_user_test
+from app.utils.init_db import create_admin, create_default_user, create_rule_test, create_user_test
 
 
 parser = argparse.ArgumentParser()
@@ -30,6 +30,7 @@ if args.init_db:
         create_admin()
         create_user_test()
         create_rule_test()
+        create_default_user()
 elif args.recreate_db:
     with app.app_context():
         db.drop_all()
@@ -37,6 +38,7 @@ elif args.recreate_db:
         create_admin()
         create_user_test()
         create_rule_test()
+        create_default_user()
 elif args.delete_db:
     with app.app_context():
         db.drop_all()

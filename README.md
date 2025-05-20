@@ -97,15 +97,20 @@ The platform includes a wide set of functionalities to manage and collaborate ar
 
 ---
 
-## Project Context
+## Project Summary
 
-This project was initiated as part of a **cybersecurity internship**, aimed at building a collaborative and educational platform. The purpose is to centralize, validate, and improve community-driven detection rules, filling the gap left by the lack of public validation for such rules.
+This internship offers a unique opportunity to contribute to the development of a cutting-edge, open-source platform: a community-driven website designed for sharing, evaluating, and refining security detection rules. These rules, which are critical for identifying threats in cybersecurity, currently lack a central place for community validation. This project addresses that gap by creating a collaborative space where users can:
 
-Participants (interns and contributors) are involved in:
-- Building core features and interfaces
-- Creating the detection rule model and standard
-- Integrating with tools like MISP and Suricata
-- Ensuring rule quality and validation
+- **Share Rules**: Contribute detection rules in various formats (YARA, Sigma, Suricata, and others), allowing for broad community access.
+- **Evaluate Rules**: Rate and comment on the effectiveness of rules, report false positives, and share practical experiences.
+- **Refine Rules**: Participate in the collaborative improvement of rules through feedback and proposed changes, enhancing their accuracy and reliability.
+- **Organize Rules**: Bundle rules into logical sets and classify them using tags and categories, improving searchability and usability.
+
+Interns will play a key role in developing the website’s features and functionalities. This will involve implementing core features, exploring integrations with other security tools such as MISP and Suricata, and assisting in the development of a security rule data model for a standardized format to facilitate easy exchange. Interns will gain hands-on experience in open-source software development, web development, and practical cybersecurity applications. 
+
+This project offers a chance to make a real-world impact by improving the way security professionals interact with essential threat detection information. You will gain exposure to web development, APIs, data modeling, and security knowledge.
+
+---
 
 ---
 

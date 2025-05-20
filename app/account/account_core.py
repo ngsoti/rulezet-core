@@ -70,6 +70,9 @@ def delete_user_core(id) -> bool:
 
 # Read
 
+def get_default_user()-> id:
+    """Return the default user"""
+    return User.query.filter_by(email='default@default.default').first()
 
 def get_user(id) -> id:
     """Return the user"""
@@ -106,6 +109,10 @@ def get_user_data_full(user_id: int) -> dict:
     votes = get_user_votes_summary(user_id)
     formats = get_user_rule_formats(user_id)
     favorites = get_user_favorite_rules(user_id)
+    
+    types = RuleModel.get_rule_type_count(user_id)
+    
+    
 
     return {
         "user": user.to_json(),
@@ -114,8 +121,9 @@ def get_user_data_full(user_id: int) -> dict:
         "total_downvotes": votes["total_downvotes"],
         "formats_used": formats,
         "favorite_rule_ids": favorites,
-        "rules": [r.to_json() for r in rules]
+        "rule_detail": types.get_json()
     }
+
 
 
 def get_all_users() -> range:
