@@ -75,6 +75,49 @@ def get_user(id) -> id:
     """Return the user"""
     return User.query.get(id)
 
+def get_user_rules(user_id: int) -> list:
+    """Return all rules created by the user."""
+    return Rule.query.filter_by(user_id=user_id).all()
+
+def get_user_votes_summary(user_id: int) -> dict:
+    """Return the total vote_up and vote_down from all rules created by the user."""
+    rules = get_user_rules(user_id)
+    return {
+        "total_upvotes": sum(r.vote_up or 0 for r in rules),
+        "total_downvotes": sum(r.vote_down or 0 for r in rules)
+    }
+
+def get_user_rule_formats(user_id: int) -> list:
+    """Return the list of unique formats used by the user in their rules."""
+    rules = get_user_rules(user_id)
+    return list(set(r.format for r in rules if r.format))
+
+def get_user_favorite_rules(user_id: int) -> list:
+    """Return list of rule IDs favorited by the user."""
+    return [fav.rule_id for fav in RuleFavoriteUser.query.filter_by(user_id=user_id).all()]
+
+def get_user_data_full(user_id: int) -> dict:
+    """Compile all user activity metadata into a single dictionary."""
+    user = get_user(user_id)
+    if not user:
+        return None
+
+    rules = get_user_rules(user_id)
+    votes = get_user_votes_summary(user_id)
+    formats = get_user_rule_formats(user_id)
+    favorites = get_user_favorite_rules(user_id)
+
+    return {
+        "user": user.to_json(),
+        "rule_count": len(rules),
+        "total_upvotes": votes["total_upvotes"],
+        "total_downvotes": votes["total_downvotes"],
+        "formats_used": formats,
+        "favorite_rule_ids": favorites,
+        "rules": [r.to_json() for r in rules]
+    }
+
+
 def get_all_users() -> range:
     """Return all users"""
     return User.query.all()

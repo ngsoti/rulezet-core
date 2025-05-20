@@ -30,9 +30,9 @@
                     </div>
 
                     <div class="card-footer bg-white border-0 d-flex justify-content-between">
-                    <button class="btn btn-outline-primary btn-sm">
+                    <a :href="'/account/detail_user/' + user.id" title="view more about this user" class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-eye me-1"></i> View Profile
-                    </button>
+                    </a>
                     <button class="btn btn-outline-danger btn-sm" @click="deleteUser(user.id, index)">
                         <i class="fas fa-trash-alt me-1"></i> Delete
                     </button>
@@ -99,6 +99,7 @@ createApp({
                 //display_toast()
             }
         }
+        /**********************Detail user section********************/
 
 
         return {

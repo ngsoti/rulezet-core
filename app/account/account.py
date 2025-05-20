@@ -29,12 +29,48 @@ def user_list() -> render_template:
     """Redirect to the user section"""
     return render_template("admin/user_list.html")
 
+@account_blueprint.route("/detail_user/<int:user_id>")
+@login_required
+def detail_user(user_id) -> render_template:
+    """Redirect to the detail user section"""
+    return render_template("account/detail_user.html" , user_id=user_id)
+
+@account_blueprint.route("/get_user")
+@login_required
+def get_user() -> jsonify:
+    """Give the user section"""
+    user_id = request.args.get('user_id',type=int)
+    if current_user.is_admin():
+        my_user = AccountModel.get_user(user_id)
+        if my_user:
+            return jsonify({"success": True, "user": my_user.to_json()})
+        else:
+            return jsonify({"success": False, "message": "no user found"})
+    else:
+        return render_template("access_denied.html")
+
+@account_blueprint.route("/get_user_donne")
+@login_required
+def get_user_donne() -> jsonify:
+    """Return the user activity and metadata."""
+    user_id = request.args.get('user_id', type=int)
+    
+    if current_user.is_admin():
+        user_data = AccountModel.get_user_data_full(user_id)
+        if user_data:
+            return jsonify({"success": True, "donne": user_data})
+        else:
+            return jsonify({"success": False, "message": "User not found"})
+    else:
+        return render_template("access_denied.html")
+
+
+
 @account_blueprint.route("/delete_user")
 @login_required
 def delete_user() -> render_template:
     """Delete an user"""
     user_id = request.args.get('id', 1, type=int)
-    print(user_id)
     if current_user.is_admin():
         delete = AccountModel.delete_user_core(user_id)
         if delete:
