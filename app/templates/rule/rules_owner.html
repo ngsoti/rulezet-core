@@ -193,7 +193,8 @@ createApp({
             if (data.success) {
                 selectedRules.value = [];  
                 fetchRules(current_page.value);  
-            } 
+            }
+            
         }
 
 
@@ -283,6 +284,11 @@ createApp({
                 rules_list.value.rule.splice(index, 1)
                 total_rules_liste.value -= 1
             }
+            if (rules_list.value.length === 0 && current_page.value > 1) {
+                    fetchRules(current_page.value - 1);
+                } else {
+                    fetchRules(current_page.value);
+                } 
         }
 
         // Vote on a rule

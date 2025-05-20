@@ -64,7 +64,24 @@ def get_user_donne() -> jsonify:
     else:
         return render_template("access_denied.html")
 
-
+@account_blueprint.route("/promote_remove_admin")
+@login_required
+def promote_remove_admin() -> jsonify:
+    """Return the user activity and metadata."""
+    user_id = request.args.get('userId', type=int)
+    action = request.args.get('action', type=str)
+    
+    if current_user.is_admin():
+        response = AccountModel.promote_remove_user_admin(user_id, action)
+        if response:
+            if action == "remove":
+                return jsonify({"success": True , "admin": False})
+            else:
+                return jsonify({"success": True , "admin": True})
+        else:
+            return jsonify({"success": False})
+    else:
+        return render_template("access_denied.html")
 
 @account_blueprint.route("/delete_user")
 @login_required
@@ -164,6 +181,11 @@ def profil() -> render_template:
     """Profil page"""
     return render_template("account/account_index.html", user=current_user)
 
+@account_blueprint.route("/acces_denied")
+@login_required
+def acces_denied() -> render_template:
+    """acces_denied page"""
+    return render_template("access_denied.html")
 
 ############
 # Favorite #

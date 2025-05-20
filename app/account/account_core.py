@@ -52,6 +52,25 @@ def disconnected(user) -> bool:
         db.session.commit()
     return not user.is_connected
 
+def promote_remove_user_admin(user_id , action) -> bool:
+    """Promote or remove user to admin right"""
+    if current_user.is_admin():
+        user = get_user(user_id)
+        if action == 'remove':
+            user.admin = False
+            db.session.commit()
+            return True
+        elif action == 'promote':
+            user.admin = True
+            db.session.commit()
+            return True
+        else:
+            print("a")
+            return False
+        
+    else:
+        return False
+
 # Delete
 
 def delete_user_core(id) -> bool:

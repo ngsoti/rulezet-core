@@ -2,19 +2,35 @@
 
 {% block content %}
 {% if current_user.is_admin() %}
-
 <div v-if="isLoading" class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
     <div class="spinner-border text-primary" role="status"></div>
     <span> Loading...</span>
 </div>
 <div v-else class="row g-4">
     <div class="container my-5" id="main-container">
+        
+        <template v-if="!current_user.admin">
+            <button class="btn btn-primary btn-sm" title="give to this user admin right" @click='promoteOrRemoveUserAdmin("promote")'>
+                <i class="fas fa-user me-1"></i> Promote admin
+            </button>
+        </template>
+        <template v-if="current_user.admin">
+            <button class="btn btn-primary btn-sm" title="remove admin right on this user" @click='promoteOrRemoveUserAdmin("remove")'>
+                <i class="fas fa-user me-1"></i> Remove admin right
+            </button>
+        </template>
+        
+
         <div v-if="current_user && current_user_donne" class="row g-4">
             <!-- User Profile Card -->
             <div class="col-md-6 card shadow p-4 mt-4 rounded-3">
                 <div class="card shadow-sm border-0">
                     <div class="card-body">
-                        <h3 class="card-title mb-3"><i class="fas fa-user-circle me-2"></i>User Profile</h3>
+                        <h3 class="card-title mb-3"><i class="fas fa-user-circle me-2"></i>User Profile
+                            <template v-if="{{current_user.id}} == current_user.id">
+                                <span class="badge bg-info text-dark ms-2">(you)</span>
+                            </template>
+                        </h3>
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item"><strong>ID:</strong> [[ current_user.id ]]</li>
                             <li class="list-group-item"><strong>Name:</strong> [[ current_user.first_name ]] [[ current_user.last_name ]]</li>
@@ -53,6 +69,7 @@
                     </div>
                 </div>
             </div>
+            
             <template v-if="rules_list && rules_list.length > 0">
                 <div class="card shadow p-4 mt-4 rounded-3">
                     <h3 class="mb-3"><i class="fas fa-scroll me-2"></i>User's Rules</h3>
@@ -119,9 +136,15 @@
                                 <h3 class="card-title text-center">
                                     <i class="fas fa-thumbs-up me-2"></i>Votes Activity
                                 </h3>
+                                [[current_user_donne.total_downvotes.value]]
                                 <div class="d-flex align-items-center justify-content-center" style="width: 300px; height: 300px; margin: 0 auto;">
-                                    <canvas id="votesChart" style="width: 100%; height: auto;"></canvas>
+                                    <template v-if="current_user_donne.total_upvotes + current_user_donne.total_downvotes> 0">
+                                        <canvas id="votesChart" style="width: 100%; height: auto;"></canvas>
+                                    </template>
+                                    <span v-else> no vote yet</span>
+                                    
                                 </div>
+                                
                             </div>
                         </div>
                     </div>
@@ -145,8 +168,10 @@
         </div>
     </div>
 </div>
-
-
+{% else %}
+    <script>
+        window.location.href = "{{ url_for('account.acces_denied') }}";
+    </script>
 
 {% endif %}
 {% endblock %}
@@ -167,6 +192,7 @@ createApp({
         const current_page = ref(0);
         const total_pages = ref(1)
         const rules_list = ref([])
+        const current_user_admin = ref("{{current_user.id}}")
 
         const isLoading = ref(true);
         const userId = "{{ user_id }}";
@@ -237,8 +263,51 @@ createApp({
             }
             return pages
         })
+        /**************************************************promote/remove admin right section ************************/
+        async function promoteOrRemoveUserAdmin(action) {
+            let confirmMsg;
+            if (current_user_admin.value == userId) {
+                confirmMsg = action === 'remove'
+                    ? "Are you sure you want to remove your admin rights?"
+                    : "Error 500";
+            } else {
+                confirmMsg = action === 'promote'
+                    ? "Are you sure you want to promote this user to admin?"
+                    : "Are you sure you want to remove this user's admin rights?";
+            }
 
-        /******************fetch data section************************/
+            const confirmed = confirm(confirmMsg);
+            if (!confirmed) return;
+
+
+            const params = new URLSearchParams({ userId, action });
+
+            try {
+                const res = await fetch('/account/promote_remove_admin?' + params.toString());
+                if (res.status === 200) {
+                    const data = await res.json();
+                    if (data.success) {
+                        current_user.value.admin = data.admin;
+                        if(current_user_admin.value == userId){
+                            // the admin delete is admin right
+                            window.location.href = "{{ url_for('account.acces_denied') }}";
+                        }
+                    } else {
+                        alert("Action failed: " + (data.message || "Unknown error."));
+                    }
+                } else {
+                    alert("Request failed with status: " + res.status);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred while updating the user.");
+            }
+        }
+
+        
+        
+
+        /**********************************************fetch data section***************************************/
         function renderChart() {
             if (!current_user_donne.value){
                 return;
@@ -366,6 +435,7 @@ createApp({
                 renderFormatsChart();
             }
         });
+        
 
         return {
             current_user,
@@ -374,7 +444,8 @@ createApp({
             fetchRules,
             visiblePages,
             isLoading,
-            renderFormatsChart
+            renderFormatsChart,
+            promoteOrRemoveUserAdmin
         };
     }
 }).mount('#main-container');

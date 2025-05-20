@@ -13,7 +13,19 @@
                         <div class="card-body">
                         <h5 class="card-title">
                             <i class="fas fa-user me-2"></i>
-                            [[ user.first_name ]] [[ user.last_name || '' ]]
+                            
+                            <template v-if="{{current_user.id}} == user.id">
+                                <span>
+                                    [[ user.first_name ]] [[ user.last_name || '' ]]
+                                    <span class="badge bg-info text-dark ms-2">(you)</span>
+                                </span>
+                            </template>
+                            <template v-else>
+                                <span>
+                                    [[ user.first_name ]] [[ user.last_name || '' ]]
+                                </span>
+                            </template>
+
                             <span class="badge bg-secondary float-end" v-if="user.admin">
                             <i class="fas fa-user-shield me-1"></i> Admin
                             </span>
@@ -64,7 +76,9 @@
     </div>
 
 {% else %}
-    <!-- redirect to acces denied -->
+    <script>
+        window.location.href = "{{ url_for('account.acces_denied') }}";
+    </script>
 {% endif %}
 {% endblock %}
 
@@ -131,11 +145,16 @@ createApp({
             if (data.success) {
                 users_list.value.splice(index, 1)
                 total_users.value -= 1
+                if (users_list.value.length === 0 && current_page.value > 1) {
+                    fetchUsers(current_page.value - 1);
+                } else {
+                    fetchUsers(current_page.value);
+                }
             }else{
                 //display_toast()
             }
         }
-        /**********************Detail user section********************/
+
 
 
         return {
