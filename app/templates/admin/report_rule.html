@@ -18,7 +18,14 @@
                 <div class="card-body">
                     <p><strong>Reason:</strong> [[ rep.reason ]]</p>
                     <p><strong>Message:</strong><br> [[ rep.message || 'No message provided.' ]]</p>
-                    <p><strong>Owner of the rule:</strong>  [[ rep.user_name ]]</p>
+                    <p>
+                        <strong>Owner of the rule:</strong>
+                        <a :href="'/account/detail_user/' + rep.user_id" title="View more about this user" class="m-2">
+                            [[ rep.rule_user_owner ]]
+                        </a>
+                    </p>
+
+                    
 
                     <div class="mt-3">
                         <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" :data-bs-target="`#ruleContent${rep.id}`" aria-expanded="false" :aria-controls="`ruleContent${rep.id}`">

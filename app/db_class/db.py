@@ -377,7 +377,7 @@ class RepportRule(db.Model):
                 "user_name": self.user.first_name if self.user else None,
                 "rule_id": self.rule_id,
                 "rule_name": self.rule.title if self.rule else None,
-                "rule_user_owner": self.rule.user_id if self.rule else None,
+                "rule_user_owner": self.rule.get_rule_user_first_name_by_id() if self.rule else None,
                 "message": self.message,
                 'created_at': self.created_at.strftime('%Y-%m-%d %H:%M'),
                 "reason": self.reason,
