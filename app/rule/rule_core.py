@@ -1031,3 +1031,75 @@ def delete_contribution(contribution_id)-> bool:
     db.session.delete(contribution)
     db.session.commit()
     return True
+
+#######################
+#   Repport section   #
+#######################
+
+# CRUD
+
+# Create
+
+def create_repport(user_id, rule_id, message, reason) -> RepportRule:
+    """Create a new report"""
+    repport = RepportRule(
+        user_id=user_id,
+        rule_id=rule_id,
+        message=message,
+        reason=reason,
+        created_at=datetime.datetime.now(datetime.timezone.utc)
+    )
+    db.session.add(repport)
+    db.session.commit()
+    return repport
+
+
+# Read 
+
+def get_repported_rule(page) -> RepportRule:
+    """Get all the page for reported"""
+    return RepportRule.query.paginate(
+        page=page,
+        per_page=20,
+        max_per_page=20
+    )
+
+def get_repport_by_id(repport_id) -> RepportRule:
+    """Read a report by ID"""
+    return RepportRule.query.get(repport_id)
+
+def get_all_repports(user_id, rule_id) -> list[RepportRule]:
+    """Read all reports (optional filter by rule or user)"""
+    query = RepportRule.query
+    if user_id:
+        query = query.filter_by(user_id=user_id)
+    if rule_id:
+        query = query.filter_by(rule_id=rule_id)
+    return query.order_by(RepportRule.created_at.desc()).all()
+
+
+# Update
+
+def update_repport(repport_id, message, reason) -> RepportRule:
+    """Update a report"""
+    repport = RepportRule.query.get(repport_id)
+    if not repport:
+        return None
+    if message is not None:
+        repport.message = message
+    if reason is not None:
+        repport.reason = reason
+    db.session.commit()
+    return repport
+
+
+# Delete
+
+def delete_report(repport_id) -> bool:
+    """Delete a repport"""
+    repport = RepportRule.query.get(repport_id)
+    if not repport:
+        return False
+    db.session.delete(repport)
+    db.session.commit()
+    return True

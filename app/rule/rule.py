@@ -870,3 +870,72 @@ def delete_bad_rule(rule_id) -> jsonify:
     else:
         return render_template("access_denied.html")
 
+#####################
+#   Repport rule    #
+#####################
+
+@rule_blueprint.route('/report/<int:rule_id>', methods=['GET', 'POST'])
+@login_required
+def report(rule_id) -> jsonify:
+    """Redirect to the repport secion"""
+    return render_template('rule/report.html' , rule_id=rule_id)
+    
+@rule_blueprint.route('/get_rule', methods=['GET', 'POST'])
+@login_required
+def get_rule() -> jsonify:
+    """Return the rule info"""
+    rule_id = request.args.get('rule_id', 1, type=int)
+    rule = RuleModel.get_rule(rule_id)
+    if rule :
+        return {"rule": rule.to_json(),"success": True}, 200 
+    return {"success": False}, 500 
+
+@rule_blueprint.route('/report_rule', methods=['POST'])
+@login_required
+def report_rule():
+    """Create a report for a specific rule (delegated to service)."""
+    data = request.get_json()
+    result = RuleModel.create_repport(current_user.id,data.get('rule_id'),data.get('message', ''),data.get('reason'))
+    
+    if result:
+        return {"success": True}, 200 
+    else:
+        return {"success": False}, 500 
+
+@rule_blueprint.route('/rules_reported', methods=['GET'])
+@login_required
+def rules_repported():
+    """Redirect to the admin report secion"""
+    return render_template('admin/report_rule.html')
+  
+@rule_blueprint.route("/get_rules_reported", methods=['GET'])
+def   get_rules_reported() -> jsonify:
+    """Get all the rules repported on a page"""
+    page = request.args.get('page', 1, type=int)
+    if current_user.is_admin():
+        rules = RuleModel.get_repported_rule(page)
+        if rules:
+            return {"success": True,
+                    "rule": [rule.to_json() for rule in rules],
+                    "total_pages": rules.pages
+                }
+    
+        return {"message": "No Rule"}, 404
+
+    else:
+        return render_template("access_denied.html")
+    
+
+@rule_blueprint.route("/delete_report", methods=['POST'])
+def   deleteReport() -> jsonify:
+    """Delete report"""
+    id = request.args.get('id', 1, type=int)
+    if current_user.is_admin():
+        check = RuleModel.delete_report(id)
+        if check:
+            return {"success": True}, 200
+    
+        return {"message": "No Rule"}, 404
+    else:
+        return render_template("access_denied.html")
+    

@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container mt-4" id="main-container">
+    <div class="card mb-4 shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-info-circle"></i> Rule Summary</span>
+        </div>
+        <div class="card-body" v-if="rule">
+            <h5 class="card-title">[[ rule.title ]]</h5>
+            <p><strong>Description:</strong> [[ rule.description ]]</p>
+            <p><strong>Author:</strong> [[ rule.author ]]</p>
+            <p><strong>License:</strong> [[ rule.license ]]</p>
+            <p><strong>Source:</strong> [[ rule.source ]]</p>
+            <p><strong>Format:</strong> [[ rule.format ]]</p>
+            <p><strong>Version:</strong> [[ rule.version ]]</p>
+            <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
+            <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
+            <div class="mt-3">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" :data-bs-target="`#ruleContent${rule.id}`" aria-expanded="false" :aria-controls="`ruleContent${rule.id}`">
+                            <i class="fas fa-code"></i> Show Rule Preview
+                        </button>
+
+                        <div class="collapse mt-2" :id="`ruleContent${rule.id}`">
+                            <div class="bg-light p-3 rounded border">
+                                <strong>Rule Preview:</strong><br>
+                                <pre class="bg-light p-3 rounded mt-3"><code>[[ rule.to_string ]]</code></pre>
+                            </div>
+                        </div>
+                    </div>
+            
+        </div>
+        <div class="card-body" v-else>
+            <p class="text-muted">Loading rule data...</p>
+        </div>
+    </div>
+
+    <!-- Report Form -->
+    <div class="card shadow">
+        <div class="card-header bg-danger text-white">
+            <i class="fas fa-flag"></i> Report This Rule
+        </div>
+        <div class="card-body">
+            <form @submit.prevent="submitReport">
+                <div class="mb-3">
+                    <label for="reason" class="form-label">Reason</label>
+                    <select class="form-select" v-model="reason" required>
+                        <option disabled value="">-- Select a reason --</option>
+                        <option>Plagiarism</option>
+                        <option>Malicious content</option>
+                        <option>Incorrect or misleading</option>
+                        <option>Inappropriate content</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="message" class="form-label">Additional Comments</label>
+                    <textarea class="form-control" v-model="message" rows="4" placeholder="Optional details..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-paper-plane"></i> Submit Report
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, computed } = Vue
+    import { message_list } from '/static/js/toaster.js'
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+
+            /*###################################_Show_the_rule_to_repport_#################*/
+            var rule_id = "{{ rule_id }}"
+            var rule = ref()
+
+            /**
+             *          #################
+             *          #   show rule   #
+             *          #################
+             * */
+        
+            async function fetchRule() {
+                
+                const res = await fetch('/rule/get_rule?rule_id='+ rule_id)
+                if(await res.status == 200){ 
+                    const data = await res.json()
+                    if(data.success){
+                        rule.value = data.rule
+                    }
+                }else{
+                    // display_toast(res);
+                    
+                }
+            }
+            fetchRule()
+
+            /*###################################_form_section_###############################*/
+            const csrf_token = '{{ csrf_token() }}';
+            const reason = ref('')
+            const message = ref('')
+
+            /**
+             *          ###################
+             *          #   report rule   #
+             *          ###################
+             * */
+
+            async function submitReport() {
+                if (!rule.value || !reason.value) {
+                    alert("Please select a reason to report.");
+                    return;
+                }
+
+                const payload = {
+                    rule_id: rule.value.id,
+                    reason: reason.value,
+                    message: message.value
+                };
+
+                const res = await fetch("/rule/report_rule", {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf_token  
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    alert("Report submitted successfully!");
+                    reason.value = '';
+                    message.value = '';
+                    window.location.href = document.referrer || '/'; 
+                } else {
+                    alert(data.error || "An error occurred while submitting the report.");
+                }
+            }
+
+
+
+            return {
+                rule,
+                reason,
+                message,
+                submitReport
+            }
+
+        }
+    }).mount('#main-container')
+</script>
+{% endblock %}

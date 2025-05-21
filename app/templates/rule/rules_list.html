@@ -128,6 +128,23 @@
             <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
           </button>
         </div>
+        <div class="dropdown float-end ms-2">
+                <a 
+                  class="btn btn-secondary btn-sm dropdown-toggle"
+                  href="#"
+                  role="button"
+                  id="dropdownMenuLink"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  title="More actions"
+                >
+                  <i class="fas fa-ellipsis-v"></i>
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+                  <li><a class="dropdown-item" :href="`/rule/report/${rule.id}`">Report rule</a></li>
+                </ul>
+              </div>
     
         <div class="text-center mt-3">
           <a :href="`detail_rule/${rule.id}`" title="view more about this rule" class="btn btn-primary">View more</a>

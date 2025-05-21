@@ -357,3 +357,29 @@ class RuleEditContribution(db.Model):
             "rule_id": self.rule_id,
             "rule_name": self.rule.title if self.rule else None
         }
+
+
+class RepportRule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # the user who made the repport
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False) # the rule which has repport
+    message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+    reason = db.Column(db.Text) # list (....differents reasons)
+
+    user = db.relationship('User', backref=db.backref('user who repport', lazy='dynamic', cascade='all, delete-orphan'))
+    rule = db.relationship('Rule', backref=db.backref('the rule repport', lazy='dynamic',  cascade='all, delete-orphan'))
+
+    def to_json(self):
+            return {
+                "id": self.id,
+                "user_id": self.user_id,
+                "user_name": self.user.first_name if self.user else None,
+                "rule_id": self.rule_id,
+                "rule_name": self.rule.title if self.rule else None,
+                "rule_user_owner": self.rule.user_id if self.rule else None,
+                "message": self.message,
+                'created_at': self.created_at.strftime('%Y-%m-%d %H:%M'),
+                "reason": self.reason,
+                "content": self.rule.to_string if self.rule else None
+            }

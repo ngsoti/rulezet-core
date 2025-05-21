@@ -94,18 +94,40 @@
         </div>
         
             <div class="card-body">
-                <p><strong>Description:</strong> [[ rule.description ]]</p>
-                <p><strong>Author:</strong> [[ rule.author ]]</p>
-                <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
-                <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
-                <a :href="`rule/detail_rule/${rule.id}`" title="view more detail about this rule" class="btn btn-primary btn-sm">View more</a>
-                <button @click="vote('up', rule.id)" title="like this rule" class="btn btn-success btn-sm mx-2">
-                    <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
-                </button>
-                <button @click="vote('down', rule.id)" title="dislike this rule" class="btn btn-danger btn-sm">
-                    <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
-                </button>
-            </div>
+              <p><strong>Description:</strong> [[ rule.description ]]</p>
+              <p><strong>Author:</strong> [[ rule.author ]]</p>
+              <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
+              <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
+              <a :href="`rule/detail_rule/${rule.id}`" title="view more detail about this rule" class="btn btn-primary btn-sm">View more</a>
+              <button @click="vote('up', rule.id)" title="like this rule" class="btn btn-success btn-sm mx-2">
+                  <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
+              </button>
+              <button @click="vote('down', rule.id)" title="dislike this rule" class="btn btn-danger btn-sm">
+                  <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
+              </button>
+
+              <div class="dropdown float-end ms-2">
+                <a 
+                  class="btn btn-secondary btn-sm dropdown-toggle"
+                  href="#"
+                  role="button"
+                  id="dropdownMenuLink"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  style="width: 38px; text-align: center; padding: 0 8px;"
+                  title="More actions"
+                >
+                  <i class="fas fa-ellipsis-v"></i>
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+                  <li><a class="dropdown-item" :href="`/rule/report/`+ rule.id">Report rule</a></li>
+                </ul>
+              </div>
+
+          </div>
+
+          </div>
         </div>
     </div>
     
