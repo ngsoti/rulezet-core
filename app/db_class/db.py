@@ -338,3 +338,22 @@ class RuleEditComment(db.Model):
             'created_at': self.created_at.isoformat()
         }
 
+class RuleEditContribution(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    proposal_id = db.Column(db.Integer, db.ForeignKey('rule_edit_proposal.id'), nullable=False)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+
+    user = db.relationship('User', backref=db.backref('contributions', lazy='dynamic', cascade='all, delete-orphan'))
+    proposal = db.relationship('RuleEditProposal', backref=db.backref('contributors', lazy='dynamic', cascade='all, delete-orphan'))
+    rule = db.relationship('Rule', backref=db.backref('RULE_proposals', lazy='dynamic',  cascade='all, delete-orphan'))
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "user_name": self.user.first_name if self.user else None,
+            "proposal_id": self.proposal_id,
+            "rule_id": self.rule_id,
+            "rule_name": self.rule.title if self.rule else None
+        }

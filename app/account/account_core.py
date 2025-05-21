@@ -65,7 +65,6 @@ def promote_remove_user_admin(user_id , action) -> bool:
             db.session.commit()
             return True
         else:
-            print("a")
             return False
         
     else:

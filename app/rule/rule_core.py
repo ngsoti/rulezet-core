@@ -524,7 +524,6 @@ def get_total_rules_count_owner() -> int:
 def give_all_right_to_admin(rules) -> None:
     """give all right for admin for each rule"""
     id_default =  AccountModel.get_default_user()
-    print(id_default)
     for rule in rules:
         rule.user_id = id_default.id   
     db.session.commit()
@@ -629,6 +628,11 @@ def get_rules_edit_propose_page_pending_admin(page) -> RuleEditProposal:
 def get_rule_proposal(id) -> RuleEditProposal:
     """Return the rule"""
     return RuleEditProposal.query.get(id)
+
+def get_rule_proposal_user_id(proposal_id) -> id:
+    """Get the user id of a proposal"""
+    rule_proposal = get_rule_proposal(proposal_id)
+    return rule_proposal.user_id
 
 def get_all_rules_edit_propose_user_par_frompage(page, user_id, per_page=20)-> RuleEditProposal:
         """Get all the rule edit porposal where the current user has part of """
@@ -937,3 +941,85 @@ def delete_comment(comment_id) -> bool:
         db.session.commit()
         return True
     return False
+
+###################
+#   contributor   #
+###################
+
+# CRUD
+
+# Create
+
+def create_contribution(user_id, proposal_id) -> bool:
+    """Add a user to the contributor"""
+    if not user_id or not proposal_id:
+        return False 
+
+    rule_id = get_rule_id_with_edit_disccuss(proposal_id)
+    contribution = RuleEditContribution(user_id=user_id, proposal_id=proposal_id , rule_id=rule_id)
+    db.session.add(contribution)
+    db.session.commit()
+    return True , contribution
+
+# Read
+
+def get_rule_id_with_edit_disccuss(proposal_id)-> id:
+    """Get the id of the reel rule"""
+    rule = get_rule_proposal(proposal_id)
+    return rule.rule_id
+
+def get_all_contributions() -> RuleEditContribution:
+    """Get all the contributor"""
+    return RuleEditContribution.query.all()
+
+
+def get_contribution_by_id(contribution_id) -> RuleEditContribution:
+    """Get a contributor with id"""
+    return RuleEditContribution.query.get(contribution_id)
+
+def get_all_contributions_with_rule_id(rule_id) -> list:
+    """
+    Get all unique contributors for a given rule_id.
+    """
+    contributions = (
+        RuleEditContribution.query
+        .filter(RuleEditContribution.rule_id == rule_id)
+        .all()
+    )
+    users_id = []
+    seen_user_ids = set()
+    for contribution in contributions:
+        if contribution.user_id not in seen_user_ids:
+            seen_user_ids.add(contribution.user_id)
+            users_id.append(contribution)
+    return users_id
+
+# Update
+
+def update_contribution(contribution_id, user_id=None, proposal_id=None , rule_id=None) -> RuleEditContribution:
+    """Update a contributor"""
+    contribution = RuleEditContribution.query.get(contribution_id)
+    if not contribution:
+        return None
+
+    if user_id:
+        contribution.user_id = user_id
+    if proposal_id:
+        contribution.proposal_id = proposal_id
+    if rule_id:
+        contribution.rule_id = rule_id
+
+    db.session.commit()
+    return contribution
+
+# Delete
+
+def delete_contribution(contribution_id)-> bool:
+    """Delete a contributor"""
+    contribution = RuleEditContribution.query.get(contribution_id)
+    if not contribution:
+        return False
+
+    db.session.delete(contribution)
+    db.session.commit()
+    return True

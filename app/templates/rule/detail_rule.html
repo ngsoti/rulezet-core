@@ -151,7 +151,6 @@
                     </div>
                     <!-- Votes -->
                     <div class="text-center">
-                       
                         <div class="mt-3">
                         <button @click="vote('up')" class="btn btn-success btn-sm" title="Like this rule">
                             <i class="fas fa-thumbs-up"></i> [[ currentRule.vote_up ]]
@@ -161,6 +160,36 @@
                         </button>
                         </div>
 
+                    </div>
+                </div>
+            </div>
+
+
+
+            <div class="card shadow-sm mb-4 mt-4">
+                <div class="card-header bg-light position-relative">
+                    <h5 class="mb-0"><i class="fa-solid fa-users-gear me-2 "></i>Contributors to Rule
+                </div>
+            
+                <div v-if="contributor_list.length === 0" class="alert alert-info">
+                    <i class="fa fa-info-circle me-1"></i> No contributors found for this rule.
+                </div>
+
+                <div v-else class="row row-cols-1 row-cols-md-2 g-3">
+                    <div class="col" v-for="contributor in contributor_list" :key="contributor.id">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="fa-solid fa-user-circle fa-2x me-3 text-secondary"></i>
+                                <div>
+                                    <h6 class="card-title mb-1">
+                                        [[ contributor.user_name ]] 
+                                        <span class="badge bg-success ms-2">
+                                            <i class="fa-solid fa-check"></i> Contributor
+                                        </span>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -464,6 +493,23 @@
             const current_page = ref(1);
             const total_pages = ref(1);
 
+            /*************************************Get_contributor***********************************************/
+            const contributor_list = ref([])
+
+            async function fetchContributor() {
+                const res = await fetch('/rule/get_contributor?rule_id='+rule_id);
+                if(res){
+                    const data = await res.json();
+                    if(data){
+                        contributor_list.value = data.contributors;
+                    }
+                    
+                }
+            }
+            fetchContributor()
+
+            /*************************************Get_detail_rule***********************************************/
+
             async function fetchPullRequest(page) {
                 const res = await fetch('/rule/get_rules_propose_page?page='+page+'&rule_id='+rule_id);
                 if(res){
@@ -610,7 +656,9 @@
                 pull_request_list,
                 current_page,
                 total_pages,
-                openNewRequestModal
+                openNewRequestModal,
+
+                contributor_list
             };
         }
     }).mount('#main-container');

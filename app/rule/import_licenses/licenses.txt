@@ -45,6 +45,8 @@ Artistic-1.0
 Artistic-1.0-Perl
 Artistic-1.0-cl8
 Artistic-2.0
+Artistic-dist
+Aspell-RU
 BSD-1-Clause
 BSD-2-Clause
 BSD-2-Clause-Darwin
@@ -53,6 +55,7 @@ BSD-2-Clause-NetBSD
 BSD-2-Clause-Patent
 BSD-2-Clause-Views
 BSD-2-Clause-first-lines
+BSD-2-Clause-pkgconf-disclaimer
 BSD-3-Clause
 BSD-3-Clause-Attribution
 BSD-3-Clause-Clear
@@ -230,6 +233,7 @@ FSFAP
 FSFAP-no-warranty-disclaimer
 FSFUL
 FSFULLR
+FSFULLRSD
 FSFULLRWD
 FSL-1.1-ALv2
 FSL-1.1-MIT
@@ -290,6 +294,7 @@ Glide
 Glulxe
 Graphics-Gems
 Gutmann
+HDF5
 HIDAPI
 HP-1986
 HP-1989
@@ -441,6 +446,7 @@ NPL-1.0
 NPL-1.1
 NPOSL-3.0
 NRL
+NTIA-PD
 NTP
 NTP-0
 Naumen
@@ -545,6 +551,7 @@ SMAIL-GPL
 SMLNJ
 SMPPL
 SNIA
+SOFA
 SPL-1.0
 SSH-OpenSSH
 SSH-short
@@ -596,6 +603,8 @@ Unicode-DFS-2016
 Unicode-TOU
 UnixCrypt
 Unlicense
+Unlicense-libtelnet
+Unlicense-libwhirlpool
 VOSTROM
 VSL-1.0
 Vim
@@ -651,6 +660,7 @@ gnuplot
 gtkbook
 hdparm
 iMatix
+jove
 libpng-2.0
 libselinux-1.0
 libtiff
@@ -663,6 +673,7 @@ metamail
 mpi-permissive
 mpich2
 mplus
+ngrep
 pkgconf
 pnmstitch
 psfrag

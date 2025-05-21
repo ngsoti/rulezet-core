@@ -539,6 +539,10 @@ def validate_proposal() -> jsonify:
                 RuleModel.set_status(rule_proposal_id,"accepted")
                 # change the to_string part of the rule in the db 
                 message = RuleModel.set_to_string_rule(rule_id, rule_proposal.proposed_content)
+                # add to contributor
+                user_proposal_id = RuleModel.get_rule_proposal_user_id(rule_proposal_id)
+                RuleModel.create_contribution(user_proposal_id,rule_proposal_id)
+
             elif decision == "rejected":
                 RuleModel.set_status(rule_proposal_id,"rejected")
                 message = "rejected"
@@ -556,6 +560,20 @@ def proposal_content_discuss() -> render_template:
     rule_edit_id = request.args.get('id', type=int)
     return render_template("rule/proposal_content_discuss.html" , rule_edit_id = rule_edit_id)
 
+@rule_blueprint.route('/get_contributor', methods=['GET'])
+@login_required
+def get_contributor() -> render_template:
+    """Get all the contributor"""
+    rule_id = request.args.get('rule_id', type=int)
+
+    contributor = RuleModel.get_all_contributions_with_rule_id(rule_id)
+   
+    contributor = [contributors.to_json() for contributors in contributor]
+    return jsonify({
+            "contributors": contributor,
+            "message": "success",
+        })
+    
 
 @rule_blueprint.route('/discuss', methods=['GET'])
 @login_required
