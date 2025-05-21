@@ -569,17 +569,17 @@ def propose_edit_core(rule_id, proposed_content, message=None) -> bool:
     return True
 
 # Read
+##################################__User__##################################################
 
-
-def get_rules_edit_propose_page(page = 1) -> RuleEditProposal:
+def get_rules_edit_propose_page(page) -> RuleEditProposal:
     """Return all rule proposals where the original rule belongs to current user (simple join version)"""
     return RuleEditProposal.query.join(RuleEditProposal.rule).filter(
         Rule.user_id == current_user.id,
         RuleEditProposal.status != 'pending'
     ).paginate(
         page=page,
-        per_page=20,
-        max_per_page=20
+        per_page=2,
+        max_per_page=2
     )
 
 def get_rules_edit_propose_page_pending(page) -> RuleEditProposal:
@@ -589,21 +589,34 @@ def get_rules_edit_propose_page_pending(page) -> RuleEditProposal:
         RuleEditProposal.status == 'pending'
     ).options(joinedload(RuleEditProposal.rule)).paginate(
         page=page,
-        per_page=20,
-        max_per_page=20
+        per_page=2,
+        max_per_page=2
     )
 
+##################################__Admin__##################################################
 
-def get_rules_edit_propose_page_admin() -> RuleEditProposal:
-    """Return all non-pending rule edit proposals (admin view, no user filter)"""
-    page=1
-    return RuleEditProposal.query.join(RuleEditProposal.rule).filter(
+def get_rules_edit_propose_page_admin(page) -> RuleEditProposal:
+    """Return all rule proposals where the original rule belongs to current user (simple join version)"""
+    return RuleEditProposal.query.filter(
         RuleEditProposal.status != 'pending'
     ).paginate(
         page=page,
         per_page=20,
         max_per_page=20
     )
+
+
+
+def get_rules_edit_propose_page_pending_admin(page) -> RuleEditProposal:
+    """Return all pending rule edit proposals (admin view, no user filter)"""
+    return RuleEditProposal.query.filter(
+        RuleEditProposal.status == 'pending'
+    ).paginate(
+        page=page,
+        per_page=20,
+        max_per_page=20
+    )
+
 
 def get_all_rules_edit_propose_page(page , rule_id) -> RuleEditProposal:
     """Return all rule edit proposals"""
@@ -615,15 +628,10 @@ def get_all_rules_edit_propose_page(page , rule_id) -> RuleEditProposal:
         max_per_page=20
     )
 
-def get_rules_edit_propose_page_pending_admin(page) -> RuleEditProposal:
-    """Return all pending rule edit proposals (admin view, no user filter)"""
-    return RuleEditProposal.query.join(Rule).filter(
-        RuleEditProposal.status == 'pending'
-    ).paginate(
-        page=page,
-        per_page=20,
-        max_per_page=20
-    )
+def get_rules_edits_propose_page_old_total_admin() -> int:
+    """Get the count of rules not in 'pending' status (e.g., validated or rejected proposals)"""
+    return RuleEditProposal.query.filter(RuleEditProposal.status != "pending").count()
+
 
 def get_rule_proposal(id) -> RuleEditProposal:
     """Return the rule"""
@@ -634,7 +642,7 @@ def get_rule_proposal_user_id(proposal_id) -> id:
     rule_proposal = get_rule_proposal(proposal_id)
     return rule_proposal.user_id
 
-def get_all_rules_edit_propose_user_par_frompage(page, user_id, per_page=20)-> RuleEditProposal:
+def get_all_rules_edit_propose_user_part_from_page(page, user_id, per_page=10)-> RuleEditProposal:
         """Get all the rule edit porposal where the current user has part of """
 
         commented_ids = db.session.query(RuleEditComment.proposal_id)\

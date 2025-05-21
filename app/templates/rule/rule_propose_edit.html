@@ -136,7 +136,7 @@
                         <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
                         <span v-else class="page-link">...</span>
                     </li>
-                    <li class="page-item" :class="{ disabled: current_page === total_pages }">
+                    <li class="page-item" :class="{ disabled: current_page === total_pages_pending }">
                         <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
                         Next <i class="fas fa-arrow-right"></i>
                         </a>
@@ -231,6 +231,24 @@
                         </template>
                     </tbody>
                 </table>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                    <li class="page-item" :class="{ disabled: current_page_old === 1 }">
+                        <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old - 1)">
+                        <i class="fas fa-arrow-left"></i> Previous
+                        </a>
+                    </li>
+                    <li class="page-item" v-for="pageOld in visiblePagesOld" :key="pageOld" :class="{ active: current_page_old === pageOld, disabled: pageOld === '...' }">
+                        <a v-if="pageOld !== '...'" class="page-link" href="#" @click.prevent="fetchOldRules(pageOld)">[[ pageOld ]]</a>
+                        <span v-else class="page-link">...</span>
+                    </li>
+                    <li class="page-item" :class="{ disabled: current_page_old === total_pages_old }">
+                        <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old + 1)">
+                        Next <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </li>
+                    </ul>
+                </nav>
             </div>
         </div>
         <div class="tab-pane fade" id="discuss" role="tabpanel">
@@ -242,7 +260,7 @@
                 </div>
         
                 <div v-else>
-                    <div v-for="proposal in uniqueDiscussList" :key="proposal.id" class="card mb-3 shadow-sm">
+                    <div v-for="proposal in discuss_list" :key="proposal.id" class="card mb-3 shadow-sm">
 
                         <div class="card-body">
                             <h5 class="card-title">
@@ -275,18 +293,21 @@
                     </div>
         
                     <!-- Pagination Controls -->
-                    <nav class="mt-3">
-                        <ul class="pagination justify-content-center">
-                            <li class="page-item" :class="{ disabled: current_page_discuss === 1 }">
-                                <a class="page-link" href="#" @click.prevent="fetchDiscussPart(current_page_discuss - 1)">Previous</a>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination">
+                            <li class="page-item" :class="{ disabled: total_page_discuss === 1 }">
+                                <a class="page-link" href="#" @click.prevent="fetchDiscussPart(current_page_discuss - 1)">
+                                <i class="fas fa-arrow-left"></i> Previous
+                                </a>
                             </li>
-                            <li class="page-item disabled">
-                                <span class="page-link">
-                                    Page [[ current_page_discuss ]] of [[ total_page_discuss ]]
-                                </span>
+                            <li class="page-item" v-for="pageDiscuss in visiblePagesDiscuss" :key="pageDiscuss" :class="{ active: current_page_discuss === pageDiscuss, disabled: pageDiscuss === '...' }">
+                                <a v-if="pageDiscuss !== '...'" class="page-link" href="#" @click.prevent="fetchDiscussPart(pageDiscuss)">[[ pageDiscuss ]]</a>
+                                <span v-else class="page-link">...</span>
                             </li>
-                            <li class="page-item" :class="{ disabled: current_page_discuss === total_page_discuss }">
-                                <a class="page-link" href="#" @click.prevent="fetchDiscussPart(current_page_discuss + 1)">Next</a>
+                            <li class="page-item" :class="{ disabled: total_page_discuss === total_pages_old }">
+                                <a class="page-link" href="#" @click.prevent="fetchDiscussPart(current_page_discuss + 1)">
+                                Next <i class="fas fa-arrow-right"></i>
+                                </a>
                             </li>
                         </ul>
                     </nav>
@@ -306,61 +327,41 @@
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
-            const csrf_token = '{{ csrf_token() }}';
-            const rules_list = ref([]);
-            const rules_pendings_list = ref([]);
-            const current_page = ref(1);
-            const total_pages = ref(1);
-            const total_pages_pending = ref(1);
+            // get the current user id with script var 
             const currentUserId = parseInt('{{ current_user.id }}');
 
-
+            /******************************************Rules_listes_pending******************************************************/
             
-
-
-             // all the discuss who the current_user has comment
-            const discuss_list = ref([]);
-            const total_page_discuss = ref(1);
-            const current_page_discuss = ref(1);
-
-            async function fetchDiscussPart(page) {
-                const res = await fetch('/rule/get_discuss_part_from?page='+page);
-                if(res){
-                    const data = await res.json();
-                    if(data){
-                        discuss_list.value = data.discuss_list;
-                        total_page_discuss.value = data.total_page_discuss;
-                        current_page_discuss.value = page;
-                    }
-                    
-                }
-            }
-            fetchDiscussPart(1)
-
-            const uniqueDiscussList = computed(() => {
-                const seenTitles = new Set();
-                return discuss_list.value.filter(proposal => {
-                    if (seenTitles.has(proposal.rule_name)) return false;
-                    seenTitles.add(proposal.rule_name);
-                    return true;
-                });
-            });
-
+            const rules_pendings_list = ref([]);
+            const total_pages_pending = ref(1);
+            const current_page = ref(1);
+            
+            /**         
+             *          ###############################
+             *          #   Fetch the pending rules   #
+             *          ###############################
+             * */       
 
             async function fetchRules(page) {
                 const res = await fetch('/rule/get_rules_propose_edit_page?page='+page);
                 if(res){
                     const data = await res.json();
                     if(data){
-                        rules_list.value = data.rules_list;
                         rules_pendings_list.value = data.rules_pendings_list;
-                        total_pages.value = data.total_pages_pending;
-                        total_pages_pending.value = data.total_rules_pending;
+                        total_pages_pending.value = data.total_pages_pending;
                         current_page.value = page;
                     }
                     
                 }
             }
+
+            fetchRules(1);
+
+            /**         
+             *          #########################################
+             *          #   validate or not the pending rules   #
+             *          #########################################
+             * */      
 
             async function handleDecision(ruleProposalId, decision, ruleId , index) {
                 const res = await fetch(`/rule/validate_proposal?ruleId=${ruleId}&decision=${decision}&ruleproposalId=${ruleProposalId}`);
@@ -368,9 +369,19 @@
                 if (res.ok) {
                     const result = await res.json();
                     rules_pendings_list.value.splice(index, 1);
-                    
+                    if (rules_pendings_list.value.length === 0 && current_page.value > 1) {
+                        fetchRules(current_page.value - 1);
+                    } else {
+                        fetchRules(current_page.value);
+                    }
                 } 
             }
+
+            /**         
+             *          #############################
+             *          #   color lines for changes  #
+             *          #############################
+             * */  
 
             function getOldContentLines(content) {
                 return content.split('\n');
@@ -393,16 +404,7 @@
                 
                 return !normalizedProposedContent.includes(normalizedLine);  
             }
-            // in yellow if the line is almost identical
-            function isLineJustModifie(line, content) {
-                const normalizedLine = line.trim();
-                const normalizedContent = content.split('\n').map(l => l.trim());
-                
-                return normalizedProposedContent.includes(normalizedLine);  
-            }
-
-
-            // shoud be remove 
+            
             function isLineIdentical(line, content) {
                 const normalizedLine = line.trim();
                 const normalizedContent = content.split('\n').map(l => l.trim());
@@ -410,9 +412,15 @@
                 return normalizedContent.includes(normalizedLine);  
             }
 
+            /**         
+             *          #############################
+             *          #   page for pending rules  #
+             *          #############################
+             * */  
+
             const visiblePages = computed(() => {
                 const pages = []
-                const total = total_pages.value
+                const total = total_pages_pending.value
                 const current = current_page.value
                 if (total <= 7) {
                 for (let i = 1; i <= total; i++) pages.push(i)
@@ -429,28 +437,155 @@
             })
 
 
-            fetchRules(1);
+            
+            
+            
+            /*********************************Rules_listes_accept_or_rejected_(history)*******************************************/
+
+            const rules_list = ref([]);
+            const total_pages_old = ref(1);
+            const current_page_old = ref(1);
+
+            /**         
+             *          ###############################
+             *          #   Fetch the history rules   #
+             *          ###############################
+             * */   
+
+            async function fetchOldRules(page) {
+                const res = await fetch('/rule/get_rules_propose_edit_history_page?page='+page);
+                if(res){
+                    const data = await res.json();
+                    if(data){
+                        rules_list.value = data.rules_list;
+                        total_pages_old.value = data.total_pages_old;
+                        current_page_old.value = page;
+                    }
+                    
+                }
+            }
+
+            fetchOldRules(1)
+
+            /**         
+             *          ###############################
+             *          #   page for history rules    #
+             *          ###############################
+             * */   
+
+            const visiblePagesOld = computed(() => {
+                const pages = []
+                const total = total_pages_old.value
+                const current = current_page_old.value
+                if (total <= 7) {
+                for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                if (current <= 4) {
+                    pages.push(1, 2, 3, 4, 5, '...', total)
+                } else if (current >= total - 3) {
+                    pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                } else {
+                    pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                }
+                }
+                return pages
+            })
+
+            /******************************************Discuss_section_for_proposal_edit*******************************************/
+
+            const discuss_list = ref([]);
+            const total_page_discuss = ref(1);
+            const current_page_discuss = ref(1);
+            /**         
+             *          ############################################
+             *          #   Fetch the discuss where user part of   #
+             *          ############################################
+             * */    
+
+            async function fetchDiscussPart(page) {
+                const res = await fetch('/rule/get_discuss_part_from?page='+page);
+                if(res){
+                    const data = await res.json();
+                    if(data){
+                        discuss_list.value = data.discuss_list;
+                        total_page_discuss.value = data.total_page_discuss;
+                        current_page_discuss.value = page;
+                    }
+                }
+            }
+
+            fetchDiscussPart(1)
+            /**         
+             *          ###############################
+             *          #   page for discuss rules    #
+             *          ###############################
+             * */   
+
+            const visiblePagesDiscuss = computed(() => {
+                const pages = []
+                const total = total_page_discuss.value
+                const current = current_page_discuss.value
+                if (total <= 7) {
+                for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                if (current <= 4) {
+                    pages.push(1, 2, 3, 4, 5, '...', total)
+                } else if (current >= total - 3) {
+                    pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                } else {
+                    pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                }
+                }
+                return pages
+            })
+
+            /**         
+             *          ###################################
+             *          #   only one card for an proosal  #
+             *          ###################################
+             * 
+             *          If an user write many comment in the same discuss, we must have only one card for this proposal rule edit
+             * */   
+
+            // const uniqueDiscussList = computed(() => {
+            //     const seenTitles = new Set();
+            //     return discuss_list.value.filter(proposal => {
+            //         if (seenTitles.has(proposal.rule_name)) return false;
+            //         seenTitles.add(proposal.rule_name);
+            //         return true;
+            //     });
+            // });
 
             return {
-                csrf_token,
-                rules_list,
-                fetchRules,
-                current_page,
-                total_pages,
-                handleDecision,
+                currentUserId,
+
+                // pending section
                 rules_pendings_list,
+                total_pages_pending,
+                current_page,
+                visiblePages,
+                fetchRules,
+                handleDecision,
                 getOldContentLines,
                 getProposedContentLines,
                 isLineNew,
                 isLineDeleted,
                 isLineIdentical,
-                visiblePages,
-                total_pages_pending,
+        
+                // history section
+                rules_list,
+                total_pages_old,
+                current_page_old,
+                fetchOldRules,
+                visiblePagesOld,
+                
+                // discuss section
                 discuss_list,
                 fetchDiscussPart,
                 total_page_discuss,
-                uniqueDiscussList,
-                currentUserId
+                //uniqueDiscussList,
+                visiblePagesDiscuss
+                
             };
         }
     }).mount('#main-container');

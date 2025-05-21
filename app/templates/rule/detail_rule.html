@@ -341,11 +341,11 @@
                                     <label for="proposed_content" class="fw-bold">Modified Rule Content</label>
                                     <div class="container mt-4">
                                         <div class="form-group mb-3">
-                                            <label for="languageSelect">Langage :</label>
+                                            <label for="languageSelect">Highlighting :</label>
                                             <select class="form-select" id="languageSelect">
-                                                <option value="javascript">JavaScript</option>
-                                                <option value="python">Python</option>
-                                                <option value="yaml">Yaml</option>                                                
+                                                <option value="javascript">HighlightForge</option>
+                                                <option value="python">SyntaxShine</option>
+                                                <option value="yaml">CodeGlow</option>                                                
                                             </select>
                                         </div>
                                     
@@ -687,10 +687,9 @@
     }
     </script>
 <script>
-    const ruleContent = document.getElementById('ruleRaw').value;
     let editor = null;
 
-    function initEditor() {
+    function initEditor(ruleContent) {
         const container = document.querySelector('.editorContainer');
         if (!container || container.children.length > 0) return;
 
@@ -698,16 +697,15 @@
             lineNumbers: true,
             mode: 'python', 
             theme: 'default',
-            value:  ruleContent
+            value: ruleContent
         });
         editor.setSize("100%", "700px"); 
 
         editor.on('change', () => {
             const proposedField = document.getElementById('proposed_content');
-            if (editor) {
+            if (editor && proposedField) {
                 proposedField.value = editor.getValue();
             }
-            
         });
 
         function updatePreview() {
@@ -717,41 +715,49 @@
             }
         }
 
-        // first attempt to init the preview
         if (editor) {
             editor.on('change', updatePreview);
             updatePreview(); 
         }
 
-        
         setTimeout(() => {
             if (editor) {
                 const currentValue = editor.getValue();
-                editor.setValue(currentValue + ' ');  
-                editor.setValue(currentValue);        
-                editor.refresh();                     
+                editor.setValue(currentValue + ' ');
+                editor.setValue(currentValue);
+                editor.refresh();
             }
-        }, 300); 
+        }, 300);
     }
 
-    
-
     document.addEventListener('DOMContentLoaded', () => {
-        initEditor();
+        const ruleRawInput = document.getElementById('ruleRaw');
+        const ruleContent = ruleRawInput ? ruleRawInput.value : "";
 
-        document.querySelector('#edit-tab').addEventListener('shown.bs.tab', () => {
-            if (editor) editor.refresh();
-        });
+        initEditor(ruleContent);
 
+        const editTab = document.querySelector('#edit-tab');
+        if (editTab) {
+            editTab.addEventListener('shown.bs.tab', () => {
+                if (editor) editor.refresh();
+            });
+        }
 
-        document.getElementById('languageSelect').addEventListener('change', function () {
-            if (editor) editor.setOption('mode', this.value);
-        });
+        const languageSelect = document.getElementById('languageSelect');
+        if (languageSelect) {
+            languageSelect.addEventListener('change', function () {
+                if (editor) editor.setOption('mode', this.value);
+            });
+        }
 
-        document.getElementById('themeSelect').addEventListener('change', function () {
-            if (editor) editor.setOption('theme', this.value);
-        });
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect) {
+            themeSelect.addEventListener('change', function () {
+                if (editor) editor.setOption('theme', this.value);
+            });
+        }
     });
+
 </script>
 {% endblock %}
 
