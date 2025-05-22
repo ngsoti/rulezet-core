@@ -83,13 +83,14 @@
                         <i class="fas fa-trash"></i>
                     </button>
                 </template>
-                <a :href="`/rule/favorite/${rule.id}`"
+                <a @click="favorite(rule.id)"
                   class="btn btn-success btn-sm me-2"
                   :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
                   <i class="fa-solid fa-star"
                     :class="rule.is_favorited ? 'text-warning' : 'text-white'">
                   </i>
                 </a>
+
             </div>
         </div>
         
@@ -185,6 +186,21 @@
         }
     }
 
+
+    async function favorite(rule_id) {
+      const res = await fetch(`/rule/favorite/${rule_id}`);
+      const data = await res.json();
+      
+      if (res.ok) {
+        const rule = rules_list.value.find(r => r.id === rule_id);
+        if (rule) {
+          rule.is_favorited = data.is_favorited;
+        }
+      } else {
+        console.error('Failed to update favorite status.');
+      }
+    }
+
       async function deleteRule(id, index) {
         const res = await fetch('/rule/delete_rule', {
           method: 'POST',
@@ -230,7 +246,8 @@
         vote,
         checkIfUserIsConnected,
         csrf_token,
-        fetchCurrentUser
+        fetchCurrentUser,
+        favorite
       }
     }
   }).mount('#main-container')

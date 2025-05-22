@@ -376,11 +376,18 @@ def add_favorite_rule(rule_id) -> redirect:
     existing = AccountModel.is_rule_favorited_by_user(user_id=current_user.id, rule_id=rule_id)
     if existing:
         remove_favorite(user_id=current_user.id, rule_id=rule_id)
-        flash("Rule remove from favorites!", "success")
+        return jsonify({ 
+            "success": True,
+            "is_favorited": False
+        }), 200
     else:
         add_favorite(user_id=current_user.id, rule_id=rule_id)
-        flash("Rule added to favorites!", "success")
-    return redirect(request.referrer or url_for('rule.rules_list'))
+        return jsonify({ 
+            "success": True,
+            "is_favorited": True
+        }), 200
+    
+    # return redirect(request.referrer or url_for('rule.rules_list'))
 
 #########################
 #   Comment section     #

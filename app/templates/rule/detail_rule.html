@@ -29,11 +29,14 @@
                         <div class="col-3 text-end">
                             {% if current_user.is_authenticated %}
                                 {% if current_user.id == rule.user_id or current_user.is_admin() %}
-                                <a :href="`/rule/edit_rule/{{rule.id}}`" class="btn btn-secondary btn-sm" title="Edit the rule">
+                                <a :href="`/rule/edit_rule/{{rule.id}}`" class="btn btn-secondary btn-sm me-2" title="Edit the rule">
                                     <i class="fas fa-pen"></i>
                                 </a>
+                                <button @click.stop="deleteRule()" class="btn btn-danger btn-sm me-2" title="Delete Rule">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                                 {% endif %}
-                                <a :href="`/rule/favorite/{{rule.id}}`"
+                                <a @click="favorite()"
                                     class="btn btn-success btn-sm me-2"
                                     :title="currentRule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
                                     <i class="fa-solid fa-star"
@@ -511,6 +514,27 @@
             const current_page = ref(1);
             const total_pages = ref(1);
 
+            
+            async function fetchCurrentRule(){
+                const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
+                if (response.ok) {
+                    const data = await response.json();
+                    currentRule.value = data.rule; 
+                } else {
+                    alert('Error while adding comment.');
+                }
+            }
+
+            async function favorite() {
+                const res = await fetch(`/rule/favorite/${rule_id}`);
+                const data = await res.json();
+                
+                if (res.ok) {
+                    currentRule.value.is_favorited = data.is_favorited;
+                }
+            }
+
+
             /*************************************Get_contributor***********************************************/
             const contributor_list = ref([])
 
@@ -557,15 +581,23 @@
                 }
             }
 
-            async function fetchCurrentRule(){
-                const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
-                if (response.ok) {
-                    const data = await response.json();
-                    currentRule.value = data.rule; 
-                } else {
-                    alert('Error while adding comment.');
+
+            async function deleteRule() {
+                const res = await fetch('/rule/delete_rule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrf_token  
+                },
+                body: JSON.stringify({ id: rule_id })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = `/rule/rules_list`;
                 }
             }
+            
 
             async function vote(voteType) {
                 if(current_user_is_connected.value == true){
@@ -577,7 +609,6 @@
                 }else{
                     window.location.href = `/account/login`;
                 }
-               
             }
 
             async function Ownership(rule_id){
@@ -656,6 +687,7 @@
 
             return {
                 Ownership,
+                favorite,
                 current_user_is_admin,
                 message_list,
                 comments_list,
@@ -666,6 +698,7 @@
                 deleteComment,
                 submitComment,
                 newCommentContent,
+                deleteRule,
 
                 currentRule,
                 fetchCurrentRule,
