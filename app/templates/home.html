@@ -3,148 +3,151 @@
 {% block content %}
 
 <div class="container mt-4">
-  <div class="container mt-4">
-    <h1 class="text-center mb-4"><i class="fas fa-shield-alt"></i> Community-Driven Security Rules Platform</h1>
-    
-    <p class="lead">
-      This platform is a collaborative space for cybersecurity professionals to:
-    </p>
-  
-    <ul class="list-group">
-      <li class="list-group-item d-flex justify-content-between align-items-center">
-        <div>
-            <i class="fas fa-share-alt"></i> <strong>Share Rules:</strong> Contribute detection rules in various formats :
-            <span class="badge bg-success m-1">YARA</span> 
-            <span class="badge bg-success m-1">Zeek</span> 
-            <span class="badge bg-success m-1">Sigma</span>
-            <span class="badge bg-success m-1">Suricata</span>
-            <span>
-                <a class="fa-solid fa-circle-question" title="learn more about" href="/rule/rules_info" ></a> 
-            </span>
-        </div>
-        <span class="badge bg-warning text-dark">
-            In process: <i class="fas fa-cogs"></i> CRS etc.
-        </span>
-      </li>
-    
-    
-      <li class="list-group-item">
-        <i class="fas fa-check-circle"></i> <strong>Evaluate Rules:</strong> Rate, comment, and share experiences on the effectiveness of security rules.
-      </li>
-      <li class="list-group-item">
-        <i class="fas fa-pencil-alt"></i> <strong>Refine Rules:</strong> Collaboratively improve rules based on feedback and proposed changes.
-      </li>
-      <li class="list-group-item">
-        <i class="fas fa-tags"></i> <strong>Organize Rules:</strong> Bundle and classify rules for easier search and access.
-      </li>
-    </ul>
-  
-    <p class="mt-4">
-      This platform enhances the accuracy and reliability of cybersecurity rules, allowing for a more effective response to threats.
-    </p>
-    <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <h5 class="card-title" data-bs-toggle="collapse" href="#collapseRuleInfo" role="button" aria-expanded="false" aria-controls="collapseRuleInfo">
-          <i class="fa-solid fa-circle-question me-2"></i> What is a Security Rule?
-        </h5>
-        <div class="collapse" id="collapseRuleInfo">
-          <p class="card-text">
-            A security rule is a pattern or logic used to detect threats, anomalies, or policy violations
-            in files, systems, or network traffic. Click below to learn more.
-          </p>
-          <a href="/rule/rules_info" class="btn btn-primary">
-            Learn More
-          </a>
-        </div>
+  <!-- Title -->
+  <h1 class="text-center mb-4">
+    <i class="fas fa-shield-alt"></i> Community-Driven Security Rules Platform
+  </h1>
+
+  <!-- Intro Description -->
+  <p class="lead">
+    This platform is a collaborative space for cybersecurity professionals to:
+  </p>
+
+  <!-- Feature List -->
+  <ul class="list-group mb-4">
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      <div>
+        <i class="fas fa-share-alt"></i>
+        <strong>Share Rules:</strong> Contribute detection rules in various formats:
+        <span class="badge bg-success m-1">YARA</span>
+        <span class="badge bg-success m-1">Zeek</span>
+        <span class="badge bg-success m-1">Sigma</span>
+        <span class="badge bg-success m-1">Suricata</span>
+        <a class="fa-solid fa-circle-question ms-1" title="Learn more" href="/rule/rules_info"></a>
+      </div>
+      <span class="badge bg-warning text-dark">
+        In process: <i class="fas fa-cogs"></i> CRS etc.
+      </span>
+    </li>
+    <li class="list-group-item">
+      <i class="fas fa-check-circle"></i>
+      <strong>Evaluate Rules:</strong> Rate, comment, and share experiences on the effectiveness of security rules.
+    </li>
+    <li class="list-group-item">
+      <i class="fas fa-pencil-alt"></i>
+      <strong>Refine Rules:</strong> Collaboratively improve rules based on feedback and proposed changes.
+    </li>
+    <li class="list-group-item">
+      <i class="fas fa-tags"></i>
+      <strong>Organize Rules:</strong> Bundle and classify rules for easier search and access.
+    </li>
+  </ul>
+
+  <!-- Platform Description -->
+  <p>
+    This platform enhances the accuracy and reliability of cybersecurity rules, allowing for a more effective response to threats.
+  </p>
+
+  <!-- Collapsible Card: What is a Security Rule -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h5 class="card-title" data-bs-toggle="collapse" href="#collapseRuleInfo" role="button" aria-expanded="false" aria-controls="collapseRuleInfo">
+        <i class="fa-solid fa-circle-question me-2"></i> What is a Security Rule?
+      </h5>
+      <div class="collapse" id="collapseRuleInfo">
+        <p class="card-text">
+          A security rule is a pattern or logic used to detect threats, anomalies, or policy violations
+          in files, systems, or network traffic. Click below to learn more.
+        </p>
+        <a href="/rule/rules_info" class="btn btn-primary">Learn More</a>
       </div>
     </div>
-    
-    
   </div>
+
   <hr/>
+
+  <!-- Header: Recent Rules + Add Rule -->
   <header class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="text-dark m-0"><i class="fas fa-cogs"></i> Recent Rules</h1>
+    <h1 class="text-dark m-0">
+      <i class="fas fa-cogs"></i> Recent Rules
+    </h1>
     <a href="/rule/create_rule" class="btn btn-primary btn-sm">
       <i class="fas fa-hammer"></i> Add Rule
     </a>
   </header>
+
+  <!-- Rule Cards Section -->
   <div class="row">
     <template v-if="rules_list.length > 0">
       <div class="col-md-6 mb-3" v-for="(rule, index) in rules_list" :key="rule.uuid">
         <div class="card card-body">
+
+          <!-- Card Header -->
           <div class="card-header text-white d-flex justify-content-between align-items-start flex-wrap" style="background-color:#1371ff">
             <h5 class="mb-2" style="max-width: 75%; word-break: break-word;">[[ rule.title ]]</h5>
             <div class="d-flex ms-auto">
-                <template v-if="parseInt('{{current_user.id}}') === rule.user_id || current_user_is_admin">
-                    <a :href="`rule/edit_rule/${rule.id}`" title="edit the rule" class="btn btn-secondary btn-sm me-2">
-                        <i class="fas fa-pen"></i>
-                    </a>
-                    <button @click="deleteRule(rule.id, index)" title="delete the rule" class="btn btn-danger btn-sm me-2">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </template>
-                <a @click="favorite(rule.id)"
-                  class="btn btn-success btn-sm me-2"
-                  :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
-                  <i class="fa-solid fa-star"
-                    :class="rule.is_favorited ? 'text-warning' : 'text-white'">
-                  </i>
+              <template v-if="parseInt('{{ current_user.id }}') === rule.user_id || current_user_is_admin">
+                <a :href="`rule/edit_rule/${rule.id}`" class="btn btn-secondary btn-sm me-2" title="Edit the rule">
+                  <i class="fas fa-pen"></i>
                 </a>
-
+                <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2" title="Delete the rule">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </template>
+              <a @click="favorite(rule.id)"
+                 class="btn btn-success btn-sm me-2"
+                 :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
+                <i class="fa-solid fa-star" :class="rule.is_favorited ? 'text-warning' : 'text-white'"></i>
+              </a>
             </div>
-        </div>
-        
-            <div class="card-body">
-              <p><strong>Description:</strong> [[ rule.description ]]</p>
-              <p><strong>Author:</strong> [[ rule.author ]]</p>
-              <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
-              <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
-              <a :href="`rule/detail_rule/${rule.id}`" title="view more detail about this rule" class="btn btn-primary btn-sm">View more</a>
-              <button @click="vote('up', rule.id)" title="like this rule" class="btn btn-success btn-sm mx-2">
-                  <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
-              </button>
-              <button @click="vote('down', rule.id)" title="dislike this rule" class="btn btn-danger btn-sm">
-                  <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
-              </button>
-
-              <div class="dropdown float-end ms-2">
-                <a 
-                  class="btn btn-dark btn-sm dropdown-toggle"
-                  href="#"
-                  role="button"
-                  id="dropdownMenuLink"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                  style="width: 38px; text-align: center; padding: 0 8px;"
-                  title="More actions"
-                >
-                  <i class="fas fa-ellipsis-v"></i>
-                </a>
-
-                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
-                  <li><a class="dropdown-item" :href="`/rule/report/`+ rule.id">Report rule</a></li>
-                </ul>
-              </div>
-
           </div>
 
+          <!-- Card Body -->
+          <div class="card-body">
+            <p><strong>Description:</strong> [[ rule.description ]]</p>
+            <p><strong>Author:</strong> [[ rule.author ]]</p>
+            <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
+            <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
+
+            <!-- Action Buttons -->
+            <div class="mb-2">
+              <a :href="`rule/detail_rule/${rule.id}`" class="btn btn-primary btn-sm" title="View more details">View more</a>
+              <button @click="vote('up', rule.id)" class="btn btn-success btn-sm mx-2" title="Like this rule">
+                <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
+              </button>
+              <button @click="vote('down', rule.id)" class="btn btn-danger btn-sm" title="Dislike this rule">
+                <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
+              </button>
+            </div>
+
+            <!-- Dropdown Menu -->
+            <div class="dropdown float-end ms-2">
+              <a class="btn btn-dark btn-sm dropdown-toggle"
+                 href="#"
+                 role="button"
+                 id="dropdownMenuLink"
+                 data-bs-toggle="dropdown"
+                 aria-expanded="false"
+                 title="More actions"
+                 style="width: 38px; text-align: center; padding: 0 8px;">
+                <i class="fas fa-ellipsis-v"></i>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+                <li><a class="dropdown-item" :href="`/rule/report/${rule.id}`">Report rule</a></li>
+              </ul>
+            </div>
+
           </div>
         </div>
-    </div>
-    
+      </div>
     </template>
-    <template v-else >
+
+    <!-- No Rules -->
+    <template v-else>
       <p class="text-muted">No recent rules found.</p>
     </template>
-
-
-
-
-    
   </div>
-  
 </div>
-
 
 {% endblock %}
 

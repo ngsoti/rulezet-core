@@ -4,7 +4,7 @@
 {% block content %}
 {% if current_user.is_admin() %}
     <div class="container my-4" id="main-container">
-       <h2 class="mb-4">Reported Rules</h2>
+       <h2 class="mb-4 "> <i class="fa-solid fa-triangle-exclamation me-2"></i>Reported Rules</h2>
 
         <div v-if="rules_reported && rules_reported.length > 0">
             <div class="card mb-3" v-for="(rep , index) in rules_reported" :key="rep.id">

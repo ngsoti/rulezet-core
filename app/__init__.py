@@ -34,7 +34,7 @@ def create_app():
     app.config["SESSION_SQLALCHEMY"] = db
     sess.init_app(app)
 
-    delete_existing_repo_folder("Rules_Github")
+    #delete_existing_repo_folder("Rules_Github")
 
     # take all the licenses 
     fetch_and_save_licenses()

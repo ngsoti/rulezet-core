@@ -1,6 +1,7 @@
 #---------------------------------------------------------------------------------------For_all_rules_types----------------------------------------------------------------------------------------------------------#
 
 import os
+import re
 import shutil
 from urllib.parse import urlparse
 
@@ -59,6 +60,17 @@ def clean_rule_filename_Yara(filename):
     if filename.lower().endswith(('.yar', '.yara')):
         return filename.rsplit('.', 1)[0]
     return filename
+
+def clean_rule_filename_Yara_v2(filepath):
+    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+
+    match = re.search(r'\brule\s+(\w+)\s*{', content)
+    if match:
+        return match.group(1)
+
+    return os.path.splitext(os.path.basename(filepath))[0]
+
 
 # take all the external param
 def build_externals_dict(vars_list):

@@ -197,7 +197,11 @@ def acces_denied() -> render_template:
 def get_rules_page_favorite() -> jsonify:
     """Rule favorite page"""
     page = request.args.get('page', 1, type=int)
-    rules = RuleModel.get_rules_page_favorite(page, current_user.id)
+    search = request.args.get("search", None)
+    author = request.args.get("author", None)
+    sort_by = request.args.get("sort_by", "newest")
+    rule_type = request.args.get("rule_type", None) 
+    rules = RuleModel.get_rules_page_favorite(page, current_user.id , search,author, sort_by, rule_type)
 
     if rules:
         return {"rule": [rule.to_json() for rule in rules], "total_pages": rules.pages}

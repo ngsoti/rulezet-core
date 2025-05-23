@@ -1,4 +1,4 @@
-from collections import Counter
+
 import json
 import re
 
@@ -12,7 +12,7 @@ import yaml
 import yara
 from app.account.account_core import get_user
 from app.import_github_project.import_github_yara import extract_first_match
-from app.import_github_project.untils_import import build_externals_dict, clean_rule_filename_Yara
+from app.import_github_project.untils_import import build_externals_dict, clean_rule_filename_Yara_v2
 from .. import db
 from ..db_class.db import *
 from . import rule_core as RuleModel
@@ -325,8 +325,9 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content) :
                 yara.compile(source=raw_content)
             except yara.SyntaxError as e:
                 return False, str(e)
-
-            title = extract_first_match(raw_content, ["title", "Title"]) or clean_rule_filename_Yara(bad_rule_obj.file_name)
+            
+            
+            title = extract_first_match(raw_content, ["title", "Title"]) or clean_rule_filename_Yara_v2(bad_rule_obj.file_name) #or clean_rule_filename_Yara(bad_rule_obj.file_name)
             description = extract_first_match(raw_content, ["description", "Description"])
             license = extract_first_match(raw_content, ["license", "License"]) or bad_rule_obj.license
             author = extract_first_match(raw_content, ["author", "Author"])
@@ -532,15 +533,59 @@ def give_all_right_to_admin(rules) -> None:
 #   Favorite rule   #
 #####################
 
-def get_rules_page_favorite(page, id_user, per_page=20) -> Rule:
-    """Get all the favorite rule of a user"""
-    favorites_query = Rule.query\
+# def get_rules_page_favorite(page, id_user,  search,author, sort_by, rule_type) -> Rule:
+#     """Get all the favorite rule of a user"""
+#     per_page=10
+#     favorites_query = Rule.query\
+#         .join(RuleFavoriteUser, Rule.id == RuleFavoriteUser.rule_id)\
+#         .filter(RuleFavoriteUser.user_id == id_user)\
+#         .order_by(RuleFavoriteUser.created_at.desc())
+#     return favorites_query.paginate(page=page, per_page=per_page, error_out=False)
+
+def get_rules_page_favorite(page, id_user, search=None, author=None, sort_by=None, rule_type=None):
+    """Get paginated favorite rules of a user with optional filters"""
+    per_page = 10
+
+    # Base query: select favorite rules for the user
+    query = Rule.query\
         .join(RuleFavoriteUser, Rule.id == RuleFavoriteUser.rule_id)\
-        .filter(RuleFavoriteUser.user_id == id_user)\
-        .order_by(RuleFavoriteUser.created_at.desc())
-    return favorites_query.paginate(page=page, per_page=per_page, error_out=False)
+        .filter(RuleFavoriteUser.user_id == id_user)
 
+    # Apply search filter
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                Rule.title.ilike(search_lower),
+                Rule.description.ilike(search_lower),
+                Rule.format.ilike(search_lower),
+                Rule.author.ilike(search_lower),
+                Rule.to_string.ilike(search_lower)
+            )
+        )
 
+    # Apply author filter
+    if author:
+        query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
+
+    # Apply rule type filter
+    if rule_type:
+        query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))
+
+    # Apply sorting
+    if sort_by == "newest":
+        query = query.order_by(Rule.creation_date.desc())
+    elif sort_by == "oldest":
+        query = query.order_by(Rule.creation_date.asc())
+    elif sort_by == "most_likes":
+        query = query.order_by(Rule.vote_up.desc())
+    elif sort_by == "least_likes":
+        query = query.order_by(Rule.vote_down.desc())
+    else:
+        # Default sort: order by favorite added time (most recent first)
+        query = query.order_by(RuleFavoriteUser.created_at.desc())
+
+    return query.paginate(page=page, per_page=per_page, error_out=False)
 
 
 #########################

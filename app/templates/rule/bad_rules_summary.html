@@ -190,6 +190,11 @@
         const data = await res.json();
         if (data.success) {
           rules_list.value.splice(index, 1);
+          if (rules_list.value.length === 0 && current_page.value > 1) {
+            fetchRules(current_page.value - 1);
+          } else {
+            fetchRules(current_page.value);
+          }
         }
       }
       

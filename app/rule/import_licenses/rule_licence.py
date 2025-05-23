@@ -8,9 +8,9 @@ OUTPUT_FILE = "app/rule/import_licenses/licenses.txt"
 
 def fetch_and_save_licenses():
     # Delete existing file if it exists
-    if os.path.exists(OUTPUT_FILE):
-        os.remove(OUTPUT_FILE)
-        print(f"Old '{OUTPUT_FILE}' file deleted.")
+    # if os.path.exists(OUTPUT_FILE):
+    #     os.remove(OUTPUT_FILE)
+    #     print(f"Old '{OUTPUT_FILE}' file deleted.")
 
     # Fetch license XML files from GitHub
     response = requests.get(API_URL)

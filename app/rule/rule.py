@@ -1,14 +1,14 @@
 import asyncio
 from datetime import datetime,  timezone
 from math import ceil
-from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, session, url_for
+from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for
 from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
+from app.import_github_project.import_github_yara import parse_yara_rules_from_repo
 from ..account import account_core as AccountModel
 from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
 from app.import_github_project.import_github_sigma import load_rule_files
 from app.import_github_project.import_github_suricata import  parse_suricata_rules_from_file
-from app.import_github_project.import_github_yara import read_and_parse_all_yara_rules_from_folder_test, save_yara_rules_as_is
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name
 from .rule_form import AddNewRuleForm, EditRuleForm
 from ..utils.utils import form_to_dict
@@ -237,7 +237,8 @@ def edit_rule(rule_id) -> render_template:
 
             RuleModel.edit_rule_core(form_dict, rule_id)
             flash("Rule modified with success!", "success")
-            return redirect("/rule/rules_list")
+            # return redirect("/rule/rules_list")
+            return redirect(request.referrer or '/')
         else:
             form.format.data = rule.format
             form.source.data = rule.source
@@ -665,9 +666,6 @@ def get_license() -> jsonify:
                 licenses.append(line)
     return jsonify({"licenses": licenses})
 
-
-
-
 @rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
 @login_required
 def test_yara_python_url() -> redirect:
@@ -696,43 +694,25 @@ def test_yara_python_url() -> redirect:
                 flash("Failed to clone or access the repository.", "danger")
                 return redirect(url_for("rule.rules_list"))
             
-            # save all the yara rules 
-            save_yara_rules_as_is(repo_url) 
-            
+
             #license 
             owner, repo = extract_owner_repo(repo_url)
             if selected_license:
                 license_from_github = selected_license
             else:
                 license_from_github = get_license_name(owner,repo)
-            # parse rules
-            # rule_dicts_Sigma , bad_rule_dicts_Sigma , nb_bad_rules_sigma= load_rule_files(repo_dir, license_from_github, repo_url)
+
             bad_rule_dicts_Sigma, nb_bad_rules_sigma, imported_sigma, skipped_sigma = asyncio.run(
                 load_rule_files(repo_dir, license_from_github, repo_url, current_user)
             )
             rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir,repo_url,license_from_github, info)
-            rule_dicts_Yara , bad_rule_dicts_Yara, nb_bad_rules_yara = read_and_parse_all_yara_rules_from_folder_test(license_from_github, repo_url, external_vars)
             rule_dicts_Suricata = parse_suricata_rules_from_file(repo_dir ,license_from_github, repo_url ,info)
-
-            imported = imported_sigma
-            skipped = skipped_sigma
             
-            # if rule_dicts_Sigma:
-            #     for rule_dict in rule_dicts_Sigma:
-            #         success = RuleModel.add_rule_core(rule_dict , current_user)
+            yara_imported, yara_skipped, yara_failed, bad_rules_yara = parse_yara_rules_from_repo(repo_dir, license_from_github, repo_url)
 
-            #         if success:
-            #             imported += 1
-            #         else:
-            #             skipped += 1
-            if rule_dicts_Yara:
-                for rule_dic2 in rule_dicts_Yara:
-                    success = RuleModel.add_rule_core(rule_dic2 , current_user)
+            imported = imported_sigma + yara_imported
+            skipped = skipped_sigma + yara_skipped
 
-                    if success:
-                        imported += 1
-                    else:
-                        skipped += 1
             if rule_dicts_Zeek:
                 for rule_dic3 in rule_dicts_Zeek:
                     success = RuleModel.add_rule_core(rule_dic3 , current_user)
@@ -754,13 +734,13 @@ def test_yara_python_url() -> redirect:
 
             # if an other user attempt to import the same depot, he can't have acces to the bad rule 
             if existe == False:
-                if bad_rule_dicts_Yara:
-                    flash(f"Failed to import {nb_bad_rules_yara} YARA rules:  ", "danger")
-                    RuleModel.save_invalid_rules(bad_rule_dicts_Yara, "YARA", repo_url, license_from_github)
+                if bad_rules_yara:
+                    flash(f"Failed to import {len(bad_rules_yara)} YARA rules:  ", "danger")
+                    RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github)
                 if bad_rule_dicts_Sigma:
                     flash(f"Failed to import {nb_bad_rules_sigma} Sigma rules:  ", "danger")
                     RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github)
-                if bad_rule_dicts_Sigma or bad_rule_dicts_Yara:
+                if bad_rule_dicts_Sigma or bad_rules_yara:
                     return redirect(url_for("rule.bad_rules_summary"))
 
         except Exception as e:
