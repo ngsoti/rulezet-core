@@ -4,9 +4,37 @@
 {% block content %}
 {% if current_user.is_admin() %}
     <div class="container my-4" id="main-container">
+        <div class="card bg-white shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <h5 class="card-title text-secondary mb-3">🔍 Smart Filters</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control form-control-sm rounded-pill" placeholder="Search by keywords...">
+                    </div>
+                    <div class="col-md-3">
+                        <select v-model="isAdminFilter" class="form-select form-select-sm rounded-pill">
+                            <option value="">All Users</option>
+                            <option value="true">Admins</option>
+                            <option value="false">Non-admins</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select v-model="isConnectedFilter" class="form-select form-select-sm rounded-pill">
+                            <option value="">All Connections</option>
+                            <option value="true">Connected</option>
+                            <option value="false">Disconnected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-dark w-100 rounded-pill" @click="fetchUsers(1)">
+                            <i class="fas fa-sliders-h"></i> Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <template v-if="users_list && users_list.length > 0">
             <h4 class="mb-4">Users (<span class="text-primary">[[ total_users ]]</span>)</h4>
-
             <div class="row row-cols-1 row-cols-md-2 g-4">
                 <div class="col" v-for="(user, index) in users_list" :key="user.id">
                     <div class="card shadow-sm h-100 border-0">
@@ -96,11 +124,18 @@ createApp({
         const total_pages = ref(0)
         const current_page = ref(0)
         
+        // filter
+        const isAdminFilter = ref("")
+        const isConnectedFilter = ref("")
+        const searchQuery = ref("")
         /******************fetch users section************************/
         async function fetchUsers(page) {
             // use URLSearchParams to add futur param for the filter (easy way)
             const params = new URLSearchParams({
-                page
+                page,
+                search: searchQuery.value,
+                connected: isConnectedFilter.value,
+                admin: isAdminFilter.value
             })
                 const res = await fetch('/account/get_all_users?' + params.toString())
                 if(await res.status == 200){ 
@@ -154,7 +189,18 @@ createApp({
                 //display_toast()
             }
         }
+        /*************************filter section******************************/
+        async function onSearchInput() {
+            if (searchQuery.value.trim() === "") {
+                await fetchUsers(1)
+            } else {
+                await fetchUsers(1)
+            }
+        }
 
+        async function onEnterKey() {
+            await fetchUsers(1)
+        }
 
 
         return {
@@ -162,7 +208,14 @@ createApp({
             users_list,
             deleteUser,
             visiblePages,
-            fetchUsers
+            fetchUsers,
+
+            isAdminFilter,
+            isConnectedFilter,
+            searchQuery,
+
+            onSearchInput,
+            onEnterKey
         };
     }
 }).mount('#main-container');

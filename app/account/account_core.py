@@ -1,5 +1,6 @@
 import datetime
 from flask_login import current_user
+from sqlalchemy import or_
 from .. import db
 from ..db_class.db import RequestOwnerRule, Rule, RuleFavoriteUser, User
 from ..utils.utils import generate_api_key
@@ -147,6 +148,44 @@ def get_user_data_full(user_id: int) -> dict:
 def get_all_users() -> range:
     """Return all users"""
     return User.query.all()
+
+def get_users_page_filter(page, search=None, connected=None, admin=None):
+    """Get paginated users with optional filters"""
+    per_page = 10
+    query = User.query  
+
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                User.first_name.ilike(search_lower),
+                User.last_name.ilike(search_lower),
+                User.email.ilike(search_lower)
+            )
+        )
+
+    if admin is not None:
+        if admin.lower() == "true":
+            query = query.filter(User.admin.is_(True))
+        elif admin.lower() == "false":
+            query = query.filter(User.admin.is_(False))
+
+    if connected is not None:
+        if connected.lower() == "true":
+            query = query.filter(User.is_connected.is_(True))
+        elif connected.lower() == "false":
+            query = query.filter(User.is_connected.is_(False))
+
+    query = query.order_by(User.id.asc())
+
+    return query.paginate(page=page, per_page=per_page, error_out=False)
+
+
+
+
+
+
+
 
 def get_count_users() -> int:
     """Return the count of all users"""

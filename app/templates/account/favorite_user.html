@@ -1,90 +1,99 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container py-5" id="main-container">
-  <div class="text-center mb-5">
-    <h1 class="fw-bold ">
-      <i class="fas fa-star-half-alt"></i> Favorite Rules Explorer
-    </h1>
+  
+  <div class=" justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <h1 class="fw-bold"><i class="fas fa-star-half-alt"></i> Favorite Rules Explorer</h1>
     <p class="text-muted">Browse and manage your most loved detection rules.</p>
   </div>
 
   <!-- Filters -->
-  <div class="bg-white rounded shadow p-4 mb-5 border-start border-5 border-primary">
-    <div class="row gy-3 align-items-end">
-      <div class="col-md-4">
-        <label class="form-label fw-semibold">Search</label>
-        <div class="input-group">
-          <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
-          <input
-            type="text"
-            v-model="searchQuery"
-            @input="onSearchInput"
-            @keyup.enter="onEnterKey"
-            class="form-control"
-            placeholder="Find a rule by name, description, etc.">
+  <div class="card bg-white shadow-sm border-0 mb-4">
+    <div class="card-body">
+      <h5 class="card-title text-secondary mb-3">🔍 Smart Filters</h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control form-control-sm rounded-pill" placeholder="Search by keywords...">
         </div>
-      </div>
-
-      <div class="col-md-3">
-        <label class="form-label fw-semibold">Sort By</label>
-        <select v-model="sortBy" class="form-select">
-          <option value="newest">🆕 Newest</option>
-          <option value="oldest">📅 Oldest</option>
-          <option value="most_likes">👍 Most Liked</option>
-          <option value="least_likes">👎 Least Liked</option>
-        </select>
-      </div>
-
-      <div class="col-md-3">
-        <label class="form-label fw-semibold">Rule Type</label>
-        <select v-model="ruleType" class="form-select">
-          <option value="">📚 All Types</option>
-          <option value="yara">🧬 YARA</option>
-          <option value="sigma">🔍 SIGMA</option>
-          <option value="zeek">🌐 Zeek</option>
-          <option value="suricata">🛡️ Suricata</option>
-        </select>
-      </div>
-
-      <div class="col-md-2 d-grid">
-        <button class="btn btn-outline-primary fw-semibold" @click="fetchRules(1)">
-          <i class="fas fa-filter"></i> Filter
-        </button>
+        <div class="col-md-3">
+          <select v-model="sortBy" class="form-select form-select-sm rounded-pill">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="most_likes">Most Liked</option>
+            <option value="least_likes">Least Liked</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select v-model="ruleType" class="form-select form-select-sm rounded-pill">
+            <option value="">All Types</option>
+            <option value="yara">YARA</option>
+            <option value="sigma">SIGMA</option>
+            <option value="zeek">Zeek</option>
+            <option value="suricata">Suricata</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-dark w-100 rounded-pill" @click="fetchRules(1)">
+            <i class="fas fa-sliders-h"></i> Apply
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Rules -->
   <template v-if="rules_list_favorite.length > 0">
-    <div class="row g-4">
-      <div class="col-md-6 col-lg-4" v-for="rule in rules_list_favorite" :key="rule.id">
-        <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden">
-          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-              <i class="fas fa-code me-1"></i> [[ rule.title ]]
-            </h5>
-            <a @click="favorite(rule.id)" title="Toggle Favorite" class="text-warning fs-5">
-              <i class="fa-solid fa-star" :class="{ 'text-warning': rule.is_favorited, 'text-white': !rule.is_favorited }"></i>
-            </a>
-          </div>
-          <div class="card-body bg-light-subtle">
-            <p class="small fst-italic mb-2">[[ rule.description ]]</p>
-            <ul class="list-unstyled small mb-3 text-secondary">
-              <li><i class="fas fa-user me-1"></i> <strong>Author:</strong> [[ rule.author ]]</li>
-              <li><i class="fas fa-calendar-alt me-1"></i> <strong>Date:</strong> [[ rule.creation_date ]]</li>
-              <li><i class="fas fa-code-branch me-1"></i> <strong>Type:</strong> [[ rule.format ]]</li>
-              <li><i class="fas fa-copyright me-1"></i> <strong>License:</strong> [[ rule.license ]]</li>
-              <li><i class="fas fa-link me-1"></i> <strong>Source:</strong>
-                <a :href="rule.source" target="_blank">link</a></li>
-              <li><i class="fas fa-thumbs-up me-1"></i> [[ rule.vote_up ]] / [[ rule.vote_down ]]</li>
-            </ul>
-            <a :href="'/rule/detail_rule/' + rule.id" class="btn btn-sm btn-outline-dark">
-              <i class="fas fa-eye"></i> View Details
-            </a>
+    <div class="accordion" id="favoriteRulesAccordion">
+      <div class="accordion-item mb-3 shadow-sm" v-for="(rule, index) in rules_list_favorite" :key="rule.id">
+        <h2 class="accordion-header">
+          <button
+            class="accordion-button collapsed fw-semibold"
+            type="button"
+            data-bs-toggle="collapse"
+            :data-bs-target="'#collapse-fav-' + rule.id"
+            aria-expanded="false"
+            aria-controls="collapse-fav-[[ rule.id ]]"
+          >
+            <i class="fas fa-star me-2"></i> [[ rule.title ]]
+          </button>
+        </h2>
+        <div
+          :id="'collapse-fav-' + rule.id"
+          class="accordion-collapse collapse"
+          data-bs-parent="#favoriteRulesAccordion"
+        >
+          <div class="accordion-body" style="background-color: rgb(247, 247, 247);">
+            <div class="row">
+              <div class="col-md-6">
+                <p><strong>Description:</strong> [[ rule.description ]]</p>
+                <p><strong>Author:</strong> [[ rule.author ]]</p>
+                <p><strong>Format:</strong> [[ rule.format ]]</p>
+                <p><strong>Source:</strong> [[ rule.source ]]</p>
+              </div>
+              <div class="col-md-6">
+                <p><strong>License:</strong> [[ rule.license ]]</p>
+                <p><strong>UUID:</strong> [[ rule.uuid ]]</p>
+                <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
+                <p><strong>Votes:</strong> [[ rule.vote_up ]] / [[ rule.vote_down ]]</p>
+              </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div>
+                <button @click="favorite(rule.id)" class="btn btn-outline-warning btn-sm" :title="rule.is_favorited ? 'Unfavorite' : 'Favorite'">
+                  <i class="fa-solid fa-star" :class="rule.is_favorited ? 'text-warning' : 'text-muted'"></i>
+                </button>
+              </div>
+              <div>
+                <a :href="`/rule/detail_rule/${rule.id}`" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-eye"></i> View
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
 
     <!-- Pagination -->
     <nav class="mt-4" aria-label="Page navigation">
@@ -116,7 +125,6 @@
   </template>
 </div>
 {% endblock %}
-
 
 {% block script %}
 <script type="module">

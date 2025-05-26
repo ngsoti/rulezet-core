@@ -103,12 +103,19 @@ def delete_user() -> render_template:
 def get_all_users() -> render_template:
     """Get all the users"""
     page = request.args.get('page', 1, type=int)
-    users = AccountModel.get_users_page(page)
+    search = request.args.get("search", None)
+    connected = request.args.get("connected", None) 
+    admin = request.args.get("admin", None) 
+
+
+
+    #users = AccountModel.get_users_page(page)
+    users_filter = AccountModel.get_users_page_filter(page , search , connected, admin)
     total_user = AccountModel.get_count_users()
     if current_user.is_admin():
-        if users:
-            return {"user": [user.to_json() for user in users], 
-                    "total_pages": users.pages, 
+        if users_filter:
+            return {"user": [user.to_json() for user in users_filter], 
+                    "total_pages": users_filter.pages, 
                     "total_users": total_user , 
                     "success": True}, 200 
         return {"message": "No Rule",

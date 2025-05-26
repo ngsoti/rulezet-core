@@ -21,10 +21,12 @@
         <div class="tab-pane fade show active" id="1" role="tabpanel">
             <!-- Main Card -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header text-white" style="background-color: rgb(19, 113, 255)">
+                <div class="card-header text-white" style="background-color:rgb(207, 226, 255)">
                     <div class="row align-items-center">
                         <div class="col-9">
-                            <h1 class="mb-0 text-truncate" style="white-space: normal;">{{ rule.title }}</h1>
+                            <h5>
+                                <i class="fas fa-shield-alt me-2 text-primary mb-0 text-truncate"></i> <span class="mb-2" style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">{{ rule.title }}</span>
+                            </h5>
                         </div>
                         <div class="col-3 text-end">
                             {% if current_user.is_authenticated %}
@@ -52,35 +54,38 @@
                 <div class="card-body">
                     <!-- Rule Description -->
                     <div class="mb-4">
-                        <strong class="h5">Description :</strong>
-                        <p>{{ rule.description }}</p>
+                        <p><i class="fas fa-align-left me-2 text-secondary"></i><strong>Description:</strong> 
+                            <p>
+                                {{ rule.description }}
+                            </p>
+                        </p>
                     </div>
                 </div>
             </div>
             <!-- Additional Information Card -->
-            <div class="card shadow-sm mb-4">
+            <div class="card shadow-sm mb-2">
                 <div class="card-header bg-light">
                     <h5 class="mb-0"><i class="fas fa-info-circle"></i> Additional Information</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-3">
+                    <div class="row ">
                         <div class="col-md-6">
-                            <strong>Format :</strong>
+                            <p><i class="fas fa-file-code me-2 text-secondary"></i><strong>Format :</strong></p>
                             <p>{{ rule.format }}</p>
                         </div>
                         <div class="col-md-6">
-                            <strong>License :</strong>
+                            <p><i class="fas fa-balance-scale me-2 text-secondary"></i><strong>License :</strong></p>
                             <p>{{ rule.license }}</p>
                         </div>
                     </div>
 
-                    <div class="row mb-3">
+                    <div class="row ">
                         <div class="col-md-6">
-                            <strong>UUID :</strong>
+                            <p><i class="fas fa-key me-2 text-secondary"></i><strong>UUID :</strong></p>
                             <p>{{ rule.uuid }}</p>
                         </div>
                         <div class="col-md-6">
-                            <strong>Source :</strong>
+                            <p><i class="fas fa-link me-2 text-secondary"></i><strong>Source :</strong></p>
                             <p>
                                 {% if rule.source.startswith('http') %}
                                     <a href="{{ rule.source }}" target="_blank">{{ rule.source }}</a>
@@ -91,29 +96,29 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
+                    <div class="row ">
                         <div class="col-md-6">
-                            <strong>Creation date :</strong>
+                            <p><i class="fas fa-calendar-plus me-2 text-secondary"></i><strong>Creation date :</strong></p>
                             <p>{{ rule.creation_date.strftime('%d/%m/%Y %H:%M:%S') }}</p>
                         </div>
                         <div class="col-md-6">
-                            <strong>Modification date :</strong>
+                            <p><i class="fas fa-calendar-alt me-2 text-secondary"></i><strong>Modification date :</strong></p>
                             <p>{{ rule.last_modif.strftime('%d/%m/%Y %H:%M:%S') }}</p>
                         </div>
                     </div>
 
-                    <div class="row mb-3">
+                    <div class="row ">
                         <div class="col-md-6">
-                            <strong>Author :</strong>
+                            <p><i class="fas fa-user me-2 text-secondary"></i><strong>Author:</strong></p>
                             <p>{{ rule.author }}</p>
                         </div>
                         <div class="col-md-6">
-                            <strong>Editor :</strong>
+                            <p><i class="fas fa-user-edit me-2 text-secondary"></i><strong>Editor :</strong></p>
                             <p>{{ rule.get_rule_user_first_name_by_id() }}</p>
                         </div>
                     </div>
-
                 </div>
+
                 <div class="dropdown float-end ms-2 mb-2">
                     <a 
                     class="btn btn-dark btn-sm dropdown-toggle"

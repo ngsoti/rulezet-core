@@ -533,15 +533,6 @@ def give_all_right_to_admin(rules) -> None:
 #   Favorite rule   #
 #####################
 
-# def get_rules_page_favorite(page, id_user,  search,author, sort_by, rule_type) -> Rule:
-#     """Get all the favorite rule of a user"""
-#     per_page=10
-#     favorites_query = Rule.query\
-#         .join(RuleFavoriteUser, Rule.id == RuleFavoriteUser.rule_id)\
-#         .filter(RuleFavoriteUser.user_id == id_user)\
-#         .order_by(RuleFavoriteUser.created_at.desc())
-#     return favorites_query.paginate(page=page, per_page=per_page, error_out=False)
-
 def get_rules_page_favorite(page, id_user, search=None, author=None, sort_by=None, rule_type=None):
     """Get paginated favorite rules of a user with optional filters"""
     per_page = 10

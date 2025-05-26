@@ -1,24 +1,30 @@
 {% extends 'base.html' %}
 {% import 'macros/form_macros.html' as f %}
 {% block content %}
-<div class="container py-5" style="max-width: 1000px;">
+
+<div class="container mt-4">
+
 
   {% with messages = get_flashed_messages(with_categories=True) %}
     {% if messages %}
       {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
-          <i class="fas fa-info-circle me-2"></i>{{ message }}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
       {% endfor %}
     {% endif %}
   {% endwith %}
 
-  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-    <h2 class="text-primary fw-bold"><i class="fas fa-dna"></i> Rule Management</h2>
-    <a href="/rule/create_rule" class="btn btn-outline-primary rounded-pill shadow-sm">
-      <i class="fas fa-plus-circle"></i> New Rule
-    </a>
+  
+  <div class=" mb-4 border-bottom pb-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <h1 class="fw-bold"><i class="fas fa-dna"></i> Rules Explorer</h1>
+      <a href="/rule/create_rule" class="btn btn-outline-primary rounded-pill shadow-sm">
+        <i class="fas fa-plus-circle"></i> New Rule
+      </a>
+    </div>
+    <p class="text-muted">Browse detection rules.</p>
   </div>
 
   <div class="card bg-white shadow-sm border-0 mb-4">
@@ -32,8 +38,8 @@
           <select v-model="sortBy" class="form-select form-select-sm rounded-pill">
             <option value="newest">Newest</option>
             <option value="oldest">Oldest</option>
-            <option value="most_likes">Most Likes</option>
-            <option value="least_likes">Least Likes</option>
+            <option value="most_likes">Most Liked</option>
+            <option value="least_likes">Least Liked</option>
           </select>
         </div>
         <div class="col-md-3">
@@ -41,7 +47,7 @@
             <option value="">All Types</option>
             <option value="yara">YARA</option>
             <option value="sigma">SIGMA</option>
-            <option value="zeek">ZEEK</option>
+            <option value="zeek">Zeek</option>
             <option value="suricata">Suricata</option>
           </select>
         </div>
@@ -54,70 +60,94 @@
     </div>
   </div>
 
+  
+  
   <template v-if="rules_list && rules_list.rule.length > 0">
-    <div class="mb-3 text-muted">[[ total_rules_liste ]] rules found</div>
+    <div class="mb-3 text-muted">
+      <i class="fas fa-database me-2"></i> [[ total_rules_liste ]] rules found
+    </div>
+    <div class="card card-body mb-3" v-for="(rule, index) in rules_list.rule" :key="rule.uuid">
+      <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:rgb(207, 226, 255)">
+        <h5>
+          <i class="fas fa-shield-alt me-2 text-primary"></i> <span class="mb-2" style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">[[ rule.title ]]</span>
+        </h5>
+        {% if current_user.is_authenticated %}
+        <div class="d-flex">
+          <template v-if="parseInt('{{current_user.id}}') == rule.user_id || current_user_is_admin">
+            <a :href="`/rule/edit_rule/${rule.id}`" class="btn btn-secondary btn-sm me-2" title="Edit Rule">
+              <i class="fas fa-pen"></i>
+            </a>
+            <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2" title="Delete Rule">
+              <i class="fas fa-trash" ></i>
+            </button>
+          </template>
+          <a @click="favorite(rule.id)"
+            class="btn btn-success btn-sm me-2"
+            :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
+            <i class="fa-solid fa-star"
+              :class="rule.is_favorited ? 'text-warning' : 'text-white'">
+            </i>
+          </a>
 
-    <div class="accordion" id="rulesAccordion">
-      <div class="accordion-item mb-3 shadow-sm" v-for="(rule, index) in rules_list.rule" :key="rule.uuid">
-        <h2 class="accordion-header">
-          <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" :data-bs-target="'#collapse-' + rule.id">
-            <i class="fas fa-shield-alt me-2"></i>[[ rule.title ]]
-          </button>
-        </h2>
-        <div :id="'collapse-' + rule.id" class="accordion-collapse collapse" data-bs-parent="#rulesAccordion">
-          <div class="accordion-body">
-            <div class="row">
-              <div class="col-md-6">
-                <p><strong>Description:</strong> [[ rule.description ]]</p>
-                <p><strong>Author:</strong> [[ rule.author ]]</p>
-                <p><strong>Format:</strong> [[ rule.format ]]</p>
-                <p><strong>Source:</strong> [[ rule.source ]]</p>
-              </div>
-              <div class="col-md-6">
-                <p><strong>License:</strong> [[ rule.license ]]</p>
-                <p><strong>UUID:</strong> [[ rule.uuid ]]</p>
-                <p><strong>Version:</strong> [[ rule.version ]]</p>
-                <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
-                <p><strong>Last Modified:</strong> [[ rule.last_modif ]]</p>
-              </div>
+          
+        </div>
+        {% endif %}
+      </div>
+    
+      <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+              <p><i class="fas fa-align-left me-2 text-secondary"></i><strong>Description:</strong> [[ rule.description ]]</p>
+              <p><i class="fas fa-user me-2 text-secondary"></i><strong>Author:</strong> [[ rule.author ]]</p>
+              <p><i class="fas fa-file-code me-2 text-secondary"></i><strong>Format:</strong> [[ rule.format ]]</p>
+              <p><i class="fas fa-link me-2 text-secondary"></i><strong>Source:</strong> [[ rule.source ]]</p>
             </div>
-
-            <div class="d-flex justify-content-between align-items-center mt-3">
-              <div>
-                <button @click="vote('up', rule.id)" class="btn btn-outline-success btn-sm me-2">
-                  <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
-                </button>
-                <button @click="vote('down', rule.id)" class="btn btn-outline-danger btn-sm">
-                  <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
-                </button>
-              </div>
-              <div>
-                <a :href="`/rule/detail_rule/${rule.id}`" class="btn btn-sm btn-outline-primary">
-                  <i class="fas fa-eye"></i> View
-                </a>
-                {% if current_user.is_authenticated %}
-                <template v-if="parseInt('{{ current_user.id }}') == rule.user_id || current_user_is_admin">
-                  <a :href="`/rule/edit_rule/${rule.id}`" class="btn btn-sm btn-outline-secondary ms-2">
-                    <i class="fas fa-pen"></i>
-                  </a>
-                  <button @click="deleteRule(rule.id, index)" class="btn btn-sm btn-outline-danger ms-2">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </template>
-                <button @click="favorite(rule.id)" class="btn btn-sm btn-outline-warning ms-2" :title="rule.is_favorited ? 'Unfavorite' : 'Favorite'">
-                  <i class="fa-solid fa-star" :class="rule.is_favorited ? 'text-warning' : 'text-muted'"></i>
-                </button>
-                {% endif %}
-              </div>
+            <div class="col-md-6">
+              <p><i class="fas fa-balance-scale me-2 text-secondary"></i><strong>License:</strong> [[ rule.license ]]</p>
+              <p><i class="fas fa-key me-2 text-secondary"></i><strong>UUID:</strong> [[ rule.uuid ]]</p>
+              <p><i class="fas fa-code-branch me-2 text-secondary"></i><strong>Version:</strong> [[ rule.version ]]</p>
+              <p><i class="fas fa-calendar-plus me-2 text-secondary"></i><strong>Created:</strong> [[ rule.creation_date ]]</p>
+              <p><i class="fas fa-calendar-alt me-2 text-secondary"></i><strong>Last Modified:</strong> [[ rule.last_modif ]]</p>
             </div>
           </div>
+    
+
+        <div class="mt-3">
+          <button @click="vote('up', rule.id)" title="like this rule" class="btn btn-success btn-sm">
+            <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
+          </button>
+          <button @click="vote('down', rule.id)" title="dislike this rule" class="btn btn-danger btn-sm">
+            <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
+          </button>
+        </div>
+        <div class="dropdown float-end ms-2">
+                <a 
+                  class="btn btn-dark btn-sm dropdown-toggle"
+                  href="#"
+                  role="button"
+                  id="dropdownMenuLink"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  title="More actions"
+                >
+                  <i class="fas fa-ellipsis-v"></i>
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+                  <li><a class="dropdown-item" :href="`/rule/report/${rule.id}`">Report rule</a></li>
+                </ul>
+              </div>
+    
+        <div class="text-center mt-3">
+          <a :href="`detail_rule/${rule.id}`" title="view more about this rule" class="btn btn-primary">View more</a>
         </div>
       </div>
     </div>
+    
 
     <!-- Pagination -->
-    <nav class="mt-4" aria-label="Page navigation">
-      <ul class="pagination justify-content-center">
+    <nav aria-label="Page navigation">
+      <ul class="pagination">
         <li class="page-item" :class="{ disabled: current_page === 1 }">
           <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
             <i class="fas fa-arrow-left"></i> Previous
@@ -135,9 +165,8 @@
       </ul>
     </nav>
   </template>
-  <div v-else class="alert alert-warning text-center mt-4 shadow-sm">
-    <i class="fas fa-exclamation-circle"></i> No rules found.
-  </div>
+  <i v-else class="text-muted">No rules found.</i>
+</div>
 </div>
 {% endblock %}
 
