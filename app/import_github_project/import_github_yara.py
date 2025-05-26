@@ -33,17 +33,15 @@ def extract_meta_from_rule(rule_text):
     return meta
 
 def parse_yara_rules_from_repo(repo_dir, license_from_github, repo_url):
-    print(f"🔍 Scanning repo at: {repo_dir}")
+
     imported = 0
     skipped = 0
     bad_rules_count = 0
     bad_rules = []
 
     yara_files = get_yara_files_from_repo(repo_dir)
-    print(f"📂 Found {len(yara_files)} YARA file(s).")
 
     for filepath in yara_files:
-        print(f"\n📄 Processing file: {filepath}")
         try:
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
@@ -56,12 +54,11 @@ def parse_yara_rules_from_repo(repo_dir, license_from_github, repo_url):
                 for line in first_lines:
                     if "rule" in line:
                         if line.strip().startswith("//"):
-                            print("🟡 Skipped commented-out rule.")
+                            print("Skipped commented-out rule.")
                             break
                         rule_blocks.append(block)
                         break
 
-            print(f"🔎 Found {len(rule_blocks)} active rule(s) in file.")
 
             for current_rule_text in rule_blocks:
                 externals = {}
@@ -79,9 +76,7 @@ def parse_yara_rules_from_repo(repo_dir, license_from_github, repo_url):
                         match_id = re.search(r'undefined identifier "(\w+)"', error_msg)
                         if match_id:
                             var_name = match_id.group(1)
-                            print(f"⚠️  Missing external variable: {var_name}")
                             if var_name in YARA_MODULES:
-                                print(f"➕ Adding import for module: {var_name}")
                                 current_rule_text = insert_import_module(current_rule_text, var_name)
                             else:
                                 externals[var_name] = "example.txt"
@@ -90,7 +85,6 @@ def parse_yara_rules_from_repo(repo_dir, license_from_github, repo_url):
 
                         match_not_structure = re.search(r'"(\w+)" is not a structure', error_msg)
                         if match_not_structure:
-                            print(f"⚠️ Warning: {match_not_structure.group(1)} is not a structure")
                             bad_rules.append({
                                 "file": filepath,
                                 "error": error_msg,
@@ -132,11 +126,8 @@ def parse_yara_rules_from_repo(repo_dir, license_from_github, repo_url):
                             imported += 1
                         else:
                             skipped += 1
-
-                        print(f"✅ Parsed and imported rule: {rule_name}")
                     except Exception as e:
                         error_msg = f"Unexpected parsing error: {e}"
-                        print(f"❌ {error_msg}")
                         bad_rules.append({
                             "file": filepath,
                             "error": error_msg,
@@ -145,7 +136,6 @@ def parse_yara_rules_from_repo(repo_dir, license_from_github, repo_url):
                         bad_rules_count += 1
 
         except Exception as e:
-            print(f"❌ Error reading file {filepath}: {e}")
             bad_rules.append({
                 "file": filepath,
                 "error": str(e),
@@ -153,7 +143,7 @@ def parse_yara_rules_from_repo(repo_dir, license_from_github, repo_url):
             })
             bad_rules_count += 1
 
-    print(f"\n✅ Parsing complete. Imported: {imported}, Skipped: {skipped}, Failed: {bad_rules_count}")
+    print(f"\nParsing complete. Imported: {imported}, Skipped: {skipped}, Failed: {bad_rules_count}")
     return imported, skipped, bad_rules_count, bad_rules
 
 def extract_first_match(raw_content, keys):
@@ -169,3 +159,6 @@ def extract_metadata_value(text, key):
     pattern = rf"{key}\s*=\s*\"([^\"]+)\""
     match = re.search(pattern, text)
     return match.group(1) if match else None
+
+
+

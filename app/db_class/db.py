@@ -21,7 +21,7 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(64), index=True)
     email = db.Column(db.String(64), unique=True, index=True)
     admin = db.Column(db.Boolean, default=False, index=True)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(165))
     api_key = db.Column(db.String(60), index=True)
     is_connected = db.Column(db.Boolean, default=False, index=True)
 
@@ -89,6 +89,8 @@ class Rule(db.Model):
     vote_up = db.Column(db.Integer)
     vote_down = db.Column(db.Integer)
     to_string = db.Column(db.String)
+
+    #taxonomie_misp = db.Column(db) 
 
     #edit
     def get_rule_user_first_name_by_id(self):

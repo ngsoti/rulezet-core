@@ -181,12 +181,6 @@ def get_users_page_filter(page, search=None, connected=None, admin=None):
     return query.paginate(page=page, per_page=per_page, error_out=False)
 
 
-
-
-
-
-
-
 def get_count_users() -> int:
     """Return the count of all users"""
     return User.query.count()

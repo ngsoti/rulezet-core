@@ -31,6 +31,8 @@
 #     'testing': TestingConfig,
 #     'default': DevelopmentConfig
 # }
+    # creer un user ou changer le moddepasse 
+
 
 class Config:
     SECRET_KEY = 'SECRET_KEY_ENV_VAR_SET'
@@ -40,7 +42,14 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///rulezet.sqlite"
+    #SQLALCHEMY_DATABASE_URI = "sqlite:///rulezet.sqlite"
+
+    # SQLALCHEMY_DATABASE_URI = "postgresql:///rulezet"
+    SQLALCHEMY_DATABASE_URI = "postgresql://theo:circl@localhost/rulezet"
+
+
+    # creer db dans un instance 
+    # cinfigurer postgresql
     SESSION_TYPE = "sqlalchemy"
     SESSION_SQLALCHEMY_TABLE = "flask_sessions"
     
@@ -59,6 +68,9 @@ class TestingConfig(Config):
     @classmethod
     def init_app(cls, app):
         print('THIS APP IS IN TESTING MODE. YOU SHOULD NOT SEE THIS IN PRODUCTION.')
+
+
+    
 
 config = {
     'development': DevelopmentConfig,
