@@ -97,8 +97,18 @@ def get_rules_page() -> jsonify:
 
         return {"rule": rules_list, "total_pages": rules.pages, "total_rules": total_rules}
     
-    return {"message": "No Rule"}, 404
+    return {"message": "No Rule"}
 
+
+@rule_blueprint.route("/get_similar_rule", methods=['GET'])
+def get_similar_rules() -> jsonify:
+    """Get all the rules on a page"""
+    rule_id = request.args.get('rule_id', 1, type=int)
+    rules_list_similar = RuleModel.get_similar_rule(rule_id)
+    if rules_list_similar:
+        return {"similar_rules": rules_list_similar}
+    
+    return {"message": "No Rule"}, 404
 
 @rule_blueprint.route("/get_rules_page_filter_with_id", methods=['GET'])
 def get_rules_page_with_user_id() -> jsonify:
@@ -143,17 +153,16 @@ def get_rules_page_filter() -> jsonify:
 #   Action on Rule  # 
 #####################
 
-@rule_blueprint.route("/delete_rule", methods=['POST'])
+@rule_blueprint.route("/delete_rule", methods=['GET'])
 @login_required
 def delete_rule() -> jsonify:
     """Delete a rule"""
-    data = request.get_json()
-    rule_id = data.get('id')
+    rule_id  = request.args.get("id")
     user_id = RuleModel.get_rule_user_id(rule_id)
 
     if current_user.id == user_id or current_user.is_admin():
         RuleModel.delete_rule_core(rule_id)
-        return jsonify({"success": True, "message": "Rule deleted!"})
+        return {"success": True, "message": "Rule deleted!" , "toast_class" : "success"}, 200
     
     return render_template("access_denied.html")
 
@@ -341,7 +350,7 @@ def get_current_rule() -> jsonify:
     """Get the current rule for detail"""
     rule_id = request.args.get('rule_id', 1, type=int)
     rule = RuleModel.get_rule(rule_id)
-
+    #rule.to_string = "]"
     if rule:
         return {"rule": rule.to_json()}
     return {"message": "No Rule"}, 404
@@ -379,13 +388,17 @@ def add_favorite_rule(rule_id) -> redirect:
         remove_favorite(user_id=current_user.id, rule_id=rule_id)
         return jsonify({ 
             "success": True,
-            "is_favorited": False
+            "is_favorited": False,
+            "toast_class": 'success',
+            "message": "rule remove from favorite"
         }), 200
     else:
         add_favorite(user_id=current_user.id, rule_id=rule_id)
         return jsonify({ 
             "success": True,
-            "is_favorited": True
+            "is_favorited": True,
+            "toast_class": 'success',
+            "message": "rule add to favorite"
         }), 200
     
     # return redirect(request.referrer or url_for('rule.rules_list'))

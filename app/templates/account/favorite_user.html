@@ -129,7 +129,7 @@
 {% block script %}
 <script type="module">
 const { createApp, ref, computed } = Vue;
-import { message_list } from '/static/js/toaster.js';
+import { message_list , display_prepared_toast } from '/static/js/toaster.js';
 
 createApp({
   delimiters: ['[[', ']]'],
@@ -178,19 +178,24 @@ createApp({
 
 
     async function favorite(rule_id) {
-      const res = await fetch(`/rule/favorite/${rule_id}`);
-      const data = await res.json();
-      
-      if (res.ok) {
-        const rule = rules_list_favorite.value.find(r => r.id === rule_id);
-        if (rule) {
-          rule.is_favorited = data.is_favorited;
-          rules_list_favorite.value = rules_list_favorite.value.filter(rule => rule.id !== rule_id);
+        const res = await fetch(`/rule/favorite/${rule_id}`);
+        const data = await res.json(); 
+
+        if (res.ok) {
+          const rule = rules_list_favorite.value.find(r => r.id === rule_id);
+          if (rule) {
+            rule.is_favorited = data.is_favorited;
+            fetchRules(1)
+          }
         }
-      } else {
-        console.error('Failed to update favorite status.');
+
+        const message = {
+          message: data.message,
+          toast_class: data.toast_class,
+          id: Math.random()
+        };
+        await display_prepared_toast(message);
       }
-    }
 
      /**
      *          #################################
@@ -213,7 +218,7 @@ createApp({
         const pages = []
         const total = total_pages.value
         const current = current_page.value
-        if (total <= 7) {
+        if (total <= 7) {favorite
           for (let i = 1; i <= total; i++) pages.push(i)
         } else {
           if (current <= 4) {
@@ -228,6 +233,7 @@ createApp({
       })
 
     return {
+      message_list,
       authorFilter,
       searchQuery,
       sortBy,

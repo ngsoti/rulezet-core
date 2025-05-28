@@ -1,3 +1,4 @@
+from typing import Union
 from ..db_class.db import User
 from flask import Blueprint, jsonify, render_template, redirect, url_for, request, flash
 from .form import LoginForm, EditUserForm, AddNewUserForm
@@ -100,7 +101,7 @@ def delete_user() -> render_template:
 
 @account_blueprint.route("/get_all_users")
 @login_required
-def get_all_users() -> render_template:
+def get_all_users() -> Union[render_template, dict]:
     """Get all the users"""
     page = request.args.get('page', 1, type=int)
     search = request.args.get("search", None)
@@ -118,7 +119,7 @@ def get_all_users() -> render_template:
                     "total_pages": users_filter.pages, 
                     "total_users": total_user , 
                     "success": True}, 200 
-        return {"message": "No Rule",
+        return {"message": "No User",
                 "toast_class": "danger-subtle"}, 404
     else:
         return render_template("access_denied.html")

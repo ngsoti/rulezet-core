@@ -77,9 +77,27 @@
             <a :href="`/rule/edit_rule/${rule.id}`" class="btn btn-secondary btn-sm me-2" title="Edit Rule">
               <i class="fas fa-pen"></i>
             </a>
-            <button @click="deleteRule(rule.id, index)" class="btn btn-danger btn-sm me-2" title="Delete Rule">
-              <i class="fas fa-trash" ></i>
+             <button type="button" class="btn btn-danger btn-sm me-2" title="Delete the rule" data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+rule.id">
+                <i class="fa-solid fa-trash fa-fw"></i>
             </button>
+            <div class="modal fade" :id="'delete_rule_modal_'+rule.id" tabindex="-1" aria-labelledby="delete_rule_modal" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" style="color:black;" id="delete_rule_modal">
+                                Delete [[rule.title ]] ?
+                            </h1>
+                            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button class="btn btn-danger" @click="deleteRule(rule.id, index)">
+                                <i class="fa-solid fa-trash"></i> Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
           </template>
           <a @click="favorite(rule.id)"
             class="btn btn-success btn-sm me-2"
@@ -174,30 +192,33 @@
 {% block script %}
 <script type="module">
   const { createApp, ref, computed } = Vue
-  import { message_list } from '/static/js/toaster.js'
+  import { display_toast, prepare_toast, message_list , display_prepared_toast} from '/static/js/toaster.js'
 
 
   createApp({
     delimiters: ['[[', ']]'],
     setup() {
-      const csrf_token = '{{ csrf_token() }}';
+
+      /*###################################_Fetch_rules_list_#############################*/
+
       const rules_list = ref({ rule: [] })
-      const total_rules = ref(0)
+      const total_rules = ref(0)  // number of rule in db
       const current_page = ref(1)
       const total_pages = ref(1)
+      const total_rules_liste = ref(0)
       const current_user_is_admin = ref()
       const searchQuery = ref('')
       const authorFilter = ref('')
       const sortBy = ref('newest')
-      const total_rules_liste = ref(0)
       const ruleType = ref("");
       const current_user_is_connected = ref(false)
 
-
+      /**
+         *          ####################
+         *          #   fetch rules    #
+         *          ####################
+         * */
       
-
-
-
       async function fetchRules(page) {
         const params = new URLSearchParams({
           page,
@@ -215,7 +236,7 @@
         total_rules_liste.value = data.total_rules
         current_page.value = page
       }
-
+      fetchRules(1)
 
       async function checkIfUserIsConnected() {
         const res = await fetch('/get_current_user_connected');
@@ -224,7 +245,25 @@
         if(data.is_authenticated == true){
           fetchCurrentUser()
         }
-    }
+      }
+
+      checkIfUserIsConnected()
+
+      async function fetchCurrentUser() {
+        const res = await fetch('get_current_user')
+        if(res){
+          const data = await res.json()
+          current_user_is_admin.value = data.user
+        }
+        
+      }
+
+      /**
+         *          ####################
+         *          #      filter      #
+         *          ####################
+         * */
+
 
 
       async function onSearchInput() {
@@ -238,58 +277,6 @@
       async function onEnterKey() {
         await fetchRules(1)
       }
-
-      async function fetchCurrentUser() {
-        const res = await fetch('get_current_user')
-        if(res){
-          const data = await res.json()
-          current_user_is_admin.value = data.user
-        }
-        
-      }
-
-      async function deleteRule(id, index) {
-        const res = await fetch('/rule/delete_rule', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrf_token  
-          },
-          body: JSON.stringify({ id: id })
-        });
-
-        const data = await res.json();
-        if (data.success) {
-          rules_list.value.rule.splice(index, 1)
-          total_rules_liste.value -= 1
-        }
-      }
-
-      async function vote(voteType, ruleId) {
-        if(current_user_is_connected.value == true){
-          const res = await fetch(`vote_rule?id=${ruleId}&vote_type=${voteType}`, { method: 'GET' })
-          const data = await res.json()
-          const updatedRule = rules_list.value.rule.find(rule => rule.id === ruleId)
-          if (updatedRule) {
-            updatedRule.vote_up = data.vote_up
-            updatedRule.vote_down = data.vote_down
-          }
-        }else{
-          window.location.href = `/account/login`;
-        }
-      }
-      async function favorite(rule_id) {
-        const res = await fetch(`/rule/favorite/${rule_id}`);
-        const data = await res.json();
-
-        if (res.ok) {
-          const rule = rules_list.value.rule.find(r => r.id === rule_id);
-          if (rule) {
-            rule.is_favorited = data.is_favorited;
-          }
-        } 
-      }
-
 
       const visiblePages = computed(() => {
         const pages = []
@@ -309,9 +296,59 @@
         return pages
       })
 
-      fetchRules(1)
-      checkIfUserIsConnected()
-      //fetchCurrentUser()
+      /**
+         *          ####################
+         *          #      Action      #
+         *          ####################
+         * */
+
+      async function deleteRule(id, index) {
+        const params = new URLSearchParams({
+            id
+        })
+        const res = await fetch('/rule/delete_rule?'+ params.toString())
+        if(await res.status == 200){
+          rules_list.value.rule.splice(index, 1);
+          var myModalEl = document.getElementById('delete_rule_modal_'+id);
+          var modal = bootstrap.Modal.getInstance(myModalEl)
+          modal.hide();
+        } 
+        display_toast(res)
+        
+      }
+
+      async function vote(voteType, ruleId) {
+        if(current_user_is_connected.value == true){
+          const res = await fetch(`vote_rule?id=${ruleId}&vote_type=${voteType}`, { method: 'GET' })
+          const data = await res.json()
+          const updatedRule = rules_list.value.rule.find(rule => rule.id === ruleId)
+          if (updatedRule) {
+            updatedRule.vote_up = data.vote_up
+            updatedRule.vote_down = data.vote_down
+          }
+        }else{
+          window.location.href = `/account/login`;
+        }
+      }
+      
+      async function favorite(rule_id) {
+        const res = await fetch(`/rule/favorite/${rule_id}`);
+        const data = await res.json(); 
+
+        if (res.ok) {
+          const rule = rules_list.value.rule.find(r => r.id === rule_id);
+          if (rule) {
+            rule.is_favorited = data.is_favorited;
+          }
+        }
+
+        const message = {
+          message: data.message,
+          toast_class: data.toast_class,
+          id: Math.random()
+        };
+        await display_prepared_toast(message);
+      }
 
       return {
         message_list,

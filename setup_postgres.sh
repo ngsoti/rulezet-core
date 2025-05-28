@@ -1,30 +1,38 @@
 #!/bin/bash
 
-# Configuration variables
-DB_USER="theo"
-DB_PASSWORD="circl"
+# === Configuration ===
 DB_NAME="rulezet"
+DB_USER="$USER"          # Use the current Linux user or change it manually
+DB_PASSWORD="password"   # Optional: set if using password-based auth
+SESSION_TABLE="flask_sessions"
 
-echo "🔧 Updating packages and installing PostgreSQL..."
-sudo apt update
-sudo apt install -y postgresql postgresql-contrib
+# === Script Start ===
 
-echo "👤 Creating PostgreSQL user if it doesn't exist..."
-sudo -u postgres psql -c "DO \$\$
-BEGIN
-   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${DB_USER}') THEN
-      CREATE ROLE ${DB_USER} WITH LOGIN PASSWORD '${DB_PASSWORD}';
-   END IF;
-END
-\$\$;"
+echo "🔧 Starting PostgreSQL setup..."
 
-echo "Creating the database..."
-sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};"
+# 1. Create PostgreSQL user if it doesn't exist
+echo "🔹 Checking if user '$DB_USER' exists..."
+USER_EXISTS=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'")
 
-echo "Granting privileges to the user..."
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};"
+if [ "$USER_EXISTS" != "1" ]; then
+  echo "✅ Creating PostgreSQL user '$DB_USER'..."
+  sudo -u postgres createuser --createdb "$DB_USER"
+else
+  echo "✅ User '$DB_USER' already exists."
+fi
 
+# 2. Drop the existing database
+echo "🔄 Dropping database '$DB_NAME' if it exists..."
+sudo -u postgres dropdb --if-exists "$DB_NAME"
 
-echo "/ PostgreSQL is now ready for your Flask app!"
-echo "Use this in your Flask config:"
-echo "   SQLALCHEMY_DATABASE_URI = 'postgresql://${DB_USER}:${DB_PASSWORD}@localhost/${DB_NAME}'"
+# 3. Create the database owned by $DB_USER
+echo "🚀 Creating database '$DB_NAME' with owner '$DB_USER'..."
+sudo -u postgres createdb "$DB_NAME" -O "$DB_USER"
+
+echo "✅ Database '$DB_NAME' created and owned by '$DB_USER'."
+
+# Optional: Inform about next steps
+echo ""
+echo "   IMPORTANT: Make sure your Flask app config contains:"
+echo "    SQLALCHEMY_DATABASE_URI = 'postgresql://$DB_USER@localhost/$DB_NAME'"
+echo ""

@@ -180,6 +180,24 @@ def get_rule(id) -> int:
     """Return the rule from id"""
     return Rule.query.get(id)
 
+def get_similar_rule(rule_id) -> list:
+    """Return up to 3 similar rules based on title, description, format, or author."""
+    rule = Rule.query.get(rule_id)
+    if not rule:
+        return []
+
+    similar_rules = Rule.query.filter(
+        Rule.id != rule.id,
+        or_(
+            Rule.title.ilike(f'%{rule.title}%'),
+            Rule.description.ilike(f'%{rule.description}%'),
+            Rule.format == rule.format,
+            Rule.author.ilike(f'%{rule.author}%')
+        )
+    ).limit(3).all()
+    return [r.to_json() for r in similar_rules]
+
+
 def get_rule_type_count(user_id):
     """Return JSON of the different rule types and total"""
     rules = Rule.query.filter_by(user_id=user_id).all()

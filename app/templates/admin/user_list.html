@@ -137,20 +137,21 @@ createApp({
                 connected: isConnectedFilter.value,
                 admin: isAdminFilter.value
             })
-                const res = await fetch('/account/get_all_users?' + params.toString())
-                if(await res.status == 200){ 
-                    const data = await res.json()
-                    if(data.success){
-                        users_list.value = data.user
-                        total_pages.value = data.total_pages
-                        total_users.value = data.total_users
-                        current_page.value = page
-                    }
-                }else{
-                    // display_toast(res);
-                    
+
+            const res = await fetch('/account/get_all_users?' + params.toString())
+            if(await res.status == 200){ 
+                const data = await res.json()
+                if(data.success){
+                    users_list.value = data.user
+                    total_pages.value = data.total_pages
+                    total_users.value = data.total_users
+                    current_page.value = page
                 }
+            }else{
+                display_toast(res);
+                
             }
+        }
             fetchUsers(1)
 
             const visiblePages = computed(() => {
@@ -204,6 +205,7 @@ createApp({
 
 
         return {
+            message_list,
             total_users,
             users_list,
             deleteUser,

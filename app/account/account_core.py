@@ -1,4 +1,5 @@
 import datetime
+from typing import List, Tuple
 from flask_login import current_user
 from sqlalchemy import or_
 from .. import db
@@ -114,7 +115,7 @@ def get_user_rule_formats(user_id: int) -> list:
     rules = get_user_rules(user_id)
     return list(set(r.format for r in rules if r.format))
 
-def get_user_favorite_rules(user_id: int) -> list:
+def get_user_favorite_rules(user_id: int) -> Tuple[int]:
     """Return list of rule IDs favorited by the user."""
     return [fav.rule_id for fav in RuleFavoriteUser.query.filter_by(user_id=user_id).all()]
 

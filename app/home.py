@@ -41,10 +41,18 @@ def home() -> render_template:
     return render_template("home.html")
 
 @home_blueprint.route("/get_last_rules", methods=['GET'])
-def get_last_rules() -> jsonify:
+def get_last_rules() -> dict:
     """Get the last 10 rules create or update"""
     rules = RuleModel.get_last_rules_from_db()
-    return jsonify({'rules': [r.to_json() for r in rules]})
+    if rules :
+        return {
+            'rules': [r.to_json() for r in rules],
+            'success': True
+        } , 200
+    return {
+        "message": "No rules",
+        'success': False
+    }, 404
 
 @home_blueprint.route("/get_current_user_connected", methods=['GET'])
 def get_current_user_connected() -> jsonify:

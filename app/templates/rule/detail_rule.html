@@ -34,9 +34,27 @@
                                 <a :href="`/rule/edit_rule/{{rule.id}}`" class="btn btn-secondary btn-sm me-2" title="Edit the rule">
                                     <i class="fas fa-pen"></i>
                                 </a>
-                                <button @click.stop="deleteRule()" class="btn btn-danger btn-sm me-2" title="Delete Rule">
-                                    <i class="fas fa-trash"></i>
+                                <button type="button" class="btn btn-danger btn-sm me-2" title="Delete the rule" data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+{{rule.id}}">
+                                    <i class="fa-solid fa-trash fa-fw"></i>
                                 </button>
+                                <div class="modal fade" :id="'delete_rule_modal_'+{{rule.id}}" tabindex="-1" aria-labelledby="delete_rule_modal" aria-hidden="true">
+                                    <div class="modal-dialog modal-sm">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h1 class="modal-title fs-5 text-truncate" style="color:black; max-width: 200px;" id="delete_rule_modal">
+                                                    Delete {{ rule.title }} ?
+                                                </h1>
+                                                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                <button class="btn btn-danger" @click="deleteRule()">
+                                                    <i class="fa-solid fa-trash"></i> Confirm
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 {% endif %}
                                 <a @click="favorite()"
                                     class="btn btn-success btn-sm me-2"
@@ -152,8 +170,9 @@
                 </div>
             
                 <div class="card-body">
-                <pre class="bg-light p-3 rounded-3 border" style="white-space: pre-wrap;">{{ rule.to_string }}</pre>
+                <pre class="bg-light p-3 rounded-3 border" style="white-space: pre-wrap;">[[ currentRule.to_string ]]</pre>
                 </div>
+                <textarea id="ruleRaw" hidden>[[ currentRule.to_string ]]</textarea>
             </div>
 
 
@@ -178,7 +197,7 @@
                     <!-- Votes -->
                     <div class="text-center">
                         <div class="mt-3">
-                        <button @click="vote('up')" class="btn btn-success btn-sm" title="Like this rule">
+                        <button @click="vote('up')" class="btn btn-success btn-sm m-1" title="Like this rule">
                             <i class="fas fa-thumbs-up"></i> [[ currentRule.vote_up ]]
                         </button>
                         <button @click="vote('down')" class="btn btn-danger btn-sm" title="Dislike this rule">
@@ -219,6 +238,43 @@
                     </div>
                 </div>
             </div>
+
+
+            <div class="card shadow-sm mb-4 mt-4">
+                <div class="card-header bg-light position-relative">
+                    <h5 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>Similar Rules
+                    </h5>
+                </div>
+
+                <div v-if="similar_rules_list.length === 0" class="text-muted p-3">
+                    No similar rules found.
+                </div>
+
+                <div v-else class="card-body">
+                    <div class="row">
+                    <div class="col-md-4" v-for="rule in similar_rules_list" :key="rule.id">
+                        <div class="card h-100 shadow-sm">
+                        <div class="card-header">
+                            <h6 class="text-truncate mb-0 text-primary">
+                            <i class="fas fa-shield-alt me-2"></i> [[ rule.title ]]
+                            </h6>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <p class="mb-2 text-muted small" style="min-height: 60px">[[ rule.description ]]</p>
+                            <p class="mb-2"><strong>Author:</strong> [[ rule.author ]]</p>
+                            <div class="mt-auto text-center">
+                            <a :href="rule.id" title="View more about this rule" class="btn btn-sm btn-primary">
+                                View more
+                            </a>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Comments Section -->
             <div class="card shadow-sm mt-5">
                 <div class="card-header bg-light">
@@ -406,7 +462,7 @@
                             
                         </div>
 
-                        <textarea id="ruleRaw" hidden>{{ rule.to_string }}</textarea>
+                        
 
                         <!-- Optional message -->
                         <div class="form-group mb-4">
@@ -501,81 +557,30 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref } = Vue;
-    import { message_list } from '/static/js/toaster.js';
+    const { createApp, ref , onMounted} = Vue;
+    import { message_list , display_prepared_toast , display_toast} from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
-            const csrf_token = '{{ csrf_token() }}'
-            const comments_list = ref([])
-            const total_comments = ref(0)
+
+            /*###################################_Fetch_rule_#################################*/
+            /**
+             *          ####################
+             *          #   fetch user     #
+             *          ####################
+             * */
+
             const current_user_is_admin = ref()
-            const newCommentContent = ref("");
-            const currentRule = ref(0)
             const current_user_is_connected = ref(false)
 
-            const pull_request_list = ref([]);
-            const current_page = ref(1);
-            const total_pages = ref(1);
 
-            
-            async function fetchCurrentRule(){
-                const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
-                if (response.ok) {
-                    const data = await response.json();
-                    currentRule.value = data.rule; 
-                } else {
-                    alert('Error while adding comment.');
-                }
+            async function fetchCurrentUser(){
+                const res = await fetch('/rule/get_current_user')
+                const data = await res.json()
+                current_user_is_admin.value = data.user
+
             }
-
-            async function favorite() {
-                const res = await fetch(`/rule/favorite/${rule_id}`);
-                const data = await res.json();
-                
-                if (res.ok) {
-                    currentRule.value.is_favorited = data.is_favorited;
-                }
-            }
-
-
-            /*************************************Get_contributor***********************************************/
-            const contributor_list = ref([])
-
-            async function fetchContributor() {
-                const res = await fetch('/rule/get_contributor?rule_id='+rule_id);
-                if(res){
-                    const data = await res.json();
-                    if(data){
-                        contributor_list.value = data.contributors;
-                    }
-                    
-                }
-            }
-            fetchContributor()
-
-            /*************************************Get_detail_rule***********************************************/
-
-            async function fetchPullRequest(page) {
-                const res = await fetch('/rule/get_rules_propose_page?page='+page+'&rule_id='+rule_id);
-                if(res){
-                    const data = await res.json();
-                    if(data){
-                        pull_request_list.value = data.rules_list;
-                        total_pages.value = data.total_pages_pending;
-                        current_page.value = page;
-                    }
-                    
-                }
-            }
-            fetchPullRequest(1)
-
-
-            function openNewRequestModal() {
-                alert('In building.');
-            }
-
 
             async function checkIfUserIsConnected() {
                 const res = await fetch('/get_current_user_connected');
@@ -586,23 +591,72 @@
                 }
             }
 
+            checkIfUserIsConnected()
 
-            async function deleteRule() {
-                const res = await fetch('/rule/delete_rule', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrf_token  
-                },
-                body: JSON.stringify({ id: rule_id })
-                });
+            /**
+             *          ####################
+             *          #   fetch rules    #
+             *          ####################
+             * */
 
-                const data = await res.json();
-                if (data.success) {
-                    window.location.href = `/rule/rules_list`;
+            const currentRule = ref([])
+
+            async function fetchCurrentRule(){
+                const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
+                if (response.ok) {
+                    const data = await response.json();
+                    currentRule.value = data.rule; 
+
+
+                    const ruleRawInput = currentRule.value.to_string
+                    const ruleContent = ruleRawInput ? ruleRawInput : "";
+                    initEditor(ruleContent);
+
+                    const editTab = document.querySelector('#edit-tab');
+                    if (editTab) {
+                        editTab.addEventListener('shown.bs.tab', () => {
+                            if (editor) editor.refresh();
+                        });
+                    }
+
+                    const languageSelect = document.getElementById('languageSelect');
+                    if (languageSelect) {
+                        languageSelect.addEventListener('change', function () {
+                            if (editor) editor.setOption('mode', this.value);
+                        });
+                    }
+
+                    const themeSelect = document.getElementById('themeSelect');
+                    if (themeSelect) {
+                        themeSelect.addEventListener('change', function () {
+                            if (editor) editor.setOption('theme', this.value);
+                        });
+                    }
+                } else {
+                    alert('Error while adding comment.');
                 }
             }
-            
+
+            /**
+             *          ####################
+             *          #   Action rule    #
+             *          ####################
+             * */
+
+            async function deleteRule() {
+                const params = new URLSearchParams({
+                    rule_id
+                })
+                const res = await fetch('/rule/delete_rule?'+ params.toString())
+                if(await res.status == 200){
+                    var myModalEl = document.getElementById('delete_rule_modal_'+rule_id);
+                    var modal = bootstrap.Modal.getInstance(myModalEl)
+                    modal.hide();
+                    window.location.href = `/rule/rules_list`;
+                } 
+                //display_toast(res)
+                
+            }
 
             async function vote(voteType) {
                 if(current_user_is_connected.value == true){
@@ -624,6 +678,33 @@
                     alert("Failed to send the request.");
                 }
             }
+
+
+            async function favorite() {
+                const res = await fetch(`/rule/favorite/${rule_id}`);
+                const data = await res.json(); 
+
+                if (res.ok) {
+                    currentRule.value.is_favorited = data.is_favorited;
+                }
+
+                const message = {
+                    message: data.message,
+                    toast_class: data.toast_class,
+                    id: Math.random()
+                };
+                await display_prepared_toast(message);
+            }
+
+            /**
+             *          ####################
+             *          #  Comment rule    #
+             *          ####################
+             * */
+
+            const comments_list = ref([])
+            const total_comments = ref(0)
+            const newCommentContent = ref("");
 
             async function submitComment(){
                 const response = await fetch('/rule/comment_add?new_content='+ newCommentContent.value + '&rule_id=' + rule_id)
@@ -668,13 +749,6 @@
                     alert('Error while deleting comment.');
                 }
             }
-            
-            async function fetchCurrentUser(){
-                const res = await fetch('/rule/get_current_user')
-                const data = await res.json()
-                current_user_is_admin.value = data.user
-
-            }
 
             async function fetchComments(page ) {
                 const res = await fetch('get_comments_page?page=' + page + '&rule_id=' + rule_id)
@@ -687,9 +761,127 @@
             }
 
             fetchComments(1)
-            checkIfUserIsConnected()
-            fetchCurrentRule()
 
+            /**
+             *          ####################
+             *          #  pull request    #
+             *          ####################
+             * */
+
+            const pull_request_list = ref([]);
+            const current_page = ref(1);
+            const total_pages = ref(1);
+
+            async function fetchPullRequest(page) {
+                const res = await fetch('/rule/get_rules_propose_page?page='+page+'&rule_id='+rule_id);
+                if(res){
+                    const data = await res.json();
+                    if(data){
+                        pull_request_list.value = data.rules_list;
+                        total_pages.value = data.total_pages_pending;
+                        current_page.value = page;
+                    }
+                    
+                }
+            }
+            fetchPullRequest(1)
+
+            /**
+             *          #######################
+             *          #  fetch contributor  #
+             *          #######################
+             * */
+            const contributor_list = ref([])
+
+            async function fetchContributor() {
+                const res = await fetch('/rule/get_contributor?rule_id='+rule_id);
+                if(res){
+                    const data = await res.json();
+                    if(data){
+                        contributor_list.value = data.contributors;
+                    }
+                    
+                }
+            }
+            fetchContributor()
+
+            /**
+             *          #########################
+             *          #  fetch similar rules  #
+             *          #########################
+             * */
+
+            const similar_rules_list = ref([])
+
+            async function fetch_similar_rules_list(){
+                const res = await fetch('/rule/get_similar_rule?rule_id='+rule_id);
+                if(res){
+                    const data = await res.json();
+                    if(data){
+                        similar_rules_list.value = data.similar_rules;
+                    }
+                    
+                }
+            }
+
+            fetch_similar_rules_list()
+
+            /*###################################_Fetch_rule_#################################*/
+
+            let editor = null;
+
+            /**
+             *          ###############
+             *          #   editor    #
+             *          ###############
+             * */
+
+            function initEditor(ruleContent) {
+                const container = document.querySelector('.editorContainer');
+                if (!container || container.children.length > 0) return;
+
+                editor = CodeMirror(container, {
+                    lineNumbers: true,
+                    mode: 'python', 
+                    theme: 'default',
+                    value: ruleContent
+                });
+                editor.setSize("100%", "700px"); 
+
+                editor.on('change', () => {
+                    const proposedField = document.getElementById('proposed_content');
+                    if (editor && proposedField) {
+                        proposedField.value = editor.getValue();
+                    }
+                });
+
+                function updatePreview() {
+                    const previewElement = document.getElementById('code_preview');
+                    if (previewElement && editor) {
+                        previewElement.textContent = editor.getValue();
+                    }
+                }
+
+                if (editor) {
+                    editor.on('change', updatePreview);
+                    updatePreview(); 
+                }
+
+                setTimeout(() => {
+                    if (editor) {
+                        const currentValue = editor.getValue();
+                        editor.setValue(currentValue + ' ');
+                        editor.setValue(currentValue);
+                        editor.refresh();
+                    }
+                }, 300);
+            }
+
+            onMounted(() => {
+                fetchCurrentRule()
+                
+            })
+    
             return {
                 Ownership,
                 favorite,
@@ -698,12 +890,12 @@
                 comments_list,
                 fetchComments,
                 fetchCurrentUser,
-                csrf_token,
                 editComment,
                 deleteComment,
                 submitComment,
                 newCommentContent,
                 deleteRule,
+                similar_rules_list,
 
                 currentRule,
                 fetchCurrentRule,
@@ -712,7 +904,6 @@
                 pull_request_list,
                 current_page,
                 total_pages,
-                openNewRequestModal,
 
                 contributor_list
             };
@@ -723,97 +914,24 @@
 
 <script>
     function copyToClipboard() {
-      const text = document.querySelector('pre').innerText;
-      const copyIcon = document.getElementById("copyIcon");
-      const copyText = document.getElementById("copyText");
-    
-      navigator.clipboard.writeText(text).then(() => {
+        const text = document.querySelector('pre').innerText;
+        const copyIcon = document.getElementById("copyIcon");
+        const copyText = document.getElementById("copyText");
+
+        navigator.clipboard.writeText(text).then(() => {
         copyIcon.classList.remove("fa-copy");
         copyIcon.classList.add("fa-check");
         copyText.textContent = "Copied";
-    
+
         setTimeout(() => {
-          copyIcon.classList.remove("fa-check");
-          copyIcon.classList.add("fa-copy");
-          copyText.textContent = "Copy";
+            copyIcon.classList.remove("fa-check");
+            copyIcon.classList.add("fa-copy");
+            copyText.textContent = "Copy";
         }, 2000);
-      }).catch(() => {
+        }).catch(() => {
         alert("Failed to copy text.");
-      });
-    }
-    </script>
-<script>
-    let editor = null;
-
-    function initEditor(ruleContent) {
-        const container = document.querySelector('.editorContainer');
-        if (!container || container.children.length > 0) return;
-
-        editor = CodeMirror(container, {
-            lineNumbers: true,
-            mode: 'python', 
-            theme: 'default',
-            value: ruleContent
         });
-        editor.setSize("100%", "700px"); 
-
-        editor.on('change', () => {
-            const proposedField = document.getElementById('proposed_content');
-            if (editor && proposedField) {
-                proposedField.value = editor.getValue();
-            }
-        });
-
-        function updatePreview() {
-            const previewElement = document.getElementById('code_preview');
-            if (previewElement && editor) {
-                previewElement.textContent = editor.getValue();
-            }
-        }
-
-        if (editor) {
-            editor.on('change', updatePreview);
-            updatePreview(); 
-        }
-
-        setTimeout(() => {
-            if (editor) {
-                const currentValue = editor.getValue();
-                editor.setValue(currentValue + ' ');
-                editor.setValue(currentValue);
-                editor.refresh();
-            }
-        }, 300);
     }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const ruleRawInput = document.getElementById('ruleRaw');
-        const ruleContent = ruleRawInput ? ruleRawInput.value : "";
-
-        initEditor(ruleContent);
-
-        const editTab = document.querySelector('#edit-tab');
-        if (editTab) {
-            editTab.addEventListener('shown.bs.tab', () => {
-                if (editor) editor.refresh();
-            });
-        }
-
-        const languageSelect = document.getElementById('languageSelect');
-        if (languageSelect) {
-            languageSelect.addEventListener('change', function () {
-                if (editor) editor.setOption('mode', this.value);
-            });
-        }
-
-        const themeSelect = document.getElementById('themeSelect');
-        if (themeSelect) {
-            themeSelect.addEventListener('change', function () {
-                if (editor) editor.setOption('theme', this.value);
-            });
-        }
-    });
-
 </script>
 {% endblock %}
 
