@@ -75,35 +75,22 @@ def owner_request() -> redirect:
         # one rule
         rule_id = request.args.get('rule_id')
         if not rule_id:
-            flash("No rule ID provided.", "danger")
-            return redirect(url_for("home.home"))
-        try:
-            AccountModel.create_request(rule_id=rule_id, source="")
-            flash("Ownership request submitted successfully.", "success")
-        except Exception as e:
-            flash("An error occurred while submitting the request.", "danger")
-        return redirect(url_for("home.home"))
+            return {"success": False, "message": "No rule with this id!" , "toast_class" : "danger"}, 200
+        request_ = AccountModel.create_request(rule_id=rule_id, source="")
+        if request_:
+            return {"success": True, "message": "Ownership request submitted successfully !" , "toast_class" : "success"}, 200
     elif choice == 2:
         # with source
         source = request.args.get('source')
         if not source:
-            flash("No source provided.", "danger")
-            return redirect(url_for("/"))
+            return {"success": False, "message": "No Source given !" , "toast_class" : "danger"}, 200
         rules = RuleModel.get_rule_by_source(source)
         if not rules:
-            flash("Rule not found.", "danger")
-            return redirect(url_for("home.home"))
-        try:
-            
-            AccountModel.create_request(rule_id=None, source=source)
-            
-            flash("Ownership request submitted successfully.", "success")
-        except Exception as e:
-            flash("An error occurred while submitting the request.", "danger")
-        return redirect(url_for("home.home"))
+            return {"success": False, "message": "No rule with this source!" , "toast_class" : "danger"}, 200
+        AccountModel.create_request(rule_id=None, source=source)
+        return {"success": True, "message": "Ownership request submitted successfully !" , "toast_class" : "success"}, 200
     else:
-        flash("An error occurred while submitting the request.", "danger")
-        return redirect(url_for("home.home"))
+        return {"success": False, "message": "Error system" , "toast_class" : "danger"}, 500
 
     
 
