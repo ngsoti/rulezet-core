@@ -174,66 +174,72 @@ class Comment(db.Model):
         }
 
 
-
-
 class RequestOwnerRule(db.Model):
-    """Model for user-submitted requests visible by admins."""
-
+    """Model for user-submitted requests visible by admins or rule owners."""
+    
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  
-    user_id_owner_rule = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  
+    uuid = db.Column(db.String(36), index=True)
+
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)
+    rule_source = db.Column(db.String, nullable=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Request creator
+    user_id_to_send = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Owner targeted by the request
+
     title = db.Column(db.String(128), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(32), default="pending")  # Ex: pending, reviewed, closed
-    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc), index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc), onupdate=datetime.datetime.now(tz=datetime.timezone.utc), index=True)
+    status = db.Column(db.String(32), default="pending")
 
-    # user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('requests', lazy='dynamic',  cascade='all, delete-orphan'))
-    # user_owner_rule = db.relationship('User', foreign_keys=[user_id_owner_rule], backref=db.backref('owned_requests', lazy='dynamic' , cascade='all, delete-orphan'))
-    # rule = db.relationship('Rule', backref=db.backref('requests', lazy='dynamic', cascade='all, delete-orphan'))
-    # Relationship to the User who submitted the request
-    
-    # - foreign_keys=[user_id]: explicitly tells SQLAlchemy to use 'user_id' as the foreign key
-    # - backref: adds a 'requests' attribute to the User model to access all submitted requests
-    # - lazy='dynamic': allows query operations like user.requests.filter(...)
-    # - cascade='all, delete-orphan': ensures related requests are deleted when the user is deleted
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.datetime.now(tz=datetime.timezone.utc),
+        index=True
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.datetime.now(tz=datetime.timezone.utc),
+        onupdate=datetime.datetime.now(tz=datetime.timezone.utc),
+        index=True
+    )
+
+    # Relationships
     user = db.relationship(
         'User',
         foreign_keys=[user_id],
         backref=db.backref('requests', lazy='dynamic', cascade='all, delete-orphan')
     )
 
-    # Relationship to the User who owns the rule (i.e., the target of the request)
-    # - foreign_keys=[user_id_owner_rule]: uses this second FK to relate to the same User table
-    # - backref: adds an 'owned_requests' attribute to the User model to access all requests targeting their rules
     user_owner_rule = db.relationship(
         'User',
-        foreign_keys=[user_id_owner_rule],
+        foreign_keys=[user_id_to_send],
         backref=db.backref('owned_requests', lazy='dynamic', cascade='all, delete-orphan')
     )
 
-    # Relationship to the Rule associated with the request
-    # - backref: adds a 'requests' attribute to the Rule model to access all related requests
     rule = db.relationship(
         'Rule',
+        foreign_keys=[rule_id],
         backref=db.backref('requests', lazy='dynamic', cascade='all, delete-orphan')
     )
 
-
     def to_json(self):
-        """Serialize the request to JSON."""
         return {
             "id": self.id,
+            "uuid": self.uuid,
             "user_id": self.user_id,
+            "user_id_to_send": self.user_id_to_send,
             "title": self.title,
             "content": self.content,
             "status": self.status,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
             "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M'),
             "rule_id": self.rule_id,
-            "user_id_owner_rule": self.user_id_owner_rule
+            "rule_source": self.rule_source,
         }
+
+
+
+
+
 
 
 class RuleVote(db.Model):

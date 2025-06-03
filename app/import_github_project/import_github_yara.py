@@ -142,7 +142,6 @@ def parse_yara_rules_from_repo(repo_dir, license_from_github, repo_url):
                 "content": ""
             })
             bad_rules_count += 1
-
     print(f"\nParsing complete. Imported: {imported}, Skipped: {skipped}, Failed: {bad_rules_count}")
     return imported, skipped, bad_rules_count, bad_rules
 

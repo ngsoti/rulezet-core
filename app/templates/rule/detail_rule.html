@@ -139,7 +139,7 @@
 
                 <div class="dropdown float-end ms-2 mb-2">
                     <a 
-                    class="btn btn-dark btn-sm dropdown-toggle"
+                    class="btn btn-secondary btn-sm "
                     href="#"
                     role="button"
                     id="dropdownMenuLink"
@@ -173,6 +173,9 @@
                 <pre class="bg-light p-3 rounded-3 border" style="white-space: pre-wrap;">[[ currentRule.to_string ]]</pre>
                 </div>
                 <textarea id="ruleRaw" hidden>[[ currentRule.to_string ]]</textarea>
+                <a :href="'/rule/history/' + currentRule.id" class="btn btn-sm btn-secondary" title="View all changes of the rule">
+                    <i class="fas fa-clock me-1"></i> History
+                </a>
             </div>
 
 
@@ -281,9 +284,11 @@
                     <h5 class="mb-0">
                         <i class="fas fa-comments"></i> Comments 
                         <span class="badge bg-secondary ms-2">[[ comments_list.length ]]</span>
-                        <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse" data-bs-target="#commentsCollapse" aria-expanded="true" aria-controls="commentsCollapse">
-                            <i class="fas fa-eye"></i> Show/Hide Comments
-                        </button>
+                        <template v-if="comments_list.length > 0">
+                            <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse" data-bs-target="#commentsCollapse" aria-expanded="true" aria-controls="commentsCollapse">
+                                <i class="fas fa-eye"></i> Show/Hide Comments
+                            </button>
+                        </template>
                     </h5>
                 </div>
                 
@@ -671,7 +676,13 @@
             }
 
             async function Ownership(rule_id){
-                const response = await fetch('/owner_request?rule_id=' + rule_id)
+                var source = "https://github.com/SadFud/YARA.Rules.git";
+                //var source = ""
+                const params = new URLSearchParams({
+                    rule_id,
+                    source
+                })
+                const response = await fetch('/owner_request?' + params.toString())
                 if (response.ok) {
                     alert("Your request has been sent!");
                 } else {
@@ -820,7 +831,6 @@
                     if(data){
                         similar_rules_list.value = data.similar_rules;
                     }
-                    
                 }
             }
 
@@ -905,7 +915,8 @@
                 current_page,
                 total_pages,
 
-                contributor_list
+                contributor_list,
+                fetch_similar_rules_list
             };
         }
     }).mount('#main-container');

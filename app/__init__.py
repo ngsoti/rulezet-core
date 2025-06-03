@@ -37,7 +37,7 @@ def create_app():
     #delete_existing_repo_folder("Rules_Github")
 
     # take all the licenses 
-    fetch_and_save_licenses()
+    #fetch_and_save_licenses()
 
     # remove the previous rule
     #  REPO_DIR = "Rules_Github"

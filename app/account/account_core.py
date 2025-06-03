@@ -6,6 +6,7 @@ from .. import db
 from ..db_class.db import RequestOwnerRule, Rule, RuleFavoriteUser, User
 from ..utils.utils import generate_api_key
 from ..rule import rule_core as RuleModel
+import uuid
 
 #####################
 #   User actions    #
@@ -267,32 +268,78 @@ def get_all_user_favorites_with_rules(user_id: int):
 #   Request Section   #
 #######################
 
-def create_request(rule, user_id, current_user):
+def create_request(rule_id, source):
     """Create or update an ownership request."""
-    existing_request = RequestOwnerRule.query.filter_by(user_id=user_id, title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.author}").first()
+    if source == "":
+        # request for one rule
+        rule = RuleModel.get_rule(rule_id)
+        existing_request = RequestOwnerRule.query.filter_by(user_id=current_user.id, title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.user_id}").first()
 
-    if existing_request:
-        existing_request.user_id_owner_rule = rule.user_id
-        existing_request.content = f"{current_user.first_name} {current_user.last_name} (ID: {current_user.id}) wants to become the owner of '{rule.title}'"
-        existing_request.status = "pending"
-        existing_request.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
+        if existing_request:
+            existing_request.content = f"{current_user.first_name} {current_user.last_name} (ID: {current_user.id}) wants to become the owner of '{rule.title}'"
+            existing_request.status = "pending"
+            existing_request.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
+            db.session.commit()
+            return existing_request
+
+
+
+
+
+        new_request = RequestOwnerRule(
+            user_id_to_send=rule.user_id,
+            user_id=current_user.id,
+            uuid=str(uuid.uuid4()),
+            title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.user_id}",
+            content=f"{current_user.first_name} {current_user.last_name} (ID: {current_user.id}) wants to become the owner of '{rule.title}'",
+            status="pending",
+            created_at=datetime.datetime.now(tz=datetime.timezone.utc),
+            updated_at=datetime.datetime.now(tz=datetime.timezone.utc),
+            rule_id=rule.id
+        )
+        db.session.add(new_request)
         db.session.commit()
-        return existing_request
+        return new_request
+    else:
+        # Request for a source
 
+        # Récupérer tous les éditeurs (user_id) pour cette source
+        rules_for_source = Rule.query.filter_by(source=source).all()
+        unique_editors = set(rule.user_id for rule in rules_for_source if rule.user_id)
 
-    new_request = RequestOwnerRule(
-        user_id_owner_rule = rule.user_id,
-        user_id=user_id,
-        title=f"Request for ownership of rule {rule.id} - {rule.title} by {rule.author}",
-        content=f"{current_user.first_name} {current_user.last_name} (ID: {current_user.id}) wants to become the owner of '{rule.title}'",
-        status="pending",
-        created_at=datetime.datetime.now(tz=datetime.timezone.utc),
-        updated_at=datetime.datetime.now(tz=datetime.timezone.utc),
-        rule_id=rule.id
-    )
-    db.session.add(new_request)
-    db.session.commit()
-    return new_request
+        created_requests = []
+
+        for editor_id in unique_editors:
+            # On vérifie s’il existe déjà une requête du current_user vers cet éditeur pour cette source
+            existing_request = RequestOwnerRule.query.filter_by(
+                user_id=current_user.id,
+                title=f"Request for ownership of '{source}' from user ID {editor_id}"
+            ).first()
+
+            if existing_request:
+                existing_request.content = f"{current_user.first_name} {current_user.last_name} (ID: {current_user.id}) wants to become the owner of '{source}' from user ID {editor_id}"
+                existing_request.status = "pending"
+                existing_request.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
+                db.session.commit()
+                created_requests.append(existing_request)
+            else:
+                new_request = RequestOwnerRule(
+                    user_id_to_send=editor_id,
+                    user_id=current_user.id,
+                    uuid=str(uuid.uuid4()),
+                    title=f"Request for ownership of '{source}' for user ID {editor_id}",
+                    content=f"{current_user.first_name} {current_user.last_name} (ID: {current_user.id}) wants to become the owner of '{source}' from user ID {editor_id}",
+                    status="pending",
+                    created_at=datetime.datetime.now(tz=datetime.timezone.utc),
+                    updated_at=datetime.datetime.now(tz=datetime.timezone.utc),
+                    rule_source=source
+                )
+                db.session.add(new_request)
+                created_requests.append(new_request)
+
+        db.session.commit()
+        return created_requests  
+
 
 
 def get_requests_page(page):
@@ -333,27 +380,85 @@ def get_request_user_id(request_id):
     return None
 
 
-def get_total_requests_to_check():
-    """Return the total count of pending requests for rules owned by the current user."""
-    return RequestOwnerRule.query.filter(
-        RequestOwnerRule.status == "pending",
-        RequestOwnerRule.user_id_owner_rule == current_user.id
-    ).count()
+# def get_total_requests_to_check():
+#     """Return the total count of pending requests for rules owned by the current user."""
+#     return RequestOwnerRule.query.filter(
+#         RequestOwnerRule.status == "pending",
+#         RequestOwnerRule.user_id_owner_rule == current_user.id
+#     ).count()
+
+
+
+
+
+
+
+
+
+# def get_requests_page_user(page):
+#     """Return all requests for the current user filtered by user_id_owner_rule"""
+#     # pour chaque request je regarde les 2 cas
+#         # si cest rule_id :
+#             # je lui affiche cette request
+#         # si jai une regle contenu dans la source 
+#             #je dois lui montrer
+
+#     return RequestOwnerRule.query.filter(RequestOwnerRule.user_id_owner_rule == current_user.id).paginate(page=page, per_page=2, max_per_page=2)
+
+# # recuperer chaque regle ayant comme source celle donne en param
+#         # trouver tous les editors concernée pour les regles de cette source sous forme de liste 
+#         # si on on trouve plus que 1 alors on doit faire 2 request differents sinon on fait une request simple
+#         # pour chaque editor :
+#         #       on envoie une request identique mais on triera plus tard les regles concerne 
+#         # 
+
 
 
 def get_requests_page_user(page):
-    """Return all requests for the current user filtered by user_id_owner_rule"""
-    return RequestOwnerRule.query.filter(RequestOwnerRule.user_id_owner_rule == current_user.id).paginate(page=page, per_page=60, max_per_page=70)
+    """Return all 'pending' requests that are relevant to the current user, paginated."""
+
+    return RequestOwnerRule.query.filter_by(user_id_to_send=current_user.id).paginate(page=page, per_page=2, max_per_page=2)
 
 
-def is_the_owner(request_id):
-    """Return True if the current user is the owner of the request"""
+
+def is_the_owner(request_id) -> bool:
+    """
+    Return True if the current user is the owner of the request
+    or if they are one of the editors (authors) of the rules from the same source.
+    """
     request = RequestOwnerRule.query.get(request_id)
-    if request and request.user_id_owner_rule == current_user.id:
-        return True
-    return False
+    if not request:
+        return False
+    
+    if request.rule_source == None:
+        rule = RuleModel.get_rule(request.rule_id)
+        if rule.user_id == current_user.id:
+            return True
+        else:
+            return False
+    else:
+        # Récupération des règles liées à la même source
+        rules = RuleModel.get_rule_by_source(request.rule_source)
+        # Liste des auteurs (id utilisateur) de ces règles
+        editor_list = RuleModel.get_all_editor_from_rules_list(rules)
+        print("Editor list:", editor_list)
+
+        # Vérifie si l'id du user actuel est dans la liste
+        if editor_list and current_user.id in editor_list:
+            return True
+
+        return False
 
 
 def get_total_requests_to_check_admin():
     """Return the total count of requests with status 'pending'."""
     return RequestOwnerRule.query.filter_by(status="pending").count()
+
+
+
+
+
+
+
+
+

@@ -164,13 +164,13 @@ def get_rules_page(page) -> Rule:
     """Return all rules by page"""
     return Rule.query.paginate(page=page, per_page=20, max_per_page=20)
 
-def get_rules_of_user_with_id(user__id) -> Rule:
+def get_rules_of_user_with_id(user_id) -> Rule:
     """Get all the rule made by the user (with id)"""
-    return Rule.query.filter(Rule.user_id == user__id).all()
+    return Rule.query.filter(Rule.user_id == user_id).all()
 
-def get_rules_of_user_with_id_page(user__id , page) -> Rule:
+def get_rules_of_user_with_id_page(user_id , page) -> Rule:
     """Get all the page rule made by the user (with id)"""
-    return Rule.query.filter(Rule.user_id == user__id).paginate(page=page, per_page=20, max_per_page=20)
+    return Rule.query.filter(Rule.user_id == user_id).paginate(page=page, per_page=20, max_per_page=20)
 
 def get_rules_of_user_with_id_count(user__id) -> int:
     """Return the count of rules"""
@@ -224,11 +224,35 @@ def get_rule_type_count(user_id):
         "types": format_counts
     })
 
+def get_all_rule_id_own_by_user_id():
+    """
+    Return a list of all rule IDs created by the current user.
+    """
+    return [rule.id for rule in Rule.query.filter_by(user_id=current_user.id).all()]
+
+def get_all_editor_from_rules_list(rules):
+    """
+    Get a list of unique editors (user_id) from a list of rules.
     
+    :param rules: A list of Rule objects.
+    :return: A list of unique authors.
+    """
+    return list({rule.user_id for rule in rules if rule.user_id})
+
+def get_rules_from_user(rules_from_source, user_id_) -> list:
+    """
+    Return a list of rules from the given list where the rule's user_id matches the given user_id.
+    """
+    return [rule for rule in rules_from_source if rule.user_id == user_id_]
+
 
 def get_rule_by_title(title) -> str:
     """Return the rule from the title"""
     return Rule.query.filter_by(title=title).all()
+
+def get_rule_by_source(source_) -> str:
+    """Return all the rule from the source"""
+    return Rule.query.filter_by(source=source_).all()
 
 def get_rule_id_by_title(title) -> int:
     """Return the rule ID from the title"""
@@ -255,6 +279,37 @@ def get_last_rules_from_db(limit=10) -> Rule:
             else_=Rule.last_modif
         ).desc()
     ).limit(limit).all()
+
+def get_history_rule(page, rule_id) -> list:
+    """Get all the accepted edit history of a rule by its ID, paginated."""
+    return RuleEditProposal.query.filter_by(rule_id=rule_id, status="accepted") \
+        .filter(RuleEditProposal.old_content.isnot(None)) \
+        .order_by(RuleEditProposal.timestamp.desc()) \
+        .paginate(page=page, per_page=20, max_per_page=20)
+
+def get_diff_lines(text1: str, text2: str):
+    """
+    Compare two multiline strings and return the line numbers and contents where they differ.
+    """
+    lines1 = text1.strip().splitlines()
+    lines2 = text2.strip().splitlines()
+    
+    max_lines = max(len(lines1), len(lines2))
+    diffs = []
+
+    for i in range(max_lines):
+        line1 = lines1[i] if i < len(lines1) else ""
+        line2 = lines2[i] if i < len(lines2) else ""
+
+        if line1 != line2:
+            diffs.append({
+                "line_number": i + 1,
+                "old_line": line1,
+                "new_line": line2
+            })
+
+    return diffs
+
 
 #################
 #   Bad Rule    #

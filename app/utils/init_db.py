@@ -73,7 +73,7 @@ def create_rule_test():
             last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
             vote_up=0,
             vote_down=0,
-            to_string ="rule test { condition: 1}"
+            to_string = " rule test { condition: 1}"
         )
         db.session.add(rule)
         db.session.commit()

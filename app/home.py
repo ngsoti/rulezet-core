@@ -52,7 +52,7 @@ def get_last_rules() -> dict:
     return {
         "message": "No rules",
         'success': False
-    }, 404
+    }
 
 @home_blueprint.route("/get_current_user_connected", methods=['GET'])
 def get_current_user_connected() -> jsonify:
@@ -70,26 +70,53 @@ def get_current_user_connected() -> jsonify:
 @login_required
 def owner_request() -> redirect:
     """Get all the request to validate"""
-    rule_id = request.args.get('rule_id')
-    if not rule_id:
-        flash("No rule ID provided.", "danger")
+    choice = request.args.get('choice', 1, type=int)
+    if choice == 1:
+        # one rule
+        rule_id = request.args.get('rule_id')
+        if not rule_id:
+            flash("No rule ID provided.", "danger")
+            return redirect(url_for("home.home"))
+        try:
+            AccountModel.create_request(rule_id=rule_id, source="")
+            flash("Ownership request submitted successfully.", "success")
+        except Exception as e:
+            flash("An error occurred while submitting the request.", "danger")
         return redirect(url_for("home.home"))
-    rule = RuleModel.get_rule(rule_id)
-    if not rule:
-        flash("Rule not found.", "danger")
+    elif choice == 2:
+        # with source
+        source = request.args.get('source')
+        if not source:
+            flash("No source provided.", "danger")
+            return redirect(url_for("/"))
+        rules = RuleModel.get_rule_by_source(source)
+        if not rules:
+            flash("Rule not found.", "danger")
+            return redirect(url_for("home.home"))
+        try:
+            
+            AccountModel.create_request(rule_id=None, source=source)
+            
+            flash("Ownership request submitted successfully.", "success")
+        except Exception as e:
+            flash("An error occurred while submitting the request.", "danger")
         return redirect(url_for("home.home"))
-    try:
-        AccountModel.create_request(rule, current_user.id, current_user)
-        flash("Ownership request submitted successfully.", "success")
-    except Exception as e:
+    else:
         flash("An error occurred while submitting the request.", "danger")
-    return redirect(url_for("home.home"))
+        return redirect(url_for("home.home"))
+
+    
+
+
 
 @home_blueprint.route("/admin/request", methods=["POST", "GET"])
 @login_required
 def admin_requests() -> render_template:
     """Redirect to request section"""
     return render_template("admin/request.html")
+
+
+
 
 @home_blueprint.route("/get_requests_page", methods=['GET'])
 @login_required
@@ -116,25 +143,53 @@ def get_requests_page() -> json:
         }
     return {"message": "No requests found"}
 
+
+
+
+
 @home_blueprint.route("/update_request", methods=["POST","GET" ])
 @login_required
 def update_request_status() -> jsonify:
     """Update the request for vue JS"""
     request_id = request.args.get('request_id')
     status = request.args.get('status')
+    
     is_the_owner = AccountModel.is_the_owner(request_id)
+    
     if current_user.is_admin() or is_the_owner:
         updated = AccountModel.update_request_status(request_id, status)
-        
         if updated and status == "approved":
             ownership_request = AccountModel.get_request_by_id(request_id)
-            rule_id_of_request = AccountModel.get_request_rule_id(request_id)
-            user_id = AccountModel.get_request_user_id(request_id)
 
-            if ownership_request:
-                rule = RuleModel.get_rule(rule_id_of_request)
-                if rule:
-                    RuleModel.set_user_id(rule_id_of_request, user_id)
+            if ownership_request.rule_source:
+                # Request concerns a source
+                # Get all rules for the specified source
+                rules_from_source = RuleModel.get_rule_by_source(ownership_request.rule_source)
+                if current_user.is_admin():
+                    rules_from_source_of_reel_owner = RuleModel.get_rules_from_user(rules_from_source , ownership_request.user_id_to_send)
+                    for rule in rules_from_source_of_reel_owner:
+                        if rule.user_id == ownership_request.user_id_to_send:
+                            
+                            # The rule belongs to the current user, give rights to the request's user
+                            rule.user_id = ownership_request.user_id
+                else:
+                    for rule in rules_from_source:
+                        if rule.user_id == current_user.id:
+                            # The rule belongs to the current user, give rights to the request's user
+                            rule.user_id = ownership_request.user_id
+
+
+
+            else:
+                
+                # request for a rule
+                rule_id_of_request = AccountModel.get_request_rule_id(request_id)
+                user_id = AccountModel.get_request_user_id(request_id)
+
+                if ownership_request:
+                    rule = RuleModel.get_rule(rule_id_of_request)
+                    if rule:
+                        RuleModel.set_user_id(rule_id_of_request, user_id)
         return jsonify({"success": updated}), 200 if updated else 400
     else:
         return render_template("access_denied.html")

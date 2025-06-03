@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4" id="main-container">
+    <div v-if="rules_list.length > 0">
+        <div class="accordion" id="rulesAccordion">
+            <div class="accordion-item" v-for="(rule, index) in rules_list" :key="rule.id">
+                <h2 class="accordion-header" :id="'heading' + rule.id">
+                    <button class="accordion-button collapsed d-flex justify-content-between align-items-center" 
+                            type="button" data-bs-toggle="collapse" 
+                            :data-bs-target="'#collapse' + rule.id" 
+                            aria-expanded="false" 
+                            :aria-controls="'collapse' + rule.id">
+                        <div>
+                            <i class="fas fa-file-alt me-2"></i>
+                            <strong>[[ rule.rule_name ]]</strong>
+                            <span class="badge ms-3" :class="rule.status === 'accepted' ? 'bg-success' : 'bg-warning text-dark'">
+                                <i :class="rule.status === 'accepted' ? 'fas fa-check-circle' : 'fas fa-hourglass-half'" class="me-1"></i>
+                                [[ rule.status]]
+                            </span>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i> [[ rule.user_name ]] — 
+                            <i class="fas fa-calendar-alt ms-2 me-1"></i> [[ new Date(rule.timestamp).toLocaleString() ]]
+                        </small>
+                    </button>
+                </h2>
+                <div :id="'collapse' + rule.id" class="accordion-collapse collapse" :aria-labelledby="'heading' + rule.id" data-bs-parent="#rulesAccordion">
+                    <div class="accordion-body">
+                        <p><strong><i class="fas fa-align-left me-2"></i>Description (from old rule):</strong></p>
+                        <pre class="bg-light p-3 rounded border" style="max-height: 200px; overflow-y: auto; white-space: pre-wrap; font-family: monospace;">[[ rule.proposed_content ]]</pre>
+                        <button class="btn btn-outline-info btn-sm mt-3" @click="showDiff(rule.id)">
+                            <i class="fas fa-code-branch me-1"></i> Show Differences
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <nav v-if="total_pages > 1" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item" :class="{ disabled: current_page === 1 }">
+                    <button class="page-link" @click="fetchRules(current_page - 1)" :disabled="current_page === 1">
+                        <i class="fas fa-chevron-left me-1"></i> Previous
+                    </button>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">Page [[ current_page ]] of [[ total_pages ]]</span>
+                </li>
+                <li class="page-item" :class="{ disabled: current_page === total_pages }">
+                    <button class="page-link" @click="fetchRules(current_page + 1)" :disabled="current_page === total_pages">
+                        Next <i class="fas fa-chevron-right ms-1"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    <div v-else class="text-center text-muted py-5">
+        <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
+        <p class="fs-5">No History rules found.</p>
+    </div>
+</div>
+
+<!-- Diff Modal -->
+<div class="modal fade" id="diffModal" tabindex="-1" aria-labelledby="diffModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="diffModalLabel"><i class="fas fa-code-branch me-2"></i> Differences</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="diffContent" class="row g-3" style="font-family: monospace; font-size: 0.9rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, computed } = Vue
+    import { display_toast } from '/static/js/toaster.js'
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const rule_id = "{{rule_id}}"
+            const rules_list = ref([])
+            const current_page = ref(1)
+            const total_pages = ref(1)
+
+            async function fetchRules(page) {
+                const params = new URLSearchParams({ page, rule_id })
+                const res = await fetch('/rule/get_rules_page_history?' + params.toString())
+
+                if (res.status === 200) {
+                    const data = await res.json()
+                    rules_list.value = data.rule
+                    total_pages.value = data.total_pages
+                    current_page.value = page
+                } else {
+                    display_toast("Error", "Failed to load rules")
+                }
+            }
+
+            async function showDiff(proposal_id) {
+                const res = await fetch(`/rule/diff/${proposal_id}`)
+                const data = await res.json()
+
+                const container = document.getElementById('diffContent')
+                container.innerHTML = ''
+
+                if (data.success) {
+                    if (data.diffs.length === 0) {
+                        container.innerHTML = '<div class="text-success">No differences found.</div>'
+                    } else {
+                        for (const diff of data.diffs) {
+                            const diffLine = document.createElement('div')
+                            diffLine.innerHTML = `
+                                <div class="mb-2">
+                                    <span class="badge bg-secondary me-2">Line ${diff.line_number}</span>
+                                    <div><span class="text-danger">- ${diff.old_line}</span></div>
+                                    <div><span class="text-success">+ ${diff.new_line}</span></div>
+                                </div>
+                            `
+                            container.appendChild(diffLine)
+                        }
+                    }
+
+                    const modal = new bootstrap.Modal(document.getElementById('diffModal'))
+                    modal.show()
+                } else {
+                    display_toast("Error", data.error || "Unable to load diff")
+                }
+            }
+
+            fetchRules(1)
+
+            return {
+                rules_list,
+                current_page,
+                total_pages,
+                showDiff
+            }
+        }
+    }).mount('#main-container')
+</script>
+{% endblock %}

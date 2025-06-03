@@ -29,7 +29,7 @@ if args.init_db:
         db.create_all()
         create_admin()
         create_user_test()
-        create_rule_test()
+        #create_rule_test()
         create_default_user()
 elif args.recreate_db:
     with app.app_context():

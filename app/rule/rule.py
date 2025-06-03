@@ -103,12 +103,14 @@ def get_rules_page() -> jsonify:
 @rule_blueprint.route("/get_similar_rule", methods=['GET'])
 def get_similar_rules() -> jsonify:
     """Get all the rules on a page"""
-    rule_id = request.args.get('rule_id', 1, type=int)
+    rule_id = request.args.get('rule_id',  type=int)
     rules_list_similar = RuleModel.get_similar_rule(rule_id)
     if rules_list_similar:
         return {"similar_rules": rules_list_similar}
     
-    return {"message": "No Rule"}, 404
+    return {"message": "No Rule",
+            "similar_rules": []
+        }
 
 @rule_blueprint.route("/get_rules_page_filter_with_id", methods=['GET'])
 def get_rules_page_with_user_id() -> jsonify:
@@ -270,6 +272,40 @@ def edit_rule(rule_id) -> render_template:
 def rules_info()-> render_template:
     """Redirect to rule info"""        
     return render_template("rule/rules_info.html")
+
+@rule_blueprint.route("/history/<int:rule_id>", methods=['GET'])
+def rules_history(rule_id)-> render_template:
+    """Redirect to rule history"""    
+    return render_template("rule/rule_history.html" , rule_id=rule_id)
+
+@rule_blueprint.route("/get_rules_page_history", methods=['GET'])
+def get_rules_page_history()-> render_template:
+    """Get the history of the rule"""
+    page = request.args.get('page', type=int)
+    rule_id = request.args.get('rule_id', type=int)
+    rules = RuleModel.get_history_rule(page, rule_id)
+    if rules:
+        return {"success": True,
+                "rule": [rule.to_json() for rule in rules],
+                "total_pages": rules.pages
+            }, 200
+    return {"message": "No Rule"}, 404
+
+
+@rule_blueprint.route('/diff/<int:proposal_id>', methods=['GET'])
+def get_rule_diff(proposal_id):
+    proposal = RuleModel.get_rule_proposal(proposal_id)
+
+    if not proposal.old_content or not proposal.proposed_content:
+        return jsonify({"error": "Missing old or proposed content"}), 400
+
+    diffs = RuleModel.get_diff_lines(proposal.old_content, proposal.proposed_content)
+
+    return jsonify({"success": True, "diffs": diffs})
+
+
+
+#  lignes = RuleModel.get_diff_lines(rules.old_content , rules.new_content)
 
 
 #################
@@ -746,15 +782,16 @@ def test_yara_python_url() -> redirect:
             delete_existing_repo_folder("app/rule/output_rules/Yara")
 
             # if an other user attempt to import the same depot, he can't have acces to the bad rule 
-            if existe == False:
-                if bad_rules_yara:
-                    flash(f"Failed to import {len(bad_rules_yara)} YARA rules:  ", "danger")
-                    RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github)
-                if bad_rule_dicts_Sigma:
-                    flash(f"Failed to import {nb_bad_rules_sigma} Sigma rules:  ", "danger")
-                    RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github)
-                if bad_rule_dicts_Sigma or bad_rules_yara:
-                    return redirect(url_for("rule.bad_rules_summary"))
+            # if existe == False:
+                
+            if bad_rules_yara:
+                flash(f"Failed to import {len(bad_rules_yara)} YARA rules:  ", "danger")
+                RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github)
+            if bad_rule_dicts_Sigma:
+                flash(f"Failed to import {nb_bad_rules_sigma} Sigma rules:  ", "danger")
+                RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github)
+            if bad_rule_dicts_Sigma or bad_rules_yara:
+                return redirect(url_for("rule.bad_rules_summary"))
 
         except Exception as e:
             flash("Failed to import rules: URL  ", "danger")
@@ -785,7 +822,6 @@ def get_bad_rule() -> jsonify:
             rules_list.append(u)
         return {"rules": rules_list  , "user": current_user.first_name, "total_pages": bad_rules.pages, "total_rules": total_rules} 
     return {"message": "No Rule"}, 404
-
 
 @rule_blueprint.route("/get_bads_rules_page_filter", methods=["GET"])
 @login_required
@@ -907,7 +943,7 @@ def report_rule():
 def rules_repported():
     """Redirect to the admin report secion"""
     return render_template('admin/report_rule.html')
-  
+
 @rule_blueprint.route("/get_rules_reported", methods=['GET'])
 def   get_rules_reported() -> jsonify:
     """Get all the rules repported on a page"""
