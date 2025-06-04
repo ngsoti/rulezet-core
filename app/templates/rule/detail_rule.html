@@ -191,45 +191,40 @@
                         {% if current_user.is_authenticated %}
                             <!-- Request Ownership button -->
                             {% if rule.user_id != current_user.id%}
-                            <!-- <button class="btn btn-outline-warning me-3 px-4 py-2 mb-2" @click="Ownership({{rule.id}})" title="Ask to become the owner of this rule">
-                                <i class="fas fa-user-shield me-1"></i> Request Ownership
-                            </button> -->
-                            <!-- Bouton pour ouvrir le modal -->
-                            <button 
-                                class="btn btn-outline-warning me-3 px-4 py-2 mb-2"
-                                data-bs-toggle="modal" 
-                                :data-bs-target="'#ownershipModal' + {{ rule.id }}" 
-                                title="Ask to become the owner of this rule">
-                                <i class="fas fa-user-shield me-1"></i> Request Ownership
-                            </button>
-                            <!-- Modal -->
-                            <div class="modal fade" :id="'ownershipModal' + {{ rule.id }}" tabindex="-1" aria-labelledby="ownershipModalLabel" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="ownershipModalLabel">Request Ownership</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Do you want to request ownership for:</p>
-                                            <ul>
-                                            <li><strong>This specific rule</strong> only</li>
-                                            <li><strong>All rules</strong> that come from the same source: <code>{{ rule.source }}</code></li>
-                                            </ul>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <button class="btn btn-outline-warning" @click="Ownership({{ rule.id }}, 1)" data-bs-dismiss="modal">
-                                            Only this rule
-                                            </button>
-                                            <button class="btn btn-outline-primary" @click="Ownership({{ rule.id }}, 2)" data-bs-dismiss="modal">
-                                            All rules from this source
-                                            </button>
+                                <button 
+                                    class="btn btn-warning me-3 px-4 py-2 mb-2"
+                                    data-bs-toggle="modal" 
+                                    :data-bs-target="'#ownershipModal' + {{ rule.id }}" 
+                                    title="Ask to become the owner of this rule">
+                                    <i class="fas fa-user-shield me-1"></i> Request Ownership
+                                </button>
+                                <!-- Modal -->
+                                <div class="modal fade" :id="'ownershipModal' + {{ rule.id }}" tabindex="-1" aria-labelledby="ownershipModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="ownershipModalLabel">Request Ownership</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>Do you want to request ownership for:</p>
+                                                <ul>
+                                                <li><strong>This specific rule</strong> only</li>
+                                                <li><strong>All rules</strong> that come from the same source: <code>{{ rule.source }}</code></li>
+                                                </ul>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button class="btn btn-warning" @click="Ownership({{ rule.id }}, 1)" data-bs-dismiss="modal">
+                                                Only this rule
+                                                </button>
+                                                <button class="btn btn-primary" @click="Ownership({{ rule.id }}, 2)" data-bs-dismiss="modal">
+                                                All rules from this source
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-
                             {% endif%}
                         {% endif%}
                     </div>

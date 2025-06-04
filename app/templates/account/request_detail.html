@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5" id="main-container">
+    <div class="text-center mb-5">
+        <i class="fas fa-id-card fa-3x text-primary mb-3"></i>
+        <h2 class="fw-bold">Ownership Request Details</h2>
+        <p class="text-muted">Full details of the ownership transfer request</p>
+    </div>
+
+    <div v-if="current_request" class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="border rounded shadow-sm p-4 bg-white">
+                <div class="mb-4 d-flex align-items-center justify-content-between">
+                    <h4 class="fw-bold mb-0">
+                        <i class="fas fa-scroll me-2 text-info"></i>[[ current_request.title ]]
+                    </h4>
+                    <span :class="statusBadge(current_request.status)" class="badge fs-6 text-uppercase">
+                        [[ current_request.status ]]
+                    </span>
+                </div>
+
+                <ul class="list-group list-group-flush mb-4">
+                    <li class="list-group-item">
+                        <strong><i class="fas fa-user me-2 text-secondary"></i>Requester:</strong>
+                        <span class="ms-2">[[ current_request.user_who_made_request ]]</span>
+                    </li>
+                    <li class="list-group-item">
+                        <strong><i class="fas fa-user-shield me-2 text-secondary"></i>Adress to:</strong>
+                        <span class="ms-2"> <span class="badge bg-primary text-uppercase"> (you) </span></span>
+                    </li>
+                    <span v-if="current_request.rule_id">
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-database me-2 text-secondary"></i>Rule ID:</strong>
+                            <span class="ms-2">[[ current_request.rule_id ]]</span>
+                        </li>
+                    </span>
+                    <span v-if="current_request.rule_source">
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-link me-2 text-secondary"></i>Rule Source:</strong>
+                            <span class="ms-2" v-if="current_request.rule_source">
+                            <a :href="current_request.rule_source" target="_blank" class="text-decoration-none">
+                                [[ current_request.rule_source ]]
+                            </a>
+                            </span>
+                            <span class="ms-2" v-else class="text-muted fst-italic">None</span>
+                        </li>
+                    </span>
+                </ul>
+
+                <div class="mb-4">
+                    <h5 class="fw-semibold"><i class="fas fa-comment-dots me-2 text-primary"></i>Request Message</h5>
+                    <p class="bg-light p-3 rounded border fst-italic">[[ current_request.content ]]</p>
+                </div>
+
+                <div class="d-flex justify-content-between text-muted small">
+                    <div>
+                        <i class="fas fa-calendar-alt me-1"></i>Created:
+                        <span>[[ current_request.created_at ]]</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-clock me-1"></i>Updated:
+                        <span>[[ current_request.updated_at ]]</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-fingerprint me-1"></i>UUID:
+                        <span class="text-break">[[ current_request.uuid ]]</span>
+                    </div>
+                    <button
+                        class="btn btn-danger me-2"
+                        @click="updateStatus('rejected')">
+                        <i class="fas fa-times"></i> Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="container mt-4" v-if="(concerned_rules_list) && (concerned_rules_list.length > 0)">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i> Rule(s) concerned
+                </h4>
+                <button class="btn btn-sm btn-primary" @click="selectAllConcernedRules">
+                    [[ selected_rules.length === concerned_rules_list.length ? 'Deselect All' : 'Select All' ]]
+                </button>
+            </div>
+
+
+            <div >
+                <div >
+                    <table class="table table-hover table-bordered align-middle shadow-sm">
+                        <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th><i class="fas fa-signature me-1"></i> Titre</th>
+                            <th><i class="fas fa-code me-1"></i> Format</th>
+                            <th><i class="fas fa-user me-1"></i> Author</th>
+                            <th><i class="fas fa-calendar-alt me-1"></i> Created</th>
+                            <th><i class="fas fa-gavel me-1"></i> Licence</th>
+                            <th><i class="fas fa-heart me-1"></i> Votes</th>
+                            <th>Select</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="(rule, index) in concerned_rules_list" :key="rule.id" @click="toggleRuleSelection(rule)"  :class="{ 'table-active': isSelected(rule) }" style="cursor: pointer;" >
+                            <th scope="row">[[ index + 1 ]]</th>
+                            <td :title="[[ rule.to_string ]]">[[ rule.title ]]</td>
+                            <td><span class="badge bg-primary text-uppercase">[[ rule.format ]]</span></td>
+                            <td>[[ rule.author ]]</td>
+                            <td>[[ rule.creation_date ]]</td>
+                            <td>
+                                <span class="badge bg-secondary text-truncate d-inline-block" style="max-width: 150px;" :title="[[ rule.license ]]">
+                                    [[ rule.license ]]
+                                </span>
+                            </td>
+                            <td>
+                                <i class="fas fa-thumbs-up text-success me-1"></i> [[ rule.vote_up ]] 
+                                <i class="fas fa-thumbs-down text-danger ms-2 me-1"></i> [[ rule.vote_down ]]
+                            </td>
+                            <td @click.stop>
+                                <input type="checkbox" :value="rule" @change="toggleRuleSelection(rule)" :checked="isSelected(rule)">
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+
+                    <nav v-if="Rules_totalPages > 1" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                        <li class="page-item" :class="{ disabled: Rules_Page === 1 }">
+                            <a class="page-link" href="#" @click.prevent="fetchConcernedRules(Rules_Page - 1)">
+                            <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item" 
+                            v-for="pageNum in Rules_totalPages" 
+                            :key="pageNum"
+                            :class="{ active: pageNum === Rules_Page }">
+                            <a class="page-link" href="#" @click.prevent="fetchConcernedRules(pageNum)">[[ pageNum ]]</a>
+                        </li>
+                        <li class="page-item" :class="{ disabled: Rules_Page === Rules_totalPages }">
+                            <a class="page-link" href="#" @click.prevent="fetchConcernedRules(Rules_Page + 1)">
+                            <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        </ul>
+                    </nav>
+                </div>
+                <div v-if="selected_rules.length > 0">
+                    <div class="border rounded p-2 bg-light">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <div v-for="rule in selected_rules" :key="rule.id" class="d-flex align-items-center bg-white border rounded px-2 py-1 small">
+                                <span class="text-truncate me-2" style="max-width: 150px;">[[ rule.title ]]</span>
+                                <button class="btn btn-sm btn-outline-danger py-0 px-1" @click="removeSelectedRule(rule)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-muted small">
+                            IDs: [[ selected_rule_ids.join(', ') ]]
+                        </div>
+                    </div>
+                    <button
+                        class="btn btn-success me-2"
+                        @click="updateStatus('approved')">
+                        <i class="fas fa-check"></i> Accept
+                    </button>
+                </div>
+
+
+
+            </div>
+        </div>
+    </div>
+
+    <div v-else class="text-center mt-5 text-muted">
+        <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+        <p>Loading request details...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+const { createApp, ref, computed } = Vue;
+import { message_list } from '/static/js/toaster.js';
+
+createApp({
+    delimiters: ['[[', ']]'],
+    setup() {
+        const request_id = ref("{{ request_id }}");
+        const current_request = ref();
+        const concerned_rules_list = ref([]);
+        const Rules_Page = ref(1);
+        const Rules_totalPages = ref(1);
+        const selected_rules = ref([]);
+
+        async function fetchCurrentRequest() {
+            const params = new URLSearchParams({ request_id: request_id.value });
+            const res = await fetch(`/get_request?` + params.toString());
+            if (res.status == 200) {
+                const data = await res.json();
+                if (data) {
+                    current_request.value = data.current_request;
+                    fetchConcernedRules(1);
+                }
+            }
+        }
+
+        async function fetchConcernedRules(page) {
+            const params = new URLSearchParams({ request_id: request_id.value, page });
+            const res = await fetch(`/get_concerned_rule?` + params.toString());
+            if (res.status == 200) {
+                const data = await res.json();
+                if (data) {
+                    concerned_rules_list.value = data.concerned_rules_list || [];
+                    Rules_Page.value = page;
+                    Rules_totalPages.value = data.Rules_totalPages;
+                }
+            }
+        }
+
+        function statusBadge(status) {
+            switch (status) {
+                case "approved": return "bg-success text-white";
+                case "pending": return "bg-warning text-dark";
+                case "rejected": return "bg-danger text-white";
+                default: return "bg-secondary text-white";
+            }
+        }
+
+        function toggleRuleSelection(rule) {
+            const index = selected_rules.value.findIndex(r => r.id === rule.id);
+            if (index === -1) {
+                selected_rules.value.push(rule);
+            } else {
+                selected_rules.value.splice(index, 1);
+            }
+        }
+
+        function removeSelectedRule(rule) {
+            selected_rules.value = selected_rules.value.filter(r => r.id !== rule.id);
+        }
+
+        function isSelected(rule) {
+            return selected_rules.value.some(r => r.id === rule.id);
+        }
+
+        const selected_rule_ids = computed(() => selected_rules.value.map(r => r.id));
+
+        function selectAllConcernedRules() {
+            if (selected_rules.value.length === concerned_rules_list.value.length) {
+                selected_rules.value = [];
+            } else {
+                selected_rules.value = [...concerned_rules_list.value];
+            }
+        }
+
+        async function updateStatus( status) {
+            const ruleIds = selected_rules.value.map(rule => rule.id);
+            const params = new URLSearchParams({ 
+                request_id: request_id.value,
+                status: status 
+                //rule_list: JSON.stringify(ruleIds)
+            });
+            const res = await fetch(`/update_request?` + params.toString());
+            if (res.status == 200) {
+                window.location.href = `/admin/request`
+            }            
+        }
+
+        fetchCurrentRequest();
+
+        return {
+            request_id,
+            current_request,
+            statusBadge,
+            concerned_rules_list,
+            Rules_Page,
+            Rules_totalPages,
+            fetchConcernedRules,
+            selected_rules,
+            toggleRuleSelection,
+            removeSelectedRule,
+            isSelected,
+            selected_rule_ids,
+            selectAllConcernedRules,
+            updateStatus
+        };
+    }
+}).mount('#main-container');
+</script>
+{% endblock %}

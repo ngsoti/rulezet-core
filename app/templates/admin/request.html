@@ -1,6 +1,4 @@
 {% extends 'base.html' %}
-{% import 'macros/form_macros.html' as f %}
-
 {% block content %}
 <div class="container my-4" id="main-container">
     <h2 class="mb-4">Ownership Requests</h2>
@@ -19,55 +17,82 @@
         </li>
     </ul>
 
+
+
+
+
+
+
     <!-- Tab content for Pending and Processed Requests -->
     <div class="tab-content mt-3">
         <!-- Pending Requests Tab -->
         <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab">
-            <div v-if="pending_requests.length > 0">
+            <div v-if="pending_requests_list.length > 0">
+                
+                
+                
                 <table class="table table-bordered table-striped align-middle">
                     <thead class="table-dark">
                         <tr>
-                            <th>#</th>
-                            <th>User</th>
-                            <th>Title</th>
-                            <th>Status</th>
-                            <th>Submitted</th>
-                            <th>Actions</th>
+                        <th>#</th>
+                        <th>User</th>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(request, index) in pending_requests" :key="request.id">
-                            <th>[[ index + 1 ]]</th>
-                            <td>[[ request.user_name ]]</td>
-                            <td>[[ request.title ]]</td>
-                            <td>
-                                <span class="badge bg-warning text-dark">[[ request.status ]]</span>
-                            </td>
-                            <td>[[ request.created_at ]]</td>
-                            <td>
-                                <button class="btn btn-success me-2" @click="updateStatus(request.id, 'approved')">
-                                    <i class="fas fa-check"></i> Accept
-                                </button>
-                                <button class="btn btn-warning me-2" @click="updateStatus(request.id, 'rejected')">
-                                    <i class="fas fa-times"></i> Reject
-                                </button>
-                            </td>
+                        <tr
+                        v-for="(request, index) in pending_requests_list"
+                        :key="request.id"
+                        class="cursor-pointer"
+                        @click="goToRequest(request.id)"
+                        >
+                        <th>[[ index + 1 ]]</th>
+                        <td>[[ request.user_name ]]</td>
+                        <td>[[ request.title ]] <span class="badge bg-primary text-uppercase"> (you) </span></td>
+                        <td>
+                            <span class="badge bg-warning text-dark">[[ request.status ]]</span>
+                        </td>
+                        <td>[[ request.created_at ]]</td>
+                        <td>
+                            <button
+                            class="btn btn-success me-2"
+                            @click.stop="updateStatus(request.id, 'approved')"
+                            >
+                            <i class="fas fa-check"></i> Accept
+                            </button>
+                            <button
+                            class="btn btn-warning me-2"
+                            @click.stop="updateStatus(request.id, 'rejected')"
+                            >
+                            <i class="fas fa-times"></i> Reject
+                            </button>
+                        </td>
                         </tr>
                     </tbody>
                 </table>
+
+
+
+
+
+
+
                 <nav aria-label="Page navigation">
                     <ul class="pagination">
-                    <li class="page-item" :class="{ disabled: currentPage === 1 }">
-                        <a class="page-link" href="#" @click.prevent="fetchRequests(currentPage - 1)">
+                    <li class="page-item" :class="{ disabled: pending_currentPage === 1 }">
+                        <a class="page-link" href="#" @click.prevent="fetchPendingRequests(pending_currentPage - 1)">
                         <i class="fas fa-arrow-left"></i> Previous
                         </a>
                     </li>
-                    <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: currentPage === page, disabled: page === '...' }">
-                        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRequests(page)">[[ page ]]</a>
+                    <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: pending_currentPage === page, disabled: page === '...' }">
+                        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchPendingRequests(page)">[[ page ]]</a>
                         <span v-else class="page-link">...</span>
                     </li>
-                    <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-                        <a class="page-link" href="#" @click.prevent="fetchRequests(current_page + 1)">
+                    <li class="page-item" :class="{ disabled: pending_currentPage === pending_totalPages }">
+                        <a class="page-link" href="#" @click.prevent="fetchPendingRequests(current_page + 1)">
                         Next <i class="fas fa-arrow-right"></i>
                         </a>
                     </li>
@@ -78,36 +103,14 @@
             <div v-else class="alert alert-secondary">No pending requests.</div>
         </div>
 
+
+
+
+
+
+
         <!-- Processed Requests Tab -->
         <div class="tab-pane fade" id="processed" role="tabpanel" aria-labelledby="processed-tab">
-            <div v-if="archived_requests.length > 0">
-                <table class="table table-hover table-bordered align-middle">
-                    <thead class="table-secondary">
-                        <tr>
-                            <th>#</th>
-                            <th>User</th>
-                            <th>Title</th>
-                            <th>Status</th>
-                            <th>Submitted</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="(request, index) in archived_requests" :key="request.id">
-                            <th>[[ index + 1 ]]</th>
-                            <td>[[ request.user_name ]]</td>
-                            <td>[[ request.title ]]</td>
-                            <td>
-                                <span :class="{
-                                    'badge bg-success': request.status === 'approved',
-                                    'badge bg-secondary': request.status === 'rejected'
-                                }">[[ request.status ]]</span>
-                            </td>
-                            <td>[[ request.created_at ]]</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div v-else class="alert alert-info">No processed requests.</div>
         </div>
     </div>
 </div>
@@ -121,45 +124,67 @@ import { message_list } from '/static/js/toaster.js';
 createApp({
     delimiters: ['[[', ']]'],
     setup() {
-        const csrf_token = '{{ csrf_token() }}';
-        const requests_list = ref([]);
-        const currentPage = ref(1);
-        const totalPages = ref(1);
-        const total_requests = ref(1); // use later
+            /*###################################_Fetch_requests_#################################*/
 
-        const pending_requests = computed(() => {
-            return requests_list.value.filter(r => r.status === "pending");
-        });
+            const pending_requests_list = ref([]);
+            const pending_currentPage = ref(1);
+            const pending_totalPages = ref(1);
 
-        const archived_requests = computed(() => {
-            return requests_list.value.filter(r => r.status !== "pending");
-        });
+            /**
+             *          ####################
+             *          #   fetch pending  #
+             *          ####################
+             * */
 
-        async function fetchRequests(page) {
-            const res = await fetch(`/get_requests_page?page=${page}`);
-            if(res){
-                const data = await res.json();
-                requests_list.value = data.requests_list || [];
-                totalPages.value = data.requests_pages;
-                currentPage.value = page;
-                total_requests.value = data.total_requests;
+            async function fetchPendingRequests(page) {
+                const params = new URLSearchParams({
+                    page
+                })
+                const res = await fetch(`/get_requests_page?` + params.toString());
+                if(await res.status == 200){
+                    const data = await res.json();
+                    if(data){
+                        pending_requests_list.value = data.pending_requests_list || [];
+                        pending_currentPage.value = page;
+                        pending_totalPages.value = data.pending_totalPages;
+                    }
+                }
             }
-        }
 
-        async function updateStatus(request_id, status) {
-            try {
-                const res = await fetch(`/update_request?request_id=${request_id}&status=${status}`);
-                if (!res.ok) throw new Error("Failed to update request");
-                await fetchRequests(currentPage.value);
-            } catch (error) {
-                message_list("Failed to update request.", "danger");
+            fetchPendingRequests(1);
+
+            /**
+             *          #####################
+             *          #   action request  #
+             *          #####################
+             * */
+
+            async function updateStatus(request_id, status) {
+                try {
+                    const res = await fetch(`/update_request?request_id=${request_id}&status=${status}`);
+                    if (!res.ok) throw new Error("Failed to update request");
+                    await fetchPendingRequests(pending_currentPage.value);
+                } catch (error) {
+                    message_list("Failed to update request.", "danger");
+                }
             }
-        }
+
+
+            function goToRequest(id) {
+                window.location.href = `/requests/${id}`;
+            }
+            /*###################################_Fetch_history_#################################*/
+
+            /**
+             *          ####################
+             *          #   fetch history  #
+             *          ####################
+             * */
 
         const visiblePages = computed(() => {
             const pages = []
-            const total = totalPages.value
-            const current = currentPage.value
+            const total = pending_totalPages.value
+            const current = pending_currentPage.value
             if (total <= 7) {
             for (let i = 1; i <= total; i++) pages.push(i)
             } else {
@@ -174,18 +199,16 @@ createApp({
             return pages
         })
 
-        fetchRequests(1);
-
         return {
-            fetchRequests,
-            requests_list,
-            currentPage,
-            totalPages,
+            pending_requests_list,
+            pending_currentPage,
+            pending_totalPages,
+            fetchPendingRequests,
+
             updateStatus,
-            pending_requests,
-            archived_requests,
-            total_requests,
-            visiblePages
+
+            visiblePages,
+            goToRequest
         };
     }
 }).mount('#main-container');

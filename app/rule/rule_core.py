@@ -310,6 +310,18 @@ def get_diff_lines(text1: str, text2: str):
 
     return diffs
 
+def get_concerned_rules_page(source, page):
+    """Return paginated concerned rules for the given page (20 per page)."""
+    return Rule.query.filter_by(source=source, user_id=current_user.id).paginate(
+        page=page,
+        per_page=20,
+        max_per_page=20
+    )
+
+def get_rules_by_ids(rule_ids) -> list:
+    """Get all the rules with id"""
+    return Rule.query.filter(Rule.id.in_(rule_ids)).all()
+
 
 #################
 #   Bad Rule    #

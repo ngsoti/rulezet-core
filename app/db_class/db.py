@@ -1,8 +1,10 @@
 import datetime
-
 from .. import db, login_manager
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin, AnonymousUserMixin, current_user
+from sqlalchemy import event
+from sqlalchemy.orm import attributes, Session
+from sqlalchemy.inspection import inspect
 
 #############
 #   User    #
@@ -220,12 +222,17 @@ class RequestOwnerRule(db.Model):
         foreign_keys=[rule_id],
         backref=db.backref('requests', lazy='dynamic', cascade='all, delete-orphan')
     )
+    def get_user_name(self, user_id: int) -> str:
+        user = User.query.get(user_id)
+        return user.first_name if user else "Unknown"
+
 
     def to_json(self):
         return {
             "id": self.id,
             "uuid": self.uuid,
             "user_id": self.user_id,
+            "user_who_made_request": self.user.first_name if self.user else "Unknown",
             "user_id_to_send": self.user_id_to_send,
             "title": self.title,
             "content": self.content,
@@ -235,8 +242,6 @@ class RequestOwnerRule(db.Model):
             "rule_id": self.rule_id,
             "rule_source": self.rule_source,
         }
-
-
 
 
 
