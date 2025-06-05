@@ -50,25 +50,16 @@
                         @click="goToRequest(request.id)"
                         >
                         <th>[[ index + 1 ]]</th>
-                        <td>[[ request.user_name ]]</td>
-                        <td>[[ request.title ]] <span class="badge bg-primary text-uppercase"> (you) </span></td>
+                        <td>[[ request.user_who_made_request	 ]]</td>
+                        <td>
+                            [[ request.title ]] <span class="badge bg-primary text-uppercase"> (you) </span>
+                        </td>
                         <td>
                             <span class="badge bg-warning text-dark">[[ request.status ]]</span>
                         </td>
                         <td>[[ request.created_at ]]</td>
                         <td>
-                            <button
-                            class="btn btn-success me-2"
-                            @click.stop="updateStatus(request.id, 'approved')"
-                            >
-                            <i class="fas fa-check"></i> Accept
-                            </button>
-                            <button
-                            class="btn btn-warning me-2"
-                            @click.stop="updateStatus(request.id, 'rejected')"
-                            >
-                            <i class="fas fa-times"></i> Reject
-                            </button>
+                            <details>More</details>
                         </td>
                         </tr>
                     </tbody>
@@ -159,15 +150,15 @@ createApp({
              *          #####################
              * */
 
-            async function updateStatus(request_id, status) {
-                try {
-                    const res = await fetch(`/update_request?request_id=${request_id}&status=${status}`);
-                    if (!res.ok) throw new Error("Failed to update request");
-                    await fetchPendingRequests(pending_currentPage.value);
-                } catch (error) {
-                    message_list("Failed to update request.", "danger");
-                }
-            }
+            // async function updateStatus(request_id, status) {
+            //     try {
+            //         const res = await fetch(`/update_request?request_id=${request_id}&status=${status}`);
+            //         if (!res.ok) throw new Error("Failed to update request");
+            //         await fetchPendingRequests(pending_currentPage.value);
+            //     } catch (error) {
+            //         message_list("Failed to update request.", "danger");
+            //     }
+            // }
 
 
             function goToRequest(id) {
@@ -205,7 +196,7 @@ createApp({
             pending_totalPages,
             fetchPendingRequests,
 
-            updateStatus,
+            //updateStatus,
 
             visiblePages,
             goToRequest

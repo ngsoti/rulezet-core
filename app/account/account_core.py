@@ -273,10 +273,13 @@ def create_request(rule_id, source):
     if source == "":
         # request for one rule
         rule = RuleModel.get_rule(rule_id)
-        existing_request = RequestOwnerRule.query.filter_by(user_id=current_user.id, title=f"Request for ownership of rule {rule.title} by {rule.get_rule_user_first_name_by_id()}").first()
+        existing_request = RequestOwnerRule.query.filter_by(
+            user_id=current_user.id,
+            title=f"Request for ownership of rule {rule.title} "
+        ).first()
 
         if existing_request:
-            existing_request.content = f"{current_user.first_name} {current_user.last_name}  wants to become the owner of '{rule.title}'"
+            existing_request.content = f"{current_user.first_name} {current_user.last_name} wants to become the owner of '{rule.title}'"
             existing_request.status = "pending"
             existing_request.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
             db.session.commit()
@@ -286,8 +289,8 @@ def create_request(rule_id, source):
             user_id_to_send=rule.user_id,
             user_id=current_user.id,
             uuid=str(uuid.uuid4()),
-            title=f"Request for ownership of rule {rule.title} by {rule.get_rule_user_first_name_by_id()}",
-            content=f"{current_user.first_name} {current_user.last_name}  wants to become the owner of '{rule.title}'",
+            title=f"Request for ownership of rule {rule.title}",
+            content=f"{current_user.first_name} {current_user.last_name} wants to become the owner of '{rule.title}'",
             status="pending",
             created_at=datetime.datetime.now(tz=datetime.timezone.utc),
             updated_at=datetime.datetime.now(tz=datetime.timezone.utc),
@@ -296,6 +299,7 @@ def create_request(rule_id, source):
         db.session.add(new_request)
         db.session.commit()
         return new_request
+
     else:
         # Request for a source
         rules_for_source = Rule.query.filter_by(source=source).all()
@@ -304,36 +308,40 @@ def create_request(rule_id, source):
         created_requests = []
 
         for editor_id in unique_editors:
-            user = get_user(editor_id)
+            if editor_id == current_user.id:
+                continue  # Ne pas envoyer de requête à soi-même
+
             existing_request = RequestOwnerRule.query.filter_by(
                 user_id=current_user.id,
-                title=f"Request for ownership of the rule(s) in '{source}' from user {user.first_name}"
+                user_id_to_send=editor_id,
+                rule_source=source,
+                title=f"Request for ownership of the rule(s) in '{source}' "
             ).first()
-            if editor_id != current_user.id:
-                if existing_request:
-                    existing_request.content = f"{current_user.first_name} {current_user.last_name} wants to become the owner of the rule(s)'{source}' from user {user.first_name}"
-                    existing_request.status = "pending"
-                    existing_request.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
-                    db.session.commit()
-                    created_requests.append(existing_request)
-                else:
-                    
-                    new_request = RequestOwnerRule(
-                        user_id_to_send=editor_id,
-                        user_id=current_user.id,
-                        uuid=str(uuid.uuid4()),
-                        title=f"Request for ownership of the rule(s) in '{source}' from user {user.first_name}",
-                        content=f"{current_user.first_name} {current_user.last_name} wants to become the owner of the rule(s)'{source}' from user {user.first_name}",
-                        status="pending",
-                        created_at=datetime.datetime.now(tz=datetime.timezone.utc),
-                        updated_at=datetime.datetime.now(tz=datetime.timezone.utc),
-                        rule_source=source
-                    )
-                    db.session.add(new_request)
-                    created_requests.append(new_request)
+
+            if existing_request:
+                existing_request.content = f"{current_user.first_name} {current_user.last_name} wants to become the owner of the rule(s) in '{source}'"
+                existing_request.status = "pending"
+                existing_request.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
+                db.session.commit()
+                created_requests.append(existing_request)
+            else:
+                new_request = RequestOwnerRule(
+                    user_id_to_send=editor_id,
+                    user_id=current_user.id,
+                    uuid=str(uuid.uuid4()),
+                    title=f"Request for ownership of the rule(s) in '{source}' ",
+                    content=f"{current_user.first_name} {current_user.last_name} wants to become the owner of the rule(s) in '{source}' ",
+                    status="pending",
+                    created_at=datetime.datetime.now(tz=datetime.timezone.utc),
+                    updated_at=datetime.datetime.now(tz=datetime.timezone.utc),
+                    rule_source=source
+                )
+                db.session.add(new_request)
+                created_requests.append(new_request)
 
         db.session.commit()
-        return created_requests  
+        return created_requests
+
 
 
 

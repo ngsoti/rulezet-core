@@ -314,9 +314,25 @@ def get_concerned_rules_page(source, page):
     """Return paginated concerned rules for the given page (20 per page)."""
     return Rule.query.filter_by(source=source, user_id=current_user.id).paginate(
         page=page,
-        per_page=20,
-        max_per_page=20
+        per_page=10,
+        max_per_page=10
     )
+
+def get_concerned_rules_admin_page(source, page, user_id_concerned):
+    """Return paginated concerned rules for the given page (20 per page)."""
+    return Rule.query.filter_by(source=source, user_id=user_id_concerned).paginate(
+        page=page,
+        per_page=10,
+        max_per_page=10
+    )
+
+def get_concerned_rules(source):
+    """Return all the concerned rules"""
+    return Rule.query.filter_by(source=source, user_id=current_user.id).all()
+
+def get_concerned_rules_admin(source , user_id_to_send):
+    """Return all the concerned rules"""
+    return Rule.query.filter_by(source=source, user_id=user_id_to_send).all()
 
 def get_rules_by_ids(rule_ids) -> list:
     """Get all the rules with id"""

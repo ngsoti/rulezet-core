@@ -76,9 +76,12 @@ def owner_request() -> redirect:
         rule_id = request.args.get('rule_id')
         if not rule_id:
             return {"success": False, "message": "No rule with this id!" , "toast_class" : "danger"}, 200
-        request_ = AccountModel.create_request(rule_id=rule_id, source="")
-        if request_:
-            return {"success": True, "message": "Ownership request submitted successfully !" , "toast_class" : "success"}, 200
+        rule = RuleModel.get_rule(rule_id)
+        if current_user.id != rule.user_id:
+            request_ = AccountModel.create_request(rule_id=rule_id, source="")
+            if request_:
+                return {"success": True, "message": "Ownership request submitted successfully !" , "toast_class" : "success"}, 200
+        return {"success": False, "message": "You can create a request for your own rule !" , "toast_class" : "danger"}, 200
     elif choice == 2:
         # with source
         source = request.args.get('source')
@@ -163,12 +166,20 @@ def get_concerned_rule() -> json:
 
     request_ = AccountModel.get_request_by_id(request_id)
     
-    if request_.rule_source:
-        concerned_rules_list = RuleModel.get_concerned_rules_page(request_.rule_source, page)
+    if current_user.is_admin():
+        if request_.rule_source:
+            concerned_rules_list = RuleModel.get_concerned_rules_admin_page(request_.rule_source, page , request_.user_id_to_send)
+        else:
+            concerned_rules_list = []
+            rule = RuleModel.get_rule(request_.rule_id)
+            concerned_rules_list.append(rule)
     else:
-        concerned_rules_list = []
-        rule = RuleModel.get_rule(request_.rule_id)
-        concerned_rules_list.append(rule)
+        if request_.rule_source:
+            concerned_rules_list = RuleModel.get_concerned_rules_page(request_.rule_source, page)
+        else:
+            concerned_rules_list = []
+            rule = RuleModel.get_rule(request_.rule_id)
+            concerned_rules_list.append(rule)
 
     if concerned_rules_list:
         return {
@@ -182,6 +193,32 @@ def get_concerned_rule() -> json:
             "success": False,
             "concerned_rules_list": [] 
         } , 200
+
+
+@home_blueprint.route("/get_all_concerned_rules", methods=["GET"])
+@login_required
+def get_all_concerned_rules():
+    request_id = request.args.get("request_id", type=int)
+
+    if not request_id:
+        return jsonify({"error": "Missing request_id"}), 400
+
+    request_ = AccountModel.get_request_by_id(request_id)
+    try:
+        if current_user.is_admin():
+            rules = RuleModel.get_concerned_rules_admin(request_.rule_source , request_.user_id_to_send)
+            result = [rule.to_json() for rule in rules]
+            return jsonify({"all_concerned_rules": result})
+        else:
+            rules = RuleModel.get_concerned_rules(request_.rule_source)
+            result = [rule.to_json() for rule in rules]
+            return jsonify({"all_concerned_rules": result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+
 
 @home_blueprint.route("/update_request", methods=["POST","GET" ])
 @login_required
@@ -205,47 +242,22 @@ def update_request_status() -> jsonify:
         updated = AccountModel.update_request_status(request_id, status)
         if updated and status == "approved":
             ownership_request = AccountModel.get_request_by_id(request_id)
-
-            if ownership_request.rule_source:
-                # Request concerns a source
-                # Get all rules for the specified source
-                rules_from_source = RuleModel.get_rule_by_source(ownership_request.rule_source)
-                if current_user.is_admin():
-                    rules_from_source_of_reel_owner = RuleModel.get_rules_from_user(rules_from_source , ownership_request.user_id_to_send)
-                    for rule in rules_from_source_of_reel_owner:
-                        if rule.user_id == ownership_request.user_id_to_send:
-                            
-                            # The rule belongs to the current user, give rights to the request's user
-                            rule.user_id = ownership_request.user_id
-                            requests_list_to_update = AccountModel.get_all_requests_with_rule_id(rule.id)
-                            if requests_list_to_update:
-                                for request_ in requests_list_to_update:
-                                    request_.user_id_to_send = ownership_request.user_id
-                else:
-                    for rule in rules_from_source:
-                        if rule.user_id == current_user.id:
-                            # The rule belongs to the current user, give rights to the request's user
-                            rule.user_id = ownership_request.user_id
-                            # Test if there is a request with this rule.id to correct user_id_to_send
-                            requests_list_to_update = AccountModel.get_all_requests_with_rule_id(rule.id)
-                            if requests_list_to_update:
-                                for request_ in requests_list_to_update:
-                                    request_.user_id_to_send = ownership_request.user_id
+            for rule in rules:
+                if rule.user_id == current_user.id or current_user.is_admin():
+                    rule.user_id = ownership_request.user_id
+                    requests_list_to_update = AccountModel.get_all_requests_with_rule_id(rule.id)
+                    if requests_list_to_update:
+                        for request_ in requests_list_to_update:
+                            request_.user_id_to_send = ownership_request.user_id
                     requests_list_to_update_source = AccountModel.get_all_requests_with_source(ownership_request.rule_source)
                     if requests_list_to_update_source:
                             for request__ in requests_list_to_update_source:
-                                request__.user_id_to_send = ownership_request.user_id
-            else:
-                # request for a rule
-                rule_id_of_request = AccountModel.get_request_rule_id(request_id)
-                user_id = AccountModel.get_request_user_id(request_id)
+                                request__.user_id_to_send = ownership_request.user_id   
+                
 
-                if ownership_request:
-                    rule = RuleModel.get_rule(rule_id_of_request)
-                    if rule:
-                        RuleModel.set_user_id(rule_id_of_request, user_id)
+            flash(f"Request Accepted! {len(rules)} rules are impacted", "success")
         else:
-            flash('Request decline !', 'success')
+            flash('Request decline with success!', 'success')
         return jsonify({"success": updated}), 200 if updated else 400
     else:
         return jsonify({"success": False}), 500

@@ -557,7 +557,7 @@ def get_rules_propose_edit_history_page() -> jsonify:
             "total_pages_old": rules_propose.pages
         })
     return jsonify({"message": "No Rule"})
-   
+
 
 @rule_blueprint.route("/get_rules_propose_page", methods=['GET'])
 def get_rules_propose_page() -> jsonify:
@@ -581,7 +581,6 @@ def propose_edit(rule_id) -> redirect:
     data = request.form
     proposed_content = data.get('proposed_content')
     message = data.get('message')
-    print(proposed_content)
     success = RuleModel.propose_edit_core(rule_id, proposed_content, message)
     if success:
         flash("Request sended.", "success")
