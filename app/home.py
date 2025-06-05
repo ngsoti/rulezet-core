@@ -138,6 +138,32 @@ def get_requests_page() -> json:
         } , 200
     return {"message": "No requests found"}
 
+@home_blueprint.route("/get_process_requests_page", methods=['GET'])
+@login_required
+def get_process_requests_page() -> json:
+    """Get all the request in a page"""
+    page = request.args.get('page', 1, type=int)
+    if current_user.is_admin():
+        requests_paginated = AccountModel.get_process_requests_page(page)
+    else:
+        requests_paginated = AccountModel.get_process_requests_page_user(page)
+
+    if requests_paginated.items:
+        requests_list = []
+        for r in requests_paginated.items:
+            user = AccountModel.get_username_by_id(r.user_id)
+            request_data = r.to_json()  
+            
+            request_data['user_name'] = user
+            requests_list.append(request_data)
+        return {
+            "success": True,
+            "process_requests_list": requests_list,
+            "process_totalPages": requests_paginated.pages,  
+        } , 200
+    return {"message": "No requests found"}
+
+
 @home_blueprint.route("/get_request", methods=['GET'])
 @login_required
 def get_request() -> json:
@@ -180,15 +206,16 @@ def get_concerned_rule() -> json:
             concerned_rules_list = []
             rule = RuleModel.get_rule(request_.rule_id)
             concerned_rules_list.append(rule)
+    
 
     if concerned_rules_list:
         return {
             "success": True,
             "concerned_rules_list": [rule.to_json() for rule in concerned_rules_list],
-            "Rules_totalPages": concerned_rules_list.pages if request_.rule_source else 1
+            "Rules_totalPages": concerned_rules_list.pages if request_.rule_source else 1,
+            "total_rules": len(concerned_rules_list) if concerned_rules_list else 0
         } , 200
     else:
-
         return {
             "success": False,
             "concerned_rules_list": [] 
@@ -207,6 +234,10 @@ def get_all_concerned_rules():
     try:
         if current_user.is_admin():
             rules = RuleModel.get_concerned_rules_admin(request_.rule_source , request_.user_id_to_send)
+            if len(rules) == 0:
+                # not with source but only one rule
+                rule_concerned = RuleModel.get_rule(request_.rule_id)
+                rules.append(rule_concerned)
             result = [rule.to_json() for rule in rules]
             return jsonify({"all_concerned_rules": result})
         else:

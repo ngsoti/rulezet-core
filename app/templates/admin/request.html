@@ -16,95 +16,174 @@
             </a>
         </li>
     </ul>
-
-
-
-
-
-
-
     <!-- Tab content for Pending and Processed Requests -->
     <div class="tab-content mt-3">
         <!-- Pending Requests Tab -->
-        <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab">
-            <div v-if="pending_requests_list.length > 0">
-                
-                
-                
-                <table class="table table-bordered table-striped align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                        <th>#</th>
-                        <th>User</th>
-                        <th>Title</th>
-                        <th>Status</th>
-                        <th>Submitted</th>
-                        <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                        v-for="(request, index) in pending_requests_list"
-                        :key="request.id"
-                        class="cursor-pointer"
-                        @click="goToRequest(request.id)"
-                        >
-                        <th>[[ index + 1 ]]</th>
-                        <td>[[ request.user_who_made_request	 ]]</td>
-                        <td>
-                            [[ request.title ]] <span class="badge bg-primary text-uppercase"> (you) </span>
-                        </td>
-                        <td>
-                            <span class="badge bg-warning text-dark">[[ request.status ]]</span>
-                        </td>
-                        <td>[[ request.created_at ]]</td>
-                        <td>
-                            <details>More</details>
-                        </td>
-                        </tr>
-                    </tbody>
-                </table>
+        <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab" v-if="pending_requests_list.length > 0">
+            <div class="card" >
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-tasks me-2"></i> Processed Ownership Requests
+                </div>
 
-
-
-
-
-
-
-                <nav aria-label="Page navigation">
-                    <ul class="pagination">
-                    <li class="page-item" :class="{ disabled: pending_currentPage === 1 }">
-                        <a class="page-link" href="#" @click.prevent="fetchPendingRequests(pending_currentPage - 1)">
-                        <i class="fas fa-arrow-left"></i> Previous
-                        </a>
-                    </li>
-                    <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: pending_currentPage === page, disabled: page === '...' }">
-                        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchPendingRequests(page)">[[ page ]]</a>
-                        <span v-else class="page-link">...</span>
-                    </li>
-                    <li class="page-item" :class="{ disabled: pending_currentPage === pending_totalPages }">
-                        <a class="page-link" href="#" @click.prevent="fetchPendingRequests(current_page + 1)">
-                        Next <i class="fas fa-arrow-right"></i>
-                        </a>
-                    </li>
-                    </ul>
-                </nav>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle mb-0 shadow-sm text-center">
+                            <thead class="table-success">
+                                <tr>
+                                    <th>#</th>
+                                    <th style="width: 15%;"><i class="fas fa-user"></i> Requester</th>
+                                    <th style="width: 20%;"><i class="fas fa-heading"></i> Title</th>
+                                    <th style="width: 12%;"><i class="fas fa-info-circle"></i> Status</th>
+                                    <th style="width: 15%;"><i class="fas fa-calendar-day"></i> Submitted</th>
+                                    <th style="width: 33%;"><i class="fas fa-file-alt"></i> Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <tr v-for="(request, index) in pending_requests_list" :key="request.id">
+                                <td class="fw-bold">
+                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ index + 1 ]]</a>
+                                </td>
+                                <td class="text-truncate" :title="request.user_who_made_request">
+                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ request.user_who_made_request ]]</a>
+                                </td>
+                                <td style="white-space: normal; overflow-wrap: break-word;" :title="request.title">
+                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark fw-semibold">
+                                        [[ request.title ]]
+                                        <span v-if="request.user_id === current_user_id" class="badge bg-primary text-uppercase ms-2">(you)</span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none">
+                                        <span 
+                                        class="badge text-uppercase"
+                                        :class="{
+                                            'bg-success': request.status === 'approved',
+                                            'bg-danger': request.status === 'rejected',
+                                            'bg-secondary': request.status !== 'approved' && request.status !== 'rejected'
+                                        }"
+                                        >
+                                        [[ request.status ]]
+                                        </span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ request.created_at ]]</a>
+                                </td>
+                                <td style="white-space: normal; overflow-wrap: break-word;" :title="request.content">
+                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ request.content ]]</a>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-center mt-3">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                            <li class="page-item" :class="{ disabled: pending_currentPage === 1 }">
+                                <a class="page-link" href="#" @click.prevent="fetchPendingRequests(pending_currentPage - 1)">
+                                <i class="fas fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: pending_currentPage === page, disabled: page === '...' }">
+                                <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchPendingRequests(page)">[[ page ]]</a>
+                                <span v-else class="page-link">...</span>
+                            </li>
+                            <li class="page-item" :class="{ disabled: pending_currentPage === pending_totalPages }">
+                                <a class="page-link" href="#" @click.prevent="fetchPendingRequests(pending_currentPage + 1)">
+                                Next <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
             </div>
-            
-            <div v-else class="alert alert-secondary">No pending requests.</div>
         </div>
-
-
-
-
-
-
+        <div v-else class="alert alert-secondary">No pending requests.</div>
 
         <!-- Processed Requests Tab -->
         <div class="tab-pane fade" id="processed" role="tabpanel" aria-labelledby="processed-tab">
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-tasks me-2"></i> Processed Ownership Requests
+                </div>
+                <div class="card-body p-0">
+                    <div v-if="process_requests_list.length > 0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered align-middle mb-0">
+                                <thead class="table-success text-center">
+                                    <tr>
+                                        <th>#</th>
+                                        <th><i class="fas fa-user"></i> Requester</th>
+                                        <th><i class="fas fa-heading"></i> Title</th>
+                                        <th><i class="fas fa-info-circle"></i> Status</th>
+                                        <th><i class="fas fa-calendar-day"></i> Submitted</th>
+                                        <th><i class="fas fa-file-alt"></i> Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(request, index) in process_requests_list" :key="request.id">
+                                        <td class="text-center">[[ index + 1 ]]</td>
+                                        <td class="text-center">[[ request.user_who_made_request ]]</td>
+                                        <td>
+                                            <span class="fw-semibold">[[ request.title ]]</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span
+                                                class="badge text-uppercase"
+                                                :class="{
+                                                'bg-success': request.status === 'approved',
+                                                'bg-danger': request.status === 'rejected',
+                                                'bg-secondary': request.status !== 'approved' && request.status !== 'rejected'
+                                                }" >
+                                                [[ request.status ]]
+                                            </span>
+                                        </td>
+                                        <td class="text-center">[[ request.created_at ]]</td>
+                                        <td>
+                                            <div style="white-space: pre-line; max-width: 400px; overflow-wrap: break-word;">
+                                                [[ request.content ]]
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            
+                        </div>
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-center mt-3">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination">
+                                <li class="page-item" :class="{ disabled: process_currentPage === 1 }">
+                                    <a class="page-link" href="#" @click.prevent="fetchProcessRequests(process_currentPage - 1)">
+                                    <i class="fas fa-arrow-left"></i> Previous
+                                    </a>
+                                </li>
+                                <li class="page-item" v-for="page in visiblePagesprocess" :key="page" :class="{ active: process_currentPage === page, disabled: page === '...' }">
+                                    <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchProcessRequests(page)">[[ page ]]</a>
+                                    <span v-else class="page-link">...</span>
+                                </li>
+                                <li class="page-item" :class="{ disabled: process_currentPage === process_totalPages }">
+                                    <a class="page-link" href="#" @click.prevent="fetchProcessRequests(current_page + 1)">
+                                    Next <i class="fas fa-arrow-right"></i>
+                                    </a>
+                                </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                    <div v-else class="text-center p-4 text-muted">
+                        <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                        <p class="mb-0">No processed ownership requests.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
 </div>
+
+
 {% endblock %}
 
 {% block script %}
@@ -144,27 +223,35 @@ createApp({
 
             fetchPendingRequests(1);
 
+
             /**
-             *          #####################
-             *          #   action request  #
-             *          #####################
+             *          ####################
+             *          #   fetch page     #
+             *          ####################
              * */
 
-            // async function updateStatus(request_id, status) {
-            //     try {
-            //         const res = await fetch(`/update_request?request_id=${request_id}&status=${status}`);
-            //         if (!res.ok) throw new Error("Failed to update request");
-            //         await fetchPendingRequests(pending_currentPage.value);
-            //     } catch (error) {
-            //         message_list("Failed to update request.", "danger");
-            //     }
-            // }
-
-
-            function goToRequest(id) {
-                window.location.href = `/requests/${id}`;
-            }
+            const visiblePages = computed(() => {
+                const pages = []
+                const total = pending_totalPages.value
+                const current = pending_currentPage.value
+                if (total <= 7) {
+                for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                if (current <= 4) {
+                    pages.push(1, 2, 3, 4, 5, '...', total)
+                } else if (current >= total - 3) {
+                    pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                } else {
+                    pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                }
+                }
+                return pages
+            })
             /*###################################_Fetch_history_#################################*/
+
+            const process_requests_list = ref([])
+            const process_currentPage = ref(1)
+            const process_totalPages = ref(1)
 
             /**
              *          ####################
@@ -172,23 +259,46 @@ createApp({
              *          ####################
              * */
 
-        const visiblePages = computed(() => {
-            const pages = []
-            const total = pending_totalPages.value
-            const current = pending_currentPage.value
-            if (total <= 7) {
-            for (let i = 1; i <= total; i++) pages.push(i)
-            } else {
-            if (current <= 4) {
-                pages.push(1, 2, 3, 4, 5, '...', total)
-            } else if (current >= total - 3) {
-                pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-            } else {
-                pages.push(1, '...', current - 1, current, current + 1, '...', total)
+            async function fetchProcessRequests(page){
+                const params = new URLSearchParams({
+                    page
+                })
+                const res = await fetch(`/get_process_requests_page?` + params.toString());
+                if(await res.status == 200){
+                    const data = await res.json();
+                    if(data){
+                        process_requests_list.value = data.process_requests_list || [];
+                        process_currentPage.value = page;
+                        process_totalPages.value = data.process_totalPages;
+                    }
+                }
             }
-            }
-            return pages
-        })
+
+            fetchProcessRequests(1)
+
+            /**
+             *          ####################
+             *          #   fetch page     #
+             *          ####################
+             * */
+
+            const visiblePagesprocess = computed(() => {
+                const pages = []
+                const total = process_totalPages.value
+                const current = process_currentPage.value
+                if (total <= 7) {
+                for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                if (current <= 4) {
+                    pages.push(1, 2, 3, 4, 5, '...', total)
+                } else if (current >= total - 3) {
+                    pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                } else {
+                    pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                }
+                }
+                return pages
+            })
 
         return {
             pending_requests_list,
@@ -196,10 +306,13 @@ createApp({
             pending_totalPages,
             fetchPendingRequests,
 
-            //updateStatus,
 
             visiblePages,
-            goToRequest
+            fetchProcessRequests,
+            process_requests_list,
+            process_currentPage,
+            process_totalPages,
+            visiblePagesprocess
         };
     }
 }).mount('#main-container');

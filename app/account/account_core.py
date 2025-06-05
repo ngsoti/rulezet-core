@@ -345,9 +345,13 @@ def create_request(rule_id, source):
 
 
 
-def get_requests_page(page):
+def get_requests_page(page) -> dict:
     """Return all requets by page"""
     return RequestOwnerRule.query.filter(RequestOwnerRule.status == "pending").paginate(page=page, per_page=20, max_per_page=20)
+
+def get_process_requests_page(page) -> dict:
+    """Return all process requets by page"""
+    return RequestOwnerRule.query.filter(RequestOwnerRule.status != "pending").paginate(page=page, per_page=20, max_per_page=20)
 
 def update_request_status(request_id, status):
     req = RequestOwnerRule.query.get(request_id)
@@ -403,6 +407,13 @@ def get_requests_page_user(page) -> dict:
     return RequestOwnerRule.query.filter(
         RequestOwnerRule.user_id_to_send == current_user.id,
         RequestOwnerRule.status == "pending"
+    ).paginate(page=page, per_page=10, max_per_page=10)
+
+def get_process_requests_page_user(page) -> dict:
+    """Return all 'process' requests that are relevant to the current user, paginated."""
+    return RequestOwnerRule.query.filter(
+        RequestOwnerRule.user_id_to_send == current_user.id,
+        RequestOwnerRule.status != "pending"
     ).paginate(page=page, per_page=10, max_per_page=10)
 
 def is_the_owner(request_id) -> bool:
