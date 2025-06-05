@@ -847,7 +847,7 @@ def edit_bad_rule(rule_id):
 
         if request.method == 'POST':
             new_content = request.form.get('raw_content')
-            success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content)
+            success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content )
 
             if success:
                 flash("Rule fixed and imported successfully.", "success")
@@ -860,31 +860,6 @@ def edit_bad_rule(rule_id):
         return render_template('rule/edit_bad_rule.html', rule=bad_rule)
     else:
         return render_template("access_denied.html")
-
-# @rule_blueprint.route('/bad_rule/<int:rule_id>/edit', methods=['GET', 'POST'])
-# @login_required
-# def edit_bad_rule(rule_id) -> render_template:
-#     """Edit a bad rule to correct it"""
-#     user_bad_rule = RuleModel.get_user_id_of_bad_rule(rule_id)
-#     if current_user.is_admin() or current_user.id == user_bad_rule :
-#         bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
-#         if request.method == 'POST':
-#             new_content = request.form.get('raw_content')
-#             success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content)
-#             if success:
-#                 flash("Rule fixed and imported successfully.", "success")
-#                 # delete the bad rule
-#                 # delete = RuleModel.delete_bad_rule(rule_id)
-#                 # if delete:
-#                 #     return redirect(url_for('rule.bad_rules_summary'))
-#                 return redirect(url_for('rule.bad_rules_summary'))
-#             else:
-#                 flash(f"Error: {error}", "danger")
-#                 bad_rule.error_message = error
-#                 return render_template('rule/edit_bad_rule.html', rule=bad_rule, new_content=new_content)
-#         return render_template('rule/edit_bad_rule.html', rule=bad_rule)
-#     else:
-#         return render_template("access_denied.html")
 
 @rule_blueprint.route('/bad_rule/<int:rule_id>/delete', methods=['GET', 'POST'])
 @login_required

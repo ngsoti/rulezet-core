@@ -11,7 +11,7 @@ from sqlalchemy import case, or_
 import yaml
 import yara
 from app.account.account_core import get_user
-from app.import_github_project.import_github_yara import extract_first_match
+from app.import_github_project.import_github_yara import extract_first_match, insert_import_module
 from app.import_github_project.untils_import import build_externals_dict, clean_rule_filename_Yara_v2
 from .. import db
 from ..db_class.db import *
@@ -416,23 +416,54 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error) -> None:
 
 # Create
 
-def process_and_import_fixed_rule(bad_rule_obj, raw_content) :
-    """Process the bad rule and the new content to attempt to create the rule"""
+YARA_MODULES = {"pe", "math", "cuckoo", "magic", "hash", "dotnet", "elf", "macho"}
+
+def process_and_import_fixed_rule(bad_rule_obj, raw_content):
+    """Process a corrected bad rule and attempt to import it into the system."""
     try:
-        rule_type = bad_rule_obj.rule_type 
+        rule_type = bad_rule_obj.rule_type
 
         if rule_type.upper() == "YARA":
-            try:
-                yara.compile(source=raw_content)
-            except yara.SyntaxError as e:
-                return False, str(e)
-            
-            
-            title = extract_first_match(raw_content, ["title", "Title"]) or clean_rule_filename_Yara_v2(bad_rule_obj.file_name) #or clean_rule_filename_Yara(bad_rule_obj.file_name)
-            description = extract_first_match(raw_content, ["description", "Description"])
-            license = extract_first_match(raw_content, ["license", "License"]) or bad_rule_obj.license
-            author = extract_first_match(raw_content, ["author", "Author"])
-            version = extract_first_match(raw_content, ["version", "Version"])
+            externals = {}
+            compiled = False
+            attempts = 0
+            max_attempts = 10
+            current_rule_text = raw_content  
+
+            while not compiled and attempts < max_attempts:
+                try:
+                    yara.compile(source=current_rule_text, externals=externals)
+                    #print("Compilation réussie")
+                    compiled = True
+                except yara.SyntaxError as e:
+                    error_msg = str(e)
+                    #print(f"Tentative {attempts+1} échouée : {error_msg}")
+
+                    match_id = re.search(r'undefined identifier "(\w+)"', error_msg)
+                    if match_id:
+                        var_name = match_id.group(1)
+                        if var_name in YARA_MODULES:
+                            current_rule_text = insert_import_module(current_rule_text, var_name)
+                            #print(f"Module YARA importé : {var_name}")
+                        else:
+                            externals[var_name] = "example.txt"
+                            #print(f"Variable externe ajoutée : {var_name}")
+                        attempts += 1
+                        continue
+                    else:
+                        return False, error_msg
+
+            # print(externals)
+            if not compiled:
+                return False, "Failled to parse this rule after many try"
+
+            rule_name_match = re.search(r'rule\s+(\w+)', current_rule_text)
+            title = rule_name_match.group(1) if rule_name_match else clean_rule_filename_Yara_v2(bad_rule_obj.file_name) or extract_first_match(current_rule_text, ["title", "Title"]) 
+
+            description = extract_first_match(current_rule_text, ["description", "Description"])
+            license = extract_first_match(current_rule_text, ["license", "License"]) or bad_rule_obj.license
+            author = extract_first_match(current_rule_text, ["author", "Author"])
+            version = extract_first_match(current_rule_text, ["version", "Version"])
             source_url = bad_rule_obj.url
 
             rule_dict = {
@@ -443,15 +474,14 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content) :
                 "source": source_url,
                 "version": version or "1.0",
                 "author": author or "Unknown",
-                "to_string": raw_content
+                "to_string": current_rule_text
             }
+            print(rule_dict)
 
-        else:  # Sigma or other types
-            rule = yaml.safe_load(raw_content)
-            rule_json = json.loads(json.dumps(rule, indent=2, default=str))
-            schema = None
+        else: 
             try:
-                # Load schema synchronously here
+                rule = yaml.safe_load(raw_content)
+                rule_json = json.loads(json.dumps(rule, indent=2, default=str))
                 with open("app/import_github_project/sigma_format.json", 'r', encoding='utf-8') as f:
                     schema = json.load(f)
                 validate(instance=rule_json, schema=schema)
@@ -474,13 +504,12 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content) :
             db.session.delete(bad_rule_obj)
             db.session.commit()
             return True, ""
-
-        return False, "Rule already exists or failed to insert."
+        else:
+            return False, "Rule already exists or failed to insert."
 
     except Exception as e:
         db.session.rollback()
         return False, str(e)
-
 
 
 # def process_and_import_fixed_rule(bad_rule_obj, raw_content) -> bool:

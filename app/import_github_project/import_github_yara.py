@@ -64,7 +64,6 @@ async def parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_u
                 for line in first_lines:
                     if "rule" in line:
                         if line.strip().startswith("//"):
-                            print("Skipped commented-out rule.")
                             break
                         rule_blocks.append(block)
                         break
