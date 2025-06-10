@@ -258,18 +258,44 @@ createApp({
 
         const selected_rule_ids = computed(() => selected_rules.value.map(r => r.id));
 
-        async function updateStatus( status) {
+        // async function updateStatus( status) {
+        //     const ruleIds = selected_rules.value.map(rule => rule.id);
+        //     const params = new URLSearchParams({ 
+        //         request_id: request_id.value,
+        //         status: status ,
+        //         rule_list: JSON.stringify(ruleIds)
+        //     });
+        //     const res = await fetch(`/update_request?` + params.toString());
+        //     if (res.status == 200) {
+        //         window.location.href = `/admin/request`
+        //     }            
+        // }
+
+        const csrf_token = '{{ csrf_token() }}';
+
+        async function updateStatus(status) {
             const ruleIds = selected_rules.value.map(rule => rule.id);
-            const params = new URLSearchParams({ 
+
+            const bodyData = {
                 request_id: request_id.value,
-                status: status ,
-                rule_list: JSON.stringify(ruleIds)
+                status: status,
+                rule_list: ruleIds
+            };
+
+            const res = await fetch('/update_request', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrf_token  
+                },
+                body: JSON.stringify(bodyData)
             });
-            const res = await fetch(`/update_request?` + params.toString());
-            if (res.status == 200) {
-                window.location.href = `/admin/request`
-            }            
+
+            if (res.status === 200) {
+                window.location.href = '/admin/request';
+            }
         }
+
 
 
         async function selectAllConcernedRules() {

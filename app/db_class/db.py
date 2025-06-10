@@ -396,3 +396,34 @@ class RepportRule(db.Model):
                 "reason": self.reason,
                 "content": self.rule.to_string if self.rule else None
             }
+    
+
+
+# class RuleAnalysisMetadata(db.Model):
+#     """
+#     Stores GitHub analysis metadata for a rule without modifying the original Rule table.
+#     """
+#     id = db.Column(db.Integer, primary_key=True)
+#     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), unique=True, index=True)
+
+#     repo_rule_path = db.Column(db.String)  # Relative path to the rule in the GitHub repo
+#     last_checked = db.Column(db.DateTime, index=True)  # Last time the rule was checked
+#     comparison_status = db.Column(db.String, index=True)  # 'identical', 'modified', 'missing', 'error'
+
+#     # Link to the Rule object
+#     rule = db.relationship('Rule', backref=db.backref('analysis_metadata', uselist=False, cascade='all, delete-orphan'))
+
+# class RuleVersionHistory(db.Model):
+#     """
+#     Keeps a history of each GitHub rule comparison (snapshot of GitHub + local content).
+#     """
+#     id = db.Column(db.Integer, primary_key=True)
+#     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), index=True)
+#     fetched_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+
+#     github_version = db.Column(db.Text)  # Content fetched from the GitHub repo
+#     local_version = db.Column(db.Text)   # Content from the Rule's to_string at the time of comparison
+#     is_identical = db.Column(db.Boolean)
+
+#     # Link to the Rule object
+#     rule = db.relationship('Rule', backref=db.backref('version_history', lazy='dynamic' , cascade='all, delete-orphan'))

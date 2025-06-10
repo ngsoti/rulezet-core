@@ -318,6 +318,10 @@ def get_concerned_rules_page(source, page):
         max_per_page=10
     )
 
+def get_concerned_rule_count(source, page):
+    """Return paginated concerned rules for the given page (20 per page)."""
+    return Rule.query.filter_by(source=source, user_id=current_user.id).count()
+
 def get_concerned_rules_admin_page(source, page, user_id_concerned):
     """Return paginated concerned rules for the given page (20 per page)."""
     return Rule.query.filter_by(source=source, user_id=user_id_concerned).paginate(
@@ -325,6 +329,10 @@ def get_concerned_rules_admin_page(source, page, user_id_concerned):
         per_page=10,
         max_per_page=10
     )
+
+def get_concerned_rule_admin_count(source, page, user_id_concerned):
+    """Return paginated concerned rules for the given page (20 per page)."""
+    return Rule.query.filter_by(source=source, user_id=user_id_concerned).count()
 
 def get_concerned_rules(source):
     """Return all the concerned rules"""
@@ -338,6 +346,20 @@ def get_rules_by_ids(rule_ids) -> list:
     """Get all the rules with id"""
     return Rule.query.filter(Rule.id.in_(rule_ids)).all()
 
+def get_all_rule_update():
+    return Rule.query.filter_by(user_id=current_user.id).all()
+
+
+def get_all_rule_sources_by_user():
+    """
+    Return a list of distinct non-null rule sources for a given user.
+    """
+    sources = db.session.query(Rule.source)\
+        .filter(Rule.user_id == current_user.id)\
+        .filter(Rule.source.isnot(None))\
+        .distinct().all()
+
+    return [s[0] for s in sources]
 
 #################
 #   Bad Rule    #
@@ -977,7 +999,7 @@ def filter_rules(search=None, author=None, sort_by=None, rule_type=None) -> Rule
         query = query.order_by(Rule.creation_date.desc())
     return query
 
-def filter_rules_owner(search=None, author=None, sort_by=None, rule_type=None) -> Rule:
+def filter_rules_owner(search=None, author=None, sort_by=None, rule_type=None , source=None) -> Rule:
     """Filter the rules"""
     query = Rule.query.filter_by(user_id=current_user.id)
     if search:
@@ -995,6 +1017,8 @@ def filter_rules_owner(search=None, author=None, sort_by=None, rule_type=None) -
         query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
     if rule_type:
         query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))  
+    if source:    
+        query = query.filter(Rule.source.ilike(f"%{source.lower()}%"))
     if sort_by == "newest":
         query = query.order_by(Rule.creation_date.desc())
     elif sort_by == "oldest":

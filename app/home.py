@@ -195,25 +195,28 @@ def get_concerned_rule() -> json:
     if current_user.is_admin():
         if request_.rule_source:
             concerned_rules_list = RuleModel.get_concerned_rules_admin_page(request_.rule_source, page , request_.user_id_to_send)
+            nb_rules = RuleModel.get_concerned_rule_admin_count(request_.rule_source, page , request_.user_id_to_send)
         else:
             concerned_rules_list = []
             rule = RuleModel.get_rule(request_.rule_id)
             concerned_rules_list.append(rule)
+            nb_rules = 1
     else:
         if request_.rule_source:
             concerned_rules_list = RuleModel.get_concerned_rules_page(request_.rule_source, page)
+            nb_rules = RuleModel.get_concerned_rule_count(request_.rule_source, page , request_.user_id_to_send)
         else:
             concerned_rules_list = []
             rule = RuleModel.get_rule(request_.rule_id)
             concerned_rules_list.append(rule)
-    
+
 
     if concerned_rules_list:
         return {
             "success": True,
             "concerned_rules_list": [rule.to_json() for rule in concerned_rules_list],
             "Rules_totalPages": concerned_rules_list.pages if request_.rule_source else 1,
-            "total_rules": len(concerned_rules_list) if concerned_rules_list else 0
+            "total_rules": nb_rules
         } , 200
     else:
         return {
@@ -251,19 +254,25 @@ def get_all_concerned_rules():
 
 
 
-@home_blueprint.route("/update_request", methods=["POST","GET" ])
+@home_blueprint.route("/update_request", methods=["POST" ])
 @login_required
 def update_request_status() -> jsonify:
     """Update the request for vue JS"""
-    request_id = request.args.get('request_id')
-    status = request.args.get('status')
-    rule_list_json = request.args.get('rule_list')
+    # request_id = request.args.get('request_id') 
+    # status = request.args.get('status')
+    # rule_list_json = request.args.get('rule_list')
 
-    try:
-        rule_ids = json.loads(rule_list_json)
-    except Exception as e:
-        rule_ids = []
+    data = request.get_json()
 
+    request_id = data.get('request_id')
+    status = data.get('status')
+    rule_ids = data.get('rule_list')
+    # rule_list_json
+    # try:
+    #     rule_ids = json.loads(rule_list_json)
+    # except Exception as e:
+    #     rule_ids = []
+   
     rules = RuleModel.get_rules_by_ids(rule_ids)
 
 

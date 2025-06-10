@@ -312,21 +312,21 @@ def get_rule_diff(proposal_id):
 #   Rule owner  #
 #################
 
-# @rule_blueprint.route("/get_rules_page_owner", methods=['GET'])
-# def get_rules_page_owner() -> jsonify:
-#     """Get all the rule of the user"""
-#     page = request.args.get('page', 1, type=int)
-#     rules = RuleModel.get_rules_page_owner(page)    
-#     total_rules = RuleModel.get_total_rules_count_owner()  
+@rule_blueprint.route("/get_rules_page_owner", methods=['GET'])
+def get_rules_page_owner() -> jsonify:
+    """Get all the rule of the user"""
+    page = request.args.get('page', 1, type=int)
+    rules = RuleModel.get_rules_page_owner(page)    
+    total_rules = RuleModel.get_total_rules_count_owner()  
 
-#     if rules:
-#         rules_list = list()
-#         for rule in rules:
-#             u = rule.to_json()
-#             rules_list.append(u)
-#         return {"rule": rules_list, "total_pages": rules.pages, "total_rules": total_rules}
+    if rules:
+        rules_list = list()
+        for rule in rules:
+            u = rule.to_json()
+            rules_list.append(u)
+        return {"owner_rules": rules_list, "owner_total_page": rules.pages, "total_rules": total_rules} , 200
     
-#     return {"message": "No Rule"}, 404
+    return {"message": "No Rule"}
 
 @rule_blueprint.route("/get_my_rules_page_filter", methods=['GET'])
 def get_rules_page_filter_owner() -> jsonify:
@@ -337,8 +337,9 @@ def get_rules_page_filter_owner() -> jsonify:
     author = request.args.get("author", None)
     sort_by = request.args.get("sort_by", "newest")
     rule_type = request.args.get("rule_type", None) 
+    sourceFilter = request.args.get("source", None) 
 
-    query = RuleModel.filter_rules_owner( search=search, author=author, sort_by=sort_by, rule_type=rule_type)
+    query = RuleModel.filter_rules_owner( search=search, author=author, sort_by=sort_by, rule_type=rule_type , source=sourceFilter)
     total_rules = query.count()
     rules = query.offset((page - 1) * per_page).limit(per_page).all()
 
@@ -701,6 +702,28 @@ def get_discuss_part_from() -> jsonify:
 #########################
 #   Import from Github  #
 #########################
+
+@rule_blueprint.route("/update_github/update_rules_from_github", methods=['GET'])
+@login_required
+def get_update_page() -> render_template:
+    """Redirect to updating interface"""
+    return render_template("rule/update_github/update_rules_from_github.html")
+
+@rule_blueprint.route("/get_all_rules_owner")
+@login_required
+def get_all_rules_owner():
+    rules = RuleModel.get_all_rule_update()
+    return jsonify([r.to_json() for r in rules])
+
+@rule_blueprint.route('/get_all_sources_owner')
+@login_required
+def get_all_sources_owner():
+    try:
+        sources = RuleModel.get_all_rule_sources_by_user()
+        return jsonify(sources)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @rule_blueprint.route("/get_license", methods=['GET'])
 @login_required

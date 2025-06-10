@@ -416,6 +416,9 @@ def get_process_requests_page_user(page) -> dict:
         RequestOwnerRule.status != "pending"
     ).paginate(page=page, per_page=10, max_per_page=10)
 
+
+
+
 def is_the_owner(request_id) -> bool:
     """
     Return True if the current user is the owner of the request
