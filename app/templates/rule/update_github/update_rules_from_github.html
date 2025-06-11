@@ -178,7 +178,8 @@
                                 </td>
                                 <td>[[ result.message ]]</td>
                                 <td>
-                                    <a class="btn btn-sm btn-primary" :href="'/update_github/choose_changes?id=' + result.history_id" target="_blank" rel="noopener noreferrer">
+                                    <a class="btn btn-sm btn-primary" :href="'/rule/update_github/choose_changes?id=' + result.history_id"  > 
+                                        <!-- target="_blank" -->
                                         <i class="fas fa-code-branch"></i> Compare Changes
                                     </a>
 
@@ -403,13 +404,11 @@
                     });
 
                     const result = await response.json();
-
-                    if (!result.success || !Array.isArray(result.results)) {
-                        console.error("Error: Unexpected response from server.");
-                        return;
-                    }
-
                     updateResults.value = result.results; 
+                    if (updateResults.value.length == 0){
+                        alert("No updates found for the selected rules.");
+
+                    }
 
 
 

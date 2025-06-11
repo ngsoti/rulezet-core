@@ -53,3 +53,83 @@ def form_to_dict(form):
         elif not field == "submit" and not field == "csrf_token":
             loc_dict[field] = form._fields[field].data
     return loc_dict
+
+
+import difflib
+
+def generate_diff_html(text_old: str, text_new: str) -> str:
+    """
+    Generate an HTML representation of the diff between two multi-line texts.
+    Lines added are highlighted in green,
+    lines removed in red,
+    unchanged lines are left plain.
+
+    Args:
+        text_old (str): The original text.
+        text_new (str): The modified text.
+
+    Returns:
+        str: An HTML string with colored diff.
+    """
+    lines_old = text_old.strip().splitlines()
+    lines_new = text_new.strip().splitlines()
+
+    diff = difflib.ndiff(lines_old, lines_new)
+    html_lines = []
+
+    for line in diff:
+        if line.startswith('+ '):
+            html_lines.append(f'<span style="background-color:#d4edda; display:block;">{line[2:]}</span>')
+        elif line.startswith('- '):
+            html_lines.append(f'<span style="background-color:#f8d7da; display:block;">{line[2:]}</span>')
+        elif line.startswith('? '):
+            # ignore diff hints line
+            continue
+        else:
+            # unchanged lines
+            content = line[2:] if line.startswith('  ') else line
+            html_lines.append(f'<span style="display:block;">{content}</span>')
+
+    return ''.join(html_lines)
+
+
+def generate_side_by_side_diff_html(text_old: str, text_new: str) -> tuple[str, str]:
+    """
+    Generate side-by-side diff HTML of two texts.
+    Returns a tuple (old_html, new_html) where:
+    - old_html: old content with deleted lines highlighted in red,
+    - new_html: new content with added lines highlighted in green.
+    Unchanged lines are normal.
+
+    Args:
+        text_old (str): original text
+        text_new (str): modified text
+
+    Returns:
+        tuple[str, str]: (old_html, new_html)
+    """
+    lines_old = text_old.strip().splitlines()
+    lines_new = text_new.strip().splitlines()
+
+    diff = difflib.ndiff(lines_old, lines_new)
+
+    old_lines_html = []
+    new_lines_html = []
+
+    for line in diff:
+        code = line[:2]
+        content = line[2:]
+
+        if code == '  ':  # unchanged
+            old_lines_html.append(f'<span style="display:block;">{content}</span>')
+            new_lines_html.append(f'<span style="display:block;">{content}</span>')
+        elif code == '- ':  # line removed from old
+            old_lines_html.append(f'<span style="background-color:#f8d7da; display:block;">{content}</span>')
+            new_lines_html.append('<span style="display:block;"></span>')  # empty placeholder
+        elif code == '+ ':  # line added in new
+            old_lines_html.append('<span style="display:block;"></span>')  # empty placeholder
+            new_lines_html.append(f'<span style="background-color:#d4edda; display:block;">{content}</span>')
+        elif code == '? ':  # diff hints line, ignore
+            continue
+
+    return ''.join(old_lines_html), ''.join(new_lines_html)

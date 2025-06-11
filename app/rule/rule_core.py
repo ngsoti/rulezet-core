@@ -287,6 +287,9 @@ def get_history_rule(page, rule_id) -> list:
         .order_by(RuleEditProposal.timestamp.desc()) \
         .paginate(page=page, per_page=20, max_per_page=20)
 
+
+
+
 def get_diff_lines(text1: str, text2: str):
     """
     Compare two multiline strings and return the line numbers and contents where they differ.
@@ -1302,7 +1305,7 @@ def delete_report(repport_id) -> bool:
 #   history section   #
 #######################
 
-def create_rule_history(data: dict):
+def create_rule_history(data: dict) -> bool:
     """Create a history entry for a rule update, unless it already exists. Returns the created RuleUpdateHistory.id or None if duplicate or error."""
     try:
         rule_id = data.get("id")
@@ -1342,6 +1345,10 @@ def create_rule_history(data: dict):
         return history_entry.id
 
     except Exception as e:
-        print("Error while creating rule history:", e)
         db.session.rollback()
         return None
+
+
+def get_history_rule_by_id(history_id):
+    """Return an history for a rule by id"""
+    return RuleUpdateHistory.query.get(history_id)

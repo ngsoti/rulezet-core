@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime,  timezone
+import difflib
 from math import ceil
 from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for
 from flask_login import current_user, login_required
@@ -12,7 +13,7 @@ from app.import_github_project.import_github_sigma import load_rule_files
 from app.import_github_project.import_github_suricata import  parse_and_import_suricata_rules_async
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name
 from .rule_form import AddNewRuleForm, EditRuleForm
-from ..utils.utils import form_to_dict
+from ..utils.utils import  form_to_dict, generate_diff_html, generate_side_by_side_diff_html
 from . import rule_core as RuleModel
 
 rule_blueprint = Blueprint(
@@ -745,6 +746,61 @@ def check_updates():
         "success": True,
         "nb_update": len(results)
     }, 200
+
+
+
+@rule_blueprint.route("/get_history_rule", methods=['GET'])
+@login_required
+def get_history_rule():
+    history_id = request.args.get('rule_id', type=int)
+    history_rule = RuleModel.get_history_rule_by_id(history_id)
+
+    old_content = history_rule.old_content or ""
+    new_content = history_rule.new_content or ""
+
+    old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
+
+    d = history_rule.to_dict()
+    d['old_diff_html'] = old_html
+    d['new_diff_html'] = new_html
+
+    return {
+        "history_rule": d
+    }
+
+
+@rule_blueprint.route("/update_github/choose_changes", methods=['GET'])
+@login_required
+def choose_changes() -> render_template:
+    """Redirect to updating interface for choose"""
+    history_id = request.args.get('id', 1, type=int)
+    return render_template("rule/update_github/updates_choose_changes.html" , history_id=history_id)
+
+@rule_blueprint.route("/update_github_rule", methods=['GET'])
+@login_required
+def update_github_rule() -> render_template:
+    """Update a rule from github"""
+    history_id = request.args.get('rule_id')
+    decision = request.args.get('decision')
+
+
+    history = RuleModel.get_history_rule_by_id(history_id)
+    
+
+    if current_user.is_admin() or history.analyzed_by_user_id == current_user.id:
+        if decision == 'accepted':
+            rule = RuleModel.get_rule(history.rule_id)
+            if rule:
+                rule.to_string = history.new_content
+                flash('Rule content modified !', 'success')
+                return redirect(f"/rule/detail_rule/{rule.id}")
+
+            flash('Error , no rule found !', 'danger')
+            return redirect(request.referrer or '/')
+        flash('No change for the rule !', 'success')
+        return redirect(request.referrer or '/')
+    else:
+        return render_template("access_denied.html")
 
 
 
