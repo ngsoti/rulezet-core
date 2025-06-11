@@ -346,8 +346,10 @@ def get_rules_by_ids(rule_ids) -> list:
     """Get all the rules with id"""
     return Rule.query.filter(Rule.id.in_(rule_ids)).all()
 
+
 def get_all_rule_update():
     return Rule.query.filter_by(user_id=current_user.id).all()
+
 
 
 def get_all_rule_sources_by_user():
@@ -1293,3 +1295,53 @@ def delete_report(repport_id) -> bool:
     db.session.delete(repport)
     db.session.commit()
     return True
+
+
+
+#######################
+#   history section   #
+#######################
+
+def create_rule_history(data: dict):
+    """Create a history entry for a rule update, unless it already exists. Returns the created RuleUpdateHistory.id or None if duplicate or error."""
+    try:
+        rule_id = data.get("id")
+        rule_title = data.get("title", "Unknown Title")
+        success = data.get("success", False)
+        message = data.get("message", "")
+        new_content = data.get("new_content", "")
+        old_content = data.get("old_content", "")
+        user_id = current_user.id
+
+        existing_entry = RuleUpdateHistory.query.filter_by(
+            rule_id=rule_id,
+            rule_title=rule_title,
+            success=success,
+            message=message,
+            new_content=new_content,
+            old_content=old_content,
+            analyzed_by_user_id=user_id
+        ).first()
+
+        if existing_entry:
+            return existing_entry.id  # Return existing history ID
+
+        history_entry = RuleUpdateHistory(
+            rule_id=rule_id,
+            rule_title=rule_title,
+            success=success,
+            message=message,
+            new_content=new_content,
+            old_content=old_content,
+            analyzed_by_user_id=user_id,
+            analyzed_at=datetime.datetime.now(tz=datetime.timezone.utc)
+        )
+
+        db.session.add(history_entry)
+        db.session.commit()
+        return history_entry.id
+
+    except Exception as e:
+        print("Error while creating rule history:", e)
+        db.session.rollback()
+        return None

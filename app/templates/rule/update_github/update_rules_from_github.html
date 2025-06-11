@@ -4,6 +4,17 @@
 <!-- Interface to verify if there is an update in a github project -->
 
 <div class="container mt-4" id="main-container" >
+    <div class="my-4 p-4 bg-light border rounded shadow-sm">
+        <h2 class="mb-3">
+            <i class="fas fa-sync-alt me-2 text-primary"></i>
+            Check for GitHub Rule Updates
+        </h2>
+        <p class="text-muted">
+            This page allows you to automatically check whether your imported rules from GitHub have been updated. 
+            For each rule, you'll be notified if a new version is available and can review the changes before applying them.
+        </p>
+    </div>
+
     <div class="card bg-white shadow-sm border-0 mb-4">
             <div class="card-body">
                 <h5 class="card-title text-secondary mb-3">🔍 Smart Filters</h5>
@@ -53,16 +64,15 @@
                     <th scope="col"><i class="fas fa-user"></i> Author</th>
                     <th scope="col"><i class="fas fa-calendar-alt"></i> Created</th>
                     <th scope="col"><i class="fas fa-link"></i> Source</th>
-                    <th scope="col"><i class="fas fa-tools"></i> Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="rule in owner_rules" :key="rule.id" 
-                        @click="toggleSelection(rule.id)" 
+                        @click="toggleSelection(rule.id , rule.title)" 
                         :class="{ 'table-primary': selectedRules.includes(rule.id) }"
                         style="cursor: pointer;">
                     <td @click.stop>
-                        <input type="checkbox" :checked="selectedRules.includes(rule.id)" />
+                        <input type="checkbox" :checked="selectedRules.some(r => r.id === rule.id)" @change="toggleSelection(rule.id, rule.title)" />
                     </td>
                     <td>[[ rule.id ]]</td>
                     <td>[[ rule.title ]]</td>
@@ -73,11 +83,7 @@
                         GitHub <i class="fas fa-external-link-alt"></i>
                         </a>
                     </td>
-                    <td>
-                        <button class="btn btn-outline-primary btn-sm" @click.stop="checkUpdate(rule.id)">
-                        <i class="fas fa-sync-alt"></i> Check Update
-                        </button>
-                    </td>
+                    
                     </tr>
                 </tbody>
             </table>
@@ -101,16 +107,92 @@
                     </ul>
                 </nav>
             </div>
+            
+
+
+
         </div>
         <template v-else>
             No rule
         </template>
+        <!-- Selected Rules Display -->
+            <div class="mt-3" v-if="selectedRules.length > 0">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title mb-2 text-primary">
+                            <i class="fas fa-check-circle me-1"></i> Selected Rules ([[ selectedRules.length ]])
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span
+                                v-for="rule in displayedSelectedRules"
+                                :key="rule.id"
+                                class="badge bg-secondary text-light rounded-pill px-3 py-2"
+                            >
+                                [[ rule.title ]]
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-close btn-close-white ms-2"
+                                    aria-label="Remove"
+                                    @click.stop="removeFromSelection(rule.id)"
+                                ></button>
+                            </span>
+
+                            <span
+                                v-if="remainingSelectedCount > 0"
+                                class="badge bg-dark text-light rounded-pill px-3 py-2 align-self-center"
+                            >
+                                +[[ remainingSelectedCount ]] others selected
+                            </span>
+                        </div>
+
+                    </div>
+                </div>
+                <button class="btn btn-outline-primary btn-sm"  @click="checkUpdateList()">
+                    <i class="fas fa-sync-alt"></i> Check Update
+                </button>
+
+                <div class="mt-4" v-if="updateResults.length > 0">
+                    <h5>Update Check Results ( [[ updateResults.length]])</h5>
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Rule Title</th>
+                                <th>Status</th>
+                                <th>Message</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="result in updateResults" :key="result.id">
+                                <td>[[ result.title ]]</td>
+                                <td>
+                                    <span v-if="result.success && result.new_content" class="text-success">
+                                        <i class="fas fa-check-circle"></i> Updated
+                                    </span>
+                                    <span v-else-if="result.success" class="text-info">
+                                        <i class="fas fa-info-circle"></i> Up-to-date
+                                    </span>
+                                    <span v-else class="text-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> Failed
+                                    </span>
+                                </td>
+                                <td>[[ result.message ]]</td>
+                                <td>
+                                    <a class="btn btn-sm btn-primary" :href="'/update_github/choose_changes?id=' + result.history_id" target="_blank" rel="noopener noreferrer">
+                                        <i class="fas fa-code-branch"></i> Compare Changes
+                                    </a>
+
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+
+                
+            </div>
     </div>
 </div>
-
-
-
-
 {% endblock %}
 {% block script %}
 <script type="module">
@@ -125,12 +207,13 @@
              *          #   Main Rule State   #
              *          ########################
              */
+            const allRules = ref([]);
+
             const owner_rules = ref([])              // Rules shown on current page
             const owner_current_page = ref(1)        // Current pagination page
             const owner_total_page = ref(0)          // Total number of pages
 
-            const selectedRules = ref([])            // IDs of selected rules
-            const allRuleIds = ref([])               // All rule IDs of current user
+
 
 
             const searchQuery = ref('');
@@ -157,6 +240,8 @@
                     owner_rules.value = data.rule;
                     owner_current_page.value = page;
                     owner_total_page.value = data.total_pages;
+                    allRules.value = data.list;
+
                 }
             }
 
@@ -168,15 +253,16 @@
              *          ##########################
              */
             async function fetchAllOwnerRules() {
-                const res = await fetch('/rule/get_all_rules_owner');
-                if (res.status === 200) {
-                    const data = await res.json();
-                    return data.map(rule => rule.id); // Return only the IDs
-                } else {
-                    message_list.error("Error while fetching all rules.");
+                try {
+                    const response = await fetch("/rule/get_all_rules_owner");
+                    const data = await response.json();
+                    return data; // [{ id, title }]
+                } catch (error) {
+                    console.error("Erreur lors du chargement des règles :", error);
                     return [];
                 }
             }
+
 
             async function fetchUserSources() {
                 const res = await fetch('/rule/get_all_sources_owner');
@@ -195,36 +281,48 @@
              *          ########################
              *          #   Selection logic   #
              *          ########################
+             * 
              */
-            function isSelected(id) {
-                return selectedRules.value.includes(id)
-            }
+            
+           const selectedRules = ref([]); // [{ id, title }]
+            const allRuleIds = ref([]); // [id, id, id, ...]
+            const allSelected = computed(() => selectedRules.value.length === allRuleIds.value.length && allRuleIds.value.length > 0);
 
-            function toggleSelection(id) {
-                const index = selectedRules.value.indexOf(id)
+            // Pour l’affichage limité
+            const displayedSelectedRules = computed(() => selectedRules.value.slice(0, 50));
+            const remainingSelectedCount = computed(() => Math.max(0, selectedRules.value.length - 50));
+
+            function toggleSelection(id, title) {
+                const index = selectedRules.value.findIndex(rule => rule.id === id);
                 if (index === -1) {
-                    selectedRules.value.push(id)
+                    selectedRules.value.push({ id, title });
                 } else {
-                    selectedRules.value.splice(index, 1)
+                    selectedRules.value.splice(index, 1);
                 }
             }
 
-            // Triggered by the master checkbox — selects or deselects all rules
-            async function toggleAll() {
-                if (selectedRules.value.length === allRuleIds.value.length && allRuleIds.value.length > 0) {
-                    selectedRules.value = [] // Unselect all
-                } else {
-                    allRuleIds.value = await fetchAllOwnerRules()
-                    selectedRules.value = [...allRuleIds.value] // Select all
+            function removeFromSelection(id) {
+                const index = selectedRules.value.findIndex(rule => rule.id === id);
+                if (index !== -1) {
+                    selectedRules.value.splice(index, 1);
                 }
             }
 
-            const allSelected = computed(() => {
-                return (
-                    allRuleIds.value.length > 0 &&
-                    selectedRules.value.length === allRuleIds.value.length
-                )
-            })
+            async function toggleAll(event) {
+                const isChecked = event.target.checked;
+
+                if (isChecked) {
+                    const rules = await fetchAllOwnerRules(); // [{ id, title }]
+                    allRuleIds.value = rules.map(r => r.id);
+                    selectedRules.value = rules;
+                } else {
+                    allRuleIds.value = [];
+                    selectedRules.value = [];
+                }
+            }
+
+
+
 
             /**
              *          ############
@@ -265,7 +363,64 @@
              */
             function checkUpdate(id) {
                 alert(`Checking updates for rule ID ${id}`)
+                // to do                
             }
+
+            const csrf_token = '{{ csrf_token() }}';
+            const updateResults = ref([]);
+
+
+            // async function checkUpdateList() {
+            //     if (this.selectedRules.length === 0) {
+            //         return;
+            //     }
+            //     const response = await fetch("/rule/check_updates", {
+            //     method: "POST",
+            //     headers: {
+            //         "Content-Type": "application/json",
+            //         'X-CSRFToken': csrf_token  
+            //     },
+            //     body: JSON.stringify({ rules: this.selectedRules }),
+            //     });
+
+            //     const result = await response.json();
+            //     this.github = result;
+            // }
+            async function checkUpdateList() {
+                if (selectedRules.value.length === 0) {
+                    console.error("Please select at least one rule to check for updates.");
+                    return;
+                }
+
+                try {
+                    const response = await fetch("/rule/check_updates", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": csrf_token
+                        },
+                        body: JSON.stringify({ rules: selectedRules.value }),
+                    });
+
+                    const result = await response.json();
+
+                    if (!result.success || !Array.isArray(result.results)) {
+                        console.error("Error: Unexpected response from server.");
+                        return;
+                    }
+
+                    updateResults.value = result.results; 
+
+
+
+                } catch (error) {
+                    console.error("Error during update check:", error);
+                }
+            }
+
+
+            
+
 
             /**
              *          #######################
@@ -290,24 +445,34 @@
                 return pages
             })
 
+
             return {
                 owner_rules,
                 selectedRules,
-                allRuleIds,
+                allRules,
                 owner_current_page,
                 owner_total_page,
-                fetchRules,
-                toggleSelection,
-                toggleAll,
-                allSelected,
-                checkUpdate,
+
+                checkUpdateList,
                 visiblePages,
+                updateResults,
+
+
+                fetchRules,
                 searchQuery,
                 sourceFilter,
                 ruleType,
                 userSources,
                 onSearchInput,
-                onEnterKey
+                onEnterKey,
+                toggleSelection,
+                removeFromSelection,
+                toggleAll,
+                allSelected,
+                displayedSelectedRules,
+                remainingSelectedCount,
+
+
             }
 
         }

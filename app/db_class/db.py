@@ -399,31 +399,30 @@ class RepportRule(db.Model):
     
 
 
-# class RuleAnalysisMetadata(db.Model):
-#     """
-#     Stores GitHub analysis metadata for a rule without modifying the original Rule table.
-#     """
-#     id = db.Column(db.Integer, primary_key=True)
-#     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), unique=True, index=True)
 
-#     repo_rule_path = db.Column(db.String)  # Relative path to the rule in the GitHub repo
-#     last_checked = db.Column(db.DateTime, index=True)  # Last time the rule was checked
-#     comparison_status = db.Column(db.String, index=True)  # 'identical', 'modified', 'missing', 'error'
 
-#     # Link to the Rule object
-#     rule = db.relationship('Rule', backref=db.backref('analysis_metadata', uselist=False, cascade='all, delete-orphan'))
+class RuleUpdateHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(db.Integer, nullable=False)
+    rule_title = db.Column(db.String(255), nullable=False)
+    success = db.Column(db.Boolean, nullable=False)
+    message = db.Column(db.Text, nullable=True)
+    new_content = db.Column(db.Text, nullable=True)
+    old_content = db.Column(db.Text, nullable=True)
+    analyzed_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    analyzed_at = db.Column(db.DateTime, index=True)
 
-# class RuleVersionHistory(db.Model):
-#     """
-#     Keeps a history of each GitHub rule comparison (snapshot of GitHub + local content).
-#     """
-#     id = db.Column(db.Integer, primary_key=True)
-#     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), index=True)
-#     fetched_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+    analyzed_by = db.relationship("User", backref=db.backref("rule_updates", lazy='dynamic', cascade='all, delete-orphan'))
 
-#     github_version = db.Column(db.Text)  # Content fetched from the GitHub repo
-#     local_version = db.Column(db.Text)   # Content from the Rule's to_string at the time of comparison
-#     is_identical = db.Column(db.Boolean)
-
-#     # Link to the Rule object
-#     rule = db.relationship('Rule', backref=db.backref('version_history', lazy='dynamic' , cascade='all, delete-orphan'))
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "rule_id": self.rule_id,
+            "rule_title": self.rule_title,
+            "success": self.success,
+            "message": self.message,
+            "new_content": self.new_content,
+            "old_content": self.old_content,
+            "analyzed_by_user_id": self.analyzed_by_user_id,
+            "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
+        }

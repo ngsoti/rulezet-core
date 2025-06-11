@@ -5,6 +5,7 @@ from flask import Blueprint, Response, jsonify, redirect, request, render_templa
 from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
 from app.import_github_project.import_github_yara import  parse_yara_rules_from_repo_async
+from app.import_github_project.update_github_project import Check_for_rule_updates
 from ..account import account_core as AccountModel
 from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
 from app.import_github_project.import_github_sigma import load_rule_files
@@ -343,10 +344,13 @@ def get_rules_page_filter_owner() -> jsonify:
     total_rules = query.count()
     rules = query.offset((page - 1) * per_page).limit(per_page).all()
 
+    #all_rules = query.all()
+
     return jsonify({
         "rule": [r.to_json() for r in rules],
         "total_rules": total_rules,
-        "total_pages": ceil(total_rules / per_page)
+        "total_pages": ceil(total_rules / per_page),
+       # "list": [r.to_json() for r in all_rules]
     })
 
 #get_my_rules_page_filter
@@ -703,17 +707,61 @@ def get_discuss_part_from() -> jsonify:
 #   Import from Github  #
 #########################
 
+@rule_blueprint.route("/check_updates", methods=["POST"])
+@rule_blueprint.route("/check_updates", methods=["POST"])
+@login_required
+def check_updates():
+    data = request.get_json()
+    rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
+    results = []
+
+    for item in rule_items:
+        rule_id = item.get("id")
+        title = item.get("title", "Unknown Title")
+
+        message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
+        rule = RuleModel.get_rule(rule_id)
+
+        if success and new_rule_content:
+            result = {
+                "id": rule_id,
+                "title": title,
+                "success": success,
+                "message": message_dict.get("message", "No message"),
+                "new_content": new_rule_content,
+                "old_content": rule.to_string if rule else "Error to charge the rule"
+            }
+
+            history_id = RuleModel.create_rule_history(result)
+            if history_id is None:
+                result["history_id"] = None
+            else:
+                result["history_id"] = history_id
+
+            results.append(result)
+
+    return {
+        "results": results,
+        "success": True,
+        "nb_update": len(results)
+    }, 200
+
+
+
+
 @rule_blueprint.route("/update_github/update_rules_from_github", methods=['GET'])
 @login_required
 def get_update_page() -> render_template:
     """Redirect to updating interface"""
     return render_template("rule/update_github/update_rules_from_github.html")
 
+
 @rule_blueprint.route("/get_all_rules_owner")
 @login_required
 def get_all_rules_owner():
     rules = RuleModel.get_all_rule_update()
-    return jsonify([r.to_json() for r in rules])
+    return jsonify([{"id": r.id, "title": r.title} for r in rules])
+
 
 @rule_blueprint.route('/get_all_sources_owner')
 @login_required

@@ -176,7 +176,129 @@ def extract_metadata_value(text, key):
     match = re.search(pattern, text)
     return match.group(1) if match else None
 
+####################
+#   search title   #
+####################
 
+def find_yara_rule_by_title(repo_dir, title):
+    yara_files = get_yara_files_from_repo(repo_dir)
+
+    for filepath in yara_files:
+        try:
+            with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+
+            raw_blocks = re.findall(r'(?s)(rule\s+\w+.*?condition\s*:\s*[^}]+})', content)
+
+            for idx, rule_text in enumerate(raw_blocks, start=1):
+                rule_name_match = re.search(r'rule\s+(\w+)', rule_text)
+                rule_name = rule_name_match.group(1) if rule_name_match else None
+
+                if rule_name != title:
+                    continue
+
+                externals = {}
+                compiled = False
+                attempts = 0
+                max_attempts = 10
+
+                while not compiled and attempts < max_attempts:
+                    try:
+                        yara.compile(source=rule_text, externals=externals)
+                        compiled = True
+                    except yara.SyntaxError as e:
+                        error_msg = str(e)
+
+                        match_id = re.search(r'undefined identifier "(\w+)"', error_msg)
+                        if match_id:
+                            var_name = match_id.group(1)
+
+                            if var_name in YARA_MODULES:
+                                rule_text = insert_import_module(rule_text, var_name)
+                            else:
+                                externals[var_name] = "example.txt"
+
+                            attempts += 1
+                            continue
+
+                        break
+
+                if compiled:
+                    return rule_text  
+
+        except Exception as e:
+            continue
+
+    return None
+
+# def find_yara_rule_by_title(repo_dir, title, logs=None):
+#     if logs is None:
+#         logs = []
+
+#     logs.append(f"Searching for YARA rule titled '{title}' in repository: {repo_dir}")
+#     yara_files = get_yara_files_from_repo(repo_dir)
+#     logs.append(f"Found {len(yara_files)} YARA files to scan.")
+
+#     for filepath in yara_files:
+#         logs.append(f"Reading file: {filepath}")
+#         try:
+#             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+#                 content = f.read()
+
+#             raw_blocks = re.findall(r'(?s)(rule\s+\w+.*?condition\s*:\s*[^}]+})', content)
+#             logs.append(f"Found {len(raw_blocks)} raw rules in file.")
+
+#             for idx, rule_text in enumerate(raw_blocks, start=1):
+#                 rule_name_match = re.search(r'rule\s+(\w+)', rule_text)
+#                 rule_name = rule_name_match.group(1) if rule_name_match else None
+
+#                 if rule_name != title:
+#                     logs.append(f"Rule #{idx} named '{rule_name}' does not match target '{title}', skipping.")
+#                     continue
+
+#                 logs.append(f"Found matching rule '{rule_name}'. Attempting to compile...")
+#                 externals = {}
+#                 compiled = False
+#                 attempts = 0
+#                 max_attempts = 10
+
+#                 while not compiled and attempts < max_attempts:
+#                     try:
+#                         yara.compile(source=rule_text, externals=externals)
+#                         compiled = True
+#                         logs.append(f"Rule compiled successfully after {attempts} attempts.")
+#                     except yara.SyntaxError as e:
+#                         error_msg = str(e)
+#                         logs.append(f"Compilation error: {error_msg}")
+
+#                         match_id = re.search(r'undefined identifier "(\w+)"', error_msg)
+#                         if match_id:
+#                             var_name = match_id.group(1)
+#                             logs.append(f"Undefined identifier found: '{var_name}'")
+
+#                             if var_name in YARA_MODULES:
+#                                 logs.append(f"Inserting import for YARA module '{var_name}'")
+#                                 rule_text = insert_import_module(rule_text, var_name)
+#                             else:
+#                                 logs.append(f"Adding external variable '{var_name}' with dummy value")
+#                                 externals[var_name] = "example.txt"
+
+#                             attempts += 1
+#                             continue
+                        
+#                         logs.append("Compilation failed with unrecoverable syntax error.")
+#                         break
+
+#                 if compiled:
+#                     logs.append(f"Returning compiled rule for '{rule_name}'.")
+#                     return rule_text, logs
+
+#         except Exception as e:
+#             logs.append(f"Error reading/parsing file {filepath}: {e}")
+#             continue
+
+#     logs.append(f"No matching YARA rule titled '{title}' found in repository.")
+#     return None, logs
 
 ###########################################################_____Sync____#####################################################################
 
