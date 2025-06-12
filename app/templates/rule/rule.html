@@ -83,6 +83,17 @@
                                 {% endif %}
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.cve_id.label(class_="col-form-label") }}
+                                {{ form.cve_id(class_="form-control") }}
+                                {% if form.cve_id.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.cve_id.errors[0] | safe }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
             
                     <div class="row mb-3">

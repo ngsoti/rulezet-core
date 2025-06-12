@@ -11,7 +11,7 @@ from ..account import account_core as AccountModel
 from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
 from app.import_github_project.import_github_sigma import load_rule_files
 from app.import_github_project.import_github_suricata import  parse_and_import_suricata_rules_async
-from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name
+from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name, git_pull_repo
 from .rule_form import AddNewRuleForm, EditRuleForm
 from ..utils.utils import  form_to_dict, generate_diff_html, generate_side_by_side_diff_html
 from . import rule_core as RuleModel
@@ -235,7 +235,6 @@ def edit_rule(rule_id) -> render_template:
 
         if form.validate_on_submit():
             form_dict = form_to_dict(form)
-
             # try to compile
             if form_dict['format'] == 'yara' :
                 valide , to_string , error = RuleModel.compile_yara([],form_dict)
@@ -247,7 +246,7 @@ def edit_rule(rule_id) -> render_template:
                     return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
 
 
-
+            
             RuleModel.edit_rule_core(form_dict, rule_id)
             flash("Rule modified with success!", "success")
             # return redirect("/rule/rules_list")
@@ -258,6 +257,7 @@ def edit_rule(rule_id) -> render_template:
             form.title.data = rule.title
             form.description.data = rule.description
             form.license.data = rule.license  # Selected value
+            form.cve_id.data = rule.cve_id
             form.version.data = rule.version
             form.to_string.data = rule.to_string
             rule.last_modif = datetime.now(timezone.utc)
@@ -278,7 +278,7 @@ def rules_info()-> render_template:
 @rule_blueprint.route("/history/<int:rule_id>", methods=['GET'])
 def rules_history(rule_id)-> render_template:
     """Redirect to rule history"""    
-    return render_template("rule/rule_history.html" , rule_id=rule_id)
+    return render_template("rule/rule_history_.html" , rule_id=rule_id)
 
 @rule_blueprint.route("/get_rules_page_history", methods=['GET'])
 def get_rules_page_history()-> render_template:
@@ -342,6 +342,30 @@ def get_rules_page_filter_owner() -> jsonify:
     sourceFilter = request.args.get("source", None) 
 
     query = RuleModel.filter_rules_owner( search=search, author=author, sort_by=sort_by, rule_type=rule_type , source=sourceFilter)
+    total_rules = query.count()
+    rules = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    #all_rules = query.all()
+
+    return jsonify({
+        "rule": [r.to_json() for r in rules],
+        "total_rules": total_rules,
+        "total_pages": ceil(total_rules / per_page),
+       # "list": [r.to_json() for r in all_rules]
+    })
+
+@rule_blueprint.route("/get_my_rules_page_filter_github", methods=['GET'])
+def get_my_rules_page_filter_github() -> jsonify:
+    """Get all the rules of the current user with filter"""
+    page = int(request.args.get("page", 1))
+    per_page = 10
+    search = request.args.get("search", None)
+    author = request.args.get("author", None)
+    sort_by = request.args.get("sort_by", "newest")
+    rule_type = request.args.get("rule_type", None) 
+    sourceFilter = request.args.get("source", None) 
+
+    query = RuleModel.filter_rules_owner_github( search=search, author=author, sort_by=sort_by, rule_type=rule_type , source=sourceFilter)
     total_rules = query.count()
     rules = query.offset((page - 1) * per_page).limit(per_page).all()
 
@@ -614,6 +638,19 @@ def validate_proposal() -> jsonify:
                 # add to contributor
                 user_proposal_id = RuleModel.get_rule_proposal_user_id(rule_proposal_id)
                 RuleModel.create_contribution(user_proposal_id,rule_proposal_id)
+                # add to history rule
+                rule = RuleModel.get_rule(rule_id)
+                result = {
+                    "id": rule_id,
+                    "title": rule.title,
+                    "success": True,
+                    "message": "accepted",
+                    "new_content": rule.to_string if rule else "Error to charge the rule",
+                    "old_content": rule_proposal.old_content
+                }
+
+
+                history_id = RuleModel.create_rule_history(result)
 
             elif decision == "rejected":
                 RuleModel.set_status(rule_proposal_id,"rejected")
@@ -709,20 +746,24 @@ def get_discuss_part_from() -> jsonify:
 #########################
 
 @rule_blueprint.route("/check_updates", methods=["POST"])
-@rule_blueprint.route("/check_updates", methods=["POST"])
 @login_required
 def check_updates():
     data = request.get_json()
     rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
     results = []
+    sources = RuleModel.get_sources_from_titles(rule_items)
+    print(sources)
+    for source in sources:
+        print("a")
+        repo_dir, exists = clone_or_access_repo(source)
+        git_pull_repo(repo_dir)
 
     for item in rule_items:
         rule_id = item.get("id")
         title = item.get("title", "Unknown Title")
-
         message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
         rule = RuleModel.get_rule(rule_id)
-
+        
         if success and new_rule_content:
             result = {
                 "id": rule_id,
@@ -1072,3 +1113,63 @@ def   deleteReport() -> jsonify:
     else:
         return render_template("access_denied.html")
     
+
+################
+#   History    #
+################
+
+# @rule_blueprint.route("/get_rules_page_history_", methods=['GET'])
+# def get_rules_page_history_() -> render_template:
+#     """Get the history of the rule"""
+#     page = request.args.get('page', type=int)
+#     rule_id = request.args.get('rule_id', type=int)
+
+#     rules = RuleModel.get_history_rule_(page, rule_id)
+
+#     if rules.items:
+#         return {
+#             "success": True,
+#             "rule": [rule.to_json() for rule in rules.items],
+#             "total_pages": rules.pages
+#         }, 200
+#     return {"message": "No Rule"}, 404
+
+@rule_blueprint.route("/get_rules_page_history_", methods=['GET'])
+def get_rules_page_history_():
+    """Get the history of the rule with HTML diff for each version"""
+    page = request.args.get('page', type=int)
+    rule_id = request.args.get('rule_id', type=int)
+
+    rules = RuleModel.get_history_rule_(page, rule_id)
+
+    if not rules.items:
+        return {"message": "No Rule"}, 404
+
+    result = []
+    for rule in rules.items:
+        # Safely handle None
+        old_content = rule.old_content or ""
+        new_content = rule.new_content or ""
+
+        # Generate HTML diff for each rule
+        old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
+
+        rule_data = {
+            "id": rule.id,
+            "rule_title": rule.rule_title,
+            "analyzed_at": rule.analyzed_at.strftime("%Y-%m-%d %H:%M") if rule.analyzed_at else "",
+            "message": rule.message,
+            "old_content": old_content,
+            "new_content": new_content,
+            "old_html": old_html,
+            "new_html": new_html,
+            "rule_id": rule.rule_id,
+            "success": rule.success,
+        }
+        result.append(rule_data)
+
+    return jsonify({
+        "success": True,
+        "rule": result,
+        "total_pages": rules.pages
+    }), 200

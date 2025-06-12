@@ -5,6 +5,8 @@ import asyncio
 import aiofiles
 from flask_login import current_user
 from concurrent.futures import ThreadPoolExecutor
+
+from app.utils.utils import detect_cve
 from ..rule import rule_core as RuleModel
 
 YARA_MODULES = {"pe", "math", "cuckoo", "magic", "hash", "dotnet", "elf", "macho"}
@@ -107,7 +109,6 @@ async def parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_u
                             bad_rules_count += 1
                             break
 
-                        print(f"✗ Syntax error: {error_msg}")
                         bad_rules.append({
                             "file": filepath,
                             "error": error_msg,
@@ -121,6 +122,7 @@ async def parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_u
                         meta = extract_meta_from_rule(current_rule_text)
                         rule_name_match = re.search(r'rule\s+(\w+)', current_rule_text)
                         rule_name = rule_name_match.group(1) if rule_name_match else "unknown_rule"
+                        r , cve = detect_cve(meta.get("description", "No description provided"))
 
                         rule_dict = {
                             "format": "yara",
@@ -130,7 +132,8 @@ async def parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_u
                             "source": repo_url,
                             "version": meta.get("version", "1.0"),
                             "author": meta.get("author", "Unknown"),
-                            "to_string": current_rule_text
+                            "to_string": current_rule_text,
+                            "cve_id": cve
                         }
 
                         result = {"valid": True, "rule": rule_dict}

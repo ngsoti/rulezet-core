@@ -4,6 +4,8 @@ import aiofiles
 import yaml
 import json
 from jsonschema import validate, ValidationError
+
+from app.utils.utils import detect_cve
 from ..rule import rule_core as RuleModel
 
 
@@ -52,7 +54,7 @@ async def _process_single_file(file, sigma_schema, semaphore):
             async with aiofiles.open(file, 'r', encoding='utf-8') as f:
                 content = await f.read()
                 rule = yaml.safe_load(content)
-
+                
 
 
                 rule_json_string = json.dumps(rule, indent=2, default=str)
@@ -62,7 +64,7 @@ async def _process_single_file(file, sigma_schema, semaphore):
                 if rule:
                     try:
                         validate(instance=rule_json_object, schema=sigma_schema)
-                        return {'valid': True, 'rule': rule}
+                        return {'valid': True, 'rule': rule , 'rule_content':content}
                     except ValidationError as e:
                         bad_rule_content = yaml.safe_dump(rule, sort_keys=False, allow_unicode=True)
                         return {
@@ -120,6 +122,7 @@ async def load_rule_files(repo_dir, license_from_github, repo_url, user):
     for res in results:
         if res.get('valid'):
             rule = res['rule']
+            r , cve = detect_cve(rule.get("description", "No description provided"),)
             rule_dict = {
                 "format": "sigma",
                 "title": rule.get("title", "Untitled"),
@@ -129,7 +132,8 @@ async def load_rule_files(repo_dir, license_from_github, repo_url, user):
                 "version": rule.get("version", "1.0"),
                 "author": rule.get("author", "Unknown"),
                 # Convert back to YAML string for storage
-                "to_string": yaml.safe_dump(rule, sort_keys=False, allow_unicode=True)
+                "to_string": res['rule_content'], #yaml.safe_dump(rule, sort_keys=False), #, allow_unicode=True
+                "cve_id": cve
             }
             # Attempt to add the rule to DB; update counters accordingly
             success = RuleModel.add_rule_core(rule_dict, user)
@@ -140,6 +144,51 @@ async def load_rule_files(repo_dir, license_from_github, repo_url, user):
 
     # Return info about invalid rules and import stats
     return bad_rules, nb_bad_rules, imported, skipped
+
+
+
+
+
+def find_sigma_rule_by_title(repo_dir, title):
+    """
+    Find a Sigma rule in the given repo by its title.
+    Returns the raw YAML string of the rule if found, otherwise None.
+    """
+
+    print(f"🔍 Searching for Sigma rule titled: '{title}' in repo: {repo_dir}")
+
+    if not os.path.exists(repo_dir):
+        print(f"❌ Directory does not exist: {repo_dir}")
+        return None
+
+    for root, dirs, files in os.walk(repo_dir):
+        dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+        for file in files:
+            if file.startswith('.') or file.startswith('_'):
+                continue
+            if file.endswith(('.yml', '.yaml')):
+                file_path = os.path.join(root, file)
+                print(f"📄 Checking file: {file_path}")
+
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        parsed = yaml.safe_load(content)
+
+                        if isinstance(parsed, dict):
+                            rule_title = parsed.get('title')
+                            print(f"   → Found rule title: {rule_title}")
+                            if rule_title == title:
+                                print(f"✅ Match found in file: {file_path}")
+                                return content  # Return raw YAML string
+                        else:
+                            print(f"⚠️ Skipped non-dict YAML content in {file_path}")
+                except Exception as e:
+                    print(f"⚠️ Error reading/parsing file {file_path}: {e}")
+                    continue
+
+    print("❗ No matching Sigma rule found.")
+    return None
 
 
 

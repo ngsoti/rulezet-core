@@ -235,7 +235,7 @@
                     source: sourceFilter.value
                 });
 
-                const res = await fetch('/rule/get_my_rules_page_filter?' + params.toString());
+                const res = await fetch('/rule/get_my_rules_page_filter_github?' + params.toString());
                 if (res.status === 200) {
                     const data = await res.json();
                     owner_rules.value = data.rule;
@@ -362,31 +362,10 @@
              *          #   Check GitHub Update  #
              *          ##########################
              */
-            function checkUpdate(id) {
-                alert(`Checking updates for rule ID ${id}`)
-                // to do                
-            }
-
+            
             const csrf_token = '{{ csrf_token() }}';
             const updateResults = ref([]);
 
-
-            // async function checkUpdateList() {
-            //     if (this.selectedRules.length === 0) {
-            //         return;
-            //     }
-            //     const response = await fetch("/rule/check_updates", {
-            //     method: "POST",
-            //     headers: {
-            //         "Content-Type": "application/json",
-            //         'X-CSRFToken': csrf_token  
-            //     },
-            //     body: JSON.stringify({ rules: this.selectedRules }),
-            //     });
-
-            //     const result = await response.json();
-            //     this.github = result;
-            // }
             async function checkUpdateList() {
                 if (selectedRules.value.length === 0) {
                     console.error("Please select at least one rule to check for updates.");

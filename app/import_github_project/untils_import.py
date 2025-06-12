@@ -55,6 +55,9 @@ def delete_existing_repo_folder(local_dir):
     """Delete the existing folder if it exists."""
     if os.path.exists(local_dir):
         shutil.rmtree(local_dir)
+        return True
+    else:
+        return False
 
 def clean_rule_filename_Yara(filename):
     if filename.lower().endswith(('.yar', '.yara')):

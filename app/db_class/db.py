@@ -91,6 +91,7 @@ class Rule(db.Model):
     vote_up = db.Column(db.Integer)
     vote_down = db.Column(db.Integer)
     to_string = db.Column(db.String)
+    cve_id = db.Column(db.String , nullable=True)
 
     #taxonomie_misp = db.Column(db) 
 
@@ -121,7 +122,8 @@ class Rule(db.Model):
             "user_id": self.user_id,
             "version": self.version,
             "to_string": self.to_string,
-            "is_favorited": is_favorited
+            "is_favorited": is_favorited,
+            "cve_id": self.cve_id
         }
 
 class RuleFavoriteUser(db.Model):
@@ -415,6 +417,19 @@ class RuleUpdateHistory(db.Model):
     analyzed_by = db.relationship("User", backref=db.backref("rule_updates", lazy='dynamic', cascade='all, delete-orphan'))
 
     def to_dict(self):
+        return {
+            "id": self.id,
+            "rule_id": self.rule_id,
+            "rule_title": self.rule_title,
+            "success": self.success,
+            "message": self.message,
+            "new_content": self.new_content,
+            "old_content": self.old_content,
+            "analyzed_by_user_id": self.analyzed_by_user_id,
+            "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
+        }
+    
+    def to_json(self):
         return {
             "id": self.id,
             "rule_id": self.rule_id,

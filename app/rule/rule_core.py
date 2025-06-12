@@ -1,7 +1,7 @@
 
 import json
 import re
-
+from typing import List
 import uuid
 import datetime
 from flask import jsonify
@@ -13,6 +13,7 @@ import yara
 from app.account.account_core import get_user
 from app.import_github_project.import_github_yara import extract_first_match, insert_import_module
 from app.import_github_project.untils_import import build_externals_dict, clean_rule_filename_Yara_v2
+from app.utils.utils import detect_cve
 from .. import db
 from ..db_class.db import *
 from . import rule_core as RuleModel
@@ -48,7 +49,8 @@ def add_rule_core(form_dict , user) -> bool:
         last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
         vote_up=0,
         vote_down=0,
-        to_string = form_dict["to_string"]
+        to_string = form_dict["to_string"],
+        cve_id = form_dict["cve_id"] or None
     )
 
     db.session.add(new_rule)
@@ -80,6 +82,7 @@ def edit_rule_core(form_dict, id) -> None:
     rule.source = form_dict["source"]
     rule.version = form_dict["version"]
     rule.to_string = form_dict["to_string"]
+    rule.cve_id = form_dict["cve_id"]
     rule.last_modif = datetime.datetime.now(tz=datetime.timezone.utc)
 
     db.session.commit()
@@ -159,6 +162,34 @@ def compile_sigma(form_dict) -> tuple[bool, dict]:
         return False, form_dict["to_string"] , error_msg
 
 # Read
+
+
+
+
+def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
+    """
+    Given a list of dicts containing 'title', retrieve the 'source' from the DB for each rule,
+    but only if the title is unique in the DB and the source has not already been added.
+    Returns a deduplicated list of sources.
+    """
+    sources = []
+
+    for rule_info in rules_list:
+        title = rule_info.get('title')
+        if not title:
+            continue
+
+        count = Rule.query.filter_by(title=title).count()
+
+        if count == 1:
+            rule = Rule.query.filter_by(title=title).first()
+            if rule.source not in sources:
+                sources.append(rule.source)
+        else:
+            print(f"⚠️ Skipping title '{title}' because it has {count} entries (duplicate or missing).")
+
+    return sources
+
 
 def get_rules_page(page) -> Rule:
     """Return all rules by page"""
@@ -492,7 +523,7 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content):
             author = extract_first_match(current_rule_text, ["author", "Author"])
             version = extract_first_match(current_rule_text, ["version", "Version"])
             source_url = bad_rule_obj.url
-
+            r , cve = detect_cve(description)
             rule_dict = {
                 "format": "YARA",
                 "title": title,
@@ -501,9 +532,10 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content):
                 "source": source_url,
                 "version": version or "1.0",
                 "author": author or "Unknown",
-                "to_string": current_rule_text
+                "to_string": current_rule_text,
+                "cve_id": cve
             }
-            print(rule_dict)
+
 
         else: 
             try:
@@ -514,7 +546,7 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content):
                 validate(instance=rule_json, schema=schema)
             except (ValidationError, FileNotFoundError) as e:
                 return False, str(e)
-
+            r , cve = detect_cve(rule.get("description", "No description provided"),)
             rule_dict = {
                 "format": "Sigma",
                 "title": rule.get("title", "Untitled"),
@@ -523,7 +555,8 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content):
                 "source": bad_rule_obj.url,
                 "version": rule.get("version", "1.0"),
                 "author": rule.get("author", "Unknown"),
-                "to_string": raw_content
+                "to_string": raw_content,
+                "cve_id": cve
             }
 
         success = RuleModel.add_rule_core(rule_dict, current_user)
@@ -1036,6 +1069,55 @@ def filter_rules_owner(search=None, author=None, sort_by=None, rule_type=None , 
         query = query.order_by(Rule.creation_date.desc())
     return query
 
+
+
+def filter_rules_owner_github(search=None, author=None, sort_by=None, rule_type=None, source=None) -> Rule:
+    """Filter the rules"""
+    query = Rule.query.filter_by(user_id=current_user.id)
+
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                Rule.title.ilike(search_lower),
+                Rule.description.ilike(search_lower),
+                Rule.format.ilike(search_lower),
+                Rule.author.ilike(search_lower),
+                Rule.to_string.ilike(search_lower)
+            )
+        )
+    
+    if author:
+        query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
+
+    if rule_type:
+        query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))  
+    
+    if source:    
+        query = query.filter(Rule.source.ilike(f"%{source.lower()}%"))
+
+    github_patterns = ['%https://github.com/%', '%http://github.com/%', '%github.com/%']
+    query = query.filter(
+        or_(
+            Rule.source.ilike(pattern) for pattern in github_patterns
+        )
+    )
+
+    # Tri
+    if sort_by == "newest":
+        query = query.order_by(Rule.creation_date.desc())
+    elif sort_by == "oldest":
+        query = query.order_by(Rule.creation_date.asc())
+    elif sort_by == "most_likes":
+        query = query.order_by(Rule.vote_up.desc())
+    elif sort_by == "least_likes":
+        query = query.order_by(Rule.vote_down.desc())
+    else:
+        query = query.order_by(Rule.creation_date.desc())
+
+    return query
+
+
 def get_filtered_bad_rules_query(search=None) -> InvalidRuleModel:
     """Return a SQLAlchemy query for filtered bad rules belonging to the current user."""
     query = InvalidRuleModel.query.filter_by(user_id=current_user.id)
@@ -1309,12 +1391,19 @@ def create_rule_history(data: dict) -> bool:
     """Create a history entry for a rule update, unless it already exists. Returns the created RuleUpdateHistory.id or None if duplicate or error."""
     try:
         rule_id = data.get("id")
+        print(rule_id)
         rule_title = data.get("title", "Unknown Title")
+        print(rule_title)
         success = data.get("success", False)
+        print(success)
         message = data.get("message", "")
+        print(message)
         new_content = data.get("new_content", "")
+        print(new_content)
         old_content = data.get("old_content", "")
+        print(old_content)
         user_id = current_user.id
+        print(user_id)
 
         existing_entry = RuleUpdateHistory.query.filter_by(
             rule_id=rule_id,
@@ -1345,6 +1434,7 @@ def create_rule_history(data: dict) -> bool:
         return history_entry.id
 
     except Exception as e:
+        print(e)
         db.session.rollback()
         return None
 
@@ -1352,3 +1442,10 @@ def create_rule_history(data: dict) -> bool:
 def get_history_rule_by_id(history_id):
     """Return an history for a rule by id"""
     return RuleUpdateHistory.query.get(history_id)
+
+def get_history_rule_(page, rule_id) -> list:
+    """Get all the accepted edit history of a rule by its ID, paginated."""
+    return RuleUpdateHistory.query.filter(
+        RuleUpdateHistory.rule_id == rule_id,
+        RuleUpdateHistory.success == True  
+    ).paginate(page=page, per_page=20, max_per_page=20)
