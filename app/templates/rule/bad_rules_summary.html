@@ -21,9 +21,7 @@
     The following rules are invalid because they did not pass syntax parsing validation.
   </p>
   
-  
-  <div v-if="rules_list.length > 0">
-    <div class="card p-4 shadow-sm bg-light mb-3" >
+  <div class="card p-4 shadow-sm bg-light mb-3" >
       <h5 class="mb-4">Filters</h5>
       <div class="row g-3">
         <div class="col-md-4">
@@ -43,8 +41,8 @@
         </div>
       </div>
     </div>
+  <div v-if="rules_list.length > 0">
     <div  class="row row-cols-1 row-cols-md-2 g-4 mt-2">
-    
       <div class="col" v-for="(rule, index) in rules_list" :key="rule.id">
         <div class="card h-100 shadow-sm border-danger">
           <div class="card-body">

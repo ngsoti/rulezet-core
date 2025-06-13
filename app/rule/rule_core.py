@@ -380,9 +380,34 @@ def get_rules_by_ids(rule_ids) -> list:
     """Get all the rules with id"""
     return Rule.query.filter(Rule.id.in_(rule_ids)).all()
 
+def get_all_rule_update(search=None, rule_type=None, sourceFilter=None) -> list:
+    """Select all current user's rules with optional filters: search, rule_type, and sourceFilter."""
+    query = Rule.query.filter_by(user_id=current_user.id)
 
-def get_all_rule_update():
-    return Rule.query.filter_by(user_id=current_user.id).all()
+
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                Rule.title.ilike(search_lower),
+                Rule.description.ilike(search_lower),
+                Rule.format.ilike(search_lower),
+                Rule.author.ilike(search_lower),
+                Rule.to_string.ilike(search_lower)
+            )
+        )
+
+
+    if rule_type:
+        query = query.filter(Rule.format == rule_type)
+
+
+    if sourceFilter:
+        if not sourceFilter.startswith("http"):
+            sourceFilter = f"https://github.com/{sourceFilter}.git"
+        query = query.filter(Rule.source == sourceFilter)
+
+    return query.all()
 
 
 
@@ -1443,9 +1468,17 @@ def get_history_rule_by_id(history_id):
     """Return an history for a rule by id"""
     return RuleUpdateHistory.query.get(history_id)
 
+
 def get_history_rule_(page, rule_id) -> list:
     """Get all the accepted edit history of a rule by its ID, paginated."""
     return RuleUpdateHistory.query.filter(
         RuleUpdateHistory.rule_id == rule_id,
         RuleUpdateHistory.success == True  
+    ).paginate(page=page, per_page=20, max_per_page=20)
+
+def get_old_rule_choice(page) -> list:
+    """Get all the old choice to make"""    
+    return RuleUpdateHistory.query.filter(
+        RuleUpdateHistory.message != "accepted",
+        RuleUpdateHistory.message != "rejected"
     ).paginate(page=page, per_page=20, max_per_page=20)

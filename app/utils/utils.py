@@ -135,35 +135,78 @@ def generate_diff_html(text_old: str, text_new: str) -> str:
 
 #     return ''.join(old_lines_html), ''.join(new_lines_html)
 
+# import difflib
+
+# def generate_side_by_side_diff_html(text_old: str, text_new: str) -> tuple[str, str]:
+#     """
+#     Generate side-by-side diff HTML of two texts, ignoring differences that are only whitespace.
+#     Returns a tuple (old_html, new_html) where:
+#     - old_html: old content with deleted lines highlighted in red,
+#     - new_html: new content with added lines highlighted in green.
+#     Unchanged lines are normal.
+
+#     Args:
+#         text_old (str): original text
+#         text_new (str): modified text
+
+#     Returns:
+#         tuple[str, str]: (old_html, new_html)
+#     """
+#     # Preprocessing: normalize whitespace by stripping and collapsing spaces
+#     def normalize(line):
+#         return line.strip()
+
+#     # Mapping from normalized line to original
+#     normalized_old = [normalize(line) for line in text_old.strip().splitlines()]
+#     normalized_new = [normalize(line) for line in text_new.strip().splitlines()]
+
+#     lines_old_raw = text_old.strip().splitlines()
+#     lines_new_raw = text_new.strip().splitlines()
+
+#     # Build a mapping from normalized line to full line
+#     map_old = dict(zip(normalized_old, lines_old_raw))
+#     map_new = dict(zip(normalized_new, lines_new_raw))
+
+#     diff = difflib.ndiff(normalized_old, normalized_new)
+
+#     old_lines_html = []
+#     new_lines_html = []
+
+#     for line in diff:
+#         code = line[:2]
+#         content = line[2:]
+
+#         original_old = map_old.get(content, "")
+#         original_new = map_new.get(content, "")
+
+#         if code == '  ':  # unchanged
+#             old_lines_html.append(f'<span style="display:block;">{original_old}</span>')
+#             new_lines_html.append(f'<span style="display:block;">{original_new}</span>')
+#         elif code == '- ':  # removed from old
+#             if content not in normalized_new:  # ignore if only whitespace difference
+#                 old_lines_html.append(f'<span style="background-color:#f8d7da; display:block;">{original_old}</span>')
+#                 new_lines_html.append('<span style="display:block;"></span>')
+#         elif code == '+ ':  # added in new
+#             if content not in normalized_old:  # ignore if only whitespace difference
+#                 old_lines_html.append('<span style="display:block;"></span>')
+#                 new_lines_html.append(f'<span style="background-color:#d4edda; display:block;">{original_new}</span>')
+#         elif code == '? ':  # hint line, ignore
+#             continue
+
+#     return ''.join(old_lines_html), ''.join(new_lines_html)
+
 import difflib
 
 def generate_side_by_side_diff_html(text_old: str, text_new: str) -> tuple[str, str]:
-    """
-    Generate side-by-side diff HTML of two texts, ignoring differences that are only whitespace.
-    Returns a tuple (old_html, new_html) where:
-    - old_html: old content with deleted lines highlighted in red,
-    - new_html: new content with added lines highlighted in green.
-    Unchanged lines are normal.
-
-    Args:
-        text_old (str): original text
-        text_new (str): modified text
-
-    Returns:
-        tuple[str, str]: (old_html, new_html)
-    """
-    # Preprocessing: normalize whitespace by stripping and collapsing spaces
     def normalize(line):
         return line.strip()
 
-    # Mapping from normalized line to original
     normalized_old = [normalize(line) for line in text_old.strip().splitlines()]
     normalized_new = [normalize(line) for line in text_new.strip().splitlines()]
 
     lines_old_raw = text_old.strip().splitlines()
     lines_new_raw = text_new.strip().splitlines()
 
-    # Build a mapping from normalized line to full line
     map_old = dict(zip(normalized_old, lines_old_raw))
     map_new = dict(zip(normalized_new, lines_new_raw))
 
@@ -180,17 +223,17 @@ def generate_side_by_side_diff_html(text_old: str, text_new: str) -> tuple[str, 
         original_new = map_new.get(content, "")
 
         if code == '  ':  # unchanged
-            old_lines_html.append(f'<span style="display:block;">{original_old}</span>')
-            new_lines_html.append(f'<span style="display:block;">{original_new}</span>')
+            old_lines_html.append(f'<div style="white-space: pre; margin:0;">{original_old}</div>')
+            new_lines_html.append(f'<div style="white-space: pre; margin:0;">{original_new}</div>')
         elif code == '- ':  # removed from old
-            if content not in normalized_new:  # ignore if only whitespace difference
-                old_lines_html.append(f'<span style="background-color:#f8d7da; display:block;">{original_old}</span>')
-                new_lines_html.append('<span style="display:block;"></span>')
+            if content not in normalized_new:
+                old_lines_html.append(f'<div style="background-color:#f8d7da; white-space: pre; margin:0;">{original_old}</div>')
+                new_lines_html.append('<div style="white-space: pre; margin:0;"></div>')
         elif code == '+ ':  # added in new
-            if content not in normalized_old:  # ignore if only whitespace difference
-                old_lines_html.append('<span style="display:block;"></span>')
-                new_lines_html.append(f'<span style="background-color:#d4edda; display:block;">{original_new}</span>')
-        elif code == '? ':  # hint line, ignore
+            if content not in normalized_old:
+                old_lines_html.append('<div style="white-space: pre; margin:0;"></div>')
+                new_lines_html.append(f'<div style="background-color:#d4edda; white-space: pre; margin:0;">{original_new}</div>')
+        elif code == '? ':
             continue
 
     return ''.join(old_lines_html), ''.join(new_lines_html)

@@ -1,4 +1,5 @@
 import asyncio
+from urllib.parse import urlparse
 from datetime import datetime,  timezone
 import difflib
 from math import ceil
@@ -752,7 +753,6 @@ def check_updates():
     rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
     results = []
     sources = RuleModel.get_sources_from_titles(rule_items)
-    print(sources)
     for source in sources:
         print("a")
         repo_dir, exists = clone_or_access_repo(source)
@@ -781,6 +781,7 @@ def check_updates():
                 result["history_id"] = history_id
 
             results.append(result)
+
 
     return {
         "results": results,
@@ -833,11 +834,16 @@ def update_github_rule() -> render_template:
             rule = RuleModel.get_rule(history.rule_id)
             if rule:
                 rule.to_string = history.new_content
+                history.message = "accepted"
                 flash('Rule content modified !', 'success')
                 return redirect(f"/rule/detail_rule/{rule.id}")
 
             flash('Error , no rule found !', 'danger')
             return redirect(request.referrer or '/')
+        if decision == 'rejected':
+            rule = RuleModel.get_rule(history.rule_id)
+            if rule:
+                history.message = "rejected"
         flash('No change for the rule !', 'success')
         return redirect(request.referrer or '/')
     else:
@@ -856,8 +862,15 @@ def get_update_page() -> render_template:
 @rule_blueprint.route("/get_all_rules_owner")
 @login_required
 def get_all_rules_owner():
-    rules = RuleModel.get_all_rule_update()
-    return jsonify([{"id": r.id, "title": r.title} for r in rules])
+    search = request.args.get("search", None)
+    rule_type = request.args.get("rule_type", None) 
+    sourceFilter = request.args.get("source", None) 
+    rule_type = request.args.get("rule_type", None) 
+    sources = RuleModel.get_all_rule_sources_by_user()
+    rules = RuleModel.get_all_rule_update(search=search , rule_type=rule_type , sourceFilter=sourceFilter)
+    return jsonify([{"id": r.id, "title": r.title} for r in rules]), 200
+
+
 
 
 @rule_blueprint.route('/get_all_sources_owner')
@@ -865,9 +878,25 @@ def get_all_rules_owner():
 def get_all_sources_owner():
     try:
         sources = RuleModel.get_all_rule_sources_by_user()
-        return jsonify(sources)
+
+        def simplify_source(src):
+            if not src:
+                return src
+
+            parsed = urlparse(src)
+            path = parsed.path  
+            if path:
+                clean_path = path.rstrip('.git').strip('/')
+                return clean_path
+            else:   
+                return src.rstrip('.git')
+        
+        simplified_sources = [simplify_source(s) for s in sources]
+
+        return jsonify(simplified_sources)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 
 @rule_blueprint.route("/get_license", methods=['GET'])
@@ -1118,22 +1147,6 @@ def   deleteReport() -> jsonify:
 #   History    #
 ################
 
-# @rule_blueprint.route("/get_rules_page_history_", methods=['GET'])
-# def get_rules_page_history_() -> render_template:
-#     """Get the history of the rule"""
-#     page = request.args.get('page', type=int)
-#     rule_id = request.args.get('rule_id', type=int)
-
-#     rules = RuleModel.get_history_rule_(page, rule_id)
-
-#     if rules.items:
-#         return {
-#             "success": True,
-#             "rule": [rule.to_json() for rule in rules.items],
-#             "total_pages": rules.pages
-#         }, 200
-#     return {"message": "No Rule"}, 404
-
 @rule_blueprint.route("/get_rules_page_history_", methods=['GET'])
 def get_rules_page_history_():
     """Get the history of the rule with HTML diff for each version"""
@@ -1143,7 +1156,12 @@ def get_rules_page_history_():
     rules = RuleModel.get_history_rule_(page, rule_id)
 
     if not rules.items:
-        return {"message": "No Rule"}, 404
+        return jsonify({
+            "success": True,
+            "rule": [],
+            "total_pages": None
+        }), 200
+
 
     result = []
     for rule in rules.items:
@@ -1173,3 +1191,16 @@ def get_rules_page_history_():
         "rule": result,
         "total_pages": rules.pages
     }), 200
+
+
+@rule_blueprint.route("/get_old_rule_choice", methods=['GET'])
+def get_old_rule_choice()-> render_template:
+    """Get the history of the rule"""
+    page = request.args.get('page', type=int)
+    rules = RuleModel.get_old_rule_choice(page)
+    if rules:
+        return {"success": True,
+                "rule": [rule.to_json() for rule in rules],
+                "total_pages": rules.pages
+            }, 200
+    return {"message": "No Rule"}, 404

@@ -116,43 +116,78 @@
             No rule
         </template>
         <!-- Selected Rules Display -->
-            <div class="mt-3" v-if="selectedRules.length > 0">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <h6 class="card-title mb-2 text-primary">
-                            <i class="fas fa-check-circle me-1"></i> Selected Rules ([[ selectedRules.length ]])
-                        </h6>
-                        <div class="d-flex flex-wrap gap-2 mb-2">
-                            <span
-                                v-for="rule in displayedSelectedRules"
-                                :key="rule.id"
-                                class="badge bg-secondary text-light rounded-pill px-3 py-2"
-                            >
-                                [[ rule.title ]]
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-close btn-close-white ms-2"
-                                    aria-label="Remove"
-                                    @click.stop="removeFromSelection(rule.id)"
-                                ></button>
-                            </span>
+        <div class="mt-3" v-if="selectedRules.length > 0">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title mb-2 text-primary">
+                        <i class="fas fa-check-circle me-1"></i> Selected Rules ([[ selectedRules.length ]])
+                    </h6>
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <span
+                            v-for="rule in displayedSelectedRules"
+                            :key="rule.id"
+                            class="badge bg-secondary text-light rounded-pill px-3 py-2"
+                        >
+                            [[ rule.title ]]
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-close btn-close-white ms-2"
+                                aria-label="Remove"
+                                @click.stop="removeFromSelection(rule.id)"
+                            ></button>
+                        </span>
 
-                            <span
-                                v-if="remainingSelectedCount > 0"
-                                class="badge bg-dark text-light rounded-pill px-3 py-2 align-self-center"
-                            >
-                                +[[ remainingSelectedCount ]] others selected
-                            </span>
-                        </div>
-
+                        <span
+                            v-if="remainingSelectedCount > 0"
+                            class="badge bg-dark text-light rounded-pill px-3 py-2 align-self-center"
+                        >
+                            +[[ remainingSelectedCount ]] others selected
+                        </span>
                     </div>
-                </div>
-                <button class="btn btn-outline-primary btn-sm"  @click="checkUpdateList()">
-                    <i class="fas fa-sync-alt"></i> Check Update
-                </button>
 
-                <div class="mt-4" v-if="updateResults.length > 0">
-                    <h5>Update Check Results ( [[ updateResults.length]])</h5>
+                </div>
+            </div>
+            <button class="btn btn-outline-primary btn-sm"  @click="checkUpdateList()">
+                <i class="fas fa-sync-alt"></i> Check Update
+            </button>
+
+            <div class="mt-4" v-if="updateResults.length > 0">
+                <h5>Update Check Results ( [[ updateResults.length]])</h5>
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Rule Title</th>
+                            <th>Status</th>
+                            <th>Message</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="result in updateResults" :key="result.id">
+                            <td>[[ result.title ]]</td>
+                            <td>
+                                <span v-if="result.success && result.new_content" class="text-success">
+                                    <i class="fas fa-info-circle"></i> Up-to-date
+                                </span>
+                                <span v-else class="text-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> Failed
+                                </span>
+                            </td>
+                            <td>[[ result.message ]]</td>
+                            <td>
+                                <a class="btn btn-sm btn-primary" :href="'/rule/update_github/choose_changes?id=' + result.history_id"  > 
+                                    <!-- target="_blank" -->
+                                    <i class="fas fa-code-branch"></i> Compare Changes
+                                </a>
+
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="mt-4" v-if="old_choice.length > 0">
+                    <h5>Update Check Results (old) ( [[ old_choice.length]])</h5>
                     <table class="table table-bordered table-hover">
                         <thead class="table-light">
                             <tr>
@@ -163,13 +198,10 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="result in updateResults" :key="result.id">
-                                <td>[[ result.title ]]</td>
+                            <tr v-for="result in old_choice" :key="result.id">
+                                <td>[[ result.rule_title	 ]]</td>
                                 <td>
                                     <span v-if="result.success && result.new_content" class="text-success">
-                                        <i class="fas fa-check-circle"></i> Updated
-                                    </span>
-                                    <span v-else-if="result.success" class="text-info">
                                         <i class="fas fa-info-circle"></i> Up-to-date
                                     </span>
                                     <span v-else class="text-danger">
@@ -178,7 +210,7 @@
                                 </td>
                                 <td>[[ result.message ]]</td>
                                 <td>
-                                    <a class="btn btn-sm btn-primary" :href="'/rule/update_github/choose_changes?id=' + result.history_id"  > 
+                                    <a class="btn btn-sm btn-primary" :href="'/rule/update_github/choose_changes?id=' + result.id"  > 
                                         <!-- target="_blank" -->
                                         <i class="fas fa-code-branch"></i> Compare Changes
                                     </a>
@@ -188,10 +220,6 @@
                         </tbody>
                     </table>
                 </div>
-
-
-                
-            </div>
     </div>
 </div>
 {% endblock %}
@@ -203,6 +231,30 @@
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
+            /**
+             *          ########################
+             *          #   old   Rule State   #
+             *          ########################
+             */
+            const old_choice = ref([])             
+            const old_current_page = ref(1)        
+            const old_total_page = ref(0)         
+
+            async function fetchOldRules(page) {
+                const params = new URLSearchParams({
+                    page
+                });
+
+                const res = await fetch('/rule/get_old_rule_choice?' + params.toString());
+                if (res.status === 200) {
+                    const data = await res.json();
+                    old_choice.value = data.rule;
+                    old_current_page.value = page;
+                    old_total_page.value = data.total_pages;
+                }
+            }
+            fetchOldRules(1)
+
             /**
              *          ########################
              *          #   Main Rule State   #
@@ -254,14 +306,17 @@
              *          ##########################
              */
             async function fetchAllOwnerRules() {
-                try {
-                    const response = await fetch("/rule/get_all_rules_owner");
+                const params = new URLSearchParams({
+                    search: searchQuery.value,
+                    rule_type: ruleType.value,
+                    source: sourceFilter.value
+                });
+                const response = await fetch("/rule/get_all_rules_owner?" + params.toString());
+                if (response.status === 200) {
                     const data = await response.json();
                     return data; // [{ id, title }]
-                } catch (error) {
-                    console.error("Erreur lors du chargement des règles :", error);
-                    return [];
                 }
+                
             }
 
 
@@ -450,6 +505,7 @@
                 displayedSelectedRules,
                 remainingSelectedCount,
 
+                old_choice
 
             }
 
