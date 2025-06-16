@@ -1480,5 +1480,6 @@ def get_old_rule_choice(page) -> list:
     """Get all the old choice to make"""    
     return RuleUpdateHistory.query.filter(
         RuleUpdateHistory.message != "accepted",
-        RuleUpdateHistory.message != "rejected"
+        RuleUpdateHistory.message != "rejected",
+        RuleUpdateHistory.analyzed_by_user_id == current_user.id
     ).paginate(page=page, per_page=20, max_per_page=20)

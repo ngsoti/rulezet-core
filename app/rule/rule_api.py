@@ -11,12 +11,12 @@ api_rule_blueprint = Blueprint('api_rule', __name__)
 
 
 api = Api(api_rule_blueprint,
-          title='Rulezet API',
-          description='API to manage a rule management instance.',
-          version='0.1',
-          default='Rules API',
-          default_label='rules / bad_rule  API',
-          doc='/doc/') 
+        title='Rulezet API',
+        description='API to manage a rule management instance.',
+        version='0.1',
+        default='Rules API',
+        default_label='rules / bad_rule  API',
+        doc='/doc/') 
 
 
 @api.route('/create_rule')
@@ -78,7 +78,7 @@ class CreateRule(Resource):
             return {"message": "Rule add successfully ", "rule": verif}, 200
             
         return {"message": "no rule added"}, 500      
-   
+
 @api.route('/delete_rule')
 @api.doc(description='Delete a rule')
 class DeleteRule(Resource):

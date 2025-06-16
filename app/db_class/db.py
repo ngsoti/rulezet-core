@@ -441,3 +441,65 @@ class RuleUpdateHistory(db.Model):
             "analyzed_by_user_id": self.analyzed_by_user_id,
             "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
         }
+
+
+class Request(db.Model):
+    """Generic reusable request model for admin actions, ownership, or any future system."""
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid = db.Column(db.String(36), index=True)
+
+    # Contextual fields
+    resource_id = db.Column(db.Integer, nullable=True)  # ID of the thing being requested (rule, project, etc.)
+    resource_type = db.Column(db.String(64), nullable=True)  # e.g., 'rule', 'project', 'group'
+
+    # Users
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Who makes the request
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Optional receiver (owner/admin)
+
+    # Content
+    title = db.Column(db.String(128), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(32), default="pending")
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.datetime.now(tz=datetime.timezone.utc),
+        index=True
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.datetime.now(tz=datetime.timezone.utc),
+        onupdate=datetime.datetime.now(tz=datetime.timezone.utc),
+        index=True
+    )
+
+    # Relationships
+    sender = db.relationship(
+        'User',
+        foreign_keys=[sender_id],
+        backref=db.backref('sent_requests', lazy='dynamic', cascade='all, delete-orphan')
+    )
+
+    receiver = db.relationship(
+        'User',
+        foreign_keys=[receiver_id],
+        backref=db.backref('received_requests', lazy='dynamic', cascade='all, delete-orphan')
+    )
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "sender_id": self.sender_id,
+            "receiver_id": self.receiver_id,
+            "sender_name": self.sender.first_name if self.sender else "Unknown",
+            "receiver_name": self.receiver.first_name if self.receiver else "Unknown",
+            "title": self.title,
+            "content": self.content,
+            "status": self.status,
+            "resource_id": self.resource_id,
+            "resource_type": self.resource_type,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
+            "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M'),
+        }

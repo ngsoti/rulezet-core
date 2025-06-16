@@ -113,7 +113,10 @@
 
         </div>
         <template v-else>
-            No rule
+            <div class="alert alert-warning text-center mt-5 shadow-sm">
+            <i class="fas fa-circle-info me-2"></i>
+                You have not  own any rules yet.
+            </div>
         </template>
         <!-- Selected Rules Display -->
         <div class="mt-3" v-if="selectedRules.length > 0">
@@ -226,7 +229,7 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, computed } = Vue
-    import { message_list } from '/static/js/toaster.js'
+    import { message_list , display_prepared_toast , prepare_toast, display_toast} from '/static/js/toaster.js'
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -427,32 +430,44 @@
                     return;
                 }
 
-                try {
-                    const response = await fetch("/rule/check_updates", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRFToken": csrf_token
-                        },
-                        body: JSON.stringify({ rules: selectedRules.value }),
-                    });
+                const response = await fetch("/rule/check_updates", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrf_token
+                    },
+                    body: JSON.stringify({ rules: selectedRules.value }),
+                });
 
-                    const result = await response.json();
-                    updateResults.value = result.results; 
-                    if (updateResults.value.length == 0){
-                        alert("No updates found for the selected rules.");
+                let data = null;
+                if (response.status === 200) {
+                    data = await response.json();
+                    updateResults.value = data.results;
 
+                    if (data.nb_update === 0) {
+                        await display_prepared_toast({
+                            message: 'No updates found for the selected rules.',
+                            toast_class: 'info',
+                            id: Math.random()
+                        });
+                    }else{
+                        await display_prepared_toast({
+                            message: 'updates found for the selected rules.',
+                            toast_class: 'success',
+                            id: Math.random()
+                        });
                     }
-
-
-
-                } catch (error) {
-                    console.error("Error during update check:", error);
                 }
+
+                // const message = {
+                //     message: data?.message || '<i class="fas fa-check-circle me-2"></i> Search completed successfully. All selected rules have been processed.',
+                //     toast_class: data?.toast_class || 'success',
+                //     id: Math.random()
+                // };
+                // await display_prepared_toast(message);
             }
 
 
-            
 
 
             /**
@@ -480,6 +495,7 @@
 
 
             return {
+                message_list,
                 owner_rules,
                 selectedRules,
                 allRules,

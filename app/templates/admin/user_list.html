@@ -39,43 +39,66 @@
                 <div class="col" v-for="(user, index) in users_list" :key="user.id">
                     <div class="card shadow-sm h-100 border-0">
                         <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="fas fa-user me-2"></i>
-                            
-                            <template v-if="{{current_user.id}} == user.id">
-                                <span>
-                                    [[ user.first_name ]] [[ user.last_name || '' ]]
-                                    <span class="badge bg-info text-dark ms-2">(you)</span>
+                            <h5 class="card-title">
+                                <i class="fas fa-user me-2"></i>
+                                <template v-if="{{current_user.id}} == user.id">
+                                    <span>
+                                        [[ user.first_name ]] [[ user.last_name || '' ]]
+                                        <span class="badge bg-info text-dark ms-2">(you)</span>
+                                    </span>
+                                </template>
+                                <template v-else>
+                                    <span>
+                                        [[ user.first_name ]] [[ user.last_name || '' ]]
+                                    </span>
+                                </template>
+
+                                <span class="badge bg-secondary float-end" v-if="user.admin">
+                                <i class="fas fa-user-shield me-1"></i> Admin
                                 </span>
-                            </template>
-                            <template v-else>
-                                <span>
-                                    [[ user.first_name ]] [[ user.last_name || '' ]]
-                                </span>
-                            </template>
+                            </h5>
 
-                            <span class="badge bg-secondary float-end" v-if="user.admin">
-                            <i class="fas fa-user-shield me-1"></i> Admin
-                            </span>
-                        </h5>
+                            <p class="card-text mb-1">
+                                <i class="fas fa-envelope me-2"></i>[[ user.email ]]
+                            </p>
 
-                        <p class="card-text mb-1">
-                            <i class="fas fa-envelope me-2"></i>[[ user.email ]]
-                        </p>
-
-                        <p class="card-text">
-                            <i :class="user.is_connected ? 'fas fa-circle text-success' : 'fas fa-circle text-secondary'"></i>
-                            [[ user.is_connected ? 'Online' : 'Offline' ]]
-                        </p>
+                            <p class="card-text">
+                                <i :class="user.is_connected ? 'fas fa-circle text-success' : 'fas fa-circle text-secondary'"></i>
+                                [[ user.is_connected ? 'Online' : 'Offline' ]]
+                            </p>
                         </div>
 
                         <div class="card-footer bg-white border-0 d-flex justify-content-between">
                         <a :href="'/account/detail_user/' + user.id" title="view more about this user" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-eye me-1"></i> View Profile
                         </a>
-                        <button class="btn btn-outline-danger btn-sm" @click="deleteUser(user.id, index)">
+
+                        <button type="button" class="btn btn-outline-danger btn-sm" title="Delete the user" data-bs-toggle="modal" :data-bs-target="'#delete_user_modal_'+user.id">
                             <i class="fas fa-trash-alt me-1"></i> Delete
                         </button>
+                        <div class="modal fade" :id="'delete_user_modal_'+user.id" tabindex="-1" aria-labelledby="delete_user_modal" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h1 class="modal-title fs-5" style="color:black;" id="delete_user_modal">
+                                        Delete [[ user.first_name ]] [[ user.last_name ]] ?
+                                        </h1>
+                                        <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        <button class="btn btn-danger" @click="deleteUser(user.id, index)">
+                                        <i class="fa-solid fa-trash"></i> Confirm
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+                        
                         </div>
                     </div>
                 </div>
@@ -177,18 +200,15 @@ createApp({
                 id
             })
             const res = await fetch('/account/delete_user?' + params.toString())
-            const data = await res.json();
-            if (data.success) {
+            if(await res.status == 200){
                 users_list.value.splice(index, 1)
                 total_users.value -= 1
-                if (users_list.value.length === 0 && current_page.value > 1) {
-                    fetchUsers(current_page.value - 1);
-                } else {
-                    fetchUsers(current_page.value);
-                }
-            }else{
-                //display_toast()
             }
+            var myModalEl = document.getElementById('delete_user_modal_'+id);
+            var modal = bootstrap.Modal.getInstance(myModalEl)
+            modal.hide();
+            
+            display_toast(res)
         }
         /*************************filter section******************************/
         async function onSearchInput() {

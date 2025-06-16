@@ -93,9 +93,12 @@ def delete_user() -> render_template:
         delete = AccountModel.delete_user_core(user_id)
         if delete:
             return {"message": "User Deleted",  
-                    "success": True}, 200 
+                    "success": True,
+                    "toast_class" : "success"}, 200 
         return {"message": "Failed to delete",
-                "success": False}, 500
+                "success": False,
+                "toast_class" : "danger"
+                }, 500
     else:
         return render_template("access_denied.html")
 

@@ -781,13 +781,13 @@ def check_updates():
                 result["history_id"] = history_id
 
             results.append(result)
-
-
     return {
-        "results": results,
-        "success": True,
-        "nb_update": len(results)
-    }, 200
+        "message": "Search completed successfully. All selected rules have been processed without issues.", 
+            "nb_update": len(results), 
+            "results": results,
+            "success": True,
+            "toast_class" : "success"
+        }, 200 
 
 
 
@@ -845,7 +845,7 @@ def update_github_rule() -> render_template:
             if rule:
                 history.message = "rejected"
         flash('No change for the rule !', 'success')
-        return redirect(request.referrer or '/')
+        return redirect('/rule/update_github/update_rules_from_github')
     else:
         return render_template("access_denied.html")
 
@@ -1204,3 +1204,6 @@ def get_old_rule_choice()-> render_template:
                 "total_pages": rules.pages
             }, 200
     return {"message": "No Rule"}, 404
+
+
+
