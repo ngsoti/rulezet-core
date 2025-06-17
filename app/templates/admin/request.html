@@ -19,8 +19,8 @@
     <!-- Tab content for Pending and Processed Requests -->
     <div class="tab-content mt-3">
         <!-- Pending Requests Tab -->
-        <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab" v-if="pending_requests_list.length > 0">
-            <div class="card" >
+        <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab" >
+            <div class="card" v-if="pending_requests_list.length > 0">
                 <div class="card-header bg-success text-white">
                     <i class="fas fa-tasks me-2"></i> Processed Ownership Requests
                 </div>
@@ -98,8 +98,9 @@
                     </div>
                 </div>
             </div>
+             <div v-else class="alert alert-secondary">No pending requests.</div>
         </div>
-        <div v-else class="alert alert-secondary">No pending requests.</div>
+       
 
         <!-- Processed Requests Tab -->
         <div class="tab-pane fade" id="processed" role="tabpanel" aria-labelledby="processed-tab">

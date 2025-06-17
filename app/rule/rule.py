@@ -1068,7 +1068,7 @@ def delete_bad_rule(rule_id) -> jsonify:
         if request.method == 'POST':
             success = RuleModel.delete_bad_rule(rule_id)
             if success:
-                return jsonify({"success": True, "message": "Rule deleted!"})
+                return jsonify({"success": True, "message": "Rule deleted!" , "toast_class": "success"})
         return render_template('rule/edit_bad_rule.html', rule=bad_rule)
     else:
         return render_template("access_denied.html")

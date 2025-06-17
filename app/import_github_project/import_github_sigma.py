@@ -155,10 +155,10 @@ def find_sigma_rule_by_title(repo_dir, title):
     Returns the raw YAML string of the rule if found, otherwise None.
     """
 
-    print(f"🔍 Searching for Sigma rule titled: '{title}' in repo: {repo_dir}")
+    #print(f"🔍 Searching for Sigma rule titled: '{title}' in repo: {repo_dir}")
 
     if not os.path.exists(repo_dir):
-        print(f"❌ Directory does not exist: {repo_dir}")
+        #print(f"❌ Directory does not exist: {repo_dir}")
         return None
 
     for root, dirs, files in os.walk(repo_dir):
@@ -168,7 +168,7 @@ def find_sigma_rule_by_title(repo_dir, title):
                 continue
             if file.endswith(('.yml', '.yaml')):
                 file_path = os.path.join(root, file)
-                print(f"📄 Checking file: {file_path}")
+            # print(f"📄 Checking file: {file_path}")
 
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
@@ -177,17 +177,17 @@ def find_sigma_rule_by_title(repo_dir, title):
 
                         if isinstance(parsed, dict):
                             rule_title = parsed.get('title')
-                            print(f"   → Found rule title: {rule_title}")
+                            #print(f"   → Found rule title: {rule_title}")
                             if rule_title == title:
-                                print(f"✅ Match found in file: {file_path}")
+                                #print(f"✅ Match found in file: {file_path}")
                                 return content  # Return raw YAML string
-                        else:
-                            print(f"⚠️ Skipped non-dict YAML content in {file_path}")
+                        #else:
+                            #print(f"⚠️ Skipped non-dict YAML content in {file_path}")
                 except Exception as e:
-                    print(f"⚠️ Error reading/parsing file {file_path}: {e}")
+                    #print(f"⚠️ Error reading/parsing file {file_path}: {e}")
                     continue
 
-    print("❗ No matching Sigma rule found.")
+    #print("❗ No matching Sigma rule found.")
     return None
 
 

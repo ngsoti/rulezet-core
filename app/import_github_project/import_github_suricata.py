@@ -34,7 +34,7 @@ async def parse_and_import_suricata_rules_async(repo_dir, license_from_github, r
         return imported, skipped
 
     for file in files:
-        try:
+        #try:
             async with aiofiles.open(file, 'r', encoding='utf-8') as f:
                 rules_content = await f.read()
 
@@ -62,8 +62,8 @@ async def parse_and_import_suricata_rules_async(repo_dir, license_from_github, r
                 else:
                     skipped += 1
 
-        except Exception as e:
-            print(f"Failed to parse file {file}: {e}")
+        #except Exception as e:
+            #print(f"Failed to parse file {file}: {e}")
 
     return imported, skipped
 
@@ -72,10 +72,10 @@ def find_suricata_rule_by_title(repo_dir, title):
     Find a Suricata rule in the given repo by its title (msg).
     Returns the raw rule string if found, otherwise None.
     """
-    print(f"🔍 Searching for Suricata rule with msg: '{title}' in repo: {repo_dir}")
+    #print(f"🔍 Searching for Suricata rule with msg: '{title}' in repo: {repo_dir}")
 
     if not os.path.exists(repo_dir):
-        print(f"❌ Directory does not exist: {repo_dir}")
+        #print(f"❌ Directory does not exist: {repo_dir}")
         return None
 
     for root, dirs, files in os.walk(repo_dir):
@@ -85,7 +85,7 @@ def find_suricata_rule_by_title(repo_dir, title):
                 continue
             if file.endswith(('.rule', '.rules')):
                 file_path = os.path.join(root, file)
-                print(f"📄 Checking file: {file_path}")
+                #print(f"📄 Checking file: {file_path}")
 
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
@@ -93,15 +93,15 @@ def find_suricata_rule_by_title(repo_dir, title):
                         rules = parse_rules(content)
 
                         for rule in rules:
-                            print(f"   → Found rule msg: {rule.msg}")
+                            #print(f"   → Found rule msg: {rule.msg}")
                             if rule.msg == title:
                                 print(f"✅ Match found in file: {file_path}")
                                 return rule.raw  # Return the raw rule string
                 except Exception as e:
-                    print(f"⚠️ Error reading/parsing file {file_path}: {e}")
+                    #print(f"⚠️ Error reading/parsing file {file_path}: {e}")
                     continue
 
-    print("❗ No matching Suricata rule found.")
+    #print("❗ No matching Suricata rule found.")
     return None
 
 
