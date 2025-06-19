@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5" id="main-container">
+
+  <div id="bundle-info" data-bundle-id="{{ bundle_id }}"></div>
+
+  <template v-if="bundle">
+    <div class="mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0 text-primary d-flex align-items-center">
+          <i class="fas fa-box-open me-2 text-secondary" style="font-size: 1.4rem;"></i>
+          [[ bundle.name ]]
+        </h2>
+
+        <div class="d-flex align-items-center">
+          <button class="btn btn-success btn-sm ms-2" title="Download all rules as ZIP" @click="DownloadBundle()">
+            <i class="fas fa-download me-1"></i>
+          </button>
+          {% if current_user.is_authenticated %}
+            <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
+              <a :href="`/bundle/edit/${bundle_id}`" class="btn btn-secondary btn-sm ms-2" title="Edit Bundle">
+                <i class="fas fa-pen"></i>
+              </a>
+              <button type="button" class="btn btn-danger btn-sm ms-2" title="Delete the bundle"
+                      data-bs-toggle="modal" :data-bs-target="'#delete_bundle_modal_'+bundle.id">
+                <i class="fa-solid fa-trash fa-fw"></i>
+              </button>
+            </template>
+          {% endif %}
+        </div>
+      </div>
+
+
+      <!-- Delete Confirmation Modal -->
+      <div class="modal fade" :id="'delete_bundle_modal_'+bundle.id" tabindex="-1" aria-labelledby="delete_bundle_modal" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5 text-dark" id="delete_rule_modal">
+                Delete [[ bundle.name ]] ?
+              </h1>
+              <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button class="btn btn-danger" @click="deleteBundle(bundle.id, index)">
+                <i class="fa-solid fa-trash"></i> Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="fst-italic text-secondary">
+        Created on [[ bundle.created_at ]] and updated on [[ bundle.last_modif || bundle.created_at ]].
+      </p>
+      <section class="mb-3">
+        <h4>Description</h4>
+        <p>[[ bundle.description || 'No description provided.' ]]</p>
+      </section>
+
+      <section class="mb-4">
+        <h4>Rules included in this bundle</h4>
+        <template v-if="rules.length === 0">
+          <div class="alert alert-warning text-center shadow-sm">
+            <i class="fas fa-circle-info me-2"></i>
+            <span>There is no rule in this bundle for the moment</span>
+          </div>
+        </template>
+
+        <template v-else>
+          <ul class="list-group">
+            <li v-for="(item, index) in rules" :key="item.rule.id" class="list-group-item d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <a :href="`/rule/detail_rule/${item.rule.id}`" title="View more about this rule">
+                  [[ item.rule.title ]]
+                </a>
+                <strong>[[ item.rule.cve_id ]]</strong> : [[ item.association.description ]]
+              </div>
+              {% if current_user.is_authenticated %}
+                <template v-if="parseInt('{{current_user.id}}') == bundle.user_id  || is_admin">
+                  <div class="ms-2">
+                    <button type="button"
+                            class="btn "
+                            title="Edit the description"
+                            data-bs-toggle="modal"
+                            :data-bs-target="'#description_bundle_modal_'+item.rule.id"
+                            @click="item.new_description = item.association.description">
+                      <i class="fa-solid fa-pen fa-fw"></i>
+                    </button>
+
+                    <div class="modal fade"
+                        :id="'description_bundle_modal_'+item.rule.id"
+                        tabindex="-1"
+                        aria-labelledby="description_bundle_modal"
+                        aria-hidden="true">
+                      <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+
+                          <div class="modal-header">
+                            <h1 class="modal-title fs-5 text-dark" id="description_bundle_modal">
+                              Edit description for [[ item.rule.title ]]
+                            </h1>
+                            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+
+                          <div class="modal-body">
+                            <div class="mb-3">
+                              <label for="bundleNewDescription" class="form-label fw-bold">New description</label>
+                              <textarea
+                                id="bundleNewDescription"
+                                v-model="item.new_description"
+                                class="form-control"
+                                rows="3"
+                                placeholder="Enter the new description here...">
+                              </textarea>
+                            </div>
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button class="btn btn-success" @click="saveNewDescription(item.association.id , item)">
+                              <i class="fa-solid fa-check"></i> Save
+                            </button>
+                          </div>
+
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              {% endif %}
+            </li>
+          </ul>
+        </template>
+      </section>
+      <section>
+        <h5>Author</h5>
+        <p>[[ bundle.author || 'Unknown' ]]</p>
+      </section>
+    </div>
+  </template>
+
+  <div v-else class="text-center my-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3">Loading bundle data...</p>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+  const bundle_id = document.getElementById('bundle-info').dataset.bundleId;
+  const { createApp, ref } = Vue;
+  import { display_toast , message_list , display_prepared_toast} from '/static/js/toaster.js';
+
+  createApp({
+    delimiters: ['[[', ']]'],
+    setup() {
+      /**
+       *          #####################
+       *          #   Fetch bundle    #
+       *          #####################
+       */
+
+      const bundle = ref(null);
+      const rules = ref([]);
+
+      async function fetchBundle() {
+        const params = new URLSearchParams({ bundle_id });
+        try {
+          const res = await fetch('/bundle/get_bundle?' + params.toString());
+          const data = await res.json();
+          if (res.ok && data.success) {
+            bundle.value = data.bundle;
+            rules.value = data.rules || [];
+          } else {
+            display_toast('Error loading bundle: ' + (data.message || 'Unknown error'), 'error');
+          }
+        } catch (e) {
+          display_toast('Fetch error: ' + e.message, 'error');
+        }
+      }
+      fetchBundle();
+
+      /**
+       *          ######################
+       *          #   action bundle    #
+       *          ######################
+       */
+
+      async function deleteBundle(id, index) {
+        const params = new URLSearchParams({
+            id
+        })
+        const res = await fetch('/bundle/delete?'+ params.toString())
+        if(await res.status == 200){
+            var myModalEl = document.getElementById('delete_bundle_modal_'+id);
+            var modal = bootstrap.Modal.getInstance(myModalEl)
+            modal.hide();
+            window.location.href = `/bundle/list`;
+        } else{
+          display_toast(res)
+        }
+    }
+
+    async function saveNewDescription(association_id , item){
+        if (item.new_description !== undefined && item.new_description.trim() !== "") {
+        
+        const params = new URLSearchParams({
+          new_description: item.new_description,
+          association_id
+        })
+        const res = await fetch('/bundle/change_description?'+ params.toString())
+        if(await res.status == 200){
+            item.association.description = item.new_description; // or fetch the rule ?
+            var myModalEl = document.getElementById('description_bundle_modal_'+item.rule.id);
+            var modal = bootstrap.Modal.getInstance(myModalEl)
+            modal.hide();
+        } 
+        display_toast(res)
+      }
+    }
+
+    async function DownloadBundle() {
+      const params = new URLSearchParams({ bundle_id });
+      const res = await fetch('/bundle/download?' + params.toString());
+
+      if (res.status === 200) {
+        const blob = await res.blob();
+
+        // download section
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${bundle.value.name}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        const message = {
+          message: "Bundle download with success",
+          toast_class: "success",
+          id: Math.random()
+        };
+        await display_prepared_toast(message);
+        
+      } else {
+        display_toast(res);
+      }
+    }
+
+    /**
+     *          #########################
+     *          #   security section    #
+     *          #########################
+     */
+
+    const is_admin = ref(false)
+
+    async function fetchCurrentUser() {
+        const res = await fetch('/rule/get_current_user')
+        if(res){
+            const data = await res.json()
+            is_admin.value = data.user
+        }
+    }
+    fetchCurrentUser()
+
+
+      return {
+        bundle,
+        rules,
+        message_list,
+        bundle_id,
+        is_admin,
+
+
+        deleteBundle,
+        saveNewDescription,
+        DownloadBundle
+      };
+    }
+  }).mount('#main-container');
+</script>
+{% endblock %}

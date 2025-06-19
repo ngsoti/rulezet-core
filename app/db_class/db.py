@@ -2,9 +2,7 @@ import datetime
 from .. import db, login_manager
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin, AnonymousUserMixin, current_user
-from sqlalchemy import event
-from sqlalchemy.orm import attributes, Session
-from sqlalchemy.inspection import inspect
+
 
 #############
 #   User    #
@@ -442,64 +440,54 @@ class RuleUpdateHistory(db.Model):
             "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
         }
 
+#############
+#   Bundle  #
+#############
 
-class Request(db.Model):
-    """Generic reusable request model for admin actions, ownership, or any future system."""
+class Bundle(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    uuid = db.Column(db.String(36), index=True)
+    user = db.relationship('User', backref=db.backref('user who create bundle', lazy='dynamic', cascade='all, delete-orphan'))
 
-    # Contextual fields
-    resource_id = db.Column(db.Integer, nullable=True)  # ID of the thing being requested (rule, project, etc.)
-    resource_type = db.Column(db.String(64), nullable=True)  # e.g., 'rule', 'project', 'group'
+    def get_username_by_id(self):
+        user = User.query.get(self.user_id)  
+        return user.first_name if user else None
 
-    # Users
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Who makes the request
-    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Optional receiver (owner/admin)
-
-    # Content
-    title = db.Column(db.String(128), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(32), default="pending")
-
-    created_at = db.Column(
-        db.DateTime,
-        default=datetime.datetime.now(tz=datetime.timezone.utc),
-        index=True
-    )
-    updated_at = db.Column(
-        db.DateTime,
-        default=datetime.datetime.now(tz=datetime.timezone.utc),
-        onupdate=datetime.datetime.now(tz=datetime.timezone.utc),
-        index=True
-    )
-
-    # Relationships
-    sender = db.relationship(
-        'User',
-        foreign_keys=[sender_id],
-        backref=db.backref('sent_requests', lazy='dynamic', cascade='all, delete-orphan')
-    )
-
-    receiver = db.relationship(
-        'User',
-        foreign_keys=[receiver_id],
-        backref=db.backref('received_requests', lazy='dynamic', cascade='all, delete-orphan')
-    )
 
     def to_json(self):
         return {
             "id": self.id,
-            "uuid": self.uuid,
-            "sender_id": self.sender_id,
-            "receiver_id": self.receiver_id,
-            "sender_name": self.sender.first_name if self.sender else "Unknown",
-            "receiver_name": self.receiver.first_name if self.receiver else "Unknown",
-            "title": self.title,
-            "content": self.content,
-            "status": self.status,
-            "resource_id": self.resource_id,
-            "resource_type": self.resource_type,
+            "name": self.name,
+            "description": self.description,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
-            "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M'),
+            "author": self.get_username_by_id() ,
+            "user_id": self.user_id,
+        }
+
+class BundleRuleAssociation(db.Model):
+    # Table to associate rule and a bundle 
+    # rule can be in many bundles and a bundle can have many rules
+    id = db.Column(db.Integer, primary_key=True)
+    bundle_id = db.Column(db.Integer, db.ForeignKey('bundle.id'), nullable=False)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    description = db.Column(db.Text)
+
+    added_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+
+    bundle = db.relationship('Bundle', backref=db.backref('rules_assoc', lazy='dynamic', cascade='all, delete-orphan'))
+    rule = db.relationship('Rule', backref=db.backref('bundles_assoc', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "bundle_id": self.bundle_id,
+            "rule_id": self.rule_id,
+            "bundle_name": self.bundle.name if self.bundle else None,
+            "rule_title": self.rule.title if self.rule else None,
+            "description": self.description,
+            "added_at": self.added_at.strftime('%Y-%m-%d %H:%M'),
         }

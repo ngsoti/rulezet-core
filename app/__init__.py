@@ -46,10 +46,13 @@ def create_app():
 
     from .home import home_blueprint
     from .account.account import account_blueprint
-    from .rule.rule import rule_blueprint   
+    from .rule.rule import rule_blueprint  
+    from .bundle.bundle import bundle_blueprint
+
     app.register_blueprint(home_blueprint, url_prefix="/")
     app.register_blueprint(account_blueprint, url_prefix="/account")
     app.register_blueprint(rule_blueprint, url_prefix="/rule")
+    app.register_blueprint(bundle_blueprint, url_prefix="/bundle")
 
     from .rule.rule_api import api_rule_blueprint
     from app.account.account_api import api_account_blueprint

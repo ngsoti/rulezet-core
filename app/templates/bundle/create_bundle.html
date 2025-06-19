@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5 p-4 rounded shadow bg-white">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h2 class="fw-bold text-primary">
+            <i class="fa-solid fa-box-open me-2"></i> Create a Bundle
+        </h2>
+        <p class="text-muted">
+            Once the bundle is created, you can populate it with rules and manage them easily.
+        </p>
+    </div>
+
+    <!-- Form -->
+    <form action="" method="post" id="form">
+        {{ form.hidden_tag() }}
+
+        <!-- Bundle Name -->
+        <div class="row mb-4 justify-content-center">
+            <div class="col-md-8">
+                <label class="form-label fw-semibold">
+                    {{ form.name.label.text }} <span class="text-danger">*</span>
+                </label>
+                {{ form.name(class_="form-control", placeholder="Enter bundle name") }}
+                {% if form.name.errors %}
+                <div class="invalid-feedback d-block">
+                    <i class="fa-solid fa-circle-exclamation me-1"></i> {{ form.name.errors[0] | safe }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="row mb-4 justify-content-center">
+            <div class="col-md-8">
+                <label class="form-label fw-semibold">
+                    {{ form.description.label.text }} <span class="text-danger">*</span>
+                </label>
+                {{ form.description(class_="form-control", rows=4, placeholder="Describe the purpose or content of the bundle...") }}
+                {% if form.description.errors %}
+                <div class="invalid-feedback d-block">
+                    <i class="fa-solid fa-circle-exclamation me-1"></i> {{ form.description.errors[0] | safe }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-success px-4 py-2">
+                <i class="fa-solid fa-plus me-2"></i> {{ form.submit.label.text }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+

@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5" id="main-container">
+    <!-- Header -->
+    <div class="text-center mb-4 position-relative">
+
+        <h2 class="fw-bold text-primary d-inline-flex align-items-center gap-2">
+            <i class="fa-solid fa-boxes-stacked"></i> All Bundles
+            <!-- Help Button -->
+            <button class="btn " 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#bundleHelpCollapse" 
+                    aria-expanded="false" 
+                    aria-controls="bundleHelpCollapse"
+                    title="What is a Bundle?">
+            <i class="fas fa-question-circle"></i>
+            </button>
+        </h2>
+
+        <!-- Help Collapse -->
+        <div class="collapse mt-3 text-start mx-auto" id="bundleHelpCollapse" style="max-width: 600px;">
+            <div class="card card-body bg-light border-0 shadow-sm">
+            <h5 class="mb-3">
+                <i class="fas fa-box-open text-primary me-2"></i> What is a Rule Bundle?
+            </h5>
+            <p>
+                A <strong>bundle</strong> is a custom collection of rules grouped together. It allows you to organize, share, and manage rules based on a specific topic, use case, or detection strategy.
+            </p>
+            <p>
+                You can create your own bundles or explore those shared by other users.
+            </p>
+            <p class="mb-0">
+                Click on a bundle to view its details, edit its content, or add it to your favorites.
+            </p>
+            </div>
+        </div>
+
+        <p class="text-muted mt-4">Browse and manage all available bundles below.</p>
+
+    </div>
+
+
+
+    <div class="row justify-content-between align-items-center mb-4">
+        <div class="col-md-10">
+            <div class="input-group">
+            <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input
+                type="text"
+                class="form-control"
+                placeholder="Search bundles..."
+                v-model="searchQuery"
+                @input="fetchAllBundles(1)"
+            >
+            </div>
+        </div>
+
+        <div class="col-md-auto">
+            <a href="/bundle/create" class="btn btn-primary btn-sm" title="Create a Bundle">
+            <i class="fas fa-hammer me-1"></i> Create Bundle
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Bundles list -->
+
+    <div v-if="bundle_list.length === 0" class="text-center text-muted py-5">
+        <i class="fa-solid fa-circle-info me-2"></i> No bundles found.
+    </div>
+
+    <div  v-for="(bundle, index) in bundle_list"   :key="bundle.id">
+
+        <div class="card-body">
+            <div class="list-group">
+
+                <div class="list-group-item list-group-item-action mb-2 rounded shadow-sm d-flex justify-content-between align-items-center"
+                    @click="goToBundleDetail(bundle.id)"
+                    style="cursor: pointer;">
+
+
+                    <div class="d-flex flex-column">
+                        <strong>
+                            <i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>[[ bundle.name ]]
+                        </strong>
+
+
+                        <div class="small text-muted mt-1 d-flex align-items-center flex-wrap">
+                            <span class="me-3 d-flex align-items-center">
+                                <i class="fas fa-user me-1"></i> [[ bundle.author ]]
+                            </span>
+                            <span class="d-flex align-items-center">
+                                <i class="fas fa-calendar-alt me-1"></i> [[ bundle.created_at ]]
+                            </span>
+                        </div>
+
+                        <div class="mt-2 text-dark d-flex align-items-start" style="font-size: 1rem;">
+                            <i class="fas fa-align-left me-2 mt-1 text-secondary"></i>
+                            <span class="fw-medium">[[ bundle.description ]]</span>
+                        </div>
+                    </div>
+
+
+                    <div class="d-flex align-items-center ms-2">
+                        {% if current_user.is_authenticated %}
+                            <template v-if="parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
+                                <a :href="`/bundle/edit/${bundle.id}`" 
+                                class="btn btn-secondary btn-sm me-2" 
+                                title="Edit Bundle"
+                                @click.stop>
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-danger btn-sm me-2" 
+                                        title="Delete the bundle" 
+                                        data-bs-toggle="modal" 
+                                        :data-bs-target="'#delete_bundle_modal_'+bundle.id"
+                                        @click.stop>
+                                    <i class="fa-solid fa-trash fa-fw"></i>
+                                </button>                                  
+                            </template>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="modal fade" :id="'delete_bundle_modal_'+bundle.id" tabindex="-1" aria-labelledby="delete_bundle_modal" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5 text-dark" id="delete_rule_modal">
+                            Delete [[ bundle.name ]] ?
+                        </h1>
+                        <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button class="btn btn-danger" @click="deleteBundle(bundle.id , index)">
+                            <i class="fa-solid fa-trash"></i> Confirm
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- Pagination -->
+    <div class="row mt-4">
+        <div class="col text-center">
+            <nav>
+                <ul class="pagination justify-content-center">
+                    <li class="page-item" :class="{ disabled: bundle_current_page === 1 }">
+                        <button class="page-link" @click="fetchAllBundles(bundle_current_page - 1)">
+                            <i class="fa-solid fa-angle-left"></i>
+                        </button>
+                    </li>
+                    <li class="page-item" v-for="page in bundle_total_page" :class="{ active: page === bundle_current_page }" :key="page">
+                        <button class="page-link" @click="fetchAllBundles(page)">[[ page ]]</button>
+                    </li>
+                    <li class="page-item" :class="{ disabled: bundle_current_page === bundle_total_page }">
+                        <button class="page-link" @click="fetchAllBundles(bundle_current_page + 1)">
+                            <i class="fa-solid fa-angle-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Total count -->
+    <div class="text-center text-muted mt-3">
+        <small>[[ bundle_total ]] bundles found.</small>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, onMounted } = Vue;
+    import { message_list, display_toast } from '/static/js/toaster.js';
+    
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            /**
+             *          ########################
+             *          #    filter bundles    #
+             *          ########################
+             */
+            const searchQuery = ref('');
+
+            /**
+             *          ########################
+             *          #   Fetch all bundles  #
+             *          ########################
+             */
+            const bundle_list = ref([])            
+            const bundle_current_page = ref(1)       
+            const bundle_total_page = ref(0) 
+            const bundle_total = ref(1)
+
+            async function fetchAllBundles(page) {
+                const params = new URLSearchParams({
+                    page,
+                    search: searchQuery.value,
+                });
+                const response = await fetch("/bundle/get_all_bundles?" + params.toString());
+                if (response.status === 200) {
+                    const data = await response.json();
+                    bundle_list.value = data.bundle_list_;
+                    bundle_current_page.value = page;
+                    bundle_total_page.value = data.total_pages;
+                    bundle_total.value = data.total_bundles;
+                }
+            }
+
+            // First call 
+            fetchAllBundles(1);
+
+            /**
+             *          ########################
+             *          #  action on  bundles  #
+             *          ########################
+             */
+            async function deleteBundle(id, index) {
+                const params = new URLSearchParams({ id })
+                const res = await fetch('/bundle/delete?' + params.toString())
+                if (res.status === 200) {
+                    bundle_list.value.splice(index, 1);
+                    bundle_total.value -= 1;
+                    var myModalEl = document.getElementById('delete_bundle_modal_' + id);
+                    var modal = bootstrap.Modal.getInstance(myModalEl);
+                    modal.hide();
+                }
+                display_toast(res)
+            }
+
+            /**
+             *          ########################
+             *          #   use admin right    #
+             *          ########################
+             * 
+             *  This is very important for the right to make an action or not on a bundle
+             */
+            const is_admin = ref(false)
+            async function fetchCurrentUser() {
+                const res = await fetch('/rule/get_current_user')
+                if (res) {
+                    const data = await res.json()
+                    is_admin.value = data.user
+                }
+            }
+            fetchCurrentUser()
+
+            /**
+             *          ########################
+             *          #   go to bundle page  #
+             *          ########################
+             */
+            function goToBundleDetail(bundleId) {
+                window.location.href = `/bundle/detail/${bundleId}`;
+            }
+
+            return {
+                // filter
+                searchQuery,
+                // fetch all bundles
+                bundle_list,
+                bundle_current_page,
+                bundle_total_page,
+                bundle_total,
+
+                // action
+                message_list,
+                deleteBundle,
+                fetchAllBundles,
+                is_admin,
+
+                // redirect
+                goToBundleDetail
+            }
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

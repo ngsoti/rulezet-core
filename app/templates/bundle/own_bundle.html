@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5" id="main-container">
+</div>
+{% endblock %}
+
+{% block script %}
+
+<script type="module">
+    const { createApp, ref , onMounted} = Vue;
+    import { message_list , display_toast } from '/static/js/toaster.js';
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            /**
+             *          ########################
+             *          #    filter bundles    #
+             *          ########################
+             */
+
+
+
+            return{
+            }
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}
+

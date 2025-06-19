@@ -191,6 +191,9 @@ def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
     return sources
 
 
+def get_rules() -> Rule:
+    """Get all the rules"""
+    return Rule.query.all()
 def get_rules_page(page) -> Rule:
     """Return all rules by page"""
     return Rule.query.paginate(page=page, per_page=20, max_per_page=20)
