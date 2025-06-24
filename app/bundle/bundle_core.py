@@ -288,3 +288,32 @@ def get_rules_from_bundle(bundle_id: int) -> List[Rule]:
         .filter(BundleRuleAssociation.bundle_id == bundle_id)
         .all()
     )
+
+
+def get_all_bundles_own_page(page: int, search: str| None) -> dict:
+    """
+    List all bundles paginated, with optional search filter (own by current user).
+    :param page: Page number.
+    :param search: The search string to filter by name or description.
+    :return: Pagination object with filtered bundles.
+    """
+    query = Bundle.query
+
+    if search:
+        like_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Bundle.name.ilike(like_pattern),
+                Bundle.description.ilike(like_pattern)
+            )
+        )
+    query = query.filter_by(user_id=current_user.id)
+    return query.order_by(Bundle.created_at.desc()).paginate(page=page, per_page=20)
+
+
+def get_total_bundles_count_own() -> int:
+    """
+    get the count of bundles (own by current user)
+    :return: int the number of bundles.
+    """
+    return Bundle.query.filter_by(user_id=current_user.id).count()

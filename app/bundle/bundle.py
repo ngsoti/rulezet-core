@@ -315,3 +315,17 @@ def download_bundle():
 def own() :     
     """list all bundles"""     
     return render_template("bundle/own_bundle.html" )
+
+@bundle_blueprint.route("/get_all_bundles_owner", methods=['GET'])
+def get_all_bundles_owner() :     
+    """get all bundles own by the current user for pages"""     
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', type=str)
+    bundles_list = BundleModel.get_all_bundles_own_page(page, search)
+    total_bundles = BundleModel.get_total_bundles_count_own()
+    if bundles_list:
+        return {"bundle_list_": [r.to_json() for r in bundles_list],
+                "total_pages": bundles_list.pages, 
+                "total_bundles": total_bundles} , 200
+
+    return {"message": "No Rule"} , 200
