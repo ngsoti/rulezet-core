@@ -26,11 +26,25 @@
       <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 40px; height: 40px;">
         <i class="fas fa-filter"></i>
       </div>
-      <h5 class="mb-0 text-primary fw-semibold">Advanced Filters</h5>
+      <div class="d-flex w-100 justify-content-between align-items-center">
+        <h5 class="mb-0 text-primary fw-semibold">Advanced Filters</h5>
+        <template v-if="rules_list.length > 0">
+          <div class="ms-auto">
+            <button @click="deleteAllRule()" class="btn btn-sm btn-outline-danger" title="Delete All bad Rules">
+              <i class="fas fa-trash me-1"></i> Delete all
+            </button>
+          </div>
+        </template>
+      </div>
+
+
+
+      
     </div>
 
+    
     <div class="row align-items-end g-3">
-      <div class="col-md-6 col-lg-4">
+      <div class="col-md-10 ">
         <label for="searchInput" class="form-label fw-semibold text-muted">
           <i class="fas fa-search me-1"></i>Search Rules
         </label>
@@ -124,14 +138,6 @@
       No invalid rule found!
     </div>
   </template>
-
-  <!-- 
-  <div class="text-center mt-4 mb-4">
-    <a href="{{ url_for('rule.rules_list') }}" class="btn btn-primary">
-      <i class="fas fa-arrow-left me-1"></i> Back to Rules List
-    </a>
-  </div>
-  -->
 </div>
 
 {% endblock %}
@@ -140,7 +146,7 @@
 {% block script %}
 <script type="module">
   const { createApp, ref, computed } = Vue
-  import { message_list , display_prepared_toast } from '/static/js/toaster.js'
+  import { message_list , display_prepared_toast ,display_toast} from '/static/js/toaster.js'
 
   createApp({
     delimiters: ['[[', ']]'],
@@ -171,7 +177,17 @@
         user.value = data.user ;
       }
 
-
+      async function deleteAllRule(){
+        const res = await fetch('/rule/bad_rule/delete_all_bad_rule')
+        if (res.status === 200) {
+            rules_list.value = []
+            
+            // var myModalEl = document.getElementById('delete_bundle_modal_' + id);
+            // var modal = bootstrap.Modal.getInstance(myModalEl);
+            // modal.hide();
+        }
+        display_toast(res)
+      }
 
 
       async function onSearchInput() {
@@ -246,7 +262,8 @@
         visiblePages,
         searchQuery,
         onEnterKey,
-        onSearchInput
+        onSearchInput,
+        deleteAllRule
       }
     }
   }).mount('#main-container')

@@ -246,11 +246,21 @@ def edit_rule(rule_id) -> render_template:
                 if valide == False:
                     return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
 
-
+            # create an history for the rule
+            if rule.to_string != form_dict['to_string']:
+                result = {
+                    "id": rule_id,
+                    "title": rule.title,
+                    "success": True,
+                    "message": "simple edit",
+                    "new_content": form_dict['to_string'],
+                    "old_content": rule.to_string 
+                }
+                RuleModel.create_rule_history(result)
             
             RuleModel.edit_rule_core(form_dict, rule_id)
             flash("Rule modified with success!", "success")
-            # return redirect("/rule/rules_list")
+
             return redirect(request.referrer or '/')
         else:
             form.format.data = rule.format
@@ -657,8 +667,13 @@ def validate_proposal() -> jsonify:
                 RuleModel.set_status(rule_proposal_id,"rejected")
                 message = "rejected"
             else:
-                return jsonify({"message": "Invalid decision"}), 400
-        return jsonify({"message": message})
+                return jsonify({"message": "Invalid decision",
+                                "success": False,
+                                "toast_class" : "danger"}), 400
+        return jsonify({"message": message,
+                        "success": True,
+                        "toast_class" : "success"
+                        }),200
     else:
         return render_template("access_denied.html")
 
@@ -753,10 +768,13 @@ def check_updates():
     rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
     results = []
     sources = RuleModel.get_sources_from_titles(rule_items)
+    
+
+    ############################################# faire un chrone ( problème automatisation , time out probleme , trop de demande )
     for source in sources:
-        print("a")
         repo_dir, exists = clone_or_access_repo(source)
         git_pull_repo(repo_dir)
+    ###############################################
 
     for item in rule_items:
         rule_id = item.get("id")
@@ -985,7 +1003,7 @@ def test_yara_python_url() -> redirect:
                 return redirect(url_for("rule.bad_rules_summary"))
 
         except Exception as e:
-            flash(f"Failed to import rules: {e}", "danger")
+            flash(f"Failed to import rules: with url :  {repo_url}", "danger")
 
     return redirect(url_for("rule.rules_list"))
 
@@ -1072,6 +1090,45 @@ def delete_bad_rule(rule_id) -> jsonify:
         return render_template('rule/edit_bad_rule.html', rule=bad_rule)
     else:
         return render_template("access_denied.html")
+    
+@rule_blueprint.route('/bad_rule/delete_all_bad_rule', methods=['GET', 'POST'])
+@login_required
+def delete_all_bad_rule() -> jsonify:
+    """Delete all bad rule (error from import)"""
+
+    bad_rules = RuleModel.get_all_bad_rule_user(current_user.id)
+    error = 0
+    if bad_rules:
+        for bad_rule in bad_rules:
+            if current_user.is_admin() or current_user.id == bad_rule.user_id :
+                success = RuleModel.delete_bad_rule(bad_rule.id)
+                if success == False:
+                    error += 1
+            else:
+                return jsonify({ 
+                    "success": False,
+                    "toast_class": 'danger',
+                    "message": "access denied"
+                }), 403
+        if error > 0:
+            return jsonify({ 
+                "success": False,
+                "toast_class": 'danger',
+                "message": "Error to delete {error} bad rules"
+            }), 500
+        else:
+            return jsonify({ 
+                "success": True,
+                "toast_class": 'success',
+                "message": "All the bad rules are delete !"
+            }), 200
+
+    else:
+        return jsonify({ 
+            "success": False,
+            "toast_class": 'danger',
+            "message": "Error to access bad rule"
+        }), 500
 
 #####################
 #   Repport rule    #

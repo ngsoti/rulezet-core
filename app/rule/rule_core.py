@@ -185,8 +185,8 @@ def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
             rule = Rule.query.filter_by(title=title).first()
             if rule.source not in sources:
                 sources.append(rule.source)
-        else:
-            print(f"⚠️ Skipping title '{title}' because it has {count} entries (duplicate or missing).")
+        # else:
+        #     print(f"⚠️ Skipping title '{title}' because it has {count} entries (duplicate or missing).")
 
     return sources
 
@@ -675,6 +675,11 @@ def get_invalid_rule_by_id(rule_id) -> Rule:
     if not rule:
         return None
     return rule
+
+def get_all_bad_rule_user(user_id: int) -> list:
+    """Get all the invalid (bad) rules of a specific user"""
+    bad_rules = InvalidRuleModel.query.filter_by(user_id=user_id).order_by(InvalidRuleModel.created_at.desc()).all()
+    return  bad_rules
 
 def get_user_id_of_bad_rule(rule_id) -> id:
     """Get the user id of a bad rule with his id"""

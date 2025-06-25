@@ -150,7 +150,7 @@
 
 
     <!-- Pagination -->
-    <div class="row mt-4">
+    <div class="row mt-4" v-if="bundle_list.length > 0">
         <div class="col text-center">
             <nav>
                 <ul class="pagination justify-content-center">
@@ -170,6 +170,7 @@
                 </ul>
             </nav>
         </div>
+        
     </div>
 
     <!-- Total count -->

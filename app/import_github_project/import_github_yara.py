@@ -45,6 +45,8 @@ async def read_file_async(filepath):
 def yara_compile_source(source, externals):
     return yara.compile(source=source, externals=externals)
 
+
+
 async def parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_url):
     imported = 0
     skipped = 0
@@ -160,7 +162,7 @@ async def parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_u
             })
             bad_rules_count += 1
 
-    print(f"\nParsing complete. Imported: {imported}, Skipped: {skipped}, Failed: {bad_rules_count}")
+    #print(f"\nParsing complete. Imported: {imported}, Skipped: {skipped}, Failed: {bad_rules_count}")
     return imported, skipped, bad_rules_count, bad_rules
 
 

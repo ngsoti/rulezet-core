@@ -5,7 +5,7 @@
     <div class="text-center mb-4 position-relative">
 
         <h2 class="fw-bold text-primary d-inline-flex align-items-center gap-2">
-            <i class="fa-solid fa-boxes-stacked"></i> My Bundles
+            <i class="fa-solid fa-crown"></i> My Bundles
             <!-- Help Button -->
             <button class="btn " 
                     type="button" 
@@ -51,7 +51,7 @@
                 class="form-control"
                 placeholder="Search bundles..."
                 v-model="searchQuery"
-                @input="fetchAllBundles(1)"
+                @input="fetchAllBundlesOwner(1)"
             >
             </div>
         </div>
@@ -150,7 +150,7 @@
 
 
     <!-- Pagination -->
-    <div class="row mt-4">
+    <div class="row mt-4" v-if="bundle_list.length > 0">
         <div class="col text-center">
             <nav>
                 <ul class="pagination justify-content-center">

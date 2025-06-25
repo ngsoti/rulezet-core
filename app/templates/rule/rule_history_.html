@@ -82,10 +82,7 @@
                 <p class="text-muted">It seems there are no accepted updates for this rule yet.</p>
             </div>
         </template>
-
-        
     </div>
-    
 </div>
 {% endblock %}
 
@@ -93,7 +90,6 @@
 <script type="module">
     const { createApp, ref } = Vue
     import { display_toast } from '/static/js/toaster.js'
-
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
@@ -125,12 +121,23 @@
                     }))
                     total_pages.value = data.total_pages
                     current_page.value = page
-                } else {
-                    console.log("ahhh")
-                }
+                } 
             }
 
             fetchRules(1)
+
+
+
+            const currentRule = ref([])
+
+            async function fetchCurrentRule(){
+                const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
+                if (response.ok) {
+                    const data = await response.json();
+                    currentRule.value = data.rule; 
+                } 
+            }
+            fetchCurrentRule()
 
             return {
                 rules_list_history,

@@ -18,7 +18,7 @@ def Check_for_rule_updates(rule_id):
         return {"message": f"No rule found with the id {rule_id}", "success": False}, False, None
     
     #a = delete_existing_repo_folder("Rules_Github")
-   
+
 
     repo_dir, exists = clone_or_access_repo(rule.source)
     if not exists:

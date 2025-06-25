@@ -32,13 +32,16 @@ def create() :
     form = AddNewBundleForm()
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
-
+        print(form_dict)
 
         my_bundle = BundleModel.create_bundle(form_dict)
         if my_bundle:
             flash('Bundle created !', 'success')
+            return render_template("bundle/edit_bundle.html", form=form, bundle=my_bundle )
         else:
             flash('Error to create', 'danger')
+            return render_template("bundle/create_bundle.html", form=form )
+        
     
     return render_template("bundle/create_bundle.html", form=form )
 
