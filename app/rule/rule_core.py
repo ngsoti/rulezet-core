@@ -175,18 +175,19 @@ def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
     sources = []
 
     for rule_info in rules_list:
+        print(1)
         title = rule_info.get('title')
         if not title:
             continue
-
+            
         count = Rule.query.filter_by(title=title).count()
 
         if count == 1:
             rule = Rule.query.filter_by(title=title).first()
             if rule.source not in sources:
                 sources.append(rule.source)
-        # else:
-        #     print(f"⚠️ Skipping title '{title}' because it has {count} entries (duplicate or missing).")
+        else:
+            print(f"⚠️ Skipping title '{title}' because it has {count} entries (duplicate or missing).")
 
     return sources
 
@@ -1424,19 +1425,12 @@ def create_rule_history(data: dict) -> bool:
     """Create a history entry for a rule update, unless it already exists. Returns the created RuleUpdateHistory.id or None if duplicate or error."""
     try:
         rule_id = data.get("id")
-        print(rule_id)
         rule_title = data.get("title", "Unknown Title")
-        print(rule_title)
         success = data.get("success", False)
-        print(success)
         message = data.get("message", "")
-        print(message)
         new_content = data.get("new_content", "")
-        print(new_content)
         old_content = data.get("old_content", "")
-        print(old_content)
         user_id = current_user.id
-        print(user_id)
 
         existing_entry = RuleUpdateHistory.query.filter_by(
             rule_id=rule_id,
@@ -1467,7 +1461,6 @@ def create_rule_history(data: dict) -> bool:
         return history_entry.id
 
     except Exception as e:
-        print(e)
         db.session.rollback()
         return None
 
@@ -1491,3 +1484,241 @@ def get_old_rule_choice(page) -> list:
         RuleUpdateHistory.message != "rejected",
         RuleUpdateHistory.analyzed_by_user_id == current_user.id
     ).paginate(page=page, per_page=20, max_per_page=20)
+
+
+##################
+#   Update rule  #
+##################
+
+def create_auto_update_schedule(hour: int,minute: int,days: List[str], name: str , description: str|None ,rule_ids: List[int]) -> dict[str, object]:
+    """
+    Create a new AutoUpdateSchedule if one with the same user_id, hour, minute, and days does not already exist.
+    Also associate the provided rules with the schedule.
+    
+    Args:
+        hour (int): Update hour (0-23).
+        minute (int): Update minute (0-59).
+        days (List[str]): List of days for the schedule (e.g., ["monday", "wednesday"]).
+        rule_ids (List[int]): List of rule IDs to link.
+
+    Returns:
+        Dict[str, object]: Dictionary with keys:
+            - 'success' (bool): True if created or existing found
+            - 'schedule_id' (int): The ID of the created or existing schedule
+            - 'created' (bool): True if a new schedule was created, False if an existing one was found
+    """
+    
+    # Check if schedule already exists for current user with same hour, minute, and days
+    existing_schedule = AutoUpdateSchedule.query.filter_by(
+        user_id=current_user.id,
+        hour=hour,
+        minute=minute,
+        name=name,
+        description=description,
+        days=days
+    ).first()
+    
+    if existing_schedule:
+        schedule = existing_schedule
+        created = False
+    else:
+        schedule = AutoUpdateSchedule(
+            user_id=current_user.id,
+            hour=hour,
+            minute=minute,
+            days=days,
+            name=name,
+            description=description,
+            active=True,
+            created_at=datetime.datetime.now(tz=datetime.timezone.utc)
+        )
+        db.session.add(schedule)
+        db.session.commit()
+        created = True
+    
+    # Associate rules (avoid duplicates)
+    if rule_ids:
+        for rule_id in rule_ids:
+            exists = db.session.query(
+                AutoUpdateScheduleRuleAssociation
+            ).filter_by(schedule_id=schedule.id, rule_id=rule_id).first()
+            if not exists:
+                assoc = AutoUpdateScheduleRuleAssociation(schedule_id=schedule.id, rule_id=rule_id)
+                db.session.add(assoc)
+        db.session.commit()
+
+    return {
+        "success": True,
+        "schedule_id": schedule.id,
+        "created": created
+    }
+
+def delete_auto_update_schedule(schedule_id: int) -> bool:
+    """
+    Delete an AutoUpdateSchedule by ID and user ID.
+
+    Args:
+        db (Session): SQLAlchemy database session.
+        schedule_id (int): ID of the schedule to delete.
+
+    Returns:
+        bool.
+    """
+    schedule = db.session.query(AutoUpdateSchedule).filter_by(id=schedule_id).first()
+    if not schedule:
+        return False
+
+    # Delete associated links first due to foreign key constraints
+    db.session.query(AutoUpdateScheduleRuleAssociation).filter_by(schedule_id=schedule_id).delete()
+    db.session.delete(schedule)
+    db.session.commit()
+    return True
+
+
+def get_auto_update_page(page: int, search: str) -> list:
+    """
+    Get paginated AutoUpdateSchedule for the current user, optionally filtered by rule title.
+
+    Args:
+        page (int): Page number.
+        search (str): Search string to filter rules by title.
+
+    Returns:
+        Pagination: SQLAlchemy Pagination object with AutoUpdateSchedule items.
+    """
+    query = AutoUpdateSchedule.query.filter_by(user_id=current_user.id)
+
+    if search:
+        query = query.join(AutoUpdateSchedule.rules).filter(Rule.title.ilike(f"%{search}%")).distinct()
+
+    return query.order_by(AutoUpdateSchedule.created_at.desc()).paginate(page=page, per_page=20, max_per_page=20)
+
+def get_schedule(schedule_id: int) -> AutoUpdateSchedule | None:
+    """
+    Retrieve an AutoUpdateSchedule by its ID.
+
+    Args:
+        schedule_id (int): The ID of the schedule to retrieve.
+
+    Returns:
+        AutoUpdateSchedule or None: The schedule object if found, else None.
+    """
+    return AutoUpdateSchedule.query.filter_by(id=schedule_id).first()
+
+def edit_schedule(form_dict: dict[str, None], schedule_id: int) -> None:
+    """
+    Edit an existing Schedule in the database using data from a form.
+
+    Args:
+        form_dict (Dict[str, Any]): Dictionary containing the form data.
+        schedule_id (int): The ID of the Schedule to update.
+
+    Expected keys in form_dict:
+        - name (str)
+        - description (str | None)
+        - hour (int)
+        - minute (int)
+        - days (list[str])        # e.g., ['monday', 'wednesday']
+        - active (bool or str)    # 'on', 'true', True, etc.
+    """
+    schedule = get_schedule(schedule_id)
+
+    schedule.name = form_dict["name"]
+    schedule.description = form_dict.get("description") or None
+    schedule.hour = int(form_dict["hour"])
+    schedule.minute = int(form_dict["minute"])
+
+    # Make sure days is a list of strings
+    schedule.days = form_dict["days"]
+
+    # Convert 'active' to boolean safely
+    if isinstance(form_dict["active"], str):
+        schedule.active = form_dict["active"].lower() in ["true", "1", "on"]
+    else:
+        schedule.active = bool(form_dict["active"])
+
+    db.session.commit()
+
+
+def add_rule_to_schedule(schedule_id: int, rule: dict) -> bool:
+    """
+    Add a rule to an auto-update schedule if it is not already linked.
+
+    Args:
+        schedule_id (int): ID of the AutoUpdateSchedule to update.
+        rule (dict): A dictionary containing at least the 'id' of the rule to add.
+
+    Returns:
+        bool: True if the rule was successfully added, False otherwise.
+    """
+    try:
+
+        schedule = db.session.get(AutoUpdateSchedule, schedule_id)
+        if schedule is None:
+
+            return False
+
+        rule_id = rule.get("id")
+        if rule_id is None:
+
+            return False
+
+        # Check if the rule is already associated with the schedule
+        existing_association = db.session.execute(
+            db.select(AutoUpdateScheduleRuleAssociation)
+            .filter_by(schedule_id=schedule_id, rule_id=rule_id)
+        ).scalar_one_or_none()
+
+        if existing_association:
+
+            return True # Already linked
+
+        new_association = AutoUpdateScheduleRuleAssociation(
+            schedule_id=schedule_id,
+            rule_id=rule_id
+        )
+        db.session.add(new_association)
+        db.session.commit()
+        return True
+
+    except Exception as e:
+        db.session.rollback()
+        return False
+
+
+def update_schedule_rules(schedule_id: int, rule_dicts: list[dict]) -> bool:
+    """Update with delete or add new rule to schedule"""
+    try:
+        rule_ids_in_payload = {
+            rule.get("id") for rule in rule_dicts if rule.get("id") is not None
+        }
+
+        current_associations = db.session.execute(
+            db.select(AutoUpdateScheduleRuleAssociation)
+            .filter_by(schedule_id=schedule_id)
+        ).scalars().all()
+
+        current_rule_ids = {assoc.rule_id for assoc in current_associations}
+
+
+
+        rule_ids_to_remove = current_rule_ids - rule_ids_in_payload
+
+
+        for assoc in current_associations:
+            if assoc.rule_id in rule_ids_to_remove:
+                db.session.delete(assoc)
+
+
+        error = 0
+        for rule in rule_dicts:
+            success = RuleModel.add_rule_to_schedule(schedule_id, rule)
+            if not success:
+                error += 1
+
+        db.session.commit()
+        return error == 0
+
+    except Exception as e:
+        db.session.rollback()
+        return False

@@ -13,7 +13,7 @@ from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek
 from app.import_github_project.import_github_sigma import load_rule_files
 from app.import_github_project.import_github_suricata import  parse_and_import_suricata_rules_async
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name, git_pull_repo
-from .rule_form import AddNewRuleForm, EditRuleForm
+from .rule_form import AddNewRuleForm, EditRuleForm, EditScheduleForm
 from ..utils.utils import  form_to_dict, generate_diff_html, generate_side_by_side_diff_html
 from . import rule_core as RuleModel
 
@@ -761,19 +761,257 @@ def get_discuss_part_from() -> jsonify:
 #   Import from Github  #
 #########################
 
+@rule_blueprint.route("/update/get_auto_component", methods=["GET"])
+@login_required
+def get_auto_component():
+    page = request.args.get("page", default=1, type=int)
+    search = request.args.get("search", default="", type=str).strip()
+
+    data = RuleModel.get_auto_update_page( page=page, search=search)
+
+    if data:
+        return jsonify({
+            "auto_component":  [item.to_json() for item in data],
+            "auto_component_total_page": data.pages,
+            "success": True
+        }), 200
+    return jsonify({
+            "auto_component":  [],
+            "auto_component_total_page": 0,
+            "success": False
+        }), 500
+
+
+@rule_blueprint.route("/get_schedule", methods=["GET"])
+@login_required
+def get_schedule():
+    schedule_id = request.args.get("schedule_id", default=1, type=int)
+
+
+    schedule = RuleModel.get_schedule(schedule_id)
+    if schedule:
+        if current_user.id == schedule.user_id or current_user.is_admin():
+            return jsonify({
+                "schedule":  schedule.to_json(),
+                "message": "schedule found",
+                "success": True
+            }), 200
+        else:
+            return jsonify( 
+                success= False, 
+                message= "You don't have the permission to do that !", 
+                toast_class= "danger"), 401
+    else:
+        return jsonify({
+                "schedule":  [],
+                "message": "schedule not found",
+                "success": False
+            }), 500
+
+
+@rule_blueprint.route("/edit_schedule/<int:schedule_id>", methods=['GET', 'POST'])
+def edit_schedule(schedule_id) -> render_template:   
+    """Redirect to edit schedule """ 
+    schedule = RuleModel.get_schedule(schedule_id)
+    if current_user.id == schedule.user_id or current_user.is_admin():
+        form = EditScheduleForm() 
+        if form.validate_on_submit():
+            form_dict = form_to_dict(form)
+            RuleModel.edit_schedule(form_dict, schedule_id)
+            flash("Schedule modified with success!", "success")
+
+            return redirect(request.referrer or '/')
+        else:
+            form.name.data = schedule.name
+            form.description.data = schedule.description
+            form.hour.data = schedule.hour  # Selected value
+            form.minute.data = schedule.minute
+            form.days.data = schedule.days
+            form.active.data = schedule.active
+        return render_template("rule/update_github/edit_schedule.html" ,schedule_id=schedule_id , form=form )
+    else:
+        return render_template("access_denied.html")
+
+@rule_blueprint.route("/update_rule_schedule", methods=['POST'])
+def update_rule_schedule():
+    """Update rule schedule"""
+
+    data = request.get_json(force=True)
+    rule_items = data.get("rules", [])
+    schedule_id = data.get("schedule_id", None)
+
+    schedule = RuleModel.get_schedule(schedule_id)
+    if not schedule:
+        return jsonify(
+            success=False,
+            message="Schedule not found.",
+            toast_class="danger"
+        ), 404
+
+    if current_user.id != schedule.user_id and not current_user.is_admin():
+        return jsonify(
+            success=False,
+            message="You don't have the permission to do that!",
+            toast_class="danger"
+        ), 401
+
+    success = RuleModel.update_schedule_rules(schedule_id, rule_items)
+
+    if success:
+        return jsonify({
+            "message": "Schedule updated successfully!",
+            "toast_class": "success",
+            "success": True
+        }), 200
+    else:
+        return jsonify({
+            "message": "Error during the update of the schedule!",
+            "toast_class": "danger",
+            "success": False
+        }), 500
+
+
+
+@rule_blueprint.route("/update/delete_schedule", methods=["GET"])
+@login_required
+def delete_schedule():
+    schedule_id = request.args.get("schedule_id",  type=int)
+
+    if not schedule_id:
+        return jsonify(success=False, message="Schedule ID missing"), 400
+
+    schedule = RuleModel.get_schedule(schedule_id)
+    if not schedule:
+        return jsonify(success=False, message="Schedule not found"), 404
+    if current_user.is_admin() or schedule.user_id == current_user.id:
+        data = RuleModel.delete_auto_update_schedule( schedule_id)
+
+        if data:
+            return jsonify({
+                "message": "Schedule delete with success !",
+                "toast_class": "success",
+                "success": True
+            }), 200
+        return jsonify({
+                "message": "Error during the delete of the Schedule !",
+                "toast_class": "danger",
+                "success": False
+            }), 500
+    return jsonify( 
+        success= False, 
+        message= "You don't have the permission to do that !", 
+        toast_class= "danger"), 401
+
+@rule_blueprint.route('/update/toggle_active', methods=['GET'])
+@login_required
+def toggle_active_schedule():
+    schedule_id = request.args.get("schedule_id",  type=int)
+
+    if not schedule_id:
+        return jsonify(success=False, message="Schedule ID missing"), 400
+
+    schedule = RuleModel.get_schedule(schedule_id)
+    if not schedule:
+        return jsonify(success=False, message="Schedule not found"), 404
+
+
+    if current_user.is_admin() or schedule.user_id == current_user.id:
+        if schedule.active:
+            schedule.active = False
+        else:
+            schedule.active = True
+        return jsonify(success=True, message=f"Schedule {'activated' if schedule.active else 'deactivated'}" , toast_class="success"), 200
+    return jsonify( 
+        success= False, 
+        message= "You don't have the permission to do that !", 
+        toast_class= "danger"), 401
+
+
+@rule_blueprint.route("/update/create_auto_update", methods=["POST"])
+@login_required
+def create_auto_update():
+    data = request.get_json(force=True)
+
+    update_hour = data.get("updateHour", None)
+    update_minute = data.get("updateMinute", None)
+    selected_days = data.get("selectedDays", [])
+    rule_ids = data.get("ruleIds", []) 
+    update_name = data.get("updateName", "No name")
+    update_description = data.get("updateDescription", None)
+    if update_name is None:
+        return jsonify({
+            "message": "Name null",
+            "success": False,
+            "toast_class": "danger"
+        }), 400
+
+    if update_hour is None or update_hour < 0 or update_hour > 23:
+        return jsonify({
+            "message": "Invalid or missing Hour. Must be between 0 and 23.",
+            "success": False,
+            "toast_class": "danger"
+        }), 400
+
+    if update_minute is None or update_minute < 0 or update_minute > 59:
+        return jsonify({
+            "message": "Invalid or missing Minute. Must be between 0 and 59.",
+            "success": False,
+            "toast_class": "danger"
+        }), 400
+
+    if not selected_days:
+        return jsonify({
+            "message": "You must select at least one day for the update.",
+            "success": False,
+            "toast_class": "warning"
+        }), 400
+
+    allowed_days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+    invalid_days = [d for d in selected_days if d.lower() not in allowed_days]
+    if invalid_days:
+        return jsonify({
+            "message": f"Invalid day(s) selected: {', '.join(invalid_days)}.",
+            "success": False,
+            "toast_class": "danger"
+        }), 400
+
+    result = RuleModel.create_auto_update_schedule(update_hour, update_minute, selected_days,update_name, update_description, rule_ids)
+
+    if result.get("success"):
+        if result.get("created"):
+            message = "Auto-update successfully scheduled!"
+            toast_class = "success"
+            status_code = 200
+        else:
+            message = "An identical auto-update schedule already exists."
+            toast_class = "info"
+            status_code = 200  
+    else:
+        message = "Error during insert to the db"
+        toast_class = "danger"
+        status_code = 500
+
+    return jsonify({
+        "message": message,
+        "success": result.get("success", False),
+        "toast_class": toast_class
+    }), status_code
+
+
+
+
 @rule_blueprint.route("/check_updates", methods=["POST"])
 @login_required
 def check_updates():
     data = request.get_json()
     rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
     results = []
-    sources = RuleModel.get_sources_from_titles(rule_items)
-    
-
+    sources = RuleModel.get_sources_from_titles(rule_items)     #  45 sec 
     ############################################# faire un chrone ( problème automatisation , time out probleme , trop de demande )
     for source in sources:
         repo_dir, exists = clone_or_access_repo(source)
-        git_pull_repo(repo_dir)
+        if exists == False:
+            git_pull_repo(repo_dir)
     ###############################################
 
     for item in rule_items:

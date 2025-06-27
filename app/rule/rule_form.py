@@ -1,7 +1,8 @@
 from flask_wtf import FlaskForm
-from wtforms import  ValidationError, SelectField
+from wtforms import  BooleanField, IntegerField, SelectMultipleField, ValidationError, SelectField
 from wtforms.fields import StringField, SubmitField, TextAreaField
-from wtforms.validators import  InputRequired, DataRequired
+from wtforms.validators import  InputRequired, DataRequired, NumberRange
+
 
 from app.utils.utils import detect_cve
 from ..db_class.db import Rule
@@ -52,3 +53,36 @@ class EditRuleForm(FlaskForm):
     submit = SubmitField('Register')
     
     
+
+class EditScheduleForm(FlaskForm):
+    """Form to edit an existing schedule"""
+
+    name = StringField('Name', validators=[InputRequired()])
+    description = TextAreaField('Description')
+
+    hour = IntegerField('Hour', validators=[
+        InputRequired(),
+        NumberRange(min=0, max=23, message="Hour must be between 0 and 23")
+    ])
+
+    minute = IntegerField('Minute', validators=[
+        InputRequired(),
+        NumberRange(min=0, max=59, message="Minute must be between 0 and 59")
+    ])
+
+    days = SelectMultipleField(
+        'Days',
+        choices=[
+            ('monday', 'Monday'),
+            ('tuesday', 'Tuesday'),
+            ('wednesday', 'Wednesday'),
+            ('thursday', 'Thursday'),
+            ('friday', 'Friday'),
+            ('saturday', 'Saturday'),
+            ('sunday', 'Sunday')
+        ],
+        validators=[InputRequired()]
+    )
+
+    active = BooleanField('Active')
+    submit = SubmitField('Save')

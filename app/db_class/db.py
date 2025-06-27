@@ -491,3 +491,67 @@ class BundleRuleAssociation(db.Model):
             "description": self.description,
             "added_at": self.added_at.strftime('%Y-%m-%d %H:%M'),
         }
+
+
+
+class AutoUpdateSchedule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text , nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    hour = db.Column(db.Integer, nullable=False)
+    minute = db.Column(db.Integer, nullable=False)
+    days = db.Column(db.ARRAY(db.String), nullable=False)  # exemple: ["monday", "wednesday"]
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+    active = db.Column(db.Boolean, default=True)
+
+    user = db.relationship(
+        'User',
+        backref=db.backref('auto_update_schedules', lazy='dynamic', cascade='all, delete-orphan')
+    )
+
+    rules = db.relationship(
+        'Rule',
+        secondary='auto_update_schedule_rule_association',
+        lazy='dynamic',
+        backref=db.backref('linked_auto_updates', lazy='dynamic', overlaps="auto_update_links,rule"),
+        overlaps="auto_update_links,rule"
+    )
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'hour': self.hour,
+            'minute': self.minute,
+            'days': self.days,
+            "name": self.name,
+            "description": self.description,
+            'created_at': self.created_at.isoformat(),
+            'active': self.active,
+            'rules': [
+                {'id': rule.id, 'title': rule.title} for rule in self.rules.all()
+            ]
+        }
+
+class AutoUpdateScheduleRuleAssociation(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    schedule_id = db.Column(db.Integer, db.ForeignKey('auto_update_schedule.id'), nullable=False)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+
+    rule = db.relationship(
+        'Rule',
+        backref=db.backref('auto_update_links', lazy='dynamic', cascade='all, delete-orphan', overlaps="linked_auto_updates,rules"),
+        overlaps="linked_auto_updates,rules"
+    )
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'schedule_id': self.schedule_id,
+            'rule_id': self.rule_id,
+            'rule_title': self.rule.title if self.rule else None,
+            'rule_format': self.rule.format if self.rule else None,
+            'rule_source': self.rule.source if self.rule else None
+        }

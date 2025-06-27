@@ -4,192 +4,296 @@
 <!-- Interface to verify if there is an update in a github project -->
 
 <div class="container mt-4" id="main-container" >
-    <div class="my-4 p-4 bg-light border rounded shadow-sm">
-        <h2 class="mb-3">
-            <i class="fas fa-sync-alt me-2 text-primary"></i>
-            Check for GitHub Rule Updates
-        </h2>
-        <p class="text-muted">
-            This page allows you to automatically check whether your imported rules from GitHub have been updated. 
-            For each rule, you'll be notified if a new version is available and can review the changes before applying them.
-        </p>
-    </div>
-
-    <div class="card bg-white shadow-sm border-0 mb-4">
-            <div class="card-body">
-                <h5 class="card-title text-secondary mb-3">🔍 Smart Filters</h5>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                    <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control form-control-sm rounded-pill" placeholder="Search by keywords...">
-                    </div>
-                    <div class="col-md-3">
-                        <select v-model="ruleType" class="form-select form-select-sm rounded-pill">
-                            <option value="">All Types</option>
-                            <option value="yara">YARA</option>
-                            <option value="sigma">SIGMA</option>
-                            <option value="zeek">Zeek</option>
-                            <option value="suricata">Suricata</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select v-model="sourceFilter" class="form-select form-select-sm rounded-pill">
-                            <option value="">All Sources</option>
-                            <option v-for="source in userSources" :key="source" :value="source">
-                                [[ source ]]
-                            </option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <button class="btn btn-dark w-100 rounded-pill" @click="fetchRules(1)">
-                            <i class="fas fa-sliders-h"></i> Apply
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
 
 
-
-    <div class="table-responsive">
-        <div v-if="owner_rules.length > 0">
-            <table class="table table-striped table-hover align-middle" >
-                <thead class="table-dark">
-                    <tr>
-                    <th scope="col">
-                        <input type="checkbox" @change="toggleAll" :checked="allSelected" aria-label="Select all" />
-                    </th>
-                    <th scope="col"><i class="fas fa-hashtag"></i> ID</th>
-                    <th scope="col"><i class="fas fa-shield-alt"></i> Title</th>
-                    <th scope="col"><i class="fas fa-user"></i> Author</th>
-                    <th scope="col"><i class="fas fa-calendar-alt"></i> Created</th>
-                    <th scope="col"><i class="fas fa-link"></i> Source</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="rule in owner_rules" :key="rule.id" 
-                        @click="toggleSelection(rule.id , rule.title)" 
-                        :class="{ 'table-primary': selectedRules.includes(rule.id) }"
-                        style="cursor: pointer;">
-                    <td @click.stop>
-                        <input type="checkbox" :checked="selectedRules.some(r => r.id === rule.id)" @change="toggleSelection(rule.id, rule.title)" />
-                    </td>
-                    <td>[[ rule.id ]]</td>
-                    <td>[[ rule.title ]]</td>
-                    <td>[[ rule.author ]]</td>
-                    <td>[[ rule.creation_date ]]</td>
-                    <td>
-                        <a :href="rule.source" target="_blank" class="text-decoration-none">
-                        GitHub <i class="fas fa-external-link-alt"></i>
-                        </a>
-                    </td>
-                    
-                    </tr>
-                </tbody>
-            </table>
-            <div class="d-flex justify-content-center mt-3">
-                <nav aria-label="Page navigation">
-                    <ul class="pagination">
-                    <li class="page-item" :class="{ disabled: owner_current_page === 1 }">
-                        <a class="page-link" href="#" @click.prevent="fetchRules(owner_current_page - 1)">
-                        <i class="fas fa-arrow-left"></i> Previous
-                        </a>
-                    </li>
-                    <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: owner_current_page === page, disabled: page === '...' }">
-                        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
-                        <span v-else class="page-link">...</span>
-                    </li>
-                    <li class="page-item" :class="{ disabled: owner_current_page === owner_total_page }">
-                        <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
-                        Next <i class="fas fa-arrow-right"></i>
-                        </a>
-                    </li>
-                    </ul>
-                </nav>
-            </div>
-            
-
-
-
-        </div>
-        <template v-else>
-            <div class="alert alert-warning text-center mt-5 shadow-sm">
-            <i class="fas fa-circle-info me-2"></i>
-                You have not  own any rules yet.
-            </div>
-        </template>
-        <!-- Selected Rules Display -->
-        <div class="mt-3" v-if="selectedRules.length > 0">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h6 class="card-title mb-2 text-primary">
-                        <i class="fas fa-check-circle me-1"></i> Selected Rules ([[ selectedRules.length ]])
-                    </h6>
-                    <div class="d-flex flex-wrap gap-2 mb-2">
-                        <span
-                            v-for="rule in displayedSelectedRules"
-                            :key="rule.id"
-                            class="badge bg-secondary text-light rounded-pill px-3 py-2"
-                        >
-                            [[ rule.title ]]
-                            <button
-                                type="button"
-                                class="btn btn-sm btn-close btn-close-white ms-2"
-                                aria-label="Remove"
-                                @click.stop="removeFromSelection(rule.id)"
-                            ></button>
-                        </span>
-
-                        <span
-                            v-if="remainingSelectedCount > 0"
-                            class="badge bg-dark text-light rounded-pill px-3 py-2 align-self-center"
-                        >
-                            +[[ remainingSelectedCount ]] others selected
-                        </span>
-                    </div>
-
-                </div>
-            </div>
-            <button class="btn btn-outline-primary btn-sm"  @click="checkUpdateList()">
-                <i class="fas fa-sync-alt"></i> Check Update
+    <ul class="nav nav-tabs fw-bold text-uppercase shadow-sm rounded" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#manuel" type="button" role="tab">
+                <i class="fa-solid fa-gear"></i> Manuel 
             </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#auto" type="button" role="tab">
+                <i class="fa-solid fa-layer-group"></i> Auto 
+            </button>
+        </li>
+    </ul>
 
-            <div class="mt-4" v-if="updateResults.length > 0">
-                <h5>Update Check Results ( [[ updateResults.length]])</h5>
-                <table class="table table-bordered table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Rule Title</th>
-                            <th>Status</th>
-                            <th>Message</th>
-                            <th>Details</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="result in updateResults" :key="result.id">
-                            <td>[[ result.title ]]</td>
-                            <td>
-                                <span v-if="result.success && result.new_content" class="text-success">
-                                    <i class="fas fa-info-circle"></i> Up-to-date
-                                </span>
-                                <span v-else class="text-danger">
-                                    <i class="fas fa-exclamation-triangle"></i> Failed
-                                </span>
-                            </td>
-                            <td>[[ result.message ]]</td>
-                            <td>
-                                <a class="btn btn-sm btn-primary" :href="'/rule/update_github/choose_changes?id=' + result.history_id"  > 
-                                    <!-- target="_blank" -->
-                                    <i class="fas fa-code-branch"></i> Compare Changes
-                                </a>
-
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+    <div class="tab-content bg-white p-4 border border-top-0 shadow-sm rounded-bottom">
+        <!-- Tab 1: Manuel -->
+        <div class="tab-pane fade show active" id="manuel" role="tabpanel">
+            <div class="my-4 p-4 bg-light border rounded shadow-sm">
+                <h2 class="mb-3">
+                    <i class="fas fa-sync-alt me-2 text-primary"></i>
+                    Check for GitHub Rule Updates
+                </h2>
+                <p class="text-muted">
+                    This page allows you to automatically check whether your imported rules from GitHub have been updated. 
+                    For each rule, you'll be notified if a new version is available and can review the changes before applying them.
+                </p>
             </div>
-        </div>
-        <div class="mt-4" v-if="old_choice.length > 0">
+
+            <div class="card bg-white shadow-sm border-0 mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                            <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control form-control-sm rounded-pill" placeholder="Search by keywords...">
+                            </div>
+                            <div class="col-md-3">
+                                <select v-model="ruleType" class="form-select form-select-sm rounded-pill">
+                                    <option value="">All Types</option>
+                                    <option value="yara">YARA</option>
+                                    <option value="sigma">SIGMA</option>
+                                    <option value="zeek">Zeek</option>
+                                    <option value="suricata">Suricata</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select v-model="sourceFilter" class="form-select form-select-sm rounded-pill">
+                                    <option value="">All Sources</option>
+                                    <option v-for="source in userSources" :key="source" :value="source">
+                                        [[ source ]]
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-2">
+                                <button class="btn btn-dark w-100 rounded-pill" @click="fetchRules(1)">
+                                    <i class="fas fa-sliders-h"></i> Apply
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+            <div class="table-responsive">
+                <div v-if="owner_rules.length > 0">
+                    <table class="table table-striped table-hover align-middle" >
+                        <thead class="table-dark">
+                            <tr>
+                            <th scope="col">
+                                <input type="checkbox" @change="toggleAll" :checked="allSelected" aria-label="Select all" />
+                            </th>
+                            <th scope="col"><i class="fas fa-hashtag"></i> ID</th>
+                            <th scope="col"><i class="fas fa-shield-alt"></i> Title</th>
+                            <th scope="col"><i class="fas fa-user"></i> Author</th>
+                            <th scope="col"><i class="fas fa-calendar-alt"></i> Created</th>
+                            <th scope="col"><i class="fas fa-link"></i> Source</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="rule in owner_rules" :key="rule.id" 
+                                @click="toggleSelection(rule.id , rule.title)" 
+                                :class="{ 'table-primary': selectedRules.includes(rule.id) }"
+                                style="cursor: pointer;">
+                            <td @click.stop>
+                                <input type="checkbox" :checked="selectedRules.some(r => r.id === rule.id)" @change="toggleSelection(rule.id, rule.title)" />
+                            </td>
+                            <td>[[ rule.id ]]</td>
+                            <td>[[ rule.title ]]</td>
+                            <td>[[ rule.author ]]</td>
+                            <td>[[ rule.creation_date ]]</td>
+                            <td>
+                                <a :href="rule.source" target="_blank" class="text-decoration-none">
+                                GitHub <i class="fas fa-external-link-alt"></i>
+                                </a>
+                            </td>
+                            
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="d-flex justify-content-center mt-3">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                            <li class="page-item" :class="{ disabled: owner_current_page === 1 }">
+                                <a class="page-link" href="#" @click.prevent="fetchRules(owner_current_page - 1)">
+                                <i class="fas fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: owner_current_page === page, disabled: page === '...' }">
+                                <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+                                <span v-else class="page-link">...</span>
+                            </li>
+                            <li class="page-item" :class="{ disabled: owner_current_page === owner_total_page }">
+                                <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
+                                Next <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            </ul>
+                        </nav>
+                    </div>
+                    
+
+
+
+                </div>
+                <template v-else>
+                    <div class="alert alert-warning text-center mt-5 shadow-sm">
+                    <i class="fas fa-circle-info me-2"></i>
+                        You have not  own any rules yet.
+                    </div>
+                </template>
+                <!-- Selected Rules Display -->
+                <div class="mt-3" v-if="selectedRules.length > 0">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-title mb-2 text-primary">
+                                <i class="fas fa-check-circle me-1"></i> Selected Rules ([[ selectedRules.length ]])
+                            </h6>
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <span
+                                    v-for="rule in displayedSelectedRules"
+                                    :key="rule.id"
+                                    class="badge bg-secondary text-light rounded-pill px-3 py-2"
+                                >
+                                    [[ rule.title ]]
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-close btn-close-white ms-2"
+                                        aria-label="Remove"
+                                        @click.stop="removeFromSelection(rule.id)"
+                                    ></button>
+                                </span>
+
+                                <span
+                                    v-if="remainingSelectedCount > 0"
+                                    class="badge bg-dark text-light rounded-pill px-3 py-2 align-self-center"
+                                >
+                                    +[[ remainingSelectedCount ]] others selected
+                                </span>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class=" my-3">
+                        <div class="text-center">
+                            <button class="btn btn-primary btn-sm mx-2" title="Search for updates" @click="checkUpdateList()">
+                                <i class="fas fa-sync-alt"></i> Check for Updates
+                            </button>
+                            
+                            <button class="btn btn-secondary btn-sm mx-2" title="Enable automatic update" data-bs-toggle="modal" data-bs-target="#auto_modal">
+                                <i class="fas fa-clock"></i> Enable Auto-Update
+                            </button>
+                        </div>
+                    
+
+                        <!-- Modal -->
+                        <div class="modal fade" id="auto_modal" tabindex="-1" aria-labelledby="auto_modal_label" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                <div class="modal-content">
+
+                                <div class="modal-header">
+                                    <h5 class="modal-title w-100 " id="auto_modal_label">Enable Automatic Rule Updates</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <p class="mb-4">
+                                        Configure when and how often you want the system to automatically check for rule updates  
+                                        from the original GitHub repositories.
+                                    </p>
+
+                                    <!-- Name -->
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Name:</label><span class="text-danger">*</span>
+                                        <input type="text" class="form-control" placeholder="Enter a name" v-model="updateName" required>
+                                    </div>
+
+                                    <!-- Description -->
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Description:</label>
+                                        <textarea class="form-control" rows="3" placeholder="Enter a description" v-model="updateDescription"></textarea>
+                                    </div>
+
+                                    <!-- Time Selection -->
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Preferred Time (24h format):</label><span class="text-danger">*</span>
+                                        <div class="d-flex flex-wrap align-items-center gap-3">
+                                            <div class="d-flex align-items-center">
+                                                <label class="form-label me-2 mb-0">Hour:</label>
+                                                <input type="number" class="form-control" min="0" max="23" placeholder="0" v-model="updateHour" style="width: 100px;" required>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <label class="form-label me-2 mb-0">Minute:</label>
+                                                <input type="number" class="form-control" min="0" max="59" placeholder="0" v-model="updateMinute" style="width: 100px;" required>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+                                    <!-- Day Selection -->
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Choose the days:</label><span class="text-danger">*</span>
+                                        <div class="d-flex flex-wrap gap-3">
+                                            <div v-for="day in weekDays" :key="day.value" class="form-check me-3">
+                                                <input
+                                                    class="form-check-input"
+                                                    type="checkbox"
+                                                    :id="day.value"
+                                                    :value="day.value"
+                                                    v-model="selectedDays"
+                                                    required
+                                                >
+                                                <label class="form-check-label" :for="day.value">
+                                                    [[ day.label ]]
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+
+                                <div class="modal-footer justify-content-center">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" @click="confirmAutoUpdate()">Confirm</button>
+                                </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <div class="mt-4" v-if="updateResults.length > 0">
+                        <h5>Update Check Results ( [[ updateResults.length]])</h5>
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Rule Title</th>
+                                    <th>Status</th>
+                                    <th>Message</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="result in updateResults" :key="result.id">
+                                    <td>[[ result.title ]]</td>
+                                    <td>
+                                        <span v-if="result.success && result.new_content" class="text-success">
+                                            <i class="fas fa-info-circle"></i> Up-to-date
+                                        </span>
+                                        <span v-else class="text-danger">
+                                            <i class="fas fa-exclamation-triangle"></i> Failed
+                                        </span>
+                                    </td>
+                                    <td>[[ result.message ]]</td>
+                                    <td>
+                                        <a class="btn btn-sm btn-primary" :href="'/rule/update_github/choose_changes?id=' + result.history_id"  > 
+                                            <!-- target="_blank" -->
+                                            <i class="fas fa-code-branch"></i> Compare Changes
+                                        </a>
+
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="mt-4" v-if="old_choice.length > 0">
                     <h5>Update Check Results (old) ( [[ old_choice.length]])</h5>
                     <table class="table table-bordered table-hover">
                         <thead class="table-light">
@@ -223,6 +327,184 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+        <!-- Tab 2: Auto -->
+        <div class="tab-pane fade " id="auto" role="tabpanel">
+            <div class="my-4 p-4 bg-light border rounded shadow-sm">
+                <h2 class="mb-3">
+                    <i class="fas fa-sync-alt me-2 text-primary"></i>
+                    Schedule GitHub Rule Updates
+                </h2>
+                <p class="text-muted">
+                    This page allows you to schedule automatic updates for your imported rules from GitHub. 
+                    You can select specific rules and define a date and time for the system to check if new versions are available. 
+                    Once an update is detected, you'll be notified and able to review the changes before applying them.
+                </p>
+            </div>
+            <div >
+                <!-- Search input -->
+                <input
+                    type="search"
+                    v-model="searchQueryAutoComponent"
+                    @input="fetchAutoComponent(1)"
+                    placeholder="Search schedules by rule title..."
+                    class="form-control mb-3"
+                />
+                <!-- Table of schedules -->
+                <table class="table table-striped table-hover align-middle" v-if="auto_component && auto_component.length > 0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Date</th>
+                            <th>Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="sched in auto_component" :key="sched.id">
+                            <td>[[ sched.id ]]</td>
+                            <td>[[ sched.name ]]</td>
+                            <td>[[ new Date(sched.created_at).toLocaleString() ]]</td>
+                            <td>
+                                <span
+                                    class="badge d-flex align-items-center"
+                                    :class="sched.active ? 'bg-success' : 'bg-danger'"
+                                    style="cursor: pointer; min-width: 90px;"
+                                    @click="toggleActive(sched)"
+                                    title="Click to toggle active status"
+                                >
+                                    <i :class="sched.active ? 'fas fa-check-circle me-1' : 'fas fa-times-circle me-1'"></i>
+                                    [[ sched.active ? 'Active' : 'Inactive' ]]
+                                </span>
+                            </td>
+                            <td>
+                                <a class="btn btn-sm btn-primary me-2"  title="Edit Schedule" :href="`/rule/edit_schedule/${sched.id}`" >
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button
+                                    class="btn btn-sm btn-danger me-2"
+                                    data-bs-toggle="modal" 
+                                    :data-bs-target="'#delete_schedule_modal_' + sched.id"
+                                    title="Delete Schedule"
+                                >
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                <button
+                                    class="btn btn-sm btn-info"
+                                    data-bs-toggle="modal" 
+                                    :data-bs-target="'#detail_schedule_modal_' + sched.id"
+                                    title="View Details"
+                                >
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <template v-else>
+                    <div class="alert alert-warning text-center mt-5 shadow-sm">
+                        <i class="fas fa-circle-info me-2"></i>
+                        You have not  own any rules yet.
+                    </div>
+                </template>
+
+                <!-- Modals (outside the table) -->
+                <div v-for="sched in auto_component" :key="'modal_' + sched.id">
+                    <div class="modal fade" :id="'delete_schedule_modal_' + sched.id" tabindex="-1" aria-labelledby="delete_schedule_modal" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5 text-dark" id="delete_schedule_modal">
+                                        Delete [[ sched.name ]] ?
+                                    </h1>
+                                    <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button class="btn btn-danger" @click="deleteSchedule(sched.id)">
+                                        <i class="fa-solid fa-trash"></i> Confirm
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" :id="'detail_schedule_modal_' + sched.id" tabindex="-1" aria-labelledby="detail_schedule_modal" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5 text-dark" id="detail_schedule_modal">
+                                        detail [[ sched.name ]]
+                                    </h1>
+                                    <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p><strong>Description:</strong> [[ sched.description ]]</p>
+                                    <p><strong>Time to update:</strong> [[ sched.hour ]]h[[ sched.minute.toString().padStart(2, '0') ]]</p>
+                                    <p><strong>Days:</strong> [[ sched.days.join(', ') ]]</p>
+                                    <p><strong>Created At:</strong> [[ new Date(sched.created_at).toLocaleString() ]]</p>
+
+                                    <div v-if="sched.rules && sched.rules.length > 0">
+                                        <p><strong>Rules:</strong></p>
+                                        <ul>
+                                            <li v-for="(rule, index) in sched.rules.slice(0, 10)" :key="rule.id">
+                                                [[ rule.title ]]
+                                            </li>
+                                            <li v-if="sched.rules.length > 10" class="text-muted">
+                                                +[[ sched.rules.length - 10 ]] more
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <div v-else>
+                                        <p class="text-muted">No rules attached to this schedule.</p>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                
+
+                
+
+                <!-- Pagination controls -->
+                <nav aria-label="Page navigation example" v-if="auto_component_total_page > 1">
+                    <ul class="pagination justify-content-center">
+                        <li
+                            class="page-item"
+                            :class="{ disabled: auto_component_current_page === 1 }"
+                            @click="auto_component_current_page > 1 && fetchAutoComponent(auto_component_current_page - 1)"
+                        >
+                            <a class="page-link" href="#">Previous</a>
+                        </li>
+                        <li
+                            class="page-item"
+                            v-for="pageNum in auto_component_total_page"
+                            :key="pageNum"
+                            :class="{ active: auto_component_current_page === pageNum }"
+                            @click="fetchAutoComponent(pageNum)"
+                        >
+                            <a class="page-link" href="#">[[ pageNum ]]</a>
+                        </li>
+                        <li
+                            class="page-item"
+                            :class="{ disabled: auto_component_current_page === auto_component_total_page }"
+                            @click="auto_component_current_page < auto_component_total_page && fetchAutoComponent(auto_component_current_page + 1)"
+                        >
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -234,6 +516,201 @@
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
+            /**
+             *          ########################
+             *          #  auto update summary #
+             *          ########################
+             */
+
+            const auto_component = ref([])              
+            const auto_component_current_page = ref(1)        
+            const auto_component_total_page = ref(0)         
+
+            const searchQueryAutoComponent = ref('');
+
+            /**
+             *          #######################
+             *          #   Fetch one page    #
+             *          #######################
+             */
+            async function fetchAutoComponent(page) {
+                const params = new URLSearchParams({
+                    page,
+                    search: searchQueryAutoComponent.value,
+                });
+
+                const res = await fetch('/rule/update/get_auto_component?' + params.toString());
+                if (res.status === 200) {
+                    const data = await res.json();
+                    auto_component.value = data.auto_component;
+                    auto_component_current_page.value = page;
+                    auto_component_total_page.value = data.auto_component_total_page;
+                }
+            }
+
+            fetchAutoComponent(1) // Initial fetch on mount
+
+
+            async function toggleActive(sched){
+                const params = new URLSearchParams({
+                    schedule_id: sched.id
+                });
+                
+                const res = await fetch('/rule/update/toggle_active?' + params.toString());
+                const data = await res.json();
+                if (res.status === 200) {
+                    sched.active = !sched.active;
+                }
+                const message_ = {
+                    message: data.message,
+                    toast_class: data.toast_class,
+                    success: data.success,
+                    id: Math.random()
+                    };
+                    await display_prepared_toast(message_);
+            }
+
+            async function deleteSchedule(schedule_id){
+                const params = new URLSearchParams({
+                    schedule_id: schedule_id
+                });
+                
+                const res = await fetch('/rule/update/delete_schedule?' + params.toString());
+                const data = await res.json();
+                if (res.status === 200) {
+                    fetchAutoComponent(auto_component_current_page)
+
+                    var myModalEl = document.getElementById('delete_schedule_modal_' + schedule_id);
+                    const modal = bootstrap.Modal.getInstance(myModalEl);
+                    modal.hide();
+                }
+                const message_ = {
+                    message: data.message,
+                    toast_class: data.toast_class,
+                    success: data.success,
+                    id: Math.random()
+                    };
+                    await display_prepared_toast(message_);
+            }
+
+            /**
+             *          ########################
+             *          #   create auto update #
+             *          ########################
+             */
+
+            const updateHour = ref(null)
+            const updateMinute = ref(null)
+            const selectedDays = ref([])
+            const updateName = ref(null)
+            const updateDescription = ref(null)
+
+            const weekDays = [
+                { value: 'monday', label: 'Monday' },
+                { value: 'tuesday', label: 'Tuesday' },
+                { value: 'wednesday', label: 'Wednesday' },
+                { value: 'thursday', label: 'Thursday' },
+                { value: 'friday', label: 'Friday' },
+                { value: 'saturday', label: 'Saturday' },
+                { value: 'sunday', label: 'Sunday' }
+            ]
+
+            async function confirmAutoUpdate() {
+                if (
+                    !updateName.value || updateName.value.trim() === ''
+                ) {
+                    await display_prepared_toast({
+                        message: "Name cannot be empty.",
+                        toast_class: "danger",
+                        success: false,
+                        id: Math.random()
+                    });
+                    return;
+                }
+
+                if (
+                    updateHour.value === null || updateHour.value === '' ||
+                    updateMinute.value === null || updateMinute.value === '' ||
+                    selectedDays.value.length === 0
+                ) {
+                    await display_prepared_toast({
+                        message: "Please fill in all fields before submitting.",
+                        toast_class: "danger",
+                        success: false,
+                        id: Math.random()
+                    });
+                    return;
+                }
+
+                if (updateHour.value < 0 || updateHour.value > 23 || updateMinute.value < 0 || updateMinute.value > 59) {
+                    await display_prepared_toast({
+                        message: "Please enter a valid hour (0–23) and minute (0–59).",
+                        toast_class: "warning",
+                        success: false,
+                        id: Math.random()
+                    });
+                    return;
+                }
+
+                const payload = {
+                    updateName: updateName.value.trim(),
+                    updateDescription: updateDescription.value ? updateDescription.value.trim() : '',
+                    updateHour: updateHour.value,
+                    updateMinute: updateMinute.value,
+                    selectedDays: selectedDays.value,
+                    ruleIds: selectedRules.value.map(rule => rule.id)
+                };
+
+                try {
+                    const res = await fetch('/rule/update/create_auto_update', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            "X-CSRFToken": csrf_token
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await res.json();
+
+                    if (res.status === 200 && data.success) {
+                        updateName.value = '';
+                        updateDescription.value = '';
+                        updateHour.value = null;
+                        updateMinute.value = null;
+                        selectedDays.value = [];
+                        selectedRules.value = [];
+
+                        fetchAutoComponent(1)
+
+                        const myModalEl = document.getElementById('auto_modal');
+                        const modal = bootstrap.Modal.getInstance(myModalEl);
+                        modal.hide();
+                    }
+
+                    await display_prepared_toast({
+                        message: data.message || "Unknown response from server.",
+                        toast_class: data.toast_class || (data.success ? "success" : "danger"),
+                        success: data.success,
+                        id: Math.random()
+                    });
+
+                } catch (error) {
+                    await display_prepared_toast({
+                        message: "Network error or server unavailable.",
+                        toast_class: "danger",
+                        success: false,
+                        id: Math.random()
+                    });
+                }
+            }
+
+
+
+        
+            
+
+
             /**
              *          ########################
              *          #   old   Rule State   #
@@ -329,7 +806,6 @@
                     const data = await res.json();
                     return data;
                 } else {
-                    message_list.error("Failed to fetch sources.");
                     return [];
                 }
             }
@@ -459,12 +935,6 @@
                     }
                 }
 
-                // const message = {
-                //     message: data?.message || '<i class="fas fa-check-circle me-2"></i> Search completed successfully. All selected rules have been processed.',
-                //     toast_class: data?.toast_class || 'success',
-                //     id: Math.random()
-                // };
-                // await display_prepared_toast(message);
             }
 
 
@@ -521,8 +991,24 @@
                 displayedSelectedRules,
                 remainingSelectedCount,
 
-                old_choice
+                old_choice,
 
+                updateHour,
+                updateMinute,
+                updateName,
+                updateDescription,
+                selectedDays,
+                weekDays,
+                confirmAutoUpdate,
+
+                fetchAutoComponent,
+                auto_component,
+                auto_component_current_page,
+                auto_component_total_page,
+                searchQueryAutoComponent,
+
+                toggleActive,
+                deleteSchedule
             }
 
         }

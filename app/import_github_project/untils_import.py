@@ -29,7 +29,6 @@ def clone_or_access_repo(repo_url):
     # folder racine to git clone
     base_dir = "Rules_Github"
     os.makedirs(base_dir, exist_ok=True) # create the folder if not exist
-
     #take the repo name 
     repo_name = get_repo_name_from_url(repo_url)
     # repo_name = repo_url.rstrip('/').split('/')[-1].replace('.git', '')
@@ -165,7 +164,7 @@ def get_license_file_from_github_repo(repo_dir):
 import subprocess
 
 def git_pull_repo(repo_dir):
-    #print(f"Performing git pull in repo directory: {repo_dir}")
+    print(f"Performing git pull in repo directory: {repo_dir}")
     try:
         result = subprocess.run(
             ["git", "-C", repo_dir, "pull"],
@@ -174,8 +173,8 @@ def git_pull_repo(repo_dir):
             text=True,
             check=True
         )
-       # print(f"Git pull output:\n{result.stdout}")
+        print(f"Git pull output:\n{result.stdout}")
         return True
     except subprocess.CalledProcessError as e:
-        #print(f"Git pull failed:\n{e.stderr}")
+        print(f"Git pull failed:\n{e.stderr}")
         return False
