@@ -4,8 +4,10 @@
 <div v-if="proposal">
     <div class="container my-4" id="main-container">
         <h2 class="mb-4 ">
-            <i class="fas fa-code-branch  me-2 "></i>
-            Proposal [[ proposal.rule_name ]]
+            <a :href="`detail_rule/${proposal.rule_id}`">
+                <i class="fas fa-code-branch  me-2 "></i>
+                Proposal [[ proposal.rule_name ]]
+            </a>
         </h2>
     
         <div class="card mb-4 shadow-sm">

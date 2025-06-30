@@ -1,50 +1,59 @@
 {% extends 'base.html' %}
+
 {% block content %}
+<div class="container py-4" id="main-container">
 
-<div class="container mt-4" id="main-container">
-    <div class="card mb-4 shadow">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-info-circle"></i> Rule Summary</span>
+    <!-- Rule Summary -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header text-primary d-flex align-items-center" style="background-color:rgb(207, 226, 255)">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Rule Summary</strong>
         </div>
+
         <div class="card-body" v-if="rule">
-            <h5 class="card-title">[[ rule.title ]]</h5>
-            <p><strong>Description:</strong> [[ rule.description ]]</p>
-            <p><strong>Author:</strong> [[ rule.author ]]</p>
-            <p><strong>License:</strong> [[ rule.license ]]</p>
-            <p><strong>Source:</strong> [[ rule.source ]]</p>
-            <p><strong>Format:</strong> [[ rule.format ]]</p>
-            <p><strong>Version:</strong> [[ rule.version ]]</p>
-            <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
-            <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
-            <div class="mt-3">
-                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" :data-bs-target="`#ruleContent${rule.id}`" aria-expanded="false" :aria-controls="`ruleContent${rule.id}`">
-                            <i class="fas fa-code"></i> Show Rule Preview
-                        </button>
+            <h4 class="card-title mb-3">[[ rule.title ]]</h4>
+            <ul class="list-group list-group-flush mb-3">
+                <li class="list-group-item"><strong>Description:</strong> [[ rule.description ]]</li>
+                <li class="list-group-item"><strong>Author:</strong> [[ rule.author ]]</li>
+                <li class="list-group-item"><strong>License:</strong> [[ rule.license ]]</li>
+                <li class="list-group-item"><strong>Source:</strong> [[ rule.source ]]</li>
+                <li class="list-group-item"><strong>Format:</strong> [[ rule.format ]]</li>
+                <li class="list-group-item"><strong>Version:</strong> [[ rule.version ]]</li>
+                <li class="list-group-item"><strong>Created:</strong> [[ rule.creation_date ]]</li>
+                <li class="list-group-item"><strong>Modified:</strong> [[ rule.last_modif ]]</li>
+            </ul>
 
-                        <div class="collapse mt-2" :id="`ruleContent${rule.id}`">
-                            <div class="bg-light p-3 rounded border">
-                                <strong>Rule Preview:</strong><br>
-                                <pre class="bg-light p-3 rounded mt-3"><code>[[ rule.to_string ]]</code></pre>
-                            </div>
-                        </div>
-                    </div>
-            
+            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                :data-bs-target="`#ruleContent${rule.id}`" aria-expanded="false" 
+                :aria-controls="`ruleContent${rule.id}`">
+                <i class="fas fa-code me-1"></i> Show Rule Preview
+            </button>
+
+            <div class="collapse mt-3" :id="`ruleContent${rule.id}`">
+                <div class="bg-light border rounded p-3">
+                    <strong>Rule Preview:</strong>
+                    <pre class="bg-light rounded mt-2 px-3 py-2"><code>[[ rule.to_string ]]</code></pre>
+                </div>
+            </div>
         </div>
-        <div class="card-body" v-else>
-            <p class="text-muted">Loading rule data...</p>
+
+        <div class="card-body text-muted" v-else>
+            <em>Loading rule data...</em>
         </div>
     </div>
 
     <!-- Report Form -->
-    <div class="card shadow">
-        <div class="card-header bg-danger text-white">
-            <i class="fas fa-flag"></i> Report This Rule
+    <div class="card shadow-sm">
+        <div class="card-header  text-danger d-flex align-items-center" style="background-color:rgb(233, 149, 138)">
+            <i class="fas fa-flag me-2"></i>
+            <strong>Report This Rule</strong>
         </div>
+
         <div class="card-body">
             <form @submit.prevent="submitReport">
                 <div class="mb-3">
                     <label for="reason" class="form-label">Reason</label>
-                    <select class="form-select" v-model="reason" required>
+                    <select id="reason" class="form-select" v-model="reason" required>
                         <option disabled value="">-- Select a reason --</option>
                         <option>Plagiarism</option>
                         <option>Malicious content</option>
@@ -53,20 +62,23 @@
                         <option>Other</option>
                     </select>
                 </div>
+
                 <div class="mb-3">
                     <label for="message" class="form-label">Additional Comments</label>
-                    <textarea class="form-control" v-model="message" rows="4" placeholder="Optional details..."></textarea>
+                    <textarea id="message" class="form-control" v-model="message" rows="4"
+                        placeholder="Optional details..."></textarea>
                 </div>
+
                 <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-paper-plane"></i> Submit Report
+                    <i class="fas fa-paper-plane me-1"></i> Submit Report
                 </button>
             </form>
         </div>
     </div>
+
 </div>
-
-
 {% endblock %}
+
 
 {% block script %}
 <script type="module">

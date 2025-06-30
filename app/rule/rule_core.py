@@ -19,7 +19,6 @@ from ..db_class.db import *
 from . import rule_core as RuleModel
 from sqlalchemy.orm import joinedload
 from ..account import account_core as AccountModel
-
 ###################
 #   Rule action   #
 ###################
@@ -1275,7 +1274,7 @@ def create_contribution(user_id, proposal_id) -> bool:
         return False 
 
     rule_id = get_rule_id_with_edit_disccuss(proposal_id)
-    contribution = RuleEditContribution(user_id=user_id, proposal_id=proposal_id , rule_id=rule_id)
+    contribution = RuleEditContribution(user_id=user_id, proposal_id=proposal_id , rule_id=rule_id , created_at=datetime.datetime.now(tz=datetime.timezone.utc))
     db.session.add(contribution)
     db.session.commit()
     return True , contribution
@@ -1312,6 +1311,44 @@ def get_all_contributions_with_rule_id(rule_id) -> list:
             seen_user_ids.add(contribution.user_id)
             users_id.append(contribution)
     return users_id
+
+# def get_top_contributors(limit=3):
+#     now = datetime.datetime.now(datetime.timezone.utc)
+#     beginning_of_month = datetime(now.year, now.month, 1)
+#     ten_days_ago = now - timedelta(days=10)
+
+#     def query_contributors(since_date=None):
+#         query = db.session.query(
+#             RuleEditContribution.user_id,
+#             func.count(RuleEditContribution.id).label('contribution_count')
+#         )
+#         if since_date:
+#             query = query.filter(RuleEditContribution.created_at >= since_date)
+#         query = query.group_by(RuleEditContribution.user_id)
+#         query = query.order_by(func.count(RuleEditContribution.id).desc())
+#         query = query.limit(limit)
+#         return query.all()
+
+#     contributors_all_time = query_contributors()
+#     contributors_this_month = query_contributors(beginning_of_month)
+#     contributors_last_10_days = query_contributors(ten_days_ago)
+
+#     def format_result(results):
+#         formatted = []
+#         for user_id, count in results:
+#             user = db.session.get(User, user_id)
+#             formatted.append({
+#                 "user_id": user_id,
+#                 "user_name": user.first_name if user else "Unknown",
+#                 "contribution_count": count
+#             })
+#         return formatted
+
+#     return {
+#         "all_time": format_result(contributors_all_time),
+#         "this_month": format_result(contributors_this_month),
+#         "last_10_days": format_result(contributors_last_10_days)
+#     }
 
 # Update
 

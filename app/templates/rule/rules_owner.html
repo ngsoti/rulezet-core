@@ -3,161 +3,170 @@
 {% block content %}
 
 <div class="container mt-4">
-<header class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="text-dark m-0"><i class="fas fa-cogs"></i> My Rules</h1>
-    <a href="/rule/create_rule" class="btn btn-primary btn-sm">
-    <i class="fas fa-hammer"></i> Add Rule
-    </a>
-</header>
-<div id="myTabContent">
-    <div class="tab-pane fade show active" id="filters" role="tabpanel" aria-labelledby="filters-tab">
-      <div class="card p-4 shadow-sm bg-light mb-3" >
-        <h5 class="mb-4">Filters</h5>
-        <div class="row g-3">
-          <div class="col-md-4">
-            <input
-              type="text"
-              v-model="searchQuery"
-              @input="onSearchInput"
-              @keyup.enter="onEnterKey"
-              class="form-control"
-              placeholder="Search by title, description..."
-            >
-          </div>
-          <div class="col-md-3">
-            <select v-model="sortBy" class="form-select">
-              <option value="newest">Most Recent</option>
-              <option value="oldest">Oldest</option>
-              <option value="most_likes">Most Likes</option>
-              <option value="least_likes">Least Likes</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <select v-model="ruleType" class="form-select">
-              <option value="">All Types</option>
-              <option value="yara">Yara</option>
-              <option value="sigma">Sigma</option>
-              <option value="zeek">Zeek</option>
-              <option value="suricata">Suricata</option>
-            </select>
-          </div>
-          
-          <div class="col-md-2">
-            <button class="btn btn-primary w-100" @click="fetchRules(1)">
-              <i class="fas fa-filter"></i> Filter
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-<template v-if="rules_list && rules_list.rule.length > 0">
-    <br/>
-    <p class="text-center">Total rules: [[ total_rules_liste ]]</p>
-    <div class="mb-3">
-        <button class="btn btn-danger" :disabled="selectedRules.length === 0" @click="deleteSelectedRules">
-            Delete Selected Rules
-        </button>
-    </div>
-
-    <!-- Rules Table -->
-    <table class="table table-striped table-bordered table-hover">
-        <thead>
-            <tr>
-                <!-- Master checkbox to select/deselect all rules -->
-                <th scope="col" style="width: 60px;">
-                    <input type="checkbox" v-model="selectAll" @change="toggleSelectAll">
-                </th>
-                <th scope="col" style="max-width: 200px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Title</th>
-                <th scope="col" style="max-width: 50px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Description</th>
-                <th scope="col" style="width: 120px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Author</th>
-                <th scope="col" style="width: 120px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">License</th>
-                <th scope="col" style="width: 150px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Loop over rules and add a checkbox for each row -->
-            <tr v-for="(rule, index) in rules_list.rule" :key="rule.uuid" @click="detailRule(rule.id)" style="cursor: pointer;">
-                <th scope="row" style="width: 60px;">
-                    <input type="checkbox" :value="rule.id" v-model="selectedRules" @click.stop/>
-                </th>
-                <td style="max-width: 200px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">[[ rule.title ]]</td>
-                <td style="max-width: 150px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">[[ rule.description ]]</td>
-                <td style="max-width: 120px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">[[ rule.author ]]</td>
-                <td style="max-width: 120px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">[[ rule.license ]]</td>
-                <td class="d-flex justify-content-start" style="max-width: 150px;">
-                    {% if current_user.is_authenticated %}
-                    <template v-if="parseInt('{{current_user.id}}') == rule.user_id || current_user_is_admin">
-                        <a :href="`/rule/edit_rule/${rule.id}`" class="btn btn-secondary btn-sm me-2" title="Edit Rule">
-                            <i class="fas fa-pen"></i>
-                        </a>
-                        <button @click.stop type="button" class="btn btn-danger btn-sm me-2" title="Delete the rule" data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+rule.id">
-                            <i class="fa-solid fa-trash fa-fw"></i>
+    <header class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-dark m-0"><i class="fas fa-cogs"></i> My Rules</h1>
+        <a href="/rule/create_rule" class="btn btn-primary btn-sm">
+        <i class="fas fa-hammer"></i> Add Rule
+        </a>
+    </header>
+    <div id="myTabContent">
+        <div class="tab-pane fade show active" id="filters" role="tabpanel" aria-labelledby="filters-tab">
+            <div class="card p-4 shadow-sm bg-light mb-3" >
+                <h5 class="mb-4">Filters</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <input
+                        type="text"
+                        v-model="searchQuery"
+                        @input="onSearchInput"
+                        @keyup.enter="onEnterKey"
+                        class="form-control"
+                        placeholder="Search by title, description..."
+                        >
+                    </div>
+                    <div class="col-md-3">
+                        <select v-model="sortBy" class="form-select">
+                        <option value="newest">Most Recent</option>
+                        <option value="oldest">Oldest</option>
+                        <option value="most_likes">Most Likes</option>
+                        <option value="least_likes">Least Likes</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select v-model="ruleType" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="yara">Yara</option>
+                        <option value="sigma">Sigma</option>
+                        <option value="zeek">Zeek</option>
+                        <option value="suricata">Suricata</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" @click="fetchRules(1)">
+                        <i class="fas fa-filter"></i> Filter
                         </button>
-                        <div class="modal fade" :id="'delete_rule_modal_'+rule.id" tabindex="-1" aria-labelledby="delete_rule_modal" aria-hidden="true">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h1 class="modal-title fs-5" style="color:black;" id="delete_rule_modal">
-                                            Delete [[rule.title ]] ?
-                                        </h1>
-                                        <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                        <button @click.stop class="btn btn-danger" @click="deleteRule(rule.id, index)">
-                                            <i class="fa-solid fa-trash"></i> Confirm
-                                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template v-if="rules_list && rules_list.rule.length > 0">
+
+        <p class="text-center">Total rules: [[ total_rules_liste ]]</p>
+    
+        <!-- Rules Table -->
+        <table class="table table-striped table-bordered table-hover ">
+            <thead class="table-dark">
+                <tr>
+                    <!-- Master checkbox to select/deselect all rules -->
+                    <th scope="col" style="width: 60px;">
+                        Select<!-- <input type="checkbox"> -->
+                    </th>
+                    <th scope="col" style="max-width: 200px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Title</th>
+                    <th scope="col" style="max-width: 50px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Description</th>
+                    <th scope="col" style="width: 120px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Author</th>
+                    <th scope="col" style="width: 120px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">License</th>
+                    <th scope="col" style="width: 150px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Loop over rules and add a checkbox for each row -->
+                <tr v-for="(rule, index) in rules_list.rule" :key="rule.uuid" @click="detailRule(rule.id)" style="cursor: pointer;">
+                    <th scope="row" style="width: 60px; height: 60px;">
+                        <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                            <input type="checkbox" 
+                                :value="rule.id" 
+                                v-model="selectedRules" 
+                                @click.stop
+                                style="transform: scale(2); cursor: pointer;" />
+                        </div>
+                    </th>
+                    <td style="max-width: 200px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">[[ rule.title ]]</td>
+                    <td style="max-width: 150px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">[[ rule.description ]]</td>
+                    <td style="max-width: 120px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">[[ rule.author ]]</td>
+                    <td style="max-width: 120px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">[[ rule.license ]]</td>
+                    <td style="max-width: 150px;">
+                        <div class="d-flex justify-content-start flex-wrap">
+                            {% if current_user.is_authenticated %}
+                            <template v-if="parseInt('{{current_user.id}}') == rule.user_id || current_user_is_admin">
+                                <a :href="`/rule/edit_rule/${rule.id}`" class="btn btn-secondary btn-sm me-2" title="Edit Rule">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <button @click.stop type="button" class="btn btn-danger btn-sm me-2" title="Delete the rule" data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+rule.id">
+                                    <i class="fa-solid fa-trash fa-fw"></i>
+                                </button>
+                                <div class="modal fade" :id="'delete_rule_modal_'+rule.id" tabindex="-1" aria-labelledby="delete_rule_modal" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h1 class="modal-title fs-5" style="color:black;" id="delete_rule_modal">
+                                                    Delete [[rule.title]] ?
+                                                </h1>
+                                                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                <button @click.stop class="btn btn-danger" @click="deleteRule(rule.id, index)">
+                                                    <i class="fa-solid fa-trash"></i> Confirm
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </template>
+                            <a @click.stop="favorite(rule.id)"
+                                class="btn btn-success btn-sm me-2"
+                                :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
+                                <i class="fa-solid fa-star"
+                                    :class="rule.is_favorited ? 'text-warning' : 'text-white'">
+                                </i>
+                            </a>
+                            {% endif %}
                         </div>
-                    </template>
-                    <a @click.stop="favorite(rule.id)"
-                        class="btn btn-success btn-sm me-2"
-                        :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
-                        <i class="fa-solid fa-star"
-                            :class="rule.is_favorited ? 'text-warning' : 'text-white'">
-                        </i>
-                    </a>
-                    {% endif %}
-                </td>
-            </tr>
-        </tbody>
-    </table>
-    
+                    </td>
 
-    <!-- Pagination (again) -->
-    <nav aria-label="Page navigation">
-    <ul class="pagination justify-content-center">
-        <li class="page-item" :class="{ disabled: current_page === 1 }">
-        <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
-            <i class="fas fa-arrow-left"></i> Previous
-        </a>
-        </li>
-        <li
-        class="page-item"
-        v-for="page in visiblePages"
-        :key="page"
-        :class="{ active: current_page === page, disabled: page === '...' }"
-        >
-        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
-        <span v-else class="page-link">...</span>
-        </li>
-        <li class="page-item" :class="{ disabled: current_page === total_pages }">
-        <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
-            Next <i class="fas fa-arrow-right"></i>
-        </a>
-        </li>
-    </ul>
-    </nav>
+                </tr>
+            </tbody>
+        </table>
+        <template v-if="selectedRules.length > 0">
+            <div class="mb-3">
+                <button class="btn btn-danger" :disabled="selectedRules.length === 0" @click="deleteSelectedRules">
+                    Delete [[ selectedRules.length ]] rules
+                </button>
+            </div>
+        </template>
 
-</template>
+        <!-- Pagination (again) -->
+        <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" :class="{ disabled: current_page === 1 }">
+            <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
+                <i class="fas fa-arrow-left"></i> Previous
+            </a>
+            </li>
+            <li
+            class="page-item"
+            v-for="page in visiblePages"
+            :key="page"
+            :class="{ active: current_page === page, disabled: page === '...' }"
+            >
+            <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+            <span v-else class="page-link">...</span>
+            </li>
+            <li class="page-item" :class="{ disabled: current_page === total_pages }">
+            <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
+                Next <i class="fas fa-arrow-right"></i>
+            </a>
+            </li>
+        </ul>
+        </nav>
 
-<!-- Message when no rules are available -->
-<i v-else class="text-muted">No rules added</i>
-<br />
+    </template>
+
+    <!-- Message when no rules are available -->
+    <i v-else class="text-muted">No rules added</i>
 </div>
 
 {% endblock %}
@@ -190,9 +199,7 @@ createApp({
 
 
         async function deleteSelectedRules() {
-            const selectedRuleIds = selectedRules.value;  
-
-            if (selectedRuleIds.length === 0) {
+            if (selectedRules.value.length === 0) {
                 alert('No rules selected for deletion!')
                 return;
             }
@@ -203,7 +210,7 @@ createApp({
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrf_token
                 },
-                body: JSON.stringify({ ids: selectedRuleIds })
+                body: JSON.stringify({ ids: selectedRules.value })
             });
 
             const data = await res.json();
@@ -218,21 +225,21 @@ createApp({
 
 
 
-        // select gestion
-        const allSelected = computed(() => selectedRules.value.length === rules_list.value.rule.length)
+        // // select gestion
+        // const allSelected = computed(() => selectedRules.value.length === rules_list.value.rule.length)
 
-        // Toggle the selection of all rules
-        const toggleSelectAll = () => {
-            if (selectAll.value) {
-                selectedRules.value = rules_list.value.rule.map(rule => rule.id) // Select all
-            } else {
-                selectedRules.value = [] // Deselect all
-            }
-        }
-        // Watch for changes in selectedRules to update selectAll checkbox
-        watch(selectedRules, () => {
-            selectAll.value = allSelected.value
-        })
+        // // Toggle the selection of all rules
+        // const toggleSelectAll = () => {
+        //     if (selectAll.value) {
+        //         selectedRules.value = rules_list.value.rule.map(rule => rule.id) // Select all
+        //     } else {
+        //         selectedRules.value = [] // Deselect all
+        //     }
+        // }
+        // // Watch for changes in selectedRules to update selectAll checkbox
+        // watch(selectedRules, () => {
+        //     selectAll.value = allSelected.value
+        // })
 
 
 
@@ -375,9 +382,6 @@ createApp({
             detailRule,
             csrf_token,
             selectedRules,
-            selectAll,
-            allSelected,
-            toggleSelectAll,
             deleteSelectedRules,
             onSearchInput,
             onEnterKey,

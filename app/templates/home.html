@@ -85,9 +85,11 @@
           <!-- Card Header -->
           <div class="card-header text-white d-flex justify-content-between align-items-start flex-wrap" style="background-color:rgb(207, 226, 255)">
             <h5 class="mb-0 d-flex align-items-center" style="max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="[[ rule.title ]]">
-              <i class="fas fa-shield-alt me-2 text-primary"></i>
-              <span style="color: rgb(10, 88, 202); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                [[ rule.title ]]
+              <a :href="`/rule/detail_rule/${rule.id}`" title="view more about this rule" >
+                <i class="fas fa-shield-alt me-2 text-primary"></i>
+                <span style="color: rgb(10, 88, 202); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  [[ rule.title ]]
+              </a>
               </span>
             </h5>
 

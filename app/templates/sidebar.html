@@ -78,22 +78,43 @@
                 
             </li>
 
-                <li class="nav-item mx-2 position-relative">
-                    <a href="/admin/request" class="nav-link d-flex align-items-center text-dark fw-semibold">
-                        <i class="fa-solid fa-envelope fa-fw me-1"></i>
-                        Ownership Requests
-                        <template v-if="requests_to_validate">
-                            <span v-if="requests_to_validate > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                [[ requests_to_validate ]]
-                                <span class="visually-hidden">unread messages</span>
-                            </span>
-                        </template>
-                        
-                        
-                        
-                    </a>
-                </li>
-
+            <li class="nav-item mx-2 position-relative">
+                <a href="/admin/request" class="nav-link d-flex align-items-center text-dark fw-semibold">
+                    <i class="fa-solid fa-envelope fa-fw me-1"></i>
+                    Ownership Requests
+                    <template v-if="requests_to_validate">
+                        <span v-if="requests_to_validate > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            [[ requests_to_validate ]]
+                            <span class="visually-hidden">unread messages</span>
+                        </span>
+                    </template>
+                    
+                    
+                    
+                </a>
+            </li>
+            
+            {% if current_user.is_authenticated %}
+                {% if current_user.is_admin() %}
+                    <li class="nav-item dropdown mx-2">
+                        <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-user fa-fw me-1"></i> Control Access
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
+                            <li>
+                                <a href="/account/all_users" class="dropdown-item">
+                                    <i class="fa-solid fa-users fa-fw me-2 text-primary"></i> All users
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/rule/rules_reported" class="dropdown-item">
+                                    <i class="fa-solid fa-triangle-exclamation fa-fw me-2 text-danger"></i> Reported rule
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                {% endif %}
+            {% endif %}
 
             <!-- Profile Dropdown -->
             <li class="nav-item dropdown mx-2">
@@ -108,19 +129,6 @@
                 {% endif %}
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
                     {% if current_user.is_authenticated %}
-                        {% if current_user.is_admin() %}
-                            <li>
-                                <a href="/account/all_users" class="dropdown-item">
-                                    <i class="fa-solid fa-users fa-fw me-2 text-primary"></i> All users
-                                </a>
-                            </li>
-                            <li>
-                                <a href="/rule/rules_reported" class="dropdown-item">
-                                    <i class="fa-solid fa-triangle-exclamation fa-fw me-2 text-danger"></i> Reported rule
-                                </a>
-                            </li>
-
-                        {% endif %}
                         <li>
                             <a href="/account/" class="dropdown-item">
                                 <i class="fa-solid fa-user fa-fw me-2 text-primary"></i> Profil

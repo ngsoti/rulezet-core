@@ -18,11 +18,18 @@
         <!-- Tab 1: Manuel -->
         <div class="tab-pane fade show active" id="manuel" role="tabpanel">
             <form action="" method="post" id="form">
+                <div class="row mb-4 justify-content-center">
+                    <div class="col-md-10">
+                        <h4 class="mb-4 text-primary">
+                            <i class="fa-solid fa-pen-to-square me-2"></i>Edit Schedule
+                        </h4>
+                    </div>
+                    
+                </div>
                 {{ form.hidden_tag() }}
-
                 <!-- Schedule Name -->
                 <div class="row mb-4 justify-content-center">
-                    <div class="col-md-8">
+                    <div class="col-md-10">
                         <label class="form-label fw-semibold">
                             {{ form.name.label.text }} <span class="text-danger">*</span>
                         </label>
@@ -37,7 +44,7 @@
 
                 <!-- Description -->
                 <div class="row mb-4 justify-content-center">
-                    <div class="col-md-8">
+                    <div class="col-md-10">
                         <label class="form-label fw-semibold">
                             {{ form.description.label.text }}
                         </label>
@@ -52,7 +59,7 @@
 
                 <!-- Hour -->
                 <div class="row mb-4 justify-content-center">
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <label class="form-label fw-semibold">
                             {{ form.hour.label.text }} <span class="text-danger">*</span>
                         </label>
@@ -65,7 +72,7 @@
                     </div>
 
                     <!-- Minute -->
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <label class="form-label fw-semibold">
                             {{ form.minute.label.text }} <span class="text-danger">*</span>
                         </label>
@@ -79,40 +86,41 @@
                 </div>
 
                 <!-- Days -->
-                <div class="row mb-4 justify-content-center">
-                    <div class="col-md-8">
+                <div class="row mb-5 justify-content-center">
+                    <div class="col-md-10">
                         <label class="form-label fw-semibold">
                             {{ form.days.label.text }} <span class="text-danger">*</span>
                         </label>
 
-                        {% for value, label in form.days.choices %}
-                            <div class="form-check">
-                                <input
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    name="{{ form.days.name }}"
-                                    id="day-{{ value }}"
-                                    value="{{ value }}"
-                                    {% if value in form.days.data %}checked{% endif %}
-                                >
-                                <label class="form-check-label" for="day-{{ value }}">
-                                    {{ label }}
-                                </label>
-                            </div>
-                        {% endfor %}
+                        <div class="d-flex flex-wrap gap-4">
+                            {% for value, label in form.days.choices %}
+                                <div class="form-check form-check-inline">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="{{ form.days.name }}"
+                                        id="day-{{ value }}"
+                                        value="{{ value }}"
+                                        {% if value in form.days.data %}checked{% endif %}
+                                    >
+                                    <label class="form-check-label" for="day-{{ value }}">
+                                        {{ label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
 
                         {% if form.days.errors %}
-                            <div class="invalid-feedback d-block">
+                            <div class="invalid-feedback d-block mt-2">
                                 <i class="fa-solid fa-circle-exclamation me-1"></i> {{ form.days.errors[0] | safe }}
                             </div>
                         {% endif %}
                     </div>
                 </div>
 
-
                 <!-- Active -->
                 <div class="row mb-4 justify-content-center">
-                    <div class="col-md-8 form-check">
+                    <div class="col-md-10 form-check">
                         {{ form.active(class_="form-check-input", id="activeCheckbox") }}
                         <label class="form-check-label fw-semibold" for="activeCheckbox">
                             {{ form.active.label.text }}
@@ -138,6 +146,9 @@
         <!-- Tab 2: Auto -->
         <div class="tab-pane fade " id="auto" role="tabpanel">
             <div class="card bg-white shadow-sm border-0 mb-4">
+                <h4 class="text-primary mb-0">
+                    <i class="fa-solid fa-plus me-2"></i>Add Rules
+                </h4>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-4">
@@ -178,7 +189,7 @@
                         <thead class="table-dark">
                             <tr>
                             <th scope="col">
-                                <input type="checkbox" @change="toggleAll" :checked="allSelected" aria-label="Select all" />
+                                <input type="checkbox" @change="toggleAll" :checked="allSelected" aria-label="Select all" style="transform: scale(1.5); "/>
                             </th>
                             <th scope="col"><i class="fas fa-hashtag"></i> ID</th>
                             <th scope="col"><i class="fas fa-shield-alt"></i> Title</th>
@@ -193,7 +204,7 @@
                                 :class="{ 'table-primary': selectedRules.includes(rule.id) }"
                                 style="cursor: pointer;">
                             <td @click.stop>
-                                <input type="checkbox" :checked="selectedRules.some(r => r.id === rule.id)" @change="toggleSelection(rule.id, rule.title)" />
+                                <input type="checkbox" :checked="selectedRules.some(r => r.id === rule.id)" @change="toggleSelection(rule.id, rule.title)" style="transform: scale(1.5); cursor: pointer;" />
                             </td>
                             <td>[[ rule.id ]]</td>
                             <td>[[ rule.title ]]</td>

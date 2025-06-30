@@ -68,7 +68,9 @@
     <div class="card card-body mb-3" v-for="(rule, index) in rules_list.rule" :key="rule.uuid">
       <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:rgb(207, 226, 255)">
         <h5>
-          <i class="fas fa-shield-alt me-2 text-primary"></i> <span class="mb-2" style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">[[ rule.title ]]</span>
+          <a :href="`/rule/detail_rule/${rule.id}`" title="view more about this rule" >
+            <i class="fas fa-shield-alt me-2 text-primary"></i> <span class="mb-2" style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">[[ rule.title ]]</span>
+          </a>
         </h5>
         {% if current_user.is_authenticated %}
         <div class="d-flex">
@@ -76,7 +78,7 @@
             <a :href="`/rule/edit_rule/${rule.id}`" class="btn btn-secondary btn-sm me-2" title="Edit Rule">
               <i class="fas fa-pen"></i>
             </a>
-             <button type="button" class="btn btn-danger btn-sm me-2" title="Delete the rule" data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+rule.id">
+            <button type="button" class="btn btn-danger btn-sm me-2" title="Delete the rule" data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+rule.id">
                 <i class="fa-solid fa-trash fa-fw"></i>
             </button>
             <div class="modal fade" :id="'delete_rule_modal_'+rule.id" tabindex="-1" aria-labelledby="delete_rule_modal" aria-hidden="true">
