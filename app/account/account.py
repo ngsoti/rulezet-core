@@ -111,8 +111,6 @@ def get_all_users() -> Union[render_template, dict]:
     connected = request.args.get("connected", None) 
     admin = request.args.get("admin", None) 
 
-
-
     #users = AccountModel.get_users_page(page)
     users_filter = AccountModel.get_users_page_filter(page , search , connected, admin)
     total_user = AccountModel.get_count_users()

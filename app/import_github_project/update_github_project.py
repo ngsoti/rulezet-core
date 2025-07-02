@@ -17,7 +17,7 @@ def Check_for_rule_updates(rule_id):
         
         return {"message": f"No rule found with the id {rule_id}", "success": False}, False, None
     
-    #a = delete_existing_repo_folder("Rules_Github")
+
 
 
     repo_dir, exists = clone_or_access_repo(rule.source)
@@ -32,7 +32,6 @@ def Check_for_rule_updates(rule_id):
         elif rule.format.lower() == "sigma":
             new_rule_str = find_sigma_rule_by_title(repo_dir, rule.title)
         elif rule.format.lower() == "suricata":
-            print("Searching SURICATA rule by title in repository...")
             new_rule_str = find_suricata_rule_by_title(repo_dir, rule.title)
         # elif rule.format.lower() == "zeek":
         #     print("Searching ZEEK rule by title in repository...")
@@ -50,6 +49,9 @@ def Check_for_rule_updates(rule_id):
     else:
         return {"message": "No change detected for this rule", "success": True, "new_content": None}, True, None
 
+
+
+
 # def Check_for_rule_updates(rule_id):
 #     """Check if a rule has been updated in its original GitHub repository."""
     
@@ -62,7 +64,6 @@ def Check_for_rule_updates(rule_id):
 #     print(f"📦 Rule found: title='{rule.title}', format='{rule.format}', source='{rule.source}'")
 
 #     repo_dir, exists = clone_or_access_repo(rule.source)
-#     print(f"📁 Repository path: {repo_dir} | Exists: {exists}")
 #     if not exists:
 #         print("❌ Repository could not be accessed or cloned.")
 #         return {"message": "Repository could not be accessed", "success": False}, False, None

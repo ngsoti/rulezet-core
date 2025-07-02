@@ -1,3 +1,4 @@
+import schedule
 from app import create_app, db
 import argparse
 from flask import render_template, request, Response
@@ -5,6 +6,8 @@ import json
 import os
 
 from app.utils.init_db import create_admin, create_default_user, create_rule_test, create_user_test
+from app.utils.rule_update_schedule import update_github_rule_auto
+
 
 
 parser = argparse.ArgumentParser()
@@ -16,6 +19,7 @@ args = parser.parse_args()
 os.environ.setdefault('FLASKENV', 'development')
 
 app = create_app()
+
 
 @app.errorhandler(404)
 def error_page_not_found(e):
@@ -31,6 +35,11 @@ if args.init_db:
         create_user_test()
         #create_rule_test()
         create_default_user()
+
+        
+
+
+
 elif args.recreate_db:
     with app.app_context():
         db.drop_all()
@@ -44,3 +53,4 @@ elif args.delete_db:
         db.drop_all()
 else:
     app.run(host=app.config.get("FLASK_URL"), port=app.config.get("FLASK_PORT"))
+    

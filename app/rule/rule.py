@@ -1007,11 +1007,12 @@ def check_updates():
     rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
     results = []
     sources = RuleModel.get_sources_from_titles(rule_items)     #  45 sec 
+    
     ############################################# faire un chrone ( problème automatisation , time out probleme , trop de demande )
     for source in sources:
         repo_dir, exists = clone_or_access_repo(source)
-        if exists == False:
-            git_pull_repo(repo_dir)
+        git_pull_repo(repo_dir)
+            
     ###############################################
 
     for item in rule_items:

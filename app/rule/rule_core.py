@@ -174,7 +174,6 @@ def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
     sources = []
 
     for rule_info in rules_list:
-        print(1)
         title = rule_info.get('title')
         if not title:
             continue
@@ -185,8 +184,6 @@ def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
             rule = Rule.query.filter_by(title=title).first()
             if rule.source not in sources:
                 sources.append(rule.source)
-        else:
-            print(f"⚠️ Skipping title '{title}' because it has {count} entries (duplicate or missing).")
 
     return sources
 
@@ -1584,6 +1581,10 @@ def create_auto_update_schedule(hour: int,minute: int,days: List[str], name: str
                 db.session.add(assoc)
         db.session.commit()
 
+
+    
+
+
     return {
         "success": True,
         "schedule_id": schedule.id,
@@ -1759,3 +1760,18 @@ def update_schedule_rules(schedule_id: int, rule_dicts: list[dict]) -> bool:
     except Exception as e:
         db.session.rollback()
         return False
+
+def get_rules_for_schedule( schedule_id) -> AutoUpdateScheduleRuleAssociation:
+    """Return all the rule from an schedule"""
+    associations = AutoUpdateScheduleRuleAssociation.query.filter_by(schedule_id=schedule_id).all()
+    rules = [assoc.rule for assoc in associations if assoc.rule is not None]
+    return rules
+
+
+def get_all_schedule_currentuser(active_) -> list:
+    """Get all the schedules for the current user"""
+    if not current_user.is_authenticated:
+        return []
+    
+    schedules = AutoUpdateSchedule.query.filter_by(user_id=current_user.id , active=active_).all()
+    return [schedule.to_json() for schedule in schedules]

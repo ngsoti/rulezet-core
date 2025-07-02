@@ -21,3 +21,4 @@ yara-python
 idstools
 suricataparser
 psycopg2-binary
+schedule
