@@ -585,22 +585,64 @@ def get_rules_propose_edit_page() -> jsonify:
         })
     return jsonify({"message": "No Rule"})
 
-@rule_blueprint.route("/get_rules_propose_edit_history_page", methods=['GET'])
-def get_rules_propose_edit_history_page() -> jsonify:
-    """Get all the changes propose (history)"""
-    page = request.args.get('page', 1, type=int)
-    if current_user.is_admin():
-        rules_propose = RuleModel.get_rules_edit_propose_page_admin(page)
-    else:
-        rules_propose = RuleModel.get_rules_edit_propose_page(page)
 
-    if rules_propose:
-        rules_list = [rule.to_json() for rule in rules_propose] 
+
+
+
+@rule_blueprint.route("/get_rules_propose_edit_history_page", methods=['GET'])
+@login_required
+def get_rules_propose_edit_history_page() -> jsonify:
+    """Get all proposed edit changes (paginated history)"""
+    page = request.args.get('page', 1, type=int)
+
+    if current_user.is_admin():
+        rules_propose_paginated = RuleModel.get_rules_edit_propose_page_admin(page)
+    else:
+        rules_propose_paginated = RuleModel.get_rules_edit_propose_page(page)
+
+    rules_list = []
+    for rule in rules_propose_paginated.items:
+        old_content = rule.old_content or ""
+        new_content = rule.proposed_content or ""
+
+        old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
+
+        d = rule.to_dict()
+        d['old_diff_html'] = old_html
+        d['new_diff_html'] = new_html
+
+        rules_list.append(d)
+
+    if rules_list:
         return jsonify({
             "rules_list": rules_list,
-            "total_pages_old": rules_propose.pages
+            "total_pages_old": rules_propose_paginated.pages
         })
     return jsonify({"message": "No Rule"})
+
+
+
+
+# @rule_blueprint.route('/get_proposal', methods=['GET'])
+# @login_required
+# def get_proposal() -> jsonify:
+#     """Get the detail porposal"""
+#     proposalId = request.args.get('id', type=int)
+#     proposal = RuleModel.get_rule_proposal(proposalId)
+
+#     old_content = proposal.old_content or ""
+#     new_content = proposal.proposed_content or ""
+
+#     old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
+
+#     d = proposal.to_dict()
+#     d['old_diff_html'] = old_html
+#     d['new_diff_html'] = new_html
+
+#     return {
+#         "proposal": d,
+#     }
+
 
 
 @rule_blueprint.route("/get_rules_propose_page", methods=['GET'])
@@ -1113,8 +1155,6 @@ def get_proposal() -> jsonify:
 
     return {
         "proposal": d,
-
-
     }
   
 

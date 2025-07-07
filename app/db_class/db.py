@@ -123,6 +123,31 @@ class Rule(db.Model):
             "is_favorited": is_favorited,
             "cve_id": self.cve_id
         }
+    
+    def to_dict(self):
+        is_favorited = False
+        if not current_user.is_anonymous:
+            is_favorited = RuleFavoriteUser.query.filter_by(user_id=current_user.id, rule_id=self.id).first() is not None
+
+        return {
+            "id": self.id,
+            "format": self.format,
+            "title": self.title,
+            "license": self.license,
+            "description": self.description,
+            "uuid": self.uuid,
+            "source": self.source,
+            "author": self.author,
+            "creation_date": self.creation_date.strftime('%Y-%m-%d %H:%M'),
+            "last_modif": self.last_modif.strftime('%Y-%m-%d %H:%M'),
+            "vote_up": self.vote_up,
+            "vote_down": self.vote_down,
+            "user_id": self.user_id,
+            "version": self.version,
+            "to_string": self.to_string,
+            "is_favorited": is_favorited,
+            "cve_id": self.cve_id
+        }  # Format the datetime to a string
 
 class RuleFavoriteUser(db.Model):
     """Association table for User and Rule favorites."""
