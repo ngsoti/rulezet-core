@@ -163,7 +163,9 @@ def compile_sigma(form_dict) -> tuple[bool, dict]:
 
 # Read
 
-
+def get_rule_history_count(rule_id) -> int:
+    """Get the count of reports for a specific rule"""
+    return RuleUpdateHistory.query.filter_by(rule_id=rule_id).count()
 
 
 def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
@@ -1443,6 +1445,7 @@ def get_repported_rule(page) -> RepportRule:
         per_page=20,
         max_per_page=20
     )
+
 
 def get_total_repport_to_check_admin() -> int:
     """Get the total count of reports to check (admin view)"""

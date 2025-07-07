@@ -178,7 +178,7 @@
                 </div>
                 <textarea id="ruleRaw" hidden>[[ currentRule.to_string ]]</textarea>
                 <a :href="'/rule/history/' + currentRule.id" class="btn btn-sm btn-secondary" title="View all changes of the rule">
-                    <i class="fas fa-clock me-1"></i> History
+                    <i class="fas fa-clock me-1"></i> History <template v-if="currentRuleHistoryCount > 0">([[ currentRuleHistoryCount ]])</template>
                 </a>
             </div>
 
@@ -613,6 +613,7 @@
 
             const current_user_is_admin = ref()
             const current_user_is_connected = ref(false)
+            const currentRuleHistoryCount = ref(0)
 
 
             async function fetchCurrentUser(){
@@ -632,6 +633,18 @@
             }
 
             checkIfUserIsConnected()
+
+            async function getCurrentRuleHistoryCount() {
+                const params = new URLSearchParams({
+                    rule_id
+                })
+                const res = await fetch(`/rule/get_rule_history_count?`+ params.toString());
+                if (res.ok) {
+                    const data = await res.json();
+                    currentRuleHistoryCount.value = data.count;
+                }
+            }
+            getCurrentRuleHistoryCount()
 
             /**
              *          ####################
@@ -943,6 +956,7 @@
                 newCommentContent,
                 deleteRule,
                 similar_rules_list,
+                currentRuleHistoryCount,
 
                 currentRule,
                 fetchCurrentRule,

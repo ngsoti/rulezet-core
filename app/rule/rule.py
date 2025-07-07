@@ -116,6 +116,7 @@ def get_similar_rules() -> jsonify:
             "similar_rules": []
         }
 
+
 @rule_blueprint.route("/get_rules_page_filter_with_id", methods=['GET'])
 def get_rules_page_with_user_id() -> jsonify:
     """Get all the rules on a page"""
@@ -1065,6 +1066,18 @@ def check_updates():
             "success": True,
             "toast_class" : "success"
         }, 200 
+
+
+@rule_blueprint.route("/get_rule_history_count", methods=['GET'])
+@login_required
+def get_rule_history_count():
+    rule_history_id = request.args.get('rule_id', type=int)
+    count = RuleModel.get_rule_history_count(rule_history_id)
+    if count is not None:
+        return jsonify({"count": count}), 200
+    else:
+        return jsonify({"error": "Rule history not found"}), 404
+
 
 
 
