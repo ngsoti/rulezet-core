@@ -11,6 +11,7 @@ from sqlalchemy import case, or_
 import yaml
 import yara
 from app.account.account_core import get_user
+#from app.import_github_project.cron_check_updates import add_schedule_job
 from app.import_github_project.import_github_yara import extract_first_match, insert_import_module
 from app.import_github_project.untils_import import build_externals_dict, clean_rule_filename_Yara_v2
 from app.utils.utils import detect_cve
@@ -175,6 +176,28 @@ def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
 
     for rule_info in rules_list:
         title = rule_info.get('title')
+        if not title:
+            continue
+            
+        count = Rule.query.filter_by(title=title).count()
+
+        if count == 1:
+            rule = Rule.query.filter_by(title=title).first()
+            if rule.source not in sources:
+                sources.append(rule.source)
+
+    return sources
+
+def get_sources_from_titles_rule(rules_list: Rule) -> List[str]:
+    """
+    Given a list of dicts containing 'title', retrieve the 'source' from the DB for each rule,
+    but only if the title is unique in the DB and the source has not already been added.
+    Returns a deduplicated list of sources.
+    """
+    sources = []
+
+    for rule_info in rules_list:
+        title = rule_info.title
         if not title:
             continue
             
@@ -1464,7 +1487,12 @@ def create_rule_history(data: dict) -> bool:
         message = data.get("message", "")
         new_content = data.get("new_content", "")
         old_content = data.get("old_content", "")
-        user_id = current_user.id
+        schedule_id = data.get("schedule_id" , None)
+        if schedule_id is None:
+            user_id = current_user.id
+        else:
+            schedule = get_schedule(schedule_id)
+            user_id = schedule.user_id if schedule else None
 
         existing_entry = RuleUpdateHistory.query.filter_by(
             rule_id=rule_id,
@@ -1477,7 +1505,8 @@ def create_rule_history(data: dict) -> bool:
         ).first()
 
         if existing_entry:
-            return existing_entry.id  # Return existing history ID
+            return existing_entry.id
+
 
         history_entry = RuleUpdateHistory(
             rule_id=rule_id,
@@ -1492,6 +1521,7 @@ def create_rule_history(data: dict) -> bool:
 
         db.session.add(history_entry)
         db.session.commit()
+
         return history_entry.id
 
     except Exception as e:
@@ -1582,7 +1612,10 @@ def create_auto_update_schedule(hour: int,minute: int,days: List[str], name: str
         db.session.commit()
 
 
-    
+    if created:
+        from app.import_github_project.cron_check_updates import add_schedule_job
+        add_schedule_job(schedule.id, days, hour, minute)
+
 
 
     return {
@@ -1676,6 +1709,7 @@ def edit_schedule(form_dict: dict[str, None], schedule_id: int) -> None:
         schedule.active = bool(form_dict["active"])
 
     db.session.commit()
+    return True
 
 
 def add_rule_to_schedule(schedule_id: int, rule: dict) -> bool:

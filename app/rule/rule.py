@@ -6,6 +6,7 @@ from math import ceil
 from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for
 from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
+from app.import_github_project.cron_check_updates import disable_schedule_job, enable_schedule_job, modify_schedule_job, remove_schedule_job
 from app.import_github_project.import_github_yara import  parse_yara_rules_from_repo_async
 from app.import_github_project.update_github_project import Check_for_rule_updates
 from ..account import account_core as AccountModel
@@ -813,24 +814,39 @@ def get_schedule():
 def edit_schedule(schedule_id) -> render_template:   
     """Redirect to edit schedule """ 
     schedule = RuleModel.get_schedule(schedule_id)
+    
     if current_user.id == schedule.user_id or current_user.is_admin():
         form = EditScheduleForm() 
+        
         if form.validate_on_submit():
             form_dict = form_to_dict(form)
-            RuleModel.edit_schedule(form_dict, schedule_id)
-            flash("Schedule modified with success!", "success")
+            success = RuleModel.edit_schedule(form_dict, schedule_id)
+            
+            if success:
+                modify_schedule_job(
+                    schedule_id=schedule_id,
+                    days=form.days.data,
+                    hour=form.hour.data,
+                    minute=form.minute.data
+                )
 
-            return redirect(request.referrer or '/')
+                flash("Schedule modified with success!", "success")
+                return redirect(request.referrer or '/')
+
         else:
+            # Pré-remplissage du formulaire
             form.name.data = schedule.name
             form.description.data = schedule.description
-            form.hour.data = schedule.hour  # Selected value
+            form.hour.data = schedule.hour
             form.minute.data = schedule.minute
             form.days.data = schedule.days
             form.active.data = schedule.active
-        return render_template("rule/update_github/edit_schedule.html" ,schedule_id=schedule_id , form=form )
+
+        return render_template("rule/update_github/edit_schedule.html", schedule_id=schedule_id, form=form)
+
     else:
         return render_template("access_denied.html")
+
 
 @rule_blueprint.route("/update_rule_schedule", methods=['POST'])
 def update_rule_schedule():
@@ -887,6 +903,7 @@ def delete_schedule():
         data = RuleModel.delete_auto_update_schedule( schedule_id)
 
         if data:
+            remove_schedule_job(schedule_id=schedule_id)
             return jsonify({
                 "message": "Schedule delete with success !",
                 "toast_class": "success",
@@ -918,8 +935,11 @@ def toggle_active_schedule():
     if current_user.is_admin() or schedule.user_id == current_user.id:
         if schedule.active:
             schedule.active = False
+            disable_schedule_job(schedule_id)
         else:
             schedule.active = True
+            enable_schedule_job(schedule_id,schedule.days, schedule.hour, schedule.minute)
+        
         return jsonify(success=True, message=f"Schedule {'activated' if schedule.active else 'deactivated'}" , toast_class="success"), 200
     return jsonify( 
         success= False, 

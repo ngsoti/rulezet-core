@@ -5,7 +5,6 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_session import Session
 
-
 from config import config as Config
 import os
 
@@ -20,7 +19,6 @@ sess = Session()
 def create_app():
     app = Flask(__name__)
 
-    #start_scheduler()
     
     config_name = os.environ.get("FLASKENV")
 
@@ -36,7 +34,9 @@ def create_app():
     app.config["SESSION_SQLALCHEMY"] = db
     sess.init_app(app)
 
+    
 
+    
 
     #delete_existing_repo_folder("Rules_Github")
 

@@ -90,3 +90,21 @@ footer{
   height: 25px;
   filter: brightness(0) invert(1); 
 }
+
+
+.full-width {
+  width: 100vw;          /* largeur totale de la fenêtre */
+  margin-left: calc(-50vw + 50%); /* sortir du container centré */
+  max-width: none !important;     /* annule max-width */
+  padding-left: 15px;    /* si tu veux un peu de padding */
+  padding-right: 15px;
+  min-height: 6000px;    /* hauteur minimale, ajuste selon besoin */
+  background-color: #fff; /* optionnel */
+}
+.tables-area {  
+  background-color: #fff;
+  background-image: url('/static/image/plan_salle.png');
+  background-size: 3800px;
+  background-repeat: no-repeat;
+}
+

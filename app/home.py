@@ -303,5 +303,3 @@ def update_request_status() -> jsonify:
         return jsonify({"success": False}), 500
 
 
-
-    

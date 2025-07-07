@@ -1,12 +1,13 @@
-import schedule
+import threading
 from app import create_app, db
 import argparse
 from flask import render_template, request, Response
 import json
 import os
 
+from app.import_github_project.cron_check_updates import run_scheduler, set_app
 from app.utils.init_db import create_admin, create_default_user, create_rule_test, create_user_test
-from app.utils.rule_update_schedule import update_github_rule_auto
+
 
 
 
@@ -19,7 +20,7 @@ args = parser.parse_args()
 os.environ.setdefault('FLASKENV', 'development')
 
 app = create_app()
-
+set_app(app)
 
 @app.errorhandler(404)
 def error_page_not_found(e):
@@ -52,5 +53,6 @@ elif args.delete_db:
     with app.app_context():
         db.drop_all()
 else:
+    threading.Thread(target=run_scheduler,  daemon=True).start()
     app.run(host=app.config.get("FLASK_URL"), port=app.config.get("FLASK_PORT"))
     

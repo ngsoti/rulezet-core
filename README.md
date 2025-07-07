@@ -21,8 +21,6 @@ This project is built with:
 - **Flask Blueprints**
 - **Flask-Login** (Authentication)
 - **Flask-SQLAlchemy** (ORM)
-- **Flask-WTF** (Forms)
-- **Flask-Session** (Session Handling)
 - **PostgreSQL** (Database)
 
 ---
@@ -45,7 +43,6 @@ Edit the `config.py` file:
 - `SECRET_KEY`: Flask secret key
 - `FLASK_URL`: Instance URL (default: localhost)
 - `FLASK_PORT`: Port to run the app
-- `MISP_MODULE`: Optional connection for MISP integration
 
 You can also use a `.env` file to store sensitive variables.
 
@@ -129,8 +126,3 @@ We welcome contributions from the community. You can:
 
 ---
 
-## License
-
-MIT License — feel free to fork and build upon Rulezet for your own projects.
-
----
