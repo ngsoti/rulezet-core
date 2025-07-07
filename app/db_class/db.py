@@ -328,6 +328,20 @@ class RuleEditProposal(db.Model):
             'timestamp': self.timestamp.isoformat(),      #2021-07-27#16:01:12.090202        DateTime_in_ISOFormat.isoformat("#", "auto")
             'comments': [comment.to_json() for comment in self.comments.order_by(RuleEditComment.created_at.asc())]  # take all the message which was concerne by this pull request with date order
         }
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'rule_id': self.rule_id,
+            'rule_name': self.get_rule_title(),
+            'user_id': self.user_id,
+            'user_name': self.user.first_name if self.user else None,
+            'proposed_content': self.proposed_content,
+            'old_content': self.old_content,
+            'message': self.message,
+            'status': self.status,
+            'timestamp': self.timestamp.isoformat(),      #2021-07-27#16:01:12.090202        DateTime_in_ISOFormat.isoformat("#", "auto")
+            'comments': [comment.to_json() for comment in self.comments.order_by(RuleEditComment.created_at.asc())]  # take all the message which was concerne by this pull request with date order
+        }
 
 
 

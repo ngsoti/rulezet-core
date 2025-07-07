@@ -6,6 +6,7 @@ from math import ceil
 from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for
 from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
+from app.db_class.db import AnonymousUser
 from app.import_github_project.cron_check_updates import disable_schedule_job, enable_schedule_job, modify_schedule_job, remove_schedule_job
 from app.import_github_project.import_github_yara import  parse_yara_rules_from_repo_async
 from app.import_github_project.update_github_project import Check_for_rule_updates
@@ -736,13 +737,7 @@ def delete_comment_discuss() -> jsonify:
     else:
         return jsonify({"error": "Not authorized or comment not found."}), 403
 
-@rule_blueprint.route('/get_proposal', methods=['GET'])
-@login_required
-def get_proposal() -> jsonify:
-    """Get the detail porposal"""
-    proposalId = request.args.get('id', type=int)
-    proposal = RuleModel.get_rule_proposal(proposalId)
-    return proposal.to_json()
+
 
 @rule_blueprint.route('/get_discuss_part_from', methods=['GET'])
 @login_required
@@ -1100,6 +1095,29 @@ def get_history_rule():
         "history_rule": d
     }
 
+@rule_blueprint.route('/get_proposal', methods=['GET'])
+@login_required
+def get_proposal() -> jsonify:
+    """Get the detail porposal"""
+    proposalId = request.args.get('id', type=int)
+    proposal = RuleModel.get_rule_proposal(proposalId)
+
+    old_content = proposal.old_content or ""
+    new_content = proposal.proposed_content or ""
+
+    old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
+
+    d = proposal.to_dict()
+    d['old_diff_html'] = old_html
+    d['new_diff_html'] = new_html
+
+    return {
+        "proposal": d,
+
+
+    }
+  
+
 
 @rule_blueprint.route("/update_github/choose_changes", methods=['GET'])
 @login_required
@@ -1187,7 +1205,14 @@ def get_all_sources_owner():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
+@rule_blueprint.route("/update_to_check", methods=['GET'])
+def get_update_to_check():
+    """Return the number of rule updates pending for validation"""
+    if current_user.is_authenticated:
+        count = RuleModel.get_update_pending()
+    else:
+        count = 0
+    return jsonify({"count": count}), 200
 
 @rule_blueprint.route("/get_license", methods=['GET'])
 @login_required
@@ -1449,12 +1474,13 @@ def rules_repported():
 @rule_blueprint.route("/repport_to_check")
 def repport_to_check() -> jsonify:
     """Get the number of changeto check"""
-    try:
-        if current_user.is_admin():
-            count = RuleModel.get_total_repport_to_check_admin()
-    except:
+    if current_user.is_admin():
+        count = RuleModel.get_total_repport_to_check_admin()
+    else:
         count = 0
     return jsonify({"count": count})
+
+
 
 @rule_blueprint.route("/get_rules_reported", methods=['GET'])
 def   get_rules_reported() -> jsonify:

@@ -1,5 +1,5 @@
 <!-- Main Navigation -->
-<nav class="container navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3 px-4 rounded-bottom">
+<nav class="container navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3 px-9 rounded-bottom">
     <div class="container-fluid d-flex justify-content-between align-items-center">
         <a href="/" class="navbar-brand d-flex align-items-center">
             <img src="{{ url_for('static', filename='image/Rulezet.png') }}" height="50" alt="RULEZET Logo" class="me-3">
@@ -88,9 +88,6 @@
                             <span class="visually-hidden">unread messages</span>
                         </span>
                     </template>
-                    
-                    
-                    
                 </a>
             </li>
             
@@ -123,18 +120,26 @@
             {% endif %}
 
             <!-- Profile Dropdown -->
-            <li class="nav-item dropdown mx-2">
-                {% if current_user.is_authenticated %}
-                <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fa-solid fa-user fa-fw me-1"></i> {{current_user.get_first_name()}}
-                </a>
-                {% else %}
-                    <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fa-solid fa-user fa-fw me-1"></i> My Profile
-                    </a>
-                {% endif %}
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
+           <li class="nav-item dropdown mx-2 position-relative d-flex align-items-center">
                     {% if current_user.is_authenticated %}
+                        <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-user fa-fw me-1"></i> {{ current_user.get_first_name() }}
+                        </a>
+                    {% else %}
+                        <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-user fa-fw me-1"></i> My Profile
+                        </a>
+                    {% endif %}
+
+                    <!-- Badge en haut à droite du bouton (extérieur du menu) -->
+                    <template v-if="update_to_validate && update_to_validate > 0">
+                        <span class="ms-2 badge rounded-pill bg-danger">
+                            [[ update_to_validate ]]
+                        </span>
+                    </template>
+
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
+                        {% if current_user.is_authenticated %}
                         <li>
                             <a href="/account/" class="dropdown-item">
                                 <i class="fa-solid fa-user fa-fw me-2 text-primary"></i> Profil
@@ -145,10 +150,16 @@
                                 <i class="fa-solid fa-user-shield fa-fw me-2"></i> My Rules
                             </a>
                         </li>
-                        <li>
-                            <a class="dropdown-item" href="/rule/update_github/update_rules_from_github">
+                        <li class="position-relative d-flex align-items-center">
+                            <a class="dropdown-item pe-2" href="/rule/update_github/update_rules_from_github">
                                 <i class="fa-solid fa-tags fa-fw me-2"></i> Github project
                             </a>
+                            <!-- Badge à côté de "Github project" -->
+                            <template v-if="update_to_validate && update_to_validate > 0">
+                                <span class="ms-2 badge rounded-pill bg-danger">
+                                    [[ update_to_validate ]]
+                                </span>
+                            </template>
                         </li>
                         <li>
                             <a href="/account/favorite" class="dropdown-item">
@@ -160,7 +171,7 @@
                                 <i class="fa-solid fa-right-from-bracket fa-fw me-2 text-danger"></i> Logout
                             </a>
                         </li>
-                    {% else %}
+                        {% else %}
                         <li>
                             <a href="/account/register" class="dropdown-item">
                                 <i class="fa-solid fa-user-plus fa-fw me-2 text-success"></i> Register
@@ -171,9 +182,9 @@
                                 <i class="fa-solid fa-right-to-bracket fa-fw me-2 text-primary"></i> Login
                             </a>
                         </li>
-                    {% endif %}
-                </ul>
-            </li>
+                        {% endif %}
+                    </ul>
+                </li>
         </ul>
     </div>
 </nav>
@@ -184,38 +195,47 @@
                 delimiters: ['[[', ']]'],
                 setup() {
                     
-                    const requests_to_validate = ref()
-                    const changes_to_validate = ref()
-                    const repport_to_validate = ref()
+                    const requests_to_validate = ref(0)
+                    const changes_to_validate = ref(0)
+                    const repport_to_validate = ref(0)
+                    const update_to_validate = ref(0)
 
                     onMounted(() => {
                         getNbRequestAdmin()
                         getNbChanges()
                         getNbRepport()
+                        getNbUpdate()
                     });
                     async function getNbRequestAdmin() {
                         const res = await fetch('/request_to_check')
                         const data = await res.json()
-                        requests_to_validate.value = data.count
+                        requests_to_validate.value = data.count | 0
                     }
 
                     async function getNbChanges() {
                         const res = await fetch('/rule/change_to_check')
                         const data = await res.json()
-                        changes_to_validate.value = data.count
+                        changes_to_validate.value = data.count | 0
                     }
 
 
                     async function getNbRepport() {
                         const res = await fetch('/rule/repport_to_check')
                         const data = await res.json()
-                        repport_to_validate.value = data.count
+                        repport_to_validate.value = data.count | 0
                     }
+                    async function getNbUpdate() {
+                        const res = await fetch('/rule/update_to_check')
+                        const data = await res.json()
+                        update_to_validate.value = data.count | 0
+                    }
+
                 
                     return {
                         requests_to_validate,
                         changes_to_validate,
-                        repport_to_validate
+                        repport_to_validate,
+                        update_to_validate
                     }},
             }).mount('.navbar')
         </script>

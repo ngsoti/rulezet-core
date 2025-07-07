@@ -9,7 +9,7 @@
                 Proposal [[ proposal.rule_name ]]
             </a>
         </h2>
-    
+
         <div class="card mb-4 shadow-sm">
             <div class="card-body">
                 <h5 class="card-title">
@@ -32,31 +32,21 @@
                     <span class="badge bg-danger" v-else>Rejected</span>
                 </p>
             </div>
-        </div>
-    
-        <div class="row">
+        </div>    
+        <div class="row mt-4">
             <div class="col-md-6">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-secondary text-white">
-                        <i class="fas fa-file-alt me-2"></i>Old Rule Content
-                    </div>
-                    <div class="card-body">
-                        <pre style="white-space: pre-wrap;">[[ proposal.old_content ]]</pre>
-                    </div>
-                </div>
+                <h5><i class="fas fa-code me-2"></i> Old Rule Content (deleted lines in red)</h5>
+                <pre class="bg-light p-3 rounded border" style="max-height: 500px; overflow-y: auto;" v-html="proposal.old_diff_html"></pre>
             </div>
             <div class="col-md-6">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <i class="fas fa-edit me-2"></i>Proposed Rule Content
-                    </div>
-                    <div class="card-body">
-                        <pre style="white-space: pre-wrap;">[[ proposal.proposed_content ]]</pre>
-                    </div>
-                </div>
+                <h5><i class="fas fa-code-branch me-2"></i> New Rule Content (added lines in green)</h5>
+                <pre class="bg-light p-3 rounded border" style="max-height: 500px; overflow-y: auto;" v-html="proposal.new_diff_html"></pre>
             </div>
         </div>
-        
+
+
+
+
         <div v-if="comments.length === 0" class="alert alert-secondary">
             No comments yet.
         </div>
@@ -102,10 +92,13 @@
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
-            const proposalId = parseInt("{{ rule_edit_id }}");
-            const proposal = ref(null)
-            const comments = ref([]);
-            const newComment = ref('');
+
+            /**
+             *          ##########################
+             *          #  Fetch current user    #
+             *          ##########################
+             * */
+
             const current_user_is_admin = ref()
 
             async function fetchCurrentUser() {
@@ -113,6 +106,35 @@
                 const data = await res.json()
                 current_user_is_admin.value = data.user
             }
+
+            /**
+             *          ##########################
+             *          #     Fetch proposal     #
+             *          ##########################
+             * */
+
+            const proposalId = parseInt("{{ rule_edit_id }}");
+            const proposal = ref(null)
+
+            async function fetchRuleProposal() {
+                const res = await fetch('/rule/get_proposal?id='+proposalId)
+                if(res.ok) {
+                    const data = await res.json();
+                    proposal.value = data.proposal;
+                }
+                
+            }
+
+            fetchRuleProposal();
+            
+            /**
+             *          ##########################
+             *          #       Fetch comment    #
+             *          ##########################
+             * */
+
+            const comments = ref([]);
+            const newComment = ref('');
 
             async function fetchComments() {
                 try {
@@ -125,9 +147,10 @@
                 }
             }
 
+            fetchComments();
+
             async function submitComment() {
                 const content = newComment.value.trim()
-                console.log(content)
                 if(content != ""){
                     const res = await fetch(`/rule/add_comment_discuss?id=`+proposalId+'&content='+content )
                     if (res.ok) {
@@ -146,16 +169,6 @@
                     const data = await res.json();
                 }
             }
-
-
-            async function fetchRuleProposal() {
-                const res = await fetch('/rule/get_proposal?id='+proposalId)
-                proposal.value = await res.json()
-            }
-
-
-            fetchComments();
-            fetchRuleProposal();
 
             return {
                 comments,

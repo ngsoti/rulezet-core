@@ -165,7 +165,10 @@ def compile_sigma(form_dict) -> tuple[bool, dict]:
 
 def get_rule_history_count(rule_id) -> int:
     """Get the count of reports for a specific rule"""
-    return RuleUpdateHistory.query.filter_by(rule_id=rule_id).count()
+    return  RuleUpdateHistory.query.filter(
+        RuleUpdateHistory.rule_id == rule_id,
+        RuleUpdateHistory.message == "accepted"
+    ).count()
 
 
 def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
@@ -1557,7 +1560,8 @@ def get_history_rule_(page, rule_id) -> list:
     """Get all the accepted edit history of a rule by its ID, paginated."""
     return RuleUpdateHistory.query.filter(
         RuleUpdateHistory.rule_id == rule_id,
-        RuleUpdateHistory.success == True  
+        RuleUpdateHistory.success == True ,
+        RuleUpdateHistory.message == "accepted" 
     ).paginate(page=page, per_page=20, max_per_page=20)
 
 def get_old_rule_choice(page) -> list:
@@ -1568,10 +1572,18 @@ def get_old_rule_choice(page) -> list:
         RuleUpdateHistory.analyzed_by_user_id == current_user.id
     ).paginate(page=page, per_page=20, max_per_page=20)
 
+def get_update_pending():
+    """Get all the schedules with pending updates for the current user"""
+    return RuleUpdateHistory.query.filter(
+        RuleUpdateHistory.analyzed_by_user_id == current_user.id,
+        RuleUpdateHistory.message != 'accepted',
+        RuleUpdateHistory.message != 'rejected'
+    ).count()
 
 ##################
 #   Update rule  #
 ##################
+
 
 def create_auto_update_schedule(hour: int,minute: int,days: List[str], name: str , description: str|None ,rule_ids: List[int]) -> dict[str, object]:
     """
@@ -1775,7 +1787,6 @@ def add_rule_to_schedule(schedule_id: int, rule: dict) -> bool:
     except Exception as e:
         db.session.rollback()
         return False
-
 
 def update_schedule_rules(schedule_id: int, rule_dicts: list[dict]) -> bool:
     """Update with delete or add new rule to schedule"""

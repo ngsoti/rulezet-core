@@ -1,3 +1,4 @@
+import datetime
 from app.import_github_project.untils_import import clone_or_access_repo, git_pull_repo
 from app.import_github_project.update_github_project import Check_for_rule_updates
 from app.rule import rule_core as RuleModel
@@ -106,15 +107,21 @@ async def Check_for_rule_updates_async(schedule_id):
             rule = RuleModel.get_rule(rule_id)
 
             if success and new_rule_content:
+                schedule = RuleModel.get_schedule(schedule_id)
+                message_base = message_dict.get("message", "No message")
+                day = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%A")
+                message_suffix = f" (from schedule {schedule.name} at {schedule.hour}:{schedule.minute} [{day}])" if day else ""
+
                 result = {
                     "id": rule_id,
                     "title": title,
                     "success": success,
-                    "message": message_dict.get("message", "No message"),
+                    "message": message_base + message_suffix,
                     "new_content": new_rule_content,
                     "old_content": rule.to_string if rule else "Error to charge the rule",
                     "schedule_id": schedule_id
                 }
+
 
                 history_id = RuleModel.create_rule_history(result)
                 result["history_id"] = history_id if history_id is not None else None
