@@ -1417,15 +1417,31 @@ def report_rule():
     result = RuleModel.create_repport(current_user.id,data.get('rule_id'),data.get('message', ''),data.get('reason'))
     
     if result:
-        return {"success": True}, 200 
+        return {
+            "message": "Report created successfully.",
+            "toast_class": "success",
+            "success": True}, 200 
     else:
-        return {"success": False}, 500 
+        return {"success": False,
+                "message": "Error to create the report",
+                "toast_class": "danger"
+                }, 500 
 
 @rule_blueprint.route('/rules_reported', methods=['GET'])
 @login_required
 def rules_repported():
     """Redirect to the admin report secion"""
     return render_template('admin/report_rule.html')
+
+@rule_blueprint.route("/repport_to_check")
+def repport_to_check() -> jsonify:
+    """Get the number of changeto check"""
+    try:
+        if current_user.is_admin():
+            count = RuleModel.get_total_repport_to_check_admin()
+    except:
+        count = 0
+    return jsonify({"count": count})
 
 @rule_blueprint.route("/get_rules_reported", methods=['GET'])
 def   get_rules_reported() -> jsonify:
@@ -1445,16 +1461,24 @@ def   get_rules_reported() -> jsonify:
         return render_template("access_denied.html")
     
 
-@rule_blueprint.route("/delete_report", methods=['POST'])
+@rule_blueprint.route("/delete_report", methods=['GET'])
 def   deleteReport() -> jsonify:
     """Delete report"""
-    id = request.args.get('id', 1, type=int)
+    id  = request.args.get("id")
+    print(id)
+    
     if current_user.is_admin():
         check = RuleModel.delete_report(id)
         if check:
-            return {"success": True}, 200
+            return {"success": True,
+                    "message": "Report deleted successfully.",
+                    "toast_class": "success"
+                    }, 200
     
-        return {"message": "No Rule"}, 404
+        return {"message": "No Repport",
+                "success": False,
+                "toast_class": "danger"
+                }, 404
     else:
         return render_template("access_denied.html")
     

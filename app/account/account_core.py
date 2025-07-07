@@ -2,6 +2,8 @@ import datetime
 from typing import List, Tuple
 from flask_login import current_user
 from sqlalchemy import or_
+
+
 from .. import db
 from ..db_class.db import RequestOwnerRule, Rule, RuleFavoriteUser, User
 from ..utils.utils import generate_api_key
@@ -80,6 +82,15 @@ def delete_user_core(id) -> bool:
     # give the right to admin 
     rules = RuleModel.get_rules_of_user_with_id(id)
     RuleModel.give_all_right_to_admin(rules)
+
+    # delete all the schdule of the user
+    schedules = RuleModel.get_schedules_by_user_id(id)
+    if schedules:
+        for schedule in schedules:
+            RuleModel.delete_auto_update_schedule(schedule["id"])
+            from app.import_github_project.cron_check_updates import remove_schedule_job
+            remove_schedule_job(schedule_id=schedule["id"])
+
 
     user = get_user(id)
     if user:

@@ -1409,7 +1409,18 @@ def delete_contribution(contribution_id)-> bool:
 # Create
 
 def create_repport(user_id, rule_id, message, reason) -> RepportRule:
-    """Create a new report"""
+    """Create a new report, unless an identical one already exists"""
+
+    existing = RepportRule.query.filter_by(
+        user_id=user_id,
+        rule_id=rule_id,
+        message=message,
+        reason=reason
+    ).first()
+
+    if existing:
+        return existing  
+
     repport = RepportRule(
         user_id=user_id,
         rule_id=rule_id,
@@ -1422,6 +1433,7 @@ def create_repport(user_id, rule_id, message, reason) -> RepportRule:
     return repport
 
 
+
 # Read 
 
 def get_repported_rule(page) -> RepportRule:
@@ -1431,6 +1443,10 @@ def get_repported_rule(page) -> RepportRule:
         per_page=20,
         max_per_page=20
     )
+
+def get_total_repport_to_check_admin() -> int:
+    """Get the total count of reports to check (admin view)"""
+    return RepportRule.query.count()
 
 def get_repport_by_id(repport_id) -> RepportRule:
     """Read a report by ID"""
@@ -1465,7 +1481,7 @@ def update_repport(repport_id, message, reason) -> RepportRule:
 
 def delete_report(repport_id) -> bool:
     """Delete a repport"""
-    repport = RepportRule.query.get(repport_id)
+    repport = get_repport_by_id(repport_id)
     if not repport:
         return False
     db.session.delete(repport)
@@ -1808,4 +1824,9 @@ def get_all_schedule_currentuser(active_) -> list:
         return []
     
     schedules = AutoUpdateSchedule.query.filter_by(user_id=current_user.id , active=active_).all()
+    return [schedule.to_json() for schedule in schedules]
+
+def get_schedules_by_user_id(user_id: int) -> list:
+    """Get all schedules for a specific user ID"""
+    schedules = AutoUpdateSchedule.query.filter_by(user_id=user_id).all()
     return [schedule.to_json() for schedule in schedules]

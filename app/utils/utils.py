@@ -148,7 +148,7 @@ def detect_cve(text):
     """
 
     vulnerability_patterns = re.compile(
-        r"\b(CVE-\d{4}-\d{4,7})\b"                         # CVE pattern
+        r"\bCVE[-\s]?(\d{4})[-\s]?(\d{4,7})\b"                       # CVE pattern
         r"|\b(GCVE-\d+-\d{4}-\d+)\b"                        # GCVE pattern
         r"|\b(GHSA-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4})\b"  # GHSA pattern
         r"|\b(PYSEC-\d{4}-\d{2,5})\b"                       # PYSEC pattern

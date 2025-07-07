@@ -45,13 +45,55 @@
                             <i class="fas fa-eye me-2"></i> View Rule
                         </a>
 
-                        <button @click="deleteReport(rep.rule_id, index)" title="Remove this report" class="btn btn-outline-danger btn-sm d-flex align-items-center">
+                        <!-- <button @click="deleteReport(rep.rule_id, index)" title="Remove this report" class="btn btn-outline-danger btn-sm d-flex align-items-center">
                             <i class="fas fa-flag me-2"></i> Delete Report
-                        </button>
+                        </button> -->
 
-                        <button @click="deleteRule(rep.rule_id, index)" title="Permanently delete this rule" class="btn btn-outline-warning btn-sm d-flex align-items-center">
-                            <i class="fas fa-exclamation-triangle me-2"></i> Delete Rule
+
+                        <button type="button" title="Remove this report" class="btn btn-outline-danger btn-sm d-flex align-items-center" data-bs-toggle="modal" :data-bs-target="'#delete_repport_modal_'+rep.id">
+                            <i class="fa-solid fa-trash fa-fw"></i>Delete Report
                         </button>
+                        <div class="modal fade" :id="'delete_repport_modal_'+rep.id" tabindex="-1" aria-labelledby="delete_repport_modal" aria-hidden="true">
+                            <div class="modal-dialog modal-sm">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h1 class="modal-title fs-5 text-truncate" style="color:black; max-width: 200px;" id="delete_repport_modal">
+                                            Delete [[rep.rule_name]]?
+                                        </h1>
+                                        <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        <button class="btn btn-danger" @click="deleteReport(rep.id, index)">
+                                            <i class="fa-solid fa-trash"></i> Confirm
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <button type="button" title="Permanently delete this rule" class="btn btn-outline-warning btn-sm d-flex align-items-center" data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+rep.rule_id">
+                            <i class="fa-solid fa-trash fa-fw"></i> Delete Rule
+                        </button>
+                        <div class="modal fade" :id="'delete_rule_modal_'+rep.rule_id" tabindex="-1" aria-labelledby="delete_rule_modal" aria-hidden="true">
+                            <div class="modal-dialog modal-sm">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h1 class="modal-title fs-5 text-truncate" style="color:black; max-width: 200px;" id="delete_rule_modal">
+                                            Delete [[ rep.rule_name]] ?
+                                        </h1>
+                                        <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        <button class="btn btn-danger" @click="deleteRule(rep.rule_id, index)">
+                                            <i class="fa-solid fa-trash"></i> Confirm
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -74,7 +116,7 @@
 {% block script %}
 <script type="module">
 const { createApp, ref, computed } = Vue;
-import { display_toast, prepare_toast, message_list } from '/static/js/toaster.js';
+import { display_toast, prepare_toast, message_list , display_prepared_toast} from '/static/js/toaster.js';
 
 createApp({
     delimiters: ['[[', ']]'],
@@ -115,28 +157,30 @@ createApp({
              * */
 
             async function deleteRule(id, index) {
-                if (confirm("Are you sure you want to delete this rule?")) {
-                    const res = await fetch('/rule/delete_rule', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrf_token  
-                    },
-                    body: JSON.stringify({ id: id })
-                    });
-
-                    const data = await res.json();
+                const params = new URLSearchParams({
+                    id
+                })
+                const res = await fetch('/rule/delete_rule?'+ params.toString())
+                const data = await res.json();
+                if(await res.status == 200){   
                     if (data.success) {
-                        rules_reported.value.splice(index, 1);
+                        var myModalEl = document.getElementById('delete_rule_modal_'+id);
+                        var modal = bootstrap.Modal.getInstance(myModalEl)
+                        modal.hide();
+                        //rules_reported.value.splice(index, 1);
                         if (rules_reported.value.length === 0 && current_page.value > 1) {
                             fetchRuleReported(current_page.value - 1);
                         } else {
                             fetchRuleReported(current_page.value);
                         }
                     }
-                }
-
-                
+                }   
+                const message = {
+                    message: data.message,
+                    toast_class: data.toast_class,
+                    id: Math.random()
+                };
+                await display_prepared_toast(message);                   
             }
 
             /**
@@ -146,17 +190,18 @@ createApp({
              * */
 
             async function deleteReport(id, index) {
-                if (confirm("Are you sure you want to delete this report ?")) {
-                    const res = await fetch('/rule/delete_report', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrf_token  
-                    },
-                    body: JSON.stringify({ id: id })
-                    });
+                const params = new URLSearchParams({
+                    id
+                })
+                const res = await fetch('/rule/delete_report?'+ params.toString())
+                const data = await res.json();
+                if(await res.status == 200){
+                    
+                    var myModalEl = document.getElementById('delete_repport_modal_'+id);
+                    var modal = bootstrap.Modal.getInstance(myModalEl)
+                    modal.hide();
 
-                    const data = await res.json();
+
                     if (data.success) {
                         rules_reported.value.splice(index, 1);
                         if (rules_reported.value.length === 0 && current_page.value > 1) {
@@ -165,12 +210,19 @@ createApp({
                             fetchRuleReported(current_page.value);
                         }
                     }
-                }                
+                }   
+                const message = {
+                    message: data.message,
+                    toast_class: data.toast_class,
+                    id: Math.random()
+                };
+                await display_prepared_toast(message);          
             }
 
             
         
         return {
+            message_list,
             rules_reported,
             deleteRule,
             deleteReport

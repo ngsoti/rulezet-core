@@ -100,6 +100,12 @@
                         <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fa-solid fa-user fa-fw me-1"></i> Control Access
                         </a>
+                        <template v-if="repport_to_validate">
+                            <span v-if="repport_to_validate > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                [[ repport_to_validate ]]
+                                <span class="visually-hidden">Repport</span>
+                            </span>
+                        </template>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
                             <li>
                                 <a href="/account/all_users" class="dropdown-item">
@@ -180,10 +186,12 @@
                     
                     const requests_to_validate = ref()
                     const changes_to_validate = ref()
+                    const repport_to_validate = ref()
 
                     onMounted(() => {
                         getNbRequestAdmin()
                         getNbChanges()
+                        getNbRepport()
                     });
                     async function getNbRequestAdmin() {
                         const res = await fetch('/request_to_check')
@@ -196,10 +204,18 @@
                         const data = await res.json()
                         changes_to_validate.value = data.count
                     }
+
+
+                    async function getNbRepport() {
+                        const res = await fetch('/rule/repport_to_check')
+                        const data = await res.json()
+                        repport_to_validate.value = data.count
+                    }
                 
                     return {
                         requests_to_validate,
-                        changes_to_validate
+                        changes_to_validate,
+                        repport_to_validate
                     }},
             }).mount('.navbar')
         </script>

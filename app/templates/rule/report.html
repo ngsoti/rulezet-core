@@ -83,7 +83,7 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, computed } = Vue
-    import { message_list } from '/static/js/toaster.js'
+    import { message_list , display_toast} from '/static/js/toaster.js'
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -146,21 +146,20 @@
                     body: JSON.stringify(payload)
                 });
 
-                const data = await res.json();
 
-                if (res.ok && data.success) {
-                    alert("Report submitted successfully!");
+
+                if (res.ok ) {
                     reason.value = '';
                     message.value = '';
-                    window.location.href = document.referrer || '/'; 
-                } else {
-                    alert(data.error || "An error occurred while submitting the report.");
-                }
+                    //window.location.href = document.referrer || '/'; 
+                } 
+                display_toast(res)
             }
 
 
 
             return {
+                message_list,
                 rule,
                 reason,
                 message,
