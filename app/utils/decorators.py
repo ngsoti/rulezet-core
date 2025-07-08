@@ -13,7 +13,12 @@ def verification_required():
         def decorated_function(*args, **kwargs):
             if request.path.startswith("/api/"):
                 if not verif_api_key(request.headers): 
-                    abort(403)  
+                    abort(403)
+                else:
+                    print("[DEBUG] API key is valid")
+            else:
+                print("[DEBUG] Non-API path, skipping API key check")
+
             return f(*args, **kwargs)
 
         return decorated_function

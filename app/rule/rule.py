@@ -1106,7 +1106,7 @@ def check_updates():
 
 
 @rule_blueprint.route("/get_rule_history_count", methods=['GET'])
-@login_required
+# @login_required
 def get_rule_history_count():
     rule_history_id = request.args.get('rule_id', type=int)
     count = RuleModel.get_rule_history_count(rule_history_id)
@@ -1266,9 +1266,9 @@ def get_license() -> jsonify:
                 licenses.append(line)
     return jsonify({"licenses": licenses})
 
-@rule_blueprint.route("/test_yara_python_url", methods=['GET', 'POST'])
+@rule_blueprint.route("/import_rules_from_github", methods=['GET', 'POST'])
 @login_required
-def test_yara_python_url() -> redirect:
+def import_rules_from_github() -> redirect:
     if request.method == 'POST':
         repo_url = request.form.get('url')
         selected_license = request.form.get('license')
@@ -1296,7 +1296,7 @@ def test_yara_python_url() -> redirect:
 
          
             yara_imported, yara_skipped, yara_failed, bad_rules_yara = asyncio.run(
-                parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_url)
+                parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_url, current_user)
             )
 
             

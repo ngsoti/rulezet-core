@@ -47,7 +47,7 @@ def yara_compile_source(source, externals):
 
 
 
-async def parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_url):
+async def parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_url , user):
     imported = 0
     skipped = 0
     bad_rules_count = 0
@@ -139,7 +139,13 @@ async def parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_u
                         }
 
                         result = {"valid": True, "rule": rule_dict}
-                        success = RuleModel.add_rule_core(result["rule"], current_user)
+
+                        if current_user.is_authenticated:
+                            user_ = current_user
+                        else:
+                            user_ = user    
+
+                        success = RuleModel.add_rule_core(result["rule"], user_)
 
                         if success:
                             imported += 1

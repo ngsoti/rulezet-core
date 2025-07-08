@@ -159,7 +159,7 @@
                         <strong>Zeek</strong> and <strong>Suricata</strong> rules are parsed but not validated for correctness.
                     </div>
                 </div>
-                <form method="POST" action="{{ url_for('rule.test_yara_python_url') }}" class="d-flex flex-column" id="github-form">
+                <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
                     <div class="mb-3 d-flex">

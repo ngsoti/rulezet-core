@@ -35,6 +35,14 @@ def add_rule_core(form_dict , user) -> bool:
     existing_rule = get_rule_by_title(title)
     if existing_rule:
         return False
+    
+    if current_user.is_authenticated:
+        # If the user is authenticated, use their ID
+        user_id = current_user.id
+    else:
+        user_id = user.id if user else None
+
+
     new_rule = Rule(
         format=form_dict["format"],
         title=title,
@@ -44,7 +52,7 @@ def add_rule_core(form_dict , user) -> bool:
         source=form_dict["source"],
         author=form_dict["author"],
         version=form_dict["version"],
-        user_id=current_user.id,
+        user_id=user_id,
         creation_date = datetime.datetime.now(tz=datetime.timezone.utc),
         last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
         vote_up=0,
@@ -71,7 +79,7 @@ def delete_rule_core(id) -> bool:
 
 # Update
 
-def edit_rule_core(form_dict, id) -> None:
+def edit_rule_core(form_dict, id) -> bool:
     """Edit the rule in the DB"""
     rule = get_rule(id)
 
@@ -86,6 +94,7 @@ def edit_rule_core(form_dict, id) -> None:
     rule.last_modif = datetime.datetime.now(tz=datetime.timezone.utc)
 
     db.session.commit()
+    return True
 
 def set_user_id(rule_id, user_id) -> bool:
     """"Set a user id"""

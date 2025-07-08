@@ -25,11 +25,14 @@ def get_user_from_api(headers):
     if "MATRIX-ID" in headers:
         bot = User.query.filter_by(last_name="Bot", first_name="Matrix").first()
         if bot:
-            if bot.api_key == headers["X-API-KEY"]:
+            if bot.api_key == headers.get("X-API-KEY"):
+                print("[DEBUG] X-API-KEY matches bot key")
                 user = User.query.filter_by(matrix_id=headers["MATRIX-ID"]).first()
                 if user:
                     return user
-    return get_user_api(headers["X-API-KEY"])
+    user = get_user_api(headers.get("X-API-KEY"))
+    return user
+
 
 
 def verif_api_key(headers):
