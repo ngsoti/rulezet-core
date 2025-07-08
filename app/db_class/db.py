@@ -1,4 +1,7 @@
 import datetime
+import json
+
+from sqlalchemy import String, TypeDecorator
 from .. import db, login_manager
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin, AnonymousUserMixin, current_user
@@ -533,7 +536,18 @@ class BundleRuleAssociation(db.Model):
             "added_at": self.added_at.strftime('%Y-%m-%d %H:%M'),
         }
 
+class JSONEncodedList(TypeDecorator):
+    impl = String
 
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return '[]'
+        return json.dumps(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return []
+        return json.loads(value)
 
 class AutoUpdateSchedule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -542,7 +556,8 @@ class AutoUpdateSchedule(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     hour = db.Column(db.Integer, nullable=False)
     minute = db.Column(db.Integer, nullable=False)
-    days = db.Column(db.ARRAY(db.String), nullable=False)  # exemple: ["monday", "wednesday"]
+    #days = db.Column(db.ARRAY(db.String), nullable=False)  # exemple: ["monday", "wednesday"]
+    days = db.Column(JSONEncodedList, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
     active = db.Column(db.Boolean, default=True)
 

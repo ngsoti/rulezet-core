@@ -207,7 +207,7 @@ class DeleteRule(Resource):
                 "message": "Unauthorized: invalid or missing API key"
             }, 401
         data = request.get_json(silent=True)
-        if not data:
+        if data is None:
             return {
                 "success": False,
                 "message": "Missing JSON body"
@@ -220,6 +220,7 @@ class DeleteRule(Resource):
                 "message": "Missing or empty 'title' parameter"
             }, 400
 
+
         rule_id = RuleModel.get_rule_id_by_title(title)
         if not rule_id:
             return {
@@ -228,24 +229,30 @@ class DeleteRule(Resource):
             }, 404
 
         rule_owner_id = RuleModel.get_rule_user_id(rule_id)
-
-        if user.id != rule_owner_id and not user.is_admin():
+        print(rule_owner_id)
+        print(user.id)
+        if rule_owner_id is None:
+            return {
+                "success": False,
+                "message": "Rule owner not found"
+            }, 404
+        if user.id == rule_owner_id or user.is_admin():
+            success = RuleModel.delete_rule_core(rule_id)
+            if success:
+                return {
+                    "success": True,
+                    "message": f"Rule '{title}' deleted successfully"
+                }, 200
+            else:
+                return {
+                    "success": False,
+                    "message": "An error occurred while deleting the rule"
+                }, 500
+        else:
             return {
                 "success": False,
                 "message": "Access denied: you are not the owner or an admin"
             }, 403
-
-        success = RuleModel.delete_rule_core(rule_id)
-        if success:
-            return {
-                "success": True,
-                "message": f"Rule '{title}' deleted successfully"
-            }, 200
-        else:
-            return {
-                "success": False,
-                "message": "An error occurred while deleting the rule"
-            }, 500
 
     # curl  -X POST http://127.0.0.1:7009/api/rule/private/delete \                                                                         
     # -H "Content-Type: application/json" \
@@ -378,6 +385,11 @@ class FavoriteRule(Resource):
 @api.doc(description="Import rules from a GitHub repository")
 class ImportRulesFromGithub(Resource):
     @api_required
+    @api.doc(params={
+        "url": "Required. URL of the GitHub repository to import rules from",
+        "license": "Optional. License to apply to the imported rules",
+        "fields[]": "Optional. External variables to parse, e.g., fields[0][type]=string&fields[0][name]=filename"
+    })
     def post(self):
         user = utils.get_user_from_api(request.headers)
         if not user:

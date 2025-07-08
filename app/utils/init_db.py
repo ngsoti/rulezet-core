@@ -28,11 +28,10 @@ def create_default_user():
         email="default@default.default",
         password=generate_api_key(),
         admin=False,
-        api_key = "user_api_key"
+        api_key = "aa"
     )
     db.session.add(user)
     db.session.commit()
-
 
 def create_user_test():
     user = User(
@@ -40,7 +39,7 @@ def create_user_test():
         last_name="Bot",
         email="neo@admin.admin",
         password=generate_api_key(),
-        api_key = "user_api_key"
+        api_key = "user_api_key",
     )
     db.session.add(user)
     db.session.commit()
@@ -51,16 +50,16 @@ def create_user_test():
         email="t@t.t",
         password="t",
         admin=False,
-        api_key = "user2_api_key"
+        api_key = "api_key_user_rule"
     )
     db.session.add(user2)
     db.session.commit()
 
 def create_rule_test():
-    editor = User.query.filter_by(email="neo@admin.admin").first()
+    editor = User.query.filter_by(email="t@t.t").first()
     if editor :
         rule = Rule(
-            format="test",
+            format="yara",
             title="test",
             license="test",
             description="test",
