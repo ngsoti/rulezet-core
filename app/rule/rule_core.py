@@ -202,6 +202,28 @@ def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
 
     return sources
 
+def get_sources_from_ids(rules_list: List[dict]) -> List[str]:
+    """
+    Given a list of dicts containing 'id', retrieve the 'source' from the DB for each rule,
+    but only if the id is unique in the DB and the source has not already been added.
+    Returns a deduplicated list of sources.
+    """
+    sources = []
+
+    for rule_info in rules_list:
+        rule_id = rule_info.get('id')
+        if not rule_id:
+            continue
+            
+        count = Rule.query.filter_by(id=rule_id).count()
+
+        if count == 1:
+            rule = Rule.query.filter_by(id=rule_id).first()
+            if rule.source not in sources:
+                sources.append(rule.source)
+
+    return sources
+
 def get_sources_from_titles_rule(rules_list: Rule) -> List[str]:
     """
     Given a list of dicts containing 'title', retrieve the 'source' from the DB for each rule,
@@ -400,6 +422,10 @@ def get_concerned_rules_admin_page(source, page, user_id_concerned):
         per_page=10,
         max_per_page=10
     )
+
+def get_all_rules_by_user(user_id) -> Rule:
+    """Return all rules by user id"""
+    return Rule.query.filter_by(user_id=user_id).all()
 
 def get_concerned_rule_admin_count(source, page, user_id_concerned):
     """Return paginated concerned rules for the given page (20 per page)."""

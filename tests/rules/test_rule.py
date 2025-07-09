@@ -92,9 +92,9 @@ def test_create_valid_yara_rule(client):
 
 
 def test_create_duplicate_rule(client):
-    test_create_valid_yara_rule(client)  # créer la règle une première fois
+    test_create_valid_yara_rule(client) 
     duplicate = {
-        "title": "Test YARA Rule 1",  # même titre
+        "title": "Test YARA Rule 1",  
         "description": "Duplicate rule",
         "version": "1.1",
         "format": "yara",
@@ -130,7 +130,7 @@ def test_create_invalid_yara_rule(client):
         "version": "1.0",
         "format": "yara",
         "license": "MIT",
-        "to_string": "rule test { condition: }"  # mauvaise syntaxe
+        "to_string": "rule test { condition: }" # Invalid syntax
     }
     response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
     assert response.status_code == 400

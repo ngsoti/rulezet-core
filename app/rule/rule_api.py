@@ -8,7 +8,8 @@ from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek
 from app.import_github_project.import_github_sigma import load_rule_files
 from app.import_github_project.import_github_suricata import parse_and_import_suricata_rules_async
 from app.import_github_project.import_github_yara import parse_yara_rules_from_repo_async
-from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name
+from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name, git_pull_repo
+from app.import_github_project.update_github_project import Check_for_rule_updates
 from app.utils import utils
 from ..rule import rule_core as RuleModel
 from ..account import account_core as AccountModel
@@ -83,7 +84,52 @@ class DetailRule(Resource):
     
     # curl -X GET http://127.0.0.1:7009/api/rule/public/detail/6
 
-    
+    #############################
+    #   Get all rules by user   #
+    #############################
+
+    @public_ns.route('/all_by_user/<int:user_id>')
+    @api.doc(description='Get all rules created by a specific user')
+    class RulesByUser(Resource):
+        def get(self, user_id):
+            """Get all rules authored by a user"""
+            user = AccountModel.get_user(user_id)
+            if not user:
+                return {"message": "User not found"}, 404
+            
+            
+
+            rules = RuleModel.get_all_rules_by_user(user_id)
+            if not rules:
+                return {"message": "No rules found for this user", "rules": []}, 200
+            
+            result = []
+            for rule in rules:
+                result.append({
+                    "id": rule.id,
+                    "title": rule.title,
+                    "format": rule.format,
+                    "version": rule.version,
+                    "to_string": rule.to_string,
+                    "description": rule.description or "No description for the rule",
+                    "source": rule.source or f"{user.first_name}, {user.last_name}",
+                    "license": rule.license,
+                    "cve_id": rule.cve_id,
+                    "user_id": {
+                        "id": user.id,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name
+                    }
+                })
+
+            return {
+                "message": f"{len(result)} rules found for user {user.first_name} {user.last_name}",
+                "rules": result,
+                "success": True
+            }, 200
+        
+        # curl -X GET http://127.0.0.1:7009/api/rule/public/all_by_user/4
+
 
 # ------------------------------------------------------------------------------------------------------------------- #
 #                                       PRIVATE ENDPOINT (auth required)                                              # 
@@ -225,7 +271,7 @@ class DeleteRule(Resource):
         if not rule_id:
             return {
                 "success": False,
-                "message": f"No rule found with title '{title}'"
+                "message": f"No rule found with title '{title}'"    
             }, 404
 
         rule_owner_id = RuleModel.get_rule_user_id(rule_id)
@@ -515,3 +561,63 @@ class ImportRulesFromGithub(Resource):
     #             "fields[1][type]": "int",
     #             "fields[1][name]": "filesize"
     #         }'
+
+###################################
+#   update rules from a github    #
+###################################
+
+@private_ns.route("/check_updates")
+@api.doc(description="Check if selected rules have updates in their respective repositories")
+class RuleUpdateCheck(Resource):
+    @api_required
+    def post(self):
+        user = utils.get_user_from_api(request.headers)
+        if not user:
+            return {"success": False, "message": "Unauthorized"}, 403
+
+        data = request.get_json()
+        rule_items = data.get("rules", [])  # id
+        results = []
+
+        sources = RuleModel.get_sources_from_ids(rule_items)
+        for source in sources:
+            repo_dir, exists = clone_or_access_repo(source)
+            git_pull_repo(repo_dir)
+
+        for item in rule_items:
+            rule_id = item.get("id")
+            title = item.get("title", "Unknown Title")
+            message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
+            rule = RuleModel.get_rule(rule_id)
+
+            if success and new_rule_content:
+                result = {
+                    "id": rule_id,
+                    "title": title,
+                    "success": success,
+                    "message": message_dict.get("message", "No message"),
+                    "new_content": new_rule_content,
+                    "old_content": rule.to_string if rule else "Error loading the rule"
+                }
+
+                history_id = RuleModel.create_rule_history(result)
+                result["history_id"] = history_id if history_id is not None else None
+
+                results.append(result)
+
+        return {
+            "message": "Search completed successfully. All selected rules have been processed without issues.",
+            "nb_update": len(results),
+            "results": results,
+            "success": True,
+            "toast_class": "success"
+        }, 200
+
+# curl -X POST http://127.0.0.1:7009/api/rule/private/check_updates \
+#     -H "Content-Type: application/json" \
+#     -H "X-API-KEY: user_api_key" \
+#     -d '{
+#         "rules": [
+#             {"id": 2},{"id": 3}, {"id": 4},{"id": 5},{"id": 6},{"id": 7},{"id":8},{"id": 9},{"id": 10}
+#         ]
+#     }'
