@@ -332,3 +332,20 @@ def get_all_bundles_owner() :
                 "total_bundles": total_bundles} , 200
 
     return {"message": "No Rule"} , 200
+
+################################
+#   Rule part of the bundle    #
+################################
+
+@bundle_blueprint.route("/get_bundle_list_rule_part_of", methods=['GET'])
+def get_bundle_list_rule_part_of() :     
+    """get all bundles where the rule is part of"""     
+    rule_id = request.args.get('rule_id',  type=int)
+    if not rule_id:
+        return {"message": "No rule id provided"}, 400
+
+    bundles = BundleModel.get_bundles_by_rule(rule_id)
+    if bundles:
+        return {"bundles": [b.to_json() for b in bundles]}, 200
+
+    return {"message": "No bundles found for this rule"}, 200

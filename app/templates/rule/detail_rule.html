@@ -278,6 +278,37 @@
                 </div>
             </div>
 
+            <div class="card shadow-sm mb-4 mt-4">
+                <div class="card-header bg-light position-relative">
+                    <h5 class="mb-0"><i class="fa-solid fa-clipboard-list me-2 "></i> Part of Bundle
+                </div>
+                
+                <div v-if="bundleListRule.length === 0" class="alert alert-info d-flex align-items-center">
+                    <i class="fas fa-info-circle me-2 fa-lg text-primary"></i>
+                    <div>No bundle is associated with this rule.</div>
+                </div>
+
+                <div v-else class="row row-cols-1 row-cols-md-2 g-4">
+                    <div class="col" v-for="bundle in bundleListRule" :key="bundle.id">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body d-flex align-items-start gap-3">
+                                <div class="icon-wrapper bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-boxes-stacked fa-lg"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="card-title mb-0">
+                                        <a :href="`/bundle/detail/${bundle.id}`" class="text-decoration-none text-dark" title="View more about this bundle">
+                                            [[ bundle.name ]]
+                                        </a>
+                                    </h6>
+                                    <small class="text-muted">[[ bundle.description ]]</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
 
             <div class="card shadow-sm mb-4 mt-4">
                 <div class="card-header bg-light position-relative">
@@ -695,6 +726,21 @@
                     }
                 } 
             }
+            /**
+             *          #######################
+             *          # Rule part of bundle #
+             *          #######################
+             * */
+            const bundleListRule = ref([])  // list of bundles where this rule is part of
+
+            async function fetchBundleList(){
+                const response = await fetch('/bundle/get_bundle_list_rule_part_of?rule_id=' + rule_id)
+                if (response.ok) {
+                    const data = await response.json();
+                    bundleListRule.value = data.bundles || []; 
+                } 
+            }
+            fetchBundleList()
 
             /**
              *          ####################
@@ -951,6 +997,7 @@
             })
     
             return {
+                bundleListRule,
                 Ownership,
                 favorite,
                 current_user_is_admin,
