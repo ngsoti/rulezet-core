@@ -270,22 +270,47 @@ def get_rule(id) -> int:
     """Return the rule from id"""
     return Rule.query.get(id)
 
+
 def get_similar_rule(rule_id) -> list:
-    """Return up to 3 similar rules based on title, description, format, or author."""
+    """Return up to 3 similar rules based on cve_id, title, format, and author."""
     rule = Rule.query.get(rule_id)
     if not rule:
         return []
 
+    filters = [Rule.id != rule.id]  # Exclude the current rule
+
+    similarity_criteria = []
+
+    if rule.cve_id:
+        similarity_criteria.append(Rule.cve_id.ilike(f'%{rule.cve_id}%'))
+    if rule.title:
+        similarity_criteria.append(Rule.title.ilike(f'%{rule.title}%'))
+    if rule.format:
+        similarity_criteria.append(Rule.format == rule.format)
+    if rule.author:
+        similarity_criteria.append(Rule.author.ilike(f'%{rule.author}%'))
+
+    # if no similarity criteria are provided, fallback to the last 3 rules
+    if not similarity_criteria:
+        fallback_rules = Rule.query.filter(Rule.id != rule.id).order_by(Rule.creation_date.desc()).limit(3).all()
+        return [r.to_json() for r in fallback_rules]
+
+    # else, filter based on the provided criteria
     similar_rules = Rule.query.filter(
-        Rule.id != rule.id,
-        or_(
-            Rule.title.ilike(f'%{rule.title}%'),
-            Rule.description.ilike(f'%{rule.description}%'),
-            Rule.format == rule.format,
-            Rule.author.ilike(f'%{rule.author}%')
-        )
-    ).limit(3).all()
+        *filters,
+        or_(*similarity_criteria)
+    ).order_by(Rule.creation_date.desc()).limit(3).all()
+
+    # complete the list with the last 3 rules if less than 3 similar rules found
+    if len(similar_rules) < 3:
+        additional_rules = Rule.query.filter(
+            Rule.id != rule.id,
+            ~Rule.id.in_([r.id for r in similar_rules])
+        ).order_by(Rule.creation_date.desc()).limit(3 - len(similar_rules)).all()
+        similar_rules += additional_rules
+
     return [r.to_json() for r in similar_rules]
+
 
 
 def get_rule_type_count(user_id):
