@@ -100,8 +100,6 @@ def generate_diff_html(text_old: str, text_new: str) -> str:
 
 
 
-
-
 def generate_side_by_side_diff_html(text_old: str, text_new: str) -> tuple[str, str]:
     def normalize(line):
         return line.strip()

@@ -232,24 +232,27 @@
                         </template>
                     </tbody>
                 </table>
-                <nav aria-label="Page navigation">
-                    <ul class="pagination">
-                    <li class="page-item" :class="{ disabled: current_page_old === 1 }">
-                        <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old - 1)">
-                        <i class="fas fa-arrow-left"></i> Previous
-                        </a>
-                    </li>
-                    <li class="page-item" v-for="pageOld in visiblePagesOld" :key="pageOld" :class="{ active: current_page_old === pageOld, disabled: pageOld === '...' }">
-                        <a v-if="pageOld !== '...'" class="page-link" href="#" @click.prevent="fetchOldRules(pageOld)">[[ pageOld ]]</a>
-                        <span v-else class="page-link">...</span>
-                    </li>
-                    <li class="page-item" :class="{ disabled: current_page_old === total_pages_old }">
-                        <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old + 1)">
-                        Next <i class="fas fa-arrow-right"></i>
-                        </a>
-                    </li>
-                    </ul>
-                </nav>
+                <div v-if="rules_list && rules_list.length > 0" class="d-flex justify-content-center mt-3">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination">
+                        <li class="page-item" :class="{ disabled: current_page_old === 1 }">
+                            <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old - 1)">
+                            <i class="fas fa-arrow-left"></i> Previous
+                            </a>
+                        </li>
+                        <li class="page-item" v-for="pageOld in visiblePagesOld" :key="pageOld" :class="{ active: current_page_old === pageOld, disabled: pageOld === '...' }">
+                            <a v-if="pageOld !== '...'" class="page-link" href="#" @click.prevent="fetchOldRules(pageOld)">[[ pageOld ]]</a>
+                            <span v-else class="page-link">...</span>
+                        </li>
+                        <li class="page-item" :class="{ disabled: current_page_old === total_pages_old }">
+                            <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old + 1)">
+                            Next <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </li>
+                        </ul>
+                    </nav>
+                </div>
+                
             </div>
         </div>
         <div class="tab-pane fade" id="discuss" role="tabpanel">

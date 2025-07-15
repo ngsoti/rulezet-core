@@ -493,13 +493,14 @@ def get_all_rule_sources_by_user():
 
 # Update
 
-def save_invalid_rules(bad_rules, rule_type ,repo_url, license) -> None:
+def save_invalid_rules(bad_rules, rule_type ,repo_url, license , user) -> None:
     """
     Save a list of invalid rules to the database if not already existing.
     
     :param bad_rules: List of dicts with 'file', 'error', and optional 'content'
     :param rule_type: Type of the rule, default is 'Sigma'
     """
+
     for bad_rule in bad_rules:
         file_name = bad_rule.get("file")
         error_message = str(bad_rule.get("error"))
@@ -509,7 +510,7 @@ def save_invalid_rules(bad_rules, rule_type ,repo_url, license) -> None:
             error_message=error_message,
             raw_content=raw_content,
             rule_type=rule_type,
-            user_id=current_user.id
+            user_id=user.id
         ).first()
         if existing:
             continue
@@ -518,7 +519,7 @@ def save_invalid_rules(bad_rules, rule_type ,repo_url, license) -> None:
             error_message=error_message,
             raw_content=raw_content,
             rule_type=rule_type,
-            user_id=current_user.id,
+            user_id=user.id,
             url=repo_url,
             license=license
         )

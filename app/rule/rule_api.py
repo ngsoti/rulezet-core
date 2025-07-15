@@ -63,7 +63,7 @@ class DetailRule(Resource):
         
         author = AccountModel.get_user(rule.user_id)
         if not author:
-            return {"message": "Author not found"}, 404
+            return {"message": "User not found"}, 404
 
         return {
             "id": rule.id,
@@ -508,10 +508,10 @@ class ImportRulesFromGithub(Resource):
 
             # Save invalid rules to database
             if bad_rules_yara:
-                RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github)
+                RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github , user)
 
             if bad_rule_dicts_sigma:
-                RuleModel.save_invalid_rules(bad_rule_dicts_sigma, "Sigma", repo_url, license_from_github)
+                RuleModel.save_invalid_rules(bad_rule_dicts_sigma, "Sigma", repo_url, license_from_github , user)
 
             # Final response
             return {
@@ -576,7 +576,7 @@ class RuleUpdateCheck(Resource):
             return {"success": False, "message": "Unauthorized"}, 403
 
         data = request.get_json()
-        rule_items = data.get("rules", [])  # id
+        rule_items = data.get("rules", [])  # id only
         results = []
 
         sources = RuleModel.get_sources_from_ids(rule_items)

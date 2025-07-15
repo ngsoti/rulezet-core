@@ -1330,11 +1330,11 @@ def import_rules_from_github() -> redirect:
 
             if bad_rules_yara:
                 flash(f"Failed to import {len(bad_rules_yara)} YARA rules.", "danger")
-                RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github)
+                RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github , current_user)
 
             if bad_rule_dicts_Sigma:
                 flash(f"Failed to import {nb_bad_rules_sigma} Sigma rules.", "danger")
-                RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github)
+                RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github , current_user)
 
             if bad_rule_dicts_Sigma or bad_rules_yara:
                 return redirect(url_for("rule.bad_rules_summary"))

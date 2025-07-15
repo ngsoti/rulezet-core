@@ -8,8 +8,8 @@ class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = "postgresql:///rulezet"
     #SQLALCHEMY_DATABASE_URI = "sqlite:///rulezet.sqlite"
-    #SQLALCHEMY_DATABASE_URI = "postgresql://theo:circl@localhost/rulezet"
 
+    
 
     SESSION_TYPE = "sqlalchemy"
     SESSION_SQLALCHEMY_TABLE = "flask_sessions"
