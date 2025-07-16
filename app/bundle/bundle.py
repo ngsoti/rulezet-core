@@ -34,7 +34,7 @@ def create() :
         form_dict = form_to_dict(form)
         print(form_dict)
 
-        my_bundle = BundleModel.create_bundle(form_dict)
+        my_bundle = BundleModel.create_bundle(form_dict , current_user)
         if my_bundle:
             flash('Bundle created !', 'success')
             return render_template("bundle/edit_bundle.html", form=form, bundle=my_bundle )

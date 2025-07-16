@@ -19,13 +19,16 @@ class EditUserForm(FlaskForm):
     first_name = StringField('First name', validators=[InputRequired()])
     last_name = StringField('Last name', validators=[InputRequired()])
     email = EmailField('Email', validators=[InputRequired(), Email()])
+    password = PasswordField('Password')
     submit = SubmitField('Register')
+
     def validate_email(self, field):
-        if not field.data == current_user.email:
+        if field.data != current_user.email:
             if User.query.filter_by(email=field.data).first():
                 raise ValidationError('Email already registered. (Did you mean to '
                                     '<a href="{}">log in</a> instead?)'.format(
                                         url_for('account.index')))
+
 
 class AddNewUserForm(FlaskForm):
     """Creation form to create an user"""

@@ -10,6 +10,8 @@ from ..utils.utils import generate_api_key
 from ..rule import rule_core as RuleModel
 import uuid
 
+
+
 #####################
 #   User actions    #
 #####################
@@ -34,14 +36,23 @@ def add_user_core(form_dict) -> User :
 
 # Update
 
+
 def edit_user_core(form_dict, id) -> None:
-    """Edit the user to the DB"""
+    """Edit the user in the DB and optionally update password"""
     user = get_user(id)
-    user.first_name=form_dict["first_name"]
-    user.last_name=form_dict["last_name"]
-    user.email=form_dict["email"]
+    user.first_name = form_dict["first_name"]
+    user.last_name = form_dict["last_name"]
+    user.email = form_dict["email"]
+
+    if form_dict.get("password"):  
+        user.password = form_dict["password"] 
+        # send_password_change_email(user.email, user.first_name)
 
     db.session.commit()
+
+
+
+
 
 def connected(user) -> bool:
     """connected an user"""

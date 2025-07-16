@@ -1013,7 +1013,7 @@ def set_to_string_rule(rule_id, proposed_content) -> json:
     rule = Rule.query.get(rule_id)
     if not rule:
         return {"message": "Rule not found"}, 404
-
+    rule.last_modif = datetime.datetime.now(tz=datetime.timezone.utc)
     rule.to_string = proposed_content  
     db.session.commit()
     return {"message": "Rule updated successfully"}, 200

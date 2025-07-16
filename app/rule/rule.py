@@ -383,16 +383,13 @@ def get_my_rules_page_filter_github() -> jsonify:
     total_rules = query.count()
     rules = query.offset((page - 1) * per_page).limit(per_page).all()
 
-    #all_rules = query.all()
 
     return jsonify({
         "rule": [r.to_json() for r in rules],
         "total_rules": total_rules,
         "total_pages": ceil(total_rules / per_page),
-       # "list": [r.to_json() for r in all_rules]
+        # "list": [r.to_json() for r in all_rules]
     })
-
-#get_my_rules_page_filter
 
 @rule_blueprint.route("/delete_rule_list", methods=['POST'])
 @login_required
@@ -410,9 +407,12 @@ def delete_selected_rules() -> jsonify:
         else:
             return render_template("access_denied.html") 
     if errorDEL >= 1:
-        return jsonify({"success": False, "message": "Failed to delete the rules!"})
+        return jsonify({"success": False, "message": "Failed to delete the rules!",
+                        "toast_class" : "danger"}), 500
     else:
-        return jsonify({"success": True, "message": "Rule deleted!"}) 
+        return jsonify({"success": True, 
+                        "message": f"{len(data['ids'])} Rule(s) deleted!",
+                        "toast_class" : "success"}), 200
 
 
 @rule_blueprint.route("/owner_rules", methods=['GET'])

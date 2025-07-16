@@ -11,7 +11,7 @@
         <div class="modal-body bg-light p-4 rounded shadow-sm">
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="{{ form.first_name.id }}" class="col-form-label text-primary">{{ form.first_name.label }}</label>
+                    <label for="{{ form.first_name.id }}" class="col-form-label text-primary">{{ form.first_name.label }}</label>  <span style="color:red">*</span>
                     {{ form.first_name(class_="form-control border-primary") }}
                     {% if form.first_name.errors %}
                         <div class="text-danger">{{ form.first_name.errors[0] | safe }}</div>
@@ -19,7 +19,7 @@
                 </div>
                 
                 <div class="col-md-6 mb-3">
-                    <label for="{{ form.last_name.id }}" class="col-form-label text-primary">{{ form.last_name.label }}</label>
+                    <label for="{{ form.last_name.id }}" class="col-form-label text-primary">{{ form.last_name.label }}</label>  <span style="color:red">*</span>
                     {{ form.last_name(class_="form-control border-primary") }}
                     {% if form.last_name.errors %}
                         <div class="text-danger">{{ form.last_name.errors[0] | safe }}</div>
@@ -28,12 +28,41 @@
             </div>
             
             <div class="mb-3">
-                <label for="{{ form.email.id }}" class="col-form-label text-primary">{{ form.email.label }}</label>
+                <label for="{{ form.email.id }}" class="col-form-label text-primary">{{ form.email.label }}</label>  <span style="color:red">*</span>
                 {{ form.email(class_="form-control border-primary") }}
                 {% if form.email.errors %}
                     <div class="text-danger">{{ form.email.errors[0] | safe }}</div>
                 {% endif %}
             </div>
+            <div class="mb-3 position-relative">
+                <label for="{{ form.password.id }}" class="col-form-label text-primary">{{ form.password.label }}</label>  <span style="color:red">*</span>
+                <div class="input-group">
+                    {{ form.password(class_="form-control border-primary", id="passwordInput") }}
+                    <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()" tabindex="-1">
+                        <i class="fa-solid fa-eye" id="togglePasswordIcon"></i>
+                    </button>
+                </div>
+
+                {% if form.password.errors %}
+                    <div class="text-danger mt-1">{{ form.password.errors[0] | safe }}</div>
+                {% endif %}
+            </div>
+
+            <script>
+                function togglePassword() {
+                    const passwordInput = document.getElementById("passwordInput");
+                    const icon = document.getElementById("togglePasswordIcon");
+
+                    const isPassword = passwordInput.type === "password";
+                    passwordInput.type = isPassword ? "text" : "password";
+
+                    // Change icon
+                    icon.classList.toggle("fa-eye");
+                    icon.classList.toggle("fa-eye-slash");
+                }
+            </script>
+
+
 
             <div class="modal-footer mt-3">
                 {{ form.submit(class_="btn btn-success") }}

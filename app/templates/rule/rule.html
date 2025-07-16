@@ -150,7 +150,7 @@
                 <h5 class="mb-2 d-flex align-items-center">
                     <label for="url" class="form-label m-0">
                         Import rules from GitHub project with URL (YARA / Zeek / Sigma / Suricata)
-                    </label>
+                    </label>  <span style="color:red">*</span>
                     <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse" data-bs-target="#ruleInfo" role="button" aria-expanded="false" aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
                 </h5>
                 <div class="collapse" id="ruleInfo">
@@ -163,7 +163,7 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
                     <div class="mb-3 d-flex">
-                    <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/name_project.git" required>
+                        <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/name_project.git" required>
                     </div>
             
                     <div class="mb-3">

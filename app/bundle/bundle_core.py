@@ -5,6 +5,7 @@ from .. import db
 from ..db_class.db import *
 from app.db_class.db import Bundle, BundleRuleAssociation
 from typing import Dict, Any, Union , List
+from ..rule import rule_core as RuleModel
 
 
 """
@@ -17,7 +18,7 @@ CRUD operations for Bundle model.
 - delete_bundle: Delete a bundle by ID.
 """
 
-def create_bundle(form_dict) -> Bundle:
+def create_bundle(form_dict , user) -> Bundle:
     """
     Create a new Bundle.
     :param name: Name of the bundle (required).
@@ -25,10 +26,11 @@ def create_bundle(form_dict) -> Bundle:
     :param user_id: ID of the user who creates the bundle (required).
     :return: The created Bundle instance.
     """
+
     new_bundle = Bundle(
         name=form_dict["name"],
         description=form_dict["description"],
-        user_id=current_user.id,
+        user_id=user.id,
         created_at=datetime.datetime.now(tz=datetime.timezone.utc)
     )
     db.session.add(new_bundle)
@@ -96,6 +98,7 @@ def update_bundle(bundle_id: int, form_dict: dict ) -> Bundle | None:
     if not bundle:
         return None
     if form_dict is not None:
+        bundle.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
         bundle.name = form_dict["name"]
         bundle.description = form_dict["description"]
     db.session.commit()
@@ -123,6 +126,17 @@ def add_rule_to_bundle(bundle_id: int, rule_id: int , description: str) -> bool:
     :param rule_id: ID of the rule to add.
     :return: Bool
     """
+    if not bundle_id or not rule_id or not description:
+        return False
+    
+    # Ensure bundle and rule exist
+    bundle = get_bundle_by_id(bundle_id)
+    if not bundle:
+        return False
+    rule = RuleModel.get_rule(rule_id)
+    if not rule:
+        return False    
+    
     # Check if association already exists
     existing = BundleRuleAssociation.query.filter_by(bundle_id=bundle_id, rule_id=rule_id).first()
     if existing:

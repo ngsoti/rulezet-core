@@ -133,6 +133,7 @@ def edit_user() -> redirect:
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
         AccountModel.edit_user_core(form_dict, current_user.id)
+        flash('Profil update with success!', 'success')
         return redirect("/account")
     else:
         form.first_name.data = current_user.first_name

@@ -47,6 +47,9 @@ class User(UserMixin, db.Model):
     def verify_password(self, password):
         """Check if the provided password matches the stored hash."""
         return check_password_hash(self.password_hash, password)
+    
+    def is_anonymous(self):
+        return False
 
     def to_json(self):
         """Serialize the user object to JSON."""
@@ -66,6 +69,9 @@ class AnonymousUser(AnonymousUserMixin):
         return False
 
     def is_read_only(self):
+        return True
+    
+    def is_anonymous(self):
         return True
 
 # Register AnonymousUser as the default for anonymous visitors
@@ -493,6 +499,7 @@ class Bundle(db.Model):
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     user = db.relationship('User', backref=db.backref('user who create bundle', lazy='dynamic', cascade='all, delete-orphan'))
@@ -508,6 +515,7 @@ class Bundle(db.Model):
             "name": self.name,
             "description": self.description,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
+            "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M'),
             "author": self.get_username_by_id() ,
             "user_id": self.user_id,
         }

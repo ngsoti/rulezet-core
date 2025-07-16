@@ -12,7 +12,6 @@
     <div id="myTabContent">
         <div class="tab-pane fade show active" id="filters" role="tabpanel" aria-labelledby="filters-tab">
             <div class="card p-4 shadow-sm bg-light mb-3" >
-                <h5 class="mb-4">Filters</h5>
                 <div class="row g-3">
                     <div class="col-md-4">
                         <input
@@ -219,29 +218,14 @@ createApp({
                 selectedRules.value = [];  
                 fetchRules(current_page.value);  
             }
+            const message = {
+                message: data.message,
+                toast_class: data.toast_class,
+                id: Math.random()
+            };
+            await display_prepared_toast(message);
             
         }
-
-
-
-
-        // // select gestion
-        // const allSelected = computed(() => selectedRules.value.length === rules_list.value.rule.length)
-
-        // // Toggle the selection of all rules
-        // const toggleSelectAll = () => {
-        //     if (selectAll.value) {
-        //         selectedRules.value = rules_list.value.rule.map(rule => rule.id) // Select all
-        //     } else {
-        //         selectedRules.value = [] // Deselect all
-        //     }
-        // }
-        // // Watch for changes in selectedRules to update selectAll checkbox
-        // watch(selectedRules, () => {
-        //     selectAll.value = allSelected.value
-        // })
-
-
 
         function detailRule(rule_id) {
             window.location.href = `/rule/detail_rule/${rule_id}`;

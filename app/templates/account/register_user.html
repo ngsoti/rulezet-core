@@ -17,14 +17,14 @@
         <div class="modal-body">
             <div class="row">
                 <div class="col">
-                    {{form.first_name.label(class_="col-form-label")}}:
+                    {{form.first_name.label(class_="col-form-label")}}:  <span style="color:red">*</span>
                     {{form.first_name(class_="form-control")}}
                     {% if form.first_name.errors %}
                         <div style="color: red;">{{form.first_name.errors[0] | safe}}</div>
                     {%endif%}
                 </div>
                 <div class="col">
-                    {{form.last_name.label(class_="col-form-label")}}:
+                    {{form.last_name.label(class_="col-form-label")}}: <span style="color:red">*</span>
                     {{form.last_name(class_="form-control")}}
                     {% if form.last_name.errors %}
                         <div style="color: red;">{{form.last_name.errors[0] | safe}}</div>
@@ -32,19 +32,39 @@
                 </div>
             </div>
             <div class="col">
-                {{form.email.label(class_="col-form-label")}}:
+                {{form.email.label(class_="col-form-label")}}:  <span style="color:red">*</span>
                 {{form.email(class_="form-control")}}
                 {% if form.email.errors %}
                     <div style="color: red;">{{form.email.errors[0] | safe}}</div>
                 {%endif%}
             </div>
             <div class="col">
-                {{form.password.label(class_="col-form-label")}}:
-                {{form.password(class_="form-control")}}
+                <label for="password" class="col-form-label">{{ form.password.label }}</label>  <span style="color:red">*</span>
+                <div class="position-relative">
+                    {{ form.password(class_="form-control pe-5", id="password") }}
+                    <i class="fa fa-eye position-absolute top-50 end-0 translate-middle-y me-3"
+                    style="cursor: pointer;"
+                    id="togglePasswordIcon"
+                    onclick="togglePassword()"></i>
+                </div>
                 {% if form.password.errors %}
-                    <div style="color: red;">{{form.password.errors[0] | safe}}</div>
-                {%endif%}
+                    <div style="color: red;">{{ form.password.errors[0] | safe }}</div>
+                {% endif %}
             </div>
+
+            <script>
+                function togglePassword() {
+                    const passwordInput = document.getElementById("password");
+                    const icon = document.getElementById("togglePasswordIcon");
+
+                    const isPassword = passwordInput.type === "password";
+                    passwordInput.type = isPassword ? "text" : "password";
+
+                    // Change icon
+                    icon.classList.toggle("fa-eye");
+                    icon.classList.toggle("fa-eye-slash");
+                }
+            </script>
             <div class="modal-footer" style="margin-top: 10px;">
                 {{form.submit(class='btn btn-primary')}}
             </div>
