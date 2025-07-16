@@ -204,11 +204,12 @@ def get_concerned_rule() -> json:
     else:
         if request_.rule_source:
             concerned_rules_list = RuleModel.get_concerned_rules_page(request_.rule_source, page)
-            nb_rules = RuleModel.get_concerned_rule_count(request_.rule_source, page , request_.user_id_to_send)
+            nb_rules = RuleModel.get_concerned_rule_count(request_.rule_source)
         else:
             concerned_rules_list = []
             rule = RuleModel.get_rule(request_.rule_id)
             concerned_rules_list.append(rule)
+            nb_rules = 1
 
 
     if concerned_rules_list:
@@ -251,28 +252,32 @@ def get_all_concerned_rules():
         return jsonify({"error": str(e)}), 500
 
 
-
+@home_blueprint.route("/get_made_requests_page", methods=["GET"])
+@login_required
+def get_made_requests_page() -> json:
+    """Get all the requests made by the user in a page"""
+    page = request.args.get('page', 1, type=int)
+    requests_paginated = AccountModel.get_made_requests_page(page)
+    if requests_paginated:
+        return {
+            "success": True,
+            "made_requests_list": [request_.to_json() for request_ in requests_paginated],
+            "made_totalPages": requests_paginated.pages,  
+        } , 200
+    return {"message": "No requests found"}, 200
 
 
 @home_blueprint.route("/update_request", methods=["POST" ])
 @login_required
 def update_request_status() -> jsonify:
     """Update the request for vue JS"""
-    # request_id = request.args.get('request_id') 
-    # status = request.args.get('status')
-    # rule_list_json = request.args.get('rule_list')
-
     data = request.get_json()
-
+    if not data:
+        return jsonify({"success": False, "error": "Invalid or missing JSON"}), 400
     request_id = data.get('request_id')
     status = data.get('status')
     rule_ids = data.get('rule_list')
-    # rule_list_json
-    # try:
-    #     rule_ids = json.loads(rule_list_json)
-    # except Exception as e:
-    #     rule_ids = []
-   
+
     rules = RuleModel.get_rules_by_ids(rule_ids)
 
 
@@ -284,15 +289,33 @@ def update_request_status() -> jsonify:
             ownership_request = AccountModel.get_request_by_id(request_id)
             for rule in rules:
                 if rule.user_id == current_user.id or current_user.is_admin():
+                    # Update the rule ownership
                     rule.user_id = ownership_request.user_id
-                    requests_list_to_update = AccountModel.get_all_requests_with_rule_id(rule.id)
-                    if requests_list_to_update:
-                        for request_ in requests_list_to_update:
-                            request_.user_id_to_send = ownership_request.user_id
-                    requests_list_to_update_source = AccountModel.get_all_requests_with_source(ownership_request.rule_source)
-                    if requests_list_to_update_source:
-                            for request__ in requests_list_to_update_source:
-                                request__.user_id_to_send = ownership_request.user_id   
+
+                    requests_list_to_refused = AccountModel.get_all_requests_one_rule_with_rule_id(rule.id)
+                    if requests_list_to_refused:
+                        for request_ in requests_list_to_refused:
+                            if request_.status == "pending":
+                                request_.status = "rejected"
+                                request_.user_id_to_send = ownership_request.user_id
+                    
+                    requests_list_to_refused_source = AccountModel.get_all_requests_with_source(ownership_request.rule_source)
+                    if requests_list_to_refused_source:
+                        for request__ in requests_list_to_refused_source:
+                            if request__.status == "pending":
+                                request__.status = "rejected"
+                                request__.user_id_to_send = ownership_request.user_id
+
+
+                    # #Save the rule with the new ownership
+                    # requests_list_to_update = AccountModel.get_all_requests_with_rule_id(rule.id)
+                    # if requests_list_to_update:
+                    #     for request_ in requests_list_to_update:
+                    #         request_.user_id_to_send = ownership_request.user_id
+                    # requests_list_to_update_source = AccountModel.get_all_requests_with_source(ownership_request.rule_source)
+                    # if requests_list_to_update_source:
+                    #         for request__ in requests_list_to_update_source:
+                    #             request__.user_id_to_send = ownership_request.user_id   
                 
 
             flash(f"Request Accepted! {len(rules)} rules are impacted", "success")

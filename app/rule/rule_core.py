@@ -436,7 +436,7 @@ def get_concerned_rules_page(source, page):
         max_per_page=10
     )
 
-def get_concerned_rule_count(source, page):
+def get_concerned_rule_count(source):
     """Return paginated concerned rules for the given page (20 per page)."""
     return Rule.query.filter_by(source=source, user_id=current_user.id).count()
 

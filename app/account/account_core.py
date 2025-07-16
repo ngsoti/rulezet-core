@@ -326,7 +326,7 @@ def create_request(rule_id, source):
         # Request for a source
         rules_for_source = Rule.query.filter_by(source=source).all()
         unique_editors = set(rule.user_id for rule in rules_for_source if rule.user_id)
-
+        print(f"Unique editors for source '{source}': {unique_editors}")
         created_requests = []
 
         for editor_id in unique_editors:
@@ -412,10 +412,19 @@ def get_all_requests_with_rule_id(_rule_id) -> list:
     """Get all the request with rule_id"""
     return RequestOwnerRule.query.filter(RequestOwnerRule.rule_id == _rule_id , RequestOwnerRule.status == "pending").all()
 
+def get_all_requests_one_rule_with_rule_id(_rule_id) -> list:
+    """Get all the request with rule_id"""
+    return RequestOwnerRule.query.filter(RequestOwnerRule.rule_id == _rule_id , RequestOwnerRule.rule_source == None , RequestOwnerRule.status == "pending").all()
+
 def get_all_requests_with_source(_source) -> list:
     """Get all the request with source"""
     return RequestOwnerRule.query.filter(RequestOwnerRule.rule_source == _source , RequestOwnerRule.status == "pending").all()
 
+def get_made_requests_page(page) -> dict:
+    """Return all requests made by the current user, paginated."""
+    return RequestOwnerRule.query.filter(
+        RequestOwnerRule.user_id == current_user.id
+    ).paginate(page=page, per_page=10, max_per_page=10)
 
 def get_total_requests_to_check() -> int:
     """Return the total count of pending requests for rules owned by the current user."""
