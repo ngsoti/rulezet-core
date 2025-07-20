@@ -26,14 +26,14 @@
         <!-- Pending Requests Tab -->
         <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab" >
             <div class="card" v-if="pending_requests_list.length > 0">
-                <div class="card-header bg-success text-white">
+                <div class="card-header text-white" style="background-color: #dba709;">
                     <i class="fas fa-tasks me-2"></i> Processed Ownership Requests
                 </div>
 
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover table-bordered align-middle mb-0 shadow-sm text-center">
-                            <thead class="table-success">
+                            <thead class="table-warning">
                                 <tr>
                                     <th>#</th>
                                     <th style="width: 15%;"><i class="fas fa-user"></i> Requester</th>
@@ -215,7 +215,8 @@
                                                 :class="{
                                                     'bg-success': request.status === 'approved',
                                                     'bg-danger': request.status === 'rejected',
-                                                    'bg-warning text-dark': request.status === 'pending'
+                                                    'bg-warning text-dark': request.status === 'pending',
+                                                    'bg-secondary': request.status !== 'approved' && request.status !== 'rejected' && request.status !== 'pending'
                                                 }"
                                             >
                                                 [[ request.status ]]
@@ -420,6 +421,30 @@ createApp({
             fetchMadeRequests(1)
 
 
+            const visiblePagesRequestMade = computed(() => {
+                const total = request_made_totalPages.value;
+                const current = request_made_currentPage.value;
+                const delta = 2;
+                const range = [];
+
+                for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
+                    range.push(i);
+                }
+
+                if (range[0] > 1) {
+                    if (range[0] > 2) range.unshift('...');
+                    range.unshift(1);
+                }
+                if (range[range.length - 1] < total) {
+                    if (range[range.length - 1] < total - 1) range.push('...');
+                    range.push(total);
+                }
+
+                return range;
+            });
+
+
+
 
         return {
             pending_requests_list,
@@ -438,7 +463,8 @@ createApp({
             request_made_list,
             request_made_currentPage,
             request_made_totalPages,
-            fetchMadeRequests
+            fetchMadeRequests,
+            visiblePagesRequestMade
         };
     }
 }).mount('#main-container');

@@ -275,8 +275,7 @@ class DeleteRule(Resource):
             }, 404
 
         rule_owner_id = RuleModel.get_rule_user_id(rule_id)
-        print(rule_owner_id)
-        print(user.id)
+
         if rule_owner_id is None:
             return {
                 "success": False,

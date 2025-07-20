@@ -326,7 +326,6 @@ def create_request(rule_id, source):
         # Request for a source
         rules_for_source = Rule.query.filter_by(source=source).all()
         unique_editors = set(rule.user_id for rule in rules_for_source if rule.user_id)
-        print(f"Unique editors for source '{source}': {unique_editors}")
         created_requests = []
 
         for editor_id in unique_editors:

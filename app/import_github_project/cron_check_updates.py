@@ -40,7 +40,6 @@ def add_schedule_job(schedule_id: int, days: list[str], hour: int, minute: int):
 
     # Sauvegarde les jobs dans le dictionnaire
     SCHEDULED_JOBS[schedule_id] = jobs
-    print(f"[🗓️] Schedule ajouté pour ID {schedule_id} à {time_str} les jours : {days}")
 
 
 def remove_schedule_job(schedule_id: int):
@@ -48,15 +47,11 @@ def remove_schedule_job(schedule_id: int):
     if jobs:
         for job in jobs:
             schedule.cancel_job(job)
-        print(f"[🗑️] Jobs pour Schedule ID {schedule_id} supprimés.")
-    else:
-        print(f"[⚠️] Aucun job à supprimer pour Schedule ID {schedule_id}")
 
 
 def modify_schedule_job(schedule_id: int, days: list[str], hour: int, minute: int):
     remove_schedule_job(schedule_id)
     add_schedule_job(schedule_id, days, hour, minute)
-    print(f"[♻️] Schedule modifié pour ID {schedule_id}.")
 
 
 def disable_schedule_job(schedule_id: int):
@@ -64,14 +59,14 @@ def disable_schedule_job(schedule_id: int):
     for job in jobs:
         schedule.cancel_job(job)
     DISABLED_SCHEDULES.add(schedule_id)
-    print(f"[🚫] Schedule ID {schedule_id} désactivé.")
+
 
 
 def enable_schedule_job(schedule_id: int, days: list[str], hour: int, minute: int):
     if schedule_id in DISABLED_SCHEDULES:
         DISABLED_SCHEDULES.remove(schedule_id)
         add_schedule_job(schedule_id, days, hour, minute)
-        print(f"[▶️] Schedule ID {schedule_id} réactivé.")
+
 
 
 def run_scheduler():

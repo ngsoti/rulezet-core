@@ -32,7 +32,6 @@ def create() :
     form = AddNewBundleForm()
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
-        print(form_dict)
 
         my_bundle = BundleModel.create_bundle(form_dict , current_user)
         if my_bundle:

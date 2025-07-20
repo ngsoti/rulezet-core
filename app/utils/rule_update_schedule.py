@@ -9,7 +9,6 @@ from ..rule import rule_core as RuleModel
 def update_github_rule_auto(schedule_id)-> None:
     """Update GitHub rule for a specific schedule."""
     current_schedule = RuleModel.get_schedule(schedule_id)
-    print(f"Updating GitHub rule for : {current_schedule.name}")
 
     rule_items = RuleModel.get_rules_from_schedule(schedule_id)
     sources = RuleModel.get_sources_from_titles(rule_items)    
@@ -36,10 +35,10 @@ def update_github_rule_auto(schedule_id)-> None:
             }
 
             history_id = RuleModel.create_rule_history(result)
-            if history_id:
-                print(f"Rule {rule_id} updated successfully. History ID: {history_id}")
-            else:
-                print(f"Failed to create history for rule {rule_id}.")
+            # if history_id:
+            #     print(f"Rule {rule_id} updated successfully. History ID: {history_id}")
+            # else:
+            #     print(f"Failed to create history for rule {rule_id}.")
 
             
 

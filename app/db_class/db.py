@@ -110,9 +110,8 @@ class Rule(db.Model):
 
     def to_json(self):
         is_favorited = False
-        if not current_user.is_anonymous:
+        if not current_user.is_anonymous():
             is_favorited = RuleFavoriteUser.query.filter_by(user_id=current_user.id, rule_id=self.id).first() is not None
-
         return {
             "id": self.id,
             "format": self.format,

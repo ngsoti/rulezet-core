@@ -179,11 +179,23 @@ def get_rule_history_count(rule_id) -> int:
         RuleUpdateHistory.message == "accepted"
     ).count()
 
+from urllib.parse import urlparse
+
+def is_valid_github_url(url: str) -> bool:
+    """
+    Check if a URL is a valid GitHub URL.
+    """
+    try:
+        parsed = urlparse(url)
+        return parsed.scheme in ('http', 'https') and 'github.com' in parsed.netloc
+    except Exception:
+        return False
 
 def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
     """
     Given a list of dicts containing 'title', retrieve the 'source' from the DB for each rule,
-    but only if the title is unique in the DB and the source has not already been added.
+    but only if the title is unique in the DB, the source has not already been added,
+    and the source is a valid GitHub URL.
     Returns a deduplicated list of sources.
     """
     sources = []
@@ -192,12 +204,11 @@ def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
         title = rule_info.get('title')
         if not title:
             continue
-            
-        count = Rule.query.filter_by(title=title).count()
 
+        count = Rule.query.filter_by(title=title).count()
         if count == 1:
             rule = Rule.query.filter_by(title=title).first()
-            if rule.source not in sources:
+            if rule.source and rule.source not in sources and is_valid_github_url(rule.source):
                 sources.append(rule.source)
 
     return sources
@@ -468,10 +479,19 @@ def get_rules_by_ids(rule_ids) -> list:
     """Get all the rules with id"""
     return Rule.query.filter(Rule.id.in_(rule_ids)).all()
 
-def get_all_rule_update(search=None, rule_type=None, sourceFilter=None) -> list:
-    """Select all current user's rules with optional filters: search, rule_type, and sourceFilter."""
-    query = Rule.query.filter_by(user_id=current_user.id)
+def is_valid_github_url(url: str) -> bool:
+    """Check if a URL is a valid GitHub URL."""
+    try:
+        parsed = urlparse(url)
+        return parsed.scheme in ('http', 'https') and 'github.com' in parsed.netloc
+    except Exception:
+        return False
 
+def get_all_rule_update(search=None, rule_type=None, sourceFilter=None) -> List[Rule]:
+    """Select all current user's rules with optional filters: search, rule_type, and sourceFilter.
+       If no sourceFilter is provided, return only rules with a valid GitHub source.
+    """
+    query = Rule.query.filter_by(user_id=current_user.id)
 
     if search:
         search_lower = f"%{search.lower()}%"
@@ -485,15 +505,17 @@ def get_all_rule_update(search=None, rule_type=None, sourceFilter=None) -> list:
             )
         )
 
-
     if rule_type:
         query = query.filter(Rule.format == rule_type)
-
 
     if sourceFilter:
         if not sourceFilter.startswith("http"):
             sourceFilter = f"https://github.com/{sourceFilter}.git"
         query = query.filter(Rule.source == sourceFilter)
+    else:
+        query = query.filter(Rule.source.isnot(None))
+        all_rules = query.all()
+        return [rule for rule in all_rules if is_valid_github_url(rule.source)]
 
     return query.all()
 

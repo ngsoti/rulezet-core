@@ -219,6 +219,8 @@ def vote_rule() -> jsonify:
         }), 200
     return jsonify({"message": "Rule not found"}), 404
 
+
+
 @rule_blueprint.route("/edit_rule/<int:rule_id>", methods=['GET' , 'POST'])
 @login_required
 def edit_rule(rule_id) -> render_template:
@@ -259,7 +261,9 @@ def edit_rule(rule_id) -> render_template:
                     "new_content": form_dict['to_string'],
                     "old_content": rule.to_string 
                 }
-                RuleModel.create_rule_history(result)
+                history_id = RuleModel.create_rule_history(result)
+                history = RuleModel.get_history_rule_by_id(history_id)
+                history.message = "accepted"
             
             RuleModel.edit_rule_core(form_dict, rule_id)
             flash("Rule modified with success!", "success")
@@ -1156,7 +1160,7 @@ def get_proposal() -> jsonify:
     return {
         "proposal": d,
     }
-  
+
 
 
 @rule_blueprint.route("/update_github/choose_changes", methods=['GET'])
@@ -1219,8 +1223,6 @@ def get_all_rules_owner():
     return jsonify([{"id": r.id, "title": r.title} for r in rules]), 200
 
 
-
-
 @rule_blueprint.route('/get_all_sources_owner')
 @login_required
 def get_all_sources_owner():
@@ -1229,21 +1231,29 @@ def get_all_sources_owner():
 
         def simplify_source(src):
             if not src:
-                return src
+                return None
 
             parsed = urlparse(src)
-            path = parsed.path  
+            if "github.com" not in parsed.netloc:
+                return None  # ignore non-GitHub sources
+
+            path = parsed.path
             if path:
                 clean_path = path.rstrip('.git').strip('/')
                 return clean_path
-            else:   
-                return src.rstrip('.git')
-        
-        simplified_sources = [simplify_source(s) for s in sources]
+            return None
+
+        # Simplify and filter out non-GitHub or invalid sources
+        simplified_sources = [
+            simplified for s in sources
+            if (simplified := simplify_source(s)) is not None
+        ]
 
         return jsonify(simplified_sources)
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 @rule_blueprint.route("/update_to_check", methods=['GET'])
 def get_update_to_check():
@@ -1544,7 +1554,6 @@ def   get_rules_reported() -> jsonify:
 def   deleteReport() -> jsonify:
     """Delete report"""
     id  = request.args.get("id")
-    print(id)
     
     if current_user.is_admin():
         check = RuleModel.delete_report(id)
