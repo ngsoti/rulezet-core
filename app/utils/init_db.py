@@ -55,25 +55,25 @@ def create_user_test():
     db.session.add(user2)
     db.session.commit()
 
-def create_rule_test():
-    editor = User.query.filter_by(email="t@t.t").first()
-    if editor :
-        rule = Rule(
-            format="yara",
-            title="test",
-            license="test",
-            description="test",
-            uuid=str(uuid.uuid4()),
-            source="test",
-            author="test",
-            version=1,
-            user_id=editor.id,
-            creation_date = datetime.datetime.now(tz=datetime.timezone.utc),
-            last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
-            vote_up=0,
-            vote_down=0,
-            to_string = " rule test { condition: 1}"
-        )
-        db.session.add(rule)
-        db.session.commit()
+# def create_rule_test():
+#     editor = User.query.filter_by(email="t@t.t").first()
+#     if editor :
+#         rule = Rule(
+#             format="yara",
+#             title="test",
+#             license="test",
+#             description="test",
+#             uuid=str(uuid.uuid4()),
+#             source="test",
+#             author="test",
+#             version=1,
+#             user_id=editor.id,
+#             creation_date = datetime.datetime.now(tz=datetime.timezone.utc),
+#             last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
+#             vote_up=0,
+#             vote_down=0,
+#             to_string = " rule test { condition: 1}"
+#         )
+#         db.session.add(rule)
+#         db.session.commit()
 

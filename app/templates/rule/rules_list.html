@@ -24,7 +24,7 @@
         <i class="fas fa-hammer"></i> Add Rule
       </a>
     </div>
-    <p class="text-muted">Browse detection rules.</p>
+    <p>Browse detection rules.</p>
   </div>
 
   <div class="card bg-white shadow-sm border-0 mb-4">
@@ -62,14 +62,14 @@
   
   
   <template v-if="rules_list && rules_list.rule.length > 0">
-    <div class="mb-3 text-muted">
+    <div class="mb-3">
       <i class="fas fa-database me-2"></i> [[ total_rules_liste ]] rules found
     </div>
     <div class="card card-body mb-3" v-for="(rule, index) in rules_list.rule" :key="rule.uuid">
-      <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:rgb(207, 226, 255)">
+      <div class="card-header text-white d-flex justify-content-between align-items-center">
         <h5>
           <a :href="`/rule/detail_rule/${rule.id}`" title="view more about this rule" >
-            <i class="fas fa-shield-alt me-2 text-primary"></i> <span class="mb-2" style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">[[ rule.title ]]</span>
+            <i class="fas fa-shield-alt me-2 text-primary"></i> <span class="mb-2" style="max-width: 75%; word-break: break-word; ">[[ rule.title ]]</span>
           </a>
         </h5>
         {% if current_user.is_authenticated %}
@@ -85,7 +85,7 @@
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h1 class="modal-title fs-5" style="color:black;" id="delete_rule_modal">
+                            <h1 class="modal-title fs-5"  id="delete_rule_modal">
                                 Delete [[rule.title ]] ?
                             </h1>
                             <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

@@ -1,5 +1,5 @@
 from flask import Blueprint, flash, redirect, render_template , request
-from flask_login import current_user
+from flask_login import current_user, login_required
 
 from app.bundle.bundle_form import AddNewBundleForm, EditBundleForm
 from app.utils.utils import form_to_dict
@@ -27,6 +27,7 @@ bundle_blueprint = Blueprint(
 #############
 
 @bundle_blueprint.route("/create", methods=['GET' , 'POST'])
+@login_required
 def create() :     
     """Create a bundle with form"""     
     form = AddNewBundleForm()
@@ -72,6 +73,7 @@ def get_all_bundles() :
 ############
 
 @bundle_blueprint.route("/delete", methods=['GET'])
+@login_required
 def delete() :     
     """Delete a bundle"""     
     bundle_id = request.args.get('id', 1, type=int)
@@ -92,6 +94,7 @@ def delete() :
     
 
 @bundle_blueprint.route("/edit/<int:bundle_id>", methods=['GET' , 'POST'])
+@login_required
 def edit(bundle_id) :     
     """Edit a bundle"""     
     bundle = BundleModel.get_bundle_by_id(bundle_id)
@@ -131,6 +134,7 @@ def get_all_rule() :
 
 
 @bundle_blueprint.route("/add_rule_bundle", methods=['GET'])
+@login_required
 def add_rule_bundle() :     
     """Add a rule in a bundle"""     
     rule_id = request.args.get('rule_id',  type=int)
@@ -155,6 +159,7 @@ def add_rule_bundle() :
 
 
 @bundle_blueprint.route("/remove", methods=['GET'])
+@login_required
 def remove() :     
     """Remove a rule in a bundle"""     
     rule_id = request.args.get('rule_id',  type=int)
@@ -227,6 +232,7 @@ def get_bundle():
     }, 200
 
 @bundle_blueprint.route("/change_description", methods=['GET'])
+@login_required
 def change_description():
     """Chamge the description of the association rule/bundle (the reason to the presence of the rule in the bundle)."""
     association_id = request.args.get('association_id', type=int)
@@ -314,11 +320,13 @@ def download_bundle():
 ################
 
 @bundle_blueprint.route("/own", methods=['GET' , 'POST'])
+@login_required
 def own() :     
     """list all bundles"""     
     return render_template("bundle/own_bundle.html" )
 
 @bundle_blueprint.route("/get_all_bundles_owner", methods=['GET'])
+@login_required
 def get_all_bundles_owner() :     
     """get all bundles own by the current user for pages"""     
     page = request.args.get('page', 1, type=int)

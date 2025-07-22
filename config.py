@@ -30,11 +30,23 @@ class TestingConfig(Config):
     def init_app(cls, app):
         print('THIS APP IS IN TESTING MODE. YOU SHOULD NOT SEE THIS IN PRODUCTION.')
 
+class ProductionConfig(Config):
+    DEBUG = False
+    SQLALCHEMY_DATABASE_URI = "postgresql:///rulezet" 
+    SESSION_TYPE = "sqlalchemy"
+    SESSION_SQLALCHEMY_TABLE = "flask_sessions"
+
+    @classmethod
+    def init_app(cls, app):
+        print('APP IS IN PRODUCTION MODE.')
+
+
 
     
 
 config = {
     'development': DevelopmentConfig,
     'testing': TestingConfig,
+    'production': ProductionConfig,
     'default': DevelopmentConfig
 }

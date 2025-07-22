@@ -52,10 +52,44 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
 
- 
     </head>
 
-    <body>
+    <body class="light-mode">
+        <button id="toggle-theme" class="btn btn-outline-secondary rounded-circle position-fixed"
+            style="top: 1rem; right: 1rem; z-index: 1050; width: 40px; height: 40px; padding: 0;">
+            <i id="theme-icon" class="fas fa-sun"></i>
+        </button>
+        <script>
+            function setBootstrapTheme(theme) {
+                const body = document.body;
+                const icon = document.getElementById("theme-icon");
+
+                if (theme === "dark") {
+                    body.classList.remove("light-mode");
+                    body.classList.add("dark-mode");
+                    icon.className = "fas fa-moon";
+                } else {
+                    body.classList.remove("dark-mode");
+                    body.classList.add("light-mode");
+                    icon.className = "fas fa-sun";
+                }
+
+                localStorage.setItem("theme", theme);
+            }
+
+            // Initialisation
+            const savedTheme = localStorage.getItem("theme") || "light";
+            setBootstrapTheme(savedTheme);
+
+            // Toggle
+            document.getElementById("toggle-theme").addEventListener("click", () => {
+                const isDark = document.body.classList.contains("dark-mode");
+                setBootstrapTheme(isDark ? "light" : "dark");
+            });
+        </script>
+
+
+
         {% include 'sidebar.html' %}
         <div class="d-flex flex-column min-vh-100">
             <div class="flex-grow-1 container" id="main-container">

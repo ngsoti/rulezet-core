@@ -6,7 +6,7 @@ import json
 import os
 
 from app.import_github_project.cron_check_updates import run_scheduler, set_app
-from app.utils.init_db import create_admin, create_default_user, create_rule_test, create_user_test
+from app.utils.init_db import create_admin, create_default_user, create_user_test
 
 
 
@@ -47,7 +47,7 @@ elif args.recreate_db:
         db.create_all()
         create_admin()
         create_user_test()
-        create_rule_test()
+        #create_rule_test()
         create_default_user()
 elif args.delete_db:
     with app.app_context():

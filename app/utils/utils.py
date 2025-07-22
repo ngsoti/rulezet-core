@@ -130,12 +130,12 @@ def generate_side_by_side_diff_html(text_old: str, text_new: str) -> tuple[str, 
             new_lines_html.append(f'<div style="white-space: pre; margin:0;">{original_new}</div>')
         elif code == '- ':  # removed from old
             if content not in normalized_new:
-                old_lines_html.append(f'<div style="background-color:#f8d7da; white-space: pre; margin:0;">{original_old}</div>')
+                old_lines_html.append(f'<div style="background-color:#f8d7da; white-space: pre; margin:0;" class="red">{original_old}</div>')
                 new_lines_html.append('<div style="white-space: pre; margin:0;"></div>')
         elif code == '+ ':  # added in new
             if content not in normalized_old:
                 old_lines_html.append('<div style="white-space: pre; margin:0;"></div>')
-                new_lines_html.append(f'<div style="background-color:#d4edda; white-space: pre; margin:0;">{original_new}</div>')
+                new_lines_html.append(f'<div style="background-color:#d4edda; white-space: pre; margin:0;" class="green" >{original_new}</div>')
         elif code == '? ':
             continue
 

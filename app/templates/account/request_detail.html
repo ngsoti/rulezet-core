@@ -9,7 +9,7 @@
 
     <div v-if="current_request" class="row justify-content-center">
         <div class="col-md-10">
-            <div class="border rounded shadow-sm p-4 bg-white">
+            <div class="border rounded shadow-sm p-4 ">
                 <div class="mb-4 d-flex align-items-center justify-content-between">
                     <h4 class="fw-bold mb-0">
                         <i class="fas fa-scroll me-2 text-info"></i>[[ current_request.title ]]
@@ -147,12 +147,12 @@
                 </div>
                 <div v-if="selected_rules.length > 0">
                     <span> selected rules : [[ selected_rules.length ]] </span>
-                    <div class="border rounded p-2 bg-light">
+                    <div class="border rounded p-2 ">
                         <div class="d-flex flex-wrap align-items-center gap-2">
                             <div
                                 v-for="rule in selected_rules.slice(0, 50)"
                                 :key="rule.id"
-                                class="d-flex align-items-center bg-white border rounded px-2 py-1 small"
+                                class="d-flex align-items-center  border rounded px-2 py-1 small"
                             >
                                 <span class="text-truncate me-2" style="max-width: 150px;">[[ rule.title ]]</span>
                                 <button class="btn btn-sm btn-outline-danger py-0 px-1" @click="removeSelectedRule(rule)">

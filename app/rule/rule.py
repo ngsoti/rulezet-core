@@ -694,7 +694,8 @@ def validate_proposal() -> jsonify:
             if decision == "accepted":
                 RuleModel.set_status(rule_proposal_id,"accepted")
                 # change the to_string part of the rule in the db 
-                message = RuleModel.set_to_string_rule(rule_id, rule_proposal.proposed_content)
+                response , status_code = RuleModel.set_to_string_rule(rule_id, rule_proposal.proposed_content)
+                message = response["message"]
                 # add to contributor
                 user_proposal_id = RuleModel.get_rule_proposal_user_id(rule_proposal_id)
                 RuleModel.create_contribution(user_proposal_id,rule_proposal_id)

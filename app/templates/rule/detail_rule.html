@@ -21,7 +21,7 @@
         <div class="tab-pane fade show active" id="1" role="tabpanel">
             <!-- Main Card -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header text-white" style="background-color:rgb(207, 226, 255)">
+                <div class="card-header text-white">
                     <div class="row align-items-center">
                         <div class="col-9">
                             <h5>
@@ -41,7 +41,7 @@
                                     <div class="modal-dialog modal-sm">
                                         <div class="modal-content">
                                             <div class="modal-header">
-                                                <h1 class="modal-title fs-5 text-truncate" style="color:black; max-width: 200px;" id="delete_rule_modal">
+                                                <h1 class="modal-title fs-5 text-truncate" style=" max-width: 200px;" id="delete_rule_modal">
                                                     Delete {{ rule.title }} ?
                                                 </h1>
                                                 <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -331,7 +331,7 @@
                             </h6>
                         </div>
                         <div class="card-body d-flex flex-column">
-                            <p class="mb-2 text-muted small" style="min-height: 60px">[[ rule.description ]]</p>
+                            <p class="mb-2 small" style="min-height: 60px">[[ rule.description ]]</p>
                             <p class="mb-2"><strong>Author:</strong> [[ rule.author ]]</p>
                             <div class="mt-auto text-center">
                             <a :href="rule.id" title="View more about this rule" class="btn btn-sm btn-primary">
@@ -397,7 +397,7 @@
                                 <div class="d-flex justify-content-between">
                                     <div>
                                         <strong><i class="fas fa-user-circle"></i> [[ comment.user_name ]]</strong>
-                                        <small class="text-muted ms-2">
+                                        <small class=" ms-2">
                                             <i class="far fa-clock"></i> [[ comment.created_at ]]
                                         </small>
                                     </div>
@@ -456,7 +456,7 @@
                     </template>
 
                     <template v-else>
-                        <p class="text-muted"><i class="fas fa-info-circle"></i> No comments yet. Be the first to comment!</p>
+                        <p><i class="fas fa-info-circle"></i> No comments yet. Be the first to comment!</p>
                     </template>          
                 </div>
             </div>            
@@ -466,7 +466,7 @@
         <div class="tab-pane fade" id="2" role="tabpanel">
             {% if current_user.is_authenticated %}
             <div class="card shadow-sm mb-4" >
-                <div class="card-header  text-primary" style="background-color:rgb(207, 226, 255)" >
+                <div class="card-header  text-primary">
                     <h5 class="mb-0"><i class="fas fa-pencil-alt"></i> Propose an Edit</h5>
                 </div>
                 <div class="card-body">
@@ -561,7 +561,7 @@
             {% else %}
             <div class="card shadow-sm mb-4">
                 <div class="card-body text-center">
-                    <p class="text-muted">Please <a href="{{ url_for('account.login') }}" class="text-primary">log in</a> to propose an edit.</p>
+                    <p>Please <a href="{{ url_for('account.login') }}" class="text-primary">log in</a> to propose an edit.</p>
                 </div>
             </div>
             {% endif %}    
@@ -580,7 +580,7 @@
                 
         
                 <div v-if="pull_request_list.length === 0" class="alert alert-info mt-3">
-                    <i class="fas fa-info-circle"></i> No edit proposals found for this rule.
+                    <p> <i class="fas fa-info-circle"></i> No edit proposals found for this rule.</p>
                 </div>
             
                 <div v-else class="list-group mt-3">
@@ -597,8 +597,8 @@
                         </small>
                         <br>
                         <small class="text-muted">
-                            <i class="fas fa-pen"></i> [[ proposal.message ]]
-                            </small>
+                            <i class="fas fa-pen"></i> [[ proposal.message || 'No message' ]]
+                        </small>
                     </div>
                     <span 
                         class="badge"
@@ -957,7 +957,7 @@
                 editor = CodeMirror(container, {
                     lineNumbers: true,
                     mode: 'python', 
-                    theme: 'default',
+                    theme: 'monokai',
                     value: ruleContent
                 });
                 editor.setSize("100%", "700px"); 
