@@ -22,4 +22,4 @@ idstools
 suricataparser
 psycopg2-binary
 schedule
-#Flask-Mail
+aiofiles
