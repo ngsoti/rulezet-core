@@ -10,28 +10,31 @@ from .utils import generate_api_key
 
 def create_admin():
     # Admin user
+    raw_password = generate_api_key()
     user = User(
         first_name="admin",
         last_name="admin",
         email="admin@admin.admin",
-        password="admin",
+        password= raw_password,  #"admin",
         admin=True,
-        api_key = "admin_api_key"
+        api_key = generate_api_key() #for test  "admin_api_key"
     )
     db.session.add(user)
     db.session.commit()
+    return user , raw_password
 
 def create_default_user():
     user = User(
         first_name="no editor",
         last_name="no editor",
         email="default@default.default",
-        password=generate_api_key(),
+        password= generate_api_key(),
         admin=False,
-        api_key = "aa"
+        api_key = generate_api_key() # "aa"
     )
     db.session.add(user)
     db.session.commit()
+    return user
 
 def create_user_test():
     user = User(

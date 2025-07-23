@@ -36,6 +36,10 @@
             </div>
             <div class="mb-3 position-relative">
                 <label for="{{ form.password.id }}" class="col-form-label text-primary">{{ form.password.label }}</label>  <span style="color:red">*</span>
+                <small class="form-text text-muted">
+                    Leave blank to keep your current password. For security reasons, it cannot be shown.
+                </small>
+
                 <div class="input-group">
                     {{ form.password(class_="form-control border-primary", id="passwordInput") }}
                     <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()" tabindex="-1">
