@@ -1,7 +1,9 @@
 import datetime
 import uuid
 from flask_login import current_user
-from ..db_class.db import Rule, User, db
+
+from app.account.account_core import get_admin_user
+from ..db_class.db import FormatRule, Rule, User, db
 from .utils import generate_api_key
 
 
@@ -57,6 +59,31 @@ def create_user_test():
     )
     db.session.add(user2)
     db.session.commit()
+
+
+def insert_default_formats():
+    formats = [
+        {"name": "yara", "can_be_execute": True},
+        {"name": "sigma", "can_be_execute": True},
+        {"name": "zeek", "can_be_execute": False},
+        {"name": "suricata", "can_be_execute": False},
+        {"name": "test", "can_be_execute": False},
+    ]
+
+    user_admin = get_admin_user()
+    for fmt in formats:
+        existing = FormatRule.query.filter_by(name=fmt["name"]).first()
+        if not existing:
+            new_format = FormatRule(
+                user_id = user_admin.id,
+                name=fmt["name"],
+                can_be_execute=fmt["can_be_execute"],
+                creation_date=datetime.datetime.now(tz=datetime.timezone.utc),
+            )
+            db.session.add(new_format)
+
+    db.session.commit()
+
 
 # def create_rule_test():
 #     editor = User.query.filter_by(email="t@t.t").first()

@@ -43,11 +43,10 @@
         </div>
         <div class="col-md-3">
           <select v-model="ruleType" class="form-select form-select-sm rounded-pill">
-            <option value="">All Types</option>
-            <option value="yara">YARA</option>
-            <option value="sigma">SIGMA</option>
-            <option value="zeek">Zeek</option>
-            <option value="suricata">Suricata</option>
+              <option value="">All Types</option>
+              <option v-for="format in rules_formats" :value="format.name" :key="format.id">
+                  [[ format.name ]]
+              </option>
           </select>
         </div>
         <div class="col-md-2">
@@ -201,6 +200,27 @@
     setup() {
 
       /*###################################_Fetch_rules_list_#############################*/
+
+
+      /**
+       *          #########################
+       *          #    formats rules      #
+       *          #########################
+       */
+
+      const rules_formats = ref([])
+      const number_rules_formats = ref(0)
+
+      async function fetchRulesFormats() {
+          const res = await fetch('/rule/get_rules_formats')
+          const data = await res.json()
+          if (res.status === 200){
+              rules_formats.value = data.formats 
+              number_rules_formats.value = data.length | 0
+          }
+      }
+      fetchRulesFormats()
+
 
       const rules_list = ref({ rule: [] })
       const total_rules = ref(0)  // number of rule in db
@@ -371,7 +391,10 @@
         onSearchInput,
         onEnterKey,
         ruleType,
-        favorite
+        favorite,
+        rules_formats,
+        number_rules_formats,
+        fetchRulesFormats
       }
     }
   }).mount('#main-container')

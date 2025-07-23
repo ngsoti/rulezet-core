@@ -42,10 +42,9 @@
                             <div class="col-md-3">
                                 <select v-model="ruleType" class="form-select form-select-sm rounded-pill">
                                     <option value="">All Types</option>
-                                    <option value="yara">YARA</option>
-                                    <option value="sigma">SIGMA</option>
-                                    <option value="zeek">Zeek</option>
-                                    <option value="suricata">Suricata</option>
+                                    <option v-for="format in rules_formats" :value="format.name" :key="format.id">
+                                        [[ format.name ]]
+                                    </option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -169,9 +168,25 @@
                     </div>
                     <div class=" my-3">
                         <div class="text-center">
-                            <button class="btn btn-primary btn-sm mx-2" title="Search for updates" @click="checkUpdateList()">
-                                <i class="fas fa-sync-alt"></i> Check for Updates
+                            <!-- Bouton Check for Updates -->
+                            <button class="btn btn-primary btn-sm mx-2" title="Search for updates" @click="handleCheckUpdate">
+                            <i class="fas fa-sync-alt"></i> Check for Updates
                             </button>
+
+                            <!-- Modal avec spinner -->
+                            <div class="modal fade" id="updateModal" tabindex="-1" aria-hidden="true" aria-labelledby="updateModalLabel">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow">
+                                    <div class="modal-body d-flex flex-column align-items-center justify-content-center py-5">
+                                        <div class="spinner-border text-primary mb-3" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p class="mb-0 text-secondary fw-semibold">Checking for updates...</p>
+                                    </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             
                             <button class="btn btn-secondary btn-sm mx-2" title="Enable automatic update" data-bs-toggle="modal" data-bs-target="#auto_modal">
                                 <i class="fas fa-clock"></i> Enable Auto-Update
@@ -720,6 +735,19 @@
             }
 
 
+            async function handleCheckUpdate() {
+                const modalEl = document.getElementById('updateModal');
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+
+                try {
+                    await checkUpdateList();  // ta méthode existante
+                } catch (error) {
+                    console.error('Update error:', error);
+                }
+
+                modal.hide();
+            }
 
         
             
@@ -977,6 +1005,25 @@
                 return pages
             })
 
+            /**
+             *          #########################
+             *          #    formats rules      #
+             *          #########################
+             */
+
+            const rules_formats = ref([])
+            const number_rules_formats = ref(0)
+
+            async function fetchRulesFormats() {
+                const res = await fetch('/rule/get_rules_formats')
+                const data = await res.json()
+                if (res.status === 200){
+                    rules_formats.value = data.formats 
+                    number_rules_formats.value = data.length | 0
+                }
+            }
+            fetchRulesFormats()
+
 
             return {
                 message_list,
@@ -1022,7 +1069,12 @@
                 searchQueryAutoComponent,
 
                 toggleActive,
-                deleteSchedule
+                deleteSchedule,
+                handleCheckUpdate,
+
+                rules_formats,
+                number_rules_formats,
+                fetchRulesFormats
             }
 
         }

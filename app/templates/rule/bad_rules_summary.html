@@ -21,33 +21,9 @@
     The following rules are invalid because they did not pass syntax parsing validation.
   </p>
 
-  <div class="card border-0 shadow rounded-3 p-4 bg-white mb-4">
-    <div class="d-flex align-items-center mb-3">
-      <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 40px; height: 40px;">
-        <i class="fas fa-filter"></i>
-      </div>
-      <div class="d-flex w-100 justify-content-between align-items-center">
-        <h5 class="mb-0 text-primary fw-semibold">Advanced Filters</h5>
-        <template v-if="rules_list.length > 0">
-          <div class="ms-auto">
-            <button @click="deleteAllRule()" class="btn btn-sm btn-outline-danger" title="Delete All bad Rules">
-              <i class="fas fa-trash me-1"></i> Delete all
-            </button>
-          </div>
-        </template>
-      </div>
-
-
-
-      
-    </div>
-
-    
-    <div class="row align-items-end g-3">
-      <div class="col-md-10 ">
-        <label for="searchInput" class="form-label fw-semibold text-muted">
-          <i class="fas fa-search me-1"></i>Search Rules
-        </label>
+  <div class="card border-0 shadow rounded-3 p-4  mb-4">
+    <div class="row g-3 align-items-center mb-3 flex-wrap">
+      <div class="col flex-grow-1">
         <input
           id="searchInput"
           type="text"
@@ -59,16 +35,64 @@
         >
       </div>
 
-      <div class="col-md-3 col-lg-2">
-        <button class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center shadow-sm" @click="fetchRules(1)">
+      <div class="col-auto">
+        <button 
+          class="btn btn-outline-primary d-flex align-items-center shadow-sm"
+          @click="fetchRules(1)"
+        >
           <i class="fas fa-filter me-2"></i> Apply
         </button>
       </div>
+
+      <div class="col-auto">
+        <button 
+          class="btn btn-sm btn-outline-danger d-flex align-items-center"
+          title="Delete All bad Rules"
+          data-bs-toggle="modal"
+          data-bs-target="#confirmDeleteAllModal"
+        >
+          <i class="fas fa-trash me-2"></i> Delete All
+        </button>
+      </div>
+
     </div>
-</div>
+
+    <!-- Modal to delete all -->
+    <div class="modal fade" id="confirmDeleteAllModal" tabindex="-1" aria-labelledby="confirmDeleteAllModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-3">
+          <div class="modal-header border-0">
+            <h5 class="modal-title" id="confirmDeleteAllModalLabel">
+              <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Deletion
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <p class="mb-3">Are you sure you want to permanently delete <strong> [[ total_rules ]] bads rules</strong>?</p>
+            <div v-if="isDeleting" class="d-flex justify-content-center align-items-center">
+              <div class="spinner-border text-danger me-2" role="status">
+                <span class="visually-hidden">Deleting...</span>
+              </div>
+              <strong>Deleting...</strong>
+            </div>
+          </div>
+          <div class="modal-footer border-0" v-if="!isDeleting">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" @click="confirmDeleteAll">
+              <i class="fas fa-trash-alt me-1"></i> Yes, Delete All
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 
   <div v-if="rules_list.length > 0">
+    <div class="mb-3">
+      <i class="fas fa-exclamation-triangle me-2"></i> [[ total_rules ]]  bads rules
+    </div>
+    
     <div class="row row-cols-1 row-cols-md-2 g-4">
       <div class="col" v-for="(rule, index) in rules_list" :key="rule.id">
         <div class="card h-100 shadow-sm border-start border-4 border-danger">
@@ -146,7 +170,7 @@
 {% block script %}
 <script type="module">
   const { createApp, ref, computed } = Vue
-  import { message_list , display_prepared_toast ,display_toast} from '/static/js/toaster.js'
+  import { message_list , display_prepared_toast , display_toast } from '/static/js/toaster.js'
 
   createApp({
     delimiters: ['[[', ']]'],
@@ -160,7 +184,7 @@
       const searchQuery = ref('')
       const authorFilter = ref('')
       const sortBy = ref('newest')
-
+      const isDeleting = ref(false)
 
       async function fetchRules(page) {
         const params = new URLSearchParams({
@@ -174,28 +198,28 @@
         total_pages.value = data.total_pages
         total_rules.value = data.total_rules
         current_page.value = page
-        user.value = data.user ;
+        user.value = data.user;
       }
 
-      async function deleteAllRule(){
+      async function deleteAllRule() {
         const res = await fetch('/rule/bad_rule/delete_all_bad_rule')
         if (res.status === 200) {
-            rules_list.value = []
-            
-            // var myModalEl = document.getElementById('delete_bundle_modal_' + id);
-            // var modal = bootstrap.Modal.getInstance(myModalEl);
-            // modal.hide();
+          rules_list.value = []
         }
         display_toast(res)
       }
 
+      async function confirmDeleteAll() {
+        isDeleting.value = true
+        await deleteAllRule()
+        isDeleting.value = false
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteAllModal'))
+        modal.hide()
+      }
 
       async function onSearchInput() {
-        if (searchQuery.value.trim() === "") {
-          await fetchRules(1)
-        } else {
-          await fetchRules(1)
-        }
+        await fetchRules(1)
       }
 
       async function onEnterKey() {
@@ -207,27 +231,27 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrf_token  
+            'X-CSRFToken': csrf_token
           },
           body: JSON.stringify({ id: id })
-        });
+        })
 
-        const data = await res.json();
+        const data = await res.json()
         if (data.success) {
-          rules_list.value.splice(index, 1);
+          rules_list.value.splice(index, 1)
           if (rules_list.value.length === 0 && current_page.value > 1) {
-            fetchRules(current_page.value - 1);
+            fetchRules(current_page.value - 1)
           } else {
-            fetchRules(current_page.value);
+            fetchRules(current_page.value)
           }
           await display_prepared_toast({
             message: 'Rule deleted.',
             toast_class: 'success',
             id: Math.random()
-          });
+          })
         }
       }
-      
+
       const visiblePages = computed(() => {
         const pages = []
         const total = total_pages.value
@@ -246,7 +270,6 @@
         return pages
       })
 
-
       fetchRules(1)
 
       return {
@@ -263,7 +286,9 @@
         searchQuery,
         onEnterKey,
         onSearchInput,
-        deleteAllRule
+        deleteAllRule,
+        confirmDeleteAll,
+        isDeleting
       }
     }
   }).mount('#main-container')

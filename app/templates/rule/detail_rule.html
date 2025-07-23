@@ -838,21 +838,25 @@
                 const comment = comments_list.value.find(c => c.id === commentId);
 
                 const res = await fetch('/rule/edit_comment?commentID=' + commentId + '&newContent=' + encodeURIComponent(comment.editContent));
-
+                const data = await res.json();
                 if (res.ok) {
-                    const updatedComment = await res.json();
+                    
                     const index = comments_list.value.findIndex(c => c.id === commentId);
                     if (index !== -1) {
-                        comments_list.value[index].content = updatedComment.updatedComment.content;
-                        comments_list.value[index].editContent = updatedComment.updatedComment.content;
+                        comments_list.value[index].content = data.updatedComment.content;
+                        comments_list.value[index].editContent = data.updatedComment.content;
 
                         const collapseEl = document.getElementById('editForm' + commentId);
                         const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseEl);
                         bsCollapse.hide();
                     }
-                } else {
-                    alert('Error while saving comment.');
-                }
+                } 
+                const message_ = {
+                    message: data.message,
+                    toast_class: data.toast_class,
+                    id: Math.random()
+                };
+                await display_prepared_toast(message_);
             }
 
             async function deleteComment(commentId) {
@@ -863,6 +867,7 @@
                         comments_list.value.splice(index, 1);  
                     }
                 } 
+                display_toast(res)
             }
 
             async function fetchComments(page ) {

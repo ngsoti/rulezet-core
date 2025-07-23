@@ -157,6 +157,27 @@ class Rule(db.Model):
             "cve_id": self.cve_id
         }  # Format the datetime to a string
 
+
+class FormatRule(db.Model):
+    """Table for all the formats of the rules"""
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    creation_date = db.Column(db.DateTime, index=True)
+    can_be_execute = db.Column(db.Boolean, nullable=False)
+
+    user = db.relationship('User', backref=db.backref('user_format', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_json(self):
+        return{
+            "id": self.id,
+            "name": self.name,
+            "creation_date": self.creation_date.strftime('%Y-%m-%d %H:%M'),
+            "user_id": self.user_id,
+            "can_be_execute": self.can_be_execute
+        }
+
+
 class RuleFavoriteUser(db.Model):
     """Association table for User and Rule favorites."""
     

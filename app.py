@@ -6,7 +6,7 @@ import json
 import os
 
 from app.import_github_project.cron_check_updates import run_scheduler, set_app
-from app.utils.init_db import create_admin, create_default_user, create_user_test
+from app.utils.init_db import create_admin, create_default_user, create_user_test, insert_default_formats
 
 
 
@@ -37,7 +37,7 @@ if args.init_db:
         db.create_all()
         admin, raw_password = create_admin()
         editor = create_default_user()
-
+        insert_default_formats()
         # create_user_test()
         # create_rule_test()
 
@@ -62,7 +62,7 @@ elif args.recreate_db:
         db.drop_all()
         db.create_all()
         admin , raw_password = create_admin()
-        
+        insert_default_formats()
 
         GREEN = "\033[92m"
         YELLOW = "\033[93m"

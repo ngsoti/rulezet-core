@@ -146,60 +146,71 @@
 
 
         <div class="tab-pane fade" id="github" role="tabpanel">
-            <div class="card p-4 shadow-sm  mb-3">
+            <div class="card p-4 shadow-sm mb-3">
                 <h5 class="mb-2 d-flex align-items-center">
-                    <label for="url" class="form-label m-0">
-                        Import rules from GitHub project with URL (YARA / Zeek / Sigma / Suricata)
-                    </label>  <span style="color:red">*</span>
-                    <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse" data-bs-target="#ruleInfo" role="button" aria-expanded="false" aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
+                <label for="url" class="form-label m-0">
+                    Import rules from GitHub project with URL (YARA / Zeek / Sigma / Suricata)
+                </label> <span style="color:red">*</span>
+                <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse" data-bs-target="#ruleInfo" role="button" aria-expanded="false" aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
                 </h5>
+
                 <div class="collapse" id="ruleInfo">
                     <div class="alert alert-info mt-2">
                         <strong>YARA</strong> and <strong>Sigma</strong> rules are passed through a syntax validator and compiled. Only valid rules will be imported.<br>
                         <strong>Zeek</strong> and <strong>Suricata</strong> rules are parsed but not validated for correctness.
                     </div>
                 </div>
-                <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form">
+
+                <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            
+
                     <div class="mb-3 d-flex">
-                        <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/name_project.git" required>
+                        <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/project.git" required>
                     </div>
-            
+
                     <div class="mb-3">
                         <label for="license-select" class="form-label">License</label>
                         <select id="license-select" name="license" class="form-control" v-model="selectedLicense">
-                            <option disabled value="">-- Choose a license --</option>
-                            <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
+                        <option disabled value="">-- Choose a license --</option>
+                        <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
                         </select>
-                    </div>                
+                    </div>
+
                     <div id="dynamic-fields" class="mb-3"></div>
-            
 
                     <div class="mb-3">
-                    <button type="button" class="btn btn-secondary" onclick="addField(2)">
+                        <button type="button" class="btn btn-secondary" onclick="addField(2)">
                         Add external variables
-                    </button>
+                        </button>
                     </div>
-            
+
                     <div class="d-flex align-items-center">
-                    <button type="submit" class="btn btn-primary" id="submit-button">
+                        <button type="submit" class="btn btn-primary" id="submit-button" data-bs-toggle="modal" data-bs-target="#parsingModal">
                         <i class="fas fa-paper-plane"></i> Send
-                    </button>
-                    
-                    <!-- Spinner hidden by default -->
-                    <div id="loading-spinner" class="ms-3" style="display: none;">
-                        <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <strong>Processing rules...</strong>
-                    </div>
+                        </button>
                     </div>
                 </form>
             </div>
-            
-
+            <div class="modal fade" id="parsingModal" tabindex="-1" aria-labelledby="parsingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content text-center p-4">
+                        <div class="modal-body">
+                            <i class="fas fa-sync-alt fa-spin fa-3x text-primary mb-3"></i>
+                            <h5 class="mb-2">Parsing rules in progress…</h5>
+                            <p class="text-muted">This may take a few seconds depending on the repository size.</p>
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+
+
+            
+        
+
     </div>
 </div>
 {% endblock %}
@@ -284,7 +295,7 @@
     container.appendChild(row);
 }
 </script>
-<script>
+<!-- <script>
     // spin for the github import
     document.addEventListener("DOMContentLoaded", function () {
     const form = document.getElementById("github-form");
@@ -296,7 +307,7 @@
         button.disabled = true;               
     });
     });
-</script>
+</script> -->
 <script type="module">
     const { createApp, ref } = Vue;
     import { message_list } from '/static/js/toaster.js';

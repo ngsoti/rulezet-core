@@ -5,17 +5,13 @@ from wtforms.validators import  InputRequired, DataRequired, NumberRange
 
 
 from app.utils.utils import detect_cve
+
+from . import rule_core as RuleModel
 from ..db_class.db import Rule
 
 class AddNewRuleForm(FlaskForm):
-    """Form to add a new rule"""
-
-    format = SelectField(
-        'Format',
-        choices=[('yara', 'Yara'), ('sigma', 'Sigma'), ('zeek', 'Zeek'), ('suricata', 'Suricata')],
-        validators=[InputRequired()]
-    )
-
+    format = SelectField('Format', choices=[], validators=[InputRequired()])
+    # autres champs ...
     title = StringField('Title', validators=[InputRequired()])
     license = SelectField('License', choices=[], validators=[DataRequired()])
     description = TextAreaField('Description')
@@ -23,8 +19,12 @@ class AddNewRuleForm(FlaskForm):
     version = StringField('Version', validators=[InputRequired()])
     to_string = TextAreaField('Content rule', validators=[InputRequired()])
     cve_id = StringField('CVE vulnerability')
-
     submit = SubmitField('Register')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        formats_rules_list = RuleModel.get_all_rule_format()
+        self.format.choices = [(f.name, f.name) for f in formats_rules_list]
 
     def validate_title(self, field):
         if Rule.query.filter_by(title=field.data).first():
@@ -35,22 +35,27 @@ class AddNewRuleForm(FlaskForm):
             valid, matches = detect_cve(field.data)
             if not valid:
                 raise ValidationError('CVE ID not recognized or invalid format.')
-            
+
+
 
 class EditRuleForm(FlaskForm):
     """Form to edit an existing rule"""
+
     title = StringField('Title', validators=[InputRequired()])
-    format = SelectField('Format',choices=[('yara', 'Yara'), ('sigma', 'Sigma'), ('zeek', 'Zeek'), ('suricata', 'Suricata')],validators=[InputRequired()])
-    
+    format = SelectField('Format', choices=[], validators=[InputRequired()])
     license = SelectField('License', choices=[], validators=[InputRequired()])
     description = TextAreaField('Description')
     source = StringField('Source')
     version = StringField('Version', validators=[InputRequired()])
     to_string = TextAreaField('Content rule', validators=[InputRequired()])
     cve_id = StringField('CVE vulnerability')
-
-
     submit = SubmitField('Register')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        formats_rules_list = RuleModel.get_all_rule_format()
+        self.format.choices = [(f.name, f.name) for f in formats_rules_list]
+
     
     
 

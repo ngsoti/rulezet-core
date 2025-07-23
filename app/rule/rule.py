@@ -47,7 +47,7 @@ def rule() -> render_template:
 
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
-
+        print(form_dict)
         external_vars = []
         index = 0
         while True:
@@ -535,7 +535,17 @@ def edit_comment() -> jsonify:
     comment = RuleModel.get_comment_by_id(comment_id)
     if  comment.user_id == current_user.id or current_user.is_admin():
         update_content = RuleModel.update_comment(comment_id, new_content)
-        return jsonify({"updatedComment": update_content.to_json()})
+        if update_content:
+            return jsonify({"updatedComment": update_content.to_json(),
+                            "success": True,
+                            "toast_class": 'success',
+                            "message": "Comment edited with success"}), 200
+        else:
+            return jsonify({ 
+            "success": False,
+            "toast_class": 'false',
+            "message": "failed to edit the comment"
+        }), 500
     else:
         return render_template("access_denied.html")
     
@@ -546,8 +556,20 @@ def delete_comment_route(comment_id) -> render_template:
     comment = RuleModel.get_comment_by_id(comment_id)
     if  comment.user_id == current_user.id or current_user.is_admin():
         rule_id = comment.rule_id
-        RuleModel.delete_comment(comment_id)
-        return redirect(url_for("rule.detail_rule", rule_id=rule_id))
+        success = RuleModel.delete_comment(comment_id)
+        if success:
+            return jsonify({ 
+                "success": True,
+                "toast_class": 'success',
+                "message": "Comment deleted with success"
+            }), 200
+        else:
+            return jsonify({ 
+            "success": False,
+            "toast_class": 'false',
+            "message": "failed to delete the comment"
+        }), 500
+        #return redirect(url_for("rule.detail_rule", rule_id=rule_id))
     else:
         return render_template("access_denied.html")
 
@@ -1305,7 +1327,7 @@ def import_rules_from_github() -> redirect:
             owner, repo = extract_owner_repo(repo_url)
             license_from_github = selected_license or get_license_name(owner, repo)
 
-         
+        
             yara_imported, yara_skipped, yara_failed, bad_rules_yara = asyncio.run(
                 parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_url, current_user)
             )
@@ -1317,7 +1339,7 @@ def import_rules_from_github() -> redirect:
             rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir, repo_url, license_from_github, info)
 
 
-           
+        
             imported_suricata, suricata_skipped = asyncio.run(
                 parse_and_import_suricata_rules_async(repo_dir, license_from_github, repo_url, info, current_user)
             )
@@ -1351,7 +1373,7 @@ def import_rules_from_github() -> redirect:
                 return redirect(url_for("rule.bad_rules_summary"))
 
         except Exception as e:
-            flash(f"Failed to import rules: with url :  {repo_url}", "danger")
+            flash(f"Failed to import rules: with url :  {repo_url} because : {e}", "danger")
 
     return redirect(url_for("rule.rules_list"))
 
@@ -1635,4 +1657,17 @@ def get_old_rule_choice()-> render_template:
     return {"message": "No Rule"}, 404
 
 
+####################
+#   Rule formats   #
+####################
 
+@rule_blueprint.route("/get_rules_formats", methods=['GET'])
+def get_rules_format()-> render_template:
+    """Get the rules formats"""
+    formats = RuleModel.get_all_rule_format()
+    if formats:
+        return {"success": True,
+                "formats": [format.to_json() for format in formats],
+                "length": len(formats)
+            }, 200
+    return {"message": "No formats"}, 404

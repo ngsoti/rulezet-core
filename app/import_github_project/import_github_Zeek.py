@@ -2,6 +2,8 @@
 import os
 import re
 
+from app.utils.utils import detect_cve
+
 
 
 def load_zeek_scripts(files):
@@ -80,6 +82,7 @@ def read_and_parse_all_zeek_scripts_from_folder(repo_dir, url_github, license_fr
                     title_text = title_text[:-4]  # Remove the last 4 characters (i.e., ".bro")\
 
             # Prepare the parsed data
+            r , cve = detect_cve(description.group(1) if description else info.get("description", "No description provided"))
             rule_dict = {
                 "format": "zeek",
                 "title": title_text,
@@ -88,7 +91,8 @@ def read_and_parse_all_zeek_scripts_from_folder(repo_dir, url_github, license_fr
                 "source": url_github,
                 "version": version.group(1) if version else "1.0",
                 "author": author.group(1) if author else info.get("author", "No author provided"),
-                "to_string": content  
+                "to_string": content  ,
+                "cve_id": cve
             }
 
             # Append to results

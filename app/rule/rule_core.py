@@ -1927,3 +1927,26 @@ def get_schedules_by_user_id(user_id: int) -> list:
     """Get all schedules for a specific user ID"""
     schedules = AutoUpdateSchedule.query.filter_by(user_id=user_id).all()
     return [schedule.to_json() for schedule in schedules]
+
+#####################
+#   Format rules    #
+#####################
+
+def get_all_rule_format():
+    """Get all the rule format in a list"""
+    return FormatRule.query.order_by(FormatRule.name.asc()).all()
+
+
+def get_all_rule_format_page(page):
+    """Get all rule format in page (20 per pages)"""
+    return FormatRule.query.order_by(FormatRule.name.asc()).paginate(page=page, per_page=20, error_out=False)
+
+
+def get_rule_format_with_id(id):
+    """Get the rule format with id"""
+    return FormatRule.query.get(id)
+
+
+def get_rule_fromat_with_name(name):
+    """Get the rule format with name"""
+    return FormatRule.query.filter_by(name=name).first()
