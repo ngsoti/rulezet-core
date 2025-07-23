@@ -30,27 +30,27 @@
         <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/core.css') }}">
         <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/sidebar.css') }}">
         <!-- CodeMirror CSS (core + themes) -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/dracula.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/monokai.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/eclipse.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/material.min.css" rel="stylesheet">
-    
-    <!-- CodeMirror JavaScript -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/javascript/javascript.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/python/python.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/css/css.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/xml/xml.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/yaml/yaml.min.js"></script>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/dracula.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/monokai.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/eclipse.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/material.min.css" rel="stylesheet">
+        
+        <!-- CodeMirror JavaScript -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/javascript/javascript.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/python/python.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/css/css.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/xml/xml.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/yaml/yaml.min.js"></script>
 
-    <!-- CodeMirror CSS & JS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
+        <!-- CodeMirror CSS & JS -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
 
     </head>
 
@@ -59,37 +59,7 @@
             style="top: 1rem; right: 1rem; z-index: 1050; width: 40px; height: 40px; padding: 0;">
             <i id="theme-icon" class="fas fa-sun"></i>
         </button>
-        <script>
-            function setBootstrapTheme(theme) {
-                const body = document.body;
-                const icon = document.getElementById("theme-icon");
-
-                if (theme === "dark") {
-                    body.classList.remove("light-mode");
-                    body.classList.add("dark-mode");
-                    icon.className = "fas fa-moon";
-                } else {
-                    body.classList.remove("dark-mode");
-                    body.classList.add("light-mode");
-                    icon.className = "fas fa-sun";
-                }
-
-                localStorage.setItem("theme", theme);
-            }
-
-            // Initialisation
-            const savedTheme = localStorage.getItem("theme") || "light";
-            setBootstrapTheme(savedTheme);
-
-            // Toggle
-            document.getElementById("toggle-theme").addEventListener("click", () => {
-                const isDark = document.body.classList.contains("dark-mode");
-                setBootstrapTheme(isDark ? "light" : "dark");
-            });
-        </script>
-
-
-
+        
         {% include 'sidebar.html' %}
         <div class="d-flex flex-column min-vh-100">
             <div class="flex-grow-1 container" id="main-container">
@@ -192,6 +162,34 @@
             });
             scrollToTopBtn.addEventListener('click', () => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+
+            function setBootstrapTheme(theme) {
+                const body = document.body;
+                const icon = document.getElementById("theme-icon");
+
+                if (theme === "dark") {
+                    body.classList.remove("light-mode");
+                    body.classList.add("dark-mode");
+                    icon.className = "fas fa-moon";
+                } else {
+                    body.classList.remove("dark-mode");
+                    body.classList.add("light-mode");
+                    icon.className = "fas fa-sun";
+                }
+
+                localStorage.setItem("theme", theme);
+            }
+
+            // Initialisation
+            const savedTheme = localStorage.getItem("theme") || "light";
+            setBootstrapTheme(savedTheme);
+
+            // Toggle
+            document.getElementById("toggle-theme").addEventListener("click", () => {
+                const isDark = document.body.classList.contains("dark-mode");
+                setBootstrapTheme(isDark ? "light" : "dark");
             });
         </script>
     </body>
