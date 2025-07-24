@@ -7,7 +7,7 @@ from wtforms.validators import  InputRequired, DataRequired, NumberRange
 from app.utils.utils import detect_cve
 
 from . import rule_core as RuleModel
-from ..db_class.db import Rule
+from ..db_class.db import FormatRule, Rule
 
 class AddNewRuleForm(FlaskForm):
     format = SelectField('Format', choices=[], validators=[InputRequired()])
@@ -91,3 +91,16 @@ class EditScheduleForm(FlaskForm):
 
     active = BooleanField('Active')
     submit = SubmitField('Save')
+
+
+
+class CreateFormatRuleForm(FlaskForm):
+    """Form to create a new rule format"""
+
+    name = StringField('Format Name', validators=[InputRequired()])
+    can_be_execute = BooleanField('Can be executed')  # checkbox
+    submit = SubmitField('Create')
+
+    def validate_name(self, field):
+        if FormatRule.query.filter_by(name=field.data).first():
+            raise ValidationError('This format name already exists.')

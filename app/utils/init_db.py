@@ -67,7 +67,7 @@ def insert_default_formats():
         {"name": "sigma", "can_be_execute": True},
         {"name": "zeek", "can_be_execute": False},
         {"name": "suricata", "can_be_execute": False},
-        {"name": "test", "can_be_execute": False},
+        {"name": "no format", "can_be_execute": False},
     ]
 
     user_admin = get_admin_user()

@@ -1939,7 +1939,7 @@ def get_all_rule_format():
 
 def get_all_rule_format_page(page):
     """Get all rule format in page (20 per pages)"""
-    return FormatRule.query.order_by(FormatRule.name.asc()).paginate(page=page, per_page=20, error_out=False)
+    return FormatRule.query.paginate(page=page, per_page=20, error_out=False)
 
 
 def get_rule_format_with_id(id):
@@ -1950,3 +1950,44 @@ def get_rule_format_with_id(id):
 def get_rule_fromat_with_name(name):
     """Get the rule format with name"""
     return FormatRule.query.filter_by(name=name).first()
+
+def add_format_rule(format_name: str, user_id: int, can_be_execute: bool) -> tuple[bool, str]:
+        """Ajoute un format de règle si non existant.
+
+        Returns:
+            (success: bool, message: str)
+        """
+        existing_format = FormatRule.query.filter_by(name=format_name).first()
+        if existing_format:
+            return False, "This format name already exists."
+
+        new_format = FormatRule(
+            name=format_name.strip(),
+            user_id=user_id,
+            creation_date=datetime.datetime.now(tz=datetime.timezone.utc),
+            can_be_execute=can_be_execute
+        )
+
+        db.session.add(new_format)
+        db.session.commit()
+
+        return True, "Format created successfully!"
+
+def delete_format(id):
+    """Check admin user somewhere before calling this function"""
+
+    format_rule = FormatRule.query.get(id)
+    if not format_rule:
+        return False
+
+    try:
+        db.session.delete(format_rule)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        return False
+
+def get_all_rule_with_this_format(format_name):
+    """Get all rules using the given format name (case-insensitive)"""
+    return Rule.query.filter(Rule.format.ilike(format_name)).all()

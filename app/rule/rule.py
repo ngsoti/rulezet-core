@@ -15,7 +15,7 @@ from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek
 from app.import_github_project.import_github_sigma import load_rule_files
 from app.import_github_project.import_github_suricata import  parse_and_import_suricata_rules_async
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name, git_pull_repo
-from .rule_form import AddNewRuleForm, EditRuleForm, EditScheduleForm
+from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm, EditScheduleForm
 from ..utils.utils import  form_to_dict, generate_diff_html, generate_side_by_side_diff_html
 from . import rule_core as RuleModel
 
@@ -1662,7 +1662,7 @@ def get_old_rule_choice()-> render_template:
 ####################
 
 @rule_blueprint.route("/get_rules_formats", methods=['GET'])
-def get_rules_format()-> render_template:
+def get_rules_format()-> dict:
     """Get the rules formats"""
     formats = RuleModel.get_all_rule_format()
     if formats:
@@ -1671,3 +1671,74 @@ def get_rules_format()-> render_template:
                 "length": len(formats)
             }, 200
     return {"message": "No formats"}, 404
+
+
+@rule_blueprint.route("/create_format_rule", methods=["GET", "POST"])
+@login_required
+def create_format_rule() -> render_template:
+    """Afficher ou créer un nouveau format de règle"""
+    if not current_user.is_admin():
+        return render_template("access_denied.html")
+
+    form = CreateFormatRuleForm()
+
+    if form.validate_on_submit():
+        format_name = form.name.data.strip()
+        can_be_execute = form.can_be_execute.data or False
+
+        success, message = RuleModel.add_format_rule(
+            format_name=format_name,
+            user_id=current_user.id,
+            can_be_execute=can_be_execute
+        )
+
+        flash(message, "success" if success else "danger")
+
+        if success:
+            return render_template("admin/create_format.html", form=form)
+
+    return render_template("admin/create_format.html", form=form)
+
+@rule_blueprint.route("/get_rules_formats_pages", methods=['GET'])
+def get_rules_formats_pages()-> dict:
+    """Get the rules formats pages"""
+    page = request.args.get('page', type=int)
+    _formats = RuleModel.get_all_rule_format_page(page)
+    if _formats:
+        return {"success": True,
+                "rules_formats": [format.to_json() for format in _formats],
+                "total_rules_formats": _formats.pages
+            }, 200
+    return {"message": "No formats"}, 404
+
+@rule_blueprint.route('/delete_format_rule', methods=['GET'])
+@login_required
+def delete_format_rule():
+    id = request.args.get('id', type=int)
+    if not current_user.is_admin():
+        return jsonify(success=False, message="Access denied"), 403
+
+    format_rule = RuleModel.get_rule_format_with_id(id)
+    if not format_rule:
+        return jsonify(success=False, message="Format not found"), 404
+    
+    rule_with_this_format = RuleModel.get_all_rule_with_this_format(format_rule.name)
+    if rule_with_this_format:
+        for rule in rule_with_this_format:
+            rule.format = "No format"
+    else:
+        {"message": "Failled to change format",
+            "success": False,
+            "toast_class": "danger"}, 500
+    
+
+    success = RuleModel.delete_format(id)
+    if success:
+        return {"success": True,
+                "message": "Format delete",
+                "toast_class": "success"
+            }, 200
+    return {"message": "Failled to delete format",
+            "success": False,
+            "toast_class": "danger"}, 500
+

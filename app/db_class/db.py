@@ -168,14 +168,19 @@ class FormatRule(db.Model):
 
     user = db.relationship('User', backref=db.backref('user_format', lazy='dynamic', cascade='all, delete-orphan'))
 
+    def get_count_rule_with_this_format(self):
+        return Rule.query.filter_by(format=self.name).count()
+
     def to_json(self):
-        return{
+        return {
             "id": self.id,
             "name": self.name,
             "creation_date": self.creation_date.strftime('%Y-%m-%d %H:%M'),
             "user_id": self.user_id,
-            "can_be_execute": self.can_be_execute
+            "can_be_execute": self.can_be_execute,
+            "number_of_rule_with_this_format": self.get_count_rule_with_this_format()
         }
+
 
 
 class RuleFavoriteUser(db.Model):

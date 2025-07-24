@@ -73,6 +73,13 @@
                                     <i class="fa-solid fa-tags fa-fw me-2"></i> Bad Rules
                                 </a>    
                             </li>
+                            {% if current_user.is_admin() %}
+                                <li>
+                                    <a class="dropdown-item" href="/rule/create_format_rule">
+                                        <i class="fa-solid fa-file-code fa-fw me-2"></i> Create Format
+                                    </a>    
+                                </li>
+                            {% endif %}
                         {% endif %}
                     </ul>
                 </div>
