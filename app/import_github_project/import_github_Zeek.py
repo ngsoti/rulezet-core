@@ -24,7 +24,8 @@ def load_zeek_scripts(files):
                         }
                         all_scripts.append(script_data)
             except Exception as e:
-                print(f"Error reading the file {file}: {e}")
+                #print(f"Error reading the file {file}: {e}")
+                return all_scripts
     
     return all_scripts
 
@@ -99,6 +100,7 @@ def read_and_parse_all_zeek_scripts_from_folder(repo_dir, url_github, license_fr
             parsed_zeek_rules.append(rule_dict)
 
         except Exception as e:
-            print(f"Error parsing the file {file}: {e}")
+            #print(f"Error parsing the file {file}: {e}")
+            return []
 
     return parsed_zeek_rules

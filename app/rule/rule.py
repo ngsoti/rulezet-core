@@ -47,7 +47,6 @@ def rule() -> render_template:
 
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
-        print(form_dict)
         external_vars = []
         index = 0
         while True:

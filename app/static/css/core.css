@@ -1,12 +1,10 @@
-
-/*************************************************************************************/
+/****************************************STYLE*********************************************/
 
 /**
-  ***********
-  *   BODY  *
-  ***********
+  *****************************
+  *   var to dark/light mode  *
+  *****************************
   **/
-
 
   :root {
   --bg-color: #ffffff;
@@ -38,35 +36,20 @@ body.dark-mode {
   --rule-name-color: rgb(10, 88, 202);
 }
 
-/* :root {
-  --bg-color: rgb(247, 247, 247);            
-  --text-color: #000000;                     
-  --card-bg-color: #ffffff;                     
-  --card-header-bg-color: rgb(207, 226, 255);    
-
-  --navbar-bg-color: #ffffff;
-  --navbar-text-color: #000000;
-}
-
-body.dark-mode {
-  --bg-color: #1e1e1e;             
-  --text-color: #f0f0f0;           
-  --card-bg-color: #2a2a2a;        
-  --card-header-bg-color: #333131; 
-
-  --navbar-bg-color: #1c1c1c;
-  --navbar-text-color: #f1f1f1;
-} */
-
-
+/**
+  **************
+  *   General  *
+  **************
+  *
+  * card / text / color
+  *
+  **/
 
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
   transition: background-color 0.3s ease, color 0.3s ease; 
 }
-
-
 
 .card {
   background-color: var(--card-bg-color);
@@ -85,11 +68,14 @@ h1, h2, h3, h4, h5 , h6{
   color: var(--text-color);
 }
 
+body.dark-mode h1 , h2 , h3 , h4 , h5 {
+  color: var(--rule-name-color);
+}
+
 body.dark-mode .text-dark {
   color: var(--text-color) !important;
 }
 
-/* List group */
 .list-group-item {
   background-color: var(--card-bg-color);
   color: var(--text-color);
@@ -97,7 +83,6 @@ body.dark-mode .text-dark {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Badges dynamiques */
 .badge.bg-success {
   background-color: var(--badge-success-bg, #198754);
   color: var(--badge-success-text, #fff);
@@ -108,7 +93,6 @@ body.dark-mode .text-dark {
   color: var(--badge-warning-text, #212529);
 }
 
-/* Mode sombre : bordures plus discrètes */
 body.dark-mode .list-group-item {
   border-color: rgba(255, 255, 255, 0.1);
 }
@@ -127,41 +111,34 @@ body.dark-mode .list-group-item {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-
 .custom-navbar a,
 .custom-navbar h4 {
   color: var(--navbar-text-color);
 }
 
-
 .custom-navbar a:hover {
   color: var(--text-color); 
 }
 
-/* Liens de navigation */
 .custom-navbar .nav-link {
   color: var(--navbar-text-color) !important;
 }
 
-/* Menu déroulant */
 .custom-navbar .dropdown-menu {
   background-color: var(--navbar-bg-color);
   border-color: rgba(0, 0, 0, 0.1);
 }
 
-/* Éléments du menu déroulant */
 .custom-navbar .dropdown-item {
   color: var(--navbar-text-color);
   transition: background-color 0.2s ease;
 }
 
-/* Survol des éléments du menu */
 .custom-navbar .dropdown-item:hover {
   background-color: rgba(0, 0, 0, 0.05);
   color: var(--text-color);
 }
 
-/* Mode sombre : ajustement du survol */
 body.dark-mode .custom-navbar .dropdown-item:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
@@ -174,12 +151,10 @@ body.dark-mode .custom-navbar .dropdown-item:hover {
   ***********
   **/
 
-/* Titres et en-têtes */
 h1, h5, label, .form-label {
   color: var(--text-color);
 }
 
-/* Onglets */
 .nav-tabs .nav-link {
   color: var(--text-color);
   background-color: var(--card-bg-color);
@@ -192,14 +167,12 @@ h1, h5, label, .form-label {
   color: var(--text-color);
 }
 
-/* Contenu des onglets */
 .tab-content .card {
   background-color: var(--card-bg-color);
   color: var(--text-color);
   border: none;
 }
 
-/* Champs de formulaire */
 .form-control, .form-select {
   background-color: var(--bg-color);
   color: var(--text-color);
@@ -213,12 +186,10 @@ h1, h5, label, .form-label {
   box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
 }
 
-/* Feedback d’erreur */
 .invalid-feedback {
   color: #ff6b6b;
 }
 
-/* Boutons */
 .btn-primary {
   background-color: var(--bs-primary);
   border-color: var(--bs-primary);
@@ -231,47 +202,39 @@ h1, h5, label, .form-label {
   color: #fff;
 }
 
-/* Collapse info box */
 .alert-info {
   background-color: rgba(13, 202, 240, 0.1);
   color: var(--text-color);
   border-color: rgba(13, 202, 240, 0.2);
 }
 
-/* Spinner et icônes */
 .spinner-border {
   color: var(--text-color);
 }
 
-/* Placeholder en mode sombre */
 body.dark-mode input::placeholder {
   color: rgba(255, 255, 255, 0.6);
 }
 
-/* Fond noir pour Select2 */
 .select2-container--default .select2-selection--single {
     background-color: #121212 !important;
     color: #eee !important;
     border: 1px solid #444 !important;
 }
 
-/* Couleur texte dans la sélection */
 .select2-container--default .select2-selection--single .select2-selection__rendered {
     color: #eee !important;
 }
 
-/* Couleur placeholder */
 .select2-container--default .select2-selection--single .select2-selection__placeholder {
     color: #888 !important;
 }
 
-/* Fond du dropdown quand il s'ouvre */
 .select2-container--default .select2-results > .select2-results__options {
     background-color: #121212 !important;
     color: #eee !important;
 }
 
-/* Survol des options dans la liste */
 .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
     background-color: #333 !important;
     color: #eee !important;
@@ -280,19 +243,11 @@ body.dark-mode input::placeholder {
 
 /*************************************************************************************/
 
-
-/* Light mode (default) */
 .card {
   background-color: #fff;
   color: #06182b;
   border: 1px solid #dee2e6;
 }
-
-/* .card-header.bg-light {
-  background-color: #f8f9fa !important;
-  color: #212529;
-  border-bottom: 1px solid #dee2e6;
-} */
 
 .card p {
   color: #212529;
@@ -302,7 +257,6 @@ body.dark-mode input::placeholder {
   color: #6c757d !important;
 }
 
-/* Dark mode */
 body.dark-mode .card {
   background-color: #1e1e1e;
   color: #e0e0e0;
@@ -323,23 +277,18 @@ body.dark-mode .card .text-secondary {
   color: #aaa !important;
 }
 
-/* Mode clair (par défaut) */
 .card-body pre.bg-light {
   background-color: #f8f9fa;
   color: #212529;
   border: 1px solid #dee2e6;
 }
 
-/* Mode sombre */
 body.dark-mode .card-body pre.bg-light {
   background-color: #121212 !important;
   color: #f0f0f0 !important;
   border: 1px solid #444 !important;
 }
 
-/* Mode clair par défaut : pas besoin de changer, Bootstrap gère */
-
-/* Mode sombre */
 body.dark-mode .modal-content {
     background-color: #121212 !important;
     color: #eee !important;
@@ -352,7 +301,7 @@ body.dark-mode .modal-footer {
 }
 
 body.dark-mode .btn-close {
-    filter: invert(1); /* rendre la croix visible sur fond sombre */
+    filter: invert(1); 
 }
 
 body.dark-mode .btn-secondary {
@@ -366,15 +315,10 @@ body.dark-mode .btn-warning {
     color: #212529 !important;
 }
 
-
-
 textarea::placeholder {
   color: #888 !important;
 }
 
-
-
-/* Card de filtres */
 .card.bg-white.shadow-sm.border-0 {
   background-color: var(--card-bg-color) !important;
   color: var(--text-color);
@@ -383,7 +327,6 @@ textarea::placeholder {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Inputs et selects en forme de pillule */
 .form-control.rounded-pill,
 .form-select.rounded-pill {
   background-color: var(--bg-color);
@@ -394,7 +337,6 @@ textarea::placeholder {
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
-/* Focus */
 .form-control.rounded-pill:focus,
 .form-select.rounded-pill:focus {
   background-color: var(--bg-color);
@@ -403,7 +345,6 @@ textarea::placeholder {
   box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
 }
 
-/* Placeholder */
 .form-control.rounded-pill::placeholder {
   color: rgba(128, 128, 128, 0.6);
 }
@@ -412,7 +353,6 @@ body.dark-mode .form-control.rounded-pill::placeholder {
   color: rgba(255, 255, 255, 0.6);
 }
 
-/* Bouton Apply */
 .btn.btn-dark.w-100.rounded-pill {
   background-color: var(--text-color);
   color: var(--bg-color);
@@ -424,13 +364,11 @@ body.dark-mode .form-control.rounded-pill::placeholder {
   opacity: 0.9;
 }
 
-/* Mode sombre : bouton Apply */
 body.dark-mode .btn.btn-dark.w-100.rounded-pill {
   background-color: #f0f0f0;
   color: #1e1e1e;
 }
 
-/* Cartes de règles */
 .card.shadow-sm {
   background-color: var(--card-bg-color);
   color: var(--text-color);
@@ -438,7 +376,10 @@ body.dark-mode .btn.btn-dark.w-100.rounded-pill {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Titre */
+body.dark-mode .title {
+  color: var(--rule-name-color);
+}
+
 .card-title a {
   color: var(--rule-name-color);
   text-decoration: none;
@@ -448,7 +389,10 @@ body.dark-mode .btn.btn-dark.w-100.rounded-pill {
   text-decoration: underline;
 }
 
-/* Badge de statut */
+a {
+  text-decoration: none;
+}
+
 .badge.bg-secondary,
 .badge.bg-success,
 .badge.bg-danger {
@@ -458,8 +402,6 @@ body.dark-mode .btn.btn-dark.w-100.rounded-pill {
   text-transform: capitalize;
 }
 
-
-/* Boutons d’action */
 .btn.btn-outline-success,
 .btn.btn-outline-danger,
 .btn.btn-outline-secondary,
@@ -489,14 +431,12 @@ body.dark-mode .btn.btn-outline-primary {
   color: #0d6efd;
 }
 
-/* Collapse: zone de message */
 .card.bg-light {
   background-color: var(--light-bg-color);
   color: var(--text-color);
   border: none;
 }
 
-/* Collapse contenu code */
 .bg-light.p-3.rounded.border {
   background-color: var(--code-bg-color);
   color: var(--text-color);
@@ -509,7 +449,6 @@ body.dark-mode .bg-light.p-3.rounded.border {
   border-color: #444;
 }
 
-/* Contenu ligne par ligne dans les diffs */
 .d-block.p-1.text-success {
   background-color: rgba(40, 167, 69, 0.1);
 }
@@ -522,7 +461,6 @@ body.dark-mode .bg-light.p-3.rounded.border {
   background-color: rgba(255, 193, 7, 0.08);
 }
 
-/* Pagination */
 .pagination .page-link {
   background-color: var(--bg-color);
   color: var(--text-color);
@@ -541,19 +479,16 @@ body.dark-mode .bg-light.p-3.rounded.border {
   pointer-events: none;
 }
 
-/* Mode clair par défaut */
 .card.bg-light,
 .bg-light {
   background-color: #f8f9fa !important;
   color: #212529 !important;
 }
 
-/* Texte secondaire clair */
 .text-muted {
   color: #6c757d !important;
 }
 
-/* Mode sombre */
 body.dark-mode .card.bg-light,
 body.dark-mode .bg-light {
   background-color: #1e1e1e !important;
@@ -565,7 +500,7 @@ body.dark-mode .text-muted {
 }
 
 body.dark-mode .text-primary {
-  color: #61dafb !important; /* ou un bleu clair adapté */
+  color: #61dafb !important; 
 }
 
 body.dark-mode .border {
@@ -573,9 +508,8 @@ body.dark-mode .border {
 }
 
 body.dark-mode .card-body {
-  background-color: transparent; /* ou #1e1e1e pour homogénéité */
+  background-color: transparent; 
 }
-
 
 body.dark-mode td {
   color: var(--text-color) !important;
@@ -596,13 +530,11 @@ body.dark-mode a{
   color: var(--text-color);
 }
 
-/* Light mode (default) */
 body:not(.dark-mode) .container.bg-white {
   background-color: #ffffff;
   color: #212529;
 }
 
-/* Dark mode */
 body.dark-mode .container.bg-white {
   background-color: #1f1f1f;
   color: #e4e4e4;
@@ -637,7 +569,6 @@ body.dark-mode .btn-success {
   border-color: #157347;
   color: #fff;
 }
-
 
 body.dark-mode .accordion-item {
   background-color: #1e1e1e;
@@ -685,7 +616,13 @@ body.dark-mode strong {
 }
 
 
+/*************************************************************************************/
 
+/**
+  *****************
+  *    Old one    *
+  *****************
+  **/
 
 #scrollToTopBtn {
   position: fixed;
@@ -695,8 +632,6 @@ body.dark-mode strong {
   z-index: 999;
   opacity: 0.9;
 }
-
-
 
 @media (min-width: 991.98px) {
   main {
@@ -725,7 +660,6 @@ span#goTop, span#project-version{
 	line-height: 14px;
 	color: white;
 }
-
 
 .select2-container {
 	padding: 5px
@@ -757,7 +691,13 @@ span#goTop, span#project-version{
     transform: scale(1.05);
 }
 
+/*************************************************************************************/
 
+/**
+  *****************
+  *   footer  *
+  *****************
+  **/
 
 footer{
   position:relative;
@@ -773,5 +713,4 @@ footer{
   filter: brightness(0) invert(1); 
 }
 
-
-
+/*************************************************************************************/

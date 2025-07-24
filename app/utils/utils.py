@@ -26,7 +26,6 @@ def get_user_from_api(headers):
         bot = User.query.filter_by(last_name="Bot", first_name="Matrix").first()
         if bot:
             if bot.api_key == headers.get("X-API-KEY"):
-                print("[DEBUG] X-API-KEY matches bot key")
                 user = User.query.filter_by(matrix_id=headers["MATRIX-ID"]).first()
                 if user:
                     return user

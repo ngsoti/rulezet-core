@@ -21,7 +21,7 @@
     The following rules are invalid because they did not pass syntax parsing validation.
   </p>
 
-  <div class="card border-0 shadow rounded-3 p-4  mb-4">
+  <div class="card border-0 shadow  p-4  mb-4">
     <div class="row g-3 align-items-center mb-3 flex-wrap">
       <div class="col flex-grow-1">
         <input
@@ -37,7 +37,7 @@
 
       <div class="col-auto">
         <button 
-          class="btn btn-outline-primary d-flex align-items-center shadow-sm"
+          class="btn btn-sm btn-primary d-flex align-items-center shadow-sm"
           @click="fetchRules(1)"
         >
           <i class="fas fa-filter me-2"></i> Apply
@@ -46,7 +46,7 @@
 
       <div class="col-auto">
         <button 
-          class="btn btn-sm btn-outline-danger d-flex align-items-center"
+          class="btn btn-sm btn-danger d-flex align-items-center"
           title="Delete All bad Rules"
           data-bs-toggle="modal"
           data-bs-target="#confirmDeleteAllModal"
@@ -119,10 +119,10 @@
               <pre class="bg-light border rounded p-2 mt-2"><code>[[ rule.raw_content ]]</code></pre>
             </details>
             <div class="d-flex flex-wrap gap-2 mt-3">
-              <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-sm btn-outline-dark">
+              <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-sm btn-dark">
                 <i class="fas fa-edit me-1"></i> Edit
               </a>
-              <button @click="deleteRule(rule.id, index)" class="btn btn-sm btn-outline-danger" title="Delete Rule">
+              <button @click="deleteRule(rule.id, index)" class="btn btn-sm btn-danger" title="Delete Rule">
                 <i class="fas fa-trash me-1"></i> Delete
               </button>
             </div>

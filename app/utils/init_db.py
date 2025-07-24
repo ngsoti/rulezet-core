@@ -15,13 +15,16 @@ def show_admin_first_connection(admin , raw_password):
     GREEN = "\033[92m"
     YELLOW = "\033[93m"
     RESET = "\033[0m"
-
-    print("\n" + "=" * 100)
+    NUMBER = 120
+    print("\n" + "=" * NUMBER)
     print(f"{GREEN}✅ Admin account created successfully!{RESET}")
     print(f"🔑 {YELLOW}API Key     :{RESET} {admin.api_key} ( Unique secret key )")
     print(f"👤 {YELLOW}Username    :{RESET} admin@admin.admin")
     print(f"🔐 {YELLOW}Password    :{RESET} {raw_password}   (⚠️ Change it after first login)")
-    print("=" * 100 + "\n")
+    print("=" * NUMBER + "\n")
+    print(f"{YELLOW}🚀 You can now launch the application using:{RESET} ./launch.sh -l\n")
+    print("=" * NUMBER + "\n")
+    
 
 
 def create_admin():
