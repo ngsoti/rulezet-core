@@ -39,7 +39,6 @@ This project is built with:
 
 At the beginning, password and api Keys are generate to security reason
 
-✅ Admin Account Created Successfully
 
 ```bash
 ====================================================================================================
