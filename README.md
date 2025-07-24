@@ -37,18 +37,13 @@ This project is built with:
 
 ## First Connection
 
-```python
-GREEN = "\033[92m"
-YELLOW = "\033[93m"
-RESET = "\033[0m"
+====================================================================================================
+✅ Admin account created successfully!
+🔑 API Key     : etlP9Iva9S18vbyqFxYvVLO0zEEzk6Pcipz7fCXYqvy4JVMJRiMIssuyQbOM ( Unique secret key )
+👤 Username    : admin@admin.admin
+🔐 Password    : U4S9LzBS0W1K9PLDHsdFYsQ9VjacFI2sCtTdNgH8h6Lm0YQOop4TwRdHdWDd   (⚠️ Change it after first login)
+====================================================================================================
 
-print("\n" + "=" * 100)
-print(f"{GREEN}✅ Admin account created successfully!{RESET}")
-print(f"🔑 {YELLOW}API Key     :{RESET} {admin.api_key} ( Unique secret key )")
-print(f"👤 {YELLOW}Username    :{RESET} admin@admin.admin")
-print(f"🔐 {YELLOW}Password    :{RESET} {raw_password}   (⚠️ Change it after first login)")
-print("=" * 100 + "\n")
-```
 You should change the password after the first connection 
 
 ---
