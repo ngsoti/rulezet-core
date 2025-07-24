@@ -37,12 +37,23 @@ This project is built with:
 
 ## First Connection
 
-====================================================================================================
-✅ Admin account created successfully!
-🔑 API Key     : etlP9Iva9S18vbyqFxYvVLO0zEEzk6Pcipz7fCXYqvy4JVMJRiMIssuyQbOM ( Unique secret key )
-👤 Username    : admin@admin.admin
-🔐 Password    : U4S9LzBS0W1K9PLDHsdFYsQ9VjacFI2sCtTdNgH8h6Lm0YQOop4TwRdHdWDd   (⚠️ Change it after first login)
-====================================================================================================
+### ✅ Admin Account Created Successfully
+
+---
+
+**🔑 API Key**  
+`etlP9Iva9S18vbyqFxYvVLO0zEEzk6Pcipz7fCXYqvy4JVMJRiMIssuyQbOM`  
+_(Unique secret key)_
+
+**👤 Username**  
+`admin@admin.admin`
+
+**🔐 Password**  
+`U4S9LzBS0W1K9PLDHsdFYsQ9VjacFI2sCtTdNgH8h6Lm0YQOop4TwRdHdWDd`  
+⚠️ _Change it after first login!_
+
+---
+
 
 You should change the password after the first connection 
 
