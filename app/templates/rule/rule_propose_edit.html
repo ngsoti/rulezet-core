@@ -45,19 +45,19 @@
     
                             <div class="d-flex flex-wrap gap-2 mb-2">
                                 <!-- Accept Button -->
-                                <button class="btn btn-outline-success btn-sm d-inline-flex align-items-center"
+                                <button class="btn btn-success btn-sm d-inline-flex align-items-center"
                                         @click="handleDecision(rule.id, 'accepted', rule.rule_id, index)">
                                     <i class="fas fa-check me-1"></i> Accept
                                 </button>
                             
                                 <!-- Reject Button -->
-                                <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center"
+                                <button class="btn btn-danger btn-sm d-inline-flex align-items-center"
                                         @click="handleDecision(rule.id, 'rejected', rule.rule_id, index)">
                                     <i class="fas fa-times me-1"></i> Reject
                                 </button>
                             
                                 <!-- Toggle Details Button -->
-                                <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center"
+                                <button class="btn btn-secondary btn-sm d-inline-flex align-items-center"
                                         type="button"
                                         data-bs-toggle="collapse"
                                         :data-bs-target="'#collapseDetails' + rule.id"
@@ -68,7 +68,7 @@
                             
                                 <!-- Discuss Content Link -->
                                 <a :href="'/rule/proposal_content_discuss?id=' + rule.id"
-                                    class="btn btn-outline-primary btn-sm d-inline-flex align-items-center">
+                                    class="btn btn-primary btn-sm d-inline-flex align-items-center">
                                     <i class="fas fa-comments me-1 text-info"></i> Discuss
                                 </a>
                             </div>

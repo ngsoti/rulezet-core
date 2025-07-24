@@ -1,7 +1,7 @@
 # RULEZET
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet.png" width="300" alt="Rulezet logo">
+  <img src="https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/logo_rulezet.png" width="300" alt="Rulezet logo">
 </p>
 
 ---

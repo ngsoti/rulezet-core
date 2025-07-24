@@ -5,27 +5,27 @@
 {% if current_user.is_admin() %}
     <div class="container my-4" id="main-container">
         <div class="card bg-white shadow-sm border-0 mb-4">
-            <div class="card-body">
+            <div class="card-body ">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control form-control-sm rounded-pill" placeholder="Search by keywords...">
+                        <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control form-control-sm " placeholder="Search by keywords...">
                     </div>
                     <div class="col-md-3">
-                        <select v-model="isAdminFilter" class="form-select form-select-sm rounded-pill">
+                        <select v-model="isAdminFilter" class="form-select form-select-sm ">
                             <option value="">All Users</option>
                             <option value="true">Admins</option>
                             <option value="false">Non-admins</option>
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <select v-model="isConnectedFilter" class="form-select form-select-sm rounded-pill">
+                        <select v-model="isConnectedFilter" class="form-select form-select-sm ">
                             <option value="">All Connections</option>
                             <option value="true">Connected</option>
                             <option value="false">Disconnected</option>
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-dark w-100 rounded-pill" @click="fetchUsers(1)">
+                        <button class="btn btn-dark w-100 " @click="fetchUsers(1)">
                             <i class="fas fa-sliders-h"></i> Apply
                         </button>
                     </div>
@@ -36,7 +36,7 @@
             <h4 class="mb-4">Users (<span class="text-primary">[[ total_users ]]</span>)</h4>
             <div class="row row-cols-1 row-cols-md-2 g-4">
                 <div class="col" v-for="(user, index) in users_list" :key="user.id">
-                    <div class="card shadow-sm h-100 border-0">
+                    <div class="card shadow-sm h-100 ">
                         <div class="card-body">
                             <h5 class="card-title">
                                 <i class="fas fa-user me-2"></i>
@@ -68,31 +68,31 @@
                         </div>
 
                         <div class="card-footer  border-0 d-flex justify-content-between">
-                        <a :href="'/account/detail_user/' + user.id" title="view more about this user" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-eye me-1"></i> View Profile
-                        </a>
+                            <a :href="'/account/detail_user/' + user.id" title="view more about this user" class="btn btn-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i> View Profile
+                            </a>
 
-                        <button type="button" class="btn btn-outline-danger btn-sm" title="Delete the user" data-bs-toggle="modal" :data-bs-target="'#delete_user_modal_'+user.id">
-                            <i class="fas fa-trash-alt me-1"></i> Delete
-                        </button>
-                        <div class="modal fade" :id="'delete_user_modal_'+user.id" tabindex="-1" aria-labelledby="delete_user_modal" aria-hidden="true">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h1 class="modal-title fs-5" id="delete_user_modal">
-                                        Delete [[ user.first_name ]] [[ user.last_name ]] ?
-                                        </h1>
-                                        <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                        <button class="btn btn-danger" @click="deleteUser(user.id, index)">
-                                        <i class="fa-solid fa-trash"></i> Confirm
-                                        </button>
+                            <button type="button" class="btn btn-danger btn-sm" title="Delete the user" data-bs-toggle="modal" :data-bs-target="'#delete_user_modal_'+user.id">
+                                <i class="fas fa-trash-alt me-1"></i> Delete
+                            </button>
+                            <div class="modal fade" :id="'delete_user_modal_'+user.id" tabindex="-1" aria-labelledby="delete_user_modal" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h1 class="modal-title fs-5" id="delete_user_modal">
+                                            Delete [[ user.first_name ]] [[ user.last_name ]] ?
+                                            </h1>
+                                            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            <button class="btn btn-danger" @click="deleteUser(user.id, index)">
+                                            <i class="fa-solid fa-trash"></i> Confirm
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
 
 
