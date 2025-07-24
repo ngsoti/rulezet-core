@@ -37,23 +37,19 @@ This project is built with:
 
 ## First Connection
 
-### ✅ Admin Account Created Successfully
+At the beginning, password and api Keys are generate to security reason
 
----
+✅ Admin Account Created Successfully
 
-**🔑 API Key**  
-`etlP9Iva9S18vbyqFxYvVLO0zEEzk6Pcipz7fCXYqvy4JVMJRiMIssuyQbOM`  
-_(Unique secret key)_
+```bash
+====================================================================================================
+✅ Admin account created successfully!
+🔑 API Key     : xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ( Unique secret key )
+👤 Username    : admin@admin.admin
+🔐 Password    : xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   (⚠️ Change it after first login)
+====================================================================================================
 
-**👤 Username**  
-`admin@admin.admin`
-
-**🔐 Password**  
-`U4S9LzBS0W1K9PLDHsdFYsQ9VjacFI2sCtTdNgH8h6Lm0YQOop4TwRdHdWDd`  
-⚠️ _Change it after first login!_
-
----
-
+```
 
 You should change the password after the first connection 
 
