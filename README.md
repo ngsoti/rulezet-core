@@ -30,21 +30,26 @@ This project is built with:
 > It is strongly recommended to use a **Python virtual environment**.
 
 ```bash
-pip install -r requirements.txt
-python3 app.py -i        # Initialize the database
+./install.sh
 ```
 
 ---
 
-## Configuration
+## First Connection
 
-Edit the `config.py` file:
+```python
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+RESET = "\033[0m"
 
-- `SECRET_KEY`: Flask secret key
-- `FLASK_URL`: Instance URL (default: localhost)
-- `FLASK_PORT`: Port to run the app
-
-You can also use a `.env` file to store sensitive variables.
+print("\n" + "=" * 100)
+print(f"{GREEN}✅ Admin account created successfully!{RESET}")
+print(f"🔑 {YELLOW}API Key     :{RESET} {admin.api_key} ( Unique secret key )")
+print(f"👤 {YELLOW}Username    :{RESET} admin@admin.admin")
+print(f"🔐 {YELLOW}Password    :{RESET} {raw_password}   (⚠️ Change it after first login)")
+print("=" * 100 + "\n")
+```
+You should change the password after the first connection 
 
 ---
 

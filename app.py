@@ -6,7 +6,7 @@ import json
 import os
 
 from app.import_github_project.cron_check_updates import run_scheduler, set_app
-from app.utils.init_db import create_admin, create_default_user, create_user_test, insert_default_formats
+from app.utils.init_db import create_admin, create_default_user, create_user_test, insert_default_formats, show_admin_first_connection
 
 
 
@@ -40,17 +40,7 @@ if args.init_db:
         insert_default_formats()
         # create_user_test()
         # create_rule_test()
-
-        GREEN = "\033[92m"
-        YELLOW = "\033[93m"
-        RESET = "\033[0m"
-
-        print("\n" + "=" * 100)
-        print(f"{GREEN}✅ Admin account created successfully!{RESET}")
-        print(f"🔑 {YELLOW}API Key     :{RESET} {admin.api_key} ( Unique secret key )")
-        print(f"👤 {YELLOW}Username    :{RESET} admin@admin.admin")
-        print(f"🔐 {YELLOW}Password    :{RESET} {raw_password}   (⚠️ Change it after first login)")
-        print("=" * 100 + "\n")
+        show_admin_first_connection(admin , raw_password)
 
 
 
@@ -63,17 +53,8 @@ elif args.recreate_db:
         db.create_all()
         admin , raw_password = create_admin()
         insert_default_formats()
+        show_admin_first_connection(admin , raw_password)
 
-        GREEN = "\033[92m"
-        YELLOW = "\033[93m"
-        RESET = "\033[0m"
-
-        print("\n" + "=" * 100)
-        print(f"{GREEN}✅ Admin account created successfully!{RESET}")
-        print(f"🔑 {YELLOW}API Key     :{RESET} {admin.api_key} ( Unique secret key ) ")
-        print(f"👤 {YELLOW}Username    :{RESET} admin@admin.admin")
-        print(f"🔐 {YELLOW}Password    :{RESET} {raw_password}   (⚠️ Change it after first login)")
-        print("=" * 100 + "\n")
 
         #create_user_test()
         #create_rule_test()

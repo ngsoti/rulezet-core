@@ -10,6 +10,20 @@ from .utils import generate_api_key
 ############
 ############
 
+def show_admin_first_connection(admin , raw_password):
+    """Show the admin element"""
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RESET = "\033[0m"
+
+    print("\n" + "=" * 100)
+    print(f"{GREEN}✅ Admin account created successfully!{RESET}")
+    print(f"🔑 {YELLOW}API Key     :{RESET} {admin.api_key} ( Unique secret key )")
+    print(f"👤 {YELLOW}Username    :{RESET} admin@admin.admin")
+    print(f"🔐 {YELLOW}Password    :{RESET} {raw_password}   (⚠️ Change it after first login)")
+    print("=" * 100 + "\n")
+
+
 def create_admin():
     # Admin user
     raw_password = generate_api_key()
