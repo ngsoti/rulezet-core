@@ -90,6 +90,10 @@ The platform includes a wide set of functionalities to manage and collaborate ar
 - Automatic **validation of imported rules**
 - Display and **manage invalid or malformed rules**  
 
+### Light/Dark Mode
+
+- The **most** important feature to enhance user comfort while working in different environments 😉.
+
 ---
 
 ## UI Previews
@@ -122,10 +126,6 @@ With this API, developers and analysts can save time, reduce errors, and streaml
 
 > Tip: Use tools like [cURL](https://curl.se/) to interact with the API and test endpoints easily.
 
-
-
-
-
 ## Project Summary
 
 This internship offers a unique opportunity to contribute to the development of a cutting-edge, open-source platform: a community-driven website designed for sharing, evaluating, and refining security detection rules. These rules, which are critical for identifying threats in cybersecurity, currently lack a central place for community validation. This project addresses that gap by creating a collaborative space where users can:
@@ -139,7 +139,6 @@ Interns will play a key role in developing the website’s features and function
 
 This project offers a chance to make a real-world impact by improving the way security professionals interact with essential threat detection information. You will gain exposure to web development, APIs, data modeling, and security knowledge.
 
----
 
 ---
 
