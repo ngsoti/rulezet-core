@@ -100,6 +100,32 @@ The platform includes a wide set of functionalities to manage and collaborate ar
 
 ---
 
+## API Access
+
+RULEZET provides a RESTful API to allow seamless integration and automation of key processes such as rule creation, importation, account management, and more.
+
+You can access the interactive API documentation using the following URL:
+
+
+### Example Endpoints:
+- `http://127.0.0.1:7009/api/rule/doc/` – Manage detection rules (create, update, delete, import, etc.)
+- `http://127.0.0.1:7009/api/account/doc/` – Manage user accounts (registration, login, etc.)
+
+### Why Use the API?
+
+- Automate rule import/update from GitHub or local sources  
+- Create and update rules programmatically  
+- Manage user accounts and permissions via scripts or clients  
+- Integrate RULEZET into your CI/CD or SOC pipeline  
+
+With this API, developers and analysts can save time, reduce errors, and streamline workflows — all while ensuring full compatibility with RULEZET's internal engine.
+
+> Tip: Use tools like [cURL](https://curl.se/) to interact with the API and test endpoints easily.
+
+
+
+
+
 ## Project Summary
 
 This internship offers a unique opportunity to contribute to the development of a cutting-edge, open-source platform: a community-driven website designed for sharing, evaluating, and refining security detection rules. These rules, which are critical for identifying threats in cybersecurity, currently lack a central place for community validation. This project addresses that gap by creating a collaborative space where users can:

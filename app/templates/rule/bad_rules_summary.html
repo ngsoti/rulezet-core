@@ -202,6 +202,15 @@
       }
 
       async function deleteAllRule() {
+        if (rules_list.value.length === 0) {
+          await display_prepared_toast({
+            message: 'No rules to delete.',
+            toast_class: 'info',
+            id: Math.random()
+          })
+          return
+        }
+
         const res = await fetch('/rule/bad_rule/delete_all_bad_rule')
         if (res.status === 200) {
           rules_list.value = []
