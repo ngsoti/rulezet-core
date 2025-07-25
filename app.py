@@ -6,6 +6,7 @@ import json
 import os
 
 from app.import_github_project.cron_check_updates import run_scheduler, set_app
+from app.import_github_project.untils_import import delete_existing_repo_folder
 from app.utils.init_db import create_admin, create_default_user, create_user_test, insert_default_formats, show_admin_first_connection
 
 
@@ -42,15 +43,11 @@ if args.init_db:
         # create_rule_test()
         show_admin_first_connection(admin , raw_password)
 
-
-
-
-
-
 elif args.recreate_db:
     with app.app_context():
         db.drop_all()
         db.create_all()
+        delete_existing_repo_folder("Rules_Github")
         admin , raw_password = create_admin()
         insert_default_formats()
         show_admin_first_connection(admin , raw_password)
@@ -61,8 +58,8 @@ elif args.recreate_db:
         editor = create_default_user()
 elif args.delete_db:
     with app.app_context():
-        print("DB delete with success")
         db.drop_all()
+        print("DB delete with success")
 else:
     threading.Thread(target=run_scheduler,  daemon=True).start()
     app.run(host=app.config.get("FLASK_URL"), port=app.config.get("FLASK_PORT"))
