@@ -1,4 +1,4 @@
-# RULEZET  ![Release](https://img.shields.io/badge/release-v1.0.0-blue)
+# RULEZET  ![Release](https://github.com/ngsoti/rulezet-core/releases/tag/v1.0.0)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/logo_rulezet.png" width="300" alt="Rulezet logo">
