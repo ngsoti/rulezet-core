@@ -160,8 +160,8 @@
                         <strong>Zeek</strong> and <strong>Suricata</strong> rules are parsed but not validated for correctness.
                     </div>
                 </div>
-
-                <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
+                    <!-- # import_rules_from_github -->
+                <form method="POST" action="{{ url_for('rule.test') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
                     <div class="mb-3 d-flex">
@@ -295,19 +295,7 @@
     container.appendChild(row);
 }
 </script>
-<!-- <script>
-    // spin for the github import
-    document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("github-form");
-    const spinner = document.getElementById("loading-spinner");
-    const button = document.getElementById("submit-button");
 
-    form.addEventListener("submit", function () {
-        spinner.style.display = "block";      
-        button.disabled = true;               
-    });
-    });
-</script> -->
 <script type="module">
     const { createApp, ref } = Vue;
     import { message_list } from '/static/js/toaster.js';

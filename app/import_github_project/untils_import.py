@@ -93,7 +93,7 @@ def build_externals_dict(vars_list):
 
 
 
-def get_github_repo_author(repo_url):
+def get_github_repo_author(repo_url , license_from_github):
     # Extraire owner et repo depuis l’URL
     parts = repo_url.rstrip(".git").split("/")
     owner, repo = parts[-2], parts[-1]
@@ -108,6 +108,7 @@ def get_github_repo_author(repo_url):
             "html_url": data.get("owner", {}).get("html_url"),
             "description": data.get("description"),
             "created_at": data.get("created_at"),
+            "license_from_github": license_from_github
         }
     else:
         return {"error": f"Failed to fetch repo info (status: {response.status_code})"}

@@ -151,25 +151,12 @@
 
     <!-- Pagination -->
     <div class="row mt-4" v-if="bundle_list.length > 0">
-        <div class="col text-center">
-            <nav>
-                <ul class="pagination justify-content-center">
-                    <li class="page-item" :class="{ disabled: bundle_current_page === 1 }">
-                        <button class="page-link" @click="fetchAllBundlesOwner(bundle_current_page - 1)">
-                            <i class="fa-solid fa-angle-left"></i>
-                        </button>
-                    </li>
-                    <li class="page-item" v-for="page in bundle_total_page" :class="{ active: page === bundle_current_page }" :key="page">
-                        <button class="page-link" @click="fetchAllBundlesOwner(page)">[[ page ]]</button>
-                    </li>
-                    <li class="page-item" :class="{ disabled: bundle_current_page === bundle_total_page }">
-                        <button class="page-link" @click="fetchAllBundlesOwner(bundle_current_page + 1)">
-                            <i class="fa-solid fa-angle-right"></i>
-                        </button>
-                    </li>
-                </ul>
-            </nav>
-        </div>
+        {% set current_page = 'bundle_current_page' %}
+        {% set total_pages = 'bundle_total_page' %}
+        {% set visible_pages = 'visiblePages' %}
+        {% set fetch_function = 'fetchAllBundlesOwner' %}
+
+        {% include "components/pagination.html" %}
     </div>
 
     <!-- Total count -->
@@ -181,7 +168,7 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, onMounted } = Vue;
+    const { createApp, ref, onMounted , computed} = Vue;
     import { message_list, display_toast } from '/static/js/toaster.js';
     
     createApp({
@@ -264,6 +251,25 @@
                 window.location.href = `/bundle/detail/${bundleId}`;
             }
 
+            const visiblePages = computed(() => {
+                const pages = []
+                const total = bundle_total_page.value
+                const current = bundle_current_page.value
+                if (total <= 7) {
+                for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                if (current <= 4) {
+                    pages.push(1, 2, 3, 4, 5, '...', total)
+                } else if (current >= total - 3) {
+                    pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                } else {
+                    pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                }
+                }
+                return pages
+            })
+
+
             return {
                 // filter
                 searchQuery,
@@ -280,7 +286,8 @@
                 is_admin,
 
                 // redirect
-                goToBundleDetail
+                goToBundleDetail,
+                visiblePages
             }
         }
     }).mount('#main-container');

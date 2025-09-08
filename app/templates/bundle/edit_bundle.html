@@ -92,7 +92,11 @@
                             </button>
                         </div>
                     </div>
-                    <div class="list-group" v-for="(rule , index) in rules_list.rule" :key="rule.id">
+                   
+                    <div class="list-group" 
+                        v-for="(rule , index) in filteredRules" 
+                        :key="rule.id">
+                        
                         <div class="list-group-item list-group-item-action mb-2 rounded shadow-sm" 
                             @click="toggleRule(rule.id)" style="cursor: pointer;">
                             
@@ -116,6 +120,7 @@
                                 <pre class="bg-light p-2 border rounded"><code>[[ rule.to_string ]]</code></pre>
                             </div>
                         </div>
+
                         <!-- Modal Bootstrap -->
                         <div class="modal fade"
                             :id="'add_rule_bundle_modal_' + rule.id"
@@ -147,27 +152,14 @@
                             </div>
                         </div>
                     </div>
+
                     <div class="row mt-4" v-if="total_rules_liste > 1">
-                        <div class="col text-center">
-                            <nav aria-label="Page navigation">
-                                <ul class="pagination justify-content-center pagination ">
-                                    <li class="page-item" :class="{ disabled: current_page === 1 }">
-                                        <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
-                                            <i class="fas fa-arrow-left"></i> Previous
-                                        </a>
-                                    </li>
-                                    <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: current_page === page, disabled: page === '...' }">
-                                        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
-                                        <span v-else class="page-link">...</span>
-                                    </li>
-                                    <li class="page-item" :class="{ disabled: current_page === total_pages }">
-                                        <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
-                                            Next <i class="fas fa-arrow-right"></i>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </nav>
-                        </div>
+                        {% set current_page = 'current_page' %}
+                        {% set total_pages = 'total_pages' %}
+                        {% set visible_pages = 'visiblePages' %}
+                        {% set fetch_function = 'fetchRules' %}
+
+                        {% include "components/pagination.html" %}
                     </div>
                 </div>
             </div>
@@ -328,16 +320,29 @@
             const added_current_page = ref(1)
             const rule_total = ref(0)
 
-            const description = ref("") // Why add to the bundle 
+            const description = ref("") // Why added to the bundle 
 
             async function addToBundle(id, index) {
                 if (!description.value.trim()) return; // Safety check
+
+                const alreadyExists = added_rules_list.value.some(rule => rule.id === id);
+                if (alreadyExists) {
+                    const message = {
+                        message: "This rule is already in the bundle.",
+                        toast_class: "warning",
+                        id: Math.random()
+                    };
+                    await display_prepared_toast(message);
+                    return; 
+                }
 
                 const params = new URLSearchParams({
                     rule_id: id,
                     bundle_id: bundle_id,
                     description: description.value.trim()
                 });
+
+                
 
                 const res = await fetch('/bundle/add_rule_bundle?' + params.toString());
                 const data = await res.json();
@@ -378,6 +383,8 @@
                 display_toast(res)
                 
             }
+
+            
 
             /**
              *          ###############################
@@ -447,6 +454,13 @@
             collapseStates.value[index] = !collapseStates.value[index];
             }
 
+            const filteredRules = computed(() => {
+                if (!rules_list.value || !rules_list.value.rule) return [];
+                return rules_list.value.rule.filter(rule =>
+                    !added_rules_list.value.some(r => r.id === rule.id)
+                );
+            });
+
 
             return{
                 collapseStates,
@@ -484,7 +498,8 @@
 
                 rules_formats,
                 number_rules_formats,
-                fetchRulesFormats
+                fetchRulesFormats,
+                filteredRules
             }
         }
     }).mount('#main-container');

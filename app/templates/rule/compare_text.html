@@ -1,0 +1,60 @@
+<!-- templates/diff_template.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-4" id="main-container">
+
+    <div class="row">
+        <div class="col-md-6">
+            <h5>Texte original</h5>
+            <div id="diff-left" class="border p-3" style="white-space: pre-wrap; background-color: #f8f9fa;"></div>
+        </div>
+        <div class="col-md-6">
+            <h5>Texte modifié</h5>
+            <div id="diff-right" class="border p-3" style="white-space: pre-wrap; background-color: #f8f9fa;"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+const { createApp, ref, onMounted } = Vue;
+import { display_toast, prepare_toast, message_list } from '/static/js/toaster.js';
+
+createApp({
+    delimiters: ['[[', ']]'],
+    setup() {
+        const htmlOld = ref('');
+        const htmlNew = ref('');
+
+        async function loadDiff() {
+            try {
+                const response = await fetch('/rule/compare');
+                if (!response.ok) throw new Error('Erreur HTTP ' + response.status);
+                const data = await response.json();
+                if (data.success) {
+                    htmlOld.value = data.html_old;
+                    htmlNew.value = data.html_new;
+                    document.getElementById('diff-left').innerHTML = htmlOld.value;
+                    document.getElementById('diff-right').innerHTML = htmlNew.value;
+                } else {
+                    document.getElementById('diff-left').innerHTML = 'Erreur lors du calcul du diff.';
+                    document.getElementById('diff-right').innerHTML = 'Erreur lors du calcul du diff.';
+                }
+            } catch (err) {
+                document.getElementById('diff-left').innerHTML = 'Impossible de charger le diff.';
+                document.getElementById('diff-right').innerHTML = 'Impossible de charger le diff.';
+                console.error(err);
+            }
+        }
+
+        onMounted(() => {
+            loadDiff();
+        });
+
+        return { htmlOld, htmlNew, loadDiff };
+    }
+}).mount('#main-container');
+</script>
+{% endblock %}

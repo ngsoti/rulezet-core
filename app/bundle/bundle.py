@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, redirect, render_template , request
+from flask import Blueprint, flash, redirect, render_template , request, url_for
 from flask_login import current_user, login_required
 
 from app.bundle.bundle_form import AddNewBundleForm, EditBundleForm
@@ -28,22 +28,22 @@ bundle_blueprint = Blueprint(
 
 @bundle_blueprint.route("/create", methods=['GET' , 'POST'])
 @login_required
-def create() :     
+def create():     
     """Create a bundle with form"""     
     form = AddNewBundleForm()
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
 
-        my_bundle = BundleModel.create_bundle(form_dict , current_user)
+        my_bundle = BundleModel.create_bundle(form_dict, current_user)
         if my_bundle:
             flash('Bundle created !', 'success')
-            return render_template("bundle/edit_bundle.html", form=form, bundle=my_bundle )
+            return redirect(url_for("bundle.edit", bundle_id=my_bundle.id))
         else:
             flash('Error to create', 'danger')
-            return render_template("bundle/create_bundle.html", form=form )
+            return render_template("bundle/create_bundle.html", form=form)
         
-    
-    return render_template("bundle/create_bundle.html", form=form )
+    return render_template("bundle/create_bundle.html", form=form)
+
 
 ############
 #   List   #

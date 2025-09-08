@@ -10,6 +10,7 @@ from app.db_class.db import AnonymousUser
 from app.import_github_project.cron_check_updates import disable_schedule_job, enable_schedule_job, modify_schedule_job, remove_schedule_job
 from app.import_github_project.import_github_yara import  parse_yara_rules_from_repo_async
 from app.import_github_project.update_github_project import Check_for_rule_updates
+from app.rule_type.main_test import  extract_rule_from_repo
 from ..account import account_core as AccountModel
 from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
 from app.import_github_project.import_github_sigma import load_rule_files
@@ -164,6 +165,7 @@ def get_rules_page_filter() -> jsonify:
 @login_required
 def delete_rule() -> jsonify:
     """Delete a rule"""
+   
     rule_id  = request.args.get("id")
     user_id = RuleModel.get_rule_user_id(rule_id)
 
@@ -1741,3 +1743,47 @@ def delete_format_rule():
             "success": False,
             "toast_class": "danger"}, 500
 
+#
+#   First attempt to parse all the rule in a github project (YARA)
+#
+#   to add and fix :
+#       - import module on the top of the rule (pe)
+#       - import licence and url in the parse_meta method (use **kwargs to give them)
+#       - comment bug (found a solution to not mix a rule corp and a comment section)
+#       - external variable ?
+#
+
+@rule_blueprint.route("/test", methods=['GET' , 'POST'])
+@login_required
+def test() -> dict:
+    """
+    Clone or access a GitHub repo, then test all YARA rules in it,
+    creating rules and classifying bad rules automatically.
+    """
+
+    repo_url = request.form.get('url')
+    selected_license = request.form.get('license')
+
+    owner, repo = extract_owner_repo(repo_url)
+    license_from_github = selected_license or get_license_name(owner, repo)
+    
+    info = get_github_repo_author(repo_url , license_from_github)
+    repo_dir, existe = clone_or_access_repo(repo_url) 
+
+    if not repo_dir:
+        flash("Failed to clone or access the repository.", "danger")
+        return redirect(url_for("rule.rules_list"))
+
+    bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir , info ))
+
+    # Save invalid YARA rules and flash
+    if bad_rules > 0:
+        flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
+        flash(f"Failed to import {bad_rules} rules.", "danger")
+        return redirect(url_for("rule.bad_rules_summary"))
+
+    flash(f"{imported} rules imported. {skipped} ignored (already exist !).", "success")
+    return redirect(url_for("rule.rules_list"))
+
+
+    

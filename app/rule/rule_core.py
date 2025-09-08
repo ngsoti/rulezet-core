@@ -590,7 +590,7 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error) -> None:
         error_message=error_message,
         raw_content=raw_content,
         rule_type=rule_type,
-        user_id=current_user.id
+        user_id= current_user.id
     ).first()
     if existing:
         return
@@ -600,7 +600,7 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error) -> None:
         error_message=error_message,
         raw_content=raw_content,
         rule_type=rule_type,
-        user_id=current_user.id,
+        user_id= current_user.id,
         url=repo_url,
         license=license
     )
