@@ -36,14 +36,16 @@
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="col-md-6">
+                       <div class="col-md-6">
                             <div class="form-group">
-                                {{ form.format.label(class_="col-form-label") }}
+                                {{ form.format.label(class_="col-form-label") }} <span style="color:red">*</span>
+
                                 {{ form.format(class_="form-select") }}
+
                                 {% if form.format.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.format.errors[0] | safe }}
-                                </div>
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.format.errors[0] | safe }}
+                                    </div>
                                 {% endif %}
                             </div>
                         </div>
@@ -74,7 +76,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                {{ form.version.label(class_="col-form-label") }} <span style="color:red">*</span>
+                                {{ form.version.label(class_="col-form-label") }} 
                                 {{ form.version(class_="form-control") }}
                                 {% if form.version.errors %}
                                 <div class="invalid-feedback d-block">
@@ -109,18 +111,36 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="row mb-3">
+                        <div class="col">
+                            <div class="form-group">
+                                {{ form.original_uuid.label(class_="col-form-label") }}
+                                {{ form.original_uuid(class_="form-control", rows=4) }}
+                                {% if form.original_uuid.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.original_uuid.errors[0] | safe }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
             
                     <div class="mb-3">
                         {% if error %}
-                            <span style="color:red">{{ error }}</span>    
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <div>
+                                {{ error }}
+                            </div>
+                        </div>
                         {% endif %}
-                        <div class="form-group">
-                            {{ form.to_string.label(class_="col-form-label") }}
-                    
-                            <input type="hidden" name="to_string" id="code-input" value="{{ form.to_string.data | e }}">  
-                    
 
-                            <textarea id="editor">{{ form.to_string.data | e }}</textarea>
+                        <div class="form-group">
+                            {{ form.to_string.label(class_="col-form-label") }} <span style="color:red">*</span>
+                    
+                            <textarea id="editor" name="to_string">{{ (form.to_string.data or '') | e }}</textarea>
+
                     
                             {% if form.to_string.errors %}
                                 <div class="invalid-feedback d-block">
@@ -131,11 +151,11 @@
                     </div>
                     
 
-                    <div id="dynamic-fields-create" class="mb-3"></div>
+                    <!-- <div id="dynamic-fields-create" class="mb-3"></div>
                 
                     <div class="mb-3">
                         <button type="button" class="btn btn-secondary" onclick="addField(1)" title="Compile the YARA rules with external variables will cause errors stating an undefined identifier. Please click this button to add as many external variables as you need.">add external variables</button>
-                    </div>
+                    </div> -->
             
                     <div class="text-center">
                         <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
@@ -161,7 +181,7 @@
                     </div>
                 </div>
                     <!-- # import_rules_from_github -->
-                <form method="POST" action="{{ url_for('rule.test') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
+                <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
                     <div class="mb-3 d-flex">
@@ -176,13 +196,13 @@
                         </select>
                     </div>
 
-                    <div id="dynamic-fields" class="mb-3"></div>
+                    <!-- <div id="dynamic-fields" class="mb-3"></div>
 
                     <div class="mb-3">
                         <button type="button" class="btn btn-secondary" onclick="addField(2)">
                         Add external variables
                         </button>
-                    </div>
+                    </div> -->
 
                     <div class="d-flex align-items-center">
                         <button type="submit" class="btn btn-primary" id="submit-button" data-bs-toggle="modal" data-bs-target="#parsingModal">
@@ -220,83 +240,73 @@
 {% block script %}
 
 <script>
-    $(document).ready(function() {
-    $('#license-select').select2({
-        placeholder: "Search for a license",
-        allowClear: true
-    });
+    // function addField(id) {
+    //     let container;
+    //     if (id == 2) {
+    //         container = document.getElementById('dynamic-fields');
+    //     } else {
+    //         container = document.getElementById('dynamic-fields-create');
+    //     }
 
-    const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-        lineNumbers: true,
-        mode: "yaml",  
-        theme: "monokai",
-        matchBrackets: true,
-        autoRefresh: true
-    });
+    //     const index = container.children.length;
 
+    //     const row = document.createElement('div');
+    //     row.className = 'd-flex mb-2';
 
-    editor.on("change", function(cm) {
-        document.getElementById("code-input").value = cm.getValue();
-    });
+    //     const select = document.createElement('select');
+    //     select.name = `fields[${index}][type]`;
+    //     select.className = 'form-select me-2';
+    //     select.required = true;
 
-    $("form").on("submit", function(event) {
-        if ($("#code-input").val() === "") {
-            event.preventDefault();
-            alert("Please fill in the content for the rule.");
-        }
-    });
-});
+    //     const options = ['string', 'int', 'bool', 'bytes'];
+    //     options.forEach(opt => {
+    //         const option = document.createElement('option');
+    //         option.value = opt;
+    //         option.textContent = opt;
+    //         select.appendChild(option);
+    //     });
 
+    //     const input = document.createElement('input');
+    //     input.type = 'text';
+    //     input.name = `fields[${index}][name]`;
+    //     input.className = 'form-control me-2';
+    //     input.placeholder = 'Nom';
+    //     input.required = true;
+
+    //     const removeBtn = document.createElement('button');
+    //     removeBtn.type = 'button';
+    //     removeBtn.className = 'btn btn-danger';
+    //     removeBtn.textContent = '✕';
+    //     removeBtn.onclick = () => row.remove();
+
+    //     row.appendChild(select);
+    //     row.appendChild(input);
+    //     row.appendChild(removeBtn);
+
+    //     container.appendChild(row);
+    // }
 </script>
-<script>
-    function addField(id) {
-    let container;
-    if (id == 2) {
-        container = document.getElementById('dynamic-fields');
-    } else {
-        container = document.getElementById('dynamic-fields-create');
-    }
 
-    const index = container.children.length;
-
-    const row = document.createElement('div');
-    row.className = 'd-flex mb-2';
-
-    const select = document.createElement('select');
-    select.name = `fields[${index}][type]`;
-    select.className = 'form-select me-2';
-    select.required = true;
-
-    const options = ['string', 'int', 'bool', 'bytes'];
-    options.forEach(opt => {
-        const option = document.createElement('option');
-        option.value = opt;
-        option.textContent = opt;
-        select.appendChild(option);
-    });
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.name = `fields[${index}][name]`;
-    input.className = 'form-control me-2';
-    input.placeholder = 'Nom';
-    input.required = true;
-
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'btn btn-danger';
-    removeBtn.textContent = '✕';
-    removeBtn.onclick = () => row.remove();
-
-    row.appendChild(select);
-    row.appendChild(input);
-    row.appendChild(removeBtn);
-
-    container.appendChild(row);
-}
-</script>
 
 <script type="module">
+
+     $(document).ready(function() {
+        $('#license-select').select2({
+            placeholder: "Search for a license",
+            allowClear: true
+        });
+
+        const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+            lineNumbers: true,
+            mode: "yaml",  
+            theme: "monokai",
+            matchBrackets: true,
+            autoRefresh: true
+        });
+
+    });
+
+
     const { createApp, ref } = Vue;
     import { message_list } from '/static/js/toaster.js';
     createApp({

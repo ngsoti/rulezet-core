@@ -28,42 +28,114 @@ from ..account import account_core as AccountModel
 
 # Create
 
-def add_rule_core(form_dict , user) -> bool:
-    """Add a rule"""
-    title = form_dict["title"].strip()
+# def add_rule_core(form_dict , user) -> bool:
+#     """Add a rule"""
+#     title = form_dict["title"].strip()
 
-    existing_rule = get_rule_by_title(title)
-    if existing_rule:
-        return False
+#     existing_rule = get_rule_by_title(title)
+#     if existing_rule:
+#         print("rule already exist")
+#         return False
     
-    if current_user.is_authenticated:
-        # If the user is authenticated, use their ID
-        user_id = current_user.id
-    else:
-        user_id = user.id if user else None
+#     if current_user.is_authenticated:
+#         # If the user is authenticated, use their ID
+#         user_id = current_user.id
+#     else:
+#         user_id = user.id if user else None
 
 
-    new_rule = Rule(
-        format=form_dict["format"],
-        title=title,
-        license=form_dict["license"],
-        description=form_dict["description"],
-        uuid=str(uuid.uuid4()),
-        source=form_dict["source"],
-        author=form_dict["author"],
-        version=form_dict["version"],
-        user_id=user_id,
-        creation_date = datetime.datetime.now(tz=datetime.timezone.utc),
-        last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
-        vote_up=0,
-        vote_down=0,
-        to_string = form_dict["to_string"],
-        cve_id = form_dict["cve_id"] or None
-    )
+#     new_rule = Rule(
+#         format=form_dict["format"],
+#         title=title,
+#         license=form_dict["license"],
+#         description=form_dict["description"],
+#         uuid=str(uuid.uuid4()),
+#         original_uuid=form_dict["original_uuid"],
+#         source=form_dict["source"],
+#         author=form_dict["author"],
+#         version=form_dict["version"],
+#         user_id=user_id,
+#         creation_date = datetime.datetime.now(tz=datetime.timezone.utc),
+#         last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
+#         vote_up=0,
+#         vote_down=0,
+#         to_string = form_dict["to_string"],
+#         cve_id = form_dict["cve_id"] or None
+#     )
 
-    db.session.add(new_rule)
-    db.session.commit()
-    return new_rule
+#     db.session.add(new_rule)
+#     db.session.commit()
+#     return new_rule
+
+
+def add_rule_core(form_dict, user) -> bool:
+    """
+    Add a rule safely with error handling.
+
+    Rules handling logic:
+    - If a rule with the same title AND same to_string AND same original_uuid already exists → do not add (it's an update of the same rule).
+    - If title + to_string match but original_uuid is different → it's considered a different rule, allow insertion.
+    - Otherwise → insert as a new rule.
+    """
+    try:
+        title = form_dict["title"].strip()
+        new_to_string = form_dict.get("to_string", "").strip()
+        new_original_uuid = str(form_dict.get("original_uuid") or "").strip()  # Normalize to string
+
+        existing_rules = get_rule_by_title(title)
+
+        if existing_rules:
+            for r in existing_rules:
+                # Normalize stored UUID for comparison
+                
+                existing_original_uuid = str(r.original_uuid or "").strip()
+
+                # Case 1: Same content and same original UUID → update case, skip
+                if r.to_string == new_to_string and existing_original_uuid == new_original_uuid:
+                    return False
+
+                # Case 2: Same content but different original UUID → allow as new rule
+                if r.to_string == new_to_string and existing_original_uuid != new_original_uuid:
+                    break  # continue to insertion
+                
+
+        # Identify user
+        if current_user.is_authenticated:
+            user_id = current_user.id
+        else:
+            user_id = user.id if user else None
+
+        # Create the new rule
+        new_rule = Rule(
+            format=form_dict["format"],
+            title=title,
+            license=form_dict.get("license", "unknown"),
+            description=form_dict.get("description", ""),
+            uuid=str(uuid.uuid4()),
+            original_uuid=new_original_uuid,
+            source=form_dict.get("source"),
+            author=form_dict.get("author"),
+            version=form_dict.get("version", "1.0"),
+            user_id=user_id,
+            creation_date=datetime.datetime.now(tz=datetime.timezone.utc),
+            last_modif=datetime.datetime.now(tz=datetime.timezone.utc),
+            vote_up=0,
+            vote_down=0,
+            to_string=new_to_string,
+            cve_id=form_dict.get("cve_id") or None,
+        )
+
+        db.session.add(new_rule)
+        db.session.commit()
+        return new_rule
+
+    except Exception as e:
+        print(f"Error adding rule: {e}")
+        return False
+
+
+
+
 
 # Delete
 
@@ -443,8 +515,8 @@ def get_concerned_rules_page(source, page):
     """Return paginated concerned rules for the given page (20 per page)."""
     return Rule.query.filter_by(source=source, user_id=current_user.id).paginate(
         page=page,
-        per_page=10,
-        max_per_page=10
+        per_page=30,
+        max_per_page=30
     )
 
 def get_concerned_rule_count(source):
@@ -455,8 +527,8 @@ def get_concerned_rules_admin_page(source, page, user_id_concerned):
     """Return paginated concerned rules for the given page (20 per page)."""
     return Rule.query.filter_by(source=source, user_id=user_id_concerned).paginate(
         page=page,
-        per_page=10,
-        max_per_page=10
+        per_page=30,
+        max_per_page=30
     )
 
 def get_all_rules_by_user(user_id) -> Rule:
@@ -847,7 +919,7 @@ def delete_bad_rule_from_url(url: str, current_user_id: int) -> bool:
 
 def get_rules_page_owner(page) -> Rule:
     """Return all owner rules by page where the user_id matches the current logged-in user"""
-    return Rule.query.filter_by(user_id=current_user.id).paginate(page=page, per_page=20, max_per_page=20)
+    return Rule.query.filter_by(user_id=current_user.id).paginate(page=page, per_page=30, max_per_page=30)
 
 def get_total_rules_count_owner() -> int:
     """Return the total count of rules created by the current logged-in user"""
@@ -866,7 +938,7 @@ def give_all_right_to_admin(rules) -> None:
 
 def get_rules_page_favorite(page, id_user, search=None, author=None, sort_by=None, rule_type=None):
     """Get paginated favorite rules of a user with optional filters"""
-    per_page = 10
+    per_page = 30
 
     # Base query: select favorite rules for the user
     query = Rule.query\
@@ -1009,7 +1081,7 @@ def get_rule_proposal_user_id(proposal_id) -> id:
     rule_proposal = get_rule_proposal(proposal_id)
     return rule_proposal.user_id
 
-def get_all_rules_edit_propose_user_part_from_page(page, user_id, per_page=10)-> RuleEditProposal:
+def get_all_rules_edit_propose_user_part_from_page(page, user_id, per_page=30)-> RuleEditProposal:
         """Get all the rule edit porposal where the current user has part of """
 
         commented_ids = db.session.query(RuleEditComment.proposal_id)\
@@ -1645,7 +1717,7 @@ def get_history_rule_(page, rule_id) -> list:
         RuleUpdateHistory.rule_id == rule_id,
         RuleUpdateHistory.success == True ,
         RuleUpdateHistory.message == "accepted" 
-    ).paginate(page=page, per_page=20, max_per_page=20)
+    ).paginate(page=page, per_page=30, max_per_page=30)
 
 def get_old_rule_choice(page) -> list:
     """Get all the old choice to make"""    
@@ -1653,7 +1725,7 @@ def get_old_rule_choice(page) -> list:
         RuleUpdateHistory.message != "accepted",
         RuleUpdateHistory.message != "rejected",
         RuleUpdateHistory.analyzed_by_user_id == current_user.id
-    ).paginate(page=page, per_page=20, max_per_page=20)
+    ).paginate(page=page, per_page=30, max_per_page=30)
 
 def get_update_pending():
     """Get all the schedules with pending updates for the current user"""
@@ -1776,7 +1848,7 @@ def get_auto_update_page(page: int, search: str) -> list:
     if search:
         query = query.join(AutoUpdateSchedule.rules).filter(Rule.title.ilike(f"%{search}%")).distinct()
 
-    return query.order_by(AutoUpdateSchedule.created_at.desc()).paginate(page=page, per_page=20, max_per_page=20)
+    return query.order_by(AutoUpdateSchedule.created_at.desc()).paginate(page=page, per_page=30, max_per_page=30)
 
 def get_schedule(schedule_id: int) -> AutoUpdateSchedule | None:
     """

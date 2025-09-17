@@ -10,12 +10,12 @@ from app.db_class.db import AnonymousUser
 from app.import_github_project.cron_check_updates import disable_schedule_job, enable_schedule_job, modify_schedule_job, remove_schedule_job
 from app.import_github_project.import_github_yara import  parse_yara_rules_from_repo_async
 from app.import_github_project.update_github_project import Check_for_rule_updates
-from app.rule_type.main_test import  extract_rule_from_repo
+from app.rule_type.main_format import  extract_rule_from_repo, verify_syntax_rule_by_format
 from ..account import account_core as AccountModel
 from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
 from app.import_github_project.import_github_sigma import load_rule_files
 from app.import_github_project.import_github_suricata import  parse_and_import_suricata_rules_async
-from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name, git_pull_repo
+from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_github_repo_metadata, extract_owner_repo, fill_all_void_field, get_github_repo_author, get_license_name, get_licst_license, git_pull_repo, github_repo_metadata, github_repo_to_api_url
 from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm, EditScheduleForm
 from ..utils.utils import  form_to_dict, generate_diff_html, generate_side_by_side_diff_html
 from . import rule_core as RuleModel
@@ -35,49 +35,31 @@ rule_blueprint = Blueprint(
 @login_required
 def rule() -> render_template:
     """Create a new rule"""
+    # init form
+
     form = AddNewRuleForm()
-    licenses = []
-    
-    with open("app/rule/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                licenses.append(line)
-    
+    licenses = get_licst_license()
     form.license.choices = [(lic, lic) for lic in licenses]
+
+    # form send to treatment
 
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
-        external_vars = []
-        index = 0
-        while True:
-            var_type = request.form.get(f'fields[{index}][type]')
-            var_name = request.form.get(f'fields[{index}][name]')
-            
-            if var_type and var_name:  
-                external_vars.append({'type': var_type, 'name': var_name})
-                index += 1
-            else:
-                break  
+        rule_dict = fill_all_void_field(form_dict)
+        
+        # try to compile or verify the syntax of the rule (in the format choose)
+        valide , error = verify_syntax_rule_by_format(rule_dict)
 
-        form_dict['author'] = current_user.first_name
-        if form_dict['description'] == '':
-            form_dict['description'] = "No description for the rule"
-        if form_dict['source'] == '':
-            form_dict['source'] = current_user.first_name + " , " + current_user.last_name
-
-        if form_dict['format'] == 'yara' :
-            valide , to_string , error = RuleModel.compile_yara(external_vars,form_dict)
-            if valide == False:
-                return render_template("rule/rule.html",error=error, form=form, rule=rule)
-        elif form_dict['format'] == 'sigma':
-            valide , to_string , error = RuleModel.compile_sigma(form_dict)
-            if valide == False:
+        if valide == False:
                 return render_template("rule/rule.html",error=error, form=form, rule=rule)
 
-        RuleModel.add_rule_core(form_dict , current_user)
-        flash('Rule added !', 'success')
-    
+        new_rule = RuleModel.add_rule_core(rule_dict , current_user)
+        if new_rule:
+            flash('Rule added !', 'success')
+            return render_template("rule/rule.html", form=form )
+        else:
+            flash('Error during the creation of the rule !', 'danger')
+            return render_template("rule/rule.html", form=form )
     return render_template("rule/rule.html", form=form )
 
 
@@ -231,27 +213,23 @@ def edit_rule(rule_id) -> render_template:
 
     if current_user.id == user_id or current_user.is_admin():
         form = EditRuleForm()
-        # Load licenses
-        with open("app/rule/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
-            licenses = [line.strip() for line in f if line.strip()]
-
-        if rule.license and rule.license not in licenses:
-            licenses.insert(0, rule.license) 
-
+        licenses = get_licst_license()
         form.license.choices = [(lic, lic) for lic in licenses]
+
+        # form send to treatment
 
         if form.validate_on_submit():
             form_dict = form_to_dict(form)
-            # try to compile
-            if form_dict['format'] == 'yara' :
-                valide , to_string , error = RuleModel.compile_yara([],form_dict)
-                if valide == False:
-                    return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
-            elif form_dict['format'] == 'sigma':
-                valide , to_string , error = RuleModel.compile_sigma(form_dict)
-                if valide == False:
-                    return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
+            rule_dict = fill_all_void_field(form_dict)
+            
+            # try to compile or verify the syntax of the rule (in the format choose)
+            valide , error = verify_syntax_rule_by_format(rule_dict)
 
+            if valide == False:
+                    return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
+            
+            rule_dict["version"] = str(float(rule_dict["version"]) + 0.1)
+ 
             # create an history for the rule
             if rule.to_string != form_dict['to_string']:
                 result = {
@@ -266,7 +244,7 @@ def edit_rule(rule_id) -> render_template:
                 history = RuleModel.get_history_rule_by_id(history_id)
                 history.message = "accepted"
             
-            RuleModel.edit_rule_core(form_dict, rule_id)
+            RuleModel.edit_rule_core(rule_dict, rule_id)
             flash("Rule modified with success!", "success")
 
             return redirect(request.referrer or '/')
@@ -279,12 +257,13 @@ def edit_rule(rule_id) -> render_template:
             form.cve_id.data = rule.cve_id
             form.version.data = rule.version
             form.to_string.data = rule.to_string
+            form.original_uuid.data= rule.original_uuid
             rule.last_modif = datetime.now(timezone.utc)
         
         return render_template("rule/edit_rule.html", form=form, rule=rule)
     else:
         return render_template("access_denied.html")
-
+    
 #################
 #   Rule info   #
 #################
@@ -311,23 +290,6 @@ def get_rules_page_history()-> render_template:
                 "total_pages": rules.pages
             }, 200
     return {"message": "No Rule"}, 404
-
-
-@rule_blueprint.route('/diff/<int:proposal_id>', methods=['GET'])
-def get_rule_diff(proposal_id):
-    proposal = RuleModel.get_rule_proposal(proposal_id)
-
-    if not proposal.old_content or not proposal.proposed_content:
-        return jsonify({"error": "Missing old or proposed content"}), 400
-
-    diffs = RuleModel.get_diff_lines(proposal.old_content, proposal.proposed_content)
-
-    return jsonify({"success": True, "diffs": diffs})
-
-
-
-#  lignes = RuleModel.get_diff_lines(rules.old_content , rules.new_content)
-
 
 #################
 #   Rule owner  #
@@ -377,7 +339,7 @@ def get_rules_page_filter_owner() -> jsonify:
 def get_my_rules_page_filter_github() -> jsonify:
     """Get all the rules of the current user with filter"""
     page = int(request.args.get("page", 1))
-    per_page = 10
+    per_page = 40
     search = request.args.get("search", None)
     author = request.args.get("author", None)
     sort_by = request.args.get("sort_by", "newest")
@@ -613,9 +575,6 @@ def get_rules_propose_edit_page() -> jsonify:
     return jsonify({"message": "No Rule"})
 
 
-
-
-
 @rule_blueprint.route("/get_rules_propose_edit_history_page", methods=['GET'])
 @login_required
 def get_rules_propose_edit_history_page() -> jsonify:
@@ -646,31 +605,6 @@ def get_rules_propose_edit_history_page() -> jsonify:
             "total_pages_old": rules_propose_paginated.pages
         })
     return jsonify({"message": "No Rule"})
-
-
-
-
-# @rule_blueprint.route('/get_proposal', methods=['GET'])
-# @login_required
-# def get_proposal() -> jsonify:
-#     """Get the detail porposal"""
-#     proposalId = request.args.get('id', type=int)
-#     proposal = RuleModel.get_rule_proposal(proposalId)
-
-#     old_content = proposal.old_content or ""
-#     new_content = proposal.proposed_content or ""
-
-#     old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
-
-#     d = proposal.to_dict()
-#     d['old_diff_html'] = old_html
-#     d['new_diff_html'] = new_html
-
-#     return {
-#         "proposal": d,
-#     }
-
-
 
 @rule_blueprint.route("/get_rules_propose_page", methods=['GET'])
 def get_rules_propose_page() -> jsonify:
@@ -900,7 +834,6 @@ def edit_schedule(schedule_id) -> render_template:
                 return redirect(request.referrer or '/')
 
         else:
-            # Pré-remplissage du formulaire
             form.name.data = schedule.name
             form.description.data = schedule.description
             form.hour.data = schedule.hour
@@ -1086,51 +1019,51 @@ def create_auto_update():
 
 
 
-@rule_blueprint.route("/check_updates", methods=["POST"])
-@login_required
-def check_updates():
-    data = request.get_json()
-    rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
-    results = []
-    sources = RuleModel.get_sources_from_titles(rule_items)     #  45 sec 
+# @rule_blueprint.route("/check_updates", methods=["POST"])
+# @login_required
+# def check_updates():
+#     data = request.get_json()
+#     rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
+#     results = []
+#     sources = RuleModel.get_sources_from_titles(rule_items)     #  45 sec 
     
-    ############################################# faire un chrone ( problème automatisation , time out probleme , trop de demande )
-    for source in sources:
-        repo_dir, exists = clone_or_access_repo(source)
-        git_pull_repo(repo_dir)
+#     ############################################# faire un chrone ( problème automatisation , time out probleme , trop de demande )
+#     for source in sources:
+#         repo_dir, exists = clone_or_access_repo(source)
+#         git_pull_repo(repo_dir)
             
-    ###############################################
+#     ###############################################
 
-    for item in rule_items:
-        rule_id = item.get("id")
-        title = item.get("title", "Unknown Title")
-        message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
-        rule = RuleModel.get_rule(rule_id)
+#     for item in rule_items:
+#         rule_id = item.get("id")
+#         title = item.get("title", "Unknown Title")
+#         message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
+#         rule = RuleModel.get_rule(rule_id)
         
-        if success and new_rule_content:
-            result = {
-                "id": rule_id,
-                "title": title,
-                "success": success,
-                "message": message_dict.get("message", "No message"),
-                "new_content": new_rule_content,
-                "old_content": rule.to_string if rule else "Error to charge the rule"
-            }
+#         if success and new_rule_content:
+#             result = {
+#                 "id": rule_id,
+#                 "title": title,
+#                 "success": success,
+#                 "message": message_dict.get("message", "No message"),
+#                 "new_content": new_rule_content,
+#                 "old_content": rule.to_string if rule else "Error to charge the rule"
+#             }
 
-            history_id = RuleModel.create_rule_history(result)
-            if history_id is None:
-                result["history_id"] = None
-            else:
-                result["history_id"] = history_id
+#             history_id = RuleModel.create_rule_history(result)
+#             if history_id is None:
+#                 result["history_id"] = None
+#             else:
+#                 result["history_id"] = history_id
 
-            results.append(result)
-    return {
-        "message": "Search completed successfully. All selected rules have been processed without issues.", 
-            "nb_update": len(results), 
-            "results": results,
-            "success": True,
-            "toast_class" : "success"
-        }, 200 
+#             results.append(result)
+#     return {
+#         "message": "Search completed successfully. All selected rules have been processed without issues.", 
+#             "nb_update": len(results), 
+#             "results": results,
+#             "success": True,
+#             "toast_class" : "success"
+#         }, 200 
 
 
 @rule_blueprint.route("/get_rule_history_count", methods=['GET'])
@@ -1300,83 +1233,83 @@ def get_license() -> jsonify:
                 licenses.append(line)
     return jsonify({"licenses": licenses})
 
-@rule_blueprint.route("/import_rules_from_github", methods=['GET', 'POST'])
-@login_required
-def import_rules_from_github() -> redirect:
-    if request.method == 'POST':
-        repo_url = request.form.get('url')
-        selected_license = request.form.get('license')
-        external_vars = []
-        index = 0
-        while True:
-            var_type = request.form.get(f'fields[{index}][type]')
-            var_name = request.form.get(f'fields[{index}][name]')
-            if var_type and var_name:
-                external_vars.append({'type': var_type, 'name': var_name})
-                index += 1
-            else:
-                break
+# @rule_blueprint.route("/import_rules_from_github", methods=['GET', 'POST'])
+# @login_required
+# def import_rules_from_github() -> redirect:
+#     if request.method == 'POST':
+#         repo_url = request.form.get('url')
+#         selected_license = request.form.get('license')
+#         external_vars = []
+#         index = 0
+#         while True:
+#             var_type = request.form.get(f'fields[{index}][type]')
+#             var_name = request.form.get(f'fields[{index}][name]')
+#             if var_type and var_name:
+#                 external_vars.append({'type': var_type, 'name': var_name})
+#                 index += 1
+#             else:
+#                 break
 
-        try:
-            info = get_github_repo_author(repo_url)
-            repo_dir, existe = clone_or_access_repo(repo_url) 
+#         try:
+#             info = get_github_repo_author(repo_url)
+#             repo_dir, existe = clone_or_access_repo(repo_url) 
 
-            if not repo_dir:
-                flash("Failed to clone or access the repository.", "danger")
-                return redirect(url_for("rule.rules_list"))
+#             if not repo_dir:
+#                 flash("Failed to clone or access the repository.", "danger")
+#                 return redirect(url_for("rule.rules_list"))
 
-            owner, repo = extract_owner_repo(repo_url)
-            license_from_github = selected_license or get_license_name(owner, repo)
+#             owner, repo = extract_owner_repo(repo_url)
+#             license_from_github = selected_license or get_license_name(owner, repo)
 
         
-            yara_imported, yara_skipped, yara_failed, bad_rules_yara = asyncio.run(
-                parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_url, current_user)
-            )
+#             yara_imported, yara_skipped, yara_failed, bad_rules_yara = asyncio.run(
+#                 parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_url, current_user)
+#             )
 
             
-            bad_rule_dicts_Sigma, nb_bad_rules_sigma, imported_sigma, skipped_sigma = asyncio.run(
-                load_rule_files(repo_dir, license_from_github, repo_url, current_user)
-            )
-            rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir, repo_url, license_from_github, info)
+#             bad_rule_dicts_Sigma, nb_bad_rules_sigma, imported_sigma, skipped_sigma = asyncio.run(
+#                 load_rule_files(repo_dir, license_from_github, repo_url, current_user)
+#             )
+#             rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir, repo_url, license_from_github, info)
 
 
         
-            imported_suricata, suricata_skipped = asyncio.run(
-                parse_and_import_suricata_rules_async(repo_dir, license_from_github, repo_url, info, current_user)
-            )
+#             imported_suricata, suricata_skipped = asyncio.run(
+#                 parse_and_import_suricata_rules_async(repo_dir, license_from_github, repo_url, info, current_user)
+#             )
 
 
 
-            imported = imported_sigma + yara_imported + imported_suricata
-            skipped = skipped_sigma + yara_skipped + suricata_skipped
+#             imported = imported_sigma + yara_imported + imported_suricata
+#             skipped = skipped_sigma + yara_skipped + suricata_skipped
 
-            # Import des règles Zeek
-            if rule_dicts_Zeek:
-                for rule_dic3 in rule_dicts_Zeek:
-                    success = RuleModel.add_rule_core(rule_dic3, current_user)
-                    if success:
-                        imported += 1
-                    else:
-                        skipped += 1
+#             # Import des règles Zeek
+#             if rule_dicts_Zeek:
+#                 for rule_dic3 in rule_dicts_Zeek:
+#                     success = RuleModel.add_rule_core(rule_dic3, current_user)
+#                     if success:
+#                         imported += 1
+#                     else:
+#                         skipped += 1
 
-            flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
-            delete_existing_repo_folder("app/rule/output_rules/Yara")
+#             flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
+#             delete_existing_repo_folder("app/rule/output_rules/Yara")
 
-            if bad_rules_yara:
-                flash(f"Failed to import {len(bad_rules_yara)} YARA rules.", "danger")
-                RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github , current_user)
+#             if bad_rules_yara:
+#                 flash(f"Failed to import {len(bad_rules_yara)} YARA rules.", "danger")
+#                 RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github , current_user)
 
-            if bad_rule_dicts_Sigma:
-                flash(f"Failed to import {nb_bad_rules_sigma} Sigma rules.", "danger")
-                RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github , current_user)
+#             if bad_rule_dicts_Sigma:
+#                 flash(f"Failed to import {nb_bad_rules_sigma} Sigma rules.", "danger")
+#                 RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github , current_user)
 
-            if bad_rule_dicts_Sigma or bad_rules_yara:
-                return redirect(url_for("rule.bad_rules_summary"))
+#             if bad_rule_dicts_Sigma or bad_rules_yara:
+#                 return redirect(url_for("rule.bad_rules_summary"))
 
-        except Exception as e:
-            flash(f"Failed to import rules: with url :  {repo_url} because : {e}", "danger")
+#         except Exception as e:
+#             flash(f"Failed to import rules: with url :  {repo_url} because : {e}", "danger")
 
-    return redirect(url_for("rule.rules_list"))
+#     return redirect(url_for("rule.rules_list"))
 
 
 #################
@@ -1753,9 +1686,9 @@ def delete_format_rule():
 #       - external variable ?
 #
 
-@rule_blueprint.route("/test", methods=['GET' , 'POST'])
+@rule_blueprint.route("/import_rules_from_github", methods=['GET' , 'POST'])
 @login_required
-def test() -> dict:
+def import_rules_from_github() -> dict:
     """
     Clone or access a GitHub repo, then test all YARA rules in it,
     creating rules and classifying bad rules automatically.
@@ -1764,17 +1697,18 @@ def test() -> dict:
     repo_url = request.form.get('url')
     selected_license = request.form.get('license')
 
-    owner, repo = extract_owner_repo(repo_url)
-    license_from_github = selected_license or get_license_name(owner, repo)
     
-    info = get_github_repo_author(repo_url , license_from_github)
     repo_dir, existe = clone_or_access_repo(repo_url) 
+    
+    info = github_repo_metadata(repo_url , selected_license)
 
     if not repo_dir:
         flash("Failed to clone or access the repository.", "danger")
         return redirect(url_for("rule.rules_list"))
 
     bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir , info ))
+
+    delete_existing_repo_folder("/Rules_Github")
 
     # Save invalid YARA rules and flash
     if bad_rules > 0:
@@ -1786,4 +1720,47 @@ def test() -> dict:
     return redirect(url_for("rule.rules_list"))
 
 
-    
+
+
+@rule_blueprint.route("/check_updates", methods=["POST"])
+@login_required
+def check_updates():
+    data = request.get_json()
+    rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
+    results = []
+
+    # Récupère toutes les sources uniques (optimisation)
+    sources = RuleModel.get_sources_from_titles(rule_items)
+    for source in sources:
+        repo_dir, exists = clone_or_access_repo(source)
+        if exists:
+            git_pull_repo(repo_dir)
+
+    for item in rule_items:
+        rule_id = item.get("id")
+        title = item.get("title", "Unknown Title")
+
+        message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
+        rule = RuleModel.get_rule(rule_id)
+
+        if success and new_rule_content:
+            result = {
+                "id": rule_id,
+                "title": title,
+                "success": success,
+                "message": message_dict.get("message", "No message"),
+                "new_content": new_rule_content,
+                "old_content": rule.to_string if rule else "Error loading the rule"
+            }
+
+            history_id = RuleModel.create_rule_history(result)
+            result["history_id"] = history_id if history_id else None
+            results.append(result)
+
+    return {
+        "message": "Search completed successfully. All selected rules have been processed without issues.",
+        "nb_update": len(results),
+        "results": results,
+        "success": True,
+        "toast_class": "success"
+    }, 200

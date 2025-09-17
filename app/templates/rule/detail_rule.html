@@ -139,6 +139,16 @@
                             <p>{{ rule.get_rule_user_first_name_by_id() }}</p>
                         </div>
                     </div>
+                    <div class="row ">
+                        <div class="col-md-6">
+                            <p><i class="fas fa-key me-2 text-secondary"></i><strong>Original UUID :</strong></p>
+                            <p>{{ rule.original_uuid }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><i class="fas fa-code-branch me-2 text-secondary"></i><strong>Version :</strong></p>
+                            <p>{{ rule.version }}</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="dropdown float-end ms-2 mb-2">

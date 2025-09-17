@@ -10,7 +10,6 @@ Werkzeug
 flask-restx
 email_validator
 python-dateutil
-schedule
 pytest
 gunicorn
 jsonschema
@@ -23,3 +22,6 @@ suricataparser
 psycopg2-binary
 schedule
 aiofiles
+zeekscript
+msc_pyparser
+nova-hunting

@@ -1,3 +1,5 @@
+from flask import url_for
+from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import  BooleanField, IntegerField, SelectMultipleField, ValidationError, SelectField
 from wtforms.fields import StringField, SubmitField, TextAreaField
@@ -12,11 +14,12 @@ from ..db_class.db import FormatRule, Rule
 class AddNewRuleForm(FlaskForm):
     format = SelectField('Format', choices=[], validators=[InputRequired()])
     # autres champs ...
+    original_uuid =  StringField('Original_uuid')
     title = StringField('Title', validators=[InputRequired()])
     license = SelectField('License', choices=[], validators=[DataRequired()])
     description = TextAreaField('Description')
     source = StringField('Source')
-    version = StringField('Version', validators=[InputRequired()])
+    version = StringField('Version')
     to_string = TextAreaField('Content rule', validators=[InputRequired()])
     cve_id = StringField('CVE vulnerability')
     submit = SubmitField('Register')
@@ -27,8 +30,17 @@ class AddNewRuleForm(FlaskForm):
         self.format.choices = [(f.name, f.name) for f in formats_rules_list]
 
     def validate_title(self, field):
-        if Rule.query.filter_by(title=field.data).first():
-            raise ValidationError('Rule already registered.')
+        existing_rule = Rule.query.filter_by(title=field.data).first()
+        if existing_rule:
+            if current_user.id == existing_rule.user_id or current_user.is_admin():
+                # raise ValidationError('Rule already registered.')
+                edit_url = url_for("rule.edit_rule", rule_id=existing_rule.id)
+                raise ValidationError(
+                    f'Rule already registered. '
+                    f'Do you want to <a href="{edit_url}">edit this rule (ID: {existing_rule.title})</a> instead?'
+                )
+            else:
+                raise ValidationError('Rule already registered.')
 
     def validate_cve_id(self, field):
         if field.data:
@@ -44,6 +56,7 @@ class EditRuleForm(FlaskForm):
     title = StringField('Title', validators=[InputRequired()])
     format = SelectField('Format', choices=[], validators=[InputRequired()])
     license = SelectField('License', choices=[], validators=[InputRequired()])
+    original_uuid =  StringField('Original_uuid')
     description = TextAreaField('Description')
     source = StringField('Source')
     version = StringField('Version', validators=[InputRequired()])

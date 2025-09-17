@@ -1,3 +1,4 @@
+import subprocess
 import os
 import re
 import uuid
@@ -170,3 +171,30 @@ def detect_cve(text):
         return True, all_matches
     else:
         return False, []
+
+def update_or_clone_repo(repo_url: str) -> str | None:
+    """
+    Clone or update a GitHub repo into Rules_Github/<owner>/<repo>.
+    Returns the local repo path on success, or None on error.
+    """
+    try:
+        parts = repo_url.rstrip("/").replace(".git", "").split("/")
+        owner, repo = parts[-2], parts[-1]
+    except Exception:
+        print("Invalid repo URL format.")
+        return None
+
+    base_dir = "Rules_Github"
+    local_repo_path = os.path.join(base_dir, owner, repo)
+
+    try:
+        if not os.path.exists(local_repo_path):
+            os.makedirs(os.path.join(base_dir, owner), exist_ok=True)
+            subprocess.run(["git", "clone", repo_url, local_repo_path], check=True)
+        else:
+            subprocess.run(["git", "-C", local_repo_path, "pull"], check=True)
+    except Exception as e:
+        print(f"Git error: {e}")
+        return None
+
+    return local_repo_path

@@ -4,7 +4,8 @@ import os
 import re
 import shutil
 from urllib.parse import urlparse
-
+from flask_login import current_user
+import datetime
 from git import Repo
 import requests
 
@@ -59,10 +60,6 @@ def delete_existing_repo_folder(local_dir):
     else:
         return False
 
-def clean_rule_filename_Yara(filename):
-    if filename.lower().endswith(('.yar', '.yara')):
-        return filename.rsplit('.', 1)[0]
-    return filename
 
 def clean_rule_filename_Yara_v2(filepath):
     with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -105,18 +102,108 @@ def get_github_repo_author(repo_url , license_from_github):
         data = response.json()
         return {
             "author": data.get("owner", {}).get("login"),
+            "repo_url": repo_url,
             "html_url": data.get("owner", {}).get("html_url"),
             "description": data.get("description"),
             "created_at": data.get("created_at"),
             "license_from_github": license_from_github
         }
     else:
-        return {"error": f"Failed to fetch repo info (status: {response.status_code})"}
+        return {"error": f"Failed to fetch repo info (status: {response.status_code})" ,"repo_url": repo_url,}
 
 
 
+#################
+#   GITHUB API  #
+#################
 
-#----------------------------------------------------------------------------------------LICENSE--------------------------------------------------------------------------------------------------------------------#
+def github_repo_to_api_url(git_url: str) -> str:
+    """Get the url to speak with the github api"""
+    if git_url.endswith(".git"):
+        git_url = git_url[:-4]
+
+    parts = git_url.rstrip("/").split("/")
+
+    owner = parts[-2]
+    repo = parts[-1]
+
+    api_url = f"https://api.github.com/repos/{owner}/{repo}"
+    return api_url
+
+def extract_github_repo_metadata(data: dict, selected_license: str) -> dict:
+    """
+    Extract useful metadata from a GitHub repository API response.
+    
+    Args:
+        data (dict): JSON response from GitHub's repo API.
+    
+    Returns:
+        dict: Simplified metadata about the repository.
+    """
+    return {
+        "id": data.get("id"),
+        "name": data.get("name"),
+        "full_name": data.get("full_name"),
+        "private": data.get("private", False),
+        "author": data.get("owner", {}).get("login"),
+        "author_url": data.get("owner", {}).get("html_url"),
+        "author_avatar": data.get("owner", {}).get("avatar_url"),
+        "repo_url": data.get("html_url"),
+        "api_url": data.get("url"),
+        "description": data.get("description"),
+        "homepage": data.get("homepage"),
+        "language": data.get("language"),
+        "topics": data.get("topics", []),
+        "created_at": data.get("created_at"),
+        "updated_at": data.get("updated_at"),
+        "pushed_at": data.get("pushed_at"),
+        "license": (
+            data.get("license", {}).get("spdx_id")
+            if data.get("license")
+            else selected_license
+        ),
+        "license_name": (
+            data.get("license", {}).get("name")
+            if data.get("license")
+            else selected_license
+        ),
+        "stars": data.get("stargazers_count", 0),
+        "watchers": data.get("watchers_count", 0),
+        "forks": data.get("forks_count", 0),
+        "open_issues": data.get("open_issues_count", 0),
+        "default_branch": data.get("default_branch"),
+        "visibility": data.get("visibility"),
+        "archived": data.get("archived", False),
+        "disabled": data.get("disabled", False),
+    }
+
+
+def github_repo_metadata(repo_url: str, selected_license: str) -> dict:
+    """
+    Fetch metadata of a GitHub repository from its clone URL.
+    
+    Args:
+        repo_url (str): GitHub repo URL (https://github.com/... or ending with .git)
+    
+    Returns:
+        dict: Extracted repository metadata.
+    """
+    # --- Build API URL ---
+    api_url = github_repo_to_api_url(repo_url)
+
+    # --- Call GitHub API ---
+    response = requests.get(api_url)
+    response.raise_for_status()  # raise exception if request failed
+    data = response.json()
+
+    # --- Extract metadata ---
+    return extract_github_repo_metadata(data , selected_license)
+
+
+
+###############
+#   License   #
+###############
 
 # use API GITHUB 
 def extract_owner_repo(github_url):
@@ -162,6 +249,14 @@ def get_license_file_from_github_repo(repo_dir):
     
     return "(No license file found)"
 
+def get_licst_license() -> list:
+    licenses = []
+    with open("app/rule/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                licenses.append(line)
+    return licenses
 
 import subprocess
 
@@ -177,3 +272,31 @@ def git_pull_repo(repo_dir):
         return True
     except subprocess.CalledProcessError as e:
         return False
+    
+
+def fill_all_void_field(form_dict: dict) -> dict:
+    """Fill all the void fields of a rule form with default values."""
+
+    form_dict['author'] = getattr(current_user, "first_name", "Unknown")
+
+    if not form_dict.get('description'):
+        form_dict['description'] = "No description for the rule"
+
+    if not form_dict.get('source'):
+        first = getattr(current_user, "first_name", "")
+        last = getattr(current_user, "last_name", "")
+        form_dict['source'] = f"{first} {last}".strip() or "Unknown source"
+
+    if not form_dict.get('license'):
+        form_dict['license'] = "No license"
+
+    if not form_dict.get('version'):
+        form_dict['version'] = "1.0"
+
+    if not form_dict.get('creation_date'):
+        form_dict['creation_date'] = datetime.datetime.now(tz=datetime.timezone.utc),
+
+    if not form_dict.get('cve_id'):
+        form_dict['cve_id'] = "None"
+
+    return form_dict

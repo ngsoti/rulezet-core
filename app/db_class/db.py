@@ -91,6 +91,7 @@ class Rule(db.Model):
     license = db.Column(db.String)
     description = db.Column(db.String)
     uuid = db.Column(db.String(36), index=True)
+    original_uuid = db.Column(db.String , nullable=True)
     source = db.Column(db.String)
     author = db.Column(db.String) # the reel author of the rule
     creation_date = db.Column(db.DateTime, index=True)
@@ -119,6 +120,7 @@ class Rule(db.Model):
             "license": self.license,
             "description": self.description,
             "uuid": self.uuid,
+            "original_uuid": self.original_uuid,
             "source": self.source,
             "author": self.author,
             "creation_date": self.creation_date.strftime('%Y-%m-%d %H:%M'),
@@ -144,6 +146,7 @@ class Rule(db.Model):
             "license": self.license,
             "description": self.description,
             "uuid": self.uuid,
+            "original_uuid": self.original_uuid,
             "source": self.source,
             "author": self.author,
             "creation_date": self.creation_date.strftime('%Y-%m-%d %H:%M'),

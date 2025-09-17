@@ -94,10 +94,29 @@
                 </div>
             </div>
 
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="form-group">
+                        {{ form.original_uuid.label(class_="col-form-label") }}
+                        {{ form.original_uuid(class_="form-control", rows=4) }}
+                        {% if form.original_uuid.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.original_uuid.errors[0] | safe }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
             <div class="mb-3">
                 {% if error %}
-                    <span style="color:red">{{ error }}</span>    
-                {% endif %}
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <div>
+                                {{ error }}
+                            </div>
+                        </div>
+                        {% endif %}
                 <div class="form-group">
                     {{ form.to_string.label(class_="col-form-label") }}
             
