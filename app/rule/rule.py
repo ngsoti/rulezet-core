@@ -1,23 +1,18 @@
 import asyncio
 from urllib.parse import urlparse
 from datetime import datetime,  timezone
-import difflib
 from math import ceil
 from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for
 from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
 from app.db_class.db import AnonymousUser
 from app.import_github_project.cron_check_updates import disable_schedule_job, enable_schedule_job, modify_schedule_job, remove_schedule_job
-from app.import_github_project.import_github_yara import  parse_yara_rules_from_repo_async
 from app.import_github_project.update_github_project import Check_for_rule_updates
-from app.rule_type.main_format import  extract_rule_from_repo, verify_syntax_rule_by_format
+from app.rule_type.main_format import  extract_rule_from_repo, process_and_import_fixed_rule, verify_syntax_rule_by_format
 from ..account import account_core as AccountModel
-from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
-from app.import_github_project.import_github_sigma import load_rule_files
-from app.import_github_project.import_github_suricata import  parse_and_import_suricata_rules_async
-from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_github_repo_metadata, extract_owner_repo, fill_all_void_field, get_github_repo_author, get_license_name, get_licst_license, git_pull_repo, github_repo_metadata, github_repo_to_api_url
+from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, fill_all_void_field, get_licst_license, git_pull_repo, github_repo_metadata
 from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm, EditScheduleForm
-from ..utils.utils import  form_to_dict, generate_diff_html, generate_side_by_side_diff_html
+from ..utils.utils import  form_to_dict, generate_side_by_side_diff_html
 from . import rule_core as RuleModel
 
 rule_blueprint = Blueprint(
@@ -1366,11 +1361,14 @@ def edit_bad_rule(rule_id):
 
         if request.method == 'POST':
             new_content = request.form.get('raw_content')
-            success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content )
+            # success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content )
+
+            success, error , rule = process_and_import_fixed_rule(bad_rule, new_content )
 
             if success:
                 flash("Rule fixed and imported successfully.", "success")
-                return redirect(url_for('rule.bad_rules_summary'))
+                #return redirect(url_for('rule.bad_rules_summary'))
+                return redirect(url_for('rule.detail_rule', rule_id=rule.id))
             else:
                 flash(f"Error: {error}", "danger")
                 bad_rule.error_message = error

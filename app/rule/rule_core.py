@@ -682,122 +682,57 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error) -> None:
 
 # Create
 
-YARA_MODULES = {"pe", "math", "cuckoo", "magic", "hash", "dotnet", "elf", "macho"}
 
-def process_and_import_fixed_rule(bad_rule_obj, raw_content):
-    """Process a corrected bad rule and attempt to import it into the system."""
-    try:
-        rule_type = bad_rule_obj.rule_type
+# YARA_MODULES = {"pe", "math", "cuckoo", "magic", "hash", "dotnet", "elf", "macho"}
 
-        if rule_type.upper() == "YARA":
-            externals = {}
-            compiled = False
-            attempts = 0
-            max_attempts = 10
-            current_rule_text = raw_content  
-
-            while not compiled and attempts < max_attempts:
-                try:
-                    yara.compile(source=current_rule_text, externals=externals)
-                    #print("Compilation réussie")
-                    compiled = True
-                except yara.SyntaxError as e:
-                    error_msg = str(e)
-                    #print(f"Tentative {attempts+1} échouée : {error_msg}")
-
-                    match_id = re.search(r'undefined identifier "(\w+)"', error_msg)
-                    if match_id:
-                        var_name = match_id.group(1)
-                        if var_name in YARA_MODULES:
-                            current_rule_text = insert_import_module(current_rule_text, var_name)
-                            #print(f"Module YARA importé : {var_name}")
-                        else:
-                            externals[var_name] = "example.txt"
-                            #print(f"Variable externe ajoutée : {var_name}")
-                        attempts += 1
-                        continue
-                    else:
-                        return False, error_msg
-
-            # print(externals)
-            if not compiled:
-                return False, "Failled to parse this rule after many try"
-
-            rule_name_match = re.search(r'rule\s+(\w+)', current_rule_text)
-            title = rule_name_match.group(1) if rule_name_match else clean_rule_filename_Yara_v2(bad_rule_obj.file_name) or extract_first_match(current_rule_text, ["title", "Title"]) 
-
-            description = extract_first_match(current_rule_text, ["description", "Description"])
-            license = extract_first_match(current_rule_text, ["license", "License"]) or bad_rule_obj.license
-            author = extract_first_match(current_rule_text, ["author", "Author"])
-            version = extract_first_match(current_rule_text, ["version", "Version"])
-            source_url = bad_rule_obj.url
-            r , cve = detect_cve(description)
-            rule_dict = {
-                "format": "YARA",
-                "title": title,
-                "license": license,
-                "description": description,
-                "source": source_url,
-                "version": version or "1.0",
-                "author": author or "Unknown",
-                "to_string": current_rule_text,
-                "cve_id": cve
-            }
-
-
-        else: 
-            try:
-                rule = yaml.safe_load(raw_content)
-                rule_json = json.loads(json.dumps(rule, indent=2, default=str))
-                with open("app/import_github_project/sigma_format.json", 'r', encoding='utf-8') as f:
-                    schema = json.load(f)
-                validate(instance=rule_json, schema=schema)
-            except (ValidationError, FileNotFoundError) as e:
-                return False, str(e)
-            r , cve = detect_cve(rule.get("description", "No description provided"),)
-            rule_dict = {
-                "format": "Sigma",
-                "title": rule.get("title", "Untitled"),
-                "license": rule.get("license", bad_rule_obj.license),
-                "description": rule.get("description", "No description provided"),
-                "source": bad_rule_obj.url,
-                "version": rule.get("version", "1.0"),
-                "author": rule.get("author", "Unknown"),
-                "to_string": raw_content,
-                "cve_id": cve
-            }
-
-        success = RuleModel.add_rule_core(rule_dict, current_user)
-        if success:
-            db.session.delete(bad_rule_obj)
-            db.session.commit()
-            return True, ""
-        else:
-            return False, "Rule already exists or failed to insert."
-
-    except Exception as e:
-        db.session.rollback()
-        return False, str(e)
-
-
-# def process_and_import_fixed_rule(bad_rule_obj, raw_content) -> bool:
-#     """Porcess the bad rule and the new content to attempt to create the rule"""
+# def process_and_import_fixed_rule(bad_rule_obj, raw_content):
+#     """Process a corrected bad rule and attempt to import it into the system."""
 #     try:
-#         rule_type = bad_rule_obj.rule_type 
+#         rule_type = bad_rule_obj.rule_type
 
 #         if rule_type.upper() == "YARA":
-#             try:
-#                 yara.compile(source=raw_content)
-#             except yara.SyntaxError as e:
-#                 return False, str(e)
+#             externals = {}
+#             compiled = False
+#             attempts = 0
+#             max_attempts = 10
+#             current_rule_text = raw_content  
 
-#             title = extract_first_match(raw_content, ["title", "Title"]) or clean_rule_filename_Yara(bad_rule_obj.file_name)
-#             description = extract_first_match(raw_content, ["description", "Description"])
-#             license = extract_first_match(raw_content, ["license", "License"]) or bad_rule_obj.license
-#             author = extract_first_match(raw_content, ["author", "Author"])
-#             version = extract_first_match(raw_content, ["version", "Version"])
+#             while not compiled and attempts < max_attempts:
+#                 try:
+#                     yara.compile(source=current_rule_text, externals=externals)
+#                     #print("Compilation réussie")
+#                     compiled = True
+#                 except yara.SyntaxError as e:
+#                     error_msg = str(e)
+#                     #print(f"Tentative {attempts+1} échouée : {error_msg}")
+
+#                     match_id = re.search(r'undefined identifier "(\w+)"', error_msg)
+#                     if match_id:
+#                         var_name = match_id.group(1)
+#                         if var_name in YARA_MODULES:
+#                             current_rule_text = insert_import_module(current_rule_text, var_name)
+#                             #print(f"Module YARA importé : {var_name}")
+#                         else:
+#                             externals[var_name] = "example.txt"
+#                             #print(f"Variable externe ajoutée : {var_name}")
+#                         attempts += 1
+#                         continue
+#                     else:
+#                         return False, error_msg
+
+#             # print(externals)
+#             if not compiled:
+#                 return False, "Failled to parse this rule after many try"
+
+#             rule_name_match = re.search(r'rule\s+(\w+)', current_rule_text)
+#             title = rule_name_match.group(1) if rule_name_match else clean_rule_filename_Yara_v2(bad_rule_obj.file_name) or extract_first_match(current_rule_text, ["title", "Title"]) 
+
+#             description = extract_first_match(current_rule_text, ["description", "Description"])
+#             license = extract_first_match(current_rule_text, ["license", "License"]) or bad_rule_obj.license
+#             author = extract_first_match(current_rule_text, ["author", "Author"])
+#             version = extract_first_match(current_rule_text, ["version", "Version"])
 #             source_url = bad_rule_obj.url
-
+#             r , cve = detect_cve(description)
 #             rule_dict = {
 #                 "format": "YARA",
 #                 "title": title,
@@ -806,15 +741,21 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content):
 #                 "source": source_url,
 #                 "version": version or "1.0",
 #                 "author": author or "Unknown",
-#                 "to_string": raw_content
+#                 "to_string": current_rule_text,
+#                 "cve_id": cve
 #             }
-#         # elif rule_type.upper() == "Sigma":
-#         else: 
-#             rule = yaml.safe_load(raw_content)
-#             rule_json = json.loads(json.dumps(rule, indent=2, default=str))
-#             schema = load_json_schema("app/import_github_project/sigma_format.json")
-#             validate(instance=rule_json, schema=schema)
 
+
+#         else: 
+#             try:
+#                 rule = yaml.safe_load(raw_content)
+#                 rule_json = json.loads(json.dumps(rule, indent=2, default=str))
+#                 with open("app/import_github_project/sigma_format.json", 'r', encoding='utf-8') as f:
+#                     schema = json.load(f)
+#                 validate(instance=rule_json, schema=schema)
+#             except (ValidationError, FileNotFoundError) as e:
+#                 return False, str(e)
+#             r , cve = detect_cve(rule.get("description", "No description provided"),)
 #             rule_dict = {
 #                 "format": "Sigma",
 #                 "title": rule.get("title", "Untitled"),
@@ -823,18 +764,24 @@ def process_and_import_fixed_rule(bad_rule_obj, raw_content):
 #                 "source": bad_rule_obj.url,
 #                 "version": rule.get("version", "1.0"),
 #                 "author": rule.get("author", "Unknown"),
-#                 "to_string": raw_content
+#                 "to_string": raw_content,
+#                 "cve_id": cve
 #             }
-#         success = RuleModel.add_rule_core(rule_dict , current_user)
+
+#         success = RuleModel.add_rule_core(rule_dict, current_user)
 #         if success:
 #             db.session.delete(bad_rule_obj)
 #             db.session.commit()
-#             return True, False
+#             return True, ""
+#         else:
+#             return False, "Rule already exists or failed to insert."
 
-#         return False, "Rule already exists or failed to insert."
 #     except Exception as e:
 #         db.session.rollback()
 #         return False, str(e)
+
+
+
 
 
 # Read
@@ -1492,43 +1439,6 @@ def get_all_contributions_with_rule_id(rule_id) -> list:
             users_id.append(contribution)
     return users_id
 
-# def get_top_contributors(limit=3):
-#     now = datetime.datetime.now(datetime.timezone.utc)
-#     beginning_of_month = datetime(now.year, now.month, 1)
-#     ten_days_ago = now - timedelta(days=10)
-
-#     def query_contributors(since_date=None):
-#         query = db.session.query(
-#             RuleEditContribution.user_id,
-#             func.count(RuleEditContribution.id).label('contribution_count')
-#         )
-#         if since_date:
-#             query = query.filter(RuleEditContribution.created_at >= since_date)
-#         query = query.group_by(RuleEditContribution.user_id)
-#         query = query.order_by(func.count(RuleEditContribution.id).desc())
-#         query = query.limit(limit)
-#         return query.all()
-
-#     contributors_all_time = query_contributors()
-#     contributors_this_month = query_contributors(beginning_of_month)
-#     contributors_last_10_days = query_contributors(ten_days_ago)
-
-#     def format_result(results):
-#         formatted = []
-#         for user_id, count in results:
-#             user = db.session.get(User, user_id)
-#             formatted.append({
-#                 "user_id": user_id,
-#                 "user_name": user.first_name if user else "Unknown",
-#                 "contribution_count": count
-#             })
-#         return formatted
-
-#     return {
-#         "all_time": format_result(contributors_all_time),
-#         "this_month": format_result(contributors_this_month),
-#         "last_10_days": format_result(contributors_last_10_days)
-#     }
 
 # Update
 

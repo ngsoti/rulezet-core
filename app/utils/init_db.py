@@ -86,6 +86,7 @@ def insert_default_formats():
         {"name": "suricata", "can_be_execute": False},
         {"name": "crs", "can_be_execute": False},
         {"name": "nova", "can_be_execute": False},
+        {"name": "elastic", "can_be_execute": True},
         {"name": "no format", "can_be_execute": False}
     ]
 
