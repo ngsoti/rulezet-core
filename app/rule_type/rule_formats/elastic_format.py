@@ -58,10 +58,6 @@ class ElasticDetectionRule(RuleType):
             rule_section = data.get("rule", {})
             metadata_section = data.get("metadata", {})
 
-            print("[DEBUG] Loaded TOML data:", data)
-            print("[DEBUG] rule_section:", rule_section)
-            print("[DEBUG] metadata_section:", metadata_section)
-
             title = rule_section.get("name") or metadata_section.get("name") or info.get("title") or f"Elastic Rule ({info.get('file_name', '')})"
             description = rule_section.get("description") or metadata_section.get("description") or info.get("description") or "No description provided"
             original_uuid = rule_section.get("rule_id") or metadata_section.get("rule_id") or info.get("rule_id") or "Unknown"
@@ -83,7 +79,6 @@ class ElasticDetectionRule(RuleType):
             }
 
         except Exception as e:
-            print(f"[ERROR] Exception in parse_metadata: {e}")
             return {
                 "format": "elastic",
                 "title": "Invalid Rule",
