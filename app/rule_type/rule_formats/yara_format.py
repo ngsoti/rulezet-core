@@ -4,7 +4,8 @@ import re
 import yara
 
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
-from app.utils.utils import detect_cve
+from app.utils.utils import detect_cve, update_or_clone_repo
+from ...rule import rule_core as RuleModel
 
 #################
 #   YARA class  #
@@ -71,33 +72,49 @@ class YaraRule(RuleType):
     def parse_metadata(self, content: str , info: Dict , validation_result: str) -> Dict[str, Any]:
         """Extract metadata and normalize it into a rule dict."""
         # --- Extract meta block ---
-        meta = {}
-        meta_block = re.search(r'meta\s*:\s*(.*?)\n\s*\w+\s*:', content, re.DOTALL)
-        if meta_block:
-            entries = re.findall(r'(\w+)\s*=\s*"(.*?)"', meta_block.group(1))
-            for key, val in entries:
-                meta[key] = val
+        try:
 
-        # --- Extract rule name ---
-        rule_name_match = re.search(r'rule\s+(\w+)', content)
-        rule_name = rule_name_match.group(1) if rule_name_match else "unknown_rule"
+            meta = {}
+            meta_block = re.search(r'meta\s*:\s*(.*?)\n\s*\w+\s*:', content, re.DOTALL)
+            if meta_block:
+                entries = re.findall(r'(\w+)\s*=\s*"(.*?)"', meta_block.group(1))
+                for key, val in entries:
+                    meta[key] = val
 
-        # --- Detect CVE in description ---
-        _, cve = detect_cve(meta.get("description", "No description provided"))
+            # --- Extract rule name ---
+            rule_name_match = re.search(r'rule\s+(\w+)', content)
+            rule_name = rule_name_match.group(1) if rule_name_match else "unknown_rule"
 
-        # --- Build normalized dict ---
-        rule_dict = {
-            "format": "yara",
-            "title": rule_name,
-            "license": meta.get("license") or info["license_from_github"],
-            "description": meta.get("description") or info["description"] or  "No description provided",
-            "source": meta.get("source") or info["html_url"],
-            "version": meta.get("version", "1.0"),
-            "author": meta.get("author") or info["author"] or "Unknown",
-            "to_string": validation_result.normalized_content,
-            "cve_id": cve
-        }
-        return rule_dict
+            # --- Detect CVE in description ---
+            _, cve = detect_cve(meta.get("description", "No description provided"))
+
+            # --- Build normalized dict ---
+            rule_dict = {
+                "format": "yara",
+                "title": rule_name,
+                "license": meta.get("license") or info["license"] or "unknown",
+                "description": meta.get("description") or info["description"] or  "No description provided",
+                "source": meta.get("source") or info["repo_url"],
+                "version": meta.get("version", "1.0"),
+                "original_uuid": meta.get("id") or  "Unknown",
+                "author": meta.get("author") or info["author"] or "Unknown",
+                "to_string": validation_result.normalized_content,
+                "cve_id": cve
+            }
+            return rule_dict
+        except Exception as e:
+            return {
+                "format": "yara",
+                "title": "Invalid Rule",
+                 "license":  info["license"] or "unknown",
+                "description": f"Error parsing metadata: {e}",
+                "version": "N/A",
+                "source": info["repo_url"],
+                "original_uuid":  "Unknown",
+                "author": info["author"] or "Unknown",
+                "cve_id": None,
+                "to_string": content,
+            }
 
     def get_rule_files(self, repo_dir: str) -> List[str]:
         """Retrieve all YARA rule files from a repository."""
@@ -111,24 +128,6 @@ class YaraRule(RuleType):
                     yara_files.append(os.path.join(root, file))
         return yara_files
 
-    # def extract_rules_from_file(self, filepath: str) -> List[str]:
-    #     """Extract all rules from a YARA file."""
-    #     rules = []
-    #     try:
-    #         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-    #             content = f.read()
-
-    #         raw_blocks = re.findall(r'(?s)(rule\s+\w+.*?condition\s*:\s*[^}]+})', content)
-
-    #         for block in raw_blocks:
-    #             # Ignore commented-out rules
-    #             first_lines = block.strip().splitlines()
-    #             if any(line.strip().startswith("//") for line in first_lines):
-    #                 continue
-    #             rules.append(block)
-    #     except Exception:
-    #         pass
-    #     return rules
     
     def extract_rules_from_file(self, filepath: str) -> List[str]:
         """
@@ -237,3 +236,32 @@ class YaraRule(RuleType):
             print(f"[extract_rules_from_file] Error parsing {filepath}: {e}")
 
         return rules
+    
+    def find_rule_in_repo(self, repo_url: str, rule_id: int) -> tuple[str, bool]:
+        """
+        Search for a YARA rule inside a locally cloned GitHub repo.
+        Repo is stored at: Rules_Github/<owner>/<repo>
+        If it already exists → run git pull to update it.
+        """
+        rule = RuleModel.get_rule(rule_id)
+        if not rule:
+            return "No rule found in the database.", False
+
+        local_repo_path = update_or_clone_repo(repo_url)
+        if not local_repo_path:
+            return "Could not clone or update repo.", False
+
+        yara_files = self.get_rule_files(local_repo_path)
+
+        for filepath in yara_files:
+            rules = self.extract_rules_from_file(filepath)
+            for r in rules:
+                match = re.search(r'rule\s+(\w+)', r)
+                if match and match.group(1) == rule.title:
+                    return r, True
+
+        return f"Rule '{rule.title}' not found inside local repo.", False
+
+
+
+  

@@ -1,7 +1,7 @@
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from suricataparser import parse_rules
-
+from ...rule import rule_core as RuleModel
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.utils.utils import detect_cve
 
@@ -33,7 +33,7 @@ class SuricataRule(RuleType):
         except Exception as e:
             return ValidationResult(ok=False, errors=[str(e)], normalized_content=content)
 
-    def parse_metadata(self, content: str, info: Dict,  **kwargs) -> Dict[str, Any]:
+    def parse_metadata(self, content: str, info: Dict,  validation_result: str) -> Dict[str, Any]:
         """
         Extract metadata from a Suricata rule.
         """
@@ -44,13 +44,14 @@ class SuricataRule(RuleType):
                 return {
                     "format": "suricata",
                     "title": "Invalid Rule",
-                    "license": kwargs.get("default_license") or info["license_from_github"],
+                    "license":  info["license"] or "unknown",
                     "description": "Failed to parse Suricata rule.",
                     "version": "N/A",
-                    "author": kwargs.get("author", "Unknown"),
+                    "original_uuid": rule.sid or  "Unknown",
+                    "author": info["author"] or "Unknown",
                     "cve_id": cve or None,
-                    "source": info["html_url"],
-                    "to_string": content,
+                    "source": info["repo_url"],
+                    "to_string": validation_result.normalized_content or content,
                 }
 
             rule = rules[0]  # take first parsed rule
@@ -59,22 +60,24 @@ class SuricataRule(RuleType):
             return {
                 "format": "suricata",
                 "title": rule.msg or "Untitled",
-                "license": kwargs.get("default_license") or info["license_from_github"],
-                "description": kwargs.get("description", "No description provided"),
+                "license":  info["license"] or "unknown",
+                "description": info["description"] or  "No description provided",
                 "version": rule.rev or "1.0",
-                "author": kwargs.get("author", "Unknown"),
+                "author": info["author"] or "Unknown",
                 "cve_id": cve,
-                "source": info["html_url"],
+                "original_uuid": rule.sid or  "Unknown",
+                "source": info["repo_url"],
                 "to_string": rule.raw,
             }
         except Exception as e:
             return {
                 "format": "suricata",
                 "title": "Invalid Rule",
-                "license": kwargs.get("default_license") or info["license_from_github"],
+                 "license":  info["license"] or "unknown",
                 "description": f"Error parsing metadata: {e}",
                 "version": "N/A",
-                "author": kwargs.get("author", "Unknown"),
+                "original_uuid": rule.sid or  "Unknown",
+                "author": info["author"] or "Unknown",
                 "cve_id": None,
                 "to_string": content,
             }
@@ -113,3 +116,26 @@ class SuricataRule(RuleType):
         except Exception:
             return []
         return rules
+
+    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
+        """
+        Search for a Suricata rule inside a locally cloned GitHub repo.
+        """
+        rule = RuleModel.get_rule(rule_id)
+        if not rule:
+            return "No rule found in the database.", False
+
+        rule_files = self.get_rule_files(repo_dir)
+
+        for filepath in rule_files:
+            rules = self.extract_rules_from_file(filepath)
+            for r in rules:
+                try:
+                    parsed_rules = parse_rules(r)
+                    for parsed_rule in parsed_rules:
+                        if str(parsed_rule.sid) == str(rule.original_uuid):
+                            return r, True
+                except Exception:
+                    continue
+
+        return f"Rule with SID '{rule.original_uuid}' not found inside repo.", False

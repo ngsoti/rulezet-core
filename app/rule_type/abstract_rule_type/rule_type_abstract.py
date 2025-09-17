@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 
+
 # ---------- Common contract ----------
 
 #
@@ -58,4 +59,9 @@ class RuleType(ABC):
         """Extract individual rules from a given file."""
         ...
 
+    @abstractmethod
+    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> str:
+        """Extract one rule with his id in a repo (to_update)."""
+        ...
+        
     # other method to do ....
