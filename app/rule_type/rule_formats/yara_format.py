@@ -94,7 +94,7 @@ class YaraRule(RuleType):
                 "title": rule_name,
                 "license": meta.get("license") or info["license"] or "unknown",
                 "description": meta.get("description") or info["description"] or  "No description provided",
-                "source": meta.get("source") or info["repo_url"],
+                "source": info["repo_url"] or meta.get("source") ,
                 "version": meta.get("version", "1.0"),
                 "original_uuid": meta.get("id") or  "Unknown",
                 "author": meta.get("author") or info["author"] or "Unknown",

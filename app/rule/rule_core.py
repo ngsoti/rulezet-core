@@ -7,7 +7,7 @@ import datetime
 from flask import jsonify
 from flask_login import current_user
 from jsonschema import  ValidationError, validate
-from sqlalchemy import case, or_
+from sqlalchemy import case, func, or_
 import yaml
 import yara
 from app.account.account_core import get_user
@@ -1973,3 +1973,4 @@ def delete_format(id):
 def get_all_rule_with_this_format(format_name):
     """Get all rules using the given format name (case-insensitive)"""
     return Rule.query.filter(Rule.format.ilike(format_name)).all()
+

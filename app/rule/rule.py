@@ -5,12 +5,11 @@ from math import ceil
 from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for
 from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
-from app.db_class.db import AnonymousUser
 from app.import_github_project.cron_check_updates import disable_schedule_job, enable_schedule_job, modify_schedule_job, remove_schedule_job
 from app.import_github_project.update_github_project import Check_for_rule_updates
 from app.rule_type.main_format import  extract_rule_from_repo, process_and_import_fixed_rule, verify_syntax_rule_by_format
 from ..account import account_core as AccountModel
-from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, fill_all_void_field, get_licst_license, git_pull_repo, github_repo_metadata
+from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, fill_all_void_field, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
 from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm, EditScheduleForm
 from ..utils.utils import  form_to_dict, generate_side_by_side_diff_html
 from . import rule_core as RuleModel
@@ -1632,16 +1631,19 @@ def create_format_rule() -> render_template:
     return render_template("admin/create_format.html", form=form)
 
 @rule_blueprint.route("/get_rules_formats_pages", methods=['GET'])
-def get_rules_formats_pages()-> dict:
+def get_rules_formats_pages() -> dict:
     """Get the rules formats pages"""
-    page = request.args.get('page', type=int)
+    page = request.args.get('page', type=int, default=1)
     _formats = RuleModel.get_all_rule_format_page(page)
-    if _formats:
-        return {"success": True,
-                "rules_formats": [format.to_json() for format in _formats],
-                "total_rules_formats": _formats.pages
-            }, 200
+    
+    if _formats.items:  
+        return {
+            "success": True,
+            "rules_formats": [f.to_json() for f in _formats.items],
+            "total_rules_formats": _formats.pages
+        }, 200
     return {"message": "No formats"}, 404
+
 
 @rule_blueprint.route('/delete_format_rule', methods=['GET'])
 @login_required
@@ -1695,7 +1697,13 @@ def import_rules_from_github() -> dict:
     repo_url = request.form.get('url')
     selected_license = request.form.get('license')
 
-    
+    verif = valider_repo_github(repo_url)
+    if not verif :
+        flash(" GitHub URL is required! Please enter a valid URL to import rules.", "danger")
+        return redirect(url_for("rule.rule", tab="github"))
+
+
+
     repo_dir, existe = clone_or_access_repo(repo_url) 
     
     info = github_repo_metadata(repo_url , selected_license)
@@ -1762,3 +1770,6 @@ def check_updates():
         "success": True,
         "toast_class": "success"
     }, 200
+
+
+

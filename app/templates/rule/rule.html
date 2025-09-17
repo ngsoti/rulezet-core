@@ -1,5 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
+
+
+
 <div class="container mt-4">
     <h1 class="ui dividing header text-center mb-4">Create a Rule</h1>
         <!-- Tabs navigation -->
@@ -168,49 +171,54 @@
         <div class="tab-pane fade" id="github" role="tabpanel">
             <div class="card p-4 shadow-sm mb-3">
                 <h5 class="mb-2 d-flex align-items-center">
-                <label for="url" class="form-label m-0">
-                    Import rules from GitHub project with URL (YARA / Zeek / Sigma / Suricata)
-                </label> <span style="color:red">*</span>
-                <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse" data-bs-target="#ruleInfo" role="button" aria-expanded="false" aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
+                    <label for="url" class="form-label m-0">
+                        Import rules from GitHub project with URL 
+                    </label> 
+                    <span style="color:red">*</span>
+                    <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse" data-bs-target="#ruleInfo" role="button" aria-expanded="false" aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
                 </h5>
 
                 <div class="collapse" id="ruleInfo">
                     <div class="alert alert-info mt-2">
-                        <strong>YARA</strong> and <strong>Sigma</strong> rules are passed through a syntax validator and compiled. Only valid rules will be imported.<br>
-                        <strong>Zeek</strong> and <strong>Suricata</strong> rules are parsed but not validated for correctness.
+                        The script will attempt to parse the rules from the GitHub repository according to their format (YARA, Sigma, Zeek, Suricata). 
+                        If any issues are detected during the rule validation, you will have the opportunity to review and correct them in the "Bad Rules" section.
                     </div>
                 </div>
-                    <!-- # import_rules_from_github -->
-                <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
+
+               <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
                     <div class="mb-3 d-flex">
-                        <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/project.git" required>
+                        <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/project.git" v-model="url" required>
                     </div>
+
+                    <div id="flash-messages" class="mt-2">
+                        {% for category, message in get_flashed_messages(with_categories=True) %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+
 
                     <div class="mb-3">
                         <label for="license-select" class="form-label">License</label>
                         <select id="license-select" name="license" class="form-control" v-model="selectedLicense">
-                        <option disabled value="">-- Choose a license --</option>
-                        <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
+                            <option disabled value="">-- Choose a license --</option>
+                            <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
                         </select>
                     </div>
 
-                    <!-- <div id="dynamic-fields" class="mb-3"></div>
-
-                    <div class="mb-3">
-                        <button type="button" class="btn btn-secondary" onclick="addField(2)">
-                        Add external variables
-                        </button>
-                    </div> -->
-
                     <div class="d-flex align-items-center">
-                        <button type="submit" class="btn btn-primary" id="submit-button" data-bs-toggle="modal" data-bs-target="#parsingModal">
-                        <i class="fas fa-paper-plane"></i> Send
+                        <button type="submit" class="btn btn-primary" id="submit-button">
+                            <i class="fas fa-paper-plane"></i> Send
                         </button>
                     </div>
                 </form>
             </div>
+
             <div class="modal fade" id="parsingModal" tabindex="-1" aria-labelledby="parsingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content text-center p-4">
@@ -228,6 +236,7 @@
         </div>
 
 
+
             
         
 
@@ -238,58 +247,25 @@
 
 
 {% block script %}
-
-<script>
-    // function addField(id) {
-    //     let container;
-    //     if (id == 2) {
-    //         container = document.getElementById('dynamic-fields');
-    //     } else {
-    //         container = document.getElementById('dynamic-fields-create');
-    //     }
-
-    //     const index = container.children.length;
-
-    //     const row = document.createElement('div');
-    //     row.className = 'd-flex mb-2';
-
-    //     const select = document.createElement('select');
-    //     select.name = `fields[${index}][type]`;
-    //     select.className = 'form-select me-2';
-    //     select.required = true;
-
-    //     const options = ['string', 'int', 'bool', 'bytes'];
-    //     options.forEach(opt => {
-    //         const option = document.createElement('option');
-    //         option.value = opt;
-    //         option.textContent = opt;
-    //         select.appendChild(option);
-    //     });
-
-    //     const input = document.createElement('input');
-    //     input.type = 'text';
-    //     input.name = `fields[${index}][name]`;
-    //     input.className = 'form-control me-2';
-    //     input.placeholder = 'Nom';
-    //     input.required = true;
-
-    //     const removeBtn = document.createElement('button');
-    //     removeBtn.type = 'button';
-    //     removeBtn.className = 'btn btn-danger';
-    //     removeBtn.textContent = '✕';
-    //     removeBtn.onclick = () => row.remove();
-
-    //     row.appendChild(select);
-    //     row.appendChild(input);
-    //     row.appendChild(removeBtn);
-
-    //     container.appendChild(row);
-    // }
-</script>
-
-
 <script type="module">
+    document.addEventListener('DOMContentLoaded', function() {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab === 'github') {
+            const githubTab = document.querySelector('#github-tab');
+            const githubPane = document.querySelector('#github');
+            const manualTab = document.querySelector('#manual-tab');
+            const manualPane = document.querySelector('#manual');
 
+            manualTab.classList.remove('active');
+            manualPane.classList.remove('show', 'active');
+
+            githubTab.classList.add('active');
+            githubPane.classList.add('show', 'active');
+        }
+    });
+
+    
      $(document).ready(function() {
         $('#license-select').select2({
             placeholder: "Search for a license",
@@ -307,28 +283,48 @@
     });
 
 
-    const { createApp, ref } = Vue;
+    const { createApp, ref, onMounted } = Vue;
     import { message_list } from '/static/js/toaster.js';
+
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
-
-            const license = ref([])
+            const license = ref([]);
             const selectedLicense = ref("");
+            const url = ref(""); // pour le champ URL
 
             async function fetchRules() {
-                const res = await fetch('/rule/get_license')
-                const data = await res.json()
-                license.value = data.licenses
+                const res = await fetch('/rule/get_license');
+                const data = await res.json();
+                license.value = data.licenses;
             }
-            fetchRules()
+
+            function showParsingModal(event) {
+                if (!url.value.trim()) {
+                    alert("The URL field is required.");
+                    return;
+                }
+                const modal = new bootstrap.Modal(document.getElementById('parsingModal'));
+                modal.show();
+
+                event.target.submit();
+            }
+
+
+            onMounted(() => {
+                fetchRules();
+            });
+
             return {
                 message_list,
                 license,
-                selectedLicense
+                selectedLicense,
+                url,
+                showParsingModal
             };
         }
     }).mount('#main-container');
+
 
     // Initialize Select2 on the license dropdown
     $(document).ready(function() {

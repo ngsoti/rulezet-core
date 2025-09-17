@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from sqlalchemy import String, TypeDecorator
+from sqlalchemy import String, TypeDecorator, func
 from .. import db, login_manager
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin, AnonymousUserMixin, current_user
@@ -172,7 +172,10 @@ class FormatRule(db.Model):
     user = db.relationship('User', backref=db.backref('user_format', lazy='dynamic', cascade='all, delete-orphan'))
 
     def get_count_rule_with_this_format(self):
-        return Rule.query.filter_by(format=self.name).count()
+        """Return the number of rules with this format, ignoring leading/trailing spaces and case."""
+        return Rule.query.filter(
+            func.lower(func.trim(Rule.format)) == self.name.lower()
+        ).count()
 
     def to_json(self):
         return {

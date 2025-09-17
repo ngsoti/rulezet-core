@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from flask_login import current_user
 import datetime
 from git import Repo
+from urllib.parse import urlparse
 import requests
 
 def get_repo_name_from_url(repo_url):
@@ -199,6 +200,24 @@ def github_repo_metadata(repo_url: str, selected_license: str) -> dict:
     # --- Extract metadata ---
     return extract_github_repo_metadata(data , selected_license)
 
+
+
+def valider_repo_github(repo_url: str) -> bool:
+    """
+    Vérifie qu'une chaîne est bien une URL de dépôt GitHub valide.
+    """
+    try:
+        parsed = urlparse(repo_url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        if parsed.netloc != "github.com":
+            return False
+        path_parts = [p for p in parsed.path.split('/') if p]
+        if len(path_parts) < 2:
+            return False
+        return True
+    except Exception:
+        return False
 
 
 ###############

@@ -117,3 +117,5 @@ class CreateFormatRuleForm(FlaskForm):
     def validate_name(self, field):
         if FormatRule.query.filter_by(name=field.data).first():
             raise ValidationError('This format name already exists.')
+        
+

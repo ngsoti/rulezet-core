@@ -97,24 +97,6 @@
             </tr>
         </tbody>
     </table>
-    <!-- <nav v-if="total_rules_formats_page > 1">
-        <ul class="pagination justify-content-center">
-            <li class="page-item" :class="{ disabled: current_page === 1 }">
-                <button class="page-link" @click="fetchRulesFormat(current_page - 1)">Previous</button>
-            </li>
-
-            <li class="page-item" 
-                v-for="page in total_rules_formats_page" 
-                :key="page" 
-                :class="{ active: page === current_page }">
-                <button class="page-link" @click="fetchRulesFormat(page)">[[ page ]]</button>
-            </li>
-
-            <li class="page-item" :class="{ disabled: current_page === total_rules_formats_page }">
-                <button class="page-link" @click="fetchRulesFormat(current_page + 1)">Next</button>
-            </li>
-        </ul>
-    </nav> -->
     <div v-if="total_rules_formats_page > 1">
         {% set current_page = 'current_page' %}
         {% set total_pages = 'total_rules_formats_page' %}
@@ -123,20 +105,6 @@
 
         {% include "components/pagination.html" %}
     </div>
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
 </div>
 {% else %}
 <script>
