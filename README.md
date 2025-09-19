@@ -99,7 +99,7 @@ The platform includes a wide set of functionalities to manage and collaborate ar
 ## Rule's Formats
 
 New rule formats may be added over time.  
-If you want to propose a new format, feel free to open an **issue** on our [GitHub](https://github.com/your-repo).
+If you want to propose a new format, feel free to open an **issue** on our [GitHub](https://github.com/ngsoti/rulezet-core.git).
 
 Currently, the supported formats are:
 
