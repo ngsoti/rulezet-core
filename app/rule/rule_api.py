@@ -1,15 +1,11 @@
 import asyncio
 from flask import Blueprint, request
-from flask_restx import Api, Resource, Namespace, fields
-from flask_login import current_user
+from flask_restx import Api, Resource, Namespace
 
 from app.db_class.db import Rule
-from app.import_github_project.import_github_Zeek import read_and_parse_all_zeek_scripts_from_folder
-from app.import_github_project.import_github_sigma import load_rule_files
-from app.import_github_project.import_github_suricata import parse_and_import_suricata_rules_async
-from app.import_github_project.import_github_yara import parse_yara_rules_from_repo_async
-from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, extract_owner_repo, get_github_repo_author, get_license_name, git_pull_repo
+from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, git_pull_repo, github_repo_metadata, valider_repo_github
 from app.import_github_project.update_github_project import Check_for_rule_updates
+from app.rule_type.main_format import extract_rule_from_repo, verify_syntax_rule_by_format
 from app.utils import utils
 from ..rule import rule_core as RuleModel
 from ..account import account_core as AccountModel
@@ -75,6 +71,7 @@ class DetailRule(Resource):
             "source": rule.source or f"{rule.author.first_name}, {rule.author.last_name}",
             "license": rule.license,
             "cve_id": rule.cve_id,
+            "original_uuid" : rule.original_uuid,
             "user_id": {
                 "id": author.id,
                 "first_name": author.first_name,
@@ -115,6 +112,7 @@ class DetailRule(Resource):
                     "source": rule.source or f"{user.first_name}, {user.last_name}",
                     "license": rule.license,
                     "cve_id": rule.cve_id,
+                    "original_uuid" : rule.original_uuid,
                     "user_id": {
                         "id": user.id,
                         "first_name": user.first_name,
@@ -167,6 +165,7 @@ class CreateRule(Resource):
         "license": "License applied to the rule",
         "source": "Origin/source of the rule",
         "to_string": "String representation of the rule content",
+        "original_uuid" : "the reel uuid of the rule if you want to create it ",
         "cve_id ": "Optional. CVE ID associated with the rule"
     })
     def post(self):
@@ -201,20 +200,14 @@ class CreateRule(Resource):
             'source': data.get("source", "").strip() or " {user.first_name}, {user.last_name}",
             'to_string': data.get("to_string").strip(),
             'license': data.get("license").strip(),
+            'original_uuid': data.get("original_uuid") or None,
             'author': user.first_name,
             'cve_id': data.get("cve_id") if cve_id else None
         }
 
-        external_vars = []  
-
-        if form_dict['format'] == 'yara':
-            valide, to_string, error = RuleModel.compile_yara(external_vars, form_dict)
-            if not valide:
-                return {"message": "Invalid YARA rule", "error": error}, 400  
-        elif form_dict['format'] == 'sigma':
-            valide, to_string, error = RuleModel.compile_sigma(form_dict)
-            if not valide:
-                return {"message": "Invalid Sigma rule", "error": error}, 400 
+        is_valid, error_msg = verify_syntax_rule_by_format(form_dict)
+        if not is_valid:
+            return {"message": "Invalid rule ", "error": error_msg}, 400  
 
         verif = RuleModel.add_rule_core(form_dict, user)
         if verif:
@@ -222,17 +215,24 @@ class CreateRule(Resource):
         return {"message": "Failed to add rule"}, 500 
 
     
-        # curl -X POST http://127.0.0.1:7009/api/rule/private/create   
-        #       -H "Content-Type: application/json"   -H "X-API-KEY: user_api_key"   -d '{
-        #     "title": "My N Rule",
-        #     "format": "yara",
-        #     "version": "1.0",
-        #     "to_string": "rule example { condition: true }",
-        #     "license": "MIT",
-        #     "description": "This is a test rule",
-        #     "source": "unit-test",
-        #     "cve_id": "CVE-2023-12345"
-        # }'
+    # curl -X POST http://127.0.0.1:7009/api/rule/private/create \
+    # -H "Content-Type: application/json" \
+    # -H "X-API-KEY: urW4F3wh93cAh18PIegFdFXOr8m09mH9sAq4sFK1ZKyAkaVx2wfVBIS1hU4b" \
+    # -d '{
+    #     "title": "My N Rule",
+    #     "format": "yara",
+    #     "version": "1.0",
+    #     "to_string": "rule example { condition: true }",
+    #     "license": "MIT",
+    #     "original_uuid": "wd334sda",
+    #     "description": "This is a test rule",
+    #     "source": "unit-test",
+    #     "cve_id": "CVE-2023-12345"
+    # }'
+
+
+        
+         
 
 #####################
 #   Delete a rule   #
@@ -427,23 +427,19 @@ class FavoriteRule(Resource):
 ###################################
 
 @private_ns.route('/import_rules_from_github')
-@api.doc(description="Import rules from a GitHub repository")
+@api.doc(description="Import YARA rules from a GitHub repository")
 class ImportRulesFromGithub(Resource):
     @api_required
     @api.doc(params={
         "url": "Required. URL of the GitHub repository to import rules from",
-        "license": "Optional. License to apply to the imported rules",
-        "fields[]": "Optional. External variables to parse, e.g., fields[0][type]=string&fields[0][name]=filename"
+        "license": "Optional. License to apply to the imported rules"
     })
     def post(self):
         user = utils.get_user_from_api(request.headers)
         if not user:
             return {"success": False, "message": "Unauthorized"}, 403
 
-        data = request.get_json(silent=True)
-        if not data:
-            data = request.args.to_dict()
-
+        data = request.get_json(silent=True) or request.args.to_dict()
         repo_url = data.get('url')
         if not repo_url:
             return {"success": False, "message": "Missing 'url' parameter"}, 400
@@ -452,95 +448,34 @@ class ImportRulesFromGithub(Resource):
         if not selected_license:
             return {"success": False, "message": "Missing 'license' parameter"}, 400
 
-        # Parse external variables (if any)
-        external_vars = []
-        index = 0
-        while True:
-            var_type = data.get(f'fields[{index}][type]')
-            var_name = data.get(f'fields[{index}][name]')
-            if var_type and var_name:
-                external_vars.append({'type': var_type, 'name': var_name})
-                index += 1
-            else:
-                break
+
+        if not valider_repo_github(repo_url):
+            return {"success": False, "message": "Invalid GitHub URL"}, 400
+
+
+        repo_dir, exists = clone_or_access_repo(repo_url)
+        if not repo_dir:
+            return {"success": False, "message": "Failed to clone or access the repository"}, 500
+
+
+        info = github_repo_metadata(repo_url, selected_license)
 
         try:
-            info = get_github_repo_author(repo_url)
-            repo_dir, exists = clone_or_access_repo(repo_url)
-            if not repo_dir:
-                return {"success": False, "message": "Failed to clone or access the repository"}, 500
+            bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir, info , user))
 
-            owner, repo = extract_owner_repo(repo_url)
-            license_from_github = selected_license or get_license_name(owner, repo)
+            delete_existing_repo_folder("Rules_Github")
 
-            # --- Import YARA ---
-            yara_imported, yara_skipped, yara_failed, bad_rules_yara = asyncio.run(
-                parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_url , user)
-            )
-
-            # --- Import Sigma ---
-            bad_rule_dicts_sigma, nb_bad_rules_sigma, imported_sigma, skipped_sigma = asyncio.run(
-                load_rule_files(repo_dir, license_from_github, repo_url, user)
-            )
-
-            # --- Import Zeek ---
-            rule_dicts_zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir, repo_url, license_from_github, info)
-            imported_zeek = 0
-            skipped_zeek = 0
-            if rule_dicts_zeek:
-                for rule in rule_dicts_zeek:
-                    success = RuleModel.add_rule_core(rule, user)
-                    if success:
-                        imported_zeek += 1
-                    else:
-                        skipped_zeek += 1
-
-            # --- Import Suricata ---
-            imported_suricata, suricata_skipped = asyncio.run(
-                parse_and_import_suricata_rules_async(repo_dir, license_from_github, repo_url, info, user)
-            )
-
-            # Clean temporary files if needed
-            # success = delete_existing_repo_folder("app/rule/output_rules/Yara")
-            # if not success:
-            #     return {"success": False, "message": "Failed to clean temporary YARA folder"}, 500
-
-            # Save invalid rules to database
-            if bad_rules_yara:
-                RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github , user)
-
-            if bad_rule_dicts_sigma:
-                RuleModel.save_invalid_rules(bad_rule_dicts_sigma, "Sigma", repo_url, license_from_github , user)
-
-            # Final response
-            return {
+            response = {
                 "success": True,
-                "summary": {
-                    "imported": {
-                        "yara": yara_imported,
-                        "sigma": imported_sigma,
-                        "suricata": imported_suricata,
-                        "zeek": imported_zeek,
-                        "total": yara_imported + imported_sigma + imported_suricata + imported_zeek
-                    },
-                    "skipped": {
-                        "yara": yara_skipped,
-                        "sigma": skipped_sigma,
-                        "suricata": suricata_skipped,
-                        "zeek": skipped_zeek,
-                        "total": yara_skipped + skipped_sigma + suricata_skipped + skipped_zeek
-                    },
-                    "failed": {
-                        "yara": len(bad_rules_yara),
-                        "sigma": nb_bad_rules_sigma,
-                        "total": len(bad_rules_yara) + nb_bad_rules_sigma
-                    }
-                },
-                "invalid_rules": {
-                    "yara": bad_rules_yara,         # List of invalid YARA rules with errors
-                    "sigma": bad_rule_dicts_sigma   # List of invalid Sigma rules with errors
-                }
-            }, 200
+                "imported": imported,
+                "skipped": skipped,
+                "failed": bad_rules
+            }
+
+            if bad_rules > 0:
+                return response, 207  
+
+            return response, 200
 
         except Exception as e:
             return {
@@ -549,17 +484,14 @@ class ImportRulesFromGithub(Resource):
                 "error": str(e)
             }, 500
 
+
     # curl -X POST http://127.0.0.1:7009/api/rule/private/import_rules_from_github \
-    #     -H "Content-Type: application/json" \
-    #     -H "X-API-KEY: user_api_key" \
-    #     -d '{
-    #             "url": "https://github.com/ecrou-exact/Test-pour-regle-yara-.git",
-    #             "license": "MIT",
-    #             "fields[0][type]": "string",
-    #             "fields[0][name]": "filename",
-    #             "fields[1][type]": "int",
-    #             "fields[1][name]": "filesize"
-    #         }'
+    # -H "Content-Type: application/json" \
+    # -H "X-API-KEY: user_api_key " \
+    # -d '{
+    #     "url": "https://github.com/ecrou-exact/Test-pour-regle-yara-.git",
+    #     "license": "MIT"
+    # }'
 
 ###################################
 #   update rules from a github    #

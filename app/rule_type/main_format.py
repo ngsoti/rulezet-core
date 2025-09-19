@@ -33,7 +33,7 @@ format_classes = {
     # "format_name": FormatclassRule
 }
 
-def Process_rules_by_format(format_files: list, format_rule: dict, info: dict, format_name: str) -> int:
+def Process_rules_by_format(format_files: list, format_rule: dict, info: dict, format_name: str , user: User) -> int:
     imported = 0
     skipped = 0
     bad_rules = 0
@@ -58,7 +58,7 @@ def Process_rules_by_format(format_files: list, format_rule: dict, info: dict, f
 
                 # Attempt to create rule if validation is OK
                 if validation_result.ok:
-                    success = RuleModel.add_rule_core(result_dict["rule"], current_user)
+                    success = RuleModel.add_rule_core(result_dict["rule"], user)
                     if success:
                         imported += 1
                     else:
@@ -69,6 +69,7 @@ def Process_rules_by_format(format_files: list, format_rule: dict, info: dict, f
                         to_string=rule_text,
                         rule_type=format_name,
                         error=validation_result.errors,
+                        user=user
                     )
 
                     bad_rules += 1
@@ -137,7 +138,7 @@ def Process_rules_by_format(format_files: list, format_rule: dict, info: dict, f
 
 #     return bad_rules, imported, skipped
 
-async def extract_rule_from_repo(repo_dir: str, info: dict):
+async def extract_rule_from_repo(repo_dir: str, info: dict, user: User):
     """
     Test all rules in a repo for all formats, returns results .
     """
@@ -161,7 +162,7 @@ async def extract_rule_from_repo(repo_dir: str, info: dict):
         files = rule_instance.get_rule_files(repo_dir)
 
         bad, imported_count, skipped_count = Process_rules_by_format(
-            files, rule_instance, info, format_name
+            files, rule_instance, info, format_name , user
         )
 
         # bad est un int, pas une liste

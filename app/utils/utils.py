@@ -34,7 +34,6 @@ def get_user_from_api(headers):
     return user
 
 
-
 def verif_api_key(headers):
     key = headers.get("X-API-KEY")
     if not key:

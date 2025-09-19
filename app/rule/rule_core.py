@@ -11,10 +11,7 @@ from sqlalchemy import case, func, or_
 import yaml
 import yara
 from app.account.account_core import get_user
-#from app.import_github_project.cron_check_updates import add_schedule_job
-from app.import_github_project.import_github_yara import extract_first_match, insert_import_module
-from app.import_github_project.untils_import import build_externals_dict, clean_rule_filename_Yara_v2
-from app.utils.utils import detect_cve
+from app.import_github_project.untils_import import build_externals_dict
 from .. import db
 from ..db_class.db import *
 from . import rule_core as RuleModel
@@ -97,14 +94,12 @@ def add_rule_core(form_dict, user) -> bool:
                 # Case 2: Same content but different original UUID → allow as new rule
                 if r.to_string == new_to_string and existing_original_uuid != new_original_uuid:
                     break  # continue to insertion
-                
 
         # Identify user
         if current_user.is_authenticated:
             user_id = current_user.id
         else:
             user_id = user.id if user else None
-
         # Create the new rule
         new_rule = Rule(
             format=form_dict["format"],
@@ -645,13 +640,19 @@ def save_invalid_rules(bad_rules, rule_type ,repo_url, license , user) -> None:
         db.session.add(new_invalid_rule)
     db.session.commit()
 
-def save_invalid_rule(form_dict, to_string ,rule_type, error) -> None:
+def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
     """
     Save an invalid rule to the database if not already existing.
     
     :param form_dict: Dict containing at least 'title', 'to_string' (content), 'error' and optionally 'url' and 'license'
     :param rule_type: Type of the rule (e.g., 'YARA', 'SIGMA')
     """
+
+    if current_user.is_authenticated:
+        user_id = current_user.id
+    else:
+        user_id = user.id if user else None
+
     file_name = str(form_dict["title"]) 
     error_message = str(error)
     raw_content = str(to_string)
@@ -662,17 +663,17 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error) -> None:
         error_message=error_message,
         raw_content=raw_content,
         rule_type=rule_type,
-        user_id= current_user.id
+        user_id= user_id
     ).first()
     if existing:
         return
 
     new_invalid_rule = InvalidRuleModel(
-        file_name=file_name or "invalide rule"+current_user.id ,
+        file_name=file_name or "invalide rule"+user_id ,
         error_message=error_message,
         raw_content=raw_content,
         rule_type=rule_type,
-        user_id= current_user.id,
+        user_id= user_id,
         url=repo_url,
         license=license
     )

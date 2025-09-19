@@ -262,11 +262,6 @@ def edit_rule(rule_id) -> render_template:
 #   Rule info   #
 #################
 
-@rule_blueprint.route("/rules_info", methods=['GET'])
-def rules_info()-> render_template:
-    """Redirect to rule info"""        
-    return render_template("rule/rules_info.html")
-
 @rule_blueprint.route("/history/<int:rule_id>", methods=['GET'])
 def rules_history(rule_id)-> render_template:
     """Redirect to rule history"""    
@@ -1227,83 +1222,6 @@ def get_license() -> jsonify:
                 licenses.append(line)
     return jsonify({"licenses": licenses})
 
-# @rule_blueprint.route("/import_rules_from_github", methods=['GET', 'POST'])
-# @login_required
-# def import_rules_from_github() -> redirect:
-#     if request.method == 'POST':
-#         repo_url = request.form.get('url')
-#         selected_license = request.form.get('license')
-#         external_vars = []
-#         index = 0
-#         while True:
-#             var_type = request.form.get(f'fields[{index}][type]')
-#             var_name = request.form.get(f'fields[{index}][name]')
-#             if var_type and var_name:
-#                 external_vars.append({'type': var_type, 'name': var_name})
-#                 index += 1
-#             else:
-#                 break
-
-#         try:
-#             info = get_github_repo_author(repo_url)
-#             repo_dir, existe = clone_or_access_repo(repo_url) 
-
-#             if not repo_dir:
-#                 flash("Failed to clone or access the repository.", "danger")
-#                 return redirect(url_for("rule.rules_list"))
-
-#             owner, repo = extract_owner_repo(repo_url)
-#             license_from_github = selected_license or get_license_name(owner, repo)
-
-        
-#             yara_imported, yara_skipped, yara_failed, bad_rules_yara = asyncio.run(
-#                 parse_yara_rules_from_repo_async(repo_dir, license_from_github, repo_url, current_user)
-#             )
-
-            
-#             bad_rule_dicts_Sigma, nb_bad_rules_sigma, imported_sigma, skipped_sigma = asyncio.run(
-#                 load_rule_files(repo_dir, license_from_github, repo_url, current_user)
-#             )
-#             rule_dicts_Zeek = read_and_parse_all_zeek_scripts_from_folder(repo_dir, repo_url, license_from_github, info)
-
-
-        
-#             imported_suricata, suricata_skipped = asyncio.run(
-#                 parse_and_import_suricata_rules_async(repo_dir, license_from_github, repo_url, info, current_user)
-#             )
-
-
-
-#             imported = imported_sigma + yara_imported + imported_suricata
-#             skipped = skipped_sigma + yara_skipped + suricata_skipped
-
-#             # Import des règles Zeek
-#             if rule_dicts_Zeek:
-#                 for rule_dic3 in rule_dicts_Zeek:
-#                     success = RuleModel.add_rule_core(rule_dic3, current_user)
-#                     if success:
-#                         imported += 1
-#                     else:
-#                         skipped += 1
-
-#             flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
-#             delete_existing_repo_folder("app/rule/output_rules/Yara")
-
-#             if bad_rules_yara:
-#                 flash(f"Failed to import {len(bad_rules_yara)} YARA rules.", "danger")
-#                 RuleModel.save_invalid_rules(bad_rules_yara, "YARA", repo_url, license_from_github , current_user)
-
-#             if bad_rule_dicts_Sigma:
-#                 flash(f"Failed to import {nb_bad_rules_sigma} Sigma rules.", "danger")
-#                 RuleModel.save_invalid_rules(bad_rule_dicts_Sigma, "Sigma", repo_url, license_from_github , current_user)
-
-#             if bad_rule_dicts_Sigma or bad_rules_yara:
-#                 return redirect(url_for("rule.bad_rules_summary"))
-
-#         except Exception as e:
-#             flash(f"Failed to import rules: with url :  {repo_url} because : {e}", "danger")
-
-#     return redirect(url_for("rule.rules_list"))
 
 
 #################
@@ -1712,7 +1630,7 @@ def import_rules_from_github() -> dict:
         flash("Failed to clone or access the repository.", "danger")
         return redirect(url_for("rule.rules_list"))
 
-    bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir , info ))
+    bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir , info , current_user))
 
     delete_existing_repo_folder("Rules_Github")
 
