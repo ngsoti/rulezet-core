@@ -1974,3 +1974,5 @@ def get_all_rule_with_this_format(format_name):
     """Get all rules using the given format name (case-insensitive)"""
     return Rule.query.filter(Rule.format.ilike(format_name)).all()
 
+
+

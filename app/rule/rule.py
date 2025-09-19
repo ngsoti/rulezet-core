@@ -1635,7 +1635,7 @@ def get_rules_formats_pages() -> dict:
     """Get the rules formats pages"""
     page = request.args.get('page', type=int, default=1)
     _formats = RuleModel.get_all_rule_format_page(page)
-    
+
     if _formats.items:  
         return {
             "success": True,
@@ -1714,7 +1714,7 @@ def import_rules_from_github() -> dict:
 
     bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir , info ))
 
-    delete_existing_repo_folder("/Rules_Github")
+    delete_existing_repo_folder("Rules_Github")
 
     # Save invalid YARA rules and flash
     if bad_rules > 0:

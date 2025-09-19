@@ -45,6 +45,7 @@
 #     else:
 #         return {"message": "No change detected for this rule", "success": True, "new_content": None}, True, None
 
+from app.rule_type.rule_formats.elastic_format import ElasticDetectionRule
 from app.rule_type.rule_formats.yara_format import YaraRule
 from app.rule_type.rule_formats.sigma_format import SigmaRule
 from app.rule_type.rule_formats.suricata_format import SuricataRule
@@ -61,6 +62,7 @@ FORMAT_CLASSES = {
     "zeek": ZeekRule,
     "crs": CRSRule,
     "nova": NovaRule,
+    "elastic": ElasticDetectionRule
 }
 
 

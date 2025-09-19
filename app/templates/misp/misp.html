@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5" id="main-container">
+    <h1 class="mb-4"><i class="fas fa-project-diagram"></i> MISP Connector</h1> 
+
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#connection_modal_">
+        <i class="fas fa-plug"></i> Try connection
+    </button>
+
+    <!-- Modal -->
+    <div class="modal fade" id="connection_modal_" tabindex="-1" aria-labelledby="connection_modal_label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="connection_modal_label">
+                        <i class="fas fa-network-wired"></i> Test MISP Connection
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Do you want to test connection to MISP server?
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-success" @click="connect">
+                        <i class="fas fa-check"></i> Connect
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp } = Vue;
+    import { message_list, display_toast } from '/static/js/toaster.js';
+    
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            async function connect() {
+                const res = await fetch('/misp/connect');
+               
+                const myModalEl = document.getElementById('connection_modal_');
+                const modal = bootstrap.Modal.getInstance(myModalEl);
+                modal.hide();
+               
+                display_toast(res)
+              
+            }
+
+            return {
+                message_list,
+                connect
+            }
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

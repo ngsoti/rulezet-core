@@ -52,11 +52,13 @@ def create_app():
     from .account.account import account_blueprint
     from .rule.rule import rule_blueprint  
     from .bundle.bundle import bundle_blueprint
+    from .misp.misp import misp_blueprint
 
     app.register_blueprint(home_blueprint, url_prefix="/")
     app.register_blueprint(account_blueprint, url_prefix="/account")
     app.register_blueprint(rule_blueprint, url_prefix="/rule")
     app.register_blueprint(bundle_blueprint, url_prefix="/bundle")
+    app.register_blueprint(misp_blueprint, url_prefix="/misp")
 
     from .rule.rule_api import api_rule_blueprint
     from app.account.account_api import api_account_blueprint
