@@ -25,7 +25,9 @@ def show_admin_first_connection(admin , raw_password):
     print(f"{YELLOW}🚀 You can now launch the application using:{RESET} ./launch.sh -l\n")
     print("=" * NUMBER + "\n")
     
-
+#############################
+#   For the reel web site   #
+#############################
 
 def create_admin():
     # Admin user
@@ -55,6 +57,10 @@ def create_default_user():
     db.session.commit()
     return user
 
+###############
+#   For test  #
+###############
+
 def create_user_test():
     user = User(
         first_name="Matrix",
@@ -77,6 +83,18 @@ def create_user_test():
     db.session.add(user2)
     db.session.commit()
 
+def create_admin_test():
+    # Admin user
+    user = User(
+        first_name="admin",
+        last_name="admin",
+        email="admin@admin.admin",
+        password= "admin",
+        admin=True,
+        api_key =  "admin_api_key"
+    )
+    db.session.add(user)
+    db.session.commit()
 
 def insert_default_formats():
     formats = [
@@ -87,6 +105,7 @@ def insert_default_formats():
         {"name": "crs", "can_be_execute": False},
         {"name": "nova", "can_be_execute": False},
         {"name": "elastic", "can_be_execute": True},
+        {"name": "nse", "can_be_execute": True},
         {"name": "no format", "can_be_execute": False}
     ]
 
@@ -105,25 +124,25 @@ def insert_default_formats():
     db.session.commit()
 
 
-# def create_rule_test():
-#     editor = User.query.filter_by(email="t@t.t").first()
-#     if editor :
-#         rule = Rule(
-#             format="yara",
-#             title="test",
-#             license="test",
-#             description="test",
-#             uuid=str(uuid.uuid4()),
-#             source="test",
-#             author="test",
-#             version=1,
-#             user_id=editor.id,
-#             creation_date = datetime.datetime.now(tz=datetime.timezone.utc),
-#             last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
-#             vote_up=0,
-#             vote_down=0,
-#             to_string = " rule test { condition: 1}"
-#         )
-#         db.session.add(rule)
-#         db.session.commit()
+def create_rule_test():
+    editor = User.query.filter_by(email="t@t.t").first()
+    if editor :
+        rule = Rule(
+            format="yara",
+            title="test",
+            license="test",
+            description="test",
+            uuid=str(uuid.uuid4()),
+            source="test",
+            author="test",
+            version=1,
+            user_id=editor.id,
+            creation_date = datetime.datetime.now(tz=datetime.timezone.utc),
+            last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
+            vote_up=0,
+            vote_down=0,
+            to_string = " rule test { condition: 1}"
+        )
+        db.session.add(rule)
+        db.session.commit()
 

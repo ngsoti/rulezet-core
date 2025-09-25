@@ -4,12 +4,8 @@
 #   Api key   #
 ###############
 
-import datetime
-import uuid
 import pytest
-from app.db_class import db
 from app.db_class.db import Rule, User
-from  app.rule import  rule_core as RuleModel
 
 # a new user for the tests
 API_KEY_USER = "user_api_key_neo"
@@ -130,11 +126,18 @@ def test_create_invalid_yara_rule(client):
         "version": "1.0",
         "format": "yara",
         "license": "MIT",
-        "to_string": "rule test { condition: }" # Invalid syntax
+        "to_string": "rule test { condition: }"  # Invalid syntax
     }
-    response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+    response = client.post(
+        "/api/rule/private/create",
+        json=data,
+        headers={"X-API-KEY": API_KEY_USER}
+    )
     assert response.status_code == 400
-    assert b"Invalid YARA rule" in response.data
+    json_data = response.get_json()
+    assert json_data["message"].startswith("Invalid rule")
+    assert "error" in json_data
+
 
 
 def test_create_rule_invalid_cve(client):

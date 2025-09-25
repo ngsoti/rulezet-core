@@ -2,7 +2,6 @@
 #   register case   #
 #####################
 
-from app.db_class.db import User
 API_KEY = "admin_api_key"
 
 def create_user(client) -> None:

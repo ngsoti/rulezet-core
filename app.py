@@ -52,9 +52,6 @@ elif args.recreate_db:
         insert_default_formats()
         show_admin_first_connection(admin , raw_password)
 
-
-        #create_user_test()
-        #create_rule_test()
         editor = create_default_user()
 elif args.delete_db:
     with app.app_context():

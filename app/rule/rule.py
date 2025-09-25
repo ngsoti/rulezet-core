@@ -1,4 +1,5 @@
 import asyncio
+import json
 from urllib.parse import urlparse
 from datetime import datetime,  timezone
 from math import ceil
@@ -7,11 +8,12 @@ from flask_login import current_user, login_required
 from app.account.account_core import add_favorite, remove_favorite
 from app.import_github_project.cron_check_updates import disable_schedule_job, enable_schedule_job, modify_schedule_job, remove_schedule_job
 from app.import_github_project.update_github_project import Check_for_rule_updates
+from app.misp.misp_core import content_convert_to_misp_object
 from app.rule_type.main_format import  extract_rule_from_repo, process_and_import_fixed_rule, verify_syntax_rule_by_format
 from ..account import account_core as AccountModel
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, fill_all_void_field, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
 from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm, EditScheduleForm
-from ..utils.utils import  form_to_dict, generate_side_by_side_diff_html
+from ..utils.utils import  bump_version, form_to_dict, generate_side_by_side_diff_html
 from . import rule_core as RuleModel
 
 rule_blueprint = Blueprint(
@@ -222,8 +224,10 @@ def edit_rule(rule_id) -> render_template:
             if valide == False:
                     return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
             
-            rule_dict["version"] = str(float(rule_dict["version"]) + 0.1)
- 
+            if rule_dict["version"] == rule.version:
+                rule_dict["version"] = bump_version(rule_dict["version"])
+
+
             # create an history for the rule
             if rule.to_string != form_dict['to_string']:
                 result = {
@@ -386,7 +390,6 @@ def get_current_rule() -> jsonify:
     """Get the current rule for detail"""
     rule_id = request.args.get('rule_id', 1, type=int)
     rule = RuleModel.get_rule(rule_id)
-    #rule.to_string = "]"
     if rule:
         return {"rule": rule.to_json()}
     return {"message": "No Rule"}, 404
@@ -397,19 +400,108 @@ def detail_rule(rule_id)-> render_template:
     rule = RuleModel.get_rule(rule_id)
     return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string)
 
-@rule_blueprint.route("/download/<int:rule_id>", methods=['GET'])
-def download_rule(rule_id) -> Response:
-    """Download a rule"""
+@rule_blueprint.route("/download_rule", methods=['GET'])
+def download_rule_unified() -> Response:
+    rule_id = request.args.get('rule_id', type=int)
+    fmt = request.args.get('format', default='txt')
+
     rule = RuleModel.get_rule(rule_id)
-    filename = f"{rule.title}.yar"
-    content = rule.to_string or ""
-    return Response(
-        content,
-        mimetype='application/octet-stream',
-        headers={
-            "Content-Disposition": f"attachment;filename={filename}"
-        }
-    )
+    if not rule:
+        return jsonify({
+            "message": f"No rule found with id={rule_id}",
+            "success": False,
+            "toast_class": "danger",
+        })
+
+    try:
+        if fmt == 'txt':
+            content = rule.to_string 
+            filename = f"{rule.title}.txt"
+
+        elif fmt == 'json':
+            content = json.dumps(rule.to_json(), indent=2)
+            filename = f"rule_{rule.id}.json"
+
+        elif fmt == 'misp':
+            object_json = content_convert_to_misp_object(rule_id)
+            if not object_json:
+                return jsonify({
+                    "message": f"Format {rule.format} not found on MISP",
+                    "success": False,
+                    "toast_class": "danger",
+                })
+            content = json.dumps(object_json, indent=2)
+            filename = f"rule_{rule.id}_misp_object.json"
+
+        else:
+            return jsonify({
+                "message": f"Unknown format: {fmt}",
+                "success": False,
+                "toast_class": "danger",
+            })
+
+    except Exception as e:
+        return jsonify({
+            "message": f"Failed to prepare download: {str(e)}",
+            "success": False,
+            "toast_class": "danger",
+        })
+    
+    return jsonify({
+        "message": f"Rule {rule.title} ready for download",
+        "success": True,
+        "toast_class": "success",
+        "filename": filename,
+        "content": content,
+    })
+
+
+
+@rule_blueprint.route("/get_rule_each_format", methods=["GET"])
+def get_rule_each_format():
+    """Return a rule in multiple export formats (Normal, JSON, MISP)."""
+
+    rule_id = request.args.get("rule_id", type=int)
+    rule = RuleModel.get_rule(rule_id)
+
+    if not rule:
+        return jsonify({
+            "message": f"No rule found with id={rule_id}",
+            "success": False
+        }), 404
+
+    rule_json = rule.to_json()
+    rule_misp_object = content_convert_to_misp_object(rule_id)
+    if rule_misp_object and rule_json:
+        return jsonify({
+            "success": True,
+            "rule_id": rule_id,
+            "formats": {
+                "normal": rule.to_string,
+                "json": rule_json,
+                "misp": rule_misp_object,
+            }
+        })
+    elif rule_json:
+        return jsonify({
+            "success": True,
+            "rule_id": rule_id,
+            "formats": {
+                "normal": rule.to_string,
+                "json": rule_json,
+                "misp": "No MISP object for the format",
+            }
+        })
+    else:
+         return jsonify({
+            "success": False,
+            "rule_id": rule_id,
+            "formats": {
+                "normal": rule.to_string,
+                "json": rule_json,
+                "misp": "No MISP object for the format",
+            }
+        })
 
 #########################
 #   Favorite section    #
@@ -1691,3 +1783,7 @@ def check_updates():
 
 
 
+    
+
+  
+        

@@ -7,7 +7,6 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = "postgresql:///rulezet"
-    #SQLALCHEMY_DATABASE_URI = "sqlite:///rulezet.sqlite"
 
     
 

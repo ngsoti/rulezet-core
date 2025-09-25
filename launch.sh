@@ -7,7 +7,7 @@ function launch {
 
 function test {
     export FLASKENV="testing"
-    pytest
+    pytest tests
 }
 
 function init_db {

@@ -40,11 +40,23 @@ class CreateBundle(Resource):
         if not data:
             data = request.args.to_dict()
 
-        my_bundle = BundleModel.create_bundle(data , user)
+        name = data.get("name", "").strip()
+        if not name:
+            return {"message": "Invalid bundle", "error": "Name is required"}, 400
+
+        description = data.get("description", "").strip()
+
+        my_bundle = BundleModel.create_bundle(
+            {"name": name, "description": description}, user
+        )
         if not my_bundle:
             return {"message": "Failed to create bundle"}, 500
 
-        return {"message": "Bundle created successfully", "bundle_id": my_bundle.id}, 201
+        return {
+            "message": "Bundle created successfully",
+            "bundle_id": my_bundle.id
+        }, 200
+
     
     # curl -X POST http://127.0.0.1:7009/api/bundle/create \
     # -H "Content-Type: application/json" \
@@ -74,6 +86,7 @@ class AddRuleToBundle(Resource):
         rule_id = request.args.get('rule_id', type=int)
         bundle_id = request.args.get('bundle_id', type=int)
         description = request.args.get('description', type=str)
+
         if not rule_id or not bundle_id or not description:
             return {
                 "success": False,
@@ -82,31 +95,34 @@ class AddRuleToBundle(Resource):
             }, 400
 
         bundle = BundleModel.get_bundle_by_id(bundle_id)
-        
         if not bundle:
-            return {"success": False, "message": "Bundle not found", "toast_class": "danger"}, 404
-
-        if user.id == bundle.user_id or user.is_admin():
-            if rule_id and bundle_id:
-                success_ = BundleModel.add_rule_to_bundle(bundle_id, rule_id, description)
-                if success_:
-                    return {
-                        "success": True,
-                        "message": "Rule added!",
-                        "toast_class": "success"
-                    }, 200
-
             return {
                 "success": False,
-                "message": "Missing rule_id or bundle_id",
+                "message": "Bundle not found",
                 "toast_class": "danger"
-            }, 400
+            }, 404
+
+        if not (user.id == bundle.user_id or user.is_admin()):
+            return {
+                "success": False,
+                "message": "You don't have the permission to do that!",
+                "toast_class": "danger"
+            }, 401
+
+        success_ = BundleModel.add_rule_to_bundle(bundle_id, rule_id, description)
+        if success_:
+            return {
+                "success": True,
+                "message": "Rule added!",
+                "toast_class": "success"
+            }, 200
 
         return {
             "success": False,
-            "message": "You don't have the permission to do that!",
+            "message": "Failed to add rule to bundle",
             "toast_class": "danger"
-        }, 401
+        }, 500
+
 
     # curl -X GET "http://127.0.0.1:7009/api/bundle/add_rule_bundle?rule_id=42&bundle_id=7&description=Important%20rule" \
     #     -H "X-API-KEY: user_api_key"

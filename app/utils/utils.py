@@ -1,3 +1,4 @@
+import json
 import subprocess
 import os
 import re
@@ -197,3 +198,26 @@ def update_or_clone_repo(repo_url: str) -> str | None:
         return None
 
     return local_repo_path
+
+def bump_version(version: str) -> str:
+    """
+    Smartly increments a version string:
+    - If it's float-like ("1", "1.0", "2.5"), increments the decimal part.
+    - If it's semver-like ("1.0.0", "2.3.4"), increments the last segment.
+    - If format is unknown, returns the original version unchanged.
+    """
+    version = version.strip()
+
+    try:
+        val = float(version)
+        return str(round(val + 0.1, 1))
+    except ValueError:
+        pass
+
+    if re.match(r'^\d+(\.\d+)*$', version):
+        parts = version.split(".")
+        parts[-1] = str(int(parts[-1]) + 1) 
+        return ".".join(parts)
+
+    return version
+

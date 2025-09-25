@@ -3,59 +3,129 @@
 <div class="container my-5" id="main-container">
     <h1 class="mb-4"><i class="fas fa-project-diagram"></i> MISP Connector</h1> 
 
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#connection_modal_">
-        <i class="fas fa-plug"></i> Try connection
-    </button>
+    <!-- Connection Status -->
+    <div class="mb-3">
+        <span class="badge" :class="connected ? 'bg-success' : 'bg-danger'">
+            [[ connected ? 'Connected' : 'Disconnected' ]]
+        </span>
+    </div>
 
-    <!-- Modal -->
-    <div class="modal fade" id="connection_modal_" tabindex="-1" aria-labelledby="connection_modal_label" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="connection_modal_label">
-                        <i class="fas fa-network-wired"></i> Test MISP Connection
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Do you want to test connection to MISP server?
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-success" @click="connect">
-                        <i class="fas fa-check"></i> Connect
-                    </button>
-                </div>
-            </div>
-        </div>
+    <!-- Connection Buttons -->
+    <div class="mb-3">
+        <button class="btn btn-primary me-2" @click="connect">
+            <i class="fas fa-plug"></i> Connect
+        </button>
+        <button class="btn btn-warning me-2" @click="disconnect">
+            <i class="fas fa-unlink"></i> Disconnect
+        </button>
+        <button class="btn btn-info" @click="fetchEvents">
+            <i class="fas fa-list"></i> Fetch Events
+        </button>
+    </div>
+
+    <!-- Create Event -->
+    <div class="mb-4">
+        <h4>Create Event</h4>
+        <input v-model="newEventInfo" class="form-control mb-2" placeholder="Event info">
+        <button class="btn btn-success" @click="createEvent">
+            <i class="fas fa-plus"></i> Create Event
+        </button>
+    </div>
+
+    <!-- Events Table -->
+    <div v-if="events.length > 0">
+        <h4>Events</h4>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Info</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="e in events" :key="e.id">
+                    <td>[[e.id]]</td>
+                    <td>[[ e.info ]] </td>
+                    <td>[[e.date ]]</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
 
 {% block script %}
 <script type="module">
-    const { createApp } = Vue;
-    import { message_list, display_toast } from '/static/js/toaster.js';
-    
-    createApp({
-        delimiters: ['[[', ']]'],
-        setup() {
-            async function connect() {
-                const res = await fetch('/misp/connect');
-               
-                const myModalEl = document.getElementById('connection_modal_');
-                const modal = bootstrap.Modal.getInstance(myModalEl);
-                modal.hide();
-               
-                display_toast(res)
-              
+const { createApp, ref } = Vue;
+import { display_toast, prepare_toast, message_list, display_prepared_toast } from '/static/js/toaster.js';
+
+createApp({
+    delimiters: ['[[', ']]'],
+    setup() {
+        const csrf_token = '{{ csrf_token() }}';
+        const events = ref([]);
+        const newEventInfo = ref('');
+        const connected = ref(false); 
+
+        async function connect() {
+            const res = await fetch('/misp/connect');
+            const data = await res.json();
+            display_prepared_toast(data);
+            connected.value = data.status === "success";
+        }
+
+        async function disconnect() {
+            const res = await fetch('/misp/disconnect');
+            const data = await res.json();
+            display_prepared_toast(data);
+            connected.value = false;
+        }
+
+        async function fetchEvents() {
+            const res = await fetch('/misp/events?limit=10');
+            const data = await res.json();
+
+            if (data.status === "success") {
+                events.value = data.events;
             }
 
-            return {
-                message_list,
-                connect
+            display_prepared_toast({
+                message: data.message,
+                toast_class: data.toast_class
+            });
+        }
+
+        async function createEvent() {
+            try {
+                const res = await fetch('/misp/create_event', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf_token
+                    },
+                    body: JSON.stringify({info: newEventInfo.value})
+                });
+                const data = await res.json();
+                display_prepared_toast(data);
+                if (data.status === "success") fetchEvents();
+            } catch (err) {
+                display_prepared_toast({ message: err.message, toast_class: "danger" });
             }
         }
-    }).mount('#main-container');
+
+        return {
+            csrf_token,
+            message_list,
+            events,
+            newEventInfo,
+            connected,
+            connect,
+            disconnect,
+            fetchEvents,
+            createEvent
+        }
+    }
+}).mount('#main-container');
 </script>
 {% endblock %}

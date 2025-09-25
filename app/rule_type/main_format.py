@@ -1,3 +1,4 @@
+from app.rule_type.rule_formats.nse_format import NseRule
 from .. import db
 from ..db_class.db import *
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
@@ -27,7 +28,8 @@ format_classes = {
     "crs": CRSRule,
     "zeek": ZeekRule,
     "nova": NovaRule,
-    "elastic": ElasticDetectionRule
+    "elastic": ElasticDetectionRule,
+    "nse": NseRule,
 
     # write ear if you want to add a format :
     # "format_name": FormatclassRule
@@ -40,39 +42,42 @@ def Process_rules_by_format(format_files: list, format_rule: dict, info: dict, f
 
     for filepath in format_files:
         rules = format_rule.extract_rules_from_file(filepath)
-        for rule_text in rules:
+        for rule_text in rules:    
+            # enrich info with filepath
+            enriched_info = {**info, "filepath": filepath}
             # Validate
-                validation_result  = format_rule.validate(rule_text)
-                # Parse metadata
-                metadata = format_rule.parse_metadata(rule_text , info , validation_result)
-                result_dict = {
-                    "validation": {
-                        "ok": validation_result.ok,
-                        "errors": validation_result.errors,
-                        "warnings": validation_result.warnings
-                    },
-                    "rule": metadata,
-                    "raw_rule": rule_text,
-                    "file": filepath
-                }
+            validation_result  = format_rule.validate(rule_text)
+            # Parse metadata
+            metadata = format_rule.parse_metadata(rule_text , enriched_info , validation_result)
 
-                # Attempt to create rule if validation is OK
-                if validation_result.ok:
-                    success = RuleModel.add_rule_core(result_dict["rule"], user)
-                    if success:
-                        imported += 1
-                    else:
-                        skipped += 1
+            result_dict = {
+                "validation": {
+                    "ok": validation_result.ok,
+                    "errors": validation_result.errors,
+                    "warnings": validation_result.warnings
+                },
+                "rule": metadata,
+                "raw_rule": rule_text,
+                "file": filepath
+            }
+
+            # Attempt to create rule if validation is OK
+            if validation_result.ok:
+                success = RuleModel.add_rule_core(result_dict["rule"], user)
+                if success:
+                    imported += 1
                 else:
-                    RuleModel.save_invalid_rule(
-                        form_dict=metadata,
-                        to_string=rule_text,
-                        rule_type=format_name,
-                        error=validation_result.errors,
-                        user=user
-                    )
+                    skipped += 1
+            else:
+                RuleModel.save_invalid_rule(
+                    form_dict=metadata,
+                    to_string=rule_text,
+                    rule_type=format_name,
+                    error=validation_result.errors,
+                    user=user
+                )
 
-                    bad_rules += 1
+                bad_rules += 1
 
     return bad_rules, imported, skipped
 
@@ -150,7 +155,8 @@ async def extract_rule_from_repo(repo_dir: str, info: dict, user: User):
         ("CRS", CRSRule),
         ("ZEEK", ZeekRule),
         ("NOVA", NovaRule),
-        ("ELASTIC", ElasticDetectionRule)
+        ("ELASTIC", ElasticDetectionRule),
+        ("NSE", NseRule),
     ]
 
     bad_rules = 0

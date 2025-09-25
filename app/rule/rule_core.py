@@ -10,7 +10,6 @@ from jsonschema import  ValidationError, validate
 from sqlalchemy import case, func, or_
 import yaml
 import yara
-from app.account.account_core import get_user
 from app.import_github_project.untils_import import build_externals_dict
 from .. import db
 from ..db_class.db import *
@@ -1347,10 +1346,6 @@ def get_comments_for_rule(rule_id) -> list[Comment]:
     """Get all comments for a rule"""
     return Comment.query.filter_by(rule_id=rule_id).order_by(Comment.created_at.desc()).all()
 
-def get_username_comment(comment_id) -> str:
-    """Get the full name of the comment's author"""
-    user = get_user(comment_id)
-    return f"{user.first_name} {user.last_name}"
 
 def get_comment_page(page, rule_id) -> object:
     """Get paginated comments for a rule"""
@@ -1975,5 +1970,13 @@ def get_all_rule_with_this_format(format_name):
     """Get all rules using the given format name (case-insensitive)"""
     return Rule.query.filter(Rule.format.ilike(format_name)).all()
 
+def get_all_format() -> list[dict]:
+    """
+    Get all rule formats from the database.
 
+    Returns:
+        list[dict]: list of formats with their attributes and rule count.
+    """
+    formats = FormatRule.query.all()
+    return [fmt.to_json() for fmt in formats]
 
