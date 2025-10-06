@@ -1,4 +1,4 @@
-from app.rule_type.rule_formats.elastic_format import ElasticDetectionRule
+# from app.rule_type.rule_formats.elastic_format import ElasticDetectionRule
 from app.rule_type.rule_formats.yara_format import YaraRule
 from app.rule_type.rule_formats.sigma_format import SigmaRule
 from app.rule_type.rule_formats.suricata_format import SuricataRule
@@ -15,7 +15,7 @@ FORMAT_CLASSES = {
     "zeek": ZeekRule,
     "crs": CRSRule,
     "nova": NovaRule,
-    "elastic": ElasticDetectionRule
+    # "elastic": ElasticDetectionRule
 }
 
 def Check_for_rule_updates(rule_id: int):
