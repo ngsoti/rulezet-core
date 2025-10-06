@@ -4,7 +4,7 @@ from .. import db
 from ..db_class.db import *
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.rule_type.rule_formats.crs_format import CRSRule
-from app.rule_type.rule_formats.elastic_format import ElasticDetectionRule
+# from app.rule_type.rule_formats.elastic_format import ElasticDetectionRule
 from app.rule_type.rule_formats.nova_format import NovaRule
 from app.rule_type.rule_formats.sigma_format import SigmaRule
 from app.rule_type.rule_formats.suricata_format import SuricataRule
@@ -29,7 +29,7 @@ format_classes = {
     "crs": CRSRule,
     "zeek": ZeekRule,
     "nova": NovaRule,
-    "elastic": ElasticDetectionRule,
+    # "elastic": ElasticDetectionRule,
     "nse": NseRule,
     "wazuh": WazuhRule
 
@@ -98,7 +98,7 @@ async def extract_rule_from_repo(repo_dir: str, info: dict, user: User):
         ("CRS", CRSRule),
         ("ZEEK", ZeekRule),
         ("NOVA", NovaRule),
-        ("ELASTIC", ElasticDetectionRule),
+        # ("ELASTIC", ElasticDetectionRule),
         ("NSE", NseRule),
         ("wazuh", WazuhRule)
     ]
