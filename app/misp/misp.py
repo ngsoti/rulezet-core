@@ -1,7 +1,5 @@
-from flask import Blueprint, Response, jsonify, render_template
-import json
+from flask import Blueprint,  jsonify, render_template
 from flask_login import login_required
-from ..rule import rule_core as RuleModel
 
 misp_blueprint = Blueprint(
     'misp',

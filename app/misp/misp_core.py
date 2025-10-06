@@ -1,5 +1,4 @@
 from pymisp import MISPObject, MISPEvent
-import json
 from ..rule import rule_core as RuleModel
 from app.rule.rule_core import get_all_format
 

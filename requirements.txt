@@ -25,6 +25,7 @@ aiofiles
 zeekscript
 msc_pyparser
 nova-hunting
+pymisp
 
 
 
