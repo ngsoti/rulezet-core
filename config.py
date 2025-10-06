@@ -1,8 +1,8 @@
 class Config:
     SECRET_KEY = 'SECRET_KEY_ENV_VAR_SET'
     
-    FLASK_URL = '127.0.0.1'
-    FLASK_PORT = 7009
+    FLASK_URL = '10.137.117.17'  #127.0.0.1'
+    FLASK_PORT = 443 #7009
 
 class DevelopmentConfig(Config):
     DEBUG = True
