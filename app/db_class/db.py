@@ -67,9 +67,6 @@ class AnonymousUser(AnonymousUserMixin):
     
     def is_admin(self):
         return False
-
-    def is_read_only(self):
-        return True
     
     def is_anonymous(self):
         return True

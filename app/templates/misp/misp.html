@@ -1,57 +1,36 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container my-5" id="main-container">
-    <h1 class="mb-4"><i class="fas fa-project-diagram"></i> MISP Connector</h1> 
 
-    <!-- Connection Status -->
-    <div class="mb-3">
-        <span class="badge" :class="connected ? 'bg-success' : 'bg-danger'">
-            [[ connected ? 'Connected' : 'Disconnected' ]]
-        </span>
+    <button class="btn btn-primary me-2" @click="test">
+        <i class="fas fa-plug"></i> Test
+    </button>
+
+    <!-- Conteneur flex pour deux panneaux -->
+    <div class="diff-wrapper mt-3 d-flex gap-3">
+        <!-- Colonne originale -->
+        <div class="flex-fill border rounded" style="max-width: 45%;">
+            <div class="p-2 bg-light fw-bold text-center">original</div>
+            <div style="max-height: 400px; overflow:auto; white-space: pre; padding: 5px;">
+                <pre v-for="(item, index) in diff_result" :key="'source-'+index" 
+                     :class="item.type === 'remove' ? 'bg-danger text-white mb-0' : 'mb-0'">
+[[ item.source ]]
+                </pre>
+            </div>
+        </div>
+
+        <!-- Colonne modifiée -->
+        <div class="flex-fill border rounded" style="max-width: 45%;">
+            <div class="p-2 bg-light fw-bold text-center">Modified</div>
+            <div style="max-height: 400px; overflow:auto; white-space: pre; padding: 5px;">
+                <pre v-for="(item, index) in diff_result" :key="'target-'+index" 
+                     :class="item.type === 'add' ? 'bg-success text-white mb-0' : 'mb-0'">
+[[ item.target ]]
+                </pre>
+            </div>
+        </div>
     </div>
 
-    <!-- Connection Buttons -->
-    <div class="mb-3">
-        <button class="btn btn-primary me-2" @click="connect">
-            <i class="fas fa-plug"></i> Connect
-        </button>
-        <button class="btn btn-warning me-2" @click="disconnect">
-            <i class="fas fa-unlink"></i> Disconnect
-        </button>
-        <button class="btn btn-info" @click="fetchEvents">
-            <i class="fas fa-list"></i> Fetch Events
-        </button>
-    </div>
-
-    <!-- Create Event -->
-    <div class="mb-4">
-        <h4>Create Event</h4>
-        <input v-model="newEventInfo" class="form-control mb-2" placeholder="Event info">
-        <button class="btn btn-success" @click="createEvent">
-            <i class="fas fa-plus"></i> Create Event
-        </button>
-    </div>
-
-    <!-- Events Table -->
-    <div v-if="events.length > 0">
-        <h4>Events</h4>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Info</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="e in events" :key="e.id">
-                    <td>[[e.id]]</td>
-                    <td>[[ e.info ]] </td>
-                    <td>[[e.date ]]</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
 </div>
 {% endblock %}
 
@@ -63,67 +42,19 @@ import { display_toast, prepare_toast, message_list, display_prepared_toast } fr
 createApp({
     delimiters: ['[[', ']]'],
     setup() {
-        const csrf_token = '{{ csrf_token() }}';
-        const events = ref([]);
-        const newEventInfo = ref('');
-        const connected = ref(false); 
+        const diff_result = ref([]);
 
-        async function connect() {
-            const res = await fetch('/misp/connect');
+        async function test() {
+            const res = await fetch('/misp/test');
             const data = await res.json();
             display_prepared_toast(data);
-            connected.value = data.status === "success";
-        }
-
-        async function disconnect() {
-            const res = await fetch('/misp/disconnect');
-            const data = await res.json();
-            display_prepared_toast(data);
-            connected.value = false;
-        }
-
-        async function fetchEvents() {
-            const res = await fetch('/misp/events?limit=10');
-            const data = await res.json();
-
-            if (data.status === "success") {
-                events.value = data.events;
-            }
-
-            display_prepared_toast({
-                message: data.message,
-                toast_class: data.toast_class
-            });
-        }
-
-        async function createEvent() {
-            try {
-                const res = await fetch('/misp/create_event', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrf_token
-                    },
-                    body: JSON.stringify({info: newEventInfo.value})
-                });
-                const data = await res.json();
-                display_prepared_toast(data);
-                if (data.status === "success") fetchEvents();
-            } catch (err) {
-                display_prepared_toast({ message: err.message, toast_class: "danger" });
-            }
+            diff_result.value = data.diff;
         }
 
         return {
-            csrf_token,
             message_list,
-            events,
-            newEventInfo,
-            connected,
-            connect,
-            disconnect,
-            fetchEvents,
-            createEvent
+            test,
+            diff_result
         }
     }
 }).mount('#main-container');

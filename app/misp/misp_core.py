@@ -45,7 +45,7 @@ def content_convert_to_misp_object(rule_id: int) -> dict:
 
         # Add rule name
         misp_object.add_attribute(
-            object_relation=f"{fmt}-rule-name",
+            object_relation=fmt,#f"{fmt}-rule-name",
             value=rule.title,
             type='text'
         )
@@ -70,44 +70,3 @@ def content_convert_to_misp_object(rule_id: int) -> dict:
 
 
 
-
-
-#  # Create a custom MISP object (no template required)
-#     misp_object = MISPObject(name='yara', ignore_warning=True)
-
-#     # Add YARA content
-#     misp_object.add_attribute(
-#         object_relation='yara',
-#         value=rule.to_string,
-#         type='yara',
-#         to_ids=True
-#     )
-
-#     # Add rule name
-#     misp_object.add_attribute(
-#         object_relation='yara-rule-name',
-#         value=rule.title,
-#         type='text'
-#     )
-
-#     # Add description if exists
-#     if rule.description:
-#         misp_object.add_attribute(
-#             object_relation='comment',
-#             value=rule.description,
-#             type='comment'
-#         )
-
-#     # Export the object as standalone JSON
-#     object_json = misp_object.to_json(indent=2)
-
-#     # produce only a json with atribut .... but no Object found by MISP import
-
-#     # To encapsule an object in event ( create )
-#     # uuid	"45f2e110-1743-47f8-b998-47974583da4a"
-#     # Object	[ {…} ]
-#     # info	"test"
-
-#     event = MISPEvent()
-#     event.add_object(misp_object)
-#     object_json = event.to_json(indent=2)

@@ -28,4 +28,3 @@ nova-hunting
 
 
 
-MISP_KEY = "d3Q9gTq4NSgpRx93smsF54goQrURns8vfi9qf3xM"

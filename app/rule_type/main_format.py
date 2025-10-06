@@ -1,4 +1,5 @@
 from app.rule_type.rule_formats.nse_format import NseRule
+from app.rule_type.rule_formats.wazuh_format import WazuhRule
 from .. import db
 from ..db_class.db import *
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
@@ -30,6 +31,7 @@ format_classes = {
     "nova": NovaRule,
     "elastic": ElasticDetectionRule,
     "nse": NseRule,
+    "wazuh": WazuhRule
 
     # write ear if you want to add a format :
     # "format_name": FormatclassRule
@@ -81,67 +83,8 @@ def Process_rules_by_format(format_files: list, format_rule: dict, info: dict, f
 
     return bad_rules, imported, skipped
 
-# async def extract_rule_from_repo(repo_dir: str , info: dict):
-#     """
-#     Test all YARA rules in a repo, returns results and classifies as valid or invalid.
-#     """
-#     imported = 0
-#     skipped = 0
-#     bad_rules = 0
-    
-#     # Get all file in each format 
 
-#     yara_rule = YaraRule()
-#     yara_files = yara_rule.get_rule_files(repo_dir)
 
-#     sigma_rule = SigmaRule()
-#     sigma_files = sigma_rule.get_rule_files(repo_dir)
-
-#     suricata_rule = SuricataRule()
-#     suricata_files = suricata_rule.get_rule_files(repo_dir)
-
-#     crs_rule = CRSRule()
-#     crs_files = crs_rule.get_rule_files(repo_dir)
-
-#     zeek_rule = ZeekRule()
-#     zeek_files = zeek_rule.get_rule_files(repo_dir)
-
-#     nova_rule = NovaRule()
-#     nova_files = nova_rule.get_rule_files(repo_dir)
-
-#     elastic_rule = ElasticDetectionRule()
-#     elastic_files = elastic_rule.get_rule_files(repo_dir)
-   
-#     # Process YARA rules
-#     bad_rules_yara, imported_yara, skipped_yara  = Process_rules_by_format(yara_files , yara_rule, info, "YARA")
-
-#     # Process Sigma rules
-#     bad_rules_sigma, imported_sigma, skipped_sigma  = Process_rules_by_format(sigma_files , sigma_rule, info, "SIGMA")
-
-#     # Process Suricata rules
-#     bad_rules_suricata, imported_suricata, skipped_suricata  = Process_rules_by_format(suricata_files , suricata_rule, info, "SURICATA")
-
-#     # Process CRS rules
-#     bad_rules_crs, imported_crs, skipped_crs  = Process_rules_by_format(crs_files , crs_rule, info, "CRS")
-
-#     # Process Zeek rules
-#     bad_rules_zeek, imported_zeek, skipped_zeek  = Process_rules_by_format(zeek_files , zeek_rule, info, "ZEEK")
-
-#     # Process Nova rules
-#     bad_rules_nova, imported_nova, skipped_nova  = Process_rules_by_format(nova_files , nova_rule, info, "NOVA")
-
-#     # Process Elastic rules
-#     bad_rules_elastic, imported_elastic, skipped_elastic  = Process_rules_by_format(elastic_files , elastic_rule, info, "ELASTIC")
-
-#     # Calculate all imported... rules
-
-#     bad_rules = bad_rules_yara + bad_rules_sigma + bad_rules_suricata + bad_rules_crs + bad_rules_zeek + bad_rules_nova + bad_rules_elastic
-#     imported = imported_yara + imported_sigma + imported_suricata + imported_crs + imported_zeek + imported_nova + imported_elastic
-#     skipped = skipped_yara + skipped_sigma + skipped_suricata + skipped_crs + skipped_zeek + skipped_nova + skipped_elastic
-
-    
-
-#     return bad_rules, imported, skipped
 
 async def extract_rule_from_repo(repo_dir: str, info: dict, user: User):
     """
@@ -157,6 +100,7 @@ async def extract_rule_from_repo(repo_dir: str, info: dict, user: User):
         ("NOVA", NovaRule),
         ("ELASTIC", ElasticDetectionRule),
         ("NSE", NseRule),
+        ("wazuh", WazuhRule)
     ]
 
     bad_rules = 0
