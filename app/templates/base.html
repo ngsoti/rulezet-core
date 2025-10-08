@@ -4,7 +4,61 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <title>RULEZET</title>
+
+        <!-- CSS -->
         <link rel="icon" href="{{ url_for('static',filename='image/logo_rulezet_bg.png') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2.min.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2-bootstrap-5-theme.min.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='bootstrap-5.3.0/css/bootstrap.min.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/fontawesome.css') }}"> 
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/solid.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/brands.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/jquery-ui.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/core.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/sidebar.css') }}">
+        <!-- CodeMirror CSS (core + themes) -->
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/dracula.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/monokai.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/eclipse.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/material.min.css" rel="stylesheet">
+
+         <!-- Color for json -->
+        <!-- Highlight.js CSS -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css"> <!-- Change this line for another JSON color -->
+
+        <!-- Highlight.js JS -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+        
+        <!-- Scripts -->
+        <!-- CodeMirror JavaScript -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/javascript/javascript.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/python/python.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/css/css.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/xml/xml.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/yaml/yaml.min.js"></script>
+        <!-- CodeMirror CSS & JS -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
+        <script>
+            (function() {
+                let savedTheme = localStorage.getItem('theme');
+                if (!savedTheme) {
+                    savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                document.documentElement.classList.add(savedTheme + '-mode');
+                const style = document.createElement('style');
+                style.innerHTML = `* { transition: none !important; }`;
+                document.head.appendChild(style);
+                window.addEventListener('DOMContentLoaded', () => style.remove());
+            })();
+        </script>
         <script src="{{ url_for('static',filename='js/popper.min.js') }}"></script>
         <script src="{{ url_for('static',filename='bootstrap-5.3.0/js/bootstrap.min.js') }}"></script>
         <script src="{{ url_for('static',filename='js/jquery.min.js') }}"></script>
@@ -17,55 +71,13 @@
         <script>dayjs.extend(window.dayjs_plugin_utc)</script>
         <script>dayjs.extend(window.dayjs_plugin_relativeTime)</script>
         <script src="{{ url_for('static',filename='js/zxcvbn.js') }}"></script>
-
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2.min.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2-bootstrap-5-theme.min.css') }}">
-
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='bootstrap-5.3.0/css/bootstrap.min.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/fontawesome.css') }}"> 
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/solid.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/brands.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/jquery-ui.css') }}">
-
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/core.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/sidebar.css') }}">
-        <!-- CodeMirror CSS (core + themes) -->
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/dracula.min.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/monokai.min.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/eclipse.min.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/material.min.css" rel="stylesheet">
-        
-        <!-- CodeMirror JavaScript -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/javascript/javascript.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/python/python.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/css/css.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/xml/xml.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/yaml/yaml.min.js"></script>
-
-        <!-- CodeMirror CSS & JS -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
-
     </head>
-
-    <body class="light-mode">
-        
-        
+    <body>
         {% include 'sidebar.html' %}
         <div class="d-flex flex-column min-vh-100">
             <div class="flex-grow-1 container" id="main-container">
-                
-
-                <!--Main layout-->
                 <main class="col ps-md-4 pt-2">
                     {% include 'macros/_flashes.html' %}
-                    
                     <div aria-live="polite" aria-atomic="true" class="">
                         <div class="toast-container start-50 translate-middle-x top-0 p-3" style="position: fixed;">
                             <template v-if="message_list">
@@ -87,14 +99,12 @@
                     {% block content %}
                     {% endblock %}
                 </main>
-
                 {% if csrf_token()|safe %}
                     <div style="visibility: hidden; display: none">
                         <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token()|safe }}">
                     </div>
                 {% endif %}
             </div>
-
             <footer class="bg-dark text-white py-4 mt-auto">
                 <div class="container">
                     <div class="row align-items-center justify-content-between">
@@ -109,7 +119,6 @@
                             <i id="theme-icon" class="fas fa-sun"></i>
                         </button>
                     </div>
-            
                     <div class="row mt-3 justify-content-center">
                         <div class="col-auto d-flex align-items-center gap-3">
                             <small class="text-white mb-0">&copy; 2025 <strong>RULEZET</strong>. All rights reserved.</small>
@@ -118,12 +127,8 @@
                             </a>
                         </div>
                     </div>
-                    
                 </div>
             </footer>
-
-            
-
         </div>
 
         {% block script %}
@@ -135,7 +140,6 @@
             }).mount('#main-container')
         </script>
         {% endblock %}
-
         <script>
             $(document).ready(function() {
                 $('.message').each((i, el) => {
@@ -143,55 +147,34 @@
                     const $xx = $el.find('.close');
                     const sec = $el.data('autohide');
                     const triggerRemove = () => clearTimeout($el.trigger('remove').T);
-
                     $el.one('remove', () => $el.remove());
                     $xx.one('click', triggerRemove);
                     if (sec) $el.T = setTimeout(triggerRemove, sec * 1000);
                 });
             });
-
-
-            
-
-            const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-            window.addEventListener('scroll', () => {
-                if (window.scrollY > 100) {
-                    scrollToTopBtn.style.display = 'block';
-                } else {
-                    scrollToTopBtn.style.display = 'none';
-                }
-            });
-            scrollToTopBtn.addEventListener('click', () => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
-
-
-            function setBootstrapTheme(theme) {
-                const body = document.body;
+            (function(){
+                const html = document.documentElement;
                 const icon = document.getElementById("theme-icon");
-
-                if (theme === "dark") {
-                    body.classList.remove("light-mode");
-                    body.classList.add("dark-mode");
-                    icon.className = "fas fa-moon";
-                } else {
-                    body.classList.remove("dark-mode");
-                    body.classList.add("light-mode");
-                    icon.className = "fas fa-sun";
+                const toggle = document.getElementById("toggle-theme");
+                function setBootstrapTheme(theme) {
+                    html.classList.remove("light-mode","dark-mode");
+                    html.classList.add(theme + "-mode");
+                    if (document.body) {
+                    document.body.classList.remove("light-mode","dark-mode");
+                    document.body.classList.add(theme + "-mode");
+                    }
+                    if (icon) icon.className = theme === "dark" ? "fas fa-moon" : "fas fa-sun";
+                    localStorage.setItem("theme", theme);
                 }
-
-                localStorage.setItem("theme", theme);
-            }
-
-            // Initialisation
-            const savedTheme = localStorage.getItem("theme") || "light";
-            setBootstrapTheme(savedTheme);
-
-            // Toggle
-            document.getElementById("toggle-theme").addEventListener("click", () => {
-                const isDark = document.body.classList.contains("dark-mode");
-                setBootstrapTheme(isDark ? "light" : "dark");
-            });
+                const savedTheme = localStorage.getItem("theme") || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                setBootstrapTheme(savedTheme);
+                if (toggle) {
+                    toggle.addEventListener("click", () => {
+                    const isDark = html.classList.contains("dark-mode");
+                    setBootstrapTheme(isDark ? "light" : "dark");
+                    });
+                }
+            })();
         </script>
     </body>
 </html>

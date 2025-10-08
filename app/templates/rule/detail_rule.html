@@ -204,10 +204,12 @@
                             <pre class="p-3 bg-light rounded"><code>[[ rule_format.normal ]]</code></pre>
                         </div>
                         <div class="tab-pane fade" id="json" role="tabpanel">
-                            <pre class="p-3 bg-light rounded"><code>[[ rule_format.json ]]</code></pre>
+                            <!-- <pre class="p-3 bg-light rounded"><code>[[ rule_format.json ]]</code></pre> -->
+                            <pre class="custom-pre mb-2"><code class="json">[[ rule_format.json ]]</code></pre>
                         </div>
                         <div class="tab-pane fade" id="misp" role="tabpanel">
-                            <pre class="p-3 bg-light rounded"><code>[[ rule_format.misp ]]</code></pre>
+                            <!-- <pre class="p-3 bg-light rounded"><code>[[ rule_format.misp ]]</code></pre> -->
+                            <pre class="custom-pre mb-2"><code class="json">[[ rule_format.misp ]]</code></pre>
                         </div>
                     </div>
                 </div>
@@ -540,26 +542,6 @@
                                 <div class="form-group mb-4">
                                     <label for="proposed_content" class="fw-bold">Modified Rule Content</label>
                                     <div class="container mt-4">
-                                        <!-- <div class="form-group mb-3">
-                                            <label for="languageSelect">Highlighting :</label>
-                                            <select class="form-select" id="languageSelect">
-                                                <option value="javascript">HighlightForge</option>
-                                                <option value="python">SyntaxShine</option>
-                                                <option value="yaml">CodeGlow</option>                                                
-                                            </select>
-                                        </div>
-                                    
-                                        <div class="form-group mb-3">
-                                            <label for="themeSelect">Theme :</label>
-                                            <select class="form-select" id="themeSelect">
-                                                <option value="default">Default</option>
-                                                <option value="dracula">Dracula</option>
-                                                <option value="monokai">Monokai</option>
-                                                <option value="eclipse">Eclipse</option>
-                                                <option value="material">Material</option>
-                                            </select>
-                                        </div> -->
-                                    
                                         <div class="editorContainer" style="min-height: 300px;" ></div>
                                     </div>
                                     
@@ -683,10 +665,13 @@
     const { createApp, ref , onMounted} = Vue;
     import { message_list , display_prepared_toast , display_toast} from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
+
+    function highlightJSON() {
+        document.querySelectorAll('pre code.json').forEach(block => hljs.highlightElement(block))
+    }
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
-
             /*###################################_Fetch_rule_#################################*/
 
             async function download_rule(format) {
@@ -718,8 +703,6 @@
                 };
                 display_prepared_toast(message);
             }
-
-
 
             /**
              *          ####################
@@ -789,7 +772,7 @@
                     const data = await response.json();
                     currentRule.value = data.rule; 
 
-
+                    setTimeout(highlightJSON, 50)
                     const ruleRawInput = currentRule.value.to_string
                     const ruleContent = ruleRawInput ? ruleRawInput : "";
                     initEditor(ruleContent);

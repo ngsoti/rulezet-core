@@ -3,8 +3,6 @@
 {% block content %}
 
 <div class="container mt-4"> 
-    
-
   <!-- Header: Recent Rules + Add Rule -->
   <header class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="text-dark m-0">
@@ -14,13 +12,11 @@
       <i class="fas fa-hammer"></i> Add Rule
     </a>
   </header>
-
   <!-- Rule Cards Section -->
   <div class="row">
     <template v-if="rules_list.length > 0">
       <div class="col-md-6 mb-3" v-for="(rule, index) in rules_list" :key="rule.uuid">
         <div class="card card-body" > 
-
           <!-- Card Header -->
           <div class="card-header  d-flex justify-content-between align-items-start flex-wrap" >
             <h5 class="mb-0 d-flex align-items-center" style="max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="[[ rule.title ]]">
@@ -31,7 +27,6 @@
               </a>
               </span>
             </h5>
-
             <div class="d-flex ms-auto">
               <template v-if="parseInt('{{ current_user.id }}') === rule.user_id || current_user_is_admin">
                 <a :href="`rule/edit_rule/${rule.id}`" class="btn btn-secondary btn-sm me-2" title="Edit the rule">
@@ -113,10 +108,7 @@
     </template>
   </div>
 </div>
-
 {% endblock %}
-
-
 
 {% block script %}
 <script type="module">
@@ -160,6 +152,7 @@
           current_user_is_admin.value = data.user
         }
       }
+
       async function checkIfUserIsConnected() {
         const res = await fetch('/get_current_user_connected');
         const data = await res.json();
@@ -174,10 +167,10 @@
       /*###################################_Action_on_rules_home_#############################*/
 
       /**
-         *          ####################
-         *          #   action user    #
-         *          ####################
-         * */
+       *          ####################
+       *          #   action user    #
+       *          ####################
+       * */
 
       async function favorite(rule_id) {
         if(current_user_is_connected.value == true){
@@ -202,9 +195,6 @@
           }
       }
 
-
-
-
       async function deleteRule(id, index) {
         const params = new URLSearchParams({
             id
@@ -219,7 +209,6 @@
         display_toast(res)
       }
 
-
       async function vote(voteType, ruleId) {
         if(current_user_is_connected.value == true){
           const res = await fetch(`/rule/vote_rule?id=${ruleId}&vote_type=${voteType}`);
@@ -231,8 +220,7 @@
           }
         }else{
           window.location.href = `/account/login`;
-        }
-        
+        } 
       }
       
       return {
