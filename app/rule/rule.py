@@ -1781,9 +1781,60 @@ def check_updates():
         "toast_class": "success"
     }, 200
 
+#########################
+#   Github url section  #
+#########################
 
 
+@rule_blueprint.route("/list_github_url", methods=['GET'])
+def list_github_url() :
+    """Go to the list of all github url"""
+    return render_template("rule/url_github/list_url_github.html")
     
 
-  
-        
+
+@rule_blueprint.route("/get_url_github", methods=['GET'])
+def get_url_github():
+    """List all the GitHub URLs from Rule.source"""
+    search = request.args.get("search", default=None, type=str)
+    page = request.args.get("page", default=1, type=int)
+
+    pagination, total = RuleModel.get_all_url_github_page(page, search)
+
+    return jsonify({
+        "success": True,
+        "github_url": [rule.source for rule in pagination.items],
+        "total_url": total,
+        "total_pages": pagination.pages
+    }), 200
+
+
+
+@rule_blueprint.route("/github_detail", methods=['GET'])
+def github_detail():
+    """Display the detail page for a specific GitHub project URL."""
+    url = request.args.get("url", type=str)
+
+    if not url:
+        flash("No GitHub URL was provided.", "warning")
+        return redirect(url_for("rule.list_github_url"))
+
+    return render_template(
+        "rule/url_github/detail_url_github.html",
+        url=url
+    )
+
+@rule_blueprint.route("/get_rule_url_github", methods=['GET'])
+def get_rule_url_github():
+    """List all the rule from GitHub URLs"""
+    search = request.args.get("search", default=None, type=str)
+    page = request.args.get("page", default=1, type=int)
+    url = request.args.get("url", default=None, type=str)
+
+    pagination, total = RuleModel.get_all_rule_by_url_github_page(page, search, url)
+    return jsonify({
+        "success": True,
+        "rule_github_url": [rule.to_json() for rule in pagination.items],
+        "total_rule": total,
+        "total_pages": pagination.pages,
+    }), 200

@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% import 'macros/form_macros.html' as f %}
+
+{% block content %}
+<div class="container mt-4" id="main-container">
+  <h3 class="mb-4 text-center">GitHub Project URLs</h3>
+
+  <!-- Search bar -->
+  <div class="d-flex justify-content-center mb-3">
+    <input v-model="searchQuery" @keyup.enter="fetchUrlGithub(1)"
+           class="form-control w-50" placeholder="Search for GitHub URLs..." @input="onSearchInput">
+  </div>
+
+  <!-- Table -->
+   <template v-if="github_url.length > 0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+            <th scope="col" class="text-center">#</th>
+            <th scope="col">GitHub URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="(url, index) in github_url" :key="index"
+                @click="goto(url)"
+                style="cursor: pointer;">
+            <td class="text-center">[[ index + 1 ]]</td>
+            <td>[[ url ]]</td>
+            </tr>
+        </tbody>
+        </table>
+    </div>
+   </template>
+  
+
+  <!-- Pagination -->
+  <nav v-if="total_pages > 1" aria-label="GitHub pagination">
+    <ul class="pagination justify-content-center">
+      <li class="page-item" :class="{ disabled: current_page === 1 }">
+        <button class="page-link" @click="fetchUrlGithub(current_page - 1)" :disabled="current_page === 1">Previous</button>
+      </li>
+
+      <li v-for="page in visiblePages" :key="page"
+          class="page-item"
+          :class="{ active: page === current_page, disabled: page === '...' }">
+        <button class="page-link" v-if="page !== '...'" @click="fetchUrlGithub(page)">[[ page ]]</button>
+        <span class="page-link" v-else>...</span>
+      </li>
+
+      <li class="page-item" :class="{ disabled: current_page === total_pages }">
+        <button class="page-link" @click="fetchUrlGithub(current_page + 1)" :disabled="current_page === total_pages">Next</button>
+      </li>
+    </ul>
+  </nav>
+
+  <p class="text-center mt-3 text-muted">Total URLs found: [[ total_url ]]</p>
+</div>
+{% endblock %}
+
+
+{% block script %}
+<script type="module">
+const { createApp, ref, computed } = Vue
+import { display_toast, prepare_toast, message_list, display_prepared_toast } from '/static/js/toaster.js'
+
+createApp({
+  delimiters: ['[[', ']]'],
+  setup() {
+    const github_url = ref([])
+    const total_url = ref(0)
+    const current_page = ref(1)
+    const total_pages = ref(1)
+    const searchQuery = ref('')
+
+    async function fetchUrlGithub(page) {
+      const params = new URLSearchParams({
+        page,
+        search: searchQuery.value || ''
+      })
+
+      const res = await fetch('/rule/get_url_github?' + params.toString())
+      const data = await res.json()
+
+      if (res.status === 200) {
+        github_url.value = data.github_url || []
+        total_url.value = data.total_url || 0
+        total_pages.value = data.total_pages || 1
+        current_page.value = page
+      } else {
+        github_url.value = []
+        total_url.value = 0
+        total_pages.value = 1
+      }
+    }
+
+    fetchUrlGithub(1)
+
+    const visiblePages = computed(() => {
+      const pages = []
+      const total = total_pages.value
+      const current = current_page.value
+      if (total <= 7) {
+        for (let i = 1; i <= total; i++) pages.push(i)
+      } else {
+        if (current <= 4) {
+          pages.push(1, 2, 3, 4, 5, '...', total)
+        } else if (current >= total - 3) {
+          pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+        } else {
+          pages.push(1, '...', current - 1, current, current + 1, '...', total)
+        }
+      }
+      return pages
+    })
+
+    async function onSearchInput() {
+        if (searchQuery.value.trim() === "") {
+          await fetchUrlGithub(1)
+        } else {
+          await fetchUrlGithub(1)
+        }
+      }
+
+      async function onEnterKey() {
+        await fetchUrlGithub(1)
+      }
+
+    function goto(url){
+        const params = new URLSearchParams({
+            url 
+        })
+        window.location.href = `/rule/github_detail?`+ params.toString()
+    }
+
+    return {
+      github_url,
+      total_url,
+      total_pages,
+      current_page,
+      searchQuery,
+      visiblePages,
+      fetchUrlGithub,
+      onSearchInput,
+      goto
+    }
+  }
+}).mount('#main-container')
+</script>
+{% endblock %}

@@ -1980,3 +1980,46 @@ def get_all_format() -> list[dict]:
     formats = FormatRule.query.all()
     return [fmt.to_json() for fmt in formats]
 
+
+def get_all_url_github_page(page: int = 1, search: str = None):
+    """Get paginated unique GitHub project URLs from Rule.source and return pagination + total count."""
+    github_pattern = r'^https?://(www\.)?github\.com/[\w\-_]+/[\w\-_]+'
+
+    query = Rule.query.filter(Rule.source.isnot(None))
+
+    if search:
+        query = query.filter(Rule.source.ilike(f"%{search}%"))
+
+    query = query.filter(Rule.source.op('~')(github_pattern))
+
+    query = query.distinct(Rule.source)
+
+    total_count = query.count()
+
+    pagination = query.paginate(page=page, per_page=20, max_per_page=20)
+
+    return pagination, total_count
+
+def get_all_rule_by_url_github_page(page: int = 1, search: str = None, url: str = None):
+    """Get paginated list of Rules whose source matches a specific GitHub project URL."""
+    
+    query = Rule.query.filter(Rule.source.isnot(None))
+    
+    if url:
+        query = query.filter(Rule.source.ilike(f"{url}%"))
+    
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            (Rule.title.ilike(search_pattern)) |
+            (Rule.description.ilike(search_pattern)) |
+            (Rule.author.ilike(search_pattern)) |
+            (Rule.cve_id.ilike(search_pattern))
+        )
+    
+    query = query.order_by(Rule.last_modif.desc())
+    total_count = query.count()
+    
+    pagination = query.paginate(page=page, per_page=20, max_per_page=20)
+    
+    return pagination, total_count
