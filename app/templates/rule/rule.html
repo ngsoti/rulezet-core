@@ -188,8 +188,11 @@
                <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-                    <div class="mb-3 d-flex">
-                        <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/project.git" v-model="url" required>
+                    <div class="mb-3 d-flex"><!-- Anti-autofill leurre -->
+                        <input type="text" name="fakeusernameremembered" id="fakeusernameremembered" style="display:none">
+                        <input type="password" name="fakepasswordremembered" id="fakepasswordremembered" style="display:none">
+
+                        <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/project.git" v-model="url" required >
                     </div>
 
                     <div id="flash-messages" class="mt-2">
