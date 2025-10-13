@@ -135,8 +135,8 @@ class YaraRule(RuleType):
 
         Features:
         - Ignores rules that are inside comments (// or /* */).
-        - Correctly handles strings so that '}', //, or /* */ inside quotes
-          are treated as part of the string, not as rule terminators or comments.
+        - Correctly handles strings so that '}', //, /* */, or /.../ regex inside quotes
+        are treated as part of the string, not as rule terminators or comments.
         - Tracks braces to determine rule boundaries.
         """
         rules = []
@@ -147,6 +147,7 @@ class YaraRule(RuleType):
             # Parsing state variables
             brace_level = 0                  # Track nesting of { }
             inside_string = False            # Whether we are inside a "..." or '...'
+            inside_regex = False             # Whether we are inside a /.../ regex
             string_char = None               # Which quote character started the string
             inside_line_comment = False      # Whether we are inside a // comment
             inside_block_comment = False     # Whether we are inside a /* */ comment
@@ -156,7 +157,6 @@ class YaraRule(RuleType):
 
             i = 0
             while i < len(content):
-                
                 char = content[i]
                 nxt = content[i + 1] if i + 1 < len(content) else ""
 
@@ -175,7 +175,21 @@ class YaraRule(RuleType):
                     i += 1
                     continue
 
-                # --- Handle comments (only when not inside a string) ---
+                # --- Handle regex content ---
+                if inside_regex:
+                    current_rule.append(char)
+
+                    if not escaped and char == "/":  # End of regex
+                        inside_regex = False
+                    elif char == "\\" and not escaped:  # Escape in regex
+                        escaped = True
+                    else:
+                        escaped = False
+
+                    i += 1
+                    continue
+
+                # --- Handle comments (only when not inside a string or regex) ---
                 if not inside_line_comment and not inside_block_comment:
                     if char == "/" and nxt == "/":  # Start of line comment
                         inside_line_comment = True
@@ -200,10 +214,18 @@ class YaraRule(RuleType):
                     i += 1
                     continue
 
-                # --- If not inside string or comment ---
+                # --- If not inside string, comment, or regex ---
                 if char in ('"', "'"):             # Start of a string
                     inside_string = True
                     string_char = char
+                    escaped = False
+                    current_rule.append(char)
+                    i += 1
+                    continue
+
+                # Detect start of a regex (only if it's not // or /*)
+                if not inside_regex and char == "/" and nxt not in ("/", "*"):
+                    inside_regex = True
                     escaped = False
                     current_rule.append(char)
                     i += 1
@@ -214,7 +236,7 @@ class YaraRule(RuleType):
                     in_rule = True
                     current_rule = []
 
-                # Count braces only outside strings and comments
+                # Count braces only outside strings, comments, and regex
                 if char == "{":
                     brace_level += 1
                 elif char == "}":
@@ -236,6 +258,7 @@ class YaraRule(RuleType):
             print(f"[extract_rules_from_file] Error parsing {filepath}: {e}")
 
         return rules
+
     
     def find_rule_in_repo(self, repo_url: str, rule_id: int) -> tuple[str, bool]:
         """
