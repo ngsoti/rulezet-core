@@ -30,6 +30,10 @@ def content_convert_to_misp_object(rule_id: int) -> dict:
             )
 
         fmt = rule.format.lower()
+        if fmt == "suricata":
+            misp_type = "snort" 
+        else:
+            misp_type = fmt
 
         # Create the MISP custom object with the rule format as name
         misp_object = MISPObject(name=fmt, ignore_warning=True)
@@ -38,7 +42,7 @@ def content_convert_to_misp_object(rule_id: int) -> dict:
         misp_object.add_attribute(
             object_relation=fmt,
             value=rule.to_string,
-            type=fmt,
+            type=misp_type,
             to_ids=True
         )
 
