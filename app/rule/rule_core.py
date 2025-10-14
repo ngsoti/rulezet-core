@@ -579,8 +579,14 @@ def get_all_rule_update(search=None, rule_type=None, sourceFilter=None) -> List[
 
     if sourceFilter:
         if not sourceFilter.startswith("http"):
-            sourceFilter = f"https://github.com/{sourceFilter}.git"
-        query = query.filter(Rule.source == sourceFilter)
+            sourceFilter = f"https://github.com/{sourceFilter}"
+
+        query = query.filter(
+            or_(
+                Rule.source.ilike(f"%{sourceFilter}%"),
+                Rule.source.ilike(f"%{sourceFilter}.git%")
+            )
+        )
     else:
         query = query.filter(Rule.source.isnot(None))
         all_rules = query.all()
