@@ -27,6 +27,4 @@ def fetch_and_save_licenses():
             for name in sorted(license_names):
                 f.write(name + "\n")
 
-        print(f"{len(license_names)} licenses saved to '{OUTPUT_FILE}'.")
-    else:
-        print(f"Error {response.status_code} while fetching licenses.")
+       

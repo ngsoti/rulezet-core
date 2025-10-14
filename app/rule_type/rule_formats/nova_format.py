@@ -43,7 +43,6 @@ class NovaRule(RuleType):
             errors.append("Must specify at least one of: keywords, semantics, llm")
 
         if errors:
-            print(errors)
             return ValidationResult(
                 ok=False,
                 errors=errors,

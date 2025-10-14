@@ -1253,13 +1253,9 @@ def get_update_page() -> render_template:
 @login_required
 def get_all_rules_owner():
     search = request.args.get("search", None)
-    print(search)
     rule_type = request.args.get("rule_type", None) 
-    print(rule_type)
     sourceFilter = request.args.get("source", None) 
-    print(sourceFilter)
     rule_type = request.args.get("rule_type", None) 
-    print(rule_type)
 
     #sources = RuleModel.get_all_rule_sources_by_user()
     rules = RuleModel.get_all_rule_update(search=search , rule_type=rule_type , sourceFilter=sourceFilter)

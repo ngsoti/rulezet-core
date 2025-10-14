@@ -127,7 +127,6 @@ def add_rule_core(form_dict, user) -> bool:
         return new_rule
 
     except Exception as e:
-        print(f"Error adding rule: {e}")
         return False
 
 
