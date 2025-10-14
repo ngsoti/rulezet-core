@@ -1,10 +1,12 @@
 import asyncio
-from flask import Blueprint, request
+from typing import Optional
+from flask import Blueprint, request, url_for
 from flask_restx import Api, Resource, Namespace
 
 from app.db_class.db import Rule
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, git_pull_repo, github_repo_metadata, valider_repo_github
 from app.import_github_project.update_github_project import Check_for_rule_updates
+from app.misp.misp_core import content_convert_to_misp_object
 from app.rule_type.main_format import extract_rule_from_repo, verify_syntax_rule_by_format
 from app.utils import utils
 from ..rule import rule_core as RuleModel
@@ -13,6 +15,9 @@ from app.utils.decorators import api_required
 
 # Create the blueprint
 api_rule_blueprint = Blueprint('api_rule', __name__)
+
+# https://rulezet.org/api/rule/doc/
+# http://127.0.0.1:7009/api/rule/swagger.json
 
 # Create the Flask-RESTx API
 api = Api(api_rule_blueprint,
@@ -44,6 +49,197 @@ class HelloPublic(Resource):
         return {"message": "Welcome to the public API!"}
     # curl -X GET http://127.0.0.1:7009/api/rule/public/hello
 
+###################################
+#   search rules Page    #
+###################################
+
+@public_ns.route('/searchPage')
+@api.doc(description='Search for a rule by name, description, UUID, or author, with pagination support.')
+class SearchRulePage(Resource):
+    @api.doc(params={
+        "search": "title for the rule",
+        "author": "filter by author",
+        "rule_type": "filter by rule type",
+        "sort_by": "newest, oldest, most_likes, least_likes",
+        "page": "page number (default=1)",
+        "per_page": "items per page (default=10)"
+    })
+    def get(self):
+        """
+        Search and paginate rules.
+        Query params:
+          - search: keyword
+          - author: filter by author
+          - rule_type: filter by rule type
+          - sort_by: newest, oldest, most_likes, least_likes
+          - page: page number (default=1)
+          - per_page: items per page (default=10)
+        """
+        search = request.args.get("search")
+        author = request.args.get("author")
+        sort_by = request.args.get("sort_by")
+        rule_type = request.args.get("rule_type")
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 10, type=int)
+
+        query = RuleModel.filter_rules(search, author, sort_by, rule_type)
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        # Build URLs for next and previous pages
+        args = request.args.to_dict()  # convert ImmutableMultiDict to normal dict
+        args.pop("page", None)
+        args.pop("per_page", None)
+
+        next_url = url_for("api_rule.public_search_rule_page", page=pagination.next_num, per_page=per_page, _external=True, **args) if pagination.has_next else None
+
+        prev_url = url_for("api_rule.public_search_rule_page", page=pagination.prev_num, per_page=per_page, _external=True, **args) if pagination.has_prev else None
+
+
+
+        # Serialize results
+        results = [
+            {
+                "uuid": rule.uuid,
+                "title": rule.title,
+                "description": rule.description,
+                "author": rule.author,
+                "creation_date": rule.creation_date.isoformat(),
+                "format": rule.format,
+                "content": rule.to_string
+            }
+            for rule in pagination.items
+        ]
+
+        return {
+            "total rule found": pagination.total,
+            "pages": pagination.pages,
+            "paggination":{
+                "prev_page": prev_url,
+                "current_page": pagination.page,
+                "next_page": next_url,
+            },
+            "results": results,
+        }, 200
+
+
+# curl -G "http://127.0.0.1:7009/api/rule/publicsearchPage" \
+#      --data-urlencode "search=detect" 
+
+######################
+#   search rules     #
+######################
+
+@public_ns.route('/search')
+@api.doc(description='Search for a rule by name, description, UUID, or author, without pagination.')
+class SearchRule(Resource):
+    @api.doc(params={
+        "search": "title for the rule",
+        "author": "filter by author",
+        "rule_type": "filter by rule type",
+        "sort_by": "newest, oldest, most_likes, least_likes",
+    })
+    def get(self):
+        """
+        Search rules.
+        Query params:
+          - search: keyword
+          - author: filter by author
+          - rule_type: filter by rule type
+          - sort_by: newest, oldest, most_likes, least_likes
+        """
+        # Récupération des paramètres
+        search = request.args.get("search")
+        author = request.args.get("author")
+        sort_by = request.args.get("sort_by")
+        rule_type = request.args.get("rule_type")
+    
+        # Filtrage des règles
+        query = RuleModel.filter_rules(search, author, sort_by, rule_type)
+
+        # Sérialisation de tous les résultats
+        results = [
+            {
+                "uuid": rule.uuid,
+                "title": rule.title,
+                "description": rule.description,
+                "author": rule.author,
+                "creation_date": rule.creation_date.isoformat(),
+                "format": rule.format,
+                "content": rule.to_string
+            }
+            for rule in query
+        ]
+
+        return {
+            "total_rules_found": len(results),
+            "results": results,
+        }, 200
+    
+    # curl -G "http://127.0.0.1:7009/api/rule/public/search" \
+    #  --data-urlencode "search=detect" \
+    #  --data-urlencode "author=@malgamy12" \
+    #  --data-urlencode "rule_type=malware" \
+    #  --data-urlencode "sort_by=newest"
+
+##################################
+#   search rules  convert MISP   #
+##################################
+
+@public_ns.route('/Convert_MISP')
+@api.doc(description='Search for a rule by name, description, UUID, or author and convert it into a MISP object if possible.')
+class ConvertMISP(Resource):
+    @api.doc(params={
+        "search": "title for the rule",
+        "author": "filter by author",
+        "rule_type": "filter by rule type",
+        "sort_by": "newest, oldest, most_likes, least_likes",
+    })
+    def get(self):
+        """
+        Search rules and convert them to MISP objects if possible.
+        Query params:
+          - search: keyword
+          - author: filter by author
+          - rule_type: filter by rule type
+          - sort_by: newest, oldest, most_likes, least_likes
+        """
+        search = request.args.get("search")
+        author = request.args.get("author")
+        sort_by = request.args.get("sort_by")
+        rule_type = request.args.get("rule_type")
+    
+        query = RuleModel.filter_rules(search, author, sort_by, rule_type)
+
+        def convert_rule(rule_id: int) -> Optional[dict]:
+            try:
+                misp_json = content_convert_to_misp_object(rule_id)
+                return misp_json
+            except Exception:
+                return None
+
+
+        results = []
+        for rule in query:
+            misp_obj = convert_rule(rule.id) 
+            results.append({
+                "uuid": rule.uuid,
+                "title": rule.title,
+                "description": rule.description,
+                "author": rule.author,
+                "creation_date": rule.creation_date.isoformat(),
+                "format": rule.format,
+                "content": rule.to_string,
+                "misp_object": misp_obj  
+            })
+
+        return {
+            "total_rules_found": len(results),
+            "results": results,
+        }, 200
+    
+    # curl -G "http://127.0.0.1:7009/api/rule/public/Convert_MISP" \
+    #  --data-urlencode "search=mars" 
+    
 #############################
 #   Get all rule's info     #
 #############################
@@ -552,3 +748,5 @@ class RuleUpdateCheck(Resource):
 #             {"id": 2},{"id": 3}, {"id": 4},{"id": 5},{"id": 6},{"id": 7},{"id":8},{"id": 9},{"id": 10}
 #         ]
 #     }'
+
+

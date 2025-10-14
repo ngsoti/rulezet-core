@@ -1835,6 +1835,6 @@ def get_rule_url_github():
     return jsonify({
         "success": True,
         "rule_github_url": [rule.to_json() for rule in pagination.items],
-        "total_rule": total,
+        "total_rule": pagination.total,
         "total_pages": pagination.pages,
     }), 200

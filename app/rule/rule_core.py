@@ -1178,7 +1178,8 @@ def filter_rules(search=None, author=None, sort_by=None, rule_type=None) -> Rule
                 Rule.description.ilike(search_lower),
                 Rule.format.ilike(search_lower),
                 Rule.author.ilike(search_lower),
-                Rule.to_string.ilike(search_lower)
+                Rule.to_string.ilike(search_lower),
+                Rule.uuid.ilike(search_lower)
             )
         )
     if author:

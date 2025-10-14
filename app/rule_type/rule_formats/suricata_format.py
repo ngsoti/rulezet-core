@@ -1,6 +1,7 @@
 import os
 from typing import List, Dict, Any
 from suricataparser import parse_rules
+from suricataparser import parse_rule
 from ...rule import rule_core as RuleModel
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.utils.utils import detect_cve
@@ -38,23 +39,7 @@ class SuricataRule(RuleType):
         Extract metadata from a Suricata rule.
         """
         try:
-            rules = parse_rules(content)
-            _ , cve = detect_cve(info.get("description", "No description provided"))
-            if not rules:
-                return {
-                    "format": "suricata",
-                    "title": "Invalid Rule",
-                    "license":  info["license"] or "unknown",
-                    "description": "Failed to parse Suricata rule.",
-                    "version": "N/A",
-                    "original_uuid":  "Unknown",
-                    "author": info["author"] or "Unknown",
-                    "cve_id": cve or None,
-                    "source": info["repo_url"],
-                    "to_string": validation_result.normalized_content or content,
-                }
-
-            rule = rules[0]  # take first parsed rule
+            rule = parse_rule(content)
             _, cve = detect_cve(rule.msg or "")
 
             return {
@@ -73,7 +58,7 @@ class SuricataRule(RuleType):
             return {
                 "format": "suricata",
                 "title": "Invalid Rule",
-                 "license":  info["license"] or "unknown",
+                "license":  info["license"] or "unknown",
                 "description": f"Error parsing metadata: {e}",
                 "version": "N/A",
                 "original_uuid":  "Unknown",
