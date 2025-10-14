@@ -99,6 +99,9 @@ def add_rule_core(form_dict, user) -> bool:
             user_id = current_user.id
         else:
             user_id = user.id if user else None
+
+        if form_dict.get("cve_id") == "None":
+            form_dict["cve_id"] = None
         # Create the new rule
         new_rule = Rule(
             format=form_dict["format"],

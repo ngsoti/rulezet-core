@@ -3,6 +3,7 @@ import re
 import subprocess
 from typing import Any, Dict, List
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from app.utils.utils import detect_cve
 
 # https://github.com/nmap/nmap.git
 
@@ -64,6 +65,7 @@ class NseRule(RuleType):
             m = re.search(r'description\s*=\s*\[\[([\s\S]*?)\]\]', content)
             if m:
                 meta["description"] = m.group(1).strip()
+                _, cve = detect_cve(meta["description"]or "")
 
             # author / license / version
             for key in ("author", "license", "version"):
@@ -93,7 +95,7 @@ class NseRule(RuleType):
             else:
                 title = "unknown_rule"
 
-
+           
             return {
                 "format": "nse",
                 "title": title,
