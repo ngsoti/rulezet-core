@@ -68,8 +68,21 @@
       <p class="fst-italic text-secondary">
         Created on [[ bundle.created_at ]] and updated on [[ bundle.updated_at ]].
       </p>
+
+      
       <section class="mb-3">
-        <h4>Description</h4>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h4>Description</h4>
+          <div class="d-flex align-items-center gap-2">
+            <button @click="vote('up', bundle.id)" title="like this bundle" class="btn btn-success btn-sm">
+              <i class="fas fa-thumbs-up"></i> [[ bundle.vote_up ]]
+            </button>
+            <button @click="vote('down', bundle.id)" title="dislike this bundle" class="btn btn-danger btn-sm ">
+              <i class="fas fa-thumbs-down"></i> [[ bundle.vote_down ]]
+            </button>
+          </div>
+        </div>
+        
         <p>[[ bundle.description || 'No description provided.' ]]</p>
       </section>
 
@@ -160,7 +173,7 @@
     </div>
     <p class="mt-3">Loading bundle data...</p>
   </div>
-
+[[current_user_is_connected]]
 </div>
 {% endblock %}
 
@@ -278,7 +291,25 @@
         display_toast(res);
       }
     }
-
+    const current_user_is_connected = ref("{{ current_user.is_authenticated }}");
+    if(current_user_is_connected.value == "True"){
+        current_user_is_connected.value = true
+    }else{
+        current_user_is_connected.value = false
+    }
+    async function vote(voteType, bundleId) {
+        if(current_user_is_connected.value == true){
+          const params = new URLSearchParams({ bundleId ,voteType });
+          const res = await fetch('/bundle/evaluate?' + params.toString());
+          const data = await res.json()
+          
+          bundle.value.vote_up = data.vote_up
+          bundle.value.vote_down = data.vote_down
+        }else{
+          window.location.href = `/account/login`;
+        }
+         
+    }
     /**
      *          #########################
      *          #   security section    #
@@ -304,10 +335,12 @@
         bundle_id,
         is_admin,
 
+        vote,
         edit_access,
         deleteBundle,
         saveNewDescription,
-        DownloadBundle
+        DownloadBundle,
+        current_user_is_connected
       };
     }
   }).mount('#main-container');

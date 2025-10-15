@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, redirect, render_template , request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template , request, url_for
 from flask_login import current_user, login_required
 
 from app.bundle.bundle_form import AddNewBundleForm, EditBundleForm
@@ -311,6 +311,69 @@ def edit_access():
         "new_access": access,
         "toast_class" : "success"
     }, 200
+
+
+@bundle_blueprint.route("/evaluate", methods=['GET'])
+@login_required
+def evaluate():
+    """Evaluate a bundle and return aggregated statistics."""
+    bundle_id = request.args.get('bundleId', type=int)
+    if not bundle_id:
+        return {
+            "message": "Missing bundle_id parameter",
+            "success": False
+        }, 400
+
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle:
+        return {
+            "message": f"No bundle found with id {bundle_id}",
+            "success": False
+        }, 404
+    
+    vote_type = request.args.get('voteType', type=str)
+    if vote_type not in ['up', 'down']:
+        return {
+            "message": "Invalid voteType. Must be 'up' or 'down'.",
+            "success": False
+        }, 400
+
+    already_vote, already_vote_type = BundleModel.has_already_vote(bundle_id, current_user.id)
+
+    if vote_type == 'up':
+        if not already_vote:
+            BundleModel.increment_up(bundle_id)
+            BundleModel.has_voted('up', bundle_id, current_user.id)
+        elif already_vote_type == 'up':
+            BundleModel.remove_one_to_increment_up(bundle_id)
+            BundleModel.remove_has_voted('up', bundle_id, current_user.id)
+        elif already_vote_type == 'down':
+            BundleModel.increment_up(bundle_id)
+            BundleModel.remove_one_to_decrement_up(bundle_id)
+            BundleModel.remove_has_voted('down', bundle_id, current_user.id)
+            BundleModel.has_voted('up', bundle_id, current_user.id)
+
+    elif vote_type == 'down':
+        if not already_vote:
+            BundleModel.decrement_up(bundle_id)
+            BundleModel.has_voted('down', bundle_id, current_user.id)
+        elif already_vote_type == 'down':
+            BundleModel.remove_one_to_decrement_up(bundle_id)
+            BundleModel.remove_has_voted('down', bundle_id, current_user.id)
+        elif already_vote_type == 'up':
+            BundleModel.decrement_up(bundle_id)
+            BundleModel.remove_one_to_increment_up(bundle_id)
+            BundleModel.remove_has_voted('up', bundle_id, current_user.id)
+            BundleModel.has_voted('down', bundle_id, current_user.id)
+
+    return jsonify({
+        "vote_up": bundle.vote_up,
+        "vote_down": bundle.vote_down
+    }), 200
+
+
+   
+    
 
 #########################
 #   Download section    #

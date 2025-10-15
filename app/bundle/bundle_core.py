@@ -362,3 +362,62 @@ def toggle_bundle_accessibility(bundle_id: int) -> bool:
     bundle.access = not bundle.access
     db.session.commit()
     return True , "Bundle access toggled successfully"
+
+
+
+
+
+
+
+def has_already_vote(bundle_id, user_id) -> bool:
+    """Test if an user has ever vote"""
+    vote =  BundleVote.query.filter_by(bundle_id=bundle_id, user_id=user_id).first()
+    if vote:
+        return True , vote.vote_type
+    return False , None
+
+def has_voted(vote,bundle_id , id) -> bool:
+    """Set a vote"""
+    user_id = id or current_user.id
+    vote = BundleVote(bundle_id=bundle_id, user_id=user_id, vote_type=vote)
+    db.session.add(vote)    
+    db.session.commit()
+    return True
+
+# Update
+
+def increment_up(id) -> None:
+    """Increment the like section"""
+    bundle = get_bundle_by_id(id)
+    bundle.vote_up = bundle.vote_up + 1
+    db.session.commit()
+
+def decrement_up(id) -> None:
+    """Increment the dislike section"""
+    bundle = get_bundle_by_id(id)
+    bundle.vote_down = bundle.vote_down + 1
+    db.session.commit()
+
+def remove_one_to_increment_up(id) -> None:
+    """Decrement the dislike section"""
+    bundle = get_bundle_by_id(id)
+    bundle.vote_up = bundle.vote_up - 1
+    db.session.commit()
+
+def remove_one_to_decrement_up(id) -> None:
+    """Decrement the dislike section"""
+    bundle = get_bundle_by_id(id)
+    bundle.vote_down = bundle.vote_down - 1
+    db.session.commit()
+
+# Remove
+
+def remove_has_voted(vote, bundle_id , id) -> bool:
+    """Remove a vote"""
+    user_id = id or current_user.id
+    existing_vote = BundleVote.query.filter_by(bundle_id=bundle_id, user_id=user_id, vote_type=vote).first()
+    if existing_vote:
+        db.session.delete(existing_vote)
+        db.session.commit()
+        return True 
+    return False 
