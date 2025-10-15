@@ -529,6 +529,11 @@ class Bundle(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    vote_up = db.Column(db.Integer, nullable=False, default=0)
+    vote_down = db.Column(db.Integer, nullable=False, default=0)
+    access = db.Column(db.Boolean, nullable=False, default=True) # if true all user can see the bundle, if false only the creator can see it
+
+
 
     user = db.relationship('User', backref=db.backref('user who create bundle', lazy='dynamic', cascade='all, delete-orphan'))
 
@@ -546,6 +551,28 @@ class Bundle(db.Model):
             "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M'),
             "author": self.get_username_by_id() ,
             "user_id": self.user_id,
+            "access": self.access,
+            "vote_up": self.vote_up,
+            "vote_down": self.vote_down,
+        }
+    
+class BundleVote(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    bundle_id = db.Column(db.Integer, db.ForeignKey('bundle.id'), nullable=False)
+    vote_type = db.Column(db.String(10), nullable=False)  
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('user_votes_bundle', lazy='dynamic', cascade='all, delete-orphan'))
+    bundle = db.relationship('Bundle', backref=db.backref('bundle', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "bundle_id": self.bundle_id,
+            "vote_type": self.vote_type,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M')
         }
 
 class BundleRuleAssociation(db.Model):
