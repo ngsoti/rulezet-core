@@ -8,6 +8,8 @@
 
 **Rulezet** is an open-source web platform for sharing, evaluating, improving, and managing cybersecurity detection rules (YARA, Sigma, Suricata, etc). It aims to foster collaboration among professionals and enthusiasts to improve the quality and reliability of detection rules.
 
+Rulezet is available as an online service at the following address [https://rulezet.org/](https://rulezet.org/)
+
 ## Technology Stack
 
 This project is built with:
