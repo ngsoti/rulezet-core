@@ -22,12 +22,17 @@ import uuid
 
 def add_user_core(form_dict) -> User :
     """Add a user to the DB"""
+    api_key = form_dict.get("key")
+
+   
+    if not api_key:
+        api_key = generate_api_key()
     user = User(
         first_name=form_dict["first_name"],
         last_name=form_dict["last_name"],
         email=form_dict["email"],
         password=form_dict["password"],
-        api_key = form_dict["key"] or generate_api_key()
+        api_key = api_key
     )
     db.session.add(user)
     db.session.commit()

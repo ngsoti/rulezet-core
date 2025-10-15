@@ -10,6 +10,7 @@ from flask_login import login_user
 from wtforms.validators import  Email
 from app.db_class.db import RuleVote, User
 from app.account import account_core as AccountModel
+from app.utils.utils import get_user_from_api
 from ..rule import rule_core as RuleModel
 
 api_account_blueprint = Blueprint('api_account', __name__)
@@ -31,14 +32,9 @@ class Register(Resource):
         'last_name': 'Last name'
     })
     def post(self):
-        api_key = request.headers.get("X-API-KEY")
-        if not api_key:
-            return {"message": "Missing API key"}, 401
-
         data = request.get_json(silent=True)
         if not data:
             data = request.args.to_dict()
-
         required_fields = ["email", "password", "first_name", "last_name"]
         if not all(field in data for field in required_fields):
             return {"message": "Missing fields in request"}, 400
@@ -52,17 +48,39 @@ class Register(Resource):
         if User.query.filter_by(email=data.get("email")).first():
             return {"message": "Email already exists"}, 409
 
+        # verify the password strength
+        password = data.get("password")
+        if len(password) < 8 or len(password) > 64:
+            return {"message": "Password must be between 8 and 64 characters."}, 400
+        if not any(c.isupper() for c in password):
+            return {"message": "Password must contain at least one uppercase letter."}, 400
+        if not any(c.islower() for c in password):
+            return {"message": "Password must contain at least one lowercase letter."}, 400
+        if not any(c.isdigit() for c in password):
+            return {"message": "Password must contain at least one digit."}, 400
+        if not any(c in '@$!%*?&' for c in password):
+            return {"message": "Password must contain at least one special character (@$!%*?&)."}, 400 
+
         form_dict = {
             'email': data.get("email"),
             'password': data.get("password"),
             'first_name': data.get("first_name"),
             'last_name': data.get("last_name"),
-            'key': request.headers["X-API-KEY"]
         }
 
-        AccountModel.add_user_core(form_dict)
-        return {"message": "User registered successfully"}, 201
-    
+        user = AccountModel.add_user_core(form_dict)
+        return {"message": "User registered successfully",
+                "X-API-KEY": user.api_key
+                }, 201
+
+# curl -X POST http://127.0.0.1:7009/api/account/register \
+#     -H "Content-Type: application/json" \
+#     -d '{
+#         "email": "test@example.com",
+#         "password": "password!!1A@",
+#         "first_name": "Test",
+#         "last_name": "User"
+#     }'
 
 
 @api.route('/login')
@@ -74,9 +92,6 @@ class Login(Resource):
         'remember_me': 'Boolean to keep the user logged in'
     })
     def post(self):
-        api_key = request.headers.get("X-API-KEY")
-        if not api_key:
-            return {"message": "Missing API key"}, 401
         data = request.get_json(silent=True)
         if not data:
             data = request.args.to_dict()
@@ -120,7 +135,10 @@ class EditUser(Resource):
         data = request.get_json(silent=True)
         if not data:
             data = request.args.to_dict()
-
+        user = get_user_from_api(request.headers)
+        if not user:
+            return {"message": "Access denied"}, 403
+        
         first_name = data.get("first_name")
         last_name = data.get("last_name")
         email = data.get("email")
@@ -135,6 +153,7 @@ class EditUser(Resource):
             return {"message": "Invalid email format"}, 400
 
 
+
         if email != current_user.email:
             existing_user = User.query.filter_by(email=email).first()
             if existing_user:
@@ -145,12 +164,32 @@ class EditUser(Resource):
                     )
                 }, 409
 
+        if data.get("password"):    
+            password = data.get("password")
+            if len(password) < 8 or len(password) > 64:
+                return {"message": "Password must be between 8 and 64 characters."}, 400
+            if not any(c.isupper() for c in password):
+                return {"message": "Password must contain at least one uppercase letter."}, 400
+            if not any(c.islower() for c in password):
+                return {"message": "Password must contain at least one lowercase letter."}, 400
+            if not any(c.isdigit() for c in password):
+                return {"message": "Password must contain at least one digit."}, 400
+            if not any(c in '@$!%*?&' for c in password):
+                return {"message": "Password must contain at least one special character (@$!%*?&)."}, 400 
+       
+            form_dict = {
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "password": password
+            }
+        else:
+            form_dict = {
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name
+            }
 
-        form_dict = {
-            "email": email,
-            "first_name": first_name,
-            "last_name": last_name
-        }
         AccountModel.edit_user_core(form_dict, current_user.id)
 
         return {"message": "User updated successfully"}, 200
