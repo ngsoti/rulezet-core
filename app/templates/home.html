@@ -71,7 +71,7 @@
 
             <!-- Action Buttons -->
             <div class="mb-2">
-              <a :href="`rule/detail_rule/${rule.id}`" class="btn btn-primary btn-sm" title="View more details">View more</a>
+              <a :href="`rule/detail_rule/${rule.id}`" class="btn btn-primary btn-sm" title="View more details"><i class="fas fa-eye btn-sm me-2"></i>View more</a>
               <button @click="vote('up', rule.id)" class="btn btn-success btn-sm mx-2" title="Like this rule">
                 <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
               </button>

@@ -9,69 +9,125 @@
             Register
         </h1>
     </header>
-    
 </div>
+
 <div class="card card-body" id="main-container">
     <form action="" method="post">
         {{ form.hidden_tag() }}
         {% if not edit_mode %}
-            {{form.user_id}}
-        {%endif%}
+            {{ form.user_id }}
+        {% endif %}
+
         <div class="modal-body">
             <div class="row">
                 <div class="col">
-                    {{form.first_name.label(class_="col-form-label")}}:  <span style="color:red">*</span>
-                    {{form.first_name(class_="form-control")}}
+                    {{ form.first_name.label(class_="col-form-label") }}:  <span style="color:red">*</span>
+                    {{ form.first_name(class_="form-control") }}
                     {% if form.first_name.errors %}
-                        <div style="color: red;">{{form.first_name.errors[0] | safe}}</div>
-                    {%endif%}
+                        <div style="color: red;">{{ form.first_name.errors[0] | safe }}</div>
+                    {% endif %}
                 </div>
                 <div class="col">
-                    {{form.last_name.label(class_="col-form-label")}}: <span style="color:red">*</span>
-                    {{form.last_name(class_="form-control")}}
+                    {{ form.last_name.label(class_="col-form-label") }}: <span style="color:red">*</span>
+                    {{ form.last_name(class_="form-control") }}
                     {% if form.last_name.errors %}
-                        <div style="color: red;">{{form.last_name.errors[0] | safe}}</div>
-                    {%endif%}
+                        <div style="color: red;">{{ form.last_name.errors[0] | safe }}</div>
+                    {% endif %}
                 </div>
             </div>
+
             <div class="col">
-                {{form.email.label(class_="col-form-label")}}:  <span style="color:red">*</span>
-                {{form.email(class_="form-control")}}
+                {{ form.email.label(class_="col-form-label") }}:  <span style="color:red">*</span>
+                {{ form.email(class_="form-control") }}
                 {% if form.email.errors %}
-                    <div style="color: red;">{{form.email.errors[0] | safe}}</div>
-                {%endif%}
+                    <div style="color: red;">{{ form.email.errors[0] | safe }}</div>
+                {% endif %}
             </div>
-            <div class="col">
-                <label for="password" class="col-form-label">{{ form.password.label }}</label>  <span style="color:red">*</span>
+
+            <!-- Password -->
+          <div class="col" id="password-container">
+                <label for="password" class="col-form-label">{{ form.password.label }}</label>  
+                <span style="color:red">*</span>
                 <div class="position-relative">
-                    {{ form.password(class_="form-control pe-5", id="password") }}
-                    <i class="fa fa-eye position-absolute top-50 end-0 translate-middle-y me-3"
-                    style="cursor: pointer;"
-                    id="togglePasswordIcon"
-                    onclick="togglePassword()"></i>
+                    <div class="position-relative">
+                        {{ form.password(class_="form-control pe-5", id="password") }}
+                        <script>
+                            document.getElementById("password").setAttribute("v-model", "password");
+                        </script>
+                        <i class="fa fa-eye position-absolute top-50 end-0 translate-middle-y me-3"
+                        style="cursor: pointer"
+                        id="togglePasswordIcon"
+                        @click="togglePassword"></i>
+                    </div>
+
                 </div>
                 {% if form.password.errors %}
                     <div style="color: red;">{{ form.password.errors[0] | safe }}</div>
                 {% endif %}
+
+                <!-- Password rules -->
+                <ul style="margin-top: 10px; padding-left: 20px; list-style: none;">
+                    <li :class="password.length >= 8 ? 'text-success' : 'text-danger'">
+                        <span v-if="password.length >= 8"><i class="fa-solid fa-check"></i></span><span v-else><i class="fa-solid fa-xmark"></i></span> At least 8 characters
+                    </li>
+                    <li :class="/[A-Z]/.test(password) ? 'text-success' : 'text-danger'">
+                        <span v-if="/[A-Z]/.test(password)"><i class="fa-solid fa-check"></i></span><span v-else><i class="fa-solid fa-xmark"></i></span> At least one uppercase letter
+                    </li>
+                    <li :class="/[a-z]/.test(password) ? 'text-success' : 'text-danger'">
+                        <span v-if="/[a-z]/.test(password)"><i class="fa-solid fa-check"></i></span><span v-else><i class="fa-solid fa-xmark"></i></span> At least one lowercase letter
+                    </li>
+                    <li :class="/[0-9]/.test(password) ? 'text-success' : 'text-danger'">
+                        <span v-if="/[0-9]/.test(password)"><i class="fa-solid fa-check"></i></span><span v-else><i class="fa-solid fa-xmark"></i></span> At least one digit
+                    </li>
+                    <li :class="/[@$!%*?&]/.test(password) ? 'text-success' : 'text-danger'">
+                        <span v-if="/[@$!%*?&]/.test(password)"><i class="fa-solid fa-check"></i></span><span v-else><i class="fa-solid fa-xmark"></i></span> At least one special character (@$!%*?&)
+                    </li>
+                </ul>
             </div>
 
-            <script>
-                function togglePassword() {
-                    const passwordInput = document.getElementById("password");
-                    const icon = document.getElementById("togglePasswordIcon");
-
-                    const isPassword = passwordInput.type === "password";
-                    passwordInput.type = isPassword ? "text" : "password";
-
-                    // Change icon
-                    icon.classList.toggle("fa-eye");
-                    icon.classList.toggle("fa-eye-slash");
-                }
-            </script>
             <div class="modal-footer" style="margin-top: 10px;">
-                {{form.submit(class='btn btn-primary')}}
+                {{ form.submit(class='btn btn-primary', id='submitBtn') }}
             </div>
+
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+const { createApp, ref, computed, onMounted, watch } = Vue;
+
+createApp({
+    setup() {
+        const password = ref('');
+
+        const passwordValid = computed(() => {
+            return password.value.length >= 8 &&
+                   /[A-Z]/.test(password.value) &&
+                   /[a-z]/.test(password.value) &&
+                   /[0-9]/.test(password.value) &&
+                   /[@$!%*?&]/.test(password.value);
+        });
+
+        const togglePassword = () => {
+            const input = document.getElementById("password");
+            const icon = document.getElementById("togglePasswordIcon");
+            input.type = input.type === "password" ? "text" : "password";
+            icon.classList.toggle("fa-eye");
+            icon.classList.toggle("fa-eye-slash");
+        };
+
+        onMounted(() => {
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            watch(passwordValid, (val) => {
+                submitBtn.disabled = !val;
+            });
+        });
+
+        return { password, togglePassword, passwordValid };
+    }
+}).mount('#password-container');
+</script>
 {% endblock %}

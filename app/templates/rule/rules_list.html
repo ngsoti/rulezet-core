@@ -167,7 +167,7 @@
               </div>
     
         <div class="text-center mt-3">
-          <a :href="`detail_rule/${rule.id}`" title="view more about this rule" class="btn btn-primary">View more</a>
+          <a :href="`detail_rule/${rule.id}`" title="view more about this rule" class="btn btn-primary"> <i class="fas fa-eye btn-sm me-2"></i>View more</a>
         </div>
       </div>
     </div>
@@ -180,13 +180,6 @@
     {% set fetch_function = 'fetchRules' %}
 
     {% include "components/pagination.html" %}
-
-    
-
-
-
-
-
   </template>
   <i v-else class="text-muted">No rules found.</i>
 </div>
