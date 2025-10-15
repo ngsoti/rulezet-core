@@ -164,7 +164,6 @@ This project offers a chance to make a real-world impact by improving the way se
 
 This project is inspired by [Ptit Crolle](https://github.com/DavidCruciani/ptit-crolle), and takes it further with a modern UI, collaborative features, and integration capabilities.
 
----
 
 ## Contributing
 
@@ -172,8 +171,6 @@ We welcome contributions from the community. You can:
 - Submit pull requests for new features or bug fixes
 - Suggest enhancements via GitHub Issues
 - Help expand supported rule formats
-
----
 
 ## License
 
@@ -184,10 +181,9 @@ Copyright (C) 2024-2025 CIRCL - Computer Incident Response Center Luxembourg
 Copyright (C) 2024-2025 Theo Geffe
 ```
 
----
-
 ## Funding
 
-![CIRCL.lu](https://www.circl.lu/assets/images/logo.png)
-![CEF Telecom funding (D4 Project](https://www.misp-project.org/assets/images/en_cef.png)
+Flowintel is co-funded by [CIRCL](https://www.circl.lu/) and by the European Union under [FETTA](https://www.circl.lu/pub/press/20240131/) (Federated European Team for Threat Analysis) project.
+
+![EU logo](https://www.vulnerability-lookup.org/images/eu-funded.jpg)
 
