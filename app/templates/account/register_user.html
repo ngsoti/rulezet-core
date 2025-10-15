@@ -79,9 +79,6 @@
                     <li :class="/[0-9]/.test(password) ? 'text-success' : 'text-danger'">
                         <span v-if="/[0-9]/.test(password)"><i class="fa-solid fa-check"></i></span><span v-else><i class="fa-solid fa-xmark"></i></span> At least one digit
                     </li>
-                    <li :class="/[@$!%*?&]/.test(password) ? 'text-success' : 'text-danger'">
-                        <span v-if="/[@$!%*?&]/.test(password)"><i class="fa-solid fa-check"></i></span><span v-else><i class="fa-solid fa-xmark"></i></span> At least one special character (@$!%*?&)
-                    </li>
                 </ul>
             </div>
 
@@ -106,8 +103,7 @@ createApp({
             return password.value.length >= 8 &&
                    /[A-Z]/.test(password.value) &&
                    /[a-z]/.test(password.value) &&
-                   /[0-9]/.test(password.value) &&
-                   /[@$!%*?&]/.test(password.value);
+                   /[0-9]/.test(password.value);
         });
 
         const togglePassword = () => {

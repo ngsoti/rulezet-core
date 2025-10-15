@@ -388,7 +388,7 @@ def download_bundle():
     if not rules or not bundle:
         return {
             "success": False,
-            "message": "Error during download",
+            "message": "No rules on this bundle to download",
             "toast_class": "danger"
         }, 400
 

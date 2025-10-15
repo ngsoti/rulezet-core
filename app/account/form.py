@@ -26,8 +26,7 @@ class EditUserForm(FlaskForm):
             Length(min=8, max=64, message="Password must be between 8 and 64 characters."),
             Regexp(r'.*[A-Z].*', message="Password must contain at least one uppercase letter."),
             Regexp(r'.*[a-z].*', message="Password must contain at least one lowercase letter."),
-            Regexp(r'.*\d.*', message="Password must contain at least one digit."),
-            Regexp(r'.*[@$!%*?&].*', message="Password must contain at least one special character (@$!%*?&).")
+            Regexp(r'.*\d.*', message="Password must contain at least one digit.")
         ]
     )
     submit = SubmitField('Register')
@@ -53,8 +52,7 @@ class AddNewUserForm(FlaskForm):
             Length(min=8, max=64, message="Password must be between 8 and 64 characters."),
             Regexp(r'.*[A-Z].*', message="Password must contain at least one uppercase letter."),
             Regexp(r'.*[a-z].*', message="Password must contain at least one lowercase letter."),
-            Regexp(r'.*\d.*', message="Password must contain at least one digit."),
-            Regexp(r'.*[@$!%*?&].*', message="Password must contain at least one special character (@$!%*?&).")
+            Regexp(r'.*\d.*', message="Password must contain at least one digit.")
         ]
     )
     

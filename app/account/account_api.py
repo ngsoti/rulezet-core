@@ -58,9 +58,7 @@ class Register(Resource):
             return {"message": "Password must contain at least one lowercase letter."}, 400
         if not any(c.isdigit() for c in password):
             return {"message": "Password must contain at least one digit."}, 400
-        if not any(c in '@$!%*?&' for c in password):
-            return {"message": "Password must contain at least one special character (@$!%*?&)."}, 400 
-
+        
         form_dict = {
             'email': data.get("email"),
             'password': data.get("password"),
