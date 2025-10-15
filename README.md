@@ -4,13 +4,9 @@
   <img src="https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/logo_rulezet.png" width="300" alt="Rulezet logo">
 </p>
 
----
-
 ## Community-Driven Detection Rules Platform
 
 **Rulezet** is an open-source web platform for sharing, evaluating, improving, and managing cybersecurity detection rules (YARA, Sigma, Suricata, etc). It aims to foster collaboration among professionals and enthusiasts to improve the quality and reliability of detection rules.
-
----
 
 ## Technology Stack
 
@@ -23,7 +19,6 @@ This project is built with:
 - **Flask-SQLAlchemy** (ORM)
 - **PostgreSQL** (Database)
 
----
 
 ## Installation
 
@@ -32,8 +27,6 @@ This project is built with:
 ```bash
 ./install.sh
 ```
-
----
 
 ## First Connection
 
@@ -52,15 +45,12 @@ At the beginning, password and api Keys are generate to security reason
 
 You should change the password after the first connection 
 
----
 
 ## Launching the Application
 
 ```bash
 ./launch.sh -l
 ```
-
----
 
 ## Features Overview
 
@@ -94,14 +84,13 @@ The platform includes a wide set of functionalities to manage and collaborate ar
 
 - The **most** important feature to enhance user comfort while working in different environments 😉.
 
----
 
 ## Rule's Formats
 
 New rule formats may be added over time.  
 If you want to propose a new format, feel free to open an **issue** on our [GitHub](https://github.com/ngsoti/rulezet-core.git).
 
-Currently, the supported formats are:
+Currently, the supported rule formats are:
 
 - yara
 - sigma
@@ -112,15 +101,11 @@ Currently, the supported formats are:
 - elastic
 - no format
 
----
-
 ## UI Previews
 
 | Homepage | Rule Detail | Rule Management |
 |---------|--------------|-----------------|
 | ![Home](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_readme.png) | ![Detail](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_detail_readme.png) | ![Readme](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_invalid_rule.png) |
-
----
 
 ## API Access
 
