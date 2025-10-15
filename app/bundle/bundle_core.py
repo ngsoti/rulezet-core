@@ -31,6 +31,7 @@ def create_bundle(form_dict , user) -> Bundle:
         name=form_dict["name"],
         description=form_dict["description"],
         user_id=user.id,
+        access=form_dict["public"],
         created_at=datetime.datetime.now(tz=datetime.timezone.utc)
     )
     db.session.add(new_bundle)
@@ -55,7 +56,7 @@ def  get_association_by_id(association_id: int) -> Bundle | None:
     """
     return BundleRuleAssociation.query.get(association_id)
 
-def get_all_bundles_page(page: int, search: str| None) -> dict:
+def get_all_bundles_page(page: int, search: str| None, own: bool) -> dict:
     """
     List all bundles paginated, with optional search filter.
     :param page: Page number.
@@ -72,6 +73,9 @@ def get_all_bundles_page(page: int, search: str| None) -> dict:
                 Bundle.description.ilike(like_pattern)
             )
         )
+    if own:
+        if current_user.is_authenticated:   
+            query = query.filter_by(user_id=current_user.id)    
 
     return query.order_by(Bundle.created_at.desc()).paginate(page=page, per_page=20)
 
@@ -101,6 +105,7 @@ def update_bundle(bundle_id: int, form_dict: dict ) -> Bundle | None:
         bundle.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
         bundle.name = form_dict["name"]
         bundle.description = form_dict["description"]
+        bundle.access = form_dict["public"]
     db.session.commit()
     return bundle
 
@@ -344,3 +349,16 @@ def get_bundles_by_rule(rule_id: int) -> List[Bundle]:
         .filter(BundleRuleAssociation.rule_id == rule_id)
         .all()
     )
+
+def toggle_bundle_accessibility(bundle_id: int) -> bool:
+    """
+    Toggle the accessibility of a bundle between public and private.
+    :param bundle_id: ID of the bundle to toggle.
+    :return: True if toggled successfully, False if bundle not found.
+    """
+    bundle = Bundle.query.get(bundle_id)
+    if not bundle:
+        return False , "Bundle not found"
+    bundle.access = not bundle.access
+    db.session.commit()
+    return True , "Bundle access toggled successfully"

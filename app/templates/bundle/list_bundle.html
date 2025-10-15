@@ -42,9 +42,9 @@
 
 
 
-    <div class="row justify-content-between align-items-center mb-4">
-        <div class="col-md-10">
-            <div class="input-group">
+    <div class="mb-4 d-flex flex-column flex-md-row align-items-md-center gap-3">
+        <!-- Search input -->
+        <div class="input-group flex-grow-1">
             <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass"></i></span>
             <input
                 type="text"
@@ -53,15 +53,24 @@
                 v-model="searchQuery"
                 @input="fetchAllBundles(1)"
             >
+        </div>
+        {% if current_user.is_authenticated %}
+            <!-- Own bundles toggle -->
+            <div class="form-check form-switch ms-md-2">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="ownBundlesToggle"
+                    v-model="showOwnBundles"
+                    @change="fetchAllBundles(1)"
+                >
+                <label class="form-check-label fw-semibold" for="ownBundlesToggle">
+                    Own bundles
+                </label>
             </div>
-        </div>
-
-        <div class="col-md-auto">
-            <a href="/bundle/create" class="btn btn-primary btn-sm" title="Create a Bundle">
-            <i class="fas fa-hammer me-1"></i> Create Bundle
-            </a>
-        </div>
+        {% endif %}
     </div>
+
 
 
     <!-- Bundles list -->
@@ -71,62 +80,70 @@
     </div>
 
     <div  v-for="(bundle, index) in bundle_list"   :key="bundle.id">
+        <template v-if="bundle.access || parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
+            <div class="card-body">
+                <div class="list-group">
 
-        <div class="card-body">
-            <div class="list-group">
-
-                <div class="list-group-item list-group-item-action mb-2 rounded shadow-sm d-flex justify-content-between align-items-center"
-                    @click="goToBundleDetail(bundle.id)"
-                    style="cursor: pointer;">
-
-
-                    <div class="d-flex flex-column">
-                        <strong>
-                            <i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>[[ bundle.name ]]
-                        </strong>
+                    <div class="list-group-item list-group-item-action mb-2 rounded shadow-sm d-flex justify-content-between align-items-center"
+                        @click="goToBundleDetail(bundle.id)"
+                        style="cursor: pointer;">
 
 
-                        <div class="small text-muted mt-1 d-flex align-items-center flex-wrap">
-                            <span class="me-3 d-flex align-items-center">
-                                <i class="fas fa-user me-1"></i> [[ bundle.author ]]
-                            </span>
-                            <span class="d-flex align-items-center">
-                                <i class="fas fa-calendar-alt me-1"></i> [[ bundle.created_at ]]
-                            </span>
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center"> 
+                                <strong>
+                                    <i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>[[ bundle.name ]]
+                                </strong>
+                                <div v-if="!bundle.access" class="badge bg-danger ms-2" title="Private Bundle">
+                                    <i class="fa-solid fa-lock fa-fw"></i> Private
+                                </div>
+                                <div v-else class="badge bg-success ms-2" title="Public Bundle">
+                                    <i class="fa-solid fa-globe fa-fw"></i> Public  
+                                </div>
+                            </div>  
+
+
+                            <div class="small text-muted mt-1 d-flex align-items-center flex-wrap">
+                                <span class="me-3 d-flex align-items-center">
+                                    <i class="fas fa-user me-1"></i> [[ bundle.author ]]
+                                </span>
+                                <span class="d-flex align-items-center">
+                                    <i class="fas fa-calendar-alt me-1"></i> [[ bundle.created_at ]]
+                                </span>
+                            </div>
+
+                            <div class="mt-2 text-dark d-flex align-items-start" style="font-size: 1rem;">
+                                <i class="fas fa-align-left me-2 mt-1 text-secondary"></i>
+                                <span class="fw-medium">[[ bundle.description ]]</span>
+                            </div>
                         </div>
 
-                        <div class="mt-2 text-dark d-flex align-items-start" style="font-size: 1rem;">
-                            <i class="fas fa-align-left me-2 mt-1 text-secondary"></i>
-                            <span class="fw-medium">[[ bundle.description ]]</span>
+
+                        <div class="d-flex align-items-center ms-2">
+                            {% if current_user.is_authenticated %}
+                                <template v-if="parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
+                                    <a :href="`/bundle/edit/${bundle.id}`" 
+                                    class="btn btn-secondary btn-sm me-2" 
+                                    title="Edit Bundle"
+                                    @click.stop>
+                                        <i class="fas fa-pen"></i>
+                                    </a>
+                                    <button type="button" 
+                                            class="btn btn-danger btn-sm me-2" 
+                                            title="Delete the bundle" 
+                                            data-bs-toggle="modal" 
+                                            :data-bs-target="'#delete_bundle_modal_'+bundle.id"
+                                            @click.stop>
+                                        <i class="fa-solid fa-trash fa-fw"></i>
+                                    </button>                                  
+                                </template>
+                            {% endif %}
                         </div>
                     </div>
 
-
-                    <div class="d-flex align-items-center ms-2">
-                        {% if current_user.is_authenticated %}
-                            <template v-if="parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
-                                <a :href="`/bundle/edit/${bundle.id}`" 
-                                class="btn btn-secondary btn-sm me-2" 
-                                title="Edit Bundle"
-                                @click.stop>
-                                    <i class="fas fa-pen"></i>
-                                </a>
-                                <button type="button" 
-                                        class="btn btn-danger btn-sm me-2" 
-                                        title="Delete the bundle" 
-                                        data-bs-toggle="modal" 
-                                        :data-bs-target="'#delete_bundle_modal_'+bundle.id"
-                                        @click.stop>
-                                    <i class="fa-solid fa-trash fa-fw"></i>
-                                </button>                                  
-                            </template>
-                        {% endif %}
-                    </div>
                 </div>
-
             </div>
-        </div>
-
+        </template>
         <div class="modal fade" :id="'delete_bundle_modal_'+bundle.id" tabindex="-1" aria-labelledby="delete_bundle_modal" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -151,7 +168,7 @@
 
     <!-- Pagination -->
     <div class="row mt-4" v-if="bundle_list.length > 0">
-        <!-- <div class="col text-center">
+        <div class="col text-center">
             <nav>
                 <ul class="pagination justify-content-center">
                     <li class="page-item" :class="{ disabled: bundle_current_page === 1 }">
@@ -169,18 +186,13 @@
                     </li>
                 </ul>
             </nav>
-        </div> -->
-        {% set current_page = 'bundle_current_page' %}
+        </div>
+        <!-- {% set current_page = 'bundle_current_page' %}
         {% set total_pages = 'bundle_total_page' %}
         {% set visible_pages = 'visiblePages' %}
         {% set fetch_function = 'fetchAllBundles' %}
 
-        {% include "components/pagination.html" %}
-    </div>
-
-    <!-- Total count -->
-    <div class="text-center text-muted mt-3">
-        <small>[[ bundle_total ]] bundles found.</small>
+        {% include "components/pagination.html" %} -->
     </div>
 </div>
 {% endblock %}
@@ -199,6 +211,7 @@
              *          ########################
              */
             const searchQuery = ref('');
+            const showOwnBundles = ref(false);
 
             /**
              *          ########################
@@ -214,6 +227,7 @@
                 const params = new URLSearchParams({
                     page,
                     search: searchQuery.value,
+                    own: showOwnBundles.value ? '1' : '0'
                 });
                 const response = await fetch("/bundle/get_all_bundles?" + params.toString());
                 if (response.status === 200) {
@@ -307,7 +321,8 @@
 
                 // redirect
                 goToBundleDetail,
-                visiblePages
+                visiblePages,
+                showOwnBundles
             }
         }
     }).mount('#main-container');

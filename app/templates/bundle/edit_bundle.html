@@ -23,9 +23,6 @@
                         <h4 class="mb-4 text-primary">
                             <i class="fa-solid fa-pen-to-square me-2"></i>Edit Bundle
                         </h4>
-                        <a :href="`/bundle/detail/` + bundle_id" class="btn btn-primary btn-sm" title="View more about this Bundle">
-                            <i class="fas fa-arrow-right me-1"></i> View bundle details
-                        </a>
                     </div>
                     <form method="POST" action="">
                         {{ form.hidden_tag() }}
@@ -43,8 +40,17 @@
                                 <div class="text-danger small">{{ error }}</div>
                             {% endfor %}
                         </div>
+                        <div class="form-check form-switch mb-4">
+                            {{ form.public(class="form-check-input", id="publicSwitch") }}
+                            <label class="form-check-label" for="publicSwitch">
+                                Make Bundle Public
+                            </label>
+                            {% for error in form.public.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
                         <div class="text-end">
-                            {{ form.submit(class="btn btn-primary") }}
+                            {{ form.submit(class="btn btn-success") }}
                         </div>
                     </form>
                 </div>
@@ -58,9 +64,6 @@
                     <h4 class="text-primary mb-0">
                         <i class="fa-solid fa-plus me-2"></i>Add Rules
                     </h4>
-                    <a :href="`/bundle/detail/` + bundle_id" class="btn btn-primary btn-sm" title="View more about this Bundle">
-                        <i class="fas fa-arrow-right me-1"></i> View bundle details
-                    </a>
                 </div>
 
                 <div class="card-body">
@@ -215,11 +218,12 @@
                     </button>
                 </div>
             </div>
-
-
-
-
         </div>
+    </div>
+    <div class="text-center my-4">
+        <a :href="`/bundle/detail/` + bundle_id" class="btn btn-primary btn-sm mt-4" title="View more about this Bundle">
+            <i class="fas fa-arrow-right me-1"></i> View bundle details
+        </a>
     </div>
 </div>
 <div id="bundle-info" data-bundle-id="{{ bundle.id }}"></div>

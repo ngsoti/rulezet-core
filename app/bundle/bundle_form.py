@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms.validators import ValidationError
-from wtforms import StringField, SubmitField, TextAreaField
+from wtforms import StringField, SubmitField, TextAreaField, BooleanField
 from wtforms.validators import InputRequired, DataRequired
 
 from app.db_class.db import Bundle
@@ -10,6 +10,7 @@ class AddNewBundleForm(FlaskForm):
 
     name = StringField('Bundle Name', validators=[InputRequired(message="Bundle name is required")])
     description = TextAreaField('Description',  validators=[InputRequired(message="Bundle description is required")])
+    public = BooleanField('Public', default=True) 
     
     submit = SubmitField('Create Bundle')
 
@@ -23,8 +24,9 @@ class EditBundleForm(FlaskForm):
 
     name = StringField('Bundle Name', validators=[InputRequired(message="Bundle name is required")])
     description = TextAreaField('Description', validators=[InputRequired(message="Bundle description is required")])
+    public = BooleanField('Public', default=True)
 
-    submit = SubmitField('Edit Bundle')
+    submit = SubmitField('Save')
 
     def __init__(self, bundle_id=None, *args, **kwargs):
         super().__init__(*args, **kwargs)

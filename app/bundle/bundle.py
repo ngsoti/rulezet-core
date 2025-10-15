@@ -59,7 +59,13 @@ def get_all_bundles() :
     """get all bundles for pages"""     
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', type=str)
-    bundles_list = BundleModel.get_all_bundles_page(page, search)
+    own = request.args.get('own', type=str)
+    if own == '1':
+        own = True
+    else:
+        own = False 
+
+    bundles_list = BundleModel.get_all_bundles_page(page, search, own)
     total_bundles = BundleModel.get_total_bundles_count()
     if bundles_list:
         return {"bundle_list_": [r.to_json() for r in bundles_list],
@@ -109,6 +115,7 @@ def edit(bundle_id) :
         else:
             form.description.data = bundle.description
             form.name.data = bundle.name 
+            form.public.data = bundle.access
 
         return render_template("bundle/edit_bundle.html", form=form, bundle=bundle )
     else:
@@ -267,6 +274,44 @@ def change_description():
             "toast_class" : "danger"
         }, 401
 
+@bundle_blueprint.route("/edit_access", methods=['GET'])
+def edit_access():
+    """Edit access to a bundle."""
+    bundle_id = request.args.get('id', type=int)
+    if not bundle_id:
+        return {
+            "message": "Missing bundle_id parameter",
+            "success": False
+        }, 400
+
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle:
+        return {
+            "message": f"No bundle found with id {bundle_id}",
+            "success": False
+        }, 404
+
+    if not (bundle.user_id == current_user.id or current_user.is_admin()):
+        return {
+            "success": False,
+            "message": "Access denied",
+            "toast_class" : "danger"
+        }, 401  
+    access, message = BundleModel.toggle_bundle_accessibility(bundle_id)
+    if access is None:
+        return {
+            "success": False,
+            "message": "Error toggling access",
+            "toast_class" : "danger"
+        }, 500
+
+    return {
+        "success": True,
+        "message": f"{message}",
+        "new_access": access,
+        "toast_class" : "success"
+    }, 200
+
 #########################
 #   Download section    #
 #########################
@@ -289,6 +334,12 @@ def download_bundle():
         "sigma": "yaml",
         "zeek": "zeek",
         "suricata": "rule",
+        "snort": "rule",
+        "text": "txt",
+        "crs": "conf",
+        "nova": "nov",
+        "wazuh": "xml",
+        "nse": "nse",
     }
 
     zip_buffer = io.BytesIO()
@@ -315,30 +366,30 @@ def download_bundle():
         mimetype='application/zip'
     ), 200
 
-################
-#  own bundle  #
-################
+# ################
+# #  own bundle  #
+# ################
 
-@bundle_blueprint.route("/own", methods=['GET' , 'POST'])
-@login_required
-def own() :     
-    """list all bundles"""     
-    return render_template("bundle/own_bundle.html" )
+# @bundle_blueprint.route("/own", methods=['GET' , 'POST'])
+# @login_required
+# def own() :     
+#     """list all bundles"""     
+#     return render_template("bundle/own_bundle.html" )
 
-@bundle_blueprint.route("/get_all_bundles_owner", methods=['GET'])
-@login_required
-def get_all_bundles_owner() :     
-    """get all bundles own by the current user for pages"""     
-    page = request.args.get('page', 1, type=int)
-    search = request.args.get('search', type=str)
-    bundles_list = BundleModel.get_all_bundles_own_page(page, search)
-    total_bundles = BundleModel.get_total_bundles_count_own()
-    if bundles_list:
-        return {"bundle_list_": [r.to_json() for r in bundles_list],
-                "total_pages": bundles_list.pages, 
-                "total_bundles": total_bundles} , 200
+# @bundle_blueprint.route("/get_all_bundles_owner", methods=['GET'])
+# @login_required
+# def get_all_bundles_owner() :     
+#     """get all bundles own by the current user for pages"""     
+#     page = request.args.get('page', 1, type=int)
+#     search = request.args.get('search', type=str)
+#     bundles_list = BundleModel.get_all_bundles_own_page(page, search)
+#     total_bundles = BundleModel.get_total_bundles_count_own()
+#     if bundles_list:
+#         return {"bundle_list_": [r.to_json() for r in bundles_list],
+#                 "total_pages": bundles_list.pages, 
+#                 "total_bundles": total_bundles} , 200
 
-    return {"message": "No Rule"} , 200
+#     return {"message": "No Rule"} , 200
 
 ################################
 #   Rule part of the bundle    #

@@ -44,6 +44,26 @@
                 {% endif %}
             </div>
         </div>
+        <!-- Public/Private -->
+        <div class="row mb-4 justify-content-center">
+            <div class="col-md-8">
+                <div class="form-check form-switch">
+                    {{ form.public(class_="form-check-input", id="publicSwitch") }}
+                    <label class="form-check-label fw-semibold" for="publicSwitch">
+                        {{ form.public.label.text }}
+                    </label>
+                </div>
+                {% if form.public.errors %}
+                <div class="invalid-feedback d-block">
+                    <i class="fa-solid fa-circle-exclamation me-1"></i> {{ form.public.errors[0] | safe }}
+                </div>
+                {% endif %}
+                <div class="form-text">
+                    Enable the toggle to make the bundle public.
+                </div>
+            </div>
+        </div>
+
 
         <!-- Submit Button -->
         <div class="text-center">
