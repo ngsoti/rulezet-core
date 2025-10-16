@@ -22,21 +22,6 @@ from flask_login import current_user
 ##############################################################################################
 
 
-format_classes = {
-    "yara": YaraRule,
-    "sigma": SigmaRule,
-    "suricata": SuricataRule,
-    "crs": CRSRule,
-    "zeek": ZeekRule,
-    "nova": NovaRule,
-    # "elastic": ElasticDetectionRule,
-    "nse": NseRule,
-    "wazuh": WazuhRule
-
-    # write ear if you want to add a format :
-    # "format_name": FormatclassRule
-}
-
 def Process_rules_by_format(format_files: list, format_rule: dict, info: dict, format_name: str , user: User) -> int:
     imported = 0
     skipped = 0
@@ -84,57 +69,68 @@ def Process_rules_by_format(format_files: list, format_rule: dict, info: dict, f
     return bad_rules, imported, skipped
 
 
-
-
 async def extract_rule_from_repo(repo_dir: str, info: dict, user: User):
     """
     Test all rules in a repo for all formats, returns results .
     """
 
-    formats = [
-        ("YARA", YaraRule),
-        ("SIGMA", SigmaRule),
-        ("SURICATA", SuricataRule),
-        ("CRS", CRSRule),
-        ("ZEEK", ZeekRule),
-        ("NOVA", NovaRule),
-        # ("ELASTIC", ElasticDetectionRule),
-        ("NSE", NseRule),
-        ("wazuh", WazuhRule)
-    ]
-
     bad_rules = 0
     imported = 0
     skipped = 0
 
-    for format_name, FormatClass in formats:
-        rule_instance = FormatClass()
+    # Get all subclasses of RuleType
+    subclasses = RuleType.__subclasses__()
+
+    # __subclasses__() : 
+    # Thanks to that methode we can add new format without changing this function
+    # The function is able to parse all the formats implemented in the rule_formats folder
+    # Just need to add the new class in the rule_formats folder and implement the abstract methods
+    # No need to change this function
+
+    for RuleClass in subclasses:
+        rule_instance = RuleClass()
+
+        format_name = rule_instance.format       
+        #class_name = rule_instance.get_class()  
+
         files = rule_instance.get_rule_files(repo_dir)
 
         bad, imported_count, skipped_count = Process_rules_by_format(
-            files, rule_instance, info, format_name , user
+            files, rule_instance, info, format_name, user
         )
 
-        # bad est un int, pas une liste
         bad_rules += bad
         imported += imported_count
         skipped += skipped_count
 
     return bad_rules, imported, skipped
 
+
 def verify_syntax_rule_by_format(rule_dict: dict) -> tuple[bool, str]:
     """
     Verify the syntax of the rule based on its format to accept or reject its creation.
     Returns (True, "") if the syntax is valid, (False, error_message) otherwise.
     """
-    
+
     rule_format = rule_dict.get("format", "").lower()
 
-    if rule_format not in format_classes:
+    if not rule_format:
+        return False, "Missing rule format."
+
+    matching_class = None
+    for cls in RuleType.__subclasses__():
+        try:
+            if cls().format.lower() == rule_format:
+                matching_class = cls
+                break
+        except Exception:
+            continue
+
+    if not matching_class:
         return False, f"Format '{rule_format}' is not supported."
 
-    # Instantiate the corresponding class
-    rule_instance: RuleType = format_classes[rule_format]()
+    # Class instantiation
+    rule_instance: RuleType = matching_class()
 
     # Get the rule content to validate
     content = rule_dict.get("to_string", "")
@@ -142,19 +138,16 @@ def verify_syntax_rule_by_format(rule_dict: dict) -> tuple[bool, str]:
         return False, "Rule content ('to_string') is empty."
 
     try:
-        # Use the validate() method which returns a ValidationResult
         result: ValidationResult = rule_instance.validate(content)
 
         if result.ok:
             return True, ""
         else:
-            # Concatenate error messages if any
             error_msg = "; ".join(result.errors) if result.errors else "Unknown validation error"
             return False, error_msg
 
     except Exception as e:
         return False, str(e)
-
 
 # The rule_dict :
 
@@ -162,11 +155,11 @@ def verify_syntax_rule_by_format(rule_dict: dict) -> tuple[bool, str]:
 #   'version': '1.0', 'to_string': 'q', 'cve_id': 'None', 'author': 'admin', 'creation_date': (datetime.datetime(2025, 9, 10, 12, 9, 47, 2389, tzinfo=datetime.timezone.utc),)}
 
 
-
 def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: str):
     """
     Process a corrected bad rule from InvalidRuleModel and attempt to import it using format-specific classes.
     """
+
     try:
         rule_dict = {
             "format": bad_rule_obj.rule_type,
@@ -175,17 +168,27 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
             "file_name": getattr(bad_rule_obj, "file_name", None),
             "user_id": bad_rule_obj.user_id
         }
-        #try to execute edit bad rule
+
         is_valid, error_msg = verify_syntax_rule_by_format(rule_dict)
         if not is_valid:
             bad_rule_obj.error_message = error_msg
             db.session.commit()
-            return False, error_msg , None
-
-        # the syntax check has been pass, parse the rule 
+            return False, error_msg, None
 
         rule_format = bad_rule_obj.rule_type.lower()
-        rule_instance: RuleType = format_classes[rule_format]()
+        matching_class = None
+        for cls in RuleType.__subclasses__():
+            try:
+                if cls().format.lower() == rule_format:
+                    matching_class = cls
+                    break
+            except Exception:
+                continue
+
+        if not matching_class:
+            return False, f"Format '{rule_format}' is not supported.", None
+
+        rule_instance: RuleType = matching_class()
 
         info = {
             "license": bad_rule_obj.license,
@@ -193,9 +196,10 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
             "repo_url": bad_rule_obj.url
         }
 
-        validation_result  = rule_instance.validate(raw_content)
-        # Parse metadata
-        metadata = rule_instance.parse_metadata(raw_content , info , validation_result)
+
+        validation_result: ValidationResult = rule_instance.validate(raw_content)
+        metadata = rule_instance.parse_metadata(raw_content, info, validation_result)
+
         result_dict = {
             "validation": {
                 "ok": validation_result.ok,
@@ -206,17 +210,19 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
             "raw_rule": raw_content,
             "file": bad_rule_obj.url
         }
-        # Attempt to create rule if validation is OK
+
+
         if validation_result.ok:
             success = RuleModel.add_rule_core(result_dict["rule"], current_user)
             if success:
                 db.session.delete(bad_rule_obj)
                 db.session.commit()
-                return True, "" , success
+                return True, "", success
             else:
-                return False, "Rule already exists or failed to insert." , None
+                return False, "Rule already exists or failed to insert.", None
         else:
-            return False, "Validate has been out passed ! The rule syntax is corrupt" , None
+            return False, "Validate has been out passed! The rule syntax is corrupt.", None
+
     except Exception as e:
         db.session.rollback()
-        return False, str(e) , None
+        return False, str(e), None

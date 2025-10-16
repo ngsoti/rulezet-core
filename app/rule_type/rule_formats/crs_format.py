@@ -20,6 +20,9 @@ class CRSRule(RuleType):
     @property
     def format(self) -> str:
         return "crs"
+    
+    def get_class(self) -> str:
+        return "CRSRule"
 
     def validate(self, content: str, **kwargs) -> ValidationResult:
         """

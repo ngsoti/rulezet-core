@@ -202,6 +202,7 @@
         const res = await fetch('/rule/delete_rule?'+ params.toString())
         if(await res.status == 200){
           rules_list.value.splice(index, 1);
+          fetchRecentRules()
           var myModalEl = document.getElementById('delete_rule_modal_'+id);
           var modal = bootstrap.Modal.getInstance(myModalEl)
           modal.hide();
@@ -231,7 +232,8 @@
         vote,
         checkIfUserIsConnected,
         fetchCurrentUser,
-        favorite
+        favorite,
+        fetchRecentRules
       }
     }
   }).mount('#main-container')

@@ -21,6 +21,8 @@ class NovaRule(RuleType):
     def format(self) -> str:
         return "nova"
 
+    def get_class(self) -> str:
+        return "NovaRule"
     # ---------------------#
     #   Abstract section   #
     # ---------------------#

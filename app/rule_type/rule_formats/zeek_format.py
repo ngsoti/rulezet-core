@@ -13,6 +13,9 @@ class ZeekRule(RuleType):
     @property
     def format(self) -> str:
         return "zeek"
+    
+    def get_class(self) -> str:
+        return "ZeekRule"
 
     def validate(self, content: str, **kwargs) -> ValidationResult:
         """

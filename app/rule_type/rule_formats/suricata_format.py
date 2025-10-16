@@ -1,7 +1,6 @@
 import os
 from typing import List, Dict, Any
-from suricataparser import parse_rules
-from suricataparser import parse_rule
+from suricataparser import parse_rules, parse_rule
 from ...rule import rule_core as RuleModel
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.utils.utils import detect_cve
@@ -15,12 +14,17 @@ class SuricataRule(RuleType):
     @property
     def format(self) -> str:
         return "suricata"
+    
+    def get_class(self) -> str:
+        return "SuricataRule"
 
     def validate(self, content: str, **kwargs) -> ValidationResult:
         """
         Validate a Suricata rule using suricataparser.
         Returns a ValidationResult with errors if the rule is invalid.
         """
+        # if content.strip().startswith("SecRule"):
+        #     return ValidationResult(ok=False, errors=["ModSecurity rules are not supported."], normalized_content=content)
         try:
             rules = parse_rules(content)
             if not rules:

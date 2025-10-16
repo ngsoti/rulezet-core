@@ -14,6 +14,9 @@ class WazuhRule(RuleType):
     @property
     def format(self) -> str:
         return "wazuh"
+    
+    def get_class(self) -> str:
+        return "WazuhRule"
 
     def validate(self, content: str, **kwargs) -> ValidationResult:
         """

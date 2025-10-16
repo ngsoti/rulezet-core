@@ -15,6 +15,9 @@ class NseRule(RuleType):
     @property
     def format(self) -> str:
         return "nse"
+    
+    def get_class(self) -> str:
+        return "NseRule"
 
     def validate(self, content: str, **kwargs) -> ValidationResult:
         """

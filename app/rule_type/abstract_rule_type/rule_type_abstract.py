@@ -40,6 +40,11 @@ class RuleType(ABC):
         ...
 
     @abstractmethod
+    def get_class(self) -> str:
+        """Short identifier of the class."""
+        ...
+
+    @abstractmethod
     def validate(self, content: str, **kwargs) -> ValidationResult:
         """Validate the rule and return a ValidationResult."""
         ...

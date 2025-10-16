@@ -44,7 +44,7 @@
           </div>
         </div>
         <div class="col-md-3">
-          <select v-model="sortBy" class="form-select form-select-sm rounded-pill">
+          <select v-model="sortBy" class="form-select form-select-sm rounded-pill" @change="fetchRules(1)">
             <option value="newest">Newest</option>
             <option value="oldest">Oldest</option>
             <option value="most_likes">Most Liked</option>
@@ -52,7 +52,7 @@
           </select>
         </div>
         <div class="col-md-3">
-          <select v-model="ruleType" class="form-select form-select-sm rounded-pill">
+          <select v-model="ruleType" class="form-select form-select-sm rounded-pill" @change="fetchRules(1)">
               <option value="">All Types</option>
               <option v-for="format in rules_formats" :value="format.name" :key="format.id">
                   [[ format.name ]]
@@ -328,6 +328,7 @@
         const res = await fetch('/rule/delete_rule?'+ params.toString())
         if(await res.status == 200){
           rules_list.value.rule.splice(index, 1);
+          fetchRules(1)
           var myModalEl = document.getElementById('delete_rule_modal_'+id);
           var modal = bootstrap.Modal.getInstance(myModalEl)
           modal.hide();

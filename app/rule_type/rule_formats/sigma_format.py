@@ -35,6 +35,8 @@ class SigmaRule(RuleType):
     def format(self) -> str:
         return "sigma"
 
+    def get_class(self) -> str:
+        return "SigmaRule"
     #---------------------#
     #   Abstract section  #
     #---------------------#

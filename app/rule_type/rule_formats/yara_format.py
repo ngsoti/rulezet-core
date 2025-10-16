@@ -33,7 +33,8 @@ class YaraRule(RuleType):
 
     YARA_MODULES = {"pe", "math", "cuckoo", "magic", "hash", "dotnet", "elf", "macho"}
 
-    
+    def get_class(self) -> str:
+        return "YaraRule"
 
     #---------------------#
     #   Abstract section  #
