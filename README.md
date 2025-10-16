@@ -170,7 +170,7 @@ Copyright (C) 2024-2025 Theo Geffe
 
 ## Funding
 
-Flowintel is co-funded by [CIRCL](https://www.circl.lu/) and by the European Union under [FETTA](https://www.circl.lu/pub/press/20240131/) (Federated European Team for Threat Analysis) project.
+Rulezet is co-funded by [CIRCL](https://www.circl.lu/) and by the European Union under [FETTA](https://www.circl.lu/pub/press/20240131/) (Federated European Team for Threat Analysis) project.
 
 ![EU logo](https://www.vulnerability-lookup.org/images/eu-funded.jpg)
 
