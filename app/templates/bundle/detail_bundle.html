@@ -102,7 +102,11 @@
                 <a :href="`/rule/detail_rule/${item.rule.id}`" title="View more about this rule">
                   [[ item.rule.title ]]
                 </a>
-                <strong>[[ item.rule.cve_id ]]</strong> : [[ item.association.description ]]
+                <template v-if="item.rule.cve_id && item.rule.cve_id !== 'None'">
+                  <strong>[[ item.rule.cve_id ]]</strong>
+                </template> - [[ item.association.description ]]
+               
+
               </div>
               {% if current_user.is_authenticated %}
                 <template v-if="parseInt('{{current_user.id}}') == bundle.user_id  || is_admin">

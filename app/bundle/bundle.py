@@ -331,6 +331,13 @@ def evaluate():
             "success": False
         }, 404
     
+    if not bundle.access and (not current_user.is_authenticated or (current_user.id != bundle.user_id and not current_user.is_admin())):
+        return {
+            "success": False,
+            "message": "You don't have the permission to evaluate this bundle",
+            "toast_class" : "danger"
+        }, 401
+
     vote_type = request.args.get('voteType', type=str)
     if vote_type not in ['up', 'down']:
         return {
@@ -391,18 +398,25 @@ def download_bundle():
             "message": "No rules on this bundle to download",
             "toast_class": "danger"
         }, 400
+    
+    if not bundle.access and (not current_user.is_authenticated or (current_user.id != bundle.user_id and not current_user.is_admin())):
+        return {
+            "success": False,
+            "message": "You don't have the permission to download this bundle",
+            "toast_class": "danger"
+        }, 401
 
     EXTENSIONS_MAP = {
-        "yara": "yara",
-        "sigma": "yaml",
-        "zeek": "zeek",
-        "suricata": "rule",
-        "snort": "rule",
-        "text": "txt",
-        "crs": "conf",
-        "nova": "nov",
-        "wazuh": "xml",
-        "nse": "nse",
+        # "yara": "yara",
+        # "sigma": "yaml",
+        # "zeek": "zeek",
+        # "suricata": "rule",
+        # "snort": "rule",
+        # "text": "txt",
+        # "crs": "conf",
+        # "nova": "nov",
+        # "wazuh": "xml",
+        # "nse": "nse",
     }
 
     zip_buffer = io.BytesIO()

@@ -25,14 +25,33 @@
                 <li class="list-group-item"><strong>Message:</strong> [[ owner_rule.message ]]</li>
             </ul>
 
-            <div class="row mt-4">
-                <div class="col-md-6">
+             <div class="row mt-4">
+                <div class="col-md-6 mb-3">
                     <h5><i class="fas fa-code me-2"></i> Old Rule Content (deleted lines in red)</h5>
-                    <pre class="bg-light p-3 rounded border" style="max-height: 500px; overflow-y: auto;" v-html="owner_rule.old_diff_html"></pre>
+                    <div class="bg-light p-3 rounded border"
+                        style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
+                        <div v-for="(line2, i) in getOldContentLines(owner_rule.old_content)" :key="i">
+                            <span v-if="line2.trim() !== ''"
+                                :class="{'text-danger': isLineDeleted(line2, owner_rule.new_content)}"
+                                class="d-block">
+                                [[ line2 ]]
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-6">
+
+                <div class="col-md-6 mb-3">
                     <h5><i class="fas fa-code-branch me-2"></i> New Rule Content (added lines in green)</h5>
-                    <pre class="bg-light p-3 rounded border" style="max-height: 500px; overflow-y: auto;" v-html="owner_rule.new_diff_html"></pre>
+                    <div class="bg-light p-3 rounded border"
+                        style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
+                        <div v-for="(line2, i) in getProposedContentLines(owner_rule.new_content)" :key="i">
+                            <span v-if="line2.trim() !== ''"
+                                :class="{'text-success': isLineNew(line2, owner_rule.old_content)}"
+                                class="d-block">
+                                [[ line2 ]]
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -84,9 +103,49 @@ createApp({
         }
         fetchRules()
 
+        /**         
+         *          #############################
+         *          #   color lines for changes  #
+         *          #############################
+         * */  
+
+        function getOldContentLines(content) {
+            return content.split('\n');
+        }
+
+        function getProposedContentLines(content) {
+            return content.split('\n');
+        }
+
+        function isLineNew(line, oldContent) {
+            const normalizedLine = line.trim();
+            const normalizedOldContent = oldContent.split('\n').map(l => l.trim());
+            
+            return !normalizedOldContent.includes(normalizedLine); 
+        }
+
+        function isLineDeleted(line, proposedContent) {
+            const normalizedLine = line.trim();
+            const normalizedProposedContent = proposedContent.split('\n').map(l => l.trim());
+            
+            return !normalizedProposedContent.includes(normalizedLine);  
+        }
+        
+        function isLineIdentical(line, content) {
+            const normalizedLine = line.trim();
+            const normalizedContent = content.split('\n').map(l => l.trim());
+            
+            return normalizedContent.includes(normalizedLine);  
+        }
+
         return { 
             owner_rule,
-            rule_id  
+            rule_id,
+            getOldContentLines,
+            getProposedContentLines,
+            isLineNew,
+            isLineDeleted,
+            isLineIdentical  
         }
     }
 }).mount('#main-container')

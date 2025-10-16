@@ -102,7 +102,6 @@
                                             <div v-for="(line, i) in getProposedContentLines(rule.proposed_content)" :key="i">
                                                 <span v-if="line.trim() !== ''" :class="{
                                                     'text-success': isLineNew(line, rule.old_content),
-                                                    'text-warning': isLineIdentical(line, rule.old_content)
                                                 }" class="d-block p-1">
                                                     [[ line ]]
                                                 </span>
@@ -116,7 +115,6 @@
                                             <div v-for="(line, i) in getOldContentLines(rule.old_content)" :key="i">
                                                 <span v-if="line.trim() !== ''" :class="{
                                                     'text-danger': isLineDeleted(line, rule.proposed_content),
-                                                    'text-warning': isLineIdentical(line, rule.proposed_content)
                                                 }" class="d-block p-1">
                                                     [[ line ]]
                                                 </span>
@@ -198,13 +196,36 @@
                                     <td colspan="5">
                                         <div class="row">
                                             <div class="row mt-4">
-                                                <div class="col-md-6">
-                                                    <h5><i class="fas fa-code me-2"></i> Old Rule Content (deleted lines in red)</h5>
-                                                    <pre class="bg-light p-3 rounded border" style="max-height: 500px; overflow-y: auto;" v-html="rule.old_diff_html"></pre>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <h5><i class="fas fa-code-branch me-2"></i> New Rule Content (added lines in green)</h5>
-                                                    <pre class="bg-light p-3 rounded border" style="max-height: 500px; overflow-y: auto;" v-html="rule.new_diff_html"></pre>
+                                                <div class="row mt-3">
+                                                   <div class="col-md-6 mb-3">
+                                                        <strong>Proposed Content:</strong>
+                                                        <div class="bg-light p-3 rounded border"
+                                                            style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
+                                                            <div v-for="(line2, i) in getProposedContentLines(rule.proposed_content)" :key="i">
+                                                                <span v-if="line2.trim() !== ''"
+                                                                    :class="{'text-success': isLineNew(line2, rule.old_content)}"
+                                                                    class="d-block">
+                                                                    [[ line2 ]]
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    
+                                                    <div class="col-md-6 mb-3">
+                                                        <strong>Old Content:</strong>
+                                                        <div class="bg-light p-3 rounded border"
+                                                            style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
+                                                            <div v-for="(line2, i) in getOldContentLines(rule.old_content)" :key="i">
+                                                                <span v-if="line2.trim() !== ''"
+                                                                    :class="{'text-danger': isLineDeleted(line2, rule.proposed_content)}"
+                                                                    class="d-block">
+                                                                    [[ line2 ]]
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
                                                 </div>
                                             </div>
 

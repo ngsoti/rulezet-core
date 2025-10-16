@@ -103,7 +103,7 @@ class Rule(db.Model):
     #edit
     def get_rule_user_first_name_by_id(self):
         user = User.query.get(self.user_id)  
-        return user.first_name if user else None
+        return user.first_name + " " + user.last_name if user else None
 
 
     def to_json(self):

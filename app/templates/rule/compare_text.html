@@ -3,17 +3,34 @@
 
 {% block content %}
 <div class="container my-4" id="main-container">
-
-    <div class="row">
-        <div class="col-md-6">
-            <h5>Texte original</h5>
-            <div id="diff-left" class="border p-3" style="white-space: pre-wrap; background-color: #f8f9fa;"></div>
+    <div class="row mt-3">
+        <div class="col-md-6 mb-3">
+            <strong>Proposed Content:</strong>
+            <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
+                <div v-for="(line, i) in getProposedContentLines(rule.proposed_content)" :key="i">
+                    <span v-if="line.trim() !== ''" :class="{
+                        'text-success': isLineNew(line, rule.old_content),
+                    }" class="d-block p-1">
+                        [[ line ]]
+                    </span>
+                </div>
+            </div>
         </div>
-        <div class="col-md-6">
-            <h5>Texte modifié</h5>
-            <div id="diff-right" class="border p-3" style="white-space: pre-wrap; background-color: #f8f9fa;"></div>
+        
+        <div class="col-md-6 mb-3">
+            <strong>Old Content:</strong>
+            <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
+                <div v-for="(line, i) in getOldContentLines(rule.old_content)" :key="i">
+                    <span v-if="line.trim() !== ''" :class="{
+                        'text-danger': isLineDeleted(line, rule.proposed_content),
+                    }" class="d-block p-1">
+                        [[ line ]]
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
+    
 </div>
 {% endblock %}
 
@@ -25,33 +42,37 @@ import { display_toast, prepare_toast, message_list } from '/static/js/toaster.j
 createApp({
     delimiters: ['[[', ']]'],
     setup() {
-        const htmlOld = ref('');
-        const htmlNew = ref('');
+         /**         
+         *          #############################
+         *          #   color lines for changes  #
+         *          #############################
+         * */  
 
-        async function loadDiff() {
-            try {
-                const response = await fetch('/rule/compare');
-                if (!response.ok) throw new Error('Erreur HTTP ' + response.status);
-                const data = await response.json();
-                if (data.success) {
-                    htmlOld.value = data.html_old;
-                    htmlNew.value = data.html_new;
-                    document.getElementById('diff-left').innerHTML = htmlOld.value;
-                    document.getElementById('diff-right').innerHTML = htmlNew.value;
-                } else {
-                    document.getElementById('diff-left').innerHTML = 'Erreur lors du calcul du diff.';
-                    document.getElementById('diff-right').innerHTML = 'Erreur lors du calcul du diff.';
-                }
-            } catch (err) {
-                document.getElementById('diff-left').innerHTML = 'Impossible de charger le diff.';
-                document.getElementById('diff-right').innerHTML = 'Impossible de charger le diff.';
-                console.error(err);
-            }
+        function getOldContentLines(content) {
+            return content.split('\n');
         }
 
-        onMounted(() => {
-            loadDiff();
-        });
+        function getProposedContentLines(content) {
+            return content.split('\n');
+        }
+
+        function isLineNew(line, oldContent) {
+            const normalizedLine = line.trim();
+            const normalizedOldContent = oldContent.split('\n').map(l => l.trim());
+            
+            return !normalizedOldContent.includes(normalizedLine); 
+        }
+
+        function isLineDeleted(line, proposedContent) {
+            const normalizedLine = line.trim();
+            const normalizedProposedContent = proposedContent.split('\n').map(l => l.trim());
+            
+            return !normalizedProposedContent.includes(normalizedLine);  
+        }
+        
+
+
+        
 
         return { htmlOld, htmlNew, loadDiff };
     }
