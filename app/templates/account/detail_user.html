@@ -15,7 +15,7 @@
                     <div class="card-body">
                         <h3 class="card-title mb-3"><i class="fas fa-user-circle me-2"></i>User Profile
                             <template v-if="{{current_user.id}} == current_user.id">
-                                <span class="badge bg-info text-dark ms-2">(you)</span>
+                                <span class="badge bg-info text-dark ms-2">me</span>
                             </template>
                         </h3>
                         <ul class="list-group list-group-flush">
@@ -24,7 +24,7 @@
                             <li class="list-group-item"><strong>Email:</strong> [[ current_user.email ]]</li>
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <div>
-                                    <strong>Admin:</strong>
+                                    <strong>Admin: </strong>
                                     <span class="badge" :class="current_user.admin ? 'bg-success' : 'bg-secondary'">
                                         [[ current_user.admin ? 'Yes' : 'No' ]]
                                     </span>
@@ -42,7 +42,7 @@
                                     </template>
                                 </div>
                             </li>
-                            <li class="list-group-item"><strong>Connected:</strong>
+                            <li class="list-group-item"><strong>Connected: </strong>
                                 <span class="badge" :class="current_user.is_connected ? 'bg-success' : 'bg-danger'">
                                     [[ current_user.is_connected ? 'Yes' : 'No' ]]
                                 </span>
