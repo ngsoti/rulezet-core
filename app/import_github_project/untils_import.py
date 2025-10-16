@@ -31,10 +31,10 @@ def clone_or_access_repo(repo_url):
     # folder racine to git clone
     base_dir = "Rules_Github"
     os.makedirs(base_dir, exist_ok=True) # create the folder if not exist
+
     #take the repo name 
     repo_name = get_repo_name_from_url(repo_url)
-    # repo_name = repo_url.rstrip('/').split('/')[-1].replace('.git', '')
-
+    repo_name=repo_name+".git"
     # build the complete path 
     repo_dir = os.path.join(base_dir, repo_name)
     existe = True

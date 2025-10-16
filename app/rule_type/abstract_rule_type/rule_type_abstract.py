@@ -65,7 +65,7 @@ class RuleType(ABC):
         ...
 
     @abstractmethod
-    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> str:
+    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """Extract one rule with his id in a repo (to_update)."""
         ...
         

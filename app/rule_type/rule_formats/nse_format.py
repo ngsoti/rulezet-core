@@ -4,6 +4,7 @@ import subprocess
 from typing import Any, Dict, List
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.utils.utils import detect_cve
+from ...rule import rule_core as RuleModel
 
 # https://github.com/nmap/nmap.git
 
@@ -153,13 +154,16 @@ class NseRule(RuleType):
         except Exception as e:
             return []
 
-    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> str:
+    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """
         Very simple implementation:
         Return the N-th NSE file found in the repo.
         """
+        rule = RuleModel.get_rule(rule_id)
+        if rule is None:
+            return f"No rule found with ID {rule_id} in the database.", False
         files = self.get_rule_files(repo_dir)
         if 0 <= rule_id < len(files):
             with open(files[rule_id], "r", encoding="utf-8") as f:
-                return f.read()
-        raise IndexError("Rule id not found in repository.")
+                return f.read() , True
+        return f"Nmap Rule with ID '{rule.uuid}' not found inside repo.", False

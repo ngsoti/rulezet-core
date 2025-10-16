@@ -1738,42 +1738,49 @@ def import_rules_from_github() -> dict:
 
 
 
-
-@rule_blueprint.route("/check_updates", methods=["POST"])
+@rule_blueprint.route("/check_updates_by_url", methods=["POST"])
 @login_required
 def check_updates():
     data = request.get_json()
-    rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
-    results = []
+    urls = data.get("url", None)  
+    if not urls or not isinstance(urls, list):
+        return {
+            "message": "No URL provided or not a list.",
+            "nb_update": 0,
+            "results": [],
+            "success": False,
+            "toast_class": "danger"
+        }, 400
 
-    # Récupère toutes les sources uniques (optimisation)
-    sources = RuleModel.get_sources_from_titles(rule_items)
-    for source in sources:
-        repo_dir, exists = clone_or_access_repo(source)
+
+    for url in urls:
+        rule_items = RuleModel.get_all_rule_by_url_github(url)
+        repo_dir, exists = clone_or_access_repo(url)
+        results = []
         if exists:
             git_pull_repo(repo_dir)
 
-    for item in rule_items:
-        rule_id = item.get("id")
-        title = item.get("title", "Unknown Title")
+            
+            for rule in rule_items:
+                rule_id = rule.id
+                title = rule.title
 
-        message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
-        rule = RuleModel.get_rule(rule_id)
+                message_dict, success, new_rule_content = Check_for_rule_updates(rule_id,repo_dir)
+                rule = RuleModel.get_rule(rule_id)
 
-        if success and new_rule_content:
-            result = {
-                "id": rule_id,
-                "title": title,
-                "success": success,
-                "message": message_dict.get("message", "No message"),
-                "new_content": new_rule_content,
-                "old_content": rule.to_string if rule else "Error loading the rule"
-            }
+                if success and new_rule_content:
+                    result = {
+                        "id": rule_id,
+                        "title": title,
+                        "success": success,
+                        "message": message_dict.get("message", "No message"),
+                        "new_content": new_rule_content,
+                        "old_content": rule.to_string if rule else "Error loading the rule"
+                    }
 
-            history_id = RuleModel.create_rule_history(result)
-            result["history_id"] = history_id if history_id else None
-            results.append(result)
-
+                    history_id = RuleModel.create_rule_history(result)
+                    result["history_id"] = history_id if history_id else None
+                    results.append(result)
     return {
         "message": "Search completed successfully. All selected rules have been processed without issues.",
         "nb_update": len(results),
@@ -1781,6 +1788,49 @@ def check_updates():
         "success": True,
         "toast_class": "success"
     }, 200
+    
+# @rule_blueprint.route("/check_updates", methods=["POST"])
+# @login_required
+# def check_updates():
+#     data = request.get_json()
+#     rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
+#     results = []
+
+#     # Récupère toutes les sources uniques (optimisation)
+#     sources = RuleModel.get_sources_from_titles(rule_items)
+#     for source in sources:
+#         repo_dir, exists = clone_or_access_repo(source)
+#         if exists:
+#             git_pull_repo(repo_dir)
+
+#     for item in rule_items:
+#         rule_id = item.get("id")
+#         title = item.get("title", "Unknown Title")
+
+#         message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
+#         rule = RuleModel.get_rule(rule_id)
+
+#         if success and new_rule_content:
+#             result = {
+#                 "id": rule_id,
+#                 "title": title,
+#                 "success": success,
+#                 "message": message_dict.get("message", "No message"),
+#                 "new_content": new_rule_content,
+#                 "old_content": rule.to_string if rule else "Error loading the rule"
+#             }
+
+#             history_id = RuleModel.create_rule_history(result)
+#             result["history_id"] = history_id if history_id else None
+#             results.append(result)
+
+    # return {
+    #     "message": "Search completed successfully. All selected rules have been processed without issues.",
+    #     "nb_update": len(results),
+    #     "results": results,
+    #     "success": True,
+    #     "toast_class": "success"
+    # }, 200
 
 #########################
 #   Github url section  #

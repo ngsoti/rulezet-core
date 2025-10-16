@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional
 import os
 import re
-import json
+from ...rule import rule_core as RuleModel
 
 from dataclasses import dataclass, field
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
@@ -140,10 +140,13 @@ class NovaRule(RuleType):
 
         return rules
 
-    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> str:
+    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """
         Search for a Nova rule by its index (for demo purposes).
         """
+        rule = RuleModel.get_rule(rule_id)
+        if rule is None:
+            return f"No rule found with ID {rule_id} in the database.", False
         nova_files = self.get_rule_files(repo_dir)
         count = 0
         for filepath in nova_files:
@@ -152,4 +155,4 @@ class NovaRule(RuleType):
                 if count == rule_id:
                     return r
                 count += 1
-        return ""
+        return f"Nova Rule with ID '{rule.uuid}' not found inside repo.", False

@@ -158,11 +158,7 @@ class SigmaRule(RuleType):
         if not rule:
             return "No rule found in the database.", False
 
-        local_repo_path = update_or_clone_repo(repo_url)
-        if not local_repo_path:
-            return "Could not clone or update repo.", False
-
-        sigma_files = self.get_rule_files(local_repo_path)
+        sigma_files = self.get_rule_files(repo_url)
 
         for filepath in sigma_files:
             rules = self.extract_rules_from_file(filepath)
@@ -177,4 +173,4 @@ class SigmaRule(RuleType):
                 except Exception:
                     continue
 
-        return f"Rule '{rule.title}' not found inside local repo.", False
+        return f"Sigma rule '{rule.title}' not found inside local repo.", False

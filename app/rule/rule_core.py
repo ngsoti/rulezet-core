@@ -364,8 +364,8 @@ def get_similar_rule(rule_id) -> list:
         similarity_criteria.append(Rule.cve_id.ilike(f'%{rule.cve_id}%'))
     if rule.title:
         similarity_criteria.append(Rule.title.ilike(f'%{rule.title}%'))
-    if rule.format:
-        similarity_criteria.append(Rule.format == rule.format)
+    # if rule.format:
+    #     similarity_criteria.append(Rule.format == rule.format)
     if rule.author:
         similarity_criteria.append(Rule.author.ilike(f'%{rule.author}%'))
 
@@ -2032,3 +2032,14 @@ def get_all_rule_by_url_github_page(page: int = 1, search: str = None, url: str 
     pagination = query.paginate(page=page, per_page=20, max_per_page=20)
     
     return pagination, total_count
+
+def get_all_rule_by_url_github(url: str = None):
+    """Get list of Rules whose source contains a specific GitHub project URL."""
+    
+    query = Rule.query.filter(Rule.source != None)
+    
+    if url:
+        query = query.filter(Rule.source.ilike(f"%{url}%"))
+    
+    return query.all()
+

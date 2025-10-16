@@ -284,7 +284,7 @@ class YaraRule(RuleType):
                 if match and match.group(1) == rule.title:
                     return r, True
 
-        return f"Rule '{rule.title}' not found inside local repo.", False
+        return f"Yara Rule '{rule.title}' not found inside local repo.", False
 
 
 

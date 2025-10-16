@@ -161,4 +161,4 @@ class WazuhRule(RuleType):
                 except Exception:
                     continue
 
-        return f"Rule with ID '{rule.original_uuid}' not found inside repo.", False
+        return f"Wazuh rule with ID '{rule.original_uuid}' not found inside repo.", False

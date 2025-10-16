@@ -4,6 +4,7 @@ import re
 import uuid
 from typing import Any, Dict, List
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from ...rule import rule_core as RuleModel
 
 class ZeekRule(RuleType):
     """
@@ -140,14 +141,17 @@ class ZeekRule(RuleType):
             return []
         return rules
 
-    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> str:
+    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """
         Search for a rule in a local repository by its ID (generated UUID).
         """
+        rule = RuleModel.get_rule(rule_id)
+        if not rule:
+            return "No rule found in the database.", False
         rule_files = self.get_rule_files(repo_dir)
         for filepath in rule_files:
             rules = self.extract_rules_from_file(filepath)
             for r in rules:
                 if str(rule_id) in r:
-                    return r
-        return f"Rule with ID '{rule_id}' not found."
+                    return r , True
+        return f"Zeek Rule with ID '{rule.uuid}' not found inside repo.", False

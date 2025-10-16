@@ -127,4 +127,4 @@ class SuricataRule(RuleType):
                 except Exception:
                     continue
 
-        return f"Rule with SID '{rule.original_uuid}' not found inside repo.", False
+        return f"Suricata rule with SID '{rule.original_uuid}' not found inside repo.", False
