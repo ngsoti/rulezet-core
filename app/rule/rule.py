@@ -1255,7 +1255,6 @@ def get_all_rules_owner():
     search = request.args.get("search", None)
     rule_type = request.args.get("rule_type", None) 
     sourceFilter = request.args.get("source", None) 
-    rule_type = request.args.get("rule_type", None) 
 
     #sources = RuleModel.get_all_rule_sources_by_user()
     rules = RuleModel.get_all_rule_update(search=search , rule_type=rule_type , sourceFilter=sourceFilter)
