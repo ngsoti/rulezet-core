@@ -84,7 +84,7 @@ class CRSRule(RuleType):
 
     def get_rule_files(self, repo_dir: str) -> List[str]:
         files = []
-        for ext in ["*.conf", "*.rules"]:
+        for ext in ["*.conf"]:
             files.extend(glob.glob(os.path.join(repo_dir, "**", ext), recursive=True))
         files = [f for f in files if not os.path.basename(f).startswith(".")]
         return files

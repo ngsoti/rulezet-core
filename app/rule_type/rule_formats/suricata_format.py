@@ -23,8 +23,6 @@ class SuricataRule(RuleType):
         Validate a Suricata rule using suricataparser.
         Returns a ValidationResult with errors if the rule is invalid.
         """
-        # if content.strip().startswith("SecRule"):
-        #     return ValidationResult(ok=False, errors=["ModSecurity rules are not supported."], normalized_content=content)
         try:
             rules = parse_rules(content)
             if not rules:
@@ -55,7 +53,7 @@ class SuricataRule(RuleType):
                 "author": info["author"] or "Unknown",
                 "cve_id": cve,
                 "original_uuid": rule.sid or  "Unknown",
-                "source": info["repo_url"],
+                "source": info["repo_url"] or "Unknown",
                 "to_string": rule.raw,
             }
         except Exception as e:

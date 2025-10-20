@@ -125,7 +125,7 @@ class YaraRule(RuleType):
             for file in files:
                 if file.startswith('.') or file.startswith('_'):
                     continue
-                if file.endswith(('.yar', '.yara', '.rule')):
+                if file.endswith(('.yar', '.yara')):
                     yara_files.append(os.path.join(root, file))
         return yara_files
 

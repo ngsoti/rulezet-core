@@ -9,7 +9,7 @@ from app.account.account_core import add_favorite, remove_favorite
 from app.import_github_project.cron_check_updates import disable_schedule_job, enable_schedule_job, modify_schedule_job, remove_schedule_job
 from app.import_github_project.update_github_project import Check_for_rule_updates
 from app.misp.misp_core import content_convert_to_misp_object
-from app.rule_type.main_format import  extract_rule_from_repo, process_and_import_fixed_rule, verify_syntax_rule_by_format
+from app.rule_type.main_format import  extract_rule_from_repo, parse_rule_by_format, process_and_import_fixed_rule, verify_syntax_rule_by_format
 from ..account import account_core as AccountModel
 from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, fill_all_void_field, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
 from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm, EditScheduleForm
@@ -1696,6 +1696,34 @@ def delete_format_rule():
 #       - comment bug (found a solution to not mix a rule corp and a comment section)
 #       - external variable ?
 #
+@rule_blueprint.route("/parse_rule", methods=['GET','POST'])
+@login_required
+def parse_rule() -> dict:
+    """Parse a single rule to test if it's valid"""
+    rule_content = request.form.get('content')
+    format = request.form.get('format')
+    if not format:
+        flash(" Format is required", "danger")
+        return redirect(url_for("rule.rule", tab="parse"))
+
+    if not rule_content:
+        flash(" Content is required", "danger")
+        return redirect(url_for("rule.rule", tab="parse"))
+    
+    success , message, object_ = parse_rule_by_format(rule_content, current_user, format)
+
+    if success == False:
+        if object_ is None:
+            flash( message , "danger")
+            return redirect(url_for("rule.bad_rules_summary"))
+        else:
+            flash( message , "warning")
+            return redirect(url_for("rule.detail_rule", rule_id=object_.id))
+
+    
+
+    flash(f"Rules imported.", "success")
+    return redirect(url_for("rule.detail_rule", rule_id=object_.id))
 
 @rule_blueprint.route("/import_rules_from_github", methods=['GET' , 'POST'])
 @login_required

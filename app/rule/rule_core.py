@@ -129,7 +129,17 @@ def add_rule_core(form_dict, user) -> bool:
     except Exception as e:
         return False
 
-
+def rule_exists(Metadata: dict) -> tuple[bool, int]:
+    """
+    Check if a rule with the same title, to_string, and original_uuid exists.
+    """
+    existing_rules = get_rule_by_title(Metadata["title"].strip())
+    if existing_rules:
+        for r in existing_rules:
+            if (r.to_string == Metadata["to_string"].strip() and
+                    str(r.original_uuid or "").strip() == str(Metadata.get("original_uuid") or "").strip()):
+                return True, r.id
+    return False , None    
 
 
 
@@ -660,11 +670,18 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
     else:
         user_id = user.id if user else None
 
+    if form_dict.get("source") is None:
+        form_dict["source"] = "Unknown"
+
+    if form_dict.get("license") is None:
+        form_dict["license"] = "Unknown"
+
+
     file_name = str(form_dict["title"]) 
     error_message = str(error)
     raw_content = str(to_string)
-    repo_url = str(form_dict["source"])
-    license = str(form_dict["license"])
+    repo_url = str(form_dict["source"]) or "Unknown"
+    license = str(form_dict["license"]) or "Unknown"
     existing = InvalidRuleModel.query.filter_by(
         file_name=file_name,
         error_message=error_message,

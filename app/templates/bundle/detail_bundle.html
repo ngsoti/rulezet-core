@@ -99,6 +99,7 @@
           <ul class="list-group">
             <li v-for="(item, index) in rules" :key="item.rule.id" class="list-group-item d-flex justify-content-between align-items-start">
               <div class="flex-grow-1">
+                <span class="badge bg-secondary me-2">[[ item.rule.format ]]</span>
                 <a :href="`/rule/detail_rule/${item.rule.id}`" title="View more about this rule">
                   [[ item.rule.title ]]
                 </a>

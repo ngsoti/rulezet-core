@@ -226,3 +226,74 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
     except Exception as e:
         db.session.rollback()
         return False, str(e), None
+    
+
+
+
+def parse_rule_by_format(rule_content: str, user: User, format_name: str):
+    """
+    Parse et importe une seule règle selon son format.
+    Retourne tuple : (success: bool, message: str, rule_obj: RuleModel | None)
+    """
+
+    # Trouver la classe correspondant au format
+    matching_class = None
+    for RuleClass in RuleType.__subclasses__():
+        try:
+            if RuleClass().format.lower() == format_name.lower():
+                matching_class = RuleClass
+                break
+        except Exception:
+            continue
+
+    if not matching_class:
+        return False, f"Format '{format_name}' is not supported.", None
+
+    # Instancier la classe du bon type
+    rule_instance = matching_class()
+
+    # Étape 1 : validation syntaxique
+    validation_result = rule_instance.validate(rule_content)
+
+    # Étape 2 : enrichir les métadonnées de base
+    info = {
+        "license": getattr(user, "license", None) or "Unknown",
+        "author": getattr(user, "first_name", "Unknown"),
+        "repo_url": "N/A",
+        "source": getattr(user, "username", None) or "Unknown",
+    }
+
+    # Étape 3 : extraire les métadonnées
+    metadata = rule_instance.parse_metadata(rule_content, info, validation_result)
+
+    # Étape 4 : si validation échoue → enregistrer comme "bad rule"
+    if not validation_result.ok:
+        RuleModel.save_invalid_rule(
+            form_dict=metadata,
+            to_string=rule_content,
+            rule_type=format_name,
+            error=validation_result.errors,
+            user=user,
+        )
+        return False, "Invalid rule", None
+
+    # Étape 5 : vérifier si la règle existe déjà
+    exists, rule_id = RuleModel.rule_exists(metadata)
+    if exists:
+        rule = RuleModel.get_rule(rule_id)
+        return False, "Rule already exists", rule
+
+    # Étape 6 : insérer la nouvelle règle
+    rule = RuleModel.add_rule_core(metadata, user)
+    if rule:
+        return True, "Rule created", rule
+    else:
+        # Si insertion échoue, sauvegarde en invalid_rule pour ne rien perdre
+        RuleModel.save_invalid_rule(
+            form_dict=metadata,
+            to_string=rule_content,
+            rule_type=format_name,
+            error=["Failed to insert rule into DB"],
+            user=user,
+        )
+        return False, "Failed to insert rule", None
