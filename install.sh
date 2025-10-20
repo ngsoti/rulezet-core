@@ -23,5 +23,7 @@ echo -e "${CYAN}🐘 Installation de PostgreSQL via le script dédié...${RESET}
 echo -e "${CYAN}🚀 Rend le script de lancement exécutable...${RESET}"
 chmod +x ./launch.sh
 
+. env/bin/activate
+
 echo -e "${GREEN}🎮 Lancement de l'application...${RESET}"
 ./launch.sh -i
