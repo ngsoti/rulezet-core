@@ -583,7 +583,7 @@ class EditRule(Resource):
         else:
             return {"success": False, "message": "Unsupported rule format"}, 400
 
-        result = RuleModel.edit_rule_core(form_dict, rule_id)
+        success , result = RuleModel.edit_rule_core(form_dict, rule_id)
         if result:
             return {"success": True, "message": "Rule updated successfully"}, 200
         return {"success": False, "message": "Failed to update rule"}, 500

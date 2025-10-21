@@ -78,25 +78,21 @@
               <button @click="vote('down', rule.id)" class="btn btn-danger btn-sm" title="Dislike this rule">
                 <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
               </button>
-            </div>
 
-            <!-- Dropdown Menu -->
-            <div class="dropdown float-end ms-2">
-              <a class="btn btn-secondary btn-sm "
-                  href="#"
-                  role="button"
-                  id="dropdownMenuLink"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                  title="More actions"
-                  style="width: 38px; text-align: center; padding: 0 8px;">
-                <i class="fas fa-ellipsis-v"></i>
-              </a>
-              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
-                <li><a class="dropdown-item" :href="`/rule/report/${rule.id}`">Report rule</a></li>
-              </ul>
+               <!-- Dropdown Menu -->
+              <a class="btn btn-secondary btn-sm  dropdown-toggle m-2"
+                    href="#"
+                    role="button"
+                    id="dropdownMenuLink"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    title="More actions">
+                  <i class="fas fa-ellipsis-v"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+                  <li><a class="dropdown-item" :href="`/rule/report/${rule.id}`">Report rule</a></li>
+                </ul>
             </div>
-
           </div>
         </div>
       </div>

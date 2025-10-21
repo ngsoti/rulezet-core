@@ -36,7 +36,13 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 {{ form.title.label(class_="col-form-label") }} <span style="color:red">*</span>
-                                {{ form.title(class_="form-control") }}
+
+                                {{ form.title(
+                                    class_="form-control",
+                                    placeholder="Enter the rule title...",
+                                    title="This is the title of your rule (e.g. SQL Injection Detection)"
+                                ) }}
+
                                 {% if form.title.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.title.errors[0] | safe }}
@@ -44,11 +50,14 @@
                                 {% endif %}
                             </div>
                         </div>
+
                        <div class="col-md-6">
                             <div class="form-group">
                                 {{ form.format.label(class_="col-form-label") }} <span style="color:red">*</span>
 
-                                {{ form.format(class_="form-select") }}
+                                {{ form.format(class_="form-select",
+                                    placeholder="Choose a rule format...",
+                                    title="Format of the rule") }}
 
                                 {% if form.format.errors %}
                                     <div class="invalid-feedback d-block">
@@ -63,7 +72,11 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 {{ form.license.label(class_="col-form-label") }}
-                                {{ form.license(class_="form-control", id="license-select") }}
+                                {{ form.license(class_="
+                                    form-control", 
+                                    id="license-select",
+                                    placeholder="Choose a license...",
+                                    title="License for the visibility of the rule") }}
                                 {% if form.license.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.license.errors[0] | safe }}
@@ -74,7 +87,9 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 {{ form.source.label(class_="col-form-label") }}
-                                {{ form.source(class_="form-control") }}
+                                {{ form.source(class_="form-control",
+                                    placeholder="Enter the rule source...",
+                                    title="Source to find the rule in the net") }}
                                 {% if form.source.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.source.errors[0] | safe }}
@@ -85,7 +100,9 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 {{ form.version.label(class_="col-form-label") }} 
-                                {{ form.version(class_="form-control") }}
+                                {{ form.version(class_="form-control",
+                                    placeholder="Enter the rule version (1.0 or 1)...",
+                                    title="Source to find the rule in the net") }}
                                 {% if form.version.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.version.errors[0] | safe }}
@@ -96,7 +113,9 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 {{ form.cve_id.label(class_="col-form-label") }}
-                                {{ form.cve_id(class_="form-control") }}
+                                {{ form.cve_id(class_="form-control",
+                                    placeholder="Enter the Vulnerability id if there is...",
+                                    title="Id format : CVE , GCVE, GHSA, PYSEC, GSD, CERT-Bund, Cisco, RedHat, MSRC CVE or CERT-FR patterns") }}
                                 {% if form.cve_id.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.cve_id.errors[0] | safe }}
@@ -104,13 +123,15 @@
                                 {% endif %}
                             </div>
                         </div>
-                    </div>
+                    </div> 
             
                     <div class="row mb-3">
                         <div class="col">
                             <div class="form-group">
                                 {{ form.description.label(class_="col-form-label") }}
-                                {{ form.description(class_="form-control", rows=4) }}
+                                {{ form.description(class_="form-control", rows=4,
+                                    placeholder="Enter the description of the rule (context, explain...)...",
+                                    title="Description for the context, the syntax... to help the community to found it") }}
                                 {% if form.description.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.description.errors[0] | safe }}
@@ -124,7 +145,9 @@
                         <div class="col">
                             <div class="form-group">
                                 {{ form.original_uuid.label(class_="col-form-label") }}
-                                {{ form.original_uuid(class_="form-control", rows=4) }}
+                                {{ form.original_uuid(class_="form-control", rows=4,
+                                    placeholder="Enter the original uuid if the rule has already one...",
+                                    title="UUID to the rule. (one will be generate after the creation of the rule)") }}
                                 {% if form.original_uuid.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.original_uuid.errors[0] | safe }}
@@ -134,7 +157,7 @@
                         </div>
                     </div>
             
-                    <div class="mb-3">
+                     <div class="mb-3">
                         {% if error %}
                         <div class="alert alert-danger d-flex align-items-center" role="alert">
                             <i class="fas fa-exclamation-triangle me-2"></i>
@@ -157,6 +180,7 @@
                             {% endif %}
                         </div>
                     </div>
+
                     
 
                     <!-- <div id="dynamic-fields-create" class="mb-3"></div>
@@ -166,9 +190,13 @@
                     </div> -->
             
                     <div class="text-center">
-                        <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
+                        <!-- <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button> -->
+                         {{ form.submit(class='btn btn-primary') }}
                     </div>
                 </form>
+            
+                   
+                    
             </div>
         </div>
         <!-- <div class="tab-pane fade  " id="parse" role="tabpanel">

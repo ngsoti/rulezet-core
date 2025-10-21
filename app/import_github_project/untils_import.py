@@ -26,25 +26,64 @@ def get_repo_name_from_url(repo_url):
 
 
 
+# def clone_or_access_repo(repo_url):
+#     """Clone or acces the repository from Git URL."""
+#     # folder racine to git clone
+#     base_dir = "Rules_Github"
+#     os.makedirs(base_dir, exist_ok=True) # create the folder if not exist
+
+#     #take the repo name 
+#     repo_name = get_repo_name_from_url(repo_url)
+#     repo_name=repo_name+".git"
+#     # build the complete path 
+#     repo_dir = os.path.join(base_dir, repo_name)
+#     existe = True
+#     if not os.path.exists(repo_dir):
+#         existe = False
+#         Repo.clone_from(repo_url, repo_dir)
+#     else:
+#         pass
+
+#     return repo_dir , existe
+
+
+
+
 def clone_or_access_repo(repo_url):
-    """Clone or acces the repository from Git URL."""
-    # folder racine to git clone
+    """Clone or access the repository from a GitHub URL without asking for credentials."""
     base_dir = "Rules_Github"
-    os.makedirs(base_dir, exist_ok=True) # create the folder if not exist
+    os.makedirs(base_dir, exist_ok=True)
 
-    #take the repo name 
     repo_name = get_repo_name_from_url(repo_url)
-    repo_name=repo_name+".git"
-    # build the complete path 
     repo_dir = os.path.join(base_dir, repo_name)
-    existe = True
-    if not os.path.exists(repo_dir):
-        existe = False
-        Repo.clone_from(repo_url, repo_dir)
-    else:
-        pass
 
-    return repo_dir , existe
+    if not is_github_repo_accessible(repo_url):
+        raise Exception(f"Github repo '{repo_url}' do not existe.")
+
+    existe = os.path.exists(repo_dir)
+    if not existe:
+        try:
+            Repo.clone_from(repo_url, repo_dir)
+        except Exception as e:
+            raise Exception(f"Eror during the clone of the repo : {str(e)}")
+
+    return repo_dir, existe
+
+
+def is_github_repo_accessible(repo_url):
+    """Verify if a GitHub repository is public and accessible."""
+    try:
+        parsed = urlparse(repo_url)
+        path = parsed.path.strip("/").replace(".git", "")
+        api_url = f"https://api.github.com/repos/{path}"
+
+        response = requests.get(api_url, timeout=5)
+
+        # A status code of 200 indicates the repository is accessible
+        return response.status_code == 200
+    except Exception:
+        return False
+
 
 def load_known_licenses(license_file_path="app/rule/import_licenses/licenses.txt"):
     """load all the licenses in  licenses.txt."""

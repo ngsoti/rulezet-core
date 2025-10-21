@@ -157,7 +157,7 @@ def delete_rule_core(id) -> bool:
 
 # Update
 
-def edit_rule_core(form_dict, id) -> bool:
+def edit_rule_core(form_dict, id) -> tuple[bool,Rule]:
     """Edit the rule in the DB"""
     rule = get_rule(id)
 
@@ -172,7 +172,7 @@ def edit_rule_core(form_dict, id) -> bool:
     rule.last_modif = datetime.datetime.now(tz=datetime.timezone.utc)
 
     db.session.commit()
-    return True
+    return True , rule
 
 def set_user_id(rule_id, user_id) -> bool:
     """"Set a user id"""

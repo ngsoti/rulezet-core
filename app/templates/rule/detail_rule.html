@@ -20,7 +20,7 @@
     <div class="tab-content mt-4">
         <div class="tab-pane fade show active" id="1" role="tabpanel">
             <!-- Main Card -->
-            <div class="card shadow-sm mb-4">
+            <div class="card shadow-lg mb-4">
                 <div class="card-header text-white">
                     <div class="row align-items-center">
                         <div class="col-9">
@@ -85,7 +85,7 @@
                 </div>
             </div>
             <!-- Additional Information Card -->
-            <div class="card shadow-sm mb-2">
+            <div class="card shadow-lg  mb-4">
                 <div class="card-header bg-light">
                     <h5 class="mb-0"><i class="fas fa-info-circle"></i> Additional Information</h5>
                 </div>
@@ -142,7 +142,7 @@
                     <div class="row ">
                         <div class="col-md-6">
                             <p><i class="fas fa-key me-2 text-secondary"></i><strong>Original UUID :</strong></p>
-                            <p>{{ rule.original_uuid }}</p>
+                            <p>{{ rule.original_uuid if rule.original_uuid else "Not set" }}</p>
                         </div>
                         <div class="col-md-6">
                             <p><i class="fas fa-code-branch me-2 text-secondary"></i><strong>Version :</strong></p>
@@ -150,28 +150,9 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="dropdown float-end ms-2 mb-2">
-                    <a 
-                    class="btn btn-secondary btn-sm "
-                    href="#"
-                    role="button"
-                    id="dropdownMenuLink"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                    style="width: 38px; text-align: center; padding: 0 8px;"
-                    title="More actions"
-                    >
-                    <i class="fas fa-ellipsis-v"></i>
-                    </a>
-
-                    <ul class="dropdown-menu dropdown-menu-end " aria-labelledby="dropdownMenuLink">
-                    <li><a class="dropdown-item" :href="`/rule/report/{{rule.id}}`">Report rule</a></li>
-                    </ul>
-                </div>
             </div>
 
-            <div class="card shadow-sm mb-4">
+            <div class="card shadow-lg  mb-4">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Rule Content</h5>
 
@@ -219,7 +200,7 @@
             </div>
 
             <!-- Actions Card -->
-            <div class="card shadow-sm">
+            <div class="card shadow-lg mb-4">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <!-- Actions -->
                     <div class="d-flex align-items-center flex-wrap">
@@ -291,6 +272,13 @@
                             <button @click="vote('down')" class="btn btn-danger btn-sm" title="Dislike this rule">
                                 <i class="fas fa-thumbs-down"></i> [[ currentRule.vote_down ]]
                             </button>
+                            <a class="btn btn-secondary btn-sm dropdown-toggle m-2" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown"aria-expanded="false" title="More actions">
+                                <i class="fas fa-ellipsis-v"></i>
+                                </a>
+
+                                <ul class="dropdown-menu dropdown-menu-end " aria-labelledby="dropdownMenuLink">
+                                    <li><a class="dropdown-item" :href="`/rule/report/{{rule.id}}`">Report rule</a></li>
+                                </ul>
                         </div>
                     </div>
                 </div>
@@ -298,7 +286,7 @@
 
 
 
-            <div class="card shadow-sm mb-4 mt-4">
+            <div class="card shadow-lg  mb-4">
                 <div class="card-header bg-light position-relative">
                     <h5 class="mb-0"><i class="fa-solid fa-users-gear me-2 "></i>Contributors to Rule
                 </div>
@@ -326,7 +314,7 @@
                 </div>
             </div>
 
-            <div class="card shadow-sm mb-4 mt-4">
+            <div class="card shadow-sm mb-4 ">
                 <div class="card-header bg-light position-relative">
                     <h5 class="mb-0"><i class="fa-solid fa-clipboard-list me-2 "></i> Part of Bundle
                 </div>
@@ -358,10 +346,10 @@
 
             </div>
 
-            <div class="card shadow-sm mb-4 mt-4">
+            <div class="card shadow-lg  mb-4 ">
                 <div class="card-header bg-light position-relative">
                     <h5 class="mb-0">
-                    <i class="fas fa-shield-alt me-2"></i>Similar Rules
+                    <i class="fas fa-shield-alt me-2"></i>Related Rules
                     </h5>
                 </div>
 
@@ -394,7 +382,7 @@
             </div>
 
             <!-- Comments Section -->
-            <div class="card shadow-sm mt-5">
+            <div class="card shadow-lg  mb-4">
                 <div class="card-header bg-light">
                     <h5 class="mb-0">
                         <i class="fas fa-comments"></i> Comments 
@@ -513,7 +501,7 @@
         
         <div class="tab-pane fade" id="2" role="tabpanel">
             {% if current_user.is_authenticated %}
-            <div class="card shadow-sm mb-4" >
+            <div class="card shadow-lg  mb-4" >
                 <div class="card-header  text-primary">
                     <h5 class="mb-0"><i class="fas fa-pencil-alt"></i> Propose an Edit</h5>
                 </div>
@@ -524,43 +512,38 @@
                         <!-- Tabs nav -->
                         <ul class="nav nav-tabs mb-3" id="editTabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link " id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab" aria-controls="edit" aria-selected="true">
+                                <button class="nav-link active" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab" aria-controls="edit" aria-selected="true">
                                     <i class="fas fa-edit"></i> Modify Content
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-controls="preview" aria-selected="false">
+                                <button class="nav-link" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-controls="preview" aria-selected="false">
                                     <i class="fas fa-eye"></i> Preview
                                 </button>
                             </li>
                         </ul>
 
-                        <!-- Tabs content -->
                         <div class="tab-content" id="editTabsContent">
                             <!-- Modify Content Tab -->
-                            <div class="tab-pane fade" id="edit" role="tabpanel" aria-labelledby="edit-tab">
+                            <div class="tab-pane fade show active" id="edit" role="tabpanel" aria-labelledby="edit-tab">
                                 <div class="form-group mb-4">
                                     <label for="proposed_content" class="fw-bold">Modified Rule Content</label>
                                     <div class="container mt-4">
-                                        <div class="editorContainer" style="min-height: 300px;" ></div>
+                                        <div class="editorContainer" style="min-height: 300px;"></div>
                                     </div>
-                                    
-                                    
-                                    <!-- Hidden textarea to submit editor content -->
-                                    <textarea name="proposed_content" id="proposed_content" hidden ></textarea>
-
+                                    <textarea name="proposed_content" id="proposed_content" hidden></textarea>
                                 </div>
                             </div>
 
                             <!-- Preview Tab -->
-                            <div class="tab-pane fade show active" id="preview" role="tabpanel" aria-labelledby="preview-tab">
+                            <div class="tab-pane fade" id="preview" role="tabpanel" aria-labelledby="preview-tab">
                                 <div class="form-group mb-4">
                                     <label for="code_preview" class="fw-bold">Code Preview</label>
                                     <pre><code id="code_preview" class="language-bash"></code></pre>
                                 </div>
                             </div>
-                            
                         </div>
+
 
                         
 
@@ -587,7 +570,7 @@
                 
             </div>
             {% else %}
-            <div class="card shadow-sm mb-4">
+            <div class="card shadow-lg  mb-4">
                 <div class="card-body text-center">
                     <p>Please <a href="{{ url_for('account.login') }}" class="text-primary">log in</a> to propose an edit.</p>
                 </div>
@@ -673,6 +656,8 @@
         delimiters: ['[[', ']]'],
         setup() {
             /*###################################_Fetch_rule_#################################*/
+
+            const csrf_token = '{{ csrf_token() }}';
 
             async function download_rule(format) {
                 const params = new URLSearchParams({
@@ -1102,7 +1087,8 @@
                 contributor_list,
                 fetch_similar_rules_list,
                 rule_format,
-                download_rule
+                download_rule,
+                csrf_token
             };
         }
     }).mount('#main-container');

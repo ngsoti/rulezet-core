@@ -52,7 +52,7 @@ def rule() -> render_template:
         new_rule = RuleModel.add_rule_core(rule_dict , current_user)
         if new_rule:
             flash('Rule added !', 'success')
-            return render_template("rule/rule.html", form=form )
+            return redirect(url_for('rule.detail_rule', rule_id=new_rule.id))
         else:
             flash('Error during the creation of the rule !', 'danger')
             return render_template("rule/rule.html", form=form )
@@ -242,10 +242,10 @@ def edit_rule(rule_id) -> render_template:
                 history = RuleModel.get_history_rule_by_id(history_id)
                 history.message = "accepted"
             
-            RuleModel.edit_rule_core(rule_dict, rule_id)
+            success , current_rule = RuleModel.edit_rule_core(rule_dict, rule_id)
             flash("Rule modified with success!", "success")
-
-            return redirect(request.referrer or '/')
+            return redirect(url_for('rule.detail_rule', rule_id=current_rule.id))
+            # return redirect(request.referrer or '/')
         else:
             form.format.data = rule.format
             form.source.data = rule.source
@@ -1731,38 +1731,40 @@ def import_rules_from_github() -> dict:
     Clone or access a GitHub repo, then test all YARA rules in it,
     creating rules and classifying bad rules automatically.
     """
+    try:
+        repo_url = request.form.get('url')
+        selected_license = request.form.get('license')
 
-    repo_url = request.form.get('url')
-    selected_license = request.form.get('license')
-
-    verif = valider_repo_github(repo_url)
-    if not verif :
-        flash(" GitHub URL is required! Please enter a valid URL to import rules.", "danger")
-        return redirect(url_for("rule.rule", tab="github"))
+        verif = valider_repo_github(repo_url)
+        if not verif :
+            flash(" GitHub URL is required! Please enter a valid URL to import rules.", "danger")
+            return redirect(url_for("rule.rule", tab="github"))
 
 
 
-    repo_dir, existe = clone_or_access_repo(repo_url) 
-    
-    info = github_repo_metadata(repo_url , selected_license)
+        repo_dir, existe = clone_or_access_repo(repo_url) 
+        
+        info = github_repo_metadata(repo_url , selected_license)
 
-    if not repo_dir:
-        flash("Failed to clone or access the repository.", "danger")
+        if not repo_dir:
+            flash("Failed to clone or access the repository.", "danger")
+            return redirect(url_for("rule.rules_list"))
+
+        bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir , info , current_user))
+
+        delete_existing_repo_folder("Rules_Github")
+
+        # Save invalid YARA rules and flash
+        if bad_rules > 0:
+            flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
+            flash(f"Failed to import {bad_rules} rules.", "danger")
+            return redirect(url_for("rule.bad_rules_summary"))
+
+        flash(f"{imported} rules imported. {skipped} ignored (already exist !).", "success")
         return redirect(url_for("rule.rules_list"))
-
-    bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir , info , current_user))
-
-    delete_existing_repo_folder("Rules_Github")
-
-    # Save invalid YARA rules and flash
-    if bad_rules > 0:
-        flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
-        flash(f"Failed to import {bad_rules} rules.", "danger")
-        return redirect(url_for("rule.bad_rules_summary"))
-
-    flash(f"{imported} rules imported. {skipped} ignored (already exist !).", "success")
-    return redirect(url_for("rule.rules_list"))
-
+    except Exception as e:
+        flash(f"An error occurred during import: {str(e)}", "danger")
+        return redirect(url_for("rule.rule", tab="github"))
 
 
 @rule_blueprint.route("/check_updates_by_url", methods=["POST"])

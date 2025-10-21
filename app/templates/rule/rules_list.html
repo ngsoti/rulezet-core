@@ -141,31 +141,26 @@
     
 
         <div class="mt-3">
-          <button @click="vote('up', rule.id)" title="like this rule" class="btn btn-success btn-sm">
+          <button @click="vote('up', rule.id)" title="like this rule" class="btn btn-success btn-sm mx-2">
             <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
           </button>
           <button @click="vote('down', rule.id)" title="dislike this rule" class="btn btn-danger btn-sm">
             <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
           </button>
-        </div>
-        <div class="dropdown float-end ms-2">
-                <a 
-                  class="btn btn-secondary btn-sm"
-                  href="#"
-                  role="button"
-                  id="dropdownMenuLink"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                  title="More actions"
-                >
-                  <i class="fas fa-ellipsis-v"></i>
-                </a>
 
-                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
-                  <li><a class="dropdown-item" :href="`/rule/report/${rule.id}`">Report rule</a></li>
-                </ul>
-              </div>
-    
+          <a class="btn btn-secondary btn-sm  dropdown-toggle m-2"
+              href="#"
+              role="button"
+              id="dropdownMenuLink"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+              title="More actions">
+            <i class="fas fa-ellipsis-v"></i>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+            <li><a class="dropdown-item" :href="`/rule/report/${rule.id}`">Report rule</a></li>
+          </ul>
+        </div>
         <div class="text-center mt-3">
           <a :href="`detail_rule/${rule.id}`" title="view more about this rule" class="btn btn-primary"> <i class="fas fa-eye btn-sm me-2"></i>View more</a>
         </div>
