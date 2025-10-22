@@ -1780,9 +1780,9 @@ def check_updates():
             "success": False,
             "toast_class": "danger"
         }, 400
-
-
+    #delete_existing_repo_folder("Rules_Github")
     for url in urls:
+        print(f"Processing URL: {url}")
         rule_items = RuleModel.get_all_rule_by_url_github(url)
         repo_dir, exists = clone_or_access_repo(url)
         results = []

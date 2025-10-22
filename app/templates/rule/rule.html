@@ -262,6 +262,7 @@
                 </div>
 
                <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
+                    
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
                     <div class="mb-3 d-flex"><!-- Anti-autofill leurre -->

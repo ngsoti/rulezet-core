@@ -271,11 +271,7 @@ class YaraRule(RuleType):
         if not rule:
             return "No rule found in the database.", False
 
-        local_repo_path = update_or_clone_repo(repo_url)
-        if not local_repo_path:
-            return "Could not clone or update repo.", False
-
-        yara_files = self.get_rule_files(local_repo_path)
+        yara_files = self.get_rule_files(repo_url)
 
         for filepath in yara_files:
             rules = self.extract_rules_from_file(filepath)
