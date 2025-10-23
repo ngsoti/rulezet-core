@@ -26,7 +26,18 @@
                     </tr>
                     <tr>
                         <td style="color:#494950"><i class="fas fa-key me-2 text-secondary"></i>API key</td>
-                        <td><b>{{user.api_key}}</b></td>
+                        <td>
+                            {% if user.api_key %}
+                            <div class="d-flex align-items-center">
+                                <span id="api-key" class="api-key blurred me-2"><b>{{ user.api_key }}</b></span>
+                                <button id="toggle-api-key" type="button" class="btn btn-sm btn-outline-secondary blur-btn" aria-pressed="false" aria-label="Show API key" title="Show API key" data-visible="false">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            {% else %}
+                            <span class="text-muted"><b>No API key</b></span>
+                            {% endif %}
+                        </td>
                     </tr>
                 </table>
             </div>
