@@ -5,7 +5,7 @@ from git import List
 from sympy import re
 
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
-from app.utils.utils import detect_cve, update_or_clone_repo
+from app.utils.utils import detect_cve
 from ...rule import rule_core as RuleModel
 
 ####################

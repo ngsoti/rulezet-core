@@ -398,6 +398,8 @@ def get_current_rule() -> jsonify:
 def detail_rule(rule_id)-> render_template:
     """Get the detail of the current rule"""
     rule = RuleModel.get_rule(rule_id)
+    if rule is None:
+        return render_template("404.html"), 404
     return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string)
 
 @rule_blueprint.route("/download_rule", methods=['GET'])
