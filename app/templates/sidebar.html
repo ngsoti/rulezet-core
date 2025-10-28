@@ -28,7 +28,7 @@
                         </a>
                     </li>
                 </ul>
-            </li>            
+            </li>
 
             <!-- Dropdown for Rules and Rule Proposal -->
             <li class="nav-item mx-2">
@@ -52,7 +52,7 @@
                             <a class="dropdown-item" href="/rule/list_github_url">
                                 <i class="fa-brands fa-github fa-fw me-2"></i> Github list
                             </a>
-                            
+
                         </li>
                         {% if current_user.is_authenticated %}
                             <li>
@@ -63,19 +63,19 @@
                             <li>
                                 <a class="dropdown-item" href="/rule/bad_rules_summary">
                                     <i class="fa-solid fa-tags fa-fw me-2"></i> Bad Rules
-                                </a>    
+                                </a>
                             </li>
                             {% if current_user.is_admin() %}
                                 <li>
                                     <a class="dropdown-item" href="/rule/create_format_rule">
                                         <i class="fa-solid fa-file-code fa-fw me-2"></i> Create Format
-                                    </a>    
+                                    </a>
                                 </li>
                             {% endif %}
                         {% endif %}
                     </ul>
                 </div>
-                
+
             </li>
 
             <li class="nav-item mx-2 position-relative">
@@ -90,7 +90,7 @@
                     </template>
                 </a>
             </li>
-            
+
             {% if current_user.is_authenticated %}
                 {% if current_user.is_admin() %}
                     <li class="nav-item dropdown mx-2">
@@ -142,7 +142,7 @@
                         {% if current_user.is_authenticated %}
                         <li>
                             <a href="/account/" class="dropdown-item">
-                                <i class="fa-solid fa-user fa-fw me-2 text-primary"></i> Profil
+                                <i class="fa-solid fa-user fa-fw me-2 text-primary"></i> Profile
                             </a>
                         </li>
                         <li>
@@ -194,13 +194,13 @@
             createApp({
                 delimiters: ['[[', ']]'],
                 setup() {
-                    
+
                     const requests_to_validate = ref(0)
                     const changes_to_validate = ref(0)
                     const repport_to_validate = ref(0)
                     const update_to_validate = ref(0)
 
-                    
+
 
                     onMounted(() => {
                         getNbRequestAdmin()
@@ -232,7 +232,7 @@
                         update_to_validate.value = data.count | 0
                     }
 
-                
+
                     return {
                         requests_to_validate,
                         changes_to_validate,

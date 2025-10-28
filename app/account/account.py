@@ -55,7 +55,7 @@ def get_user() -> jsonify:
 def get_user_donne() -> jsonify:
     """Return the user activity and metadata."""
     user_id = request.args.get('user_id', type=int)
-    
+
     if current_user.is_admin():
         user_data = AccountModel.get_user_data_full(user_id)
         if user_data:
@@ -71,7 +71,7 @@ def promote_remove_admin() -> jsonify:
     """Return the user activity and metadata."""
     user_id = request.args.get('userId', type=int)
     action = request.args.get('action', type=str)
-    
+
     if current_user.is_admin():
         response = AccountModel.promote_remove_user_admin(user_id, action)
         if response:
@@ -92,9 +92,9 @@ def delete_user() -> render_template:
     if current_user.is_admin():
         delete = AccountModel.delete_user_core(user_id)
         if delete:
-            return {"message": "User Deleted",  
+            return {"message": "User Deleted",
                     "success": True,
-                    "toast_class" : "success"}, 200 
+                    "toast_class" : "success"}, 200
         return {"message": "Failed to delete",
                 "success": False,
                 "toast_class" : "danger"
@@ -108,18 +108,18 @@ def get_all_users() -> Union[render_template, dict]:
     """Get all the users"""
     page = request.args.get('page', 1, type=int)
     search = request.args.get("search", None)
-    connected = request.args.get("connected", None) 
-    admin = request.args.get("admin", None) 
+    connected = request.args.get("connected", None)
+    admin = request.args.get("admin", None)
 
     #users = AccountModel.get_users_page(page)
     users_filter = AccountModel.get_users_page_filter(page , search , connected, admin)
     total_user = AccountModel.get_count_users()
     if current_user.is_admin():
         if users_filter:
-            return {"user": [user.to_json() for user in users_filter], 
-                    "total_pages": users_filter.pages, 
-                    "total_users": total_user , 
-                    "success": True}, 200 
+            return {"user": [user.to_json() for user in users_filter],
+                    "total_pages": users_filter.pages,
+                    "total_users": total_user ,
+                    "success": True}, 200
         return {"message": "No User",
                 "toast_class": "danger-subtle"}, 404
     else:
@@ -133,7 +133,7 @@ def edit_user() -> redirect:
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
         AccountModel.edit_user_core(form_dict, current_user.id)
-        flash('Profil update with success!', 'success')
+        flash('Profile update with success!', 'success')
         return redirect("/account")
     else:
         form.first_name.data = current_user.first_name
@@ -164,7 +164,7 @@ def logout() -> redirect:
     "Log out an User"
     AccountModel.disconnected(current_user)
     logout_user()
-    
+
     flash('You have been logged out.', 'info')
     return redirect(url_for('home.home'))
 
@@ -178,7 +178,7 @@ def add_user() -> redirect:
         AccountModel.add_user_core(form_dict)
         flash('You are now register. You can connect !', 'success')
         return redirect("/account/login")
-    return render_template("account/register_user.html", form=form) 
+    return render_template("account/register_user.html", form=form)
 
 @account_blueprint.route('/favorite')
 @login_required
@@ -189,7 +189,7 @@ def favorite() -> render_template:
 @account_blueprint.route("/profil")
 @login_required
 def profil() -> render_template:
-    """Profil page"""
+    """Profile page"""
     return render_template("account/account_index.html", user=current_user)
 
 @account_blueprint.route("/acces_denied")
@@ -211,7 +211,7 @@ def get_rules_page_favorite() -> jsonify:
     search = request.args.get("search", None)
     author = request.args.get("author", None)
     sort_by = request.args.get("sort_by", "newest")
-    rule_type = request.args.get("rule_type", None) 
+    rule_type = request.args.get("rule_type", None)
     rules = RuleModel.get_rules_page_favorite(page, current_user.id , search,author, sort_by, rule_type)
 
     if rules:
