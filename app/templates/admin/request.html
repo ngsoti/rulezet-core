@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container my-4" id="main-container">
+<div class="container my-4" id="main-container" v-cloak>
+    <style>
+        /* Hide elements until Vue is fully loaded */
+        [v-cloak] {
+            display: none;
+        }
+    </style>
     <h2 class="mb-4">Ownership Requests</h2>
 
     <!-- Nav tabs for Pending and Processed Requests -->
@@ -464,7 +470,9 @@ createApp({
             request_made_currentPage,
             request_made_totalPages,
             fetchMadeRequests,
-            visiblePagesRequestMade
+            visiblePagesRequestMade,
+
+            message_list
         };
     }
 }).mount('#main-container');
