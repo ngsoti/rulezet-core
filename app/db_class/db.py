@@ -28,6 +28,9 @@ class User(UserMixin, db.Model):
     api_key = db.Column(db.String(60), index=True)
     is_connected = db.Column(db.Boolean, default=False, index=True)
 
+    # confirmed = db.Column(db.Boolean, default=False)
+    # confirmed_at = db.Column(db.DateTime, nullable=True)
+
     def is_admin(self):
         """Check if the user has admin privileges."""
         return self.admin

@@ -1,4 +1,5 @@
 from typing import Union
+
 from ..db_class.db import User
 from flask import Blueprint, jsonify, render_template, redirect, url_for, request, flash
 from .form import LoginForm, EditUserForm, AddNewUserForm
@@ -175,9 +176,17 @@ def add_user() -> redirect:
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
         form_dict["key"] = generate_api_key()
-        AccountModel.add_user_core(form_dict)
-        flash('You are now register. You can connect !', 'success')
-        return redirect("/account/login")
+        user = AccountModel.add_user_core(form_dict)
+
+        if user is None:
+            flash('Error during the registration. Please try again !', 'error')
+            return redirect("/account/register")
+        #send_confirmation_email(user)
+
+        flash('A confirmation email has been sent to your inbox.', 'info')
+        return redirect(url_for('login'))
+        # flash('You are now register. You can connect !', 'success')
+        # return redirect("/account/login")
     return render_template("account/register_user.html", form=form)
 
 @account_blueprint.route('/favorite')

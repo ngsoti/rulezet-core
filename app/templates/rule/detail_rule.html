@@ -3,9 +3,14 @@
 
 {% block content %}
 
-
-<div class="container mt-4">
-
+ <style>
+        /* Hide elements until Vue is fully loaded */
+        [v-cloak] {
+            display: none;
+        }
+    </style>
+<div class="container mt-4" v-cloak>
+   
     <ul class="nav nav-tabs" role="tablist">
         <li class="nav-item">
             <a class="nav-link active" data-bs-toggle="tab" href="#1" role="tab">Rule</a>

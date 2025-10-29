@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Confirm your email</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #333; background-color: #f8f9fa; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    h2 { color: #2c3e50; }
+    a.button {
+      display: inline-block;
+      background-color: #007bff;
+      color: white;
+      padding: 12px 20px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    p.footer { font-size: 13px; color: #999; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Confirm your email address</h2>
+    <p>Hi {{ user.first_name or 'there' }},</p>
+    <p>Thank you for creating an account on <strong>Rulezet</strong>!</p>
+    <p>Please confirm your email by clicking the button below:</p>
+
+    <a href="{{ confirm_url }}" class="button">Confirm my email</a>
+
+    <p>If you did not create an account, you can safely ignore this message.</p>
+    <p class="footer">This link will expire in 1 hour.<br>© {{ current_year }} Rulezet — All rights reserved.</p>
+  </div>
+</body>
+</html>

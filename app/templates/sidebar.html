@@ -54,7 +54,7 @@
                                     <template v-if="changes_to_validate">
                                         <span 
                                             v-if="changes_to_validate > 0" 
-                                            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                            class="position-absolute ms-1   badge rounded-pill bg-danger">
                                             [[ changes_to_validate ]]
                                             <span class="visually-hidden">unread messages</span>
                                         </span>
@@ -82,12 +82,11 @@
                                         <template v-if="requests_to_validate">
                                             <span 
                                                 v-if="requests_to_validate > 0" 
-                                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                                class="position-absolute ms-1   badge rounded-pill bg-danger">
                                                 [[ requests_to_validate ]]
                                                 <span class="visually-hidden">unread messages</span>
                                             </span>
                                         </template>
-                                </a>
                                     </a>
                                 </li>
                             {% endif %}
@@ -125,7 +124,7 @@
                                     <template v-if="requests_to_validate">
                                     <span 
                                         v-if="requests_to_validate > 0" 
-                                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        class="position-absolute ms-1 badge rounded-pill bg-danger">
                                         [[ requests_to_validate ]]
                                         <span class="visually-hidden">unread messages</span>
                                     </span>
@@ -166,9 +165,8 @@
                         <a class="dropdown-item pe-2" href="/rule/update_github/update_rules_from_github">
                             <i class="fa-solid fa-tags fa-fw me-2"></i> Update rules
                         </a>
-                        <!-- Badge à côté de "Github project" -->
                         <template v-if="update_to_validate && update_to_validate > 0">
-                            <span class="ms-2 badge rounded-pill bg-danger">
+                            <span class="position-absolute ms-1 badge rounded-pill bg-danger">
                                 [[ update_to_validate ]]
                             </span>
                         </template>
