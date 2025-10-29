@@ -55,7 +55,7 @@ def rule() -> render_template:
             return redirect(url_for('rule.detail_rule', rule_id=new_rule.id))
         else:
             flash('Error during the creation of the rule !', 'danger')
-            return render_template("rule/rule.html", form=form )
+            return render_template("rule/rule.html", form=form, tab="manuel" )
     return render_template("rule/rule.html", form=form )
 
 
@@ -479,12 +479,12 @@ def get_rule_each_format():
     }
 
     if rule_misp_object and rule_json:
-        return_dict["format"]["misp"] = rule_misp_object
+        return_dict["formats"]["misp"] = rule_misp_object
     elif rule_json:
-        return_dict["format"]["misp"] = "No MISP object for the format"
+        return_dict["formats"]["misp"] = "No MISP object for the format"
     else:
         return_dict["success"] = False
-        return_dict["format"]["misp"] = "No MISP object for the format"
+        return_dict["formats"]["misp"] = "No MISP object for the format"
     
     return jsonify(return_dict)
 
@@ -1691,6 +1691,7 @@ def parse_rule() -> dict:
         return redirect(url_for("rule.rule", tab="parse"))
     
     success , message, object_ = parse_rule_by_format(rule_content, current_user, format)
+
 
     if success == False:
         if object_ is None:

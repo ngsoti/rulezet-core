@@ -131,15 +131,36 @@ def add_rule_core(form_dict, user) -> bool:
 
 def rule_exists(Metadata: dict) -> tuple[bool, int]:
     """
-    Check if a rule with the same title, to_string, and original_uuid exists.
+    Check if a rule already exists.
+    - If no original_uuid is provided: check by title.
+    - If original_uuid is provided: check by original_uuid.
     """
-    existing_rules = get_rule_by_title(Metadata["title"].strip())
-    if existing_rules:
-        for r in existing_rules:
-            if (r.to_string == Metadata["to_string"].strip() and
-                    str(r.original_uuid or "").strip() == str(Metadata.get("original_uuid") or "").strip()):
+    original_uuid = str(Metadata.get("original_uuid") or "").strip()
+    if original_uuid.lower() == "none":
+        original_uuid = ""
+
+    title = Metadata.get("title", "").strip()
+    to_string = Metadata.get("to_string", "").strip()
+
+    existing_rules = get_rule_by_title(title)
+
+    if not existing_rules:
+        return False, None
+
+    for r in existing_rules:
+        # Case 1 : without original_uuid → compare title only
+        if not original_uuid:
+            if r.title.strip() == title:
                 return True, r.id
-    return False , None    
+
+        # Case 2 : with original_uuid → compare both original_uuid and title
+        else:
+            if str(r.original_uuid or "").strip() == original_uuid:
+                return True, r.id
+
+    return False, None
+
+ 
 
 
 

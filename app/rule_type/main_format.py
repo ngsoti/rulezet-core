@@ -249,13 +249,10 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str):
     if not matching_class:
         return False, f"Format '{format_name}' is not supported.", None
 
-    # Instancier la classe du bon type
     rule_instance = matching_class()
 
-    # Étape 1 : validation syntaxique
     validation_result = rule_instance.validate(rule_content)
 
-    # Étape 2 : enrichir les métadonnées de base
     info = {
         "license": getattr(user, "license", None) or "Unknown",
         "author": getattr(user, "first_name", "Unknown"),
@@ -263,10 +260,8 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str):
         "source": getattr(user, "username", None) or "Unknown",
     }
 
-    # Étape 3 : extraire les métadonnées
     metadata = rule_instance.parse_metadata(rule_content, info, validation_result)
 
-    # Étape 4 : si validation échoue → enregistrer comme "bad rule"
     if not validation_result.ok:
         RuleModel.save_invalid_rule(
             form_dict=metadata,
@@ -277,18 +272,16 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str):
         )
         return False, "Invalid rule", None
 
-    # Étape 5 : vérifier si la règle existe déjà
     exists, rule_id = RuleModel.rule_exists(metadata)
     if exists:
         rule = RuleModel.get_rule(rule_id)
         return False, "Rule already exists", rule
 
-    # Étape 6 : insérer la nouvelle règle
+
     rule = RuleModel.add_rule_core(metadata, user)
     if rule:
         return True, "Rule created", rule
     else:
-        # Si insertion échoue, sauvegarde en invalid_rule pour ne rien perdre
         RuleModel.save_invalid_rule(
             form_dict=metadata,
             to_string=rule_content,
