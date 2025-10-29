@@ -221,8 +221,8 @@ def edit_rule(rule_id) -> render_template:
             # try to compile or verify the syntax of the rule (in the format choose)
             valide , error = verify_syntax_rule_by_format(rule_dict)
 
-            if valide == False:
-                    return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
+            if not valide:
+                return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
             
             if rule_dict["version"] == rule.version:
                 rule_dict["version"] = bump_version(rule_dict["version"])
@@ -302,7 +302,7 @@ def get_rules_page_owner() -> jsonify:
             rules_list.append(u)
         return {"owner_rules": rules_list, "owner_total_page": rules.pages, "total_rules": total_rules} , 200
     
-    return {"message": "No Rule"}
+    return {"message": "No Rule"}, 400
 
 @rule_blueprint.route("/get_my_rules_page_filter", methods=['GET'])
 def get_rules_page_filter_owner() -> jsonify:
@@ -326,7 +326,7 @@ def get_rules_page_filter_owner() -> jsonify:
         "total_rules": total_rules,
         "total_pages": ceil(total_rules / per_page),
        # "list": [r.to_json() for r in all_rules]
-    })
+    }), 200
 
 @rule_blueprint.route("/get_my_rules_page_filter_github", methods=['GET'])
 def get_my_rules_page_filter_github() -> jsonify:
@@ -368,7 +368,7 @@ def delete_selected_rules() -> jsonify:
             return render_template("access_denied.html") 
     if errorDEL >= 1:
         return jsonify({"success": False, "message": "Failed to delete the rules!",
-                        "toast_class" : "danger"}), 500
+                        "toast_class" : "danger"}), 400
     else:
         return jsonify({"success": True, 
                         "message": f"{len(data['ids'])} Rule(s) deleted!",
@@ -398,8 +398,6 @@ def get_current_rule() -> jsonify:
 def detail_rule(rule_id)-> render_template:
     """Get the detail of the current rule"""
     rule = RuleModel.get_rule(rule_id)
-    if rule is None:
-        return render_template("404.html"), 404
     return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string)
 
 @rule_blueprint.route("/download_rule", methods=['GET'])
@@ -415,6 +413,7 @@ def download_rule_unified() -> Response:
             "toast_class": "danger",
         })
 
+    error_mesg = ""
     try:
         if fmt == 'txt':
             content = rule.to_string 
@@ -427,24 +426,19 @@ def download_rule_unified() -> Response:
         elif fmt == 'misp':
             object_json = content_convert_to_misp_object(rule_id)
             if not object_json:
-                return jsonify({
-                    "message": f"Format {rule.format} not found on MISP",
-                    "success": False,
-                    "toast_class": "danger",
-                })
+                error_mesg = f"Format {rule.format} not found on MISP"
             content = json.dumps(object_json, indent=2)
             filename = f"rule_{rule.id}_misp_object.json"
 
         else:
-            return jsonify({
-                "message": f"Unknown format: {fmt}",
-                "success": False,
-                "toast_class": "danger",
-            })
+            error_mesg = f"Unknown format: {fmt}"
 
     except Exception as e:
+        error_mesg = f"Failed to prepare download: {str(e)}"
+    
+    if error_mesg:
         return jsonify({
-            "message": f"Failed to prepare download: {str(e)}",
+            "message": error_mesg,
             "success": False,
             "toast_class": "danger",
         })
@@ -474,36 +468,25 @@ def get_rule_each_format():
 
     rule_json = rule.to_json()
     rule_misp_object = content_convert_to_misp_object(rule_id)
+
+    return_dict = {
+        "success": True,
+        "rule_id": rule_id,
+        "formats": {
+            "normal": rule.to_string,
+            "json": rule_json,
+        }
+    }
+
     if rule_misp_object and rule_json:
-        return jsonify({
-            "success": True,
-            "rule_id": rule_id,
-            "formats": {
-                "normal": rule.to_string,
-                "json": rule_json,
-                "misp": rule_misp_object,
-            }
-        })
+        return_dict["format"]["misp"] = rule_misp_object
     elif rule_json:
-        return jsonify({
-            "success": True,
-            "rule_id": rule_id,
-            "formats": {
-                "normal": rule.to_string,
-                "json": rule_json,
-                "misp": "No MISP object for the format",
-            }
-        })
+        return_dict["format"]["misp"] = "No MISP object for the format"
     else:
-         return jsonify({
-            "success": False,
-            "rule_id": rule_id,
-            "formats": {
-                "normal": rule.to_string,
-                "json": rule_json,
-                "misp": "No MISP object for the format",
-            }
-        })
+        return_dict["success"] = False
+        return_dict["format"]["misp"] = "No MISP object for the format"
+    
+    return jsonify(return_dict)
 
 #########################
 #   Favorite section    #
@@ -545,10 +528,7 @@ def comment_rule() -> jsonify:
     comments = RuleModel.get_comment_page(page , rule_id)
     total_comments = RuleModel.get_total_comments_count()
     if comments:
-        comments_list = list()
-        for comment in comments:
-            u = comment.to_json()
-            comments_list.append(u)
+        comments_list = [c.to_json for c in comments]
         return {"comments_list": comments_list, "total_comments": total_comments}
     return {"message": "No Comments"}, 404
 
@@ -601,7 +581,6 @@ def delete_comment_route(comment_id) -> render_template:
     """Delete a comment"""
     comment = RuleModel.get_comment_by_id(comment_id)
     if  comment.user_id == current_user.id or current_user.is_admin():
-        rule_id = comment.rule_id
         success = RuleModel.delete_comment(comment_id)
         if success:
             return jsonify({ 
