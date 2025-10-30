@@ -5,6 +5,9 @@
   *   var to dark/light mode  *
   *****************************
   **/
+  [v-cloak] {
+    display: none;
+  }
 
   :root {
   --bg-color: #ffffff;

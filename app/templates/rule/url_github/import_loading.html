@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div v-if="info_session">
+    <h3 class="mt-4 mb-4 text-center">[[info_session.repo_url]]</h3>
+
+    <div v-if="!is_finished">
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped active" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" :style="'width:'+progress + '%;'">
+            </div>
+        </div> 
+        <span v-if="status_site" id="status">[[status_site]]</span>
+    </div>
+    <!-- [[info_session]] -->
+
+    <div v-if="is_finished" class="container col-md-8 justify-content-center my-5" >
+        <div class="card shadow border-0">
+            <div class="card-body p-4 bg-light rounded">
+                <div class="table-responsive">
+                    <table class="table">
+                        <tr>
+                            <td style="color:#494950">Total Files</td>
+                            <td><b>[[result_data.total]]</b></td>
+                        </tr>
+                        <tr>
+                            <td style="color:#494950">Total Rules</td>
+                            <td><b>[[result_data.imported + result_data.bad_rules + result_data.skipped]]</b></td>
+                        </tr>
+                        <tr>
+                            <td style="color:#494950">Imported</td>
+                            <td><b>[[result_data.imported]]</b></td>
+                        </tr>
+                        <tr>
+                            <td style="color:#494950">Bad Rules</td>
+                            <td><b>[[result_data.bad_rules]]</b></td>
+                        </tr>
+                        <tr>
+                            <td style="color:#494950">Skipped</td>
+                            <td><b>[[result_data.skipped]]</b></td>
+                        </tr>
+                        <tr>
+                            <td style="color:#494950">Query Date</td>
+                            <td><b>[[result_data.query_date]]</b></td>
+                        </tr>
+                        <template v-for="format, key in result_data.count_per_format">
+                            <tr>
+                                <td class="text-end"><b>[[key]]</b></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>Bad rules: [[format.bad_rule]]</td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>Imported: [[format.imported]]</td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>Skipped: [[format.skipped]]</td>
+                            </tr>
+                        </template>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+</div>
+
+{% endblock %}
+
+
+
+{% block script %}
+<script type="module">
+
+const { createApp, ref, onMounted } = Vue;
+    import { message_list, display_toast } from '/static/js/toaster.js';
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const progress = ref(0)
+            const status_site = ref("")
+
+            const info_session = ref({})
+            const result_data = ref({})
+            const is_finished = ref(false)
+
+            async function fetchInfoSession() {
+
+                const res = await fetch('/rule/import_get_info_session/{{sid}}')
+                
+                if (await res.status === 200) {
+                    const data = await res.json()
+                    info_session.value = data
+                } else {
+                    display_toast(res)
+                }
+            }
+
+
+            function pollScan() {
+                // Loop function to update the list of identified domains
+                $.getJSON('/rule/import_loading_status/{{sid}}', async function(data) {
+                    result_data.value = data
+                    progress.value = Math.round((data['complete']/data['total'])*100)
+                    status_site.value = 'Processed ' + data['complete'] + ' of ' + data['total']
+                    if (data['remaining'] > 0) {
+                        setTimeout(pollScan, 5000);
+                    } else {
+                        is_finished.value = true
+                        status_site.value = 'Found ' + data['complete'] + ' files.'
+                        const res = await fetch('/rule/import_loading_status/{{sid}}?is_finished=true')
+                        const loc = await res.json()
+                        result_data.value = loc
+                    }
+                });
+            }
+            
+
+            onMounted(() => {
+                fetchInfoSession()
+                pollScan();
+            });
+
+
+            return {
+                message_list,
+                status_site,
+                progress,
+                info_session,
+                result_data,
+                is_finished
+            };
+        }
+    }).mount('#main-container');
+
+</script>
+{% endblock %}

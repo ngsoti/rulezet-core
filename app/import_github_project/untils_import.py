@@ -56,12 +56,12 @@ def clone_or_access_repo(repo_url):
 
     repo_name = get_repo_name_from_url(repo_url)
     repo_dir = os.path.join(base_dir, repo_name)
-
-    if not is_github_repo_accessible(repo_url):
-        raise Exception(f"Github repo '{repo_url}' do not existe.")
-
+    
     existe = os.path.exists(repo_dir)
     if not existe:
+        if not is_github_repo_accessible(repo_url):
+            raise Exception(f"Github repo '{repo_url}' do not existe.")
+        
         try:
             Repo.clone_from(repo_url, repo_dir)
         except Exception as e:
