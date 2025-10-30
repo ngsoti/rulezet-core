@@ -95,7 +95,7 @@ def add_rule_core(form_dict, user) -> bool:
                     break  # continue to insertion
 
         # Identify user
-        if current_user.is_authenticated:
+        if current_user and current_user.is_authenticated:
             user_id = current_user.id
         else:
             user_id = user.id if user else None
@@ -739,7 +739,7 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
     :param rule_type: Type of the rule (e.g., 'YARA', 'SIGMA')
     """
 
-    if current_user.is_authenticated:
+    if current_user and current_user.is_authenticated:
         user_id = current_user.id
     else:
         user_id = user.id if user else None
@@ -2091,6 +2091,9 @@ def get_all_format() -> list[dict]:
     return [fmt.to_json() for fmt in formats]
 
 
+def sqlite_regexp(conn, record):
+    conn.create_function("REGEXP", 2, lambda expr, item: 1 if item and re.search(expr, item) else 0)
+
 def get_all_url_github_page(page: int = 1, search: str = None):
     """Get paginated unique GitHub project URLs from Rule.source and return pagination + total count."""
     github_pattern = r'^https?://(www\.)?github\.com/[\w\-_]+/[\w\-_]+'
@@ -2100,9 +2103,10 @@ def get_all_url_github_page(page: int = 1, search: str = None):
     if search:
         query = query.filter(Rule.source.ilike(f"%{search}%"))
 
-    query = query.filter(Rule.source.op('~')(github_pattern))
+    # query = query.filter(Rule.source.op('~')(github_pattern))
 
-    query = query.distinct(Rule.source)
+    # query = query.distinct(Rule.source)
+    query = query.group_by(Rule.source)
 
     total_count = query.count()
 
@@ -2219,3 +2223,10 @@ def replace_rule_format(old_format_name: str, new_format_name: str) -> int:
         count += 1
     db.session.commit()
     return count
+
+
+def get_importer_result(sid: str):
+    return ImporterResult.query.filter_by(uuid=sid).first()
+
+def get_importer_list_page(page: int = 1):
+    return ImporterResult.query.paginate(page=page, per_page=20, max_per_page=20)

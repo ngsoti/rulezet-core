@@ -15,6 +15,7 @@ from app.import_github_project.untils_import import clone_or_access_repo, delete
 from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm, EditScheduleForm
 from ..utils.utils import  bump_version, form_to_dict, generate_side_by_side_diff_html
 from . import rule_core as RuleModel
+from . import session_class as SessionModel
 
 rule_blueprint = Blueprint(
     'rule',
@@ -405,7 +406,10 @@ def get_current_rule() -> jsonify:
 def detail_rule(rule_id)-> render_template:
     """Get the detail of the current rule"""
     rule = RuleModel.get_rule(rule_id)
-    return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string)
+    if rule:
+        return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string)
+    return render_template("404.html")
+    
 
 @rule_blueprint.route("/download_rule", methods=['GET'])
 def download_rule_unified() -> Response:
@@ -1772,47 +1776,132 @@ def parse_rule() -> dict:
     flash(f"Rules imported.", "success")
     return redirect(url_for("rule.detail_rule", rule_id=object_.id))
 
-@rule_blueprint.route("/import_rules_from_github", methods=['GET' , 'POST'])
+@rule_blueprint.route("/import_rules_from_github", methods=['POST'])
 @login_required
-def import_rules_from_github() -> dict:
+def import_rules_from_github():
     """
     Clone or access a GitHub repo, then test all YARA rules in it,
     creating rules and classifying bad rules automatically.
     """
     try:
-        repo_url = request.form.get('url')
-        selected_license = request.form.get('license')
+        repo_url = request.json.get('url')
+        selected_license = request.json.get('license')
 
         verif = valider_repo_github(repo_url)
         if not verif :
-            flash(" GitHub URL is required! Please enter a valid URL to import rules.", "danger")
-            return redirect(url_for("rule.rule", tab="github"))
-
-
+            # flash(" GitHub URL is required! Please enter a valid URL to import rules.", "danger")
+            # return redirect(url_for("rule.rule", tab="github"))
+            return {"message": "Please enter a valid URL to import rules.", "toast_class": "danger-subtle"}, 400
 
         repo_dir, existe = clone_or_access_repo(repo_url) 
         
         info = github_repo_metadata(repo_url , selected_license)
+        # info = {"id": 355847073, "name": "factual-rules", "full_name": "CIRCL/factual-rules", "private": False, "author": "CIRCL", "author_url": "https://github.com/CIRCL", "author_avatar": "https://avatars.githubusercontent.com/u/468501?v=4", "repo_url": "https://github.com/CIRCL/factual-rules", "api_url": "https://api.github.com/repos/CIRCL/factual-rules", "description": "Factual rules are YARA rules to find legitimate software on raw disk acquisition.", "homepage": "https://circl.github.io/factual-rules/", "language": "YARA", "topics": ["dfir", "dfir-automation", "yara-forensics", "yara-rules", "yara-signatures"], "created_at": "2021-04-08T09:41:36Z", "updated_at": "2025-08-22T13:49:51Z", "pushed_at": "2022-01-18T10:05:33Z", "license": "BSD-2-Clause", "license_name": "BSD 2-Clause \"Simplified\" License", "stars": 12, "watchers": 12, "forks": 1, "open_issues": 0, "default_branch": "main", "visibility": "public", "archived": False, "disabled": False}
 
         if not repo_dir:
-            flash("Failed to clone or access the repository.", "danger")
-            return redirect(url_for("rule.rules_list"))
+            # flash("Failed to clone or access the repository.", "danger")
+            # return redirect(url_for("rule.rules_list"))
+            return {"message": "Failed to clone or access the repository.", "toast_class": "danger-subtle"}, 400
+        
+        session_th = SessionModel.Session_class(repo_dir, current_user, info)
+        session_th.start()
+        SessionModel.sessions.append(session_th)
+        
+        return {"message": "Go !", "toast_class": "success-subtle", "session_uuid": session_th.uuid}, 201
 
-        bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir , info , current_user))
+        # bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir , info , current_user))
 
-        delete_existing_repo_folder("Rules_Github")
+        # delete_existing_repo_folder("Rules_Github")
 
-        # Save invalid YARA rules and flash
-        if bad_rules > 0:
-            flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
-            flash(f"Failed to import {bad_rules} rules.", "danger")
-            return redirect(url_for("rule.bad_rules_summary"))
+        # # Save invalid YARA rules and flash
+        # if bad_rules > 0:
+        #     flash(f"{imported} rules imported. {skipped} ignored (already exist).", "success")
+        #     flash(f"Failed to import {bad_rules} rules.", "danger")
+        #     return redirect(url_for("rule.bad_rules_summary"))
 
-        flash(f"{imported} rules imported. {skipped} ignored (already exist !).", "success")
-        return redirect(url_for("rule.rules_list"))
+        # flash(f"{imported} rules imported. {skipped} ignored (already exist !).", "success")
+        # return redirect(url_for("rule.rules_list"))
     except Exception as e:
-        flash(f"An error occurred during import: {str(e)}", "danger")
-        return redirect(url_for("rule.rule", tab="github"))
+        # flash(f"An error occurred during import: {str(e)}", "danger")
+        # return redirect(url_for("rule.rule", tab="github"))
+        return {"message": f"An error occurred during import: {str(e)}", "toast_class": "danger-subtle"}, 400
+    
+
+@rule_blueprint.route("/import_loading/<sid>", methods=['GET'])
+@login_required
+def import_loading(sid):
+    for s in SessionModel.sessions:
+        if s.uuid == sid:
+            return render_template("rule/url_github/import_loading.html", sid=sid)
+    r = RuleModel.get_importer_result(sid)
+    if r:
+        return render_template("rule/url_github/import_loading.html", sid=sid)
+    return render_template("404.html"), 404
+
+@rule_blueprint.route("/import_loading_status/<sid>", methods=['GET'])
+@login_required
+def import_loading_status(sid):
+    is_finished = request.args.get('is_finished', 'false', type=str)
+    if not is_finished == 'true':
+        for s in SessionModel.sessions:
+            if s.uuid == sid:
+                return jsonify(s.status())
+        
+    r = RuleModel.get_importer_result(sid)
+    if r:
+        loc = r.to_json()
+        loc["complete"] = loc["total"]
+        loc["remaining"] = 0
+        return loc
+    return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
+
+@rule_blueprint.route("/import_get_info_session/<sid>", methods=['GET'])
+@login_required
+def import_get_info_session(sid):
+    for s in SessionModel.sessions:
+        if s.uuid == sid:
+            return jsonify(s.info)
+        
+    r = RuleModel.get_importer_result(sid)
+    if r:
+        return json.loads(r.info)
+    return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
+
+# @rule_blueprint.route("/importer_result/<sid>", methods=['GET'])
+# @login_required
+# def importer_result(sid):
+#     r = RuleModel.get_importer_result(sid)
+#     if r:
+#         return r.to_json()
+#     return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
+
+@rule_blueprint.route("/history_github_importer", methods=['GET'])
+@login_required
+def history_github_importer():
+    return render_template("rule/url_github/github_importer.html")
+
+
+@rule_blueprint.route("/history_github_importer/list", methods=['GET'])
+@login_required
+def history_github_importer_list():
+    page = request.args.get('page', 1, type=int)
+    github_importer_list = RuleModel.get_importer_list_page(page)
+
+    return {"history": [g.to_json() for g in github_importer_list], 
+            "total_history": github_importer_list.total, 
+            "total_pages": github_importer_list.pages}, 200
+
+
+@rule_blueprint.route("/import_get_session_running", methods=['GET'])
+@login_required
+def import_get_session_running():
+    return [{"uuid": s.uuid, "info": s.info} for s in SessionModel.sessions]
+
+
+# @rule_blueprint.route("/import_length_session_running", methods=['GET'])
+# @login_required
+# def import_length_session_running():
+#     return len(SessionModel.sessions)
 
 
 @rule_blueprint.route("/check_updates_by_url", methods=["POST"])
