@@ -2194,3 +2194,28 @@ def get_all_rule_by_github_url_page(search: str = None, page: int = 1):
     # Return paginated results
     pagination = query.paginate(page=page, per_page=per_page)
     return pagination, total_count
+
+
+
+def exists_format_in_rules(format_name: str) -> bool:
+    """
+    Check if a format exists in any rule (case-insensitive).
+    Returns True if at least one rule has this format, False otherwise.
+    """
+    return Rule.query.filter(Rule.format == format_name).first() is not None
+
+
+
+def replace_rule_format(old_format_name: str, new_format_name: str) -> int:
+    """Replace all occurrences of old_format_name with new_format_name in Rule.format.
+
+    Returns:
+        int: Number of rules updated.
+    """
+    rules_to_update = Rule.query.filter(func.lower(Rule.format) == old_format_name.lower()).all()
+    count = 0
+    for rule in rules_to_update:
+        rule.format = new_format_name
+        count += 1
+    db.session.commit()
+    return count

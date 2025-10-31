@@ -1609,6 +1609,40 @@ def get_old_rule_choice()-> render_template:
 #   Rule formats   #
 ####################
 
+@rule_blueprint.route("/replace_format_rule", methods=["POST"])
+@login_required
+def replace_format_rule():
+    """Replace format for multiple rules"""
+    if not current_user.is_admin():
+        return render_template("access_denied.html")
+
+    current_format = request.form.get("current_format")
+    new_format = request.form.get("new_format")
+
+    if not current_format or not new_format:
+        flash("Both fields are required.", "warning")
+        return redirect(url_for("rule.manage_format_rule"))
+    
+    if current_format == new_format:
+        flash("Current format and new format cannot be the same.", "warning")
+        return redirect(url_for("rule.manage_format_rule"))
+    
+
+    if not RuleModel.exists_format_in_rules(current_format):
+        flash(f"Current format '{current_format}' does not exist.", "warning")
+        return redirect(url_for("rule.manage_format_rule"))
+
+
+    # update rules
+    updated_count = RuleModel.replace_rule_format(current_format, new_format)
+
+    if updated_count is None:
+        flash("Error occurred while updating formats.", "error")
+    else:
+        flash(f"{updated_count} rule(s) updated from '{current_format}' to '{new_format}'.", "success")
+    return redirect(url_for("rule.manage_format_rule"))
+
+
 @rule_blueprint.route("/get_rules_formats", methods=['GET'])
 def get_rules_format()-> dict:
     """Get the rules formats"""
@@ -1621,9 +1655,9 @@ def get_rules_format()-> dict:
     return {"message": "No formats"}, 404
 
 
-@rule_blueprint.route("/create_format_rule", methods=["GET", "POST"])
+@rule_blueprint.route("/manage_format_rule", methods=["GET", "POST"])
 @login_required
-def create_format_rule() -> render_template:
+def manage_format_rule() -> render_template:
     """Afficher ou créer un nouveau format de règle"""
     if not current_user.is_admin():
         return render_template("access_denied.html")
@@ -1643,9 +1677,9 @@ def create_format_rule() -> render_template:
         flash(message, "success" if success else "danger")
 
         if success:
-            return render_template("admin/create_format.html", form=form)
+            return render_template("admin/format.html", form=form)
 
-    return render_template("admin/create_format.html", form=form)
+    return render_template("admin/format.html", form=form)
 
 @rule_blueprint.route("/get_rules_formats_pages", methods=['GET'])
 def get_rules_formats_pages() -> dict:
