@@ -167,7 +167,10 @@
       </section>
       <section>
         <h5>Author</h5>
-        <p>[[ bundle.author || 'Unknown' ]]</p>
+        <a :href="`/account/detail_user/${bundle.user_id}`" title="View author's profile">
+          [[ bundle.user_name ]]
+        </a>
+        
       </section>
     </div>
   </template>

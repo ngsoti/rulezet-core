@@ -42,29 +42,23 @@ def detail_user(user_id) -> render_template:
 def get_user() -> jsonify:
     """Give the user section"""
     user_id = request.args.get('user_id',type=int)
-    if current_user.is_admin():
-        my_user = AccountModel.get_user(user_id)
-        if my_user:
-            return jsonify({"success": True, "user": my_user.to_json()})
-        else:
-            return jsonify({"success": False, "message": "no user found"})
+    my_user = AccountModel.get_user(user_id)
+    if my_user:
+        return jsonify({"success": True, "user": my_user.to_json()})
     else:
-        return render_template("access_denied.html")
+        return jsonify({"success": False, "message": "no user found"})
 
 @account_blueprint.route("/get_user_donne")
 @login_required
 def get_user_donne() -> jsonify:
     """Return the user activity and metadata."""
     user_id = request.args.get('user_id', type=int)
-
-    if current_user.is_admin():
-        user_data = AccountModel.get_user_data_full(user_id)
-        if user_data:
-            return jsonify({"success": True, "donne": user_data})
-        else:
-            return jsonify({"success": False, "message": "User not found"})
+    user_data = AccountModel.get_user_data_full(user_id)
+    if user_data:
+        return jsonify({"success": True, "donne": user_data})
     else:
-        return render_template("access_denied.html")
+        return jsonify({"success": False, "message": "User not found"})
+
 
 @account_blueprint.route("/promote_remove_admin")
 @login_required
@@ -114,12 +108,12 @@ def get_all_users() -> Union[render_template, dict]:
 
     #users = AccountModel.get_users_page(page)
     users_filter = AccountModel.get_users_page_filter(page , search , connected, admin)
-    total_user = AccountModel.get_count_users()
+    # total_user = AccountModel.get_count_users()
     if current_user.is_admin():
         if users_filter:
             return {"user": [user.to_json() for user in users_filter],
                     "total_pages": users_filter.pages,
-                    "total_users": total_user ,
+                    "total_users": users_filter.total ,
                     "success": True}, 200
         return {"message": "No User",
                 "toast_class": "danger-subtle"}, 404

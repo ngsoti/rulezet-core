@@ -4,7 +4,15 @@
 {% block content %}
 {% if current_user.is_admin() %}
     <div class="container my-4" id="main-container">
-        <h2 class="mb-4 "> <i class="fa-solid fa-triangle-exclamation me-2"></i>Reported Rules</h2>
+        <div class="mb-4 border-bottom pb-3">
+                <h2 class="mb-3 text-center text-primary fw-bold">
+                    Reported Rules Management
+                    <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+                </h2>
+                <p class="text-muted    mt-2">
+                    Manage and review rules that have been reported by users. View details of each report, including the reason for reporting and the content of the rule. Take appropriate actions such as deleting reports or removing problematic rules from the repository.
+                </p>
+        </div>
 
         <div v-if="rules_reported && rules_reported.length > 0">
             <div class="card mb-3" v-for="(rep , index) in rules_reported" :key="rep.id">

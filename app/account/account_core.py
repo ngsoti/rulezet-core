@@ -5,7 +5,7 @@ from sqlalchemy import or_
 
 
 from .. import db
-from ..db_class.db import RequestOwnerRule, Rule, RuleFavoriteUser, User
+from ..db_class.db import Bundle, RequestOwnerRule, Rule, RuleFavoriteUser, User
 from ..utils.utils import generate_api_key
 from ..rule import rule_core as RuleModel
 import uuid
@@ -134,13 +134,40 @@ def get_user_rules(user_id: int) -> list:
     """Return all rules created by the user."""
     return Rule.query.filter_by(user_id=user_id).all()
 
+# def get_user_votes_summary(user_id: int) -> dict:
+#     """Return the total vote_up and vote_down from all rules created by the user."""
+#     rules = get_user_rules(user_id)
+#     return {
+#         "total_upvotes": sum(r.vote_up or 0 for r in rules),
+#         "total_downvotes": sum(r.vote_down or 0 for r in rules)
+#     }
+
+
 def get_user_votes_summary(user_id: int) -> dict:
-    """Return the total vote_up and vote_down from all rules created by the user."""
+    """
+    Return the total vote_up and vote_down from all rules and bundles created by the user.
+    """
+    # Votes sur les rules
     rules = get_user_rules(user_id)
+    rules_upvotes = sum(r.vote_up or 0 for r in rules)
+    rules_downvotes = sum(r.vote_down or 0 for r in rules)
+
+    # Votes sur les bundles
+    bundles = Bundle.query.filter_by(user_id=user_id).all()
+    bundles_upvotes = sum(b.vote_up or 0 for b in bundles)
+    bundles_downvotes = sum(b.vote_down or 0 for b in bundles)
+
+    # Total combiné
     return {
-        "total_upvotes": sum(r.vote_up or 0 for r in rules),
-        "total_downvotes": sum(r.vote_down or 0 for r in rules)
+        "total_upvotes": rules_upvotes + bundles_upvotes,
+        "total_downvotes": rules_downvotes + bundles_downvotes,
+        "rules_upvotes": rules_upvotes,
+        "rules_downvotes": rules_downvotes,
+        "bundles_upvotes": bundles_upvotes,
+        "bundles_downvotes": bundles_downvotes,
     }
+
+
 
 def get_user_rule_formats(user_id: int) -> list:
     """Return the list of unique formats used by the user in their rules."""
@@ -158,23 +185,25 @@ def get_user_data_full(user_id: int) -> dict:
         return None
 
     rules = get_user_rules(user_id)
-    votes = get_user_votes_summary(user_id)
+    votes = get_user_votes_summary(user_id) 
     formats = get_user_rule_formats(user_id)
     favorites = get_user_favorite_rules(user_id)
-    
     types = RuleModel.get_rule_type_count(user_id)
-    
-    
 
     return {
         "user": user.to_json(),
         "rule_count": len(rules),
-        "total_upvotes": votes["total_upvotes"],
-        "total_downvotes": votes["total_downvotes"],
+        "total_upvotes": votes["total_upvotes"],      
+        "total_downvotes": votes["total_downvotes"],  
+        "rules_upvotes": votes["rules_upvotes"],     
+        "rules_downvotes": votes["rules_downvotes"],
+        "bundles_upvotes": votes["bundles_upvotes"],  
+        "bundles_downvotes": votes["bundles_downvotes"],
         "formats_used": formats,
         "favorite_rule_ids": favorites,
         "rule_detail": types.get_json()
     }
+
 
 
 

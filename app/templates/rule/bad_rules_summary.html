@@ -13,13 +13,16 @@
 {% endwith %}
 
 <div id="container" class="container mt-5">
-  <h2 class="mb-3 text-center text-danger">
-    <i class="fas fa-exclamation-triangle me-2"></i>
-    Invalid or Non-Conforming Rules
-  </h2>
-  <p class="text-center text-muted mb-4">
-    The following rules are invalid because they did not pass syntax parsing validation.
-  </p>
+  <div class="mb-4 border-bottom pb-3">
+    <h2 class="mb-3 text-center text-primary fw-bold">
+      Invalid or Non-Conforming Rules
+      <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+    </h2>
+    <p class="text-muted mt-2">
+      The following rules are invalid because they did not pass syntax parsing validation.
+    </p>
+  </div>
+  
 
   <div class="card border-0 shadow  p-4  mb-4">
     <div class="row g-3 align-items-center mb-3 flex-wrap">

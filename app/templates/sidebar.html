@@ -45,7 +45,6 @@
                             <a class="dropdown-item" href="/rule/list_github_url">
                                 <i class="fa-brands fa-github fa-fw me-2"></i> Github list
                             </a>
-
                         </li>
                         {% if current_user.is_authenticated %}
                             <li>
@@ -64,6 +63,11 @@
                             <li>
                                 <a class="dropdown-item" href="/rule/bad_rules_summary">
                                     <i class="fa-solid fa-tags fa-fw me-2"></i> Bad Rules
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/rule/create_rule">
+                                    <i class="fas fa-hammer fa-fw me-2"></i> Add Rule
                                 </a>
                             </li>
                             {% if current_user.is_admin() %}

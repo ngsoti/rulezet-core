@@ -2,41 +2,69 @@
 {% import 'macros/form_macros.html' as f %}
 
 {% block content %}
-<div class="container mt-4" id="main-container">
-  <h3 class="mb-4 text-center">GitHub Project URLs</h3>
+<div class="container mt-5" id="main-container">
 
-  <!-- Search bar -->
-  <div class="d-flex justify-content-center mb-3">
-    <input v-model="searchQuery" @keyup.enter="fetchUrlGithub(1)"
-           class="form-control w-50" placeholder="Search for GitHub URLs..." @input="onSearchInput">
+  <!-- Title -->
+  <div class="mb-4 border-bottom pb-3">
+    <h2 class="fw-bold mb-1 text-primary text-center">GitHub Project URLs</h2>
+    <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+    <p class="text-muted mt-2">
+      Explore and discover GitHub project URLs associated with our detection rules. Use the search bar to quickly find specific URLs.
+    </p>
   </div>
 
-  <!-- Table -->
-   <template v-if="github_url.length > 0">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-        <thead class="table-light">
-            <tr>
-            <th scope="col" class="text-center">#</th>
-            <th scope="col">GitHub URL</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr v-for="(url, index) in github_url" :key="index"
-                @click="goto(url)"
-                style="cursor: pointer;">
-            <td class="text-center">[[ index + 1 ]]</td>
-            <td>[[ url ]]</td>
-            </tr>
-        </tbody>
-        </table>
+  <!-- Search bar -->
+  <div class="d-flex justify-content-center mb-4">
+    <div class="input-group  shadow-sm rounded">
+      <span class="input-group-text bg-white border-end-0">
+        <i class="fa-solid fa-magnifying-glass text-muted"></i>
+      </span>
+      <input v-model="searchQuery" @keyup.enter="fetchUrlGithub(1)"
+             class="form-control border-start-0 rounded-end" placeholder="Search for GitHub URLs..." 
+             @input="onSearchInput">
     </div>
-   </template>
-  
+  </div>
+  <p class="text-center mt-3 text-muted" v-if="!loading">Total URLs found: [[ total_url ]]</p>
+
+  <!-- Loading Spinner -->
+  <div v-if="loading" class="d-flex justify-content-center my-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <!-- GitHub URLs Card -->
+  <div class="row g-3" v-if="!loading">
+    <template v-if="github_url.length > 0">
+
+      <div class="col-12" v-for="(url, index) in github_url" :key="index" style="cursor: pointer;">
+        <div class="card shadow-sm hover-shadow cursor-pointer" @click="goto(url.url)">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+              <h5 class="card-title mb-1">
+                [[ index + 1 ]]. <span class="text-truncate" style="max-width: 70vw;">[[ url.url ]]</span>
+              </h5>
+              <span class="badge bg-primary">Rule count: [[ url.rule_count ]]</span>
+            </div>
+            <i class="fa-solid fa-arrow-right text-primary fa-lg"></i>
+          </div>
+        </div>
+      </div>
+
+    </template>
+
+    <template v-else>
+      <div class="col-12">
+        <div class="alert alert-warning shadow-sm text-center" role="alert">
+          No GitHub URLs found.
+        </div>
+      </div>
+    </template>
+  </div>
 
   <!-- Pagination -->
-  <nav v-if="total_pages > 1" aria-label="GitHub pagination">
-    <ul class="pagination justify-content-center">
+  <nav v-if="total_pages > 1 && !loading" aria-label="GitHub pagination" class="mt-4">
+    <ul class="pagination justify-content-center shadow-sm rounded p-2 bg-white">
       <li class="page-item" :class="{ disabled: current_page === 1 }">
         <button class="page-link" @click="fetchUrlGithub(current_page - 1)" :disabled="current_page === 1">Previous</button>
       </li>
@@ -54,10 +82,10 @@
     </ul>
   </nav>
 
-  <p class="text-center mt-3 text-muted">Total URLs found: [[ total_url ]]</p>
+  
+
 </div>
 {% endblock %}
-
 
 {% block script %}
 <script type="module">
@@ -72,8 +100,10 @@ createApp({
     const current_page = ref(1)
     const total_pages = ref(1)
     const searchQuery = ref('')
+    const loading = ref(true)
 
     async function fetchUrlGithub(page) {
+      loading.value = true
       const params = new URLSearchParams({
         page,
         search: searchQuery.value || ''
@@ -92,6 +122,7 @@ createApp({
         total_url.value = 0
         total_pages.value = 1
       }
+      loading.value = false
     }
 
     fetchUrlGithub(1)
@@ -115,21 +146,11 @@ createApp({
     })
 
     async function onSearchInput() {
-        if (searchQuery.value.trim() === "") {
-          await fetchUrlGithub(1)
-        } else {
-          await fetchUrlGithub(1)
-        }
-      }
-
-      async function onEnterKey() {
         await fetchUrlGithub(1)
-      }
+    }
 
     function goto(url){
-        const params = new URLSearchParams({
-            url 
-        })
+        const params = new URLSearchParams({ url })
         window.location.href = `/rule/github_detail?`+ params.toString()
     }
 
@@ -142,7 +163,8 @@ createApp({
       visiblePages,
       fetchUrlGithub,
       onSearchInput,
-      goto
+      goto,
+      loading
     }
   }
 }).mount('#main-container')

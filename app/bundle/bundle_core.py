@@ -365,6 +365,90 @@ def toggle_bundle_accessibility(bundle_id: int) -> bool:
 
 
 
+# def get_bundles_of_user_with_id_page(user_id: int, page: int, search: str = None, sort_by: str = "newest", rule_type: str = None) -> dict:
+#     """
+#     List all accessible bundles of a specific user, paginated and optionally filtered by search.
+    
+#     :param user_id: ID of the user whose bundles to retrieve.
+#     :param page: Page number.
+#     :param search: Optional search string to filter by name or description.
+#     :return: Pagination object with the user's bundles.
+#     """
+#     query = Bundle.query.filter(
+#         Bundle.user_id == user_id,
+#         Bundle.access.is_(True)  # Only show accessible bundles
+#     )
+
+#     if search:
+#         like_pattern = f"%{search}%"
+#         query = query.filter(
+#             or_(
+#                 Bundle.name.ilike(like_pattern),
+#                 Bundle.description.ilike(like_pattern)
+#             )
+#         )
+
+#     pagination = query.order_by(Bundle.created_at.desc()).paginate(page=page, per_page=20)
+
+#     return pagination
+
+
+
+def get_bundles_of_user_with_id_page(
+    user_id: int, 
+    page: int, 
+    search: str = None, 
+    sort_by: str = "newest", 
+    rule_type: str = None
+) -> dict:
+    """
+    List all accessible bundles of a specific user, paginated and optionally filtered by search, rule_type and sort.
+    """
+
+    # Base query
+    query = Bundle.query.filter(
+        Bundle.user_id == user_id,
+        Bundle.access.is_(True)
+    )
+
+    # Search filter
+    if search:
+        like_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Bundle.name.ilike(like_pattern),
+                Bundle.description.ilike(like_pattern)
+            )
+        )
+
+    # Rule type filter (bundles containing rules of a given type)
+    if rule_type:
+        normalized_type = rule_type.strip().lower()
+        query = (
+            query.join(Bundle.rules_assoc)
+                 .join(BundleRuleAssociation.rule)
+                 .filter(func.lower(Rule.format) == normalized_type)
+                 .distinct()
+        )
+
+    # Sorting options
+    if sort_by == "newest":
+        query = query.order_by(Bundle.created_at.desc())
+    elif sort_by == "oldest":
+        query = query.order_by(Bundle.created_at.asc())
+    elif sort_by == "most_rules":
+        query = query.outerjoin(Bundle.rules_assoc).group_by(Bundle.id).order_by(func.count(BundleRuleAssociation.id).desc())
+    elif sort_by == "least_rules":
+        query = query.outerjoin(Bundle.rules_assoc).group_by(Bundle.id).order_by(func.count(BundleRuleAssociation.id).asc())
+    elif sort_by == "most_likes":
+        query = query.order_by(Bundle.vote_up.desc())
+    elif sort_by == "least_likes":
+        query = query.order_by(Bundle.vote_up.asc())
+
+    # Pagination
+    pagination = query.paginate(page=page, per_page=20)
+
+    return pagination
 
 
 

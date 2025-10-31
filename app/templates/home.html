@@ -3,15 +3,17 @@
 {% block content %}
 
 <div class="container mt-4"> 
-  <!-- Header: Recent Rules + Add Rule -->
-  <header class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="text-dark m-0">
-      <i class="fas fa-cogs"></i> Recent Rules
-    </h1>
-    <a href="/rule/create_rule" class="btn btn-primary btn-sm">
-      <i class="fas fa-hammer"></i> Add Rule
-    </a>
-  </header>
+ 
+  <div  class="mb-4 border-bottom pb-3">
+    <h2 class="fw-bold mb-1 text-primary text-center">
+      Recent Rules
+      <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+    </h2>
+    <p class="text-muted mt-2">
+      Stay updated with the latest rules added to our repository. Browse through recent contributions and find new detection rules to enhance your security measures.
+    </p>
+  </div>
+  
   <!-- Rule Cards Section -->
   <div class="row">
     <template v-if="rules_list.length > 0">

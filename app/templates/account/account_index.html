@@ -1,14 +1,18 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container col-md-8 justify-content-center my-5">
+<div class="container  justify-content-center my-5">
     <div class="card shadow border-0">
         <div class="card-body p-4 bg-light rounded">
-            <h1 class="text-primary" style="text-align: center;">
-                <i class="fas fa-user-circle me-2"></i> My Profile
-            </h1>
-
-            <hr class="w-25 mx-auto">
+            <div class="mb-4 border-bottom pb-3">
+                <h2 class="mb-3 text-center text-primary fw-bold">
+                    Account Information
+                    <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+                </h2>
+                <p class="text-muted mt-2 text-center">
+                    Review and manage your account details below. Keep your information up to date to ensure seamless access to all features.
+                </p>
+            </div>
 
             <div class="table-responsive">
                 <table class="table">

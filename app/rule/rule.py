@@ -101,17 +101,24 @@ def get_rules_page_with_user_id() -> jsonify:
     """Get all the rules on a page"""
     page = request.args.get('page', 1, type=int)
     user_id = request.args.get('userId', 1, type=int)
-    rules = RuleModel.get_rules_of_user_with_id_page(user_id,page)
-    total_rules = RuleModel.get_rules_of_user_with_id_count(user_id)
-    if rules:
-        rules_list = list()
-        for rule in rules:
-            u = rule.to_json()
-            rules_list.append(u)
 
-        return {"success": True,"rule": rules_list, "total_pages": rules.pages, "total_rules": total_rules}
-    
-    return {"message": "No Rule"}, 404
+    sort_by = request.args.get("sort_by", "newest")
+    search = request.args.get("search", None)
+    rule_type = request.args.get("rule_type", None)
+
+    rules = RuleModel.get_rules_of_user_with_id_page(user_id, page, search, sort_by, rule_type)
+
+    if rules and rules.items:  
+        rules_list = [rule.to_json() for rule in rules.items]
+
+        return {
+            "success": True,
+            "rule": rules_list,
+            "total_pages": rules.pages,
+            "total_rules": rules.total
+        }, 200
+
+    return {"message": "No Rule"}, 200
 
 # get page with filter
 @rule_blueprint.route("/get_rules_page_filter", methods=['GET'])
@@ -688,13 +695,32 @@ def get_rules_propose_page() -> jsonify:
 def propose_edit(rule_id) -> redirect:
     """Create a new edit (like a change request)"""
     data = request.form
-    proposed_content = data.get('proposed_content')
+    proposed_content = data.get('rule_content')
     message = data.get('message')
+    if not proposed_content:
+        flash("Proposed content cannot be empty.", "error")
+        return redirect(url_for('rule.detail_rule', rule_id=rule_id))
+    
+    # verify if the proposed content is different from the current content and verify the syntax
+
+    rule = RuleModel.get_rule(rule_id)
+
+    if rule.to_string == proposed_content:
+        flash("Proposed content is the same as the current content.", "warning")
+        return redirect(url_for('rule.detail_rule', rule_id=rule_id))
+    
+    rule_dict = rule.to_json()
+    rule_dict['to_string'] = proposed_content
+    valide , error = verify_syntax_rule_by_format(rule_dict)
+    if not valide:
+        flash(f"Syntax error in proposed content: {error}", "error")
+        return redirect(url_for('rule.detail_rule', rule_id=rule_id))
+
     success = RuleModel.propose_edit_core(rule_id, proposed_content, message)
     if success:
         flash("Request sended.", "success")
     else:
-        flash("Request sended but fail.", "danger")
+        flash("Request sended but fail.", "error")
     return redirect(url_for('rule.detail_rule', rule_id=rule_id))
 
 @rule_blueprint.route("/validate_proposal", methods=['GET'])
@@ -734,7 +760,7 @@ def validate_proposal() -> jsonify:
 
             elif decision == "rejected":
                 RuleModel.set_status(rule_proposal_id,"rejected")
-                message = "rejected"
+                message = "Proposal rejected."
             else:
                 return jsonify({"message": "Invalid decision",
                                 "success": False,
@@ -1753,45 +1779,53 @@ def import_rules_from_github() -> dict:
 @login_required
 def check_updates():
     data = request.get_json()
-    urls = data.get("url", None)  
+    urls = data.get("url", None)
+
     if not urls or not isinstance(urls, list):
         return {
-            "message": "No URL provided or not a list.",
+            "message": "No URL list provided or invalid format.",
             "nb_update": 0,
             "results": [],
             "success": False,
             "toast_class": "danger"
         }, 400
-    #delete_existing_repo_folder("Rules_Github")
-    for url in urls:
-        print(f"Processing URL: {url}")
+
+    results = []
+
+    for item in urls:
+        url = item.get("url")  
+        if not url:
+            continue  
+
         rule_items = RuleModel.get_all_rule_by_url_github(url)
         repo_dir, exists = clone_or_access_repo(url)
-        results = []
-        if exists:
-            git_pull_repo(repo_dir)
 
-            
-            for rule in rule_items:
-                rule_id = rule.id
-                title = rule.title
+        if not exists:
+            continue
 
-                message_dict, success, new_rule_content = Check_for_rule_updates(rule_id,repo_dir)
-                rule = RuleModel.get_rule(rule_id)
+        git_pull_repo(repo_dir)
 
-                if success and new_rule_content:
-                    result = {
-                        "id": rule_id,
-                        "title": title,
-                        "success": success,
-                        "message": message_dict.get("message", "No message"),
-                        "new_content": new_rule_content,
-                        "old_content": rule.to_string if rule else "Error loading the rule"
-                    }
+        for rule in rule_items:
+            rule_id = rule.id
+            title = rule.title
 
-                    history_id = RuleModel.create_rule_history(result)
-                    result["history_id"] = history_id if history_id else None
-                    results.append(result)
+            message_dict, success, new_rule_content = Check_for_rule_updates(rule_id, repo_dir)
+            rule = RuleModel.get_rule(rule_id)
+
+            if success and new_rule_content:
+                result = {
+                    "id": rule_id,
+                    "title": title,
+                    "success": success,
+                    "message": message_dict.get("message", "No message"),
+                    "new_content": new_rule_content,
+                    "old_content": rule.to_string if rule else "Error loading the rule"
+                }
+
+                history_id = RuleModel.create_rule_history(result)
+                result["history_id"] = history_id if history_id else None
+                results.append(result)
+
     return {
         "message": "Search completed successfully. All selected rules have been processed without issues.",
         "nb_update": len(results),
@@ -1799,49 +1833,53 @@ def check_updates():
         "success": True,
         "toast_class": "success"
     }, 200
+
     
-# @rule_blueprint.route("/check_updates", methods=["POST"])
-# @login_required
-# def check_updates():
-#     data = request.get_json()
-#     rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
-#     results = []
+@rule_blueprint.route("/check_updates_by_rule", methods=["POST"])
+@login_required
+def check_updates_by_rule():
+    data = request.get_json()
+    rule_items = data.get("rules", [])  # list of id
+    results = []
 
-#     # Récupère toutes les sources uniques (optimisation)
-#     sources = RuleModel.get_sources_from_titles(rule_items)
-#     for source in sources:
-#         repo_dir, exists = clone_or_access_repo(source)
-#         if exists:
-#             git_pull_repo(repo_dir)
 
-#     for item in rule_items:
-#         rule_id = item.get("id")
-#         title = item.get("title", "Unknown Title")
+    sources = RuleModel.get_sources_from_ids(rule_items)
 
-#         message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
-#         rule = RuleModel.get_rule(rule_id)
+    for source in sources:
+        repo_dir, exists = clone_or_access_repo(source)
+        if exists:
+            git_pull_repo(repo_dir)
 
-#         if success and new_rule_content:
-#             result = {
-#                 "id": rule_id,
-#                 "title": title,
-#                 "success": success,
-#                 "message": message_dict.get("message", "No message"),
-#                 "new_content": new_rule_content,
-#                 "old_content": rule.to_string if rule else "Error loading the rule"
-#             }
+    for rule_id in rule_items:
+        rule = RuleModel.get_rule(rule_id)
+        if not rule:
+            continue
+        title = rule.title
+        repo_dir, exists = clone_or_access_repo(rule.source)
+        message_dict, success, new_rule_content = Check_for_rule_updates(rule_id, repo_dir)
+        rule = RuleModel.get_rule(rule_id)
 
-#             history_id = RuleModel.create_rule_history(result)
-#             result["history_id"] = history_id if history_id else None
-#             results.append(result)
+        if success and new_rule_content:
+            result = {
+                "id": rule_id,
+                "title": title,
+                "success": success,
+                "message": message_dict.get("message", "No message"),
+                "new_content": new_rule_content,
+                "old_content": rule.to_string if rule else "Error loading the rule"
+            }
 
-    # return {
-    #     "message": "Search completed successfully. All selected rules have been processed without issues.",
-    #     "nb_update": len(results),
-    #     "results": results,
-    #     "success": True,
-    #     "toast_class": "success"
-    # }, 200
+            history_id = RuleModel.create_rule_history(result)
+            result["history_id"] = history_id if history_id else None
+            results.append(result)
+
+    return {
+        "message": "Search completed successfully. All selected rules have been processed without issues.",
+        "nb_update": len(results),
+        "results": results,
+        "success": True,
+        "toast_class": "success"
+    }, 200
 
 #########################
 #   Github url section  #
@@ -1857,18 +1895,30 @@ def list_github_url() :
 
 @rule_blueprint.route("/get_url_github", methods=['GET'])
 def get_url_github():
-    """List all the GitHub URLs from Rule.source"""
+    """List all GitHub URLs and show how many Rules exist for each one."""
     search = request.args.get("search", default=None, type=str)
     page = request.args.get("page", default=1, type=int)
 
-    pagination, total = RuleModel.get_all_url_github_page(page, search)
+    pagination_urls, total_urls = RuleModel.get_all_url_github_page(page, search)
+    pagination_counts, _ = RuleModel.get_rule_count_by_github_page(page, search)
+
+    counts_map = {item.url: item.rule_count for item in pagination_counts.items}
+
+    github_data = []
+    for rule in pagination_urls.items:
+        url = rule.source
+        github_data.append({
+            "url": url,
+            "rule_count": counts_map.get(url, 0)
+        })
 
     return jsonify({
         "success": True,
-        "github_url": [rule.source for rule in pagination.items],
-        "total_url": total,
-        "total_pages": pagination.pages
+        "github_url": github_data,
+        "total_url": total_urls,
+        "total_pages": pagination_urls.pages
     }), 200
+
 
 
 
@@ -1899,4 +1949,20 @@ def get_rule_url_github():
         "rule_github_url": [rule.to_json() for rule in pagination.items],
         "total_rule": pagination.total,
         "total_pages": pagination.pages,
+    }), 200
+
+
+@rule_blueprint.route("/get_rules_with_github_url", methods=["GET"])
+def get_rules_with_github_url():
+    """Get all rules associated with a specific GitHub URL."""
+    search = request.args.get("search", type=str, default=None)
+    page = request.args.get("page", type=int, default=1)
+
+    pagination , total = RuleModel.get_all_rule_by_github_url_page(search=search, page=page)
+
+    return jsonify({
+        "success": True,
+        "github_rules": [rule.to_json() for rule in pagination.items],
+        "total_rule": total,
+        "total_pages": pagination.pages
     }), 200

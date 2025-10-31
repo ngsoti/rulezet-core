@@ -2,29 +2,40 @@
 {% import 'macros/form_macros.html' as f %}
 
 {% block content %}
-
- <style>
-        /* Hide elements until Vue is fully loaded */
-        [v-cloak] {
-            display: none;
-        }
-    </style>
 <div class="container mt-4" v-cloak>
    
-    <ul class="nav nav-tabs" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active" data-bs-toggle="tab" href="#1" role="tab">Rule</a>
+    <h2 class="fw-bold mb-1 text-center text-primary">
+        <i class="fas fa-shield-alt me-2"></i>  {{ rule.title }}
+    </h2>
+    <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+    <p class="text-muted mt-2">
+        Here you can find all the details about the rule "<strong>{{ rule.title }}</strong>".
+        Propose edits, view related rules, and engage with the community through comments.
+    </p>
+    
+
+    <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist" >
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab" aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
+                    Detail Rule
+            </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#2" role="tab">Suggest an edit</a>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab" aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
+                    Suggest an Edit
+            </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#3" role="tab">Pull request</a>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab" aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
+                    Pull Request
+            </a>
         </li>
     </ul>
-    <div class="tab-content mt-4">
-        <div class="tab-pane fade show active" id="1" role="tabpanel">
-            <!-- Main Card -->
+
+
+    <div class="tab-content" id="exampleTabsContent">
+        <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
+            <!-- Rule Detail Card -->
             <div class="card shadow-lg mb-4">
                 <div class="card-header text-white">
                     <div class="row align-items-center">
@@ -98,7 +109,7 @@
                     <div class="row ">
                         <div class="col-md-6">
                             <p><i class="fas fa-file-code me-2 text-secondary"></i><strong>Format :</strong></p>
-                            <p>{{ rule.format }}</p>
+                            <span class="badge text-bg-primary "> {{ rule.format }} </span>
                         </div>
                         <div class="col-md-6">
                             <p><i class="fas fa-balance-scale me-2 text-secondary"></i><strong>License :</strong></p>
@@ -141,7 +152,9 @@
                         </div>
                         <div class="col-md-6">
                             <p><i class="fas fa-user-edit me-2 text-secondary"></i><strong>Editor :</strong></p>
-                            <p>{{ rule.get_rule_user_first_name_by_id() }}</p>
+                            <a href="/account/detail_user/{{ rule.user_id }}" style="text-decoration-line: underline;">
+                                {{ rule.get_rule_user_first_name_by_id() }}
+                            </a>
                         </div>
                     </div>
                     <div class="row ">
@@ -157,6 +170,7 @@
                 </div>
             </div>
 
+            <!-- Rule Content Card -->
             <div class="card shadow-lg  mb-4">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Rule Content</h5>
@@ -289,7 +303,7 @@
             </div>
 
 
-
+            <!-- Contributors Card -->
             <div class="card shadow-lg  mb-4">
                 <div class="card-header bg-light position-relative">
                     <h5 class="mb-0"><i class="fa-solid fa-users-gear me-2 "></i>Contributors to Rule
@@ -306,7 +320,9 @@
                                 <i class="fa-solid fa-user-circle fa-2x me-3 text-secondary"></i>
                                 <div>
                                     <h6 class="card-title mb-1">
-                                        [[ contributor.user_name ]] 
+                                        <a :href="`/account/detail_user/${contributor.user_id}`" style="text-decoration-line: underline;" title="View more about this user">
+                                            [[ contributor.user_name ]] 
+                                        </a>
                                         <span class="badge bg-success ms-2">
                                             <i class="fa-solid fa-check"></i> Contributor
                                         </span>
@@ -318,6 +334,7 @@
                 </div>
             </div>
 
+            <!-- Bundles Card -->
             <div class="card shadow-sm mb-4 ">
                 <div class="card-header bg-light position-relative">
                     <h5 class="mb-0"><i class="fa-solid fa-clipboard-list me-2 "></i> Part of Bundle
@@ -350,6 +367,7 @@
 
             </div>
 
+            <!-- Similar Rules Card -->
             <div class="card shadow-lg  mb-4 ">
                 <div class="card-header bg-light position-relative">
                     <h5 class="mb-0">
@@ -363,24 +381,36 @@
 
                 <div v-else class="card-body">
                     <div class="row">
-                    <div class="col-md-4" v-for="rule in similar_rules_list" :key="rule.id">
-                        <div class="card h-100 shadow-sm">
-                        <div class="card-header">
-                            <h6 class="text-truncate mb-0 text-primary">
-                            <i class="fas fa-shield-alt me-2"></i> [[ rule.title ]]
-                            </h6>
-                        </div>
-                        <div class="card-body d-flex flex-column">
-                            <p class="mb-2 small" style="min-height: 60px">[[ rule.description ]]</p>
-                            <p class="mb-2"><strong>Author:</strong> [[ rule.author ]]</p>
-                            <div class="mt-auto text-center">
-                            <a :href="rule.id" title="View more about this rule" class="btn btn-sm btn-primary">
-                                View more
-                            </a>
+                        <div class="col-md-4" v-for="rule in similar_rules_list" :key="rule.id">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="text-truncate mb-0 text-primary">
+                                            <i class="fas fa-shield-alt me-2"></i> [[ rule.title ]]
+                                        </h6>
+                                        <a @click="favoriteSimilar(rule.id)"
+                                            class="btn btn-success btn-sm me-2"
+                                            :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
+                                            <i class="fa-solid fa-star"
+                                                :class="rule.is_favorited ? 'text-warning' : 'text-white'">
+                                            </i>
+                                        </a>
+                                    </div>
+                                    
+                                </div>
+                                <div class="card-body d-flex flex-column">
+                                    <span class="small mb-2">[[ rule.description ]]</span>
+                                    <span><strong>Author:</strong> [[ rule.author ]]</span>
+                                    <span><strong>Format:</strong> <span class="badge text-bg-primary "> [[ rule.format ]] </span></span>
+                                    <hr>
+                                    <div class=" text-center">
+                                        <a :href="rule.id" title="View more about this rule" class="btn btn-sm btn-primary">
+                                            View more
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        </div>
-                    </div>
                     </div>
                 </div>
             </div>
@@ -502,142 +532,107 @@
             </div>            
             <div id="rule_id" data-rule-id="{{ rule.id }}"></div>
         </div>
-        
-        <div class="tab-pane fade" id="2" role="tabpanel">
-            {% if current_user.is_authenticated %}
-            <div class="card shadow-lg  mb-4" >
-                <div class="card-header  text-primary">
-                    <h5 class="mb-0"><i class="fas fa-pencil-alt"></i> Propose an Edit</h5>
+        <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
+            <div class="card card-body shadow-sm" id="main-container">
+                {% if current_user.is_authenticated %}
+                <form action="{{ url_for('rule.propose_edit', rule_id=rule.id) }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                    <!-- Rule Content -->
+                    <div class="form-group mb-4">
+                        <label for="rule_content" class="fw-bold">Rule Content</label><span style="color:red"> *</span>
+                        <textarea 
+                            id="rule_content" 
+                            name="rule_content" 
+                            class="form-control" 
+                            rows="15" 
+                            placeholder="Enter the modified rule content here"
+                            required>{{ rule.to_string }}</textarea>
+                    </div>
+
+                    <!-- Optional message -->
+                    <div class="form-group mb-4">
+                        <label for="message" class="fw-bold">Message or Justification</label>
+                        <input 
+                            id="message" 
+                            type="text" 
+                            name="message" 
+                            class="form-control" 
+                            placeholder="Explain the changes you made or provide any additional context"
+                        >
+                    </div>
+
+                    <!-- Submit button -->
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-paper-plane"></i> Submit Proposal
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="card shadow-lg  mb-4">
+                    <div class="card-body text-center">
+                        <p>Please <a href="{{ url_for('account.login') }}" class="text-primary">log in</a> to propose an edit.</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form action="{{ url_for('rule.propose_edit', rule_id=rule.id) }}" method="post">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-                        <!-- Tabs nav -->
-                        <ul class="nav nav-tabs mb-3" id="editTabs" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab" aria-controls="edit" aria-selected="true">
-                                    <i class="fas fa-edit"></i> Modify Content
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-controls="preview" aria-selected="false">
-                                    <i class="fas fa-eye"></i> Preview
-                                </button>
-                            </li>
-                        </ul>
-
-                        <div class="tab-content" id="editTabsContent">
-                            <!-- Modify Content Tab -->
-                            <div class="tab-pane fade show active" id="edit" role="tabpanel" aria-labelledby="edit-tab">
-                                <div class="form-group mb-4">
-                                    <label for="proposed_content" class="fw-bold">Modified Rule Content</label>
-                                    <div class="container mt-4">
-                                        <div class="editorContainer" style="min-height: 300px;"></div>
-                                    </div>
-                                    <textarea name="proposed_content" id="proposed_content" hidden></textarea>
-                                </div>
-                            </div>
-
-                            <!-- Preview Tab -->
-                            <div class="tab-pane fade" id="preview" role="tabpanel" aria-labelledby="preview-tab">
-                                <div class="form-group mb-4">
-                                    <label for="code_preview" class="fw-bold">Code Preview</label>
-                                    <pre><code id="code_preview" class="language-bash"></code></pre>
-                                </div>
-                            </div>
-                        </div>
-
-
-                        
-
-                        <!-- Optional message -->
-                        <div class="form-group mb-4">
-                            <label for="message" class="fw-bold">Message or Justification (optional)</label>
-                            <input 
-                                id="message" 
-                                type="text" 
-                                name="message" 
-                                class="form-control" 
-                                placeholder="Explain the changes you made or provide any additional context"
-                            >
-                        </div>
-
-                        <!-- Submit button -->
-                        <div class="d-flex justify-content-end">
-                            <button type="submit" class="btn btn-warning">
-                                <i class="fas fa-paper-plane"></i> Submit Proposal
-                            </button>
-                        </div>
-                    </form>
-                </div>
-                
+                {% endif %}    
             </div>
-            {% else %}
-            <div class="card shadow-lg  mb-4">
-                <div class="card-body text-center">
-                    <p>Please <a href="{{ url_for('account.login') }}" class="text-primary">log in</a> to propose an edit.</p>
-                </div>
-            </div>
-            {% endif %}    
+            
+
+            
         </div>
-
-        <div class="tab-pane fade " id="3" role="tabpanel">
-            <div id="main-container" class="container mt-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0">
-                        <i class="fas fa-code-branch"></i> Proposed Pull Requests
-                    </h4>
-                </div>
-                
-        
-                <div v-if="pull_request_list.length === 0" class="alert alert-info mt-3">
+        <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
+            <div class="card card-body shadow-sm" id="main-container">
+                <div v-if="pull_request_list.length === 0" >
                     <p> <i class="fas fa-info-circle"></i> No edit proposals found for this rule.</p>
                 </div>
             
                 <div v-else class="list-group mt-3">
-                    <a v-for="proposal in pull_request_list"
-                    :key="proposal.id"
-                    :href="'/rule/proposal_content_discuss?id=' + proposal.id"
-                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="fas fa-user-edit"></i>
-                        <strong> [[ proposal.user_name ]] </strong> submitted a change
-                        <br>
-                        <small class="text-muted">
-                        <i class="fas fa-clock"></i> [[ proposal.timestamp ]]
-                        </small>
-                        <br>
-                        <small class="text-muted">
-                            <i class="fas fa-pen"></i> [[ proposal.message || 'No message' ]]
-                        </small>
-                    </div>
-                    <span 
-                        class="badge"
+                    <a v-for="proposal in pull_request_list" :key="proposal.id" :href="'/rule/proposal_content_discuss?id=' + proposal.id" 
+                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center  shadow-sm mb-2 rounded-3 transition" style="background-color: var(--code-bg-color);">
+                        <div class="d-flex flex-column flex-grow-1 p-2">
+                        <div class="d-flex align-items-center mb-1">
+                            <i class="fas fa-user-edit text-primary me-2"></i>
+                            <strong class="me-1">[[ proposal.user_name ]]</strong>
+                            <span class="text-muted">submitted a change</span>
+                        </div>
+
+                        <div class="text-muted small">
+                            <i class="fas fa-clock me-1"></i> [[ proposal.timestamp ]]
+                        </div>
+
+                        <div class="text-secondary mt-1">
+                            <i class="fas fa-pen me-1"></i>
+                            [[ proposal.message || 'No message' ]]
+                        </div>
+                        </div>
+
+                        <span
+                        class="badge fs-6 px-3 py-2 text-capitalize shadow-sm"
                         :class="{
                             'bg-success text-light': proposal.status === 'accepted',
                             'bg-danger text-light': proposal.status === 'rejected',
                             'bg-warning text-dark': proposal.status !== 'accepted' && proposal.status !== 'rejected'
                         }"
                         >
-                        <i class="fas fa-info-circle"></i> [[ proposal.status ]]
-                    </span>
-
+                        <i class="fas fa-info-circle me-1"></i> [[ proposal.status ]]
+                        </span>
                     </a>
                 </div>
+
             
                 <!-- Pagination -->
-                <nav v-if="total_pages >= 1" class="mt-4">
+                <nav v-if="total_pages > 1" class="mt-4">
                     <ul class="pagination justify-content-center">
-                    <li class="page-item" :class="{ disabled: current_page === 1 }">
-                        <a class="page-link" href="#" @click.prevent="fetchPullRequest(current_page - 1)">Previous</a>
-                    </li>
-                    <li class="page-item disabled">
-                        <span class="page-link">[[ current_page ]]</span>
-                    </li>
-                    <li class="page-item" :class="{ disabled: current_page === total_pages }">
-                        <a class="page-link" href="#" @click.prevent="fetchPullRequest(current_page + 1)">Next</a>
-                    </li>
+                        <li class="page-item" :class="{ disabled: current_page === 1 }">
+                            <a class="page-link" href="#" @click.prevent="fetchPullRequest(current_page - 1)">Previous</a>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">[[ current_page ]]</span>
+                        </li>
+                        <li class="page-item" :class="{ disabled: current_page === total_pages }">
+                            <a class="page-link" href="#" @click.prevent="fetchPullRequest(current_page + 1)">Next</a>
+                        </li>
                     </ul>
                 </nav>
             </div>
@@ -647,12 +642,11 @@
 {% endblock %}
 
 {% block script %}
-
 <script type="module">
     const { createApp, ref , onMounted} = Vue;
     import { message_list , display_prepared_toast , display_toast} from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
-
+    
     function highlightJSON() {
         document.querySelectorAll('pre code.json').forEach(block => hljs.highlightElement(block))
     }
@@ -755,39 +749,16 @@
 
             const currentRule = ref([])
 
-            async function fetchCurrentRule(){
+
+             async function fetchCurrentRule(){
                 const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
                 if (response.ok) {
                     const data = await response.json();
                     currentRule.value = data.rule; 
-
-                    setTimeout(highlightJSON, 50)
-                    const ruleRawInput = currentRule.value.to_string
-                    const ruleContent = ruleRawInput ? ruleRawInput : "";
-                    initEditor(ruleContent);
-
-                    const editTab = document.querySelector('#edit-tab');
-                    if (editTab) {
-                        editTab.addEventListener('shown.bs.tab', () => {
-                            if (editor) editor.refresh();
-                        });
-                    }
-
-                    const languageSelect = document.getElementById('languageSelect');
-                    if (languageSelect) {
-                        languageSelect.addEventListener('change', function () {
-                            if (editor) editor.setOption('mode', this.value);
-                        });
-                    }
-
-                    const themeSelect = document.getElementById('themeSelect');
-                    if (themeSelect) {
-                        themeSelect.addEventListener('change', function () {
-                            if (editor) editor.setOption('theme', this.value);
-                        });
-                    }
                 } 
             }
+
+    
             /**
              *          #######################
              *          # Rule part of bundle #
@@ -865,6 +836,25 @@
 
                 if (res.ok) {
                     currentRule.value.is_favorited = data.is_favorited;
+                }
+
+                const message = {
+                    message: data.message,
+                    toast_class: data.toast_class,
+                    id: Math.random()
+                };
+                await display_prepared_toast(message);
+            }
+
+            async function favoriteSimilar(similar_rule_id) {
+                const res = await fetch(`/rule/favorite/${similar_rule_id}`);
+                const data = await res.json(); 
+
+                if (res.ok) {
+                    const rule = similar_rules_list.value.find(r => r.id === similar_rule_id);
+                    if (rule) {
+                        rule.is_favorited = data.is_favorited;
+                    }
                 }
 
                 const message = {
@@ -1017,51 +1007,13 @@
              *          ###############
              * */
 
-            function initEditor(ruleContent) {
-                const container = document.querySelector('.editorContainer');
-                if (!container || container.children.length > 0) return;
-
-                editor = CodeMirror(container, {
-                    lineNumbers: true,
-                    mode: 'python', 
-                    theme: 'monokai',
-                    value: ruleContent
-                });
-                editor.setSize("100%", "700px"); 
-
-                editor.on('change', () => {
-                    const proposedField = document.getElementById('proposed_content');
-                    if (editor && proposedField) {
-                        proposedField.value = editor.getValue();
-                    }
-                });
-
-                function updatePreview() {
-                    const previewElement = document.getElementById('code_preview');
-                    if (previewElement && editor) {
-                        previewElement.textContent = editor.getValue();
-                    }
-                }
-
-                if (editor) {
-                    editor.on('change', updatePreview);
-                    updatePreview(); 
-                }
-
-                setTimeout(() => {
-                    if (editor) {
-                        const currentValue = editor.getValue();
-                        editor.setValue(currentValue + ' ');
-                        editor.setValue(currentValue);
-                        editor.refresh();
-                    }
-                }, 300);
-            }
+           
 
             onMounted(() => {
                 fetchCurrentRule()
-                
+                highlightJSON();
             })
+
     
             return {
                 bundleListRule,
@@ -1092,7 +1044,8 @@
                 fetch_similar_rules_list,
                 rule_format,
                 download_rule,
-                csrf_token
+                csrf_token,
+                favoriteSimilar
             };
         }
     }).mount('#main-container');

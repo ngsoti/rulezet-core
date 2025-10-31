@@ -4,9 +4,19 @@
 {% block content %}
 {% if current_user.is_admin() %}
 <div class="container my-4" id="main-container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <h2 class="mb-4">Create a New Rule Format</h2>
+        <div>
+            <div class="mb-4 border-bottom pb-3">
+                <h2 class="mb-3 text-center text-primary fw-bold">
+                    Create a New Rule Format
+                    <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+                </h2>
+                <p class="text-muted mt-2">
+                    Define new rule formats to categorize and manage detection rules effectively. Specify whether the format can be executed.
+                </p>
+            </div>
+
+
+
             <form method="POST" action="{{ url_for('rule.create_format_rule') }}">
                 {{ form.hidden_tag() }}
 
@@ -28,7 +38,6 @@
                 </button>
             </form>
         </div>
-    </div>
 
     <hr class="my-5">
 

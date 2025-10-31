@@ -1,182 +1,107 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container my-4" id="main-container" v-cloak>
-    <style>
-        /* Hide elements until Vue is fully loaded */
-        [v-cloak] {
-            display: none;
-        }
-    </style>
-    <h2 class="mb-4">Ownership Requests</h2>
+    
+    <div class="mb-4 border-bottom pb-3">
+        <h2 class="fw-bold mb-1 text-center text-primary">Rule Change Proposals</h2>
+        <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+         <p class="text-muted mt-2">
+            Manage and review proposed edits to existing rules. Accept or reject changes, view proposal history, and participate in discussions to ensure the quality and accuracy of our rule repository. 
+        </p>
+    </div>
 
-    <!-- Nav tabs for Pending and Processed Requests -->
-    <ul class="nav nav-tabs" id="requestsTab" role="tablist">
-        <li class="nav-item" role="presentation">
-            <a class="nav-link active" id="pending-tab" data-bs-toggle="tab" href="#pending" role="tab" aria-controls="pending" aria-selected="true">
-                Pending Requests
+
+    <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist" >
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab" aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
+                    Ownership Request
             </a>
         </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link" id="processed-tab" data-bs-toggle="tab" href="#processed" role="tab" aria-controls="processed" aria-selected="false">
-                Processed Requests
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab" aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
+                    Proposal History
             </a>
         </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link" id="respond-tab" data-bs-toggle="tab" href="#respond" role="tab" aria-controls="respond" aria-selected="false">
-                Your Requests
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab" aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
+                    Discussions
             </a>
         </li>
     </ul>
-    <!-- Tab content for Pending and Processed Requests -->
-    <div class="tab-content mt-3">
-        <!-- Pending Requests Tab -->
-        <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab" >
-            <div class="card" v-if="pending_requests_list.length > 0">
-                <div class="card-header text-white" style="background-color: #dba709;">
-                    <i class="fas fa-tasks me-2"></i> Processed Ownership Requests
-                </div>
 
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-bordered align-middle mb-0 shadow-sm text-center">
-                            <thead class="table-warning">
-                                <tr>
-                                    <th>#</th>
-                                    <th style="width: 15%;"><i class="fas fa-user"></i> Requester</th>
-                                    <th style="width: 20%;"><i class="fas fa-heading"></i> Title</th>
-                                    <th style="width: 12%;"><i class="fas fa-info-circle"></i> Status</th>
-                                    <th style="width: 15%;"><i class="fas fa-calendar-day"></i> Submitted</th>
-                                    <th style="width: 33%;"><i class="fas fa-file-alt"></i> Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            <tr v-for="(request, index) in pending_requests_list" :key="request.id">
-                                <td class="fw-bold">
-                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ index + 1 ]]</a>
-                                </td>
-                                <td class="text-truncate" :title="request.user_who_made_request">
-                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ request.user_who_made_request ]]</a>
-                                </td>
-                                <td style="white-space: normal; overflow-wrap: break-word;" :title="request.title">
-                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark fw-semibold">
-                                        [[ request.title ]]
-                                        <span v-if="request.user_id === current_user_id" class="badge bg-primary text-uppercase ms-2">(you)</span>
-                                    </a>
-                                </td>
-                                <td>
-                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none">
-                                        <span 
-                                        class="badge text-uppercase"
-                                        :class="{
-                                            'bg-success': request.status === 'approved',
-                                            'bg-danger': request.status === 'rejected',
-                                            'bg-secondary': request.status !== 'approved' && request.status !== 'rejected'
-                                        }"
-                                        >
-                                        [[ request.status ]]
-                                        </span>
-                                    </a>
-                                </td>
-                                <td>
-                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ request.created_at ]]</a>
-                                </td>
-                                <td style="white-space: normal; overflow-wrap: break-word;" :title="request.content">
-                                    <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ request.content ]]</a>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+    <div class="tab-content" id="exampleTabsContent">
+        <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
+            <div class="card card-body shadow-sm" id="main-container">
+                <div class="card" v-if="pending_requests_list.length > 0">
+                    <div class="card-header text-white" style="background-color: #dba709;">
+                        <i class="fas fa-tasks me-2"></i> Processed Ownership Requests
                     </div>
-                    <div class="d-flex justify-content-center mt-3">
-                        <nav aria-label="Page navigation">
-                            <ul class="pagination">
-                            <li class="page-item" :class="{ disabled: pending_currentPage === 1 }">
-                                <a class="page-link" href="#" @click.prevent="fetchPendingRequests(pending_currentPage - 1)">
-                                <i class="fas fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: pending_currentPage === page, disabled: page === '...' }">
-                                <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchPendingRequests(page)">[[ page ]]</a>
-                                <span v-else class="page-link">...</span>
-                            </li>
-                            <li class="page-item" :class="{ disabled: pending_currentPage === pending_totalPages }">
-                                <a class="page-link" href="#" @click.prevent="fetchPendingRequests(pending_currentPage + 1)">
-                                Next <i class="fas fa-arrow-right"></i>
-                                </a>
-                            </li>
-                            </ul>
-                        </nav>
-                    </div>
-                </div>
-            </div>
-            <div v-else class="alert alert-secondary">No pending requests.</div>
-        </div>
-       
 
-        <!-- Processed Requests Tab -->
-        <div class="tab-pane fade" id="processed" role="tabpanel" aria-labelledby="processed-tab">
-            <div class="card shadow-sm mt-4">
-                <div class="card-header bg-success text-white">
-                    <i class="fas fa-tasks me-2"></i> Processed Ownership Requests
-                </div>
-                <div class="card-body p-0">
-                    <div v-if="process_requests_list.length > 0">
+                    <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover table-bordered align-middle mb-0">
-                                <thead class="table-success text-center">
+                            <table class="table table-hover table-bordered align-middle mb-0 shadow-sm text-center">
+                                <thead class="table-warning">
                                     <tr>
                                         <th>#</th>
-                                        <th><i class="fas fa-user"></i> Requester</th>
-                                        <th><i class="fas fa-heading"></i> Title</th>
-                                        <th><i class="fas fa-info-circle"></i> Status</th>
-                                        <th><i class="fas fa-calendar-day"></i> Submitted</th>
-                                        <th><i class="fas fa-file-alt"></i> Description</th>
+                                        <th style="width: 15%;"><i class="fas fa-user"></i> Requester</th>
+                                        <th style="width: 20%;"><i class="fas fa-heading"></i> Title</th>
+                                        <th style="width: 12%;"><i class="fas fa-info-circle"></i> Status</th>
+                                        <th style="width: 15%;"><i class="fas fa-calendar-day"></i> Submitted</th>
+                                        <th style="width: 33%;"><i class="fas fa-file-alt"></i> Description</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="(request, index) in process_requests_list" :key="request.id">
-                                        <td class="text-center">[[ index + 1 ]]</td>
-                                        <td class="text-center">[[ request.user_who_made_request ]]</td>
-                                        <td>
-                                            <span class="fw-semibold">[[ request.title ]]</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span
-                                                class="badge text-uppercase"
-                                                :class="{
+                                <tr v-for="(request, index) in pending_requests_list" :key="request.id">
+                                    <td class="fw-bold">
+                                        <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ index + 1 ]]</a>
+                                    </td>
+                                    <td class="text-truncate" :title="request.user_who_made_request">
+                                        <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ request.user_who_made_request ]]</a>
+                                    </td>
+                                    <td style="white-space: normal; overflow-wrap: break-word;" :title="request.title">
+                                        <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark fw-semibold">
+                                            [[ request.title ]]
+                                            <span v-if="request.user_id === current_user_id" class="badge bg-primary text-uppercase ms-2">(you)</span>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a :href="`/requests/${request.id}`" class="d-block text-decoration-none">
+                                            <span 
+                                            class="badge text-uppercase"
+                                            :class="{
                                                 'bg-success': request.status === 'approved',
                                                 'bg-danger': request.status === 'rejected',
                                                 'bg-secondary': request.status !== 'approved' && request.status !== 'rejected'
-                                                }" >
-                                                [[ request.status ]]
+                                            }"
+                                            >
+                                            [[ request.status ]]
                                             </span>
-                                        </td>
-                                        <td class="text-center">[[ request.created_at ]]</td>
-                                        <td>
-                                            <div style="white-space: pre-line; max-width: 400px; overflow-wrap: break-word;">
-                                                [[ request.content ]]
-                                            </div>
-                                        </td>
-                                    </tr>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ request.created_at ]]</a>
+                                    </td>
+                                    <td style="white-space: normal; overflow-wrap: break-word;" :title="request.content">
+                                        <a :href="`/requests/${request.id}`" class="d-block text-decoration-none text-dark">[[ request.content ]]</a>
+                                    </td>
+                                </tr>
                                 </tbody>
                             </table>
-                            
                         </div>
-                        <!-- Pagination -->
-                        <div class="d-flex justify-content-center mt-3">
+                        <div class="d-flex justify-content-center mt-3" v-if="pending_totalPages > 10">
                             <nav aria-label="Page navigation">
                                 <ul class="pagination">
-                                <li class="page-item" :class="{ disabled: process_currentPage === 1 }">
-                                    <a class="page-link" href="#" @click.prevent="fetchProcessRequests(process_currentPage - 1)">
+                                <li class="page-item" :class="{ disabled: pending_currentPage === 1 }">
+                                    <a class="page-link" href="#" @click.prevent="fetchPendingRequests(pending_currentPage - 1)">
                                     <i class="fas fa-arrow-left"></i> Previous
                                     </a>
                                 </li>
-                                <li class="page-item" v-for="page in visiblePagesprocess" :key="page" :class="{ active: process_currentPage === page, disabled: page === '...' }">
-                                    <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchProcessRequests(page)">[[ page ]]</a>
+                                <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: pending_currentPage === page, disabled: page === '...' }">
+                                    <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchPendingRequests(page)">[[ page ]]</a>
                                     <span v-else class="page-link">...</span>
                                 </li>
-                                <li class="page-item" :class="{ disabled: process_currentPage === process_totalPages }">
-                                    <a class="page-link" href="#" @click.prevent="fetchProcessRequests(current_page + 1)">
+                                <li class="page-item" :class="{ disabled: pending_currentPage === pending_totalPages }">
+                                    <a class="page-link" href="#" @click.prevent="fetchPendingRequests(pending_currentPage + 1)">
                                     Next <i class="fas fa-arrow-right"></i>
                                     </a>
                                 </li>
@@ -184,100 +109,176 @@
                             </nav>
                         </div>
                     </div>
-                    <div v-else class="text-center p-4 text-muted">
-                        <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
-                        <p class="mb-0">No processed ownership requests.</p>
-                    </div>
                 </div>
+                <div v-else class="alert alert-secondary">No pending requests.</div>
             </div>
         </div>
-        <div class="tab-pane fade" id="respond" role="tabpanel" aria-labelledby="respond-tab">
-            <div class="card shadow-sm mt-4">
-                <div class="card-header bg-primary text-white">
-                    <i class="fas fa-paper-plane me-2"></i> My Ownership Requests
-                </div>
-                <div class="card-body p-0">
-                    <div v-if="request_made_list.length > 0">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-bordered align-middle mb-0">
-                                <thead class="table-primary text-center">
-                                    <tr>
-                                        <th>#</th>
-                                        <th><i class="fas fa-heading"></i> Title</th>
-                                        <th><i class="fas fa-info-circle"></i> Status</th>
-                                        <th><i class="fas fa-calendar-day"></i> Submitted</th>
-                                        <th><i class="fas fa-file-alt"></i> Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(request, index) in request_made_list" :key="request.id">
-                                        <td class="text-center">[[ index + 1 ]]</td>
-                                        <td>
-                                            <span class="fw-semibold">[[ request.title ]]</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span
-                                                class="badge text-uppercase"
-                                                :class="{
+        <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
+            <div class="card card-body shadow-sm" id="main-container">
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header bg-success text-white">
+                        <i class="fas fa-tasks me-2"></i> Processed Ownership Requests
+                    </div>
+                    <div class="card-body p-0">
+                        <div v-if="process_requests_list.length > 0">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered align-middle mb-0">
+                                    <thead class="table-success text-center">
+                                        <tr>
+                                            <th>#</th>
+                                            <th><i class="fas fa-user"></i> Requester</th>
+                                            <th><i class="fas fa-heading"></i> Title</th>
+                                            <th><i class="fas fa-info-circle"></i> Status</th>
+                                            <th><i class="fas fa-calendar-day"></i> Submitted</th>
+                                            <th><i class="fas fa-file-alt"></i> Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(request, index) in process_requests_list" :key="request.id">
+                                            <td class="text-center">[[ index + 1 ]]</td>
+                                            <td class="text-center">[[ request.user_who_made_request ]]</td>
+                                            <td>
+                                                <span class="fw-semibold">[[ request.title ]]</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span
+                                                    class="badge text-uppercase"
+                                                    :class="{
                                                     'bg-success': request.status === 'approved',
                                                     'bg-danger': request.status === 'rejected',
-                                                    'bg-warning text-dark': request.status === 'pending',
-                                                    'bg-secondary': request.status !== 'approved' && request.status !== 'rejected' && request.status !== 'pending'
-                                                }"
-                                            >
-                                                [[ request.status ]]
-                                            </span>
-                                        </td>
-                                        <td class="text-center">[[ request.created_at ]]</td>
-                                        <td>
-                                            <div style="white-space: pre-line; max-width: 400px; overflow-wrap: break-word;">
-                                                [[ request.content ]]
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Pagination -->
-                        <div class="d-flex justify-content-center mt-3">
-                            <nav aria-label="Page navigation">
-                                <ul class="pagination">
-                                    <li class="page-item" :class="{ disabled: request_made_currentPage === 1 }">
-                                        <a class="page-link" href="#" @click.prevent="fetchMadeRequests(request_made_currentPage - 1)">
-                                            <i class="fas fa-arrow-left"></i> Previous
+                                                    'bg-secondary': request.status !== 'approved' && request.status !== 'rejected'
+                                                    }" >
+                                                    [[ request.status ]]
+                                                </span>
+                                            </td>
+                                            <td class="text-center">[[ request.created_at ]]</td>
+                                            <td>
+                                                <div style="white-space: pre-line; max-width: 400px; overflow-wrap: break-word;">
+                                                    [[ request.content ]]
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                
+                            </div>
+                            <!-- Pagination -->
+                            <div class="d-flex justify-content-center mt-3" v-if="process_totalPages > 10">
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination">
+                                    <li class="page-item" :class="{ disabled: process_currentPage === 1 }">
+                                        <a class="page-link" href="#" @click.prevent="fetchProcessRequests(process_currentPage - 1)">
+                                        <i class="fas fa-arrow-left"></i> Previous
                                         </a>
                                     </li>
-                                    <li
-                                        class="page-item"
-                                        v-for="page in visiblePagesRequestMade"
-                                        :key="page"
-                                        :class="{ active: request_made_currentPage === page, disabled: page === '...' }"
-                                    >
-                                        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchMadeRequests(page)">[[ page ]]</a>
+                                    <li class="page-item" v-for="page in visiblePagesprocess" :key="page" :class="{ active: process_currentPage === page, disabled: page === '...' }">
+                                        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchProcessRequests(page)">[[ page ]]</a>
                                         <span v-else class="page-link">...</span>
                                     </li>
-                                    <li class="page-item" :class="{ disabled: request_made_currentPage === request_made_totalPages }">
-                                        <a class="page-link" href="#" @click.prevent="fetchMadeRequests(request_made_currentPage + 1)">
-                                            Next <i class="fas fa-arrow-right"></i>
+                                    <li class="page-item" :class="{ disabled: process_currentPage === process_totalPages }">
+                                        <a class="page-link" href="#" @click.prevent="fetchProcessRequests(current_page + 1)">
+                                        Next <i class="fas fa-arrow-right"></i>
                                         </a>
                                     </li>
-                                </ul>
-                            </nav>
+                                    </ul>
+                                </nav>
+                            </div>
                         </div>
-                    </div>
-
-                    <!-- Empty State -->
-                    <div v-else class="text-center p-4 text-muted">
-                        <i class="fas fa-inbox fa-2x mb-2 text-primary"></i>
-                        <p class="mb-0">You have not made any ownership requests yet.</p>
+                        <div v-else class="text-center p-4 text-muted">
+                            <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                            <p class="mb-0">No processed ownership requests.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
+            <div class="card card-body shadow-sm" id="main-container">
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-paper-plane me-2"></i> My Ownership Requests
+                    </div>
+                    <div class="card-body p-0">
+                        <div v-if="request_made_list.length > 0">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered align-middle mb-0">
+                                    <thead class="table-primary text-center">
+                                        <tr>
+                                            <th>#</th>
+                                            <th><i class="fas fa-heading"></i> Title</th>
+                                            <th><i class="fas fa-info-circle"></i> Status</th>
+                                            <th><i class="fas fa-calendar-day"></i> Submitted</th>
+                                            <th><i class="fas fa-file-alt"></i> Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(request, index) in request_made_list" :key="request.id">
+                                            <td class="text-center">[[ index + 1 ]]</td>
+                                            <td>
+                                                <span class="fw-semibold">[[ request.title ]]</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span
+                                                    class="badge text-uppercase"
+                                                    :class="{
+                                                        'bg-success': request.status === 'approved',
+                                                        'bg-danger': request.status === 'rejected',
+                                                        'bg-warning text-dark': request.status === 'pending',
+                                                        'bg-secondary': request.status !== 'approved' && request.status !== 'rejected' && request.status !== 'pending'
+                                                    }"
+                                                >
+                                                    [[ request.status ]]
+                                                </span>
+                                            </td>
+                                            <td class="text-center">[[ request.created_at ]]</td>
+                                            <td>
+                                                <div style="white-space: pre-line; max-width: 400px; overflow-wrap: break-word;">
+                                                    [[ request.content ]]
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
 
+                            <!-- Pagination -->
+                            <div class="d-flex justify-content-center mt-3" v-if="request_made_totalPages > 10">
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination">
+                                        <li class="page-item" :class="{ disabled: request_made_currentPage === 1 }">
+                                            <a class="page-link" href="#" @click.prevent="fetchMadeRequests(request_made_currentPage - 1)">
+                                                <i class="fas fa-arrow-left"></i> Previous
+                                            </a>
+                                        </li>
+                                        <li
+                                            class="page-item"
+                                            v-for="page in visiblePagesRequestMade"
+                                            :key="page"
+                                            :class="{ active: request_made_currentPage === page, disabled: page === '...' }"
+                                        >
+                                            <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchMadeRequests(page)">[[ page ]]</a>
+                                            <span v-else class="page-link">...</span>
+                                        </li>
+                                        <li class="page-item" :class="{ disabled: request_made_currentPage === request_made_totalPages }">
+                                            <a class="page-link" href="#" @click.prevent="fetchMadeRequests(request_made_currentPage + 1)">
+                                                Next <i class="fas fa-arrow-right"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div v-else class="text-center p-4 text-muted">
+                            <i class="fas fa-inbox fa-2x mb-2 text-primary"></i>
+                            <p class="mb-0">You have not made any ownership requests yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
 </div>
 
 

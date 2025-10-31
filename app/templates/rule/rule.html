@@ -4,328 +4,317 @@
 
 
 <div class="container mt-4">
-    <h1 class="ui dividing header text-center mb-4">Create a Rule</h1>
-        <!-- Tabs navigation -->
-    <ul class="nav nav-tabs mb-3" id="ruleTab" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual" type="button" role="tab">
-                <i class="fas fa-edit me-1"></i> Manual Submission
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link " id="parse-tab" data-bs-toggle="tab" data-bs-target="#parse" type="button" role="tab">
-                <i class="fa-solid fa-paste me-1"></i>Parse a rule
-            </button>
-        </li>
-        {% if current_user.is_admin() %}
-        <li class="nav-item" role="presentation">
-            <button class="nav-link " id="github-tab" data-bs-toggle="tab" data-bs-target="#github" type="button" role="tab">
-                <i class="fab fa-github me-1"></i> GitHub URL
-            </button>
-        </li>
-        {% endif %}
-    </ul>
-    <!-- Tabs content -->
-    <div class="tab-content" id="ruleTabContent">
-        
-        <!-- Manual rule submission tab -->
-        <div class="tab-pane fade show active" id="manual" role="tabpanel">
-            <div class="card card-body shadow-sm" id="main-container">
-                <form action="" method="post" id="form">
-                    {{ form.hidden_tag() }}
-            
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                {{ form.title.label(class_="col-form-label") }} <span style="color:red">*</span>
+  <h2 class="fw-bold mb-1 text-center text-primary">Create a Rule</h2>
+  <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+  <p class="text-muted mt-2">
+      Use the form below to manually submit a new detection rule, parse an existing rule, or import rules from a GitHub repository. Select the appropriate tab to get started.
+  </p>
+      <div>
+            <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist">
+                  <li class="nav-item flex-fill text-center">
+                        <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab" aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
+                              Manual Submission
+                        </a>
+                  </li>
+                  <li class="nav-item flex-fill text-center">
+                        <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab" aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
+                              Parse a Rule
+                        </a>
+                  </li>
+                  <li class="nav-item flex-fill text-center">
+                        <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab" aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
+                              GitHub URL
+                        </a>
+                  </li>
+            </ul>
 
-                                {{ form.title(
-                                    class_="form-control",
-                                    placeholder="Enter the rule title...",
-                                    title="This is the title of your rule (e.g. SQL Injection Detection)"
-                                ) }}
+            <div class="tab-content" id="exampleTabsContent">
+                  <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
+                        <div class="card card-body shadow-sm" id="main-container">
+                              <form action="" method="post" id="form">
+                                    {{ form.hidden_tag() }}
+                              
+                                    <div class="row mb-3">
+                                          <div class="col-md-6">
+                                                <div class="form-group">
+                                                      <strong>{{ form.title.label(class_="col-form-label") }} <span style="color:red">*</span></strong>
 
-                                {% if form.title.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.title.errors[0] | safe }}
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
+                                                      {{ form.title(
+                                                            class_="form-control",
+                                                            placeholder="Enter the rule title...",
+                                                            title="This is the title of your rule (e.g. SQL Injection Detection)"
+                                                      ) }}
 
-                       <div class="col-md-6">
-                            <div class="form-group">
-                                {{ form.format.label(class_="col-form-label") }} <span style="color:red">*</span>
+                                                      {% if form.title.errors %}
+                                                      <div class="invalid-feedback d-block">
+                                                            {{ form.title.errors[0] | safe }}
+                                                      </div>
+                                                      {% endif %}
+                                                </div>
+                                          </div>
 
-                                {{ form.format(class_="form-select",
-                                    placeholder="Choose a rule format...",
-                                    title="Format of the rule") }}
+                                          <div class="col-md-6">
+                                                <div class="form-group">
+                                                      <strong>{{ form.format.label(class_="col-form-label") }} <span style="color:red">*</span></strong>
 
-                                {% if form.format.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.format.errors[0] | safe }}
+                                                      {{ form.format(class_="form-select",
+                                                            placeholder="Choose a rule format...",
+                                                            title="Format of the rule") }}
+
+                                                      {% if form.format.errors %}
+                                                            <div class="invalid-feedback d-block">
+                                                            {{ form.format.errors[0] | safe }}
+                                                            </div>
+                                                      {% endif %}
+                                                </div>
+                                          </div>
                                     </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-            
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                {{ form.license.label(class_="col-form-label") }}
-                                {{ form.license(class_="
-                                    form-control", 
-                                    id="license-select",
-                                    placeholder="Choose a license...",
-                                    title="License for the visibility of the rule") }}
-                                {% if form.license.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.license.errors[0] | safe }}
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                {{ form.source.label(class_="col-form-label") }}
-                                {{ form.source(class_="form-control",
-                                    placeholder="Enter the rule source...",
-                                    title="Source to find the rule in the net") }}
-                                {% if form.source.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.source.errors[0] | safe }}
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                {{ form.version.label(class_="col-form-label") }} 
-                                {{ form.version(class_="form-control",
-                                    placeholder="Enter the rule version (1.0 or 1)...",
-                                    title="Source to find the rule in the net") }}
-                                {% if form.version.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.version.errors[0] | safe }}
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                {{ form.cve_id.label(class_="col-form-label") }}
-                                {{ form.cve_id(class_="form-control",
-                                    placeholder="Enter the Vulnerability id if there is...",
-                                    title="Id format : CVE , GCVE, GHSA, PYSEC, GSD, CERT-Bund, Cisco, RedHat, MSRC CVE or CERT-FR patterns") }}
-                                {% if form.cve_id.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.cve_id.errors[0] | safe }}
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div> 
-            
-                    <div class="row mb-3">
-                        <div class="col">
-                            <div class="form-group">
-                                {{ form.description.label(class_="col-form-label") }}
-                                {{ form.description(class_="form-control", rows=4,
-                                    placeholder="Enter the description of the rule (context, explain...)...",
-                                    title="Description for the context, the syntax... to help the community to found it") }}
-                                {% if form.description.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.description.errors[0] | safe }}
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
+                              
+                                    <div class="row mb-3">
+                                          <div class="col-md-6">
+                                                <div class="form-group">
+                                                      <strong>{{ form.license.label(class_="col-form-label") }}</strong>
+                                                      {{ form.license(class_="
+                                                            form-control", 
+                                                            id="license-select",
+                                                            placeholder="Choose a license...",
+                                                            title="License for the visibility of the rule") }}
+                                                      {% if form.license.errors %}
+                                                      <div class="invalid-feedback d-block">
+                                                            {{ form.license.errors[0] | safe }}
+                                                      </div>
+                                                      {% endif %}
+                                                </div>
+                                          </div>
+                                          <div class="col-md-6">
+                                                <div class="form-group">
+                                                      <strong>{{ form.source.label(class_="col-form-label") }}</strong>
+                                                      {{ form.source(class_="form-control",
+                                                            placeholder="Enter the rule source...",
+                                                            title="Source to find the rule in the net") }}
+                                                      {% if form.source.errors %}
+                                                      <div class="invalid-feedback d-block">
+                                                            {{ form.source.errors[0] | safe }}
+                                                      </div>
+                                                      {% endif %}
+                                                </div>
+                                          </div>
+                                          <div class="col-md-6">
+                                                <div class="form-group">
+                                                      <strong>{{ form.version.label(class_="col-form-label") }} </strong>
+                                                      {{ form.version(class_="form-control",
+                                                            placeholder="Enter the rule version (1.0 or 1)...",
+                                                            title="Source to find the rule in the net") }}
+                                                      {% if form.version.errors %}
+                                                      <div class="invalid-feedback d-block">
+                                                            {{ form.version.errors[0] | safe }}
+                                                      </div>
+                                                      {% endif %}
+                                                </div>
+                                          </div>
+                                          <div class="col-md-6">
+                                                <div class="form-group">
+                                                      <strong>{{ form.cve_id.label(class_="col-form-label") }}</strong>
+                                                      {{ form.cve_id(class_="form-control",
+                                                            placeholder="Enter the Vulnerability id if there is...",
+                                                            title="Id format : CVE , GCVE, GHSA, PYSEC, GSD, CERT-Bund, Cisco, RedHat, MSRC CVE or CERT-FR patterns") }}
+                                                      {% if form.cve_id.errors %}
+                                                      <div class="invalid-feedback d-block">
+                                                            {{ form.cve_id.errors[0] | safe }}
+                                                      </div>
+                                                      {% endif %}
+                                                </div>
+                                          </div>
+                                    </div> 
+                              
+                                    <div class="row mb-3">
+                                          <div class="col">
+                                                <div class="form-group">
+                                                      <strong>{{ form.description.label(class_="col-form-label") }}</strong>
+                                                      {{ form.description(class_="form-control", rows=4,
+                                                            placeholder="Enter the description of the rule (context, explain...)...",
+                                                            title="Description for the context, the syntax... to help the community to found it") }}
+                                                      {% if form.description.errors %}
+                                                      <div class="invalid-feedback d-block">
+                                                            {{ form.description.errors[0] | safe }}
+                                                      </div>
+                                                      {% endif %}
+                                                </div>
+                                          </div>
+                                    </div>
 
-                    <div class="row mb-3">
-                        <div class="col">
-                            <div class="form-group">
-                                {{ form.original_uuid.label(class_="col-form-label") }}
-                                {{ form.original_uuid(class_="form-control", rows=4,
-                                    placeholder="Enter the original uuid if the rule has already one...",
-                                    title="UUID to the rule. (one will be generate after the creation of the rule)") }}
-                                {% if form.original_uuid.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.original_uuid.errors[0] | safe }}
-                                </div>
-                                {% endif %}
-                            </div>
+                                    <div class="row mb-3">
+                                          <div class="col">
+                                                <div class="form-group">
+                                                      <strong>{{ form.original_uuid.label(class_="col-form-label") }}</strong>
+                                                      {{ form.original_uuid(class_="form-control", rows=4,
+                                                            placeholder="Enter the original uuid if the rule has already one...",
+                                                            title="UUID to the rule. (one will be generate after the creation of the rule)") }}
+                                                      {% if form.original_uuid.errors %}
+                                                      <div class="invalid-feedback d-block">
+                                                            {{ form.original_uuid.errors[0] | safe }}
+                                                      </div>
+                                                      {% endif %}
+                                                </div>
+                                          </div>
+                                    </div>
+                              
+                                    <div class="mb-3">
+                                          {% if error %}
+                                          <div class="alert alert-danger d-flex align-items-center" role="alert">
+                                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                                <div>
+                                                      {{ error }}
+                                                </div>
+                                          </div>
+                                          {% endif %}
+
+                                          <div class="form-group">
+                                                <strong>{{ form.to_string.label(class_="col-form-label") }} <span style="color:red">*</span></strong>
+                                          
+                                                <textarea id="editor" name="to_string">{{ (form.to_string.data or '') | e }}</textarea>
+
+                                          
+                                                {% if form.to_string.errors %}
+                                                      <div class="invalid-feedback d-block">
+                                                            {{ form.to_string.errors[0] | safe }}
+                                                      </div>
+                                                {% endif %}
+                                          </div>
+                                    </div>
+                              
+                                    <div class="text-center">
+                                          {{ form.submit(class='btn btn-primary') }}
+                                    </div>
+                              </form>
+                        
+                              
+                              
                         </div>
-                    </div>
-            
-                     <div class="mb-3">
-                        {% if error %}
-                        <div class="alert alert-danger d-flex align-items-center" role="alert">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <div>
-                                {{ error }}
-                            </div>
+                  </div>
+                  <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
+                        <div class="card card-body shadow-sm" id="main-container">
+                              <form method="POST" action="{{ url_for('rule.parse_rule') }}" 
+                                    class="d-flex flex-column" 
+                                    id="github-form"  novalidate>
+
+                                    <div id="flash-messages" class="mt-2">
+                                          {% for category, message in get_flashed_messages(with_categories=True) %}
+                                          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                                {{ message }}
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                          </div>
+                                          {% endfor %}
+                                    </div>
+                                    
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                                    <input type="text" name="fakeusernameremembered" id="fakeusernameremembered" style="display:none">
+                                    <input type="password" name="fakepasswordremembered" id="fakepasswordremembered" style="display:none">
+
+                                    <div class="mb-3">
+                                          <strong><label for="content" class="form-label">Rule content<span style="color:red">*</span></label></strong>
+                                          <textarea id="content" name="content" rows="6"   placeholder="Paste your rule content here..."  required></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <strong><label for="format" class="form-label">Rule format <span style="color:red">*</span></label></strong>
+                                          <select v-model="ruleType" name="format" id="format" class="form-select form-select-sm " required>
+                                                <option v-for="format in rules_formats" :value="format.name" :key="format.id">
+                                                      [[ format.name ]]
+                                                </option>
+                                          </select>
+                                    </div>
+
+                                    <div class="text-center">
+                                          <button type="submit" class="btn btn-primary" id="submit-button">
+                                          Parse
+                                          </button>
+                                    </div>
+                              </form>
+
+                              </div>
+                  </div>
+                  <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
+                        {% if current_user.is_admin() %}
+                              <div class="card p-4 shadow-sm mb-3">
+                                    <h5 class="mb-2 d-flex align-items-center">
+                                          <strong>
+                                                <label for="url" class="form-label m-0">
+                                                      Import rules from GitHub project with URL 
+                                                </label> 
+                                                <span style="color:red">*</span>
+                                          </strong>
+                                          <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse" data-bs-target="#ruleInfo" role="button" aria-expanded="false" aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
+                                    </h5>
+
+                                    <div class="collapse" id="ruleInfo">
+                                          <div class="alert alert-info mt-2">
+                                                The script will attempt to parse the rules from the GitHub repository according to their format (YARA, Sigma, Zeek, Suricata). 
+                                                If any issues are detected during the rule validation, you will have the opportunity to review and correct them in the "Bad Rules" section.
+                                          </div>
+                                    </div>
+
+                                    <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
+                                          
+                                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                                          <div class="mb-3 d-flex"><!-- Anti-autofill leurre -->
+                                                <input type="text" name="fakeusernameremembered" id="fakeusernameremembered" style="display:none">
+                                                <input type="password" name="fakepasswordremembered" id="fakepasswordremembered" style="display:none">
+
+                                                <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/project.git" v-model="url" required >
+                                          </div>
+
+                                          <div id="flash-messages" class="mt-2">
+                                                {% for category, message in get_flashed_messages(with_categories=True) %}
+                                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                                {{ message }}
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                                </div>
+                                                {% endfor %}
+                                          </div>
+
+
+
+                                          <div class="mb-3">
+                                                <strong><label for="license-select" class="form-label">License</label></strong>
+                                                <select id="license-select" name="license" class="form-control" v-model="selectedLicense">
+                                                      <option disabled value="">No license</option>
+                                                      <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
+                                                </select>
+                                          </div>
+
+                                          <div class="d-flex align-items-center">
+                                                <button type="submit" class="btn btn-primary" id="submit-button">
+                                                <i class="fas fa-paper-plane"></i> Send
+                                                </button>
+                                          </div>
+                                    </form>
+                              </div>
+
+                              <div class="modal fade" id="parsingModal" tabindex="-1" aria-labelledby="parsingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                          <div class="modal-content text-center p-4">
+                                                <div class="modal-body">
+                                                <i class="fas fa-sync-alt fa-spin fa-3x text-primary mb-3"></i>
+                                                <h5 class="mb-2">Parsing rules in progress…</h5>
+                                                <p class="text-muted">This may take a few seconds depending on the repository size.</p>
+                                                <div class="spinner-border text-primary" role="status">
+                                                      <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                </div>
+                                          </div>
+                                    </div>
+                              </div>
+                        {% else %}
+                        <div class="card p-3">
+                              <pre><code>In progress...</code></pre>
                         </div>
                         {% endif %}
-
-                        <div class="form-group">
-                            {{ form.to_string.label(class_="col-form-label") }} <span style="color:red">*</span>
-                    
-                            <textarea id="editor" name="to_string">{{ (form.to_string.data or '') | e }}</textarea>
-
-                    
-                            {% if form.to_string.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.to_string.errors[0] | safe }}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    
-
-                    <!-- <div id="dynamic-fields-create" class="mb-3"></div>
-                
-                    <div class="mb-3">
-                        <button type="button" class="btn btn-secondary" onclick="addField(1)" title="Compile the YARA rules with external variables will cause errors stating an undefined identifier. Please click this button to add as many external variables as you need.">add external variables</button>
-                    </div> -->
-            
-                    <div class="text-center">
-                        <!-- <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button> -->
-                         {{ form.submit(class='btn btn-primary') }}
-                    </div>
-                </form>
-            
-                   
-                    
+                  </div>
             </div>
-        </div>
-
-        <div class="tab-pane fade" id="parse" role="tabpanel">
-            <div class="card card-body shadow-sm" id="main-container">
-               <form method="POST" action="{{ url_for('rule.parse_rule') }}" 
-                    class="d-flex flex-column" 
-                    id="github-form"  novalidate>
-
-                    <div id="flash-messages" class="mt-2">
-                        {% for category, message in get_flashed_messages(with_categories=True) %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-                    <input type="text" name="fakeusernameremembered" id="fakeusernameremembered" style="display:none">
-                    <input type="password" name="fakepasswordremembered" id="fakepasswordremembered" style="display:none">
-
-                    <div class="mb-3">
-                        <label for="content" class="form-label"><strong>Rule content</strong> <span style="color:red">*</span></label>
-                        <!-- <textarea name="content" id="content" class="form-control" 
-                                rows="6" required></textarea> -->
-
-                        <textarea id="content" name="content" rows="6"   placeholder="Paste your rule content here..."  required></textarea>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="format" class="form-label"><strong>Rule format</strong> <span style="color:red">*</span></label>
-                        <select v-model="ruleType" name="format" id="format" class="form-select form-select-sm rounded-pill" required>
-                            <option v-for="format in rules_formats" :value="format.name" :key="format.id">
-                                [[ format.name ]]
-                            </option>
-                        </select>
-                    </div>
-
-                    <div class="text-center">
-                        <button type="submit" class="btn btn-primary" id="submit-button">
-                           Parse
-                        </button>
-                    </div>
-                </form>
-
-            </div>
-        </div>
-        {% if current_user.is_admin() %}
-        <div class="tab-pane fade" id="github" role="tabpanel">
-            <div class="card p-4 shadow-sm mb-3">
-                <h5 class="mb-2 d-flex align-items-center">
-                    <label for="url" class="form-label m-0">
-                        Import rules from GitHub project with URL 
-                    </label> 
-                    <span style="color:red">*</span>
-                    <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse" data-bs-target="#ruleInfo" role="button" aria-expanded="false" aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
-                </h5>
-
-                <div class="collapse" id="ruleInfo">
-                    <div class="alert alert-info mt-2">
-                        The script will attempt to parse the rules from the GitHub repository according to their format (YARA, Sigma, Zeek, Suricata). 
-                        If any issues are detected during the rule validation, you will have the opportunity to review and correct them in the "Bad Rules" section.
-                    </div>
-                </div>
-
-               <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
-                    
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-                    <div class="mb-3 d-flex"><!-- Anti-autofill leurre -->
-                        <input type="text" name="fakeusernameremembered" id="fakeusernameremembered" style="display:none">
-                        <input type="password" name="fakepasswordremembered" id="fakepasswordremembered" style="display:none">
-
-                        <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/project.git" v-model="url" required >
-                    </div>
-
-                    <div id="flash-messages" class="mt-2">
-                        {% for category, message in get_flashed_messages(with_categories=True) %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    </div>
-
-
-
-                    <div class="mb-3">
-                        <label for="license-select" class="form-label">License</label>
-                        <select id="license-select" name="license" class="form-control" v-model="selectedLicense">
-                            <option disabled value="">-- Choose a license --</option>
-                            <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
-                        </select>
-                    </div>
-
-                    <div class="d-flex align-items-center">
-                        <button type="submit" class="btn btn-primary" id="submit-button">
-                            <i class="fas fa-paper-plane"></i> Send
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="modal fade" id="parsingModal" tabindex="-1" aria-labelledby="parsingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content text-center p-4">
-                        <div class="modal-body">
-                            <i class="fas fa-sync-alt fa-spin fa-3x text-primary mb-3"></i>
-                            <h5 class="mb-2">Parsing rules in progress…</h5>
-                            <p class="text-muted">This may take a few seconds depending on the repository size.</p>
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-
-            
-        
-
-    </div>
+      </div>
 </div>
 {% endblock %}
 

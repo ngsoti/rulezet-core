@@ -131,7 +131,8 @@ class Rule(db.Model):
             "version": self.version,
             "to_string": self.to_string,
             "is_favorited": is_favorited,
-            "cve_id": self.cve_id
+            "cve_id": self.cve_id,
+            "editor": self.get_rule_user_first_name_by_id()
         }
     
     def to_dict(self):
@@ -543,7 +544,9 @@ class Bundle(db.Model):
     def get_username_by_id(self):
         user = User.query.get(self.user_id)  
         return user.first_name if user else None
-
+    def get_rule_user_first_name_by_id(self):
+        user = User.query.get(self.user_id)  
+        return user.first_name + " " + user.last_name if user else None
 
     def to_json(self):
         return {
@@ -557,6 +560,9 @@ class Bundle(db.Model):
             "access": self.access,
             "vote_up": self.vote_up,
             "vote_down": self.vote_down,
+            "user_name": self.get_rule_user_first_name_by_id(),
+            "list_of_format_of_rules": list(set([assoc.rule.format for assoc in self.rules_assoc])),
+            "number_of_rules": len(self.rules_assoc.all())
         }
     
 class BundleVote(db.Model):

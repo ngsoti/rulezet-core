@@ -3,343 +3,366 @@
 
 {% block content %}
 <div class="container mt-4" id="main-container">
-    <h2 class="mb-4 text-center">Rule Change Proposals</h2>
+    <div class="mb-4 border-bottom pb-3">
+        <h2 class="fw-bold mb-1 text-center text-primary">Rule Change Proposals</h2>
+        <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+         <p class="text-muted mt-2">
+            Manage and review proposed edits to existing rules. Accept or reject changes, view proposal history, and participate in discussions to ensure the quality and accuracy of our rule repository.
+         </p>
+    </div>
+   
 
-    <ul class="nav nav-tabs" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active" data-bs-toggle="tab" href="#pending" role="tab">To manage</a>
+    <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist" >
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab" aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
+                    Manage Proposals
+            </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#history" role="tab">History</a>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab" aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
+                    Proposal History
+            </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#discuss" role="tab">Discuss</a>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab" aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
+                    Discussions
+            </a>
         </li>
     </ul>
 
-    <div class="tab-content mt-4">
-        <div class="tab-pane fade show active" id="pending" role="tabpanel">
-            <template v-if="rules_pendings_list && rules_pendings_list.length > 0">
-                <div  v-for="(rule, index) in rules_pendings_list" :key="rule.id">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="card-title mb-0">
-                                    <a :href="`/rule/detail_rule/${rule.id}`" title="view more about this rule" >
-                                        <i class="fas fa-shield-alt me-2 text-primary"></i> 
-                                        [[ rule.rule_name ]]
-                                    </a>
-                                </h5>
-                                
-                                <span class="badge"
-                                    :class="{
-                                        'bg-secondary': rule.status === 'pending',
-                                        'bg-success': rule.status === 'accepted',
-                                        'bg-danger': rule.status === 'rejected'
-                                    }">
-                                    [[ rule.status ]]
-                                </span>
-                            </div>
-                            
-                            <p class="text-muted small mb-2">A new edit has been proposed.</p>
-    
-                            <div class="d-flex flex-wrap gap-2 mb-2">
-                                <!-- Accept Button -->
-                                <button class="btn btn-success btn-sm d-inline-flex align-items-center"
-                                        @click="handleDecision(rule.id, 'accepted', rule.rule_id, index)">
-                                    <i class="fas fa-check me-1"></i> Accept
-                                </button>
-                            
-                                <!-- Reject Button -->
-                                <button class="btn btn-danger btn-sm d-inline-flex align-items-center"
-                                        @click="handleDecision(rule.id, 'rejected', rule.rule_id, index)">
-                                    <i class="fas fa-times me-1"></i> Reject
-                                </button>
-                            
-                                <!-- Toggle Details Button -->
-                                <button class="btn btn-secondary btn-sm d-inline-flex align-items-center"
-                                        type="button"
-                                        data-bs-toggle="collapse"
-                                        :data-bs-target="'#collapseDetails' + rule.id"
-                                        aria-expanded="false"
-                                        :aria-controls="'collapseDetails' + rule.id">
-                                    <i class="fas fa-eye me-1"></i> Details
-                                </button>
-                            
-                                <!-- Discuss Content Link -->
-                                <a :href="'/rule/proposal_content_discuss?id=' + rule.id"
-                                    class="btn btn-primary btn-sm d-inline-flex align-items-center">
-                                    <i class="fas fa-comments me-1 text-info"></i> Discuss
-                                </a>
-                            </div>
-                            
-    
-                            <!-- COLLAPSIBLE DETAILS -->
-                            <div class="collapse" :id="'collapseDetails' + rule.id">
-                                <strong>Description:</strong>
-                                <div v-if="rule.message && rule.message.trim() !== ''" class="card mb-3 shadow-sm bg-light">
-                                    <div class="card-body">
-                                        <p class="mb-2">
-                                            <i class="fas fa-comment-dots text-primary me-2"></i>
-                                            [[ rule.message ]]
-                                        </p>
-                                        <div class="d-flex justify-content-between text-muted small">
-                                            <span>
-                                                <i class="fas fa-user me-1"></i>
-                                                from [[ rule.user_name ]]
-                                            </span>
-                                            <span>
-                                                <i class="fas fa-clock me-1"></i>
-                                                [[ rule.timestamp ]]
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row mt-3">
-                                    <div class="col-md-6 mb-3">
-                                        <strong>Proposed Content:</strong>
-                                        <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
-                                            <div v-for="(line, i) in getProposedContentLines(rule.proposed_content)" :key="i">
-                                                <span v-if="line.trim() !== ''" :class="{
-                                                    'text-success': isLineNew(line, rule.old_content),
-                                                }" class="d-block p-1">
-                                                    [[ line ]]
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
+
+
+    <div class="tab-content" id="exampleTabsContent">
+        <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab" >
+            <div class="card card-body shadow-sm" id="main-container">
+                <template v-if="rules_pendings_list && rules_pendings_list.length > 0">
+                    <div  v-for="(rule, index) in rules_pendings_list" :key="rule.id">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">
+                                        <a :href="`/rule/detail_rule/${rule.id}`" title="view more about this rule" >
+                                            <i class="fas fa-shield-alt me-2 text-primary"></i> 
+                                            [[ rule.rule_name ]]
+                                        </a>
+                                    </h5>
                                     
-                                    <div class="col-md-6 mb-3">
-                                        <strong>Old Content:</strong>
-                                        <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
-                                            <div v-for="(line, i) in getOldContentLines(rule.old_content)" :key="i">
-                                                <span v-if="line.trim() !== ''" :class="{
-                                                    'text-danger': isLineDeleted(line, rule.proposed_content),
-                                                }" class="d-block p-1">
-                                                    [[ line ]]
+                                    <span class="badge"
+                                        :class="{
+                                            'bg-secondary': rule.status === 'pending',
+                                            'bg-success': rule.status === 'accepted',
+                                            'bg-danger': rule.status === 'rejected'
+                                        }">
+                                        [[ rule.status ]]
+                                    </span>
+                                </div>
+                                
+                                <p class="text-muted small mb-2">A new edit has been proposed.</p>
+        
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <!-- Accept Button -->
+                                    <button class="btn btn-success btn-sm d-inline-flex align-items-center"
+                                            @click="handleDecision(rule.id, 'accepted', rule.rule_id, index)">
+                                        <i class="fas fa-check me-1"></i> Accept
+                                    </button>
+                                
+                                    <!-- Reject Button -->
+                                    <button class="btn btn-danger btn-sm d-inline-flex align-items-center"
+                                            @click="handleDecision(rule.id, 'rejected', rule.rule_id, index)">
+                                        <i class="fas fa-times me-1"></i> Reject
+                                    </button>
+                                
+                                    <!-- Toggle Details Button -->
+                                    <button class="btn btn-secondary btn-sm d-inline-flex align-items-center"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            :data-bs-target="'#collapseDetails' + rule.id"
+                                            aria-expanded="false"
+                                            :aria-controls="'collapseDetails' + rule.id">
+                                        <i class="fas fa-eye me-1"></i> Details
+                                    </button>
+                                
+                                    <!-- Discuss Content Link -->
+                                    <a :href="'/rule/proposal_content_discuss?id=' + rule.id"
+                                        class="btn btn-primary btn-sm d-inline-flex align-items-center">
+                                        <i class="fas fa-comments me-1 text-info"></i> Discuss
+                                    </a>
+                                </div>
+                                
+        
+                                <!-- COLLAPSIBLE DETAILS -->
+                                <div class="collapse" :id="'collapseDetails' + rule.id">
+                                    <strong>Description:</strong>
+                                    <div v-if="rule.message && rule.message.trim() !== ''" class="card mb-3 shadow-sm bg-light">
+                                        <div class="card-body">
+                                            <p class="mb-2">
+                                                <i class="fas fa-comment-dots text-primary me-2"></i>
+                                                [[ rule.message ]]
+                                            </p>
+                                            <div class="d-flex justify-content-between text-muted small">
+                                                <span>
+                                                    <i class="fas fa-user me-1"></i>
+                                                    from [[ rule.user_name ]]
+                                                </span>
+                                                <span>
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    [[ rule.timestamp ]]
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                            
-                        </div>
-                    </div>
-                </div>
-                <nav aria-label="Page navigation">
-                    <ul class="pagination">
-                    <li class="page-item" :class="{ disabled: current_page === 1 }">
-                        <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
-                        <i class="fas fa-arrow-left"></i> Previous
-                        </a>
-                    </li>
-                    <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: current_page === page, disabled: page === '...' }">
-                        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
-                        <span v-else class="page-link">...</span>
-                    </li>
-                    <li class="page-item" :class="{ disabled: current_page === total_pages_pending }">
-                        <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
-                        Next <i class="fas fa-arrow-right"></i>
-                        </a>
-                    </li>
-                    </ul>
-                </nav>
-            </template>
-    
-            <template v-else>
-                <div class="text-center mt-5">
-                    <p class="text-muted">No proposed edits found.</p>
-                </div>
-            </template>
-        </div>
-        <div class="tab-pane fade" id="history" role="tabpanel">
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">Rule</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">From</th>
-                            <th scope="col">View</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template v-if="rules_list && rules_list.length > 0">
-                            <template v-for="(rule, index) in rules_list" :key="rule.id">
-                                <!-- Clickable Row -->
-                                <tr data-bs-toggle="collapse" :data-bs-target="'#collapseHistory' + rule.id"
-                                    aria-expanded="false" :aria-controls="'collapseHistory' + rule.id"
-                                    style="cursor: pointer;">
-                                    <td>[[ index + 1 ]]</td>
-                                    <td>[[ rule.rule_name ]]</td>
-                                    <td>
-                                        <span :class="{
-                                            'badge bg-secondary': rule.status === 'pending',
-                                            'badge bg-success': rule.status === 'accepted',
-                                            'badge bg-danger': rule.status === 'rejected'
-                                        }">
-                                            [[ rule.status ]]
-                                        </span>
-                                    </td>
-                                    <td>
-                                        [[ rule.user_name ]]
-                                    </td>
-                                    <td>
-                                        <i class="fas fa-chevron-down text-muted"></i>
-                                    </td>
-                                </tr>
-        
-                                <!-- Expandable Detail Row -->
-                                <tr class="collapse bg-light" :id="'collapseHistory' + rule.id">
-                                    <td colspan="5">
-                                        <div class="row">
-                                            <div class="row mt-4">
-                                                <div class="row mt-3">
-                                                   <div class="col-md-6 mb-3">
-                                                        <strong>Proposed Content:</strong>
-                                                        <div class="bg-light p-3 rounded border"
-                                                            style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
-                                                            <div v-for="(line2, i) in getProposedContentLines(rule.proposed_content)" :key="i">
-                                                                <span v-if="line2.trim() !== ''"
-                                                                    :class="{'text-success': isLineNew(line2, rule.old_content)}"
-                                                                    class="d-block">
-                                                                    [[ line2 ]]
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    
-                                                    <div class="col-md-6 mb-3">
-                                                        <strong>Old Content:</strong>
-                                                        <div class="bg-light p-3 rounded border"
-                                                            style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
-                                                            <div v-for="(line2, i) in getOldContentLines(rule.old_content)" :key="i">
-                                                                <span v-if="line2.trim() !== ''"
-                                                                    :class="{'text-danger': isLineDeleted(line2, rule.proposed_content)}"
-                                                                    class="d-block">
-                                                                    [[ line2 ]]
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
+                                    <div class="row mt-3">
+                                        <div class="col-md-6 mb-3">
+                                            <strong>Proposed Content:</strong>
+                                            <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
+                                                <div v-for="(line, i) in getProposedContentLines(rule.proposed_content)" :key="i">
+                                                    <span v-if="line.trim() !== ''" :class="{
+                                                        'text-success': isLineNew(line, rule.old_content),
+                                                    }" class="d-block p-1">
+                                                        [[ line ]]
+                                                    </span>
                                                 </div>
                                             </div>
-
-                                            <div class="d-flex flex-wrap gap-2 mb-2 justify-content-center">
-                                                <!-- Discuss Content Link -->
-                                                <a :href="'/rule/proposal_content_discuss?id=' + rule.id"
-                                                    class="btn btn-secondary btn-sm d-inline-flex align-items-center">
-                                                    <i class="fas fa-comments me-1"></i> Discuss about changes
-                                                </a>
-                                                <a :href="`/rule/detail_rule/` + rule.rule_id" 
-                                                    class="btn btn-primary btn-sm" title="View more details">
-                                                    <i class="fas fa-eye me-1"></i> View more about this rule
-                                                </a>
-                                            </div>
-
                                         </div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </template>
-                        <template v-else>
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-4">No decisions found.</td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-                <div v-if="rules_list && rules_list.length > 0" class="d-flex justify-content-center mt-3">
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination">
-                        <li class="page-item" :class="{ disabled: current_page_old === 1 }">
-                            <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old - 1)">
-                            <i class="fas fa-arrow-left"></i> Previous
-                            </a>
-                        </li>
-                        <li class="page-item" v-for="pageOld in visiblePagesOld" :key="pageOld" :class="{ active: current_page_old === pageOld, disabled: pageOld === '...' }">
-                            <a v-if="pageOld !== '...'" class="page-link" href="#" @click.prevent="fetchOldRules(pageOld)">[[ pageOld ]]</a>
-                            <span v-else class="page-link">...</span>
-                        </li>
-                        <li class="page-item" :class="{ disabled: current_page_old === total_pages_old }">
-                            <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old + 1)">
-                            Next <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </li>
-                        </ul>
-                    </nav>
-                </div>
-                
-            </div>
-        </div>
-        <div class="tab-pane fade" id="discuss" role="tabpanel">
-            <div class="mt-3">
-                <h5 class="mb-3">Your Discussions</h5>
-        
-                <div v-if="discuss_list.length === 0" class="alert alert-secondary">
-                    You haven't participated in any discussions yet.
-                </div>
-        
-                <div v-else>
-                    <div v-for="proposal in discuss_list" :key="proposal.id" class="card mb-3 shadow-sm">
-
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-comments me-2 "></i>
-                                [[ proposal.rule_name || 'Untitled Rule' ]]
-                                <span v-if="proposal.user_id === currentUserId" class="badge bg-primary ms-2">
-                                    You submitted this request
-                                </span>
-                    
-                                <span v-else class="badge bg-success ms-2">
-                                    You participated in this discussion
-                                </span>
-                            </h5>
-        
-                            <p class="card-text text-muted mb-2">
-                                <strong>Status:</strong> [[ proposal.status ]] <br>
-                                <strong>Submitted by:</strong> [[ proposal.user_name ]] <br>
-                                <strong>Date:</strong> [[ proposal.timestamp ]]
-                            </p>
-        
-                            <p class="card-text">
-                                <strong>Message:</strong><br>
-                                [[ proposal.message || 'No message provided.' ]]
-                            </p>
-        
-                            <a class="btn btn-outline-primary btn-sm mt-2" :href="'/rule/proposal_content_discuss?id=' + proposal.id">
-                                View Proposal
-                            </a>
+                                        
+                                        <div class="col-md-6 mb-3">
+                                            <strong>Old Content:</strong>
+                                            <div class="bg-light p-3 rounded border" style="white-space: pre-wrap; font-family: monospace;">
+                                                <div v-for="(line, i) in getOldContentLines(rule.old_content)" :key="i">
+                                                    <span v-if="line.trim() !== ''" :class="{
+                                                        'text-danger': isLineDeleted(line, rule.proposed_content),
+                                                    }" class="d-block p-1">
+                                                        [[ line ]]
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </div>
                         </div>
                     </div>
-        
-                    <!-- Pagination Controls -->
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination">
-                            <li class="page-item" :class="{ disabled: total_page_discuss === 1 }">
-                                <a class="page-link" href="#" @click.prevent="fetchDiscussPart(current_page_discuss - 1)">
+                    <template v-if="rules_pendings_list && rules_pendings_list.length > 10" class="mt-3 d-flex justify-content-center">
+                        <nav aria-label="Page navigation" class="mt-3 d-flex justify-content-center">
+                            <ul class="pagination">
+                            <li class="page-item" :class="{ disabled: current_page === 1 }">
+                                <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
                                 <i class="fas fa-arrow-left"></i> Previous
                                 </a>
                             </li>
-                            <li class="page-item" v-for="pageDiscuss in visiblePagesDiscuss" :key="pageDiscuss" :class="{ active: current_page_discuss === pageDiscuss, disabled: pageDiscuss === '...' }">
-                                <a v-if="pageDiscuss !== '...'" class="page-link" href="#" @click.prevent="fetchDiscussPart(pageDiscuss)">[[ pageDiscuss ]]</a>
+                            <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: current_page === page, disabled: page === '...' }">
+                                <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
                                 <span v-else class="page-link">...</span>
                             </li>
-                            <li class="page-item" :class="{ disabled: total_page_discuss === total_pages_old }">
-                                <a class="page-link" href="#" @click.prevent="fetchDiscussPart(current_page_discuss + 1)">
+                            <li class="page-item" :class="{ disabled: current_page === total_pages_pending }">
+                                <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
                                 Next <i class="fas fa-arrow-right"></i>
                                 </a>
                             </li>
-                        </ul>
-                    </nav>
+                            </ul>
+                        </nav>
+                    </template>
+                </template>
+        
+                <template v-else>
+                    <div class="text-center mt-5">
+                        <p class="text-muted">No proposed edits found.</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
+            <div class="card card-body shadow-sm" id="main-container">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">Rule</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">From</th>
+                                <th scope="col">View</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-if="rules_list && rules_list.length > 0">
+                                <template v-for="(rule, index) in rules_list" :key="rule.id">
+                                    <!-- Clickable Row -->
+                                    <tr data-bs-toggle="collapse" :data-bs-target="'#collapseHistory' + rule.id"
+                                        aria-expanded="false" :aria-controls="'collapseHistory' + rule.id"
+                                        style="cursor: pointer;">
+                                        <td>[[ index + 1 ]]</td>
+                                        <td>[[ rule.rule_name ]]</td>
+                                        <td>
+                                            <span :class="{
+                                                'badge bg-secondary': rule.status === 'pending',
+                                                'badge bg-success': rule.status === 'accepted',
+                                                'badge bg-danger': rule.status === 'rejected'
+                                            }">
+                                                [[ rule.status ]]
+                                            </span>
+                                        </td>
+                                        <td>
+                                            [[ rule.user_name ]]
+                                        </td>
+                                        <td>
+                                            <i class="fas fa-chevron-down text-muted"></i>
+                                        </td>
+                                    </tr>
+            
+                                    <!-- Expandable Detail Row -->
+                                    <tr class="collapse bg-light" :id="'collapseHistory' + rule.id">
+                                        <td colspan="5">
+                                            <div class="row">
+                                                <div class="row mt-4">
+                                                    <div class="row mt-3">
+                                                    <div class="col-md-6 mb-3">
+                                                            <strong>Proposed Content:</strong>
+                                                            <div class="bg-light p-3 rounded border"
+                                                                style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
+                                                                <div v-for="(line2, i) in getProposedContentLines(rule.proposed_content)" :key="i">
+                                                                    <span v-if="line2.trim() !== ''"
+                                                                        :class="{'text-success': isLineNew(line2, rule.old_content)}"
+                                                                        class="d-block">
+                                                                        [[ line2 ]]
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        
+                                                        <div class="col-md-6 mb-3">
+                                                            <strong>Old Content:</strong>
+                                                            <div class="bg-light p-3 rounded border"
+                                                                style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
+                                                                <div v-for="(line2, i) in getOldContentLines(rule.old_content)" :key="i">
+                                                                    <span v-if="line2.trim() !== ''"
+                                                                        :class="{'text-danger': isLineDeleted(line2, rule.proposed_content)}"
+                                                                        class="d-block">
+                                                                        [[ line2 ]]
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                    </div>
+                                                </div>
+
+                                                <div class="d-flex flex-wrap gap-2 mb-2 justify-content-center">
+                                                    <!-- Discuss Content Link -->
+                                                    <a :href="'/rule/proposal_content_discuss?id=' + rule.id"
+                                                        class="btn btn-secondary btn-sm d-inline-flex align-items-center">
+                                                        <i class="fas fa-comments me-1"></i> Discuss about changes
+                                                    </a>
+                                                    <a :href="`/rule/detail_rule/` + rule.rule_id" 
+                                                        class="btn btn-primary btn-sm" title="View more details">
+                                                        <i class="fas fa-eye me-1"></i> View more about this rule
+                                                    </a>
+                                                </div>
+
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
+                            <template v-else>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No decisions found.</td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <div v-if="rules_list && rules_list.length > 10" class="mt-3 d-flex justify-content-center">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                            <li class="page-item" :class="{ disabled: current_page_old === 1 }">
+                                <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old - 1)">
+                                <i class="fas fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="page-item" v-for="pageOld in visiblePagesOld" :key="pageOld" :class="{ active: current_page_old === pageOld, disabled: pageOld === '...' }">
+                                <a v-if="pageOld !== '...'" class="page-link" href="#" @click.prevent="fetchOldRules(pageOld)">[[ pageOld ]]</a>
+                                <span v-else class="page-link">...</span>
+                            </li>
+                            <li class="page-item" :class="{ disabled: current_page_old === total_pages_old }">
+                                <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old + 1)">
+                                Next <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
         </div>
-        
+        <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
+            <div class="card card-body shadow-sm" id="main-container">
+                <div class="mt-3">
+                    <h5 class="mb-3">Your Discussions</h5>
+            
+                    <div v-if="discuss_list.length === 0" class="alert alert-secondary">
+                        You haven't participated in any discussions yet.
+                    </div>
+            
+                    <div v-else>
+                        <div v-for="proposal in discuss_list" :key="proposal.id" class="card mb-3 shadow-sm">
+
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-comments me-2 "></i>
+                                    [[ proposal.rule_name || 'Untitled Rule' ]]
+                                    <span v-if="proposal.user_id === currentUserId" class="badge bg-primary ms-2">
+                                        You submitted this request
+                                    </span>
+                        
+                                    <span v-else class="badge bg-success ms-2">
+                                        You participated in this discussion
+                                    </span>
+                                </h5>
+            
+                                <p class="card-text text-muted mb-2">
+                                    <strong>Status:</strong> [[ proposal.status ]] <br>
+                                    <strong>Submitted by:</strong> [[ proposal.user_name ]] <br>
+                                    <strong>Date:</strong> [[ proposal.timestamp ]]
+                                </p>
+            
+                                <p class="card-text">
+                                    <strong>Message:</strong><br>
+                                    [[ proposal.message || 'No message provided.' ]]
+                                </p>
+            
+                                <a class="btn btn-outline-primary btn-sm mt-2" :href="'/rule/proposal_content_discuss?id=' + proposal.id">
+                                    View Proposal
+                                </a>
+                            </div>
+                        </div>
+            
+                        <!-- Pagination Controls -->
+                        <template v-if="discuss_list && discuss_list.length > 10" >
+                            <nav aria-label="Page navigation" class="mt-3 d-flex justify-content-center">
+                                <ul class="pagination">
+                                    <li class="page-item" :class="{ disabled: total_page_discuss === 1 }">
+                                        <a class="page-link" href="#" @click.prevent="fetchDiscussPart(current_page_discuss - 1)">
+                                        <i class="fas fa-arrow-left"></i> Previous
+                                        </a>
+                                    </li>
+                                    <li class="page-item" v-for="pageDiscuss in visiblePagesDiscuss" :key="pageDiscuss" :class="{ active: current_page_discuss === pageDiscuss, disabled: pageDiscuss === '...' }">
+                                        <a v-if="pageDiscuss !== '...'" class="page-link" href="#" @click.prevent="fetchDiscussPart(pageDiscuss)">[[ pageDiscuss ]]</a>
+                                        <span v-else class="page-link">...</span>
+                                    </li>
+                                    <li class="page-item" :class="{ disabled: total_page_discuss === total_pages_old }">
+                                        <a class="page-link" href="#" @click.prevent="fetchDiscussPart(current_page_discuss + 1)">
+                                        Next <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
