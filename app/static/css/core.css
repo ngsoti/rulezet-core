@@ -14,7 +14,7 @@
   --light-bg-color: #f1f1f1;
   --code-bg-color: #f8f9fa;
   --border-color: #dee2e6;
-  --card-header-bg-color: rgb(207, 226, 255); 
+  --card-header-bg-color: rgb(207, 226, 255);
 
   --rule-name-color: rgb(10, 88, 202);
 
@@ -52,7 +52,7 @@ body.dark-mode {
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
-  transition: background-color 0.3s ease, color 0.3s ease; 
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .card {
@@ -121,7 +121,7 @@ body.dark-mode .list-group-item {
 }
 
 .custom-navbar a:hover {
-  color: var(--text-color); 
+  color: var(--text-color);
 }
 
 .custom-navbar .nav-link {
@@ -305,7 +305,7 @@ body.dark-mode .modal-footer {
 }
 
 body.dark-mode .btn-close {
-    filter: invert(1); 
+    filter: invert(1);
 }
 
 body.dark-mode .btn-secondary {
@@ -512,7 +512,7 @@ body.dark-mode .border {
 }
 
 body.dark-mode .card-body {
-  background-color: transparent; 
+  background-color: transparent;
 }
 
 body.dark-mode td {
@@ -647,7 +647,7 @@ span#goTop, span#project-version{
   position: fixed;
   right: 1em;
   bottom: 1em;
-  background-color: #fafbfc; 
+  background-color: #fafbfc;
 }
 
 .tag {
@@ -680,7 +680,7 @@ span#goTop, span#project-version{
 
 .nav-link:hover {
     text-decoration: none !important;
-    color: #0d6efd !important; 
+    color: #0d6efd !important;
 }
 
 .topnav {
@@ -705,8 +705,8 @@ span#goTop, span#project-version{
 
 footer{
   position:relative;
-  width: 100%; 
-  bottom: 0; 
+  width: 100%;
+  bottom: 0;
   background: #f1f1f1;
 
 }
@@ -714,11 +714,24 @@ footer{
 .footer-icon {
   width: 25px;
   height: 25px;
-  filter: brightness(0) invert(1); 
+  filter: brightness(0) invert(1);
 }
 
 /*************************************************************************************/
 
+
+/* blur and blur button */
+.blurred {
+    filter: blur(6px);
+    -webkit-filter: blur(6px);
+    user-select: none;
+}
+.blur-btn {
+    line-height: 1;
+    padding: .25rem .5rem;
+}
+/* prevent blurred text from showing on selection in some browsers */
+.blurred::selection { background: transparent; }
    .nav-underline .nav-link {
   color: #333;
   font-weight: 500;

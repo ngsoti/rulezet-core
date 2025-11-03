@@ -10,7 +10,7 @@
         <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2.min.css') }}">
         <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2-bootstrap-5-theme.min.css') }}">
         <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='bootstrap-5.3.0/css/bootstrap.min.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/fontawesome.css') }}"> 
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/fontawesome.css') }}">
         <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/solid.css') }}">
         <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/brands.css') }}">
         <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/jquery-ui.css') }}">
@@ -30,7 +30,7 @@
         <!-- Highlight.js JS -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
-        
+
         <!-- Scripts -->
         <!-- CodeMirror JavaScript -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.js"></script>
@@ -71,6 +71,7 @@
         <script>dayjs.extend(window.dayjs_plugin_utc)</script>
         <script>dayjs.extend(window.dayjs_plugin_relativeTime)</script>
         <script src="{{ url_for('static',filename='js/zxcvbn.js') }}"></script>
+        <script src="{{ url_for('static',filename='js/blur.js')}}"></script>
     </head>
     <body>
         {% include 'sidebar.html' %}
@@ -108,7 +109,7 @@
             <footer class="bg-dark text-white py-4 mt-auto border-top border-secondary shadow-lg">
                 <div class="container">
                     <div class="row align-items-center justify-content-between">
-                    
+
                     <!-- Logo / Version -->
                     <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
                         <small class="fw-bold text-uppercase">
