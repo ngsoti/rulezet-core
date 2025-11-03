@@ -5,12 +5,11 @@ from queue import Queue
 from threading import Thread
 from uuid import uuid4
 
+from app.import_github_project.untils_import import delete_existing_repo_folder
 from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType
-from app.rule_type.main_format import Process_rules_by_format
 from .. import db
 from ..db_class.db import ImporterResult, User
 from . import rule_core as RuleModel
-from app.import_github_project.cron_check_updates import APP
 from flask import current_app
 from flask_login import current_user
 
@@ -36,27 +35,30 @@ class Session_class:
     def start(self):
         """Start all worker"""
         cp = 0
-        for root, dirs, files in os.walk(self.repo_dir):
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
-            for file in files:
-                subclasses = RuleType.__subclasses__()
+        if os.path.exists(self.repo_dir):
+            for root, dirs, files in os.walk(self.repo_dir):
+                dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+                for file in files:
+                    if not file.startswith('.') or not file.startswith('_'):
+                        subclasses = RuleType.__subclasses__()
 
-                for RuleClass in subclasses:
-                    rule_instance = RuleClass()
+                        for RuleClass in subclasses:
+                            rule_instance = RuleClass()
 
-                    format_name = rule_instance.format
-                    if not format_name in self.count_per_format:
-                        self.count_per_format[format_name] = {"bad_rule":0, "skipped":0, "imported":0}
+                            format_name = rule_instance.format
+                            if not format_name in self.count_per_format:
+                                self.count_per_format[format_name] = {"bad_rule": 0, "skipped": 0, "imported": 0}
 
 
-                    is_file = rule_instance.get_rule_files(file)
+                            is_file = rule_instance.get_rule_files(file)
 
-                    if not is_file:
-                        continue
+                            if not is_file:
+                                continue
 
-                    if is_file:
-                        cp += 1
-                        self.jobs.put((cp, file, os.path.join(root, file), rule_instance))
+                            if is_file:
+                                cp += 1
+                                self.jobs.put((cp, file, os.path.join(root, file), rule_instance))
+                                break
         self.total = cp
 
         #need the index and the url in each queue item.
@@ -105,6 +107,7 @@ class Session_class:
         self.threads.clear()
         self.save_info()
         sessions.remove(self)
+        delete_existing_repo_folder("Rules_Github")
         del self
 
     def process(self, loc_app, user: User):

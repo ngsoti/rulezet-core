@@ -84,20 +84,13 @@ class ZeekRule(RuleType):
                 "to_string": content,
             }
 
-    def get_rule_files(self, repo_dir: str) -> List[str]:
+    def get_rule_files(self, file: str) -> bool:
         """
         Retrieve all .zeek files in a local repository.
         """
-        rule_files = []
-        if not os.path.exists(repo_dir):
-            return rule_files
-
-        for root, dirs, files in os.walk(repo_dir):
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
-            for file in files:
-                if file.endswith(".zeek") and not (file.startswith('.') or file.startswith('_')) or file.endswith(".bro") and not (file.startswith('.')):
-                    rule_files.append(os.path.join(root, file))
-        return rule_files
+        if file.endswith(".zeek") or file.endswith(".bro"):
+            return True
+        return False
 
     def extract_rules_from_file(self, filepath: str) -> List[str]:
         """

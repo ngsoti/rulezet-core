@@ -92,17 +92,11 @@ class Defaulrule(RuleType):
                 "to_string": content,
             }
 
-    def get_rule_files(self, repo_dir: str) -> List[str]:
+    def get_rule_files(self, file: str) -> bool:
         """Retrieve all defuly rule files from a repository."""
-        yara_files = []
-        for root, dirs, files in os.walk(repo_dir):
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
-            for file in files:
-                if file.startswith('.') or file.startswith('_'):
-                    continue
-                if file.endswith(('.default')):      # to do 
-                    yara_files.append(os.path.join(root, file))
-        return yara_files
+        if file.endswith(('.default')):      # to do 
+            return True
+        return False
 
     
     def extract_rules_from_file(self, filepath: str) -> List[str]:

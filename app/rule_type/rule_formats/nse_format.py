@@ -133,16 +133,13 @@ class NseRule(RuleType):
 
 
 
-    def get_rule_files(self, repo_dir: str) -> List[str]:
+    def get_rule_files(self, file: str) -> bool:
         """
         Return all .nse files inside a repo directory.
         """
-        nse_files: List[str] = []
-        for root, _, files in os.walk(repo_dir):
-            for f in files:
-                if f.endswith(".nse"):
-                    nse_files.append(os.path.join(root, f))
-        return nse_files
+        if file.endswith(".nse"):
+            return True
+        return False
 
     def extract_rules_from_file(self, filepath: str) -> List[str]:
         """

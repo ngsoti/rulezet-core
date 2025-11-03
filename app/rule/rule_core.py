@@ -2091,9 +2091,6 @@ def get_all_format() -> list[dict]:
     return [fmt.to_json() for fmt in formats]
 
 
-def sqlite_regexp(conn, record):
-    conn.create_function("REGEXP", 2, lambda expr, item: 1 if item and re.search(expr, item) else 0)
-
 def get_all_url_github_page(page: int = 1, search: str = None):
     """Get paginated unique GitHub project URLs from Rule.source and return pagination + total count."""
     github_pattern = r'^https?://(www\.)?github\.com/[\w\-_]+/[\w\-_]+'
@@ -2103,10 +2100,9 @@ def get_all_url_github_page(page: int = 1, search: str = None):
     if search:
         query = query.filter(Rule.source.ilike(f"%{search}%"))
 
-    # query = query.filter(Rule.source.op('~')(github_pattern))
+    query = query.filter(Rule.source.op('~')(github_pattern))
 
-    # query = query.distinct(Rule.source)
-    query = query.group_by(Rule.source)
+    query = query.distinct(Rule.source)
 
     total_count = query.count()
 

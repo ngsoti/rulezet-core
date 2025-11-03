@@ -108,7 +108,7 @@ const { createApp, ref, onMounted } = Vue;
                 $.getJSON('/rule/import_loading_status/{{sid}}', async function(data) {
                     result_data.value = data
                     progress.value = Math.round((data['complete']/data['total'])*100)
-                    status_site.value = 'Processed ' + data['complete'] + ' of ' + data['total']
+                    status_site.value = 'Processed ' + data['complete'] + ' of ' + data['total'] + ' files'
                     if (data['remaining'] > 0) {
                         setTimeout(pollScan, 5000);
                     } else {

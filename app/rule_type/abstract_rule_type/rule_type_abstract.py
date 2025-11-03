@@ -55,7 +55,7 @@ class RuleType(ABC):
         ...
 
     @abstractmethod
-    def get_rule_files(self, repo_dir: str) -> List[str]:
+    def get_rule_files(self, file: str) -> bool:
         """Return all rule files from a given repository directory."""
         ...
 
