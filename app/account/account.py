@@ -177,10 +177,10 @@ def add_user() -> redirect:
             return redirect("/account/register")
         #send_confirmation_email(user)
 
-        flash('A confirmation email has been sent to your inbox.', 'info')
-        return redirect(url_for('account.login'))
-        # flash('You are now register. You can connect !', 'success')
-        # return redirect("/account/login")
+        # flash('A confirmation email has been sent to your inbox.', 'info')
+        # return redirect(url_for('account.login'))
+        flash('You are now register. You can connect !', 'success')
+        return redirect("/account/login")
     return render_template("account/register_user.html", form=form)
 
 @account_blueprint.route('/favorite')

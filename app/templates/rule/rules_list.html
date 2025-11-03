@@ -43,7 +43,7 @@
                   placeholder="Search by keywords...">
           </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <select v-model="sortBy" class="form-select form-select-sm rounded-pill" @change="fetchRules(1)">
             <option value="newest">Newest</option>
             <option value="oldest">Oldest</option>
@@ -51,18 +51,13 @@
             <option value="least_likes">Least Liked</option>
           </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <select v-model="ruleType" class="form-select form-select-sm rounded-pill" @change="fetchRules(1)">
               <option value="">All Types</option>
               <option v-for="format in rules_formats" :value="format.name" :key="format.id">
                   [[ format.name ]]
               </option>
           </select>
-        </div>
-        <div class="col-md-2">
-          <button class="btn btn-dark w-100 rounded-pill" @click="fetchRules(1)">
-            <i class="fas fa-sliders-h"></i> Apply
-          </button>
         </div>
       </div>
     </div>
