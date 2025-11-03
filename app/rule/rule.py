@@ -634,6 +634,7 @@ def get_rules_propose_edit_page() -> jsonify:
     if current_user.is_admin():
         rules_pendings = RuleModel.get_rules_edit_propose_page_pending_admin(page)
     else:
+        print("he")
         rules_pendings = RuleModel.get_rules_edit_propose_page_pending(page)
     if rules_pendings:
         rules_pendings_list = [rule_pending.to_json() for rule_pending in rules_pendings]
@@ -755,8 +756,13 @@ def validate_proposal() -> jsonify:
                     "old_content": rule_proposal.old_content
                 }
 
-
+            
                 history_id = RuleModel.create_rule_history(result)
+                if not history_id:
+                    return jsonify({"message": "Error during the creation of the history." ,
+                        "success": False,
+                        "toast_class" : "danger"
+                        }),500
 
             elif decision == "rejected":
                 RuleModel.set_status(rule_proposal_id,"rejected")

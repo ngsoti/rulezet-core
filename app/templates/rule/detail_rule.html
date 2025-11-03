@@ -201,16 +201,14 @@
                     <!-- Tab Content -->
                     <div class="tab-content" id="ruleTabsContent">
                         <div class="tab-pane fade show active" id="normal" role="tabpanel">
-                            <!-- <pre class="p-3 bg-light rounded"><code>[[ rule_format.normal ]]</code></pre> -->
-                            <pre class="custom-pre mb-2"><code class="json">[[ rule_format.normal ]]</code></pre>
+                            <pre class="custom-pre mb-2"><code class="json" v-text="rule_format.normal"></code></pre>
+
                         </div>
                         <div class="tab-pane fade" id="json" role="tabpanel">
-                            <!-- <pre class="p-3 bg-light rounded"><code>[[ rule_format.json ]]</code></pre> -->
-                            <pre class="custom-pre mb-2"><code class="json">[[ rule_format.json ]]</code></pre>
+                            <pre class="custom-pre mb-2"><code class="json" v-text="rule_format.json"></code></pre>
                         </div>
                         <div class="tab-pane fade" id="misp" role="tabpanel">
-                            <!-- <pre class="p-3 bg-light rounded"><code>[[ rule_format.misp ]]</code></pre> -->
-                            <pre class="custom-pre mb-2"><code class="json">[[ rule_format.misp ]]</code></pre>
+                            <pre class="custom-pre mb-2"><code class="json" v-text="rule_format.misp"></code></pre>
                         </div>
                     </div>
                 </div>
@@ -547,7 +545,8 @@
                             class="form-control" 
                             rows="15" 
                             placeholder="Enter the modified rule content here"
-                            required>{{ rule.to_string }}</textarea>
+                            v-text="rule_format.normal"
+                            required></textarea>
                     </div>
 
                     <!-- Optional message -->
@@ -692,7 +691,8 @@
              *          #   fetch user     #
              *          ####################
              * */
-            const rule_format = ref([])
+            const rule_format = ref({ normal: "", json: "", misp: "" })
+
 
             async function get_rule_in_each_format(rule_id) {
                 const params = new URLSearchParams({ rule_id })

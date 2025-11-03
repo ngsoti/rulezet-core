@@ -17,34 +17,44 @@
                             <span class="badge bg-danger ms-2" v-else>Failure</span>
                         </button>
                     </h2>
-                    <div :id="'collapse-' + index" class="accordion-collapse collapse" :aria-labelledby="'heading-' + index"
-                        data-bs-parent="#historyAccordion">
+
+                    <div :id="'collapse-' + index" class="accordion-collapse collapse"
+                         :aria-labelledby="'heading-' + index" data-bs-parent="#historyAccordion">
                         <div class="accordion-body">
+
                             <p><strong>Message:</strong> [[ entry.message ]]</p>
 
-                            <button class="btn btn-sm btn-outline-secondary mb-3"
-                                    @click="entry.show_colored = !entry.show_colored">
-                                <i class="fas fa-paint-brush"></i>
-                                [[ entry.show_colored ?  'Hide diff' : 'Show diff' ]]
-                            </button>
-
-                            <div class="row">
-                                <div class="col-md-6">
+                            <div v-if="entry.show_diff" class="row mt-4">
+                                <!-- OLD CONTENT -->
+                                <div class="col-md-6 mb-3">
                                     <h6><i class="fas fa-arrow-left text-danger"></i> Old Version</h6>
-                                    <div class="diff-box border p-2">
-                                        <pre v-if="!entry.show_colored">[[ entry.old_content]]</pre>
-                                        <pre v-else v-html="entry.old_html"></pre>
+                                    <div class="bg-light p-3 rounded border"
+                                        style="white-space: pre; font-family: monospace; overflow-x: auto; font-size: 0.9rem;">
+                                        <div v-for="(line, i) in getOldContentLines(entry.old_content)" :key="i">
+                                            <span v-if="line.trim() !== ''"
+                                                :class="{'text-danger': isLineDeleted(line, entry.new_content)}"
+                                                class="d-block">
+                                                [[ line ]]
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+
+                                <!-- NEW CONTENT -->
+                                <div class="col-md-6 mb-3">
                                     <h6><i class="fas fa-arrow-right text-success"></i> New Version</h6>
-                                    <div class="diff-box border p-2">
-                                        <pre v-if="!entry.show_colored">[[ entry.new_content ]]</pre>
-                                        <pre v-else v-html="entry.new_html"></pre>
+                                    <div class="bg-light p-3 rounded border"
+                                        style="white-space: pre; font-family: monospace; overflow-x: auto; font-size: 0.9rem;">
+                                        <div v-for="(line, i) in getProposedContentLines(entry.new_content)" :key="i">
+                                            <span v-if="line.trim() !== ''"
+                                                :class="{'text-success': isLineNew(line, entry.old_content)}"
+                                                class="d-block">
+                                                [[ line ]]
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-
 
                         </div>
                     </div>
@@ -65,15 +75,6 @@
                 </ul>
             </nav>
 
-            <style>
-                .diff-box {
-                    font-family: monospace;
-                    background-color: #fdfdfd;
-                    min-height: 100px;
-                    white-space: pre-wrap;
-                    word-break: break-word;
-                }
-            </style>
         </template>
         <template v-else>
             <div class="text-center my-5">
@@ -86,67 +87,75 @@
 </div>
 {% endblock %}
 
+
 {% block script %}
 <script type="module">
-    const { createApp, ref } = Vue
-    import { display_toast } from '/static/js/toaster.js'
-    createApp({
-        delimiters: ['[[', ']]'],
-        setup() {
-            const rule_id = "{{ rule_id }}"
-            const rules_list_history = ref([])
-            const current_page = ref(1)
-            const total_pages = ref(1)
+const { createApp, ref } = Vue
+import { display_toast } from '/static/js/toaster.js'
 
-            function escapeHtml(unsafe) {
-                if (!unsafe) return ''
-                return unsafe
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;")
-                    .replace(/\n/g, "<br>");
-            }
+createApp({
+    delimiters: ['[[', ']]'],
+    setup() {
+        const rule_id = "{{ rule_id }}"
+        const rules_list_history = ref([])
+        const current_page = ref(1)
+        const total_pages = ref(1)
 
-            async function fetchRules(page) {
-                const params = new URLSearchParams({ page, rule_id })
-                const res = await fetch('/rule/get_rules_page_history_?' + params.toString())
+        async function fetchRules(page) {
+            const params = new URLSearchParams({ page, rule_id })
+            const res = await fetch('/rule/get_rules_page_history_?' + params.toString())
 
-                if (res.status === 200) {
-                    const data = await res.json()
-                    rules_list_history.value = data.rule.map(entry => ({
-                        ...entry,
-                        show_colored: true  // default to colored
-                    }))
-                    total_pages.value = data.total_pages
-                    current_page.value = page
-                } 
-            }
-
-            fetchRules(1)
-
-
-
-            const currentRule = ref([])
-
-            async function fetchCurrentRule(){
-                const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
-                if (response.ok) {
-                    const data = await response.json();
-                    currentRule.value = data.rule; 
-                } 
-            }
-            fetchCurrentRule()
-
-            return {
-                rules_list_history,
-                current_page,
-                total_pages,
-                fetchRules,
-                escapeHtml
+            if (res.status === 200) {
+                const data = await res.json()
+                rules_list_history.value = data.rule.map(entry => ({
+                    ...entry,
+                    show_diff: true // par défaut on montre la diff
+                }))
+                total_pages.value = data.total_pages
+                current_page.value = page
             }
         }
-    }).mount('#main-container')
+
+        fetchRules(1)
+
+        /**
+         * #############################
+         * #   Coloration des lignes   #
+         * #############################
+         */
+        function getOldContentLines(content) {
+            if (!content) return []
+            return content.split('\n')
+        }
+
+        function getProposedContentLines(content) {
+            if (!content) return []
+            return content.split('\n')
+        }
+
+        function isLineNew(line, oldContent) {
+            const normalizedLine = line.trim()
+            const normalizedOldContent = oldContent.split('\n').map(l => l.trim())
+            return !normalizedOldContent.includes(normalizedLine)
+        }
+
+        function isLineDeleted(line, proposedContent) {
+            const normalizedLine = line.trim()
+            const normalizedProposedContent = proposedContent.split('\n').map(l => l.trim())
+            return !normalizedProposedContent.includes(normalizedLine)
+        }
+
+        return {
+            rules_list_history,
+            current_page,
+            total_pages,
+            fetchRules,
+            getOldContentLines,
+            getProposedContentLines,
+            isLineNew,
+            isLineDeleted
+        }
+    }
+}).mount('#main-container')
 </script>
 {% endblock %}
