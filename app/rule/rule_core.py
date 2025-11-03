@@ -1063,8 +1063,8 @@ def get_rules_edit_propose_page(page) -> RuleEditProposal:
         RuleEditProposal.status != 'pending'
     ).paginate(
         page=page,
-        per_page=2,
-        max_per_page=2
+        per_page=20,
+        max_per_page=20
     )
 
 def get_rules_edit_propose_page_pending(page) -> RuleEditProposal:
@@ -1074,8 +1074,8 @@ def get_rules_edit_propose_page_pending(page) -> RuleEditProposal:
         RuleEditProposal.status == 'pending'
     ).options(joinedload(RuleEditProposal.rule)).paginate(
         page=page,
-        per_page=2,
-        max_per_page=2
+        per_page=20,
+        max_per_page=20
     )
 
 ##################################__Admin__##################################################
