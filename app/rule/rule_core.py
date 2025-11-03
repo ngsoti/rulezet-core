@@ -131,15 +131,36 @@ def add_rule_core(form_dict, user) -> bool:
 
 def rule_exists(Metadata: dict) -> tuple[bool, int]:
     """
-    Check if a rule with the same title, to_string, and original_uuid exists.
+    Check if a rule already exists.
+    - If no original_uuid is provided: check by title.
+    - If original_uuid is provided: check by original_uuid.
     """
-    existing_rules = get_rule_by_title(Metadata["title"].strip())
-    if existing_rules:
-        for r in existing_rules:
-            if (r.to_string == Metadata["to_string"].strip() and
-                    str(r.original_uuid or "").strip() == str(Metadata.get("original_uuid") or "").strip()):
+    original_uuid = str(Metadata.get("original_uuid") or "").strip()
+    if original_uuid.lower() == "none":
+        original_uuid = ""
+
+    title = Metadata.get("title", "").strip()
+    to_string = Metadata.get("to_string", "").strip()
+
+    existing_rules = get_rule_by_title(title)
+
+    if not existing_rules:
+        return False, None
+
+    for r in existing_rules:
+        # Case 1 : without original_uuid → compare title only
+        if not original_uuid:
+            if r.title.strip() == title:
                 return True, r.id
-    return False , None    
+
+        # Case 2 : with original_uuid → compare both original_uuid and title
+        else:
+            if str(r.original_uuid or "").strip() == original_uuid:
+                return True, r.id
+
+    return False, None
+
+ 
 
 
 
@@ -269,27 +290,51 @@ def is_valid_github_url(url: str) -> bool:
     except Exception:
         return False
 
-def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
+# def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
+#     """
+#     Given a list of dicts containing 'title', retrieve the 'source' from the DB for each rule,
+#     but only if the title is unique in the DB, the source has not already been added,
+#     and the source is a valid GitHub URL.
+#     Returns a deduplicated list of sources.
+#     """
+#     sources = []
+
+#     for rule_info in rules_list:
+#         title = rule_info.get('title')
+#         if not title:
+#             continue
+
+#         count = Rule.query.filter_by(title=title).count()
+#         if count == 1:
+#             rule = Rule.query.filter_by(title=title).first()
+#             if rule.source and rule.source not in sources and is_valid_github_url(rule.source):
+#                 sources.append(rule.source)
+
+#     return sources
+
+def get_sources_from_ids(rule_ids: List[int]) -> List[str]:
     """
-    Given a list of dicts containing 'title', retrieve the 'source' from the DB for each rule,
-    but only if the title is unique in the DB, the source has not already been added,
-    and the source is a valid GitHub URL.
+    Given a list of rule IDs, retrieve the 'source' for each rule from the DB,
+    but only if the source is a valid GitHub URL and not already added.
     Returns a deduplicated list of sources.
     """
+    if not rule_ids:
+        return []
+
+    # Récupère toutes les règles d'un seul coup
+    rules = Rule.query.filter(Rule.id.in_(rule_ids)).all()
+
     sources = []
+    seen_sources = set()
 
-    for rule_info in rules_list:
-        title = rule_info.get('title')
-        if not title:
-            continue
-
-        count = Rule.query.filter_by(title=title).count()
-        if count == 1:
-            rule = Rule.query.filter_by(title=title).first()
-            if rule.source and rule.source not in sources and is_valid_github_url(rule.source):
-                sources.append(rule.source)
+    for rule in rules:
+        src = rule.source
+        if src and src not in seen_sources and is_valid_github_url(src):
+            sources.append(src)
+            seen_sources.add(src)
 
     return sources
+
 
 def get_sources_from_ids(rules_list: List[dict]) -> List[str]:
     """
@@ -299,10 +344,8 @@ def get_sources_from_ids(rules_list: List[dict]) -> List[str]:
     """
     sources = []
 
-    for rule_info in rules_list:
-        rule_id = rule_info.get('id')
-        if not rule_id:
-            continue
+    for rule_id in rules_list:
+        
             
         count = Rule.query.filter_by(id=rule_id).count()
 
@@ -347,9 +390,40 @@ def get_rules_of_user_with_id(user_id) -> Rule:
     """Get all the rule made by the user (with id)"""
     return Rule.query.filter(Rule.user_id == user_id).all()
 
-def get_rules_of_user_with_id_page(user_id , page) -> Rule:
+def get_rules_of_user_with_id_page(user_id, page, search, sort_by, rule_type) -> Rule:
     """Get all the page rule made by the user (with id)"""
-    return Rule.query.filter(Rule.user_id == user_id).paginate(page=page, per_page=20, max_per_page=20)
+    query = Rule.query.filter(Rule.user_id == user_id)
+
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                Rule.title.ilike(search_lower),
+                Rule.description.ilike(search_lower),
+                Rule.format.ilike(search_lower),
+                Rule.author.ilike(search_lower),
+                Rule.to_string.ilike(search_lower)
+            )
+        )
+
+    if rule_type:
+        query = query.filter(Rule.format.ilike(rule_type))  # use ilike for case-insensitive match
+
+    # Sorting
+    if sort_by == "newest":
+        query = query.order_by(Rule.creation_date.desc())
+    elif sort_by == "oldest":
+        query = query.order_by(Rule.creation_date.asc())
+    elif sort_by == "most_likes":
+        query = query.order_by(Rule.vote_up.desc())
+    elif sort_by == "least_likes":
+        query = query.order_by(Rule.vote_down.desc())
+    else:
+        query = query.order_by(Rule.creation_date.desc())
+
+    # Pagination
+    return query.paginate(page=page, per_page=20, max_per_page=20)
+
 
 def get_rules_of_user_with_id_count(user__id) -> int:
     """Return the count of rules"""
@@ -1936,9 +2010,19 @@ def get_schedules_by_user_id(user_id: int) -> list:
 #   Format rules    #
 #####################
 
+# def get_all_rule_format():
+#     """Get all the rule format in a list"""
+#     return FormatRule.query.order_by(FormatRule.name.asc()).all()
+
 def get_all_rule_format():
-    """Get all the rule format in a list"""
-    return FormatRule.query.order_by(FormatRule.name.asc()).all()
+    """Return all rule formats sorted alphabetically, excluding 'no format'."""
+    return (
+        FormatRule.query
+        .filter(FormatRule.name.ilike('%'))  
+        .filter(FormatRule.name != 'no format')
+        .order_by(FormatRule.name.asc())
+        .all()
+    )
 
 
 def get_all_rule_format_page(page):
@@ -2026,6 +2110,29 @@ def get_all_url_github_page(page: int = 1, search: str = None):
 
     return pagination, total_count
 
+def get_rule_count_by_github_page(page: int = 1, search: str = None):
+        """Return paginated list of GitHub URLs with how many rules are linked to each."""
+        github_pattern = r'^https?://(www\.)?github\.com/[\w\-_]+/[\w\-_]+'
+
+        query = (
+            db.session.query(
+                Rule.source.label("url"),
+                func.count(Rule.id).label("rule_count")
+            )
+            .filter(Rule.source.isnot(None))
+            .filter(Rule.source.op('~')(github_pattern))
+        )
+
+        if search:
+            query = query.filter(Rule.source.ilike(f"%{search}%"))
+
+        query = query.group_by(Rule.source).order_by(func.count(Rule.id).desc())
+
+        total_count = query.count()
+        pagination = query.paginate(page=page, per_page=20, max_per_page=20)
+
+        return pagination, total_count
+
 def get_all_rule_by_url_github_page(page: int = 1, search: str = None, url: str = None):
     """Get paginated list of Rules whose source matches a specific GitHub project URL."""
     
@@ -2060,3 +2167,55 @@ def get_all_rule_by_url_github(url: str = None):
     
     return query.all()
 
+
+def get_all_rule_by_github_url_page(search: str = None, page: int = 1):
+    """Get paginated list of Rules whose source matches a specific GitHub project URL and belong to the current user."""
+    per_page = 10
+
+    # Base query: only rules that have a GitHub source and belong to the current user
+    query = Rule.query.filter(
+        Rule.source.isnot(None),
+        Rule.source.ilike("%github.com%"),
+        Rule.user_id == current_user.id
+    )
+
+    # Optional search filter
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Rule.title.ilike(search_pattern),
+                Rule.description.ilike(search_pattern),
+                Rule.author.ilike(search_pattern),
+                Rule.cve_id.ilike(search_pattern)
+            )
+        )
+    total_count = query.count()
+    # Return paginated results
+    pagination = query.paginate(page=page, per_page=per_page)
+    return pagination, total_count
+
+
+
+def exists_format_in_rules(format_name: str) -> bool:
+    """
+    Check if a format exists in any rule (case-insensitive).
+    Returns True if at least one rule has this format, False otherwise.
+    """
+    return Rule.query.filter(Rule.format == format_name).first() is not None
+
+
+
+def replace_rule_format(old_format_name: str, new_format_name: str) -> int:
+    """Replace all occurrences of old_format_name with new_format_name in Rule.format.
+
+    Returns:
+        int: Number of rules updated.
+    """
+    rules_to_update = Rule.query.filter(func.lower(Rule.format) == old_format_name.lower()).all()
+    count = 0
+    for rule in rules_to_update:
+        rule.format = new_format_name
+        count += 1
+    db.session.commit()
+    return count

@@ -26,6 +26,6 @@ zeekscript
 msc_pyparser
 nova-hunting
 pymisp
-
+flask_mail
 
 

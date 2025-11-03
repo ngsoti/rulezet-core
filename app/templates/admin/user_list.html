@@ -3,37 +3,45 @@
 
 {% block content %}
 {% if current_user.is_admin() %}
-    <div class="container my-4" id="main-container">
+    <div class="container my-4" id="main-container" v-cloak>
+
+        <div class="mb-4 border-bottom pb-3">
+                <h2 class="mb-3 text-center text-primary fw-bold">
+                    User Management
+                    <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+                </h2>
+                <p class="text-muted mt-2">
+                    Manage all registered users in the system. View user details, filter by admin status or connection status, and perform administrative actions such as deleting users.
+                </p>
+        </div>
+
         <div class="card bg-white shadow-sm border-0 mb-4">
             <div class="card-body ">
                 <div class="row g-3">
                     <div class="col-md-4">
                         <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control form-control-sm " placeholder="Search by keywords...">
                     </div>
-                    <div class="col-md-3">
-                        <select v-model="isAdminFilter" class="form-select form-select-sm ">
+                    <div class="col-md-4">
+                        <select v-model="isAdminFilter" class="form-select form-select-sm" @change="fetchUsers(1)">
                             <option value="">All Users</option>
                             <option value="true">Admins</option>
                             <option value="false">Non-admins</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <select v-model="isConnectedFilter" class="form-select form-select-sm ">
+                    <div class="col-md-4">
+                        <select v-model="isConnectedFilter" class="form-select form-select-sm" @change="fetchUsers(1)">
                             <option value="">All Connections</option>
                             <option value="true">Connected</option>
                             <option value="false">Disconnected</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <button class="btn btn-dark w-100 " @click="fetchUsers(1)">
-                            <i class="fas fa-sliders-h"></i> Apply
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
+        <h5 class="mb-3">
+                Total Users: <span class="badge bg-primary">[[ total_users ]]</span>
+            </h5>
         <template v-if="users_list && users_list.length > 0">
-            <h4 class="mb-4">Users (<span class="text-primary">[[ total_users ]]</span>)</h4>
             <div class="row row-cols-1 row-cols-md-2 g-4">
                 <div class="col" v-for="(user, index) in users_list" :key="user.id">
                     <div class="card shadow-sm h-100 ">

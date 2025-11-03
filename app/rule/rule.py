@@ -55,7 +55,7 @@ def rule() -> render_template:
             return redirect(url_for('rule.detail_rule', rule_id=new_rule.id))
         else:
             flash('Error during the creation of the rule !', 'danger')
-            return render_template("rule/rule.html", form=form )
+            return render_template("rule/rule.html", form=form, tab="manuel" )
     return render_template("rule/rule.html", form=form )
 
 
@@ -101,17 +101,24 @@ def get_rules_page_with_user_id() -> jsonify:
     """Get all the rules on a page"""
     page = request.args.get('page', 1, type=int)
     user_id = request.args.get('userId', 1, type=int)
-    rules = RuleModel.get_rules_of_user_with_id_page(user_id,page)
-    total_rules = RuleModel.get_rules_of_user_with_id_count(user_id)
-    if rules:
-        rules_list = list()
-        for rule in rules:
-            u = rule.to_json()
-            rules_list.append(u)
 
-        return {"success": True,"rule": rules_list, "total_pages": rules.pages, "total_rules": total_rules}
-    
-    return {"message": "No Rule"}, 404
+    sort_by = request.args.get("sort_by", "newest")
+    search = request.args.get("search", None)
+    rule_type = request.args.get("rule_type", None)
+
+    rules = RuleModel.get_rules_of_user_with_id_page(user_id, page, search, sort_by, rule_type)
+
+    if rules and rules.items:  
+        rules_list = [rule.to_json() for rule in rules.items]
+
+        return {
+            "success": True,
+            "rule": rules_list,
+            "total_pages": rules.pages,
+            "total_rules": rules.total
+        }, 200
+
+    return {"message": "No Rule"}, 200
 
 # get page with filter
 @rule_blueprint.route("/get_rules_page_filter", methods=['GET'])
@@ -221,8 +228,8 @@ def edit_rule(rule_id) -> render_template:
             # try to compile or verify the syntax of the rule (in the format choose)
             valide , error = verify_syntax_rule_by_format(rule_dict)
 
-            if valide == False:
-                    return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
+            if not valide:
+                return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
             
             if rule_dict["version"] == rule.version:
                 rule_dict["version"] = bump_version(rule_dict["version"])
@@ -302,7 +309,7 @@ def get_rules_page_owner() -> jsonify:
             rules_list.append(u)
         return {"owner_rules": rules_list, "owner_total_page": rules.pages, "total_rules": total_rules} , 200
     
-    return {"message": "No Rule"}
+    return {"message": "No Rule"}, 400
 
 @rule_blueprint.route("/get_my_rules_page_filter", methods=['GET'])
 def get_rules_page_filter_owner() -> jsonify:
@@ -326,7 +333,7 @@ def get_rules_page_filter_owner() -> jsonify:
         "total_rules": total_rules,
         "total_pages": ceil(total_rules / per_page),
        # "list": [r.to_json() for r in all_rules]
-    })
+    }), 200
 
 @rule_blueprint.route("/get_my_rules_page_filter_github", methods=['GET'])
 def get_my_rules_page_filter_github() -> jsonify:
@@ -368,7 +375,7 @@ def delete_selected_rules() -> jsonify:
             return render_template("access_denied.html") 
     if errorDEL >= 1:
         return jsonify({"success": False, "message": "Failed to delete the rules!",
-                        "toast_class" : "danger"}), 500
+                        "toast_class" : "danger"}), 400
     else:
         return jsonify({"success": True, 
                         "message": f"{len(data['ids'])} Rule(s) deleted!",
@@ -413,6 +420,7 @@ def download_rule_unified() -> Response:
             "toast_class": "danger",
         })
 
+    error_mesg = ""
     try:
         if fmt == 'txt':
             content = rule.to_string 
@@ -425,24 +433,19 @@ def download_rule_unified() -> Response:
         elif fmt == 'misp':
             object_json = content_convert_to_misp_object(rule_id)
             if not object_json:
-                return jsonify({
-                    "message": f"Format {rule.format} not found on MISP",
-                    "success": False,
-                    "toast_class": "danger",
-                })
+                error_mesg = f"Format {rule.format} not found on MISP"
             content = json.dumps(object_json, indent=2)
             filename = f"rule_{rule.id}_misp_object.json"
 
         else:
-            return jsonify({
-                "message": f"Unknown format: {fmt}",
-                "success": False,
-                "toast_class": "danger",
-            })
+            error_mesg = f"Unknown format: {fmt}"
 
     except Exception as e:
+        error_mesg = f"Failed to prepare download: {str(e)}"
+    
+    if error_mesg:
         return jsonify({
-            "message": f"Failed to prepare download: {str(e)}",
+            "message": error_mesg,
             "success": False,
             "toast_class": "danger",
         })
@@ -472,36 +475,25 @@ def get_rule_each_format():
 
     rule_json = rule.to_json()
     rule_misp_object = content_convert_to_misp_object(rule_id)
+
+    return_dict = {
+        "success": True,
+        "rule_id": rule_id,
+        "formats": {
+            "normal": rule.to_string,
+            "json": rule_json,
+        }
+    }
+
     if rule_misp_object and rule_json:
-        return jsonify({
-            "success": True,
-            "rule_id": rule_id,
-            "formats": {
-                "normal": rule.to_string,
-                "json": rule_json,
-                "misp": rule_misp_object,
-            }
-        })
+        return_dict["formats"]["misp"] = rule_misp_object
     elif rule_json:
-        return jsonify({
-            "success": True,
-            "rule_id": rule_id,
-            "formats": {
-                "normal": rule.to_string,
-                "json": rule_json,
-                "misp": "No MISP object for the format",
-            }
-        })
+        return_dict["formats"]["misp"] = "No MISP object for the format"
     else:
-         return jsonify({
-            "success": False,
-            "rule_id": rule_id,
-            "formats": {
-                "normal": rule.to_string,
-                "json": rule_json,
-                "misp": "No MISP object for the format",
-            }
-        })
+        return_dict["success"] = False
+        return_dict["formats"]["misp"] = "No MISP object for the format"
+    
+    return jsonify(return_dict)
 
 #########################
 #   Favorite section    #
@@ -543,10 +535,7 @@ def comment_rule() -> jsonify:
     comments = RuleModel.get_comment_page(page , rule_id)
     total_comments = RuleModel.get_total_comments_count()
     if comments:
-        comments_list = list()
-        for comment in comments:
-            u = comment.to_json()
-            comments_list.append(u)
+        comments_list = [c.to_json for c in comments]
         return {"comments_list": comments_list, "total_comments": total_comments}
     return {"message": "No Comments"}, 404
 
@@ -599,7 +588,6 @@ def delete_comment_route(comment_id) -> render_template:
     """Delete a comment"""
     comment = RuleModel.get_comment_by_id(comment_id)
     if  comment.user_id == current_user.id or current_user.is_admin():
-        rule_id = comment.rule_id
         success = RuleModel.delete_comment(comment_id)
         if success:
             return jsonify({ 
@@ -707,13 +695,32 @@ def get_rules_propose_page() -> jsonify:
 def propose_edit(rule_id) -> redirect:
     """Create a new edit (like a change request)"""
     data = request.form
-    proposed_content = data.get('proposed_content')
+    proposed_content = data.get('rule_content')
     message = data.get('message')
+    if not proposed_content:
+        flash("Proposed content cannot be empty.", "error")
+        return redirect(url_for('rule.detail_rule', rule_id=rule_id))
+    
+    # verify if the proposed content is different from the current content and verify the syntax
+
+    rule = RuleModel.get_rule(rule_id)
+
+    if rule.to_string == proposed_content:
+        flash("Proposed content is the same as the current content.", "warning")
+        return redirect(url_for('rule.detail_rule', rule_id=rule_id))
+    
+    rule_dict = rule.to_json()
+    rule_dict['to_string'] = proposed_content
+    valide , error = verify_syntax_rule_by_format(rule_dict)
+    if not valide:
+        flash(f"Syntax error in proposed content: {error}", "error")
+        return redirect(url_for('rule.detail_rule', rule_id=rule_id))
+
     success = RuleModel.propose_edit_core(rule_id, proposed_content, message)
     if success:
         flash("Request sended.", "success")
     else:
-        flash("Request sended but fail.", "danger")
+        flash("Request sended but fail.", "error")
     return redirect(url_for('rule.detail_rule', rule_id=rule_id))
 
 @rule_blueprint.route("/validate_proposal", methods=['GET'])
@@ -753,7 +760,7 @@ def validate_proposal() -> jsonify:
 
             elif decision == "rejected":
                 RuleModel.set_status(rule_proposal_id,"rejected")
-                message = "rejected"
+                message = "Proposal rejected."
             else:
                 return jsonify({"message": "Invalid decision",
                                 "success": False,
@@ -1602,6 +1609,40 @@ def get_old_rule_choice()-> render_template:
 #   Rule formats   #
 ####################
 
+@rule_blueprint.route("/replace_format_rule", methods=["POST"])
+@login_required
+def replace_format_rule():
+    """Replace format for multiple rules"""
+    if not current_user.is_admin():
+        return render_template("access_denied.html")
+
+    current_format = request.form.get("current_format")
+    new_format = request.form.get("new_format")
+
+    if not current_format or not new_format:
+        flash("Both fields are required.", "warning")
+        return redirect(url_for("rule.manage_format_rule"))
+    
+    if current_format == new_format:
+        flash("Current format and new format cannot be the same.", "warning")
+        return redirect(url_for("rule.manage_format_rule"))
+    
+
+    if not RuleModel.exists_format_in_rules(current_format):
+        flash(f"Current format '{current_format}' does not exist.", "warning")
+        return redirect(url_for("rule.manage_format_rule"))
+
+
+    # update rules
+    updated_count = RuleModel.replace_rule_format(current_format, new_format)
+
+    if updated_count is None:
+        flash("Error occurred while updating formats.", "error")
+    else:
+        flash(f"{updated_count} rule(s) updated from '{current_format}' to '{new_format}'.", "success")
+    return redirect(url_for("rule.manage_format_rule"))
+
+
 @rule_blueprint.route("/get_rules_formats", methods=['GET'])
 def get_rules_format()-> dict:
     """Get the rules formats"""
@@ -1614,9 +1655,9 @@ def get_rules_format()-> dict:
     return {"message": "No formats"}, 404
 
 
-@rule_blueprint.route("/create_format_rule", methods=["GET", "POST"])
+@rule_blueprint.route("/manage_format_rule", methods=["GET", "POST"])
 @login_required
-def create_format_rule() -> render_template:
+def manage_format_rule() -> render_template:
     """Afficher ou créer un nouveau format de règle"""
     if not current_user.is_admin():
         return render_template("access_denied.html")
@@ -1636,9 +1677,9 @@ def create_format_rule() -> render_template:
         flash(message, "success" if success else "danger")
 
         if success:
-            return render_template("admin/create_format.html", form=form)
+            return render_template("admin/format.html", form=form)
 
-    return render_template("admin/create_format.html", form=form)
+    return render_template("admin/format.html", form=form)
 
 @rule_blueprint.route("/get_rules_formats_pages", methods=['GET'])
 def get_rules_formats_pages() -> dict:
@@ -1711,6 +1752,7 @@ def parse_rule() -> dict:
     
     success , message, object_ = parse_rule_by_format(rule_content, current_user, format)
 
+
     if success == False:
         if object_ is None:
             flash( message , "danger")
@@ -1771,45 +1813,53 @@ def import_rules_from_github() -> dict:
 @login_required
 def check_updates():
     data = request.get_json()
-    urls = data.get("url", None)  
+    urls = data.get("url", None)
+
     if not urls or not isinstance(urls, list):
         return {
-            "message": "No URL provided or not a list.",
+            "message": "No URL list provided or invalid format.",
             "nb_update": 0,
             "results": [],
             "success": False,
             "toast_class": "danger"
         }, 400
-    #delete_existing_repo_folder("Rules_Github")
-    for url in urls:
-        print(f"Processing URL: {url}")
+
+    results = []
+
+    for item in urls:
+        url = item.get("url")  
+        if not url:
+            continue  
+
         rule_items = RuleModel.get_all_rule_by_url_github(url)
         repo_dir, exists = clone_or_access_repo(url)
-        results = []
-        if exists:
-            git_pull_repo(repo_dir)
 
-            
-            for rule in rule_items:
-                rule_id = rule.id
-                title = rule.title
+        if not exists:
+            continue
 
-                message_dict, success, new_rule_content = Check_for_rule_updates(rule_id,repo_dir)
-                rule = RuleModel.get_rule(rule_id)
+        git_pull_repo(repo_dir)
 
-                if success and new_rule_content:
-                    result = {
-                        "id": rule_id,
-                        "title": title,
-                        "success": success,
-                        "message": message_dict.get("message", "No message"),
-                        "new_content": new_rule_content,
-                        "old_content": rule.to_string if rule else "Error loading the rule"
-                    }
+        for rule in rule_items:
+            rule_id = rule.id
+            title = rule.title
 
-                    history_id = RuleModel.create_rule_history(result)
-                    result["history_id"] = history_id if history_id else None
-                    results.append(result)
+            message_dict, success, new_rule_content = Check_for_rule_updates(rule_id, repo_dir)
+            rule = RuleModel.get_rule(rule_id)
+
+            if success and new_rule_content:
+                result = {
+                    "id": rule_id,
+                    "title": title,
+                    "success": success,
+                    "message": message_dict.get("message", "No message"),
+                    "new_content": new_rule_content,
+                    "old_content": rule.to_string if rule else "Error loading the rule"
+                }
+
+                history_id = RuleModel.create_rule_history(result)
+                result["history_id"] = history_id if history_id else None
+                results.append(result)
+
     return {
         "message": "Search completed successfully. All selected rules have been processed without issues.",
         "nb_update": len(results),
@@ -1817,49 +1867,53 @@ def check_updates():
         "success": True,
         "toast_class": "success"
     }, 200
+
     
-# @rule_blueprint.route("/check_updates", methods=["POST"])
-# @login_required
-# def check_updates():
-#     data = request.get_json()
-#     rule_items = data.get("rules", [])  # [{'id': 6323, 'title': '...'}]
-#     results = []
+@rule_blueprint.route("/check_updates_by_rule", methods=["POST"])
+@login_required
+def check_updates_by_rule():
+    data = request.get_json()
+    rule_items = data.get("rules", [])  # list of id
+    results = []
 
-#     # Récupère toutes les sources uniques (optimisation)
-#     sources = RuleModel.get_sources_from_titles(rule_items)
-#     for source in sources:
-#         repo_dir, exists = clone_or_access_repo(source)
-#         if exists:
-#             git_pull_repo(repo_dir)
 
-#     for item in rule_items:
-#         rule_id = item.get("id")
-#         title = item.get("title", "Unknown Title")
+    sources = RuleModel.get_sources_from_ids(rule_items)
 
-#         message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
-#         rule = RuleModel.get_rule(rule_id)
+    for source in sources:
+        repo_dir, exists = clone_or_access_repo(source)
+        if exists:
+            git_pull_repo(repo_dir)
 
-#         if success and new_rule_content:
-#             result = {
-#                 "id": rule_id,
-#                 "title": title,
-#                 "success": success,
-#                 "message": message_dict.get("message", "No message"),
-#                 "new_content": new_rule_content,
-#                 "old_content": rule.to_string if rule else "Error loading the rule"
-#             }
+    for rule_id in rule_items:
+        rule = RuleModel.get_rule(rule_id)
+        if not rule:
+            continue
+        title = rule.title
+        repo_dir, exists = clone_or_access_repo(rule.source)
+        message_dict, success, new_rule_content = Check_for_rule_updates(rule_id, repo_dir)
+        rule = RuleModel.get_rule(rule_id)
 
-#             history_id = RuleModel.create_rule_history(result)
-#             result["history_id"] = history_id if history_id else None
-#             results.append(result)
+        if success and new_rule_content:
+            result = {
+                "id": rule_id,
+                "title": title,
+                "success": success,
+                "message": message_dict.get("message", "No message"),
+                "new_content": new_rule_content,
+                "old_content": rule.to_string if rule else "Error loading the rule"
+            }
 
-    # return {
-    #     "message": "Search completed successfully. All selected rules have been processed without issues.",
-    #     "nb_update": len(results),
-    #     "results": results,
-    #     "success": True,
-    #     "toast_class": "success"
-    # }, 200
+            history_id = RuleModel.create_rule_history(result)
+            result["history_id"] = history_id if history_id else None
+            results.append(result)
+
+    return {
+        "message": "Search completed successfully. All selected rules have been processed without issues.",
+        "nb_update": len(results),
+        "results": results,
+        "success": True,
+        "toast_class": "success"
+    }, 200
 
 #########################
 #   Github url section  #
@@ -1875,18 +1929,30 @@ def list_github_url() :
 
 @rule_blueprint.route("/get_url_github", methods=['GET'])
 def get_url_github():
-    """List all the GitHub URLs from Rule.source"""
+    """List all GitHub URLs and show how many Rules exist for each one."""
     search = request.args.get("search", default=None, type=str)
     page = request.args.get("page", default=1, type=int)
 
-    pagination, total = RuleModel.get_all_url_github_page(page, search)
+    pagination_urls, total_urls = RuleModel.get_all_url_github_page(page, search)
+    pagination_counts, _ = RuleModel.get_rule_count_by_github_page(page, search)
+
+    counts_map = {item.url: item.rule_count for item in pagination_counts.items}
+
+    github_data = []
+    for rule in pagination_urls.items:
+        url = rule.source
+        github_data.append({
+            "url": url,
+            "rule_count": counts_map.get(url, 0)
+        })
 
     return jsonify({
         "success": True,
-        "github_url": [rule.source for rule in pagination.items],
-        "total_url": total,
-        "total_pages": pagination.pages
+        "github_url": github_data,
+        "total_url": total_urls,
+        "total_pages": pagination_urls.pages
     }), 200
+
 
 
 
@@ -1917,4 +1983,20 @@ def get_rule_url_github():
         "rule_github_url": [rule.to_json() for rule in pagination.items],
         "total_rule": pagination.total,
         "total_pages": pagination.pages,
+    }), 200
+
+
+@rule_blueprint.route("/get_rules_with_github_url", methods=["GET"])
+def get_rules_with_github_url():
+    """Get all rules associated with a specific GitHub URL."""
+    search = request.args.get("search", type=str, default=None)
+    page = request.args.get("page", type=int, default=1)
+
+    pagination , total = RuleModel.get_all_rule_by_github_url_page(search=search, page=page)
+
+    return jsonify({
+        "success": True,
+        "github_rules": [rule.to_json() for rule in pagination.items],
+        "total_rule": total,
+        "total_pages": pagination.pages
     }), 200

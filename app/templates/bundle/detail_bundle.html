@@ -3,173 +3,179 @@
 <div class="container my-5" id="main-container">
 
   <div id="bundle-info" data-bundle-id="{{ bundle_id }}"></div>
-
+  <div class="mb-4 border-bottom pb-3">
+    <h2 class="fw-bold text-primary text-center">
+      Bundle Details
+      <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+    </h2>
+    <p class="text-muted mt-2">
+      Here you can find all the information about this specific bundle, including its description, rules, and author.
+    </p>
+  </div>
   <template v-if="bundle">
-    <div class="mb-4">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <div class="d-flex align-items-center">
-          <h2 class="fw-bold mb-0 text-primary d-flex align-items-center">
-            <i class="fas fa-box-open me-2 text-secondary" style="font-size: 1.4rem;"></i>
-            [[ bundle.name ]]
-          </h2>
-          <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
-            <button class="btn btn-outline-secondary btn-sm ms-3" :class="bundle.access ? 'btn-outline-success' : 'btn-outline-danger'" @click="edit_access(bundle.id)" :title="bundle.access ? 'Make Private' : 'Make Public'">
-              <i :class="bundle.access ? 'fas fa-lock-open' : 'fas fa-lock'"></i>
-              <span class="ms-1">[[ bundle.access ? 'Public' : 'Private' ]]</span>
-            </button>
-          </template>
-          <template v-else>
-            <span class="badge ms-2" :class="bundle.access ? 'bg-success' : 'bg-danger'">
-              <i :class="bundle.access ? 'fas fa-lock-open' : 'fas fa-lock'"></i>
-              <span class="ms-1">[[ bundle.access ? 'Public' : 'Private' ]]</span>
-            </span>
-          </template>  
-        </div>
 
-        <div class="d-flex align-items-center">
-          <button class="btn btn-success btn-sm ms-2" title="Download all rules as ZIP" @click="DownloadBundle()">
-            <i class="fas fa-download me-1"></i>
-          </button>
-          {% if current_user.is_authenticated %}
+    <!-- Carte principale du bundle -->
+    <div class="card bg-white shadow-sm border-0 mb-4">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center">
+            <h2 class="fw-bold mb-0 text-primary d-flex align-items-center">
+              <i class="fas fa-box-open me-2 text-secondary" style="font-size: 1.4rem;"></i>
+              [[ bundle.name ]]
+            </h2>
+
             <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
-              <a :href="`/bundle/edit/${bundle_id}`" class="btn btn-secondary btn-sm ms-2" title="Edit Bundle">
-                <i class="fas fa-pen"></i>
-              </a>
-              
-              <button type="button" class="btn btn-danger btn-sm ms-2" title="Delete the bundle"
-                      data-bs-toggle="modal" :data-bs-target="'#delete_bundle_modal_'+bundle.id">
-                <i class="fa-solid fa-trash fa-fw"></i>
+              <button class="btn btn-outline-secondary btn-sm ms-3"
+                      :class="bundle.access ? 'btn-outline-success' : 'btn-outline-danger'"
+                      @click="edit_access(bundle.id)"
+                      :title="bundle.access ? 'Make Private' : 'Make Public'">
+                <i :class="bundle.access ? 'fas fa-lock-open' : 'fas fa-lock'"></i>
+                <span class="ms-1">[[ bundle.access ? 'Public' : 'Private' ]]</span>
               </button>
             </template>
-          {% endif %}
-        </div>
-      </div>
+            <template v-else>
+              <span class="badge ms-2" :class="bundle.access ? 'bg-success' : 'bg-danger'">
+                <i :class="bundle.access ? 'fas fa-lock-open' : 'fas fa-lock'"></i>
+                <span class="ms-1">[[ bundle.access ? 'Public' : 'Private' ]]</span>
+              </span>
+            </template>  
+          </div>
 
-
-      <!-- Delete Confirmation Modal -->
-      <div class="modal fade" :id="'delete_bundle_modal_'+bundle.id" tabindex="-1" aria-labelledby="delete_bundle_modal" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h1 class="modal-title fs-5 text-dark" id="delete_rule_modal">
-                Delete [[ bundle.name ]] ?
-              </h1>
-              <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-              <button class="btn btn-danger" @click="deleteBundle(bundle.id, index)">
-                <i class="fa-solid fa-trash"></i> Confirm
-              </button>
-            </div>
+          <div class="d-flex align-items-center">
+            <button class="btn btn-success btn-sm ms-2" title="Download all rules as ZIP" @click="DownloadBundle()">
+              <i class="fas fa-download me-1"></i>
+            </button>
+            {% if current_user.is_authenticated %}
+              <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
+                <a :href="`/bundle/edit/${bundle_id}`" class="btn btn-secondary btn-sm ms-2" title="Edit Bundle">
+                  <i class="fas fa-pen"></i>
+                </a>
+                <button type="button" class="btn btn-danger btn-sm ms-2" title="Delete the bundle"
+                        data-bs-toggle="modal" :data-bs-target="'#delete_bundle_modal_'+bundle.id">
+                  <i class="fa-solid fa-trash fa-fw"></i>
+                </button>
+              </template>
+            {% endif %}
           </div>
         </div>
-      </div>
-      <p class="fst-italic text-secondary">
-        Created on [[ bundle.created_at ]] and updated on [[ bundle.updated_at ]].
-      </p>
 
-      
-      <section class="mb-3">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <h4>Description</h4>
+        <p class="fst-italic text-secondary">
+          Created on [[ bundle.created_at ]] and updated on [[ bundle.updated_at ]].
+        </p>
+      </div>
+    </div>
+
+    <!-- Carte Description -->
+    <div class="card bg-white shadow-sm border-0 mb-4">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="text-primary">Description</h4>
           <div class="d-flex align-items-center gap-2">
-            <button @click="vote('up', bundle.id)" title="like this bundle" class="btn btn-success btn-sm">
+            <button @click="vote('up', bundle.id)" title="Like this bundle" class="btn btn-success btn-sm">
               <i class="fas fa-thumbs-up"></i> [[ bundle.vote_up ]]
             </button>
-            <button @click="vote('down', bundle.id)" title="dislike this bundle" class="btn btn-danger btn-sm ">
+            <button @click="vote('down', bundle.id)" title="Dislike this bundle" class="btn btn-danger btn-sm">
               <i class="fas fa-thumbs-down"></i> [[ bundle.vote_down ]]
             </button>
           </div>
         </div>
-        
         <p>[[ bundle.description || 'No description provided.' ]]</p>
-      </section>
+      </div>
+    </div>
 
-      <section class="mb-4">
-        <h4>Rules included in this bundle</h4>
+    <!-- Carte Rules -->
+    <div class="card bg-white shadow-sm border-0 mb-4">
+      <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <h4 class="mb-0 text-primary">Rules included in this bundle</h4>
+            <span class="badge bg-primary ms-2">
+              [[ rules.length ]]
+            </span>
+          </div>
         <template v-if="rules.length === 0">
-          <div class="alert alert-warning text-center shadow-sm">
+          <div class="alert alert-warning text-center shadow-sm mt-3">
             <i class="fas fa-circle-info me-2"></i>
             <span>There is no rule in this bundle for the moment</span>
           </div>
         </template>
 
         <template v-else>
-          <ul class="list-group">
-            <li v-for="(item, index) in rules" :key="item.rule.id" class="list-group-item d-flex justify-content-between align-items-start">
-              <div class="flex-grow-1">
-                <span class="badge bg-secondary me-2">[[ item.rule.format ]]</span>
-                <a :href="`/rule/detail_rule/${item.rule.id}`" title="View more about this rule">
-                  [[ item.rule.title ]]
-                </a>
-                <template v-if="item.rule.cve_id && item.rule.cve_id !== 'None'">
-                  <strong>[[ item.rule.cve_id ]]</strong>
-                </template> - [[ item.association.description ]]
-               
+          <ul class="list-group list-group-flush mt-3">
+            <li v-for="(item, index) in rules" :key="item.rule.id" class="list-group-item">
 
-              </div>
-              {% if current_user.is_authenticated %}
-                <template v-if="parseInt('{{current_user.id}}') == bundle.user_id  || is_admin">
-                  <div class="ms-2">
-                    <button type="button"
-                            class="btn "
-                            title="Edit the description"
-                            data-bs-toggle="modal"
-                            :data-bs-target="'#description_bundle_modal_'+item.rule.id"
-                            @click="item.new_description = item.association.description">
-                      <i class="fa-solid fa-pen fa-fw"></i>
-                    </button>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                  <span class="badge bg-secondary me-2">[[ item.rule.format ]]</span>
+                  <a :href="`/rule/detail_rule/${item.rule.id}`" title="View more about this rule">
+                    [[ item.rule.title ]]
+                  </a>
+                  <template v-if="item.rule.cve_id && item.rule.cve_id !== 'None'">
+                    <strong>[[ item.rule.cve_id ]]</strong>
+                  </template>
+                </div>
 
-                    <div class="modal fade"
-                        :id="'description_bundle_modal_'+item.rule.id"
-                        tabindex="-1"
-                        aria-labelledby="description_bundle_modal"
-                        aria-hidden="true">
-                      <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
+                {% if current_user.is_authenticated %}
+                  <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
+                    <div>
+                      <button type="button" class="btn btn-sm " title="Edit the description"
+                              data-bs-toggle="modal"
+                              :data-bs-target="'#description_bundle_modal_'+item.rule.id"
+                              @click="item.new_description = item.association.description">
+                        <i class="fa-solid fa-pen fa-fw"></i>
+                      </button>
 
-                          <div class="modal-header">
-                            <h1 class="modal-title fs-5 text-dark" id="description_bundle_modal">
-                              Edit description for [[ item.rule.title ]]
-                            </h1>
-                            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                          </div>
-
-                          <div class="modal-body">
-                            <div class="mb-3">
-                              <label for="bundleNewDescription" class="form-label fw-bold">New description</label>
-                              <textarea
-                                id="bundleNewDescription"
-                                v-model="item.new_description"
-                                class="form-control"
-                                rows="3"
-                                placeholder="Enter the new description here...">
-                              </textarea>
+                      <div class="modal fade" :id="'description_bundle_modal_'+item.rule.id" tabindex="-1" aria-labelledby="description_bundle_modal" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                          <div class="modal-content">
+                            <div class="modal-header">
+                              <h1 class="modal-title fs-5 text-dark">Edit description for [[ item.rule.title ]]</h1>
+                              <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                              <div class="mb-3">
+                                <label for="bundleNewDescription" class="form-label fw-bold">New description</label>
+                                <textarea id="bundleNewDescription" v-model="item.new_description"
+                                          class="form-control" rows="3" placeholder="Enter the new description here..."></textarea>
+                              </div>
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                              <button class="btn btn-success" @click="saveNewDescription(item.association.id , item)">
+                                <i class="fa-solid fa-check"></i> Save
+                              </button>
                             </div>
                           </div>
-                          <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button class="btn btn-success" @click="saveNewDescription(item.association.id , item)">
-                              <i class="fa-solid fa-check"></i> Save
-                            </button>
-                          </div>
-
                         </div>
                       </div>
+
                     </div>
-                  </div>
-                </template>
-              {% endif %}
+                  </template>
+                {% endif %}
+              </div>
+
+              <div>
+                <p class="mb-0" style="white-space: pre-wrap; max-width: 95%;">
+                  [[ item.association.description ]]
+                </p>
+              </div>
+
             </li>
           </ul>
+
         </template>
-      </section>
-      <section>
-        <h5>Author</h5>
-        <p>[[ bundle.author || 'Unknown' ]]</p>
-      </section>
+      </div>
     </div>
+
+    <!-- Carte Auteur -->
+    <div class="card bg-white shadow-sm border-0 mb-4">
+      <div class="card-body">
+        <h5 class="text-primary">Author</h5>
+        <a :href="`/account/detail_user/${bundle.user_id}`" title="View author's profile">
+          [[ bundle.user_name ]]
+        </a>
+      </div>
+    </div>
+
   </template>
 
   <div v-else class="text-center my-5">
@@ -178,8 +184,10 @@
     </div>
     <p class="mt-3">Loading bundle data...</p>
   </div>
+
 </div>
 {% endblock %}
+
 
 {% block script %}
 <script type="module">

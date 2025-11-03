@@ -28,20 +28,13 @@
                         </a>
                     </li>
                 </ul>
-            </li>            
-
+            </li>
             <!-- Dropdown for Rules and Rule Proposal -->
             <li class="nav-item mx-2">
                 <div class="dropdown">
                     <a class="nav-link dropdown-toggle text-dark fw-semibold" type="button" id="rulesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fa-solid fa-shield-halved fa-fw me-1"></i> Security Rules
                     </a>
-                    <template v-if="changes_to_validate">
-                        <span v-if="changes_to_validate > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            [[ changes_to_validate ]]
-                            <span class="visually-hidden">Pending changes</span>
-                        </span>
-                    </template>
                     <ul class="dropdown-menu" aria-labelledby="rulesDropdown">
                         <li>
                             <a class="dropdown-item" href="/rule/rules_list">
@@ -52,153 +45,240 @@
                             <a class="dropdown-item" href="/rule/list_github_url">
                                 <i class="fa-brands fa-github fa-fw me-2"></i> Github list
                             </a>
-                            
                         </li>
                         {% if current_user.is_authenticated %}
                             <li>
-                                <a class="dropdown-item" href="/rule/rule_propose_edit">
+                                <a class="dropdown-item position-relative" href="/rule/rule_propose_edit">
                                     <i class="fa-solid fa-lightbulb fa-fw me-2"></i> Rule proposal
+                                    <template v-if="changes_to_validate">
+                                        <span 
+                                            v-if="changes_to_validate > 0" 
+                                            class="position-absolute ms-1   badge rounded-pill bg-danger">
+                                            [[ changes_to_validate ]]
+                                            <span class="visually-hidden">unread messages</span>
+                                        </span>
+                                    </template>
                                 </a>
                             </li>
                             <li>
                                 <a class="dropdown-item" href="/rule/bad_rules_summary">
                                     <i class="fa-solid fa-tags fa-fw me-2"></i> Bad Rules
-                                </a>    
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/rule/create_rule">
+                                    <i class="fas fa-hammer fa-fw me-2"></i> Add Rule
+                                </a>
                             </li>
                             {% if current_user.is_admin() %}
                                 <li>
-                                    <a class="dropdown-item" href="/rule/create_format_rule">
-                                        <i class="fa-solid fa-file-code fa-fw me-2"></i> Create Format
-                                    </a>    
+                                    <a class="dropdown-item" href="/rule/manage_format_rule">
+                                        <i class="fa-solid fa-file-code fa-fw me-2"></i> Manage Format
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li>
+                                    <a href="/admin/request" class="dropdown-item position-relative">
+                                        <i class="fa-solid fa-envelope fa-fw me-2"></i>
+                                        Ownership Requests
+
+                                        
+                                        <template v-if="requests_to_validate">
+                                            <span 
+                                                v-if="requests_to_validate > 0" 
+                                                class="position-absolute ms-1   badge rounded-pill bg-danger">
+                                                [[ requests_to_validate ]]
+                                                <span class="visually-hidden">unread messages</span>
+                                            </span>
+                                        </template>
+                                    </a>
                                 </li>
                             {% endif %}
                         {% endif %}
                     </ul>
                 </div>
-                
+
             </li>
 
-            <li class="nav-item mx-2 position-relative">
-                <a href="/admin/request" class="nav-link d-flex align-items-center text-dark fw-semibold">
-                    <i class="fa-solid fa-envelope fa-fw me-1"></i>
-                    Ownership Requests
-                    <template v-if="requests_to_validate">
-                        <span v-if="requests_to_validate > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            [[ requests_to_validate ]]
-                            <span class="visually-hidden">unread messages</span>
-                        </span>
-                    </template>
-                </a>
-            </li>
             
+
             {% if current_user.is_authenticated %}
                 {% if current_user.is_admin() %}
-                    <li class="nav-item dropdown mx-2">
+                   <li class="nav-item dropdown mx-2 position-relative">
                         <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-user fa-fw me-1"></i> Control Access
+                            <i class="fa-solid fa-user fa-fw me-1"></i> Admin section
                         </a>
-                        <template v-if="repport_to_validate">
-                            <span v-if="repport_to_validate > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                [[ repport_to_validate ]]
-                                <span class="visually-hidden">Repport</span>
-                            </span>
-                        </template>
+
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
                             <li>
                                 <a href="/account/all_users" class="dropdown-item">
-                                    <i class="fa-solid fa-users fa-fw me-2 text-primary"></i> All users
+                                    <i class="fa-solid fa-users fa-fw me-2"></i> All users
                                 </a>
                             </li>
                             <li>
                                 <a href="/rule/rules_reported" class="dropdown-item">
-                                    <i class="fa-solid fa-triangle-exclamation fa-fw me-2 text-danger"></i> Reported rule
+                                    <i class="fa-solid fa-triangle-exclamation fa-fw me-2"></i> Reported rule
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/admin/request" class="dropdown-item position-relative">
+                                    <i class="fa-solid fa-envelope fa-fw me-2"></i>
+                                    Ownership Requests
+                                    <!-- Badge spécifique à cette entrée -->
+                                    <template v-if="requests_to_validate">
+                                    <span 
+                                        v-if="requests_to_validate > 0" 
+                                        class="position-absolute ms-1 badge rounded-pill bg-danger">
+                                        [[ requests_to_validate ]]
+                                        <span class="visually-hidden">unread messages</span>
+                                    </span>
+                                    </template>
                                 </a>
                             </li>
                         </ul>
                     </li>
+
                 {% endif %}
             {% endif %}
 
             <!-- Profile Dropdown -->
            <li class="nav-item dropdown mx-2 position-relative d-flex align-items-center">
-                    {% if current_user.is_authenticated %}
-                        <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-user fa-fw me-1"></i> {{ current_user.get_first_name() }}
-                        </a>
-                    {% else %}
-                        <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-user fa-fw me-1"></i> My Profile
-                        </a>
-                    {% endif %}
+                {% if current_user.is_authenticated %}
+                    <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-solid fa-user fa-fw me-1"></i> {{ current_user.get_first_name() }}
+                    </a>
+                {% else %}
+                    <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-solid fa-user fa-fw me-1"></i> My Profile
+                    </a>
+                {% endif %}
 
-                    <!-- Badge en haut à droite du bouton (extérieur du menu) -->
-                    <template v-if="update_to_validate && update_to_validate > 0">
-                        <span class="ms-2 badge rounded-pill bg-danger">
-                            [[ update_to_validate ]]
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
+                    {% if current_user.is_authenticated %}
+                    <li>
+                        <a href="/account/" class="dropdown-item">
+                            <i class="fa-solid fa-user fa-fw me-2 "></i> Profile
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="/rule/owner_rules">
+                            <i class="fa-solid fa-user-shield fa-fw me-2"></i> My Rules
+                        </a>
+                    </li>
+                    <li class="position-relative d-flex align-items-center">
+                        <a class="dropdown-item pe-2" href="/rule/update_github/update_rules_from_github">
+                            <i class="fa-solid fa-tags fa-fw me-2"></i> Update rules
+                        </a>
+                        <template v-if="update_to_validate && update_to_validate > 0">
+                            <span class="position-absolute ms-1 badge rounded-pill bg-danger">
+                                [[ update_to_validate ]]
+                            </span>
+                        </template>
+                    </li>
+                    <li>
+                        <a href="/account/favorite" class="dropdown-item">
+                            <i class="fa-solid fa-star fa-fw me-2 "></i> Favorite
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/account/logout" class="dropdown-item">
+                            <i class="fa-solid fa-right-from-bracket fa-fw me-2 "></i> Logout
+                        </a>
+                    </li>
+                    {% else %}
+                    <li>
+                        <a href="/account/register" class="dropdown-item">
+                            <i class="fa-solid fa-user-plus fa-fw me-2 "></i> Register
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/account/profil" class="dropdown-item">
+                            <i class="fa-solid fa-right-to-bracket fa-fw me-2 "></i> Login
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </li>
+            <li class="nav-item dropdown mx-2 position-relative d-flex align-items-center">
+                <a  class="nav-link text-dark fw-semibold position-relative" href="#"  id="notificationsDropdown"   role="button"  data-bs-toggle="dropdown"  aria-expanded="false">
+                    <i class="fa-solid fa-bell fa-lg"></i>
+
+                    <!-- Badge total -->
+                    <template v-if="total_notifications > 0">
+                        <span 
+                            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            [[ total_notifications ]]
+                            <span class="visually-hidden">unread notifications</span>
                         </span>
                     </template>
+                </a>
 
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
-                        {% if current_user.is_authenticated %}
-                        <li>
-                            <a href="/account/" class="dropdown-item">
-                                <i class="fa-solid fa-user fa-fw me-2 text-primary"></i> Profil
+                <!-- Dropdown Menu -->
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded p-2" aria-labelledby="notificationsDropdown" style="min-width: 260px;">
+                    <li class="dropdown-header fw-bold text-center">
+                        Notifications
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+
+                    <template v-if="total_notifications === 0">
+                        <li class="text-center text-muted small py-2">
+                            Everything is up to date!
+                        </li>
+                    </template>
+
+                    <template v-else>
+                        <li v-if="requests_to_validate > 0">
+                            <a href="/admin/request" class="dropdown-item d-flex justify-content-between align-items-center">
+                                <span><i class="fa-solid fa-envelope me-2 text-primary"></i> Ownership Requests</span>
+                                <span class="badge bg-danger rounded-pill">[[ requests_to_validate ]]</span>
                             </a>
                         </li>
-                        <li>
-                            <a class="dropdown-item" href="/rule/owner_rules">
-                                <i class="fa-solid fa-user-shield fa-fw me-2"></i> My Rules
+
+                        <li v-if="changes_to_validate > 0">
+                            <a href="/rule/rule_propose_edit" class="dropdown-item d-flex justify-content-between align-items-center">
+                                <span><i class="fa-solid fa-lightbulb me-2 text-warning"></i> Rule Changes</span>
+                                <span class="badge bg-danger rounded-pill">[[ changes_to_validate ]]</span>
                             </a>
                         </li>
-                        <li class="position-relative d-flex align-items-center">
-                            <a class="dropdown-item pe-2" href="/rule/update_github/update_rules_from_github">
-                                <i class="fa-solid fa-tags fa-fw me-2"></i> Update rules
-                            </a>
-                            <!-- Badge à côté de "Github project" -->
-                            <template v-if="update_to_validate && update_to_validate > 0">
-                                <span class="ms-2 badge rounded-pill bg-danger">
-                                    [[ update_to_validate ]]
-                                </span>
-                            </template>
-                        </li>
-                        <li>
-                            <a href="/account/favorite" class="dropdown-item">
-                                <i class="fa-solid fa-star fa-fw me-2 text-warning"></i> Favorite
+
+                        <li v-if="repport_to_validate > 0">
+                            <a href="/rule/rules_reported" class="dropdown-item d-flex justify-content-between align-items-center">
+                                <span><i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i> Reported Rules</span>
+                                <span class="badge bg-danger rounded-pill">[[ repport_to_validate ]]</span>
                             </a>
                         </li>
-                        <li>
-                            <a href="/account/logout" class="dropdown-item">
-                                <i class="fa-solid fa-right-from-bracket fa-fw me-2 text-danger"></i> Logout
+
+                        <li v-if="update_to_validate > 0">
+                            <a href="/rule/update_github/update_rules_from_github" class="dropdown-item d-flex justify-content-between align-items-center">
+                                <span><i class="fa-solid fa-rotate me-2 text-success"></i> Rule Updates</span>
+                                <span class="badge bg-danger rounded-pill">[[ update_to_validate ]]</span>
                             </a>
                         </li>
-                        {% else %}
-                        <li>
-                            <a href="/account/register" class="dropdown-item">
-                                <i class="fa-solid fa-user-plus fa-fw me-2 text-success"></i> Register
-                            </a>
-                        </li>
-                        <li>
-                            <a href="/account/profil" class="dropdown-item">
-                                <i class="fa-solid fa-right-to-bracket fa-fw me-2 text-primary"></i> Login
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </li>
+                    </template>
+                </ul>
+            </li>
         </ul>
     </div>
 </nav>
 
         <script type="module">
-            const {createApp, ref, onMounted} = Vue
+            const {createApp, ref, onMounted, computed} = Vue
             createApp({
                 delimiters: ['[[', ']]'],
                 setup() {
-                    
+
                     const requests_to_validate = ref(0)
                     const changes_to_validate = ref(0)
                     const repport_to_validate = ref(0)
                     const update_to_validate = ref(0)
+                    const total_notifications = computed(() => {
+                        return (
+                            Number(requests_to_validate.value || 0) +
+                            Number(changes_to_validate.value || 0) +
+                            Number(repport_to_validate.value || 0) +
+                            Number(update_to_validate.value || 0)
+                        )
+                    })
 
                     
 
@@ -232,12 +312,13 @@
                         update_to_validate.value = data.count | 0
                     }
 
-                
+
                     return {
                         requests_to_validate,
                         changes_to_validate,
                         repport_to_validate,
-                        update_to_validate
+                        update_to_validate,
+                        total_notifications
                     }},
             }).mount('.navbar')
         </script>

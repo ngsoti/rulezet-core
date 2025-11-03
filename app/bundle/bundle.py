@@ -484,3 +484,31 @@ def get_bundle_list_rule_part_of() :
         return {"bundles": [b.to_json() for b in bundles]}, 200
 
     return {"message": "No bundles found for this rule"}, 200
+
+
+###############################
+#   Bundle by user section    #
+###############################
+
+@bundle_blueprint.route("/get_bundles_page_filter_with_id", methods=['GET'])
+def get_bundles_page_filter_with_id():     
+    """get all the bundles of a user for pages"""     
+    user_id = request.args.get('user_id', type=int)
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get("searchBundle", None)
+    sort_by = request.args.get("sortByBundle", "newest")
+    rule_type = request.args.get("ruleTypeBundle", "")
+
+    if not user_id:
+        return {"message": "No user id provided"}, 400
+
+    bundles = BundleModel.get_bundles_of_user_with_id_page(user_id, page, search,sort_by, rule_type)
+    
+    if bundles.total > 0:
+        return {
+            "bundles_list": [r.to_json() for r in bundles.items],
+            "total_pages": bundles.pages,
+            "total_bundles": bundles.total
+        }, 200
+
+    return {"message": "No Bundle"}, 200

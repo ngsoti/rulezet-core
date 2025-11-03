@@ -13,12 +13,14 @@
         <div class="card mb-4 shadow-sm">
             <div class="card-body">
                 <h5 class="card-title">
-                    <i class="fas fa-user me-2 text-secondary"></i> Proposed by [[ proposal.user_name ]]
+                    <i class="fas fa-user me-2 text-secondary"></i> Proposed by :
+                    <a :href="`/account/detail_user/${proposal.user_id}`" style="text-decoration-line: underline;" title="View more about this user">
+                        [[ proposal.user_name ]]
+                    </a>
                 </h5>
                 <p class="card-text">
                     <i class="fas fa-comment-dots me-2"></i>
                     <strong>Message:</strong> <template v-if="proposal.message != '' " >[[ proposal.message ]] </template> <template v-else> no message</template>
-        
                 </p>
                 <p class="card-text">
                     <i class="fas fa-clock me-2"></i>

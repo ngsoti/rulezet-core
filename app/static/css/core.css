@@ -45,6 +45,10 @@ body.dark-mode {
   *
   **/
 
+  [v-cloak] {
+      display: none;
+  }
+
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
@@ -499,9 +503,9 @@ body.dark-mode .text-muted {
   color: #b0b0b0 !important;
 }
 
-body.dark-mode .text-primary {
-  color: #61dafb !important;
-}
+/* body.dark-mode .text-primary {
+  color: #61dafb !important; 
+} */
 
 body.dark-mode .border {
   border-color: #333 !important;
@@ -728,3 +732,19 @@ footer{
 }
 /* prevent blurred text from showing on selection in some browsers */
 .blurred::selection { background: transparent; }
+   .nav-underline .nav-link {
+  color: #333;
+  font-weight: 500;
+  border: none;
+  transition: color 0.2s ease;
+}
+
+.nav-underline .nav-link:hover {
+  color: #0d6efd;
+}
+
+.nav-underline .nav-link.active {
+  font-weight: 600;
+  color: #000;
+  border-bottom: 2px solid #0d6efd;
+}

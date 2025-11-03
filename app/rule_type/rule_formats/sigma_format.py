@@ -83,7 +83,7 @@ class SigmaRule(RuleType):
             _, cve = detect_cve(rule.get("description", ""))
             return {
                 "title": rule.get("title", "Untitled"),
-                "format": "Sigma",
+                "format": "sigma",
                 "license": rule.get("license") or info.get("license", "Unknown"),
                 "description": rule.get("description", "No description provided"),
                 "version": rule.get("version", "1.0"),

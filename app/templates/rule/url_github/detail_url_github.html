@@ -2,67 +2,101 @@
 {% import 'macros/form_macros.html' as f %}
 
 {% block content %}
-<div class="container mt-4" id="main-container">
-    <h3 class="mb-4 text-center">Rules for GitHub URL: {{ url }}</h3>
+<div class="container mt-5" id="main-container">
 
-    <!-- Search bar -->
-    <div class="d-flex justify-content-center mb-3">
-        <input v-model="searchQuery" @keyup.enter="fetchRuleUrlGithub(1)"
-               class="form-control w-50" placeholder="Search rules..." @input="onSearchInput">
+  <div class="mb-4 border-bottom pb-3">
+    <!-- Title principal -->
+    <h2 class="fw-bold mb-2 text-center text-primary">GitHub Rules Dashboard</h2>
+    <div class="mx-auto mb-3" style="width: 80px; height: 5px; background-color: #0d6efd; border-radius: 2px;"></div>
+
+    <!-- URL card -->
+    <div class="card shadow-sm mx-auto hover-shadow cursor-pointer" 
+        style="transition: transform 0.2s;" >
+      <div class="card-body text-truncate">
+        <i class="fa-brands fa-github me-2 text-dark"></i> Source URL:
+        <strong><a href="{{ url }}" target="_blank" class="stretched-link"></a> {{ url }}</strong>
+      </div>
     </div>
+  </div>
 
-    <!-- Table -->
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th scope="col" class="text-center">#</th>
-                    <th scope="col">Title</th>
-                    <th scope="col">Author</th>
-                    <th scope="col">Description</th>
-                    <th scope="col">Format</th>
-                    <th scope="col">Creation Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="(rule, index) in rule_github_url" :key="rule.id"
-                    @click=goto(rule.id)
-                    style="cursor: pointer;">
-                    <td class="text-center">[[ index + 1 + (current_page - 1) * 20 ]]</td>
-                    <td>[[ rule.title ]]</td>
-                    <td>[[ rule.author ]]</td>
-                    <td>[[ rule.description ]]</td>
-                    <td>[[ rule.format ]]</td>
-                    <td>[[ rule.creation_date ]]</td>
-                </tr>
-            </tbody>
-        </table>
+
+  <!-- Search bar -->
+  <div class="d-flex justify-content-center mb-4">
+    <div class="input-group shadow-sm rounded">
+      <span class="input-group-text bg-white border-end-0">
+        <i class="fa-solid fa-magnifying-glass text-muted"></i>
+      </span>
+      <input v-model="searchQuery" @keyup.enter="fetchRuleUrlGithub(1)"
+             class="form-control border-start-0 rounded-end" placeholder="Search rules..." 
+             @input="onSearchInput">
     </div>
+  </div>
+  <p class="text-center mt-3 text-muted" v-if="!loading">Total rules found: [[ total_rule ]]</p>
+  <!-- Loading Spinner -->
+  <div v-if="loading" class="d-flex justify-content-center my-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
 
-    <!-- Pagination -->
-    <nav v-if="total_pages > 1" aria-label="Rule pagination">
-        <ul class="pagination justify-content-center">
-            <li class="page-item" :class="{ disabled: current_page === 1 }">
-                <button class="page-link" @click="fetchRuleUrlGithub(current_page - 1)" :disabled="current_page === 1">Previous</button>
-            </li>
+  <!-- Table -->
+  <div class="table-responsive" v-if="!loading">
+    <table class="table table-hover table-striped align-middle shadow-sm rounded">
+      <thead class="table-light">
+        <tr>
+          <th scope="col" class="text-center">#</th>
+          <th scope="col">Title</th>
+          <th scope="col">Author</th>
+          <th scope="col">Description</th>
+          <th scope="col">Format</th>
+          <th scope="col">Creation Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(rule, index) in rule_github_url" :key="rule.id"
+            @click="goto(rule.id)" style="cursor: pointer;">
+          <td class="text-center">[[ index + 1 + (current_page - 1) * 20 ]]</td>
+          <td>[[ rule.title ]]</td>
+          <td>[[ rule.author ]]</td>
+          <td class="text-truncate" style="max-width: 200px;">[[ rule.description ]]</td>
+          <td> 
+            <span class="badge bg-primary">
+              [[ rule.format ]]
+            </span>
+          </td>
+          <td>[[ rule.creation_date ]]</td>
+        </tr>
+      </tbody>
+    </table>
+    <div v-if="rule_github_url.length === 0" class="alert alert-warning text-center shadow-sm mt-3">
+      No rules found.
+    </div>
+  </div>
 
-            <li v-for="page in visiblePages" :key="page"
-                class="page-item"
-                :class="{ active: page === current_page, disabled: page === '...' }">
-                <button class="page-link" v-if="page !== '...'" @click="fetchRuleUrlGithub(page)">[[ page ]]</button>
-                <span class="page-link" v-else>...</span>
-            </li>
+  <!-- Pagination -->
+  <nav v-if="total_pages > 1 && !loading" aria-label="Rule pagination" class="mt-4">
+    <ul class="pagination justify-content-center shadow-sm rounded p-2 bg-white">
+      <li class="page-item" :class="{ disabled: current_page === 1 }">
+        <button class="page-link" @click="fetchRuleUrlGithub(current_page - 1)" :disabled="current_page === 1">Previous</button>
+      </li>
 
-            <li class="page-item" :class="{ disabled: current_page === total_pages }">
-                <button class="page-link" @click="fetchRuleUrlGithub(current_page + 1)" :disabled="current_page === total_pages">Next</button>
-            </li>
-        </ul>
-    </nav>
+      <li v-for="page in visiblePages" :key="page"
+          class="page-item"
+          :class="{ active: page === current_page, disabled: page === '...' }">
+        <button class="page-link" v-if="page !== '...'" @click="fetchRuleUrlGithub(page)">[[ page ]]</button>
+        <span class="page-link" v-else>...</span>
+      </li>
 
-    <p class="text-center mt-3 text-muted">Total rules found: [[ total_rule ]]</p>
+      <li class="page-item" :class="{ disabled: current_page === total_pages }">
+        <button class="page-link" @click="fetchRuleUrlGithub(current_page + 1)" :disabled="current_page === total_pages">Next</button>
+      </li>
+    </ul>
+  </nav>
+
+  
+
 </div>
 {% endblock %}
-
 
 {% block script %}
 <script type="module">
@@ -77,8 +111,10 @@ createApp({
     const current_page = ref(1)
     const total_pages = ref(1)
     const searchQuery = ref('')
+    const loading = ref(true)
 
     async function fetchRuleUrlGithub(page) {
+      loading.value = true
       const params = new URLSearchParams({
         page,
         search: searchQuery.value || '',
@@ -98,6 +134,7 @@ createApp({
         total_rule.value = 0
         total_pages.value = 1
       }
+      loading.value = false
     }
 
     fetchRuleUrlGithub(1)
@@ -121,16 +158,8 @@ createApp({
     })
 
     async function onSearchInput() {
-        if (searchQuery.value.trim() === "") {
-          await fetchRuleUrlGithub(1)
-        } else {
-          await fetchRuleUrlGithub(1)
-        }
-      }
-
-      async function onEnterKey() {
         await fetchRuleUrlGithub(1)
-      }
+    }
 
     function goto(id){
         window.location.href = "/rule/detail_rule/"+ id
@@ -145,7 +174,8 @@ createApp({
       visiblePages,
       fetchRuleUrlGithub,
       onSearchInput,
-      goto
+      goto,
+      loading
     }
   }
 }).mount('#main-container')
