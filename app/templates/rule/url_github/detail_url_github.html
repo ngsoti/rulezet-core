@@ -101,7 +101,7 @@
 {% block script %}
 <script type="module">
 const { createApp, ref, computed } = Vue
-import { display_toast,   message_list, display_prepared_toast } from '/static/js/toaster.js'
+import { display_toast, message_list } from '/static/js/toaster.js'
 
 createApp({
   delimiters: ['[[', ']]'],
@@ -166,6 +166,7 @@ createApp({
     }
 
     return {
+      message_list,
       rule_github_url,
       total_rule,
       total_pages,

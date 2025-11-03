@@ -155,7 +155,7 @@
 {% block script %}
 <script type="module">
   const { createApp, ref, computed } = Vue
-  import { message_list , display_prepared_toast , display_toast } from '/static/js/toaster.js'
+  import { message_list, create_message , display_toast } from '/static/js/toaster.js'
 
   createApp({
     delimiters: ['[[', ']]'],
@@ -188,12 +188,7 @@
 
       async function deleteAllRule() {
         if (rules_list.value.length === 0) {
-          await display_prepared_toast({
-            message: 'No rules to delete.',
-            toast_class: 'info',
-            id: Math.random()
-          })
-          return
+          create_message('No rules to delete.', 'info-subtle')
         }
 
         const res = await fetch('/rule/bad_rule/delete_all_bad_rule')
@@ -238,11 +233,7 @@
           } else {
             fetchRules(current_page.value)
           }
-          await display_prepared_toast({
-            message: 'Rule deleted.',
-            toast_class: 'success',
-            id: Math.random()
-          })
+          create_message('Rule deleted.', 'success-subtle')
         }
       }
 

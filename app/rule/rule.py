@@ -510,18 +510,16 @@ def add_favorite_rule(rule_id) -> redirect:
     existing = AccountModel.is_rule_favorited_by_user(user_id=current_user.id, rule_id=rule_id)
     if existing:
         remove_favorite(user_id=current_user.id, rule_id=rule_id)
-        return jsonify({ 
-            "success": True,
+        return jsonify({
             "is_favorited": False,
-            "toast_class": 'success',
+            "toast_class": 'success-subtle',
             "message": "rule remove from favorite"
         }), 200
     else:
         add_favorite(user_id=current_user.id, rule_id=rule_id)
-        return jsonify({ 
-            "success": True,
+        return jsonify({
             "is_favorited": True,
-            "toast_class": 'success',
+            "toast_class": 'success-subtle',
             "message": "rule add to favorite"
         }), 200
     
@@ -1381,43 +1379,43 @@ def get_bads_rules_page_filter():
 @login_required
 def edit_bad_rule(rule_id):
     """Edit a bad rule to correct it"""
-    user_bad_rule = RuleModel.get_user_id_of_bad_rule(rule_id)
-    if current_user.is_admin() or current_user.id == user_bad_rule:
-        bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
+    bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
+    if bad_rule:
+        if current_user.is_admin() or current_user.id == bad_rule.user_id:
 
-        if request.method == 'POST':
-            new_content = request.form.get('raw_content')
-            # success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content )
+            if request.method == 'POST':
+                new_content = request.form.get('raw_content')
+                # success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content )
 
-            success, error , rule = process_and_import_fixed_rule(bad_rule, new_content )
+                success, error , rule = process_and_import_fixed_rule(bad_rule, new_content )
 
-            if success:
-                flash("Rule fixed and imported successfully.", "success")
-                #return redirect(url_for('rule.bad_rules_summary'))
-                return redirect(url_for('rule.detail_rule', rule_id=rule.id))
-            else:
-                flash(f"Error: {error}", "danger")
-                bad_rule.error_message = error
-                return render_template('rule/edit_bad_rule.html', rule=bad_rule, new_content=new_content)
+                if success:
+                    flash("Rule fixed and imported successfully.", "success")
+                    #return redirect(url_for('rule.bad_rules_summary'))
+                    return redirect(url_for('rule.detail_rule', rule_id=rule.id))
+                else:
+                    flash(f"Error: {error}", "danger")
+                    bad_rule.error_message = error
+                    return render_template('rule/edit_bad_rule.html', rule=bad_rule, new_content=new_content)
 
-        return render_template('rule/edit_bad_rule.html', rule=bad_rule)
-    else:
+            return render_template('rule/edit_bad_rule.html', rule=bad_rule)
         return render_template("access_denied.html")
+    return render_template('404.html')
 
 @rule_blueprint.route('/bad_rule/<int:rule_id>/delete', methods=['GET', 'POST'])
 @login_required
 def delete_bad_rule(rule_id) -> jsonify:
     """Delete a bad rule (error from import)"""
-    user_bad_rule = RuleModel.get_user_id_of_bad_rule(rule_id)
-    if current_user.is_admin() or current_user.id == user_bad_rule :
-        bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
-        if request.method == 'POST':
-            success = RuleModel.delete_bad_rule(rule_id)
-            if success:
-                return jsonify({"success": True, "message": "Rule deleted!" , "toast_class": "success"})
-        return render_template('rule/edit_bad_rule.html', rule=bad_rule)
-    else:
+    bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
+    if bad_rule:
+        if current_user.is_admin() or current_user.id == bad_rule.user_id :
+            if request.method == 'POST':
+                success = RuleModel.delete_bad_rule(rule_id)
+                if success:
+                    return jsonify({"success": True, "message": "Rule deleted!" , "toast_class": "success"})
+            return render_template('rule/edit_bad_rule.html', rule=bad_rule)
         return render_template("access_denied.html")
+    return render_template("404.html")
     
 @rule_blueprint.route('/bad_rule/delete_all_bad_rule', methods=['GET', 'POST'])
 @login_required

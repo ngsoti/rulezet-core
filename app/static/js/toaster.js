@@ -57,17 +57,3 @@ export async function display_toast(res, not_hide=false) {
 		await create_message(loc["message"], loc["toast_class"], not_hide, loc["icon"])
 	}
 }
-
-
-export async function display_prepared_toast(message){
-	message_list.value.push(message)
-	await nextTick()
-	const toastLiveExample = document.getElementById('liveToast-'+message.id)
-	const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toastLiveExample)
-	toastBootstrap.show()
-	toastLiveExample.addEventListener('hidden.bs.toast', () => {
-		let index = message_list.value.indexOf(message)
-		if(index > -1)
-			message_list.value.splice(index, 1)
-	})
-}
