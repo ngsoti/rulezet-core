@@ -236,60 +236,68 @@
                               </div>
                   </div>
                   <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
-                        {% if current_user.is_admin() %}
-                              <div class="card p-4 shadow-sm mb-3">
-                                    <h5 class="mb-2 d-flex align-items-center">
-                                          <strong>
-                                                <label for="url" class="form-label m-0">
-                                                      Import rules from GitHub project with URL 
-                                                </label> 
-                                                <span style="color:red">*</span>
-                                          </strong>
-                                          <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse" data-bs-target="#ruleInfo" role="button" aria-expanded="false" aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
-                                    </h5>
+                        
+                        <div class="card p-4 shadow-sm mb-3">
+                              <h5 class="mb-2 d-flex align-items-center">
+                                    <strong>
+                                          <label for="url" class="form-label m-0">
+                                                Import rules from GitHub project with URL 
+                                          </label> 
+                                          <span style="color:red">*</span>
+                                    </strong>
+                                    <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse" data-bs-target="#ruleInfo" role="button" aria-expanded="false" aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
+                              </h5>
 
-                                    <div class="collapse" id="ruleInfo">
-                                          <div class="alert alert-info mt-2">
-                                                The script will attempt to parse the rules from the GitHub repository according to their format (YARA, Sigma, Zeek, Suricata). 
-                                                If any issues are detected during the rule validation, you will have the opportunity to review and correct them in the "Bad Rules" section.
-                                          </div>
+                              <div class="collapse" id="ruleInfo">
+                                    <div class="alert alert-info mt-2">
+                                          The script will attempt to parse the rules from the GitHub repository according to their format (YARA, Sigma, Zeek, Suricata). 
+                                          If any issues are detected during the rule validation, you will have the opportunity to review and correct them in the "Bad Rules" section.
                                     </div>
+                              </div>
 
-
-                <div>
-                    <div class="mb-3">
-                        <input type="text" name="url" class="form-control w-100" id="url" placeholder="https://github.com/your_username/project.git" v-model="url" >
-                    </div>
-
-                    <div id="github-url-error" style="color: brown;"></div>
-
+                              {% if current_user.is_admin() %}
+                                    <div>
                                           <div class="mb-3">
-                                                <strong><label for="license-select" class="form-label">License</label></strong>
-                                                <select id="license-select" name="license" class="form-control" v-model="selectedLicense">
-                                                      <option disabled value="">No license</option>
-                                                      <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
-                                                </select>
+                                                <input type="text" name="url" class="form-control w-100" id="url" placeholder="https://github.com/your_username/project.git" v-model="url" >
                                           </div>
 
-                    <button v-if="!is_loading" type="submit" class="btn btn-primary" @click="import_git_url()">
-                        <i class="fas fa-paper-plane"></i> Send
-                    </button>
+                                          <div id="github-url-error" style="color: brown;"></div>
 
-                    <button v-else class="btn btn-primary" type="button" disabled>
-                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                        <span role="status">Loading...</span>
-                    </button>
-                </div>
+                                                                  <div class="mb-3">
+                                                                        <strong><label for="license-select" class="form-label">License</label></strong>
+                                                                        <select id="license-select" name="license" class="form-control" v-model="selectedLicense">
+                                                                              <option disabled value="">No license</option>
+                                                                              <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
+                                                                        </select>
+                                                                  </div>
+
+                                          <button v-if="!is_loading" type="submit" class="btn btn-primary" @click="import_git_url()">
+                                                <i class="fas fa-paper-plane"></i> Send
+                                          </button>
+
+                                          <button v-else class="btn btn-primary" type="button" disabled>
+                                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                                <span role="status">Loading...</span>
+                                          </button>
+                                    </div>
+                              {% else %}
+                                    <div>
+                                          <span class="mt-2">
+                                                <strong>You need to be an admin to import rules from GitHub.</strong>
+                                          </span>
+                                          
+                                          
+                                          
+                                          <div class="mt-2">
+                                                <a href="/account/login" class="btn btn-primary">Login</a>
+                                          </div>
+                                          
+                                    </div>
+                              {% endif %}
+                        </div>
+                  </div>
             </div>
-
-        </div>
-        {% endif %}
-
-
-            
-        
-
-    </div>
+      </div>
 </div>
 {% endblock %}
 

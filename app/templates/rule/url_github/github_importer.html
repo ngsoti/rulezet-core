@@ -39,9 +39,17 @@
         </div>
     </div>
 
-
-
-    <h3 class="mb-4 text-center">GitHub Importer history</h3>
+    <h2 class="fw-bold mb-1 text-center text-primary">GitHub Importer history</h2>
+    <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+    <p class="text-muted mt-2">
+        Browse through your previous GitHub importer sessions and revisit any session by clicking on it.
+    </p>
+    <template v-if="history_list.length === 0">
+        <div class="alert alert-info text-center" role="alert">
+            No history found.
+        </div>
+    </template>
+    
 
     <!-- Table -->
     <template v-if="history_list.length > 0">
@@ -51,13 +59,20 @@
                     <tr>
                         <th scope="col" class="text-center">#</th>
                         <th scope="col">GitHub Importer</th>
-                        <th></th>
+                        <th scope="col">Imported</th>
+                        <th scope="col">Bad rules</th>
+                        <th scope="col">Skipped</th>
+                        <th scope="col">Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="(history, index) in history_list" :key="index" @click="goto(history.uuid)" style="cursor: pointer;">
                         <td class="text-center">[[ index + 1 ]]</td>
                         <td>[[ history.info.repo_url ]]</td>
+                        <td>[[ history.imported ]]</td>
+                        <td>[[ history.bad_rules ]]</td>
+                        <td>[[ history.skipped ]]</td>
+                        <td>[[ history.query_date ]]</td>
                     </tr>
                 </tbody>
             </table>

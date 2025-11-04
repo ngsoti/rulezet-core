@@ -2,9 +2,20 @@
 {% block content %}
 
 <div v-if="info_session">
-    <h3 class="mt-4 mb-4 text-center">[[info_session.repo_url]]</h3>
+    <h2 class="fw-bold mb-1 text-center text-primary">[[info_session.repo_url]]</h2>
+    <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+    
 
     <div v-if="!is_finished">
+        <p class="text-muted mt-2">
+            Importing rules from <span class="text-primary">
+                <a :href="info_session.repo_url" target="_blank">
+                    [[info_session.repo_url]]
+                </a>
+            </span>.
+            This may take a while, please wait...
+        </p>
+        
         <div class="progress">
             <div class="progress-bar progress-bar-striped active" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" :style="'width:'+progress + '%;'">
             </div>
@@ -13,9 +24,59 @@
     </div>
     <!-- [[info_session]] -->
 
-    <div v-if="is_finished" class="container col-md-8 justify-content-center my-5" >
+    <div v-if="is_finished" class="container col-md-10 justify-content-center my-5" >
+        <p class="text-muted mt-2">
+            Import completed successfully.
+            You can now view the imported rules and their details below.
+            <span class="text-primary">
+                <a :href="info_session.repo_url" target="_blank">
+                    [[info_session.repo_url]]
+                </a>
+            </span>. 
+        </p>
+
         <div class="card shadow border-0">
             <div class="card-body p-4 bg-light rounded">
+                <h3 class="fw-bold mb-3">Github information</h3>
+                
+                <table class="table">
+                    <tr v-if="result_data.info.author">
+                        <td style="color:#494950">Author</td>
+                        <td><b>[[ result_data.info.author ]]</b></td>        
+                    </tr>
+                    <tr v-if="result_data.info.description">
+                        <td style="color:#494950">Description</td>
+                        <td><b>[[ result_data.info.description ]]</b></td>
+                    </tr>
+                    <tr v-if="result_data.info.license">
+                        <td style="color:#494950">License</td>
+                        <td><b>[[ result_data.info.license ]]</b></td>     
+                    </tr>
+                    <tr v-if="result_data.info.created_at">
+                        <td style="color:#494950">Creation Date</td>
+                        <td><b>[[ result_data.info.created_at ]]</b></td>        
+                    </tr>
+                    <tr v-if="result_data.info.language">
+                        <td style="color:#494950">Language</td>
+                        <td><b><span class="badge bg-primary">[[ result_data.info.language ]]</span></b></td>        
+                    </tr>
+                    <tr v-if="result_data.info.watchers">
+                        <td style="color:#494950">Watchers</td>
+                        <td><b>[[ result_data.info.watchers ]]</b></td>
+                    </tr>
+                    <tr v-if="result_data.info.stars">
+                        <td style="color:#494950">Stars</td>
+                        <td><b>[[ result_data.info.stars ]]</b></td>
+                    </tr>
+                    <tr v-if="result_data.info.open_issues">
+                        <td style="color:#494950">Open Issues</td>
+                        <td><b>[[ result_data.info.open_issues ]]</b></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card-body p-4 bg-light rounded">
+                <h3 class="fw-bold mb-3">Import summary</h3>
                 <div class="table-responsive">
                     <table class="table">
                         <tr>
@@ -62,6 +123,11 @@
                         </template>
                     </table>
                 </div>
+                <div class="text-center">
+                    <button class="btn btn-primary" type="button" @click="goto(info_session.repo_url)">
+                        View rules
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -102,6 +168,13 @@ const { createApp, ref, onMounted } = Vue;
                 }
             }
 
+            function goto(url){
+                const params = new URLSearchParams({ url })
+                window.location.href = `/rule/github_detail?`+ params.toString()
+            }
+            
+            
+
 
             function pollScan() {
                 // Loop function to update the list of identified domains
@@ -134,7 +207,8 @@ const { createApp, ref, onMounted } = Vue;
                 progress,
                 info_session,
                 result_data,
-                is_finished
+                is_finished,
+                goto
             };
         }
     }).mount('#main-container');
