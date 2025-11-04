@@ -1,8 +1,10 @@
 import json
-from flask import  Blueprint, flash, jsonify, redirect, render_template, request, url_for
+
+from flask import  Blueprint, flash, jsonify, redirect, render_template, request
 from flask_login import current_user, login_required
 from flask import get_flashed_messages
 from flask_login import login_required, current_user
+
 from .rule import rule_core as RuleModel
 from .account import account_core as AccountModel
 

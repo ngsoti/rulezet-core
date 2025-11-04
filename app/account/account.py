@@ -106,9 +106,8 @@ def get_all_users() -> Union[render_template, dict]:
     connected = request.args.get("connected", None)
     admin = request.args.get("admin", None)
 
-    #users = AccountModel.get_users_page(page)
     users_filter = AccountModel.get_users_page_filter(page , search , connected, admin)
-    # total_user = AccountModel.get_count_users()
+
     if current_user.is_admin():
         if users_filter:
             return {"user": [user.to_json() for user in users_filter],
@@ -134,7 +133,7 @@ def edit_user() -> redirect:
         form.first_name.data = current_user.first_name
         form.last_name.data = current_user.last_name
         form.email.data = current_user.email
-        # form.password.data = "" # current_user.password_hash
+
     return render_template("account/edit_user.html", form=form)
 
 
@@ -175,10 +174,7 @@ def add_user() -> redirect:
         if user is None:
             flash('Error during the registration. Please try again !', 'error')
             return redirect("/account/register")
-        #send_confirmation_email(user)
 
-        # flash('A confirmation email has been sent to your inbox.', 'info')
-        # return redirect(url_for('account.login'))
         flash('You are now register. You can connect !', 'success')
         return redirect("/account/login")
     return render_template("account/register_user.html", form=form)
@@ -204,7 +200,6 @@ def acces_denied() -> render_template:
 ############
 # Favorite #
 ############
-
 
 @account_blueprint.route("/favorite/get_rules_page_favorite",  methods=['GET'])
 @login_required

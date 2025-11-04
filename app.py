@@ -5,9 +5,8 @@ from flask import render_template, request, Response
 import json
 import os
 
-from app.import_github_project.cron_check_updates import run_scheduler, set_app
 from app.import_github_project.untils_import import delete_existing_repo_folder
-from app.utils.init_db import create_admin, create_default_user, create_user_test, insert_default_formats, show_admin_first_connection
+from app.utils.init_db import create_admin, create_default_user, insert_default_formats, show_admin_first_connection
 
 
 
@@ -24,7 +23,6 @@ args = parser.parse_args()
 os.environ.setdefault('FLASKENV', 'development')
 
 app = create_app()
-set_app(app)
 
 @app.errorhandler(404)
 def error_page_not_found(e):
@@ -39,8 +37,6 @@ if args.init_db:
         admin, raw_password = create_admin()
         editor = create_default_user()
         insert_default_formats()
-        # create_user_test()
-        # create_rule_test()
         show_admin_first_connection(admin , raw_password)
 
 elif args.recreate_db:
@@ -58,6 +54,5 @@ elif args.delete_db:
         db.drop_all()
         print("DB delete with success")
 else:
-    threading.Thread(target=run_scheduler,  daemon=True).start()
     app.run(host=app.config.get("FLASK_URL"), port=app.config.get("FLASK_PORT"))
     

@@ -159,28 +159,6 @@ def add_rule_to_bundle(bundle_id: int, rule_id: int , description: str) -> bool:
         return True
     return False 
 
-
-def add_rules_to_bundle(bundle_id: int, rule_ids: list[int]) -> list[BundleRuleAssociation]:
-    """
-    Add multiple rules to a bundle.
-    :param bundle_id: ID of the bundle.
-    :param rule_ids: List of rule IDs to add.
-    :return: List of created BundleRuleAssociation objects (skips duplicates).
-    """
-    added_associations = []
-    for rule_id in rule_ids:
-        existing = BundleRuleAssociation.query.filter_by(bundle_id=bundle_id, rule_id=rule_id).first()
-        if not existing:
-            assoc = BundleRuleAssociation(
-                bundle_id=bundle_id,
-                rule_id=rule_id,
-                added_at=datetime.datetime.now(tz=datetime.timezone.utc)
-            )
-            db.session.add(assoc)
-            added_associations.append(assoc)
-    db.session.commit()
-    return added_associations
-
 def get_all_rule_bundles_page(page: int, bundle_id: int) -> list[Rule]:
     """
     List all rules from a bundle (paginated).
@@ -252,19 +230,12 @@ def get_full_rule_bundle_info(rule_id: int) -> Union[Dict[str, Any], Dict[str, s
     if not assoc:
         return {"error": f"No bundle association found for rule_id {rule_id}"}
 
-    # # Get the associated Bundle
-    # bundle = assoc.bundle
-    # if not bundle:
-    #     return {"error": f"No bundle found for bundle_id {assoc.bundle_id}"}
-
     # Return combined data
     return {
         "rule": rule.to_json(),
         "association": assoc.to_json()
         # "bundle": bundle.to_json()
     }
-
-
 
 def get_rule_ids_by_bundle(bundle_id: int) -> Union[Dict[str, str], List[int]]:
     """
@@ -289,8 +260,6 @@ def get_rule_ids_by_bundle(bundle_id: int) -> Union[Dict[str, str], List[int]]:
     # Extract rule IDs from associations
     rule_ids = [assoc.rule_id for assoc in associations]
     return rule_ids
-
-
 def get_rules_from_bundle(bundle_id: int) -> List[Rule]:
     """
     Retrieve all Rule objects associated with a given bundle.
@@ -307,35 +276,6 @@ def get_rules_from_bundle(bundle_id: int) -> List[Rule]:
         .filter(BundleRuleAssociation.bundle_id == bundle_id)
         .all()
     )
-
-
-def get_all_bundles_own_page(page: int, search: str| None) -> dict:
-    """
-    List all bundles paginated, with optional search filter (own by current user).
-    :param page: Page number.
-    :param search: The search string to filter by name or description.
-    :return: Pagination object with filtered bundles.
-    """
-    query = Bundle.query
-
-    if search:
-        like_pattern = f"%{search}%"
-        query = query.filter(
-            or_(
-                Bundle.name.ilike(like_pattern),
-                Bundle.description.ilike(like_pattern)
-            )
-        )
-    query = query.filter_by(user_id=current_user.id)
-    return query.order_by(Bundle.created_at.desc()).paginate(page=page, per_page=20)
-
-
-def get_total_bundles_count_own() -> int:
-    """
-    get the count of bundles (own by current user)
-    :return: int the number of bundles.
-    """
-    return Bundle.query.filter_by(user_id=current_user.id).count()
 
 def get_bundles_by_rule(rule_id: int) -> List[Bundle]:
     """
@@ -362,37 +302,6 @@ def toggle_bundle_accessibility(bundle_id: int) -> bool:
     bundle.access = not bundle.access
     db.session.commit()
     return True , "Bundle access toggled successfully"
-
-
-
-# def get_bundles_of_user_with_id_page(user_id: int, page: int, search: str = None, sort_by: str = "newest", rule_type: str = None) -> dict:
-#     """
-#     List all accessible bundles of a specific user, paginated and optionally filtered by search.
-    
-#     :param user_id: ID of the user whose bundles to retrieve.
-#     :param page: Page number.
-#     :param search: Optional search string to filter by name or description.
-#     :return: Pagination object with the user's bundles.
-#     """
-#     query = Bundle.query.filter(
-#         Bundle.user_id == user_id,
-#         Bundle.access.is_(True)  # Only show accessible bundles
-#     )
-
-#     if search:
-#         like_pattern = f"%{search}%"
-#         query = query.filter(
-#             or_(
-#                 Bundle.name.ilike(like_pattern),
-#                 Bundle.description.ilike(like_pattern)
-#             )
-#         )
-
-#     pagination = query.order_by(Bundle.created_at.desc()).paginate(page=page, per_page=20)
-
-#     return pagination
-
-
 
 def get_bundles_of_user_with_id_page(
     user_id: int, 
@@ -449,9 +358,6 @@ def get_bundles_of_user_with_id_page(
     pagination = query.paginate(page=page, per_page=20)
 
     return pagination
-
-
-
 
 def has_already_vote(bundle_id, user_id) -> bool:
     """Test if an user has ever vote"""

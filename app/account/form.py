@@ -38,7 +38,6 @@ class EditUserForm(FlaskForm):
                                     '<a href="{}">log in</a> instead?)'.format(
                                         url_for('account.index')))
 
-
 class AddNewUserForm(FlaskForm):
     """Creation form to create a user"""
     first_name = StringField('First name', validators=[InputRequired()])

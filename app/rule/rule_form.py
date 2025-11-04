@@ -69,44 +69,6 @@ class EditRuleForm(FlaskForm):
         formats_rules_list = RuleModel.get_all_rule_format()
         self.format.choices = [(f.name, f.name) for f in formats_rules_list]
 
-    
-    
-
-class EditScheduleForm(FlaskForm):
-    """Form to edit an existing schedule"""
-
-    name = StringField('Name', validators=[InputRequired()])
-    description = TextAreaField('Description')
-
-    hour = IntegerField('Hour', validators=[
-        InputRequired(),
-        NumberRange(min=0, max=23, message="Hour must be between 0 and 23")
-    ])
-
-    minute = IntegerField('Minute', validators=[
-        InputRequired(),
-        NumberRange(min=0, max=59, message="Minute must be between 0 and 59")
-    ])
-
-    days = SelectMultipleField(
-        'Days',
-        choices=[
-            ('monday', 'Monday'),
-            ('tuesday', 'Tuesday'),
-            ('wednesday', 'Wednesday'),
-            ('thursday', 'Thursday'),
-            ('friday', 'Friday'),
-            ('saturday', 'Saturday'),
-            ('sunday', 'Sunday')
-        ],
-        validators=[InputRequired()]
-    )
-
-    active = BooleanField('Active')
-    submit = SubmitField('Save')
-
-
-
 class CreateFormatRuleForm(FlaskForm):
     """Form to create a new rule format"""
 

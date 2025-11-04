@@ -378,10 +378,6 @@ def evaluate():
         "vote_down": bundle.vote_down
     }), 200
 
-
-   
-    
-
 #########################
 #   Download section    #
 #########################
@@ -406,26 +402,13 @@ def download_bundle():
             "toast_class": "danger"
         }, 401
 
-    EXTENSIONS_MAP = {
-        # "yara": "yara",
-        # "sigma": "yaml",
-        # "zeek": "zeek",
-        # "suricata": "rule",
-        # "snort": "rule",
-        # "text": "txt",
-        # "crs": "conf",
-        # "nova": "nov",
-        # "wazuh": "xml",
-        # "nse": "nse",
-    }
-
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
         bundle_info_json = json.dumps(bundle.to_json(), indent=2)
         zip_file.writestr("bundle_info.txt", bundle_info_json)
 
         for rule in rules:
-            ext = EXTENSIONS_MAP.get(rule.format.lower(), "txt") if rule.format else "txt"
+            ext = "txt" # Change into .yara .... for each format
             base_filename = f"{rule.title.replace(' ', '_')}_{rule.id}"
 
             code_filename = f"{base_filename}.{ext}"
@@ -442,31 +425,6 @@ def download_bundle():
         download_name=f"{bundle.name}.zip",
         mimetype='application/zip'
     ), 200
-
-# ################
-# #  own bundle  #
-# ################
-
-# @bundle_blueprint.route("/own", methods=['GET' , 'POST'])
-# @login_required
-# def own() :     
-#     """list all bundles"""     
-#     return render_template("bundle/own_bundle.html" )
-
-# @bundle_blueprint.route("/get_all_bundles_owner", methods=['GET'])
-# @login_required
-# def get_all_bundles_owner() :     
-#     """get all bundles own by the current user for pages"""     
-#     page = request.args.get('page', 1, type=int)
-#     search = request.args.get('search', type=str)
-#     bundles_list = BundleModel.get_all_bundles_own_page(page, search)
-#     total_bundles = BundleModel.get_total_bundles_count_own()
-#     if bundles_list:
-#         return {"bundle_list_": [r.to_json() for r in bundles_list],
-#                 "total_pages": bundles_list.pages, 
-#                 "total_bundles": total_bundles} , 200
-
-#     return {"message": "No Rule"} , 200
 
 ################################
 #   Rule part of the bundle    #

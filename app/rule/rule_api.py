@@ -504,89 +504,89 @@ class DeleteRule(Resource):
 #   Edit a rule   #
 ###################
 
-@private_ns.route('/edit/<int:rule_id>')
-@api.doc(description="Edit a rule")
-class EditRule(Resource):
-    @api_required
-    def post(self, rule_id):
-        user = utils.get_user_from_api(request.headers)
-        if not user:
-            return {"success": False, "message": "Unauthorized"}, 403
+# @private_ns.route('/edit/<int:rule_id>')
+# @api.doc(description="Edit a rule")
+# class EditRule(Resource):
+#     @api_required
+#     def post(self, rule_id):
+#         user = utils.get_user_from_api(request.headers)
+#         if not user:
+#             return {"success": False, "message": "Unauthorized"}, 403
 
-        rule = RuleModel.get_rule(rule_id)
-        if not rule:
-            return {"success": False, "message": "Rule not found"}, 404
+#         rule = RuleModel.get_rule(rule_id)
+#         if not rule:
+#             return {"success": False, "message": "Rule not found"}, 404
 
-        user_id = RuleModel.get_rule_user_id(rule_id)
-        if user.id != user_id and not user.is_admin():
-            return {"success": False, "message": "Access denied"}, 403
+#         user_id = RuleModel.get_rule_user_id(rule_id)
+#         if user.id != user_id and not user.is_admin():
+#             return {"success": False, "message": "Access denied"}, 403
 
-        data = request.get_json(silent=True)
-        if not data:
-            data = request.args.to_dict()
-
-
-        title = data.get("title", rule.title).strip()
-        format_ = data.get("format", rule.format).strip()
-        version = data.get("version", rule.version).strip()
-        to_string = data.get("to_string", rule.to_string).strip()
-        license_ = data.get("license", rule.license).strip()
-        description = data.get("description", rule.description or "").strip() or "No description for the rule"
-        source = data.get("source", rule.source or "").strip() or f"{user.first_name}, {user.last_name}"
-        cve_id = data.get("cve_id", rule.cve_id)
-
-        required_fields = {
-            "title": title,
-            "format": format_,
-            "version": version,
-            "to_string": to_string,
-            "license": license_,
-        }
-
-        missing_fields = [k for k, v in required_fields.items() if not v or not str(v).strip()]
-        if missing_fields:
-            return {"success": False, "message": f"Missing or empty fields: {', '.join(missing_fields)}"}, 400
+#         data = request.get_json(silent=True)
+#         if not data:
+#             data = request.args.to_dict()
 
 
-        existing_rule = Rule.query.filter_by(title=title).first()
-        if existing_rule and existing_rule.id != rule_id:
-            return {"success": False, "message": "Another rule with this title already exists"}, 409
+#         title = data.get("title", rule.title).strip()
+#         format_ = data.get("format", rule.format).strip()
+#         version = data.get("version", rule.version).strip()
+#         to_string = data.get("to_string", rule.to_string).strip()
+#         license_ = data.get("license", rule.license).strip()
+#         description = data.get("description", rule.description or "").strip() or "No description for the rule"
+#         source = data.get("source", rule.source or "").strip() or f"{user.first_name}, {user.last_name}"
+#         cve_id = data.get("cve_id", rule.cve_id)
+
+#         required_fields = {
+#             "title": title,
+#             "format": format_,
+#             "version": version,
+#             "to_string": to_string,
+#             "license": license_,
+#         }
+
+#         missing_fields = [k for k, v in required_fields.items() if not v or not str(v).strip()]
+#         if missing_fields:
+#             return {"success": False, "message": f"Missing or empty fields: {', '.join(missing_fields)}"}, 400
 
 
-        if cve_id:
-            valid, matches = utils.detect_cve(cve_id)
-            if not valid:
-                return {"success": False, "message": "Invalid CVE ID format or not recognized"}, 400
+#         existing_rule = Rule.query.filter_by(title=title).first()
+#         if existing_rule and existing_rule.id != rule_id:
+#             return {"success": False, "message": "Another rule with this title already exists"}, 409
 
-        form_dict = {
-            'title': title,
-            'format': format_,
-            'description': description,
-            'version': version,
-            'source': source,
-            'to_string': to_string,
-            'license': license_,
-            'author': user.first_name,
-            'cve_id': cve_id if cve_id else None
-        }
 
-        external_vars = []
+#         if cve_id:
+#             valid, matches = utils.detect_cve(cve_id)
+#             if not valid:
+#                 return {"success": False, "message": "Invalid CVE ID format or not recognized"}, 400
 
-        if format_ == 'yara':
-            valid, to_string, error = RuleModel.compile_yara(external_vars, form_dict)
-            if not valid:
-                return {"success": False, "message": error}, 400
-        elif format_ == 'sigma':
-            valid, to_string, error = RuleModel.compile_sigma(form_dict)
-            if not valid:
-                return {"success": False, "message": error}, 400
-        else:
-            return {"success": False, "message": "Unsupported rule format"}, 400
+#         form_dict = {
+#             'title': title,
+#             'format': format_,
+#             'description': description,
+#             'version': version,
+#             'source': source,
+#             'to_string': to_string,
+#             'license': license_,
+#             'author': user.first_name,
+#             'cve_id': cve_id if cve_id else None
+#         }
 
-        success , result = RuleModel.edit_rule_core(form_dict, rule_id)
-        if result:
-            return {"success": True, "message": "Rule updated successfully"}, 200
-        return {"success": False, "message": "Failed to update rule"}, 500
+#         external_vars = []
+
+#         if format_ == 'yara':
+#             valid, to_string, error = RuleModel.compile_yara(external_vars, form_dict)
+#             if not valid:
+#                 return {"success": False, "message": error}, 400
+#         elif format_ == 'sigma':
+#             valid, to_string, error = RuleModel.compile_sigma(form_dict)
+#             if not valid:
+#                 return {"success": False, "message": error}, 400
+#         else:
+#             return {"success": False, "message": "Unsupported rule format"}, 400
+
+#         success , result = RuleModel.edit_rule_core(form_dict, rule_id)
+#         if result:
+#             return {"success": True, "message": "Rule updated successfully"}, 200
+#         return {"success": False, "message": "Failed to update rule"}, 500
 
         # curl -X POST http://127.0.0.1:7009/api/rule/private/edit/3 \
         #   -H "Content-Type: application/json" \

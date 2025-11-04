@@ -28,8 +28,6 @@ from ..account import account_core as AccountModel
 # CRUD
 
 # Create
-
-
 def add_rule_core(form_dict, user) -> bool:
     """
     Add a rule safely with error handling.
@@ -126,10 +124,6 @@ def rule_exists(Metadata: dict) -> tuple[bool, int]:
 
     return False, None
 
- 
-
-
-
 # Delete
 
 def delete_rule_core(id) -> bool:
@@ -161,15 +155,6 @@ def edit_rule_core(form_dict, id) -> tuple[bool,Rule]:
     db.session.commit()
     return True , rule
 
-def set_user_id(rule_id, user_id) -> bool:
-    """"Set a user id"""
-    rule = get_rule(rule_id)
-    if rule:
-        rule.user_id = user_id
-        db.session.commit()  
-        return True
-    return False
-
 def compile_yara(external_vars, form_dict) -> tuple[bool, dict]:
     """Try to compile a YARA rule with external variables. Return updated form_dict if success."""
     external_vars_temp = external_vars.copy()
@@ -192,7 +177,6 @@ def compile_yara(external_vars, form_dict) -> tuple[bool, dict]:
             else:
                 return False , form_dict["to_string"] , error_msg
 
-# sync methode 
 def load_json_schema_sync(schema_file):
     """
     Load a JSON schema synchronously from a file.
@@ -204,36 +188,6 @@ def load_json_schema_sync(schema_file):
         return schema
     except Exception:
         return None
-
-
-def compile_sigma(form_dict) -> tuple[bool, dict]:
-    """
-    Try to compile and validate a Sigma rule using JSON Schema.
-    
-    :param external_vars: Not used here but kept for symmetry with compile_yara
-    :param form_dict: Dict containing the Sigma rule in form_dict["to_string"]
-    :return: (success: bool, possibly modified form_dict)
-    """
-    sigma_schema = load_json_schema_sync("app/import_github_project/sigma_format.json")
-    rule_string = form_dict['to_string']
-    try:
-        rule = yaml.safe_load(rule_string)
-        if not rule:
-            raise ValueError("Empty or invalid YAML structure.")
-
-        rule_json_string = json.dumps(rule, indent=2, default=str)
-        rule_json_object = json.loads(rule_json_string)
-
-        validate(instance=rule_json_object, schema=sigma_schema)
-        return True, form_dict["to_string"] , 'no error'
-
-    except ValidationError as e:
-        error_msg = str(e)
-        return False, form_dict["to_string"] , error_msg
-
-    except Exception as e:
-        error_msg = str(e)
-        return False, form_dict["to_string"] , error_msg
 
 # Read
 
@@ -255,28 +209,6 @@ def is_valid_github_url(url: str) -> bool:
         return parsed.scheme in ('http', 'https') and 'github.com' in parsed.netloc
     except Exception:
         return False
-
-# def get_sources_from_titles(rules_list: List[dict]) -> List[str]:
-#     """
-#     Given a list of dicts containing 'title', retrieve the 'source' from the DB for each rule,
-#     but only if the title is unique in the DB, the source has not already been added,
-#     and the source is a valid GitHub URL.
-#     Returns a deduplicated list of sources.
-#     """
-#     sources = []
-
-#     for rule_info in rules_list:
-#         title = rule_info.get('title')
-#         if not title:
-#             continue
-
-#         count = Rule.query.filter_by(title=title).count()
-#         if count == 1:
-#             rule = Rule.query.filter_by(title=title).first()
-#             if rule.source and rule.source not in sources and is_valid_github_url(rule.source):
-#                 sources.append(rule.source)
-
-#     return sources
 
 def get_sources_from_ids(rule_ids: List[int]) -> List[str]:
     """
@@ -301,7 +233,6 @@ def get_sources_from_ids(rule_ids: List[int]) -> List[str]:
 
     return sources
 
-
 def get_sources_from_ids(rules_list: List[dict]) -> List[str]:
     """
     Given a list of dicts containing 'id', retrieve the 'source' from the DB for each rule,
@@ -321,29 +252,6 @@ def get_sources_from_ids(rules_list: List[dict]) -> List[str]:
                 sources.append(rule.source)
 
     return sources
-
-def get_sources_from_titles_rule(rules_list: Rule) -> List[str]:
-    """
-    Given a list of dicts containing 'title', retrieve the 'source' from the DB for each rule,
-    but only if the title is unique in the DB and the source has not already been added.
-    Returns a deduplicated list of sources.
-    """
-    sources = []
-
-    for rule_info in rules_list:
-        title = rule_info.title
-        if not title:
-            continue
-            
-        count = Rule.query.filter_by(title=title).count()
-
-        if count == 1:
-            rule = Rule.query.filter_by(title=title).first()
-            if rule.source not in sources:
-                sources.append(rule.source)
-
-    return sources
-
 
 def get_rules() -> Rule:
     """Get all the rules"""
@@ -390,11 +298,6 @@ def get_rules_of_user_with_id_page(user_id, page, search, sort_by, rule_type) ->
     # Pagination
     return query.paginate(page=page, per_page=20, max_per_page=20)
 
-
-def get_rules_of_user_with_id_count(user__id) -> int:
-    """Return the count of rules"""
-    return Rule.query.filter(Rule.user_id == user__id).count()
-
 def get_rule(id) -> int:
     """Return the rule from id"""
     return Rule.query.get(id)
@@ -440,8 +343,6 @@ def get_similar_rule(rule_id) -> list:
 
     return [r.to_json() for r in similar_rules]
 
-
-
 def get_rule_type_count(user_id):
     """Return JSON of the different rule types and total"""
     rules = Rule.query.filter_by(user_id=user_id).all()
@@ -468,12 +369,6 @@ def get_rule_type_count(user_id):
         "types": format_counts
     })
 
-def get_all_rule_id_own_by_user_id():
-    """
-    Return a list of all rule IDs created by the current user.
-    """
-    return [rule.id for rule in Rule.query.filter_by(user_id=current_user.id).all()]
-
 def get_all_editor_from_rules_list(rules):
     """
     Get a list of unique editors (user_id) from a list of rules.
@@ -482,13 +377,6 @@ def get_all_editor_from_rules_list(rules):
     :return: A list of unique authors.
     """
     return list({rule.user_id for rule in rules if rule.user_id})
-
-def get_rules_from_user(rules_from_source, user_id_) -> list:
-    """
-    Return a list of rules from the given list where the rule's user_id matches the given user_id.
-    """
-    return [rule for rule in rules_from_source if rule.user_id == user_id_]
-
 
 def get_rule_by_title(title) -> str:
     """Return the rule from the title"""
@@ -502,7 +390,6 @@ def get_rule_id_by_title(title) -> int:
     """Return the rule ID from the title"""
     rule = Rule.query.filter_by(title=title).first()
     return rule.id if rule else None
-
 
 def get_total_rules_count() -> int:
     """Return the count of rules"""
@@ -530,32 +417,6 @@ def get_history_rule(page, rule_id) -> list:
         .filter(RuleEditProposal.old_content.isnot(None)) \
         .order_by(RuleEditProposal.timestamp.desc()) \
         .paginate(page=page, per_page=20, max_per_page=20)
-
-
-
-
-def get_diff_lines(text1: str, text2: str):
-    """
-    Compare two multiline strings and return the line numbers and contents where they differ.
-    """
-    lines1 = text1.strip().splitlines()
-    lines2 = text2.strip().splitlines()
-    
-    max_lines = max(len(lines1), len(lines2))
-    diffs = []
-
-    for i in range(max_lines):
-        line1 = lines1[i] if i < len(lines1) else ""
-        line2 = lines2[i] if i < len(lines2) else ""
-
-        if line1 != line2:
-            diffs.append({
-                "line_number": i + 1,
-                "old_line": line1,
-                "new_line": line2
-            })
-
-    return diffs
 
 def get_concerned_rules_page(source, page):
     """Return paginated concerned rules for the given page (20 per page)."""
@@ -643,8 +504,6 @@ def get_all_rule_update(search=None, rule_type=None, sourceFilter=None) -> List[
 
     return query.all()
 
-
-
 def get_all_rule_sources_by_user():
     """
     Return a list of distinct non-null rule sources for a given user.
@@ -663,39 +522,6 @@ def get_all_rule_sources_by_user():
 # CRUD
 
 # Update
-
-def save_invalid_rules(bad_rules, rule_type ,repo_url, license , user) -> None:
-    """
-    Save a list of invalid rules to the database if not already existing.
-    
-    :param bad_rules: List of dicts with 'file', 'error', and optional 'content'
-    :param rule_type: Type of the rule, default is 'Sigma'
-    """
-
-    for bad_rule in bad_rules:
-        file_name = bad_rule.get("file")
-        error_message = str(bad_rule.get("error"))
-        raw_content = bad_rule.get("content", "")
-        existing = InvalidRuleModel.query.filter_by(
-            file_name=file_name,
-            error_message=error_message,
-            raw_content=raw_content,
-            rule_type=rule_type,
-            user_id=user.id
-        ).first()
-        if existing:
-            continue
-        new_invalid_rule = InvalidRuleModel(
-            file_name=file_name or "invalide rule" ,
-            error_message=error_message,
-            raw_content=raw_content,
-            rule_type=rule_type,
-            user_id=user.id,
-            url=repo_url,
-            license=license
-        )
-        db.session.add(new_invalid_rule)
-    db.session.commit()
 
 def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
     """
@@ -745,8 +571,6 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
     db.session.add(new_invalid_rule)
     db.session.commit()
 
-
-
 # Read
 
 def get_bad_rules_page(page, per_page=20) -> InvalidRuleModel:
@@ -788,33 +612,6 @@ def delete_bad_rule(rule_id) -> bool:
         return True
     else:
         return False
-    
-
-
-def delete_bad_rule_from_url(url: str, current_user_id: int) -> bool:
-    """
-    Delete all InvalidRuleModel entries with the given URL
-    only if they belong to the current user.
-    """
-    try:
-        rules_to_delete = get_bad_rule_with_url(url)
-        deleted = False
-
-        for rule in rules_to_delete:
-            if rule.user_id == current_user_id:
-                db.session.delete(rule)
-                deleted = True 
-
-        if deleted:
-            db.session.commit()
-            return True
-        else:
-            db.session.rollback()
-            return False
-    except Exception as e:
-        db.session.rollback()
-        return False
-
 
 #################
 #   Owner Rule  #
@@ -892,7 +689,6 @@ def get_rules_page_favorite(page, id_user, search=None, author=None, sort_by=Non
 # CRUD
 
 # Create
-
 def propose_edit_core(rule_id, proposed_content, message=None) -> bool:
     """create an issue for a rule"""
     if not proposed_content:
@@ -911,7 +707,6 @@ def propose_edit_core(rule_id, proposed_content, message=None) -> bool:
     return True
 
 # Read
-##################################__User__##################################################
 
 def get_rules_edit_propose_page(page) -> RuleEditProposal:
     """Return all rule proposals where the original rule belongs to current user (simple join version)"""
@@ -935,8 +730,6 @@ def get_rules_edit_propose_page_pending(page) -> RuleEditProposal:
         max_per_page=20
     )
 
-##################################__Admin__##################################################
-
 def get_rules_edit_propose_page_admin(page) -> RuleEditProposal:
     """Return all rule proposals where the original rule belongs to current user (simple join version)"""
     return RuleEditProposal.query.filter(
@@ -947,8 +740,6 @@ def get_rules_edit_propose_page_admin(page) -> RuleEditProposal:
         max_per_page=20
     )
 
-
-
 def get_rules_edit_propose_page_pending_admin(page) -> RuleEditProposal:
     """Return all pending rule edit proposals (admin view, no user filter)"""
     return RuleEditProposal.query.filter(
@@ -958,8 +749,6 @@ def get_rules_edit_propose_page_pending_admin(page) -> RuleEditProposal:
         per_page=20,
         max_per_page=20
     )
-
-
 def get_all_rules_edit_propose_page(page , rule_id) -> RuleEditProposal:
     """Return all rule edit proposals"""
     return RuleEditProposal.query.join(RuleEditProposal.rule).filter(
@@ -969,12 +758,6 @@ def get_all_rules_edit_propose_page(page , rule_id) -> RuleEditProposal:
         per_page=20,
         max_per_page=20
     )
-
-def get_rules_edits_propose_page_old_total_admin() -> int:
-    """Get the count of rules not in 'pending' status (e.g., validated or rejected proposals)"""
-    return RuleEditProposal.query.filter(RuleEditProposal.status != "pending").count()
-
-
 def get_rule_proposal(id) -> RuleEditProposal:
     """Return the rule"""
     return RuleEditProposal.query.get(id)
@@ -1299,11 +1082,6 @@ def get_comment_by_id(comment_id) -> Comment | None:
     """Get a comment by its ID"""
     return Comment.query.get(comment_id)
 
-def get_comments_for_rule(rule_id) -> list[Comment]:
-    """Get all comments for a rule"""
-    return Comment.query.filter_by(rule_id=rule_id).order_by(Comment.created_at.desc()).all()
-
-
 def get_comment_page(page, rule_id) -> object:
     """Get paginated comments for a rule"""
     return Comment.query.filter_by(rule_id=rule_id).paginate(page=page, per_page=20, max_per_page=20)
@@ -1330,7 +1108,6 @@ def update_comment(comment_id, new_content) -> Comment | None:
     return comment
 
 # Delete
-
 def delete_comment(comment_id) -> bool:
     """Delete a comment by its ID"""
     comment = get_comment_by_id(comment_id)
@@ -1365,16 +1142,6 @@ def get_rule_id_with_edit_disccuss(proposal_id)-> id:
     """Get the id of the reel rule"""
     rule = get_rule_proposal(proposal_id)
     return rule.rule_id
-
-def get_all_contributions() -> RuleEditContribution:
-    """Get all the contributor"""
-    return RuleEditContribution.query.all()
-
-
-def get_contribution_by_id(contribution_id) -> RuleEditContribution:
-    """Get a contributor with id"""
-    return RuleEditContribution.query.get(contribution_id)
-
 def get_all_contributions_with_rule_id(rule_id) -> list:
     """
     Get all unique contributors for a given rule_id.
@@ -1391,37 +1158,6 @@ def get_all_contributions_with_rule_id(rule_id) -> list:
             seen_user_ids.add(contribution.user_id)
             users_id.append(contribution)
     return users_id
-
-
-# Update
-
-def update_contribution(contribution_id, user_id=None, proposal_id=None , rule_id=None) -> RuleEditContribution:
-    """Update a contributor"""
-    contribution = RuleEditContribution.query.get(contribution_id)
-    if not contribution:
-        return None
-
-    if user_id:
-        contribution.user_id = user_id
-    if proposal_id:
-        contribution.proposal_id = proposal_id
-    if rule_id:
-        contribution.rule_id = rule_id
-
-    db.session.commit()
-    return contribution
-
-# Delete
-
-def delete_contribution(contribution_id)-> bool:
-    """Delete a contributor"""
-    contribution = RuleEditContribution.query.get(contribution_id)
-    if not contribution:
-        return False
-
-    db.session.delete(contribution)
-    db.session.commit()
-    return True
 
 #######################
 #   Repport section   #
@@ -1467,7 +1203,6 @@ def get_repported_rule(page) -> RepportRule:
         max_per_page=20
     )
 
-
 def get_total_repport_to_check_admin() -> int:
     """Get the total count of reports to check (admin view)"""
     return RepportRule.query.count()
@@ -1475,31 +1210,6 @@ def get_total_repport_to_check_admin() -> int:
 def get_repport_by_id(repport_id) -> RepportRule:
     """Read a report by ID"""
     return RepportRule.query.get(repport_id)
-
-def get_all_repports(user_id, rule_id) -> list[RepportRule]:
-    """Read all reports (optional filter by rule or user)"""
-    query = RepportRule.query
-    if user_id:
-        query = query.filter_by(user_id=user_id)
-    if rule_id:
-        query = query.filter_by(rule_id=rule_id)
-    return query.order_by(RepportRule.created_at.desc()).all()
-
-
-# Update
-
-def update_repport(repport_id, message, reason) -> RepportRule:
-    """Update a report"""
-    repport = RepportRule.query.get(repport_id)
-    if not repport:
-        return None
-    if message is not None:
-        repport.message = message
-    if reason is not None:
-        repport.reason = reason
-    db.session.commit()
-    return repport
-
 
 # Delete
 
@@ -1511,8 +1221,6 @@ def delete_report(repport_id) -> bool:
     db.session.delete(repport)
     db.session.commit()
     return True
-
-
 
 #######################
 #   history section   #
@@ -1527,12 +1235,13 @@ def create_rule_history(data: dict) -> bool:
         message = data.get("message", "")
         new_content = data.get("new_content", "")
         old_content = data.get("old_content", "")
-        schedule_id = data.get("schedule_id" , None)
-        if schedule_id is None:
-            user_id = current_user.id
-        else:
-            schedule = get_schedule(schedule_id)
-            user_id = schedule.user_id if schedule else None
+
+        rule = get_rule(rule_id)
+        if rule:
+            if current_user:
+                user_id = current_user.id
+            else:
+                user_id = rule.user_id
 
         existing_entry = RuleUpdateHistory.query.filter_by(
             rule_id=rule_id,
@@ -1598,278 +1307,9 @@ def get_update_pending():
         RuleUpdateHistory.message != 'rejected'
     ).count()
 
-##################
-#   Update rule  #
-##################
-
-
-def create_auto_update_schedule(hour: int,minute: int,days: List[str], name: str , description: str|None ,rule_ids: List[int]) -> dict[str, object]:
-    """
-    Create a new AutoUpdateSchedule if one with the same user_id, hour, minute, and days does not already exist.
-    Also associate the provided rules with the schedule.
-    
-    Args:
-        hour (int): Update hour (0-23).
-        minute (int): Update minute (0-59).
-        days (List[str]): List of days for the schedule (e.g., ["monday", "wednesday"]).
-        rule_ids (List[int]): List of rule IDs to link.
-
-    Returns:
-        Dict[str, object]: Dictionary with keys:
-            - 'success' (bool): True if created or existing found
-            - 'schedule_id' (int): The ID of the created or existing schedule
-            - 'created' (bool): True if a new schedule was created, False if an existing one was found
-    """
-    
-    # Check if schedule already exists for current user with same hour, minute, and days
-    existing_schedule = AutoUpdateSchedule.query.filter_by(
-        user_id=current_user.id,
-        hour=hour,
-        minute=minute,
-        name=name,
-        description=description,
-        days=days
-    ).first()
-    
-    if existing_schedule:
-        schedule = existing_schedule
-        created = False
-    else:
-        schedule = AutoUpdateSchedule(
-            user_id=current_user.id,
-            hour=hour,
-            minute=minute,
-            days=days,
-            name=name,
-            description=description,
-            active=True,
-            created_at=datetime.datetime.now(tz=datetime.timezone.utc)
-        )
-        db.session.add(schedule)
-        db.session.commit()
-        created = True
-    
-    # Associate rules (avoid duplicates)
-    if rule_ids:
-        for rule_id in rule_ids:
-            exists = db.session.query(
-                AutoUpdateScheduleRuleAssociation
-            ).filter_by(schedule_id=schedule.id, rule_id=rule_id).first()
-            if not exists:
-                assoc = AutoUpdateScheduleRuleAssociation(schedule_id=schedule.id, rule_id=rule_id)
-                db.session.add(assoc)
-        db.session.commit()
-
-
-    if created:
-        from app.import_github_project.cron_check_updates import add_schedule_job
-        add_schedule_job(schedule.id, days, hour, minute)
-
-
-
-    return {
-        "success": True,
-        "schedule_id": schedule.id,
-        "created": created
-    }
-
-def delete_auto_update_schedule(schedule_id: int) -> bool:
-    """
-    Delete an AutoUpdateSchedule by ID and user ID.
-
-    Args:
-        db (Session): SQLAlchemy database session.
-        schedule_id (int): ID of the schedule to delete.
-
-    Returns:
-        bool.
-    """
-    schedule = db.session.query(AutoUpdateSchedule).filter_by(id=schedule_id).first()
-    if not schedule:
-        return False
-
-    # Delete associated links first due to foreign key constraints
-    db.session.query(AutoUpdateScheduleRuleAssociation).filter_by(schedule_id=schedule_id).delete()
-    db.session.delete(schedule)
-    db.session.commit()
-    return True
-
-
-def get_auto_update_page(page: int, search: str) -> list:
-    """
-    Get paginated AutoUpdateSchedule for the current user, optionally filtered by rule title.
-
-    Args:
-        page (int): Page number.
-        search (str): Search string to filter rules by title.
-
-    Returns:
-        Pagination: SQLAlchemy Pagination object with AutoUpdateSchedule items.
-    """
-    query = AutoUpdateSchedule.query.filter_by(user_id=current_user.id)
-
-    if search:
-        query = query.join(AutoUpdateSchedule.rules).filter(Rule.title.ilike(f"%{search}%")).distinct()
-
-    return query.order_by(AutoUpdateSchedule.created_at.desc()).paginate(page=page, per_page=30, max_per_page=30)
-
-def get_schedule(schedule_id: int) -> AutoUpdateSchedule | None:
-    """
-    Retrieve an AutoUpdateSchedule by its ID.
-
-    Args:
-        schedule_id (int): The ID of the schedule to retrieve.
-
-    Returns:
-        AutoUpdateSchedule or None: The schedule object if found, else None.
-    """
-    return AutoUpdateSchedule.query.filter_by(id=schedule_id).first()
-
-def edit_schedule(form_dict: dict[str, None], schedule_id: int) -> None:
-    """
-    Edit an existing Schedule in the database using data from a form.
-
-    Args:
-        form_dict (Dict[str, Any]): Dictionary containing the form data.
-        schedule_id (int): The ID of the Schedule to update.
-
-    Expected keys in form_dict:
-        - name (str)
-        - description (str | None)
-        - hour (int)
-        - minute (int)
-        - days (list[str])        # e.g., ['monday', 'wednesday']
-        - active (bool or str)    # 'on', 'true', True, etc.
-    """
-    schedule = get_schedule(schedule_id)
-
-    schedule.name = form_dict["name"]
-    schedule.description = form_dict.get("description") or None
-    schedule.hour = int(form_dict["hour"])
-    schedule.minute = int(form_dict["minute"])
-
-    # Make sure days is a list of strings
-    schedule.days = form_dict["days"]
-
-    # Convert 'active' to boolean safely
-    if isinstance(form_dict["active"], str):
-        schedule.active = form_dict["active"].lower() in ["true", "1", "on"]
-    else:
-        schedule.active = bool(form_dict["active"])
-
-    db.session.commit()
-    return True
-
-
-def add_rule_to_schedule(schedule_id: int, rule: dict) -> bool:
-    """
-    Add a rule to an auto-update schedule if it is not already linked.
-
-    Args:
-        schedule_id (int): ID of the AutoUpdateSchedule to update.
-        rule (dict): A dictionary containing at least the 'id' of the rule to add.
-
-    Returns:
-        bool: True if the rule was successfully added, False otherwise.
-    """
-    try:
-
-        schedule = db.session.get(AutoUpdateSchedule, schedule_id)
-        if schedule is None:
-
-            return False
-
-        rule_id = rule.get("id")
-        if rule_id is None:
-
-            return False
-
-        # Check if the rule is already associated with the schedule
-        existing_association = db.session.execute(
-            db.select(AutoUpdateScheduleRuleAssociation)
-            .filter_by(schedule_id=schedule_id, rule_id=rule_id)
-        ).scalar_one_or_none()
-
-        if existing_association:
-
-            return True # Already linked
-
-        new_association = AutoUpdateScheduleRuleAssociation(
-            schedule_id=schedule_id,
-            rule_id=rule_id
-        )
-        db.session.add(new_association)
-        db.session.commit()
-        return True
-
-    except Exception as e:
-        db.session.rollback()
-        return False
-
-def update_schedule_rules(schedule_id: int, rule_dicts: list[dict]) -> bool:
-    """Update with delete or add new rule to schedule"""
-    try:
-        rule_ids_in_payload = {
-            rule.get("id") for rule in rule_dicts if rule.get("id") is not None
-        }
-
-        current_associations = db.session.execute(
-            db.select(AutoUpdateScheduleRuleAssociation)
-            .filter_by(schedule_id=schedule_id)
-        ).scalars().all()
-
-        current_rule_ids = {assoc.rule_id for assoc in current_associations}
-
-
-
-        rule_ids_to_remove = current_rule_ids - rule_ids_in_payload
-
-
-        for assoc in current_associations:
-            if assoc.rule_id in rule_ids_to_remove:
-                db.session.delete(assoc)
-
-
-        error = 0
-        for rule in rule_dicts:
-            success = add_rule_to_schedule(schedule_id, rule)
-            if not success:
-                error += 1
-
-        db.session.commit()
-        return error == 0
-
-    except Exception as e:
-        db.session.rollback()
-        return False
-
-def get_rules_for_schedule( schedule_id) -> AutoUpdateScheduleRuleAssociation:
-    """Return all the rule from an schedule"""
-    associations = AutoUpdateScheduleRuleAssociation.query.filter_by(schedule_id=schedule_id).all()
-    rules = [assoc.rule for assoc in associations if assoc.rule is not None]
-    return rules
-
-
-def get_all_schedule_currentuser(active_) -> list:
-    """Get all the schedules for the current user"""
-    if not current_user.is_authenticated:
-        return []
-    
-    schedules = AutoUpdateSchedule.query.filter_by(user_id=current_user.id , active=active_).all()
-    return [schedule.to_json() for schedule in schedules]
-
-def get_schedules_by_user_id(user_id: int) -> list:
-    """Get all schedules for a specific user ID"""
-    schedules = AutoUpdateSchedule.query.filter_by(user_id=user_id).all()
-    return [schedule.to_json() for schedule in schedules]
-
 #####################
 #   Format rules    #
 #####################
-
-# def get_all_rule_format():
-#     """Get all the rule format in a list"""
-#     return FormatRule.query.order_by(FormatRule.name.asc()).all()
 
 def get_all_rule_format():
     """Return all rule formats sorted alphabetically, excluding 'no format'."""
@@ -1890,11 +1330,6 @@ def get_all_rule_format_page(page):
 def get_rule_format_with_id(id):
     """Get the rule format with id"""
     return FormatRule.query.get(id)
-
-
-def get_rule_fromat_with_name(name):
-    """Get the rule format with name"""
-    return FormatRule.query.filter_by(name=name).first()
 
 def add_format_rule(format_name: str, user_id: int, can_be_execute: bool) -> tuple[bool, str]:
         """Ajoute un format de règle si non existant.
