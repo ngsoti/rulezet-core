@@ -256,8 +256,8 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str):
     info = {
         "license": getattr(user, "license", None) or "Unknown",
         "author": getattr(user, "first_name", "Unknown"),
-        "repo_url": "N/A",
-        "source": getattr(user, "username", None) or "Unknown",
+        "repo_url": None,
+        "source": current_user.first_name + current_user.last_name or "Unknown",
     }
 
     metadata = rule_instance.parse_metadata(rule_content, info, validation_result)

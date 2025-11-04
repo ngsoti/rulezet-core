@@ -750,3 +750,85 @@ class RuleUpdateCheck(Resource):
 #     }'
 
 
+#####################################################
+#        dump of all the rules as open data         #
+#####################################################
+@private_ns.route("/dumpRules")
+@api.doc(description="Provide a complete dump of all rules as open data.")
+class DumpRules(Resource):
+    @api_required
+    def post(self):
+        """
+        Provide a structured JSON dump of all rules for open data analysis.
+
+        This endpoint allows exporting all existing rules in a structured JSON format
+        suitable for research, data analytics, or external integrations.
+
+        Optional JSON parameters for filtering:
+          - format_name: string or list (e.g., "text" or ["text", "video"])
+          - created_after: "YYYY-MM-DD HH:MM" or "YYYY-MM-DD"
+          - created_before: "YYYY-MM-DD HH:MM" or "YYYY-MM-DD"
+          - updated_after: "YYYY-MM-DD HH:MM" or "YYYY-MM-DD"
+          - updated_before: "YYYY-MM-DD HH:MM" or "YYYY-MM-DD"
+          - top_liked: integer (top N most liked rules)
+          - top_disliked: integer (top N most disliked rules)
+
+        Returns:
+            JSON response containing all rules and summary statistics.
+        """
+        user = utils.get_user_from_api(request.headers)
+        if not user:
+            return {"success": False, "message": "Unauthorized"}, 403
+
+        data = request.get_json() or {}
+        if not isinstance(data, dict):
+            return {"success": False, "message": "Invalid JSON body"}, 400
+
+        # Parse filters (may contain datetime objects)
+        arg_dict = RuleModel.get_arg_filter_dump_rule(data)
+        if arg_dict is None:
+            return {"success": False, "message": "Failed to parse arguments"}, 400
+
+        # Generate JSON dump (rule.to_json should already return strings for dates)
+        rules_data = RuleModel.get_all_rules_in_json_dump(arg_dict)
+        if not rules_data or not rules_data.get("summary_by_format", {}).get("total_rules"):
+            return {"success": False, "message": "No rules found to dump."}, 404
+
+        # Make response JSON-safe: convert datetimes to strings
+        safe_filters = RuleModel.make_json_safe(arg_dict)
+        safe_data = RuleModel.make_json_safe(rules_data)
+
+        return {
+            "success": True,
+            "message": "Rules dump successfully generated.",
+            "filters_applied": safe_filters,
+            "data": safe_data
+        }, 200
+
+    
+
+# curl -X POST http://127.0.0.1:7009/api/rule/private/dumpRules \
+#     -H "Content-Type: application/json" \
+#     -H "X-API-KEY: user_api_key" \
+#     -d '{}'
+
+
+# curl -X POST http://127.0.0.1:7009/api/rule/private/dumpRules \
+#      -H "Content-Type: application/json" \
+#      -H "X-API-KEY: user_api_key" \
+#      -d '{
+#            "format_name": ["yara", "sigma"],
+#            "created_after": "2025-10-01 00:00",
+#            "created_before": "2025-11-01 23:59",
+#            "updated_after": "2025-10-05",
+#            "updated_before": "2025-11-02",
+#            "top_liked": 10,
+#            "top_disliked": 5
+#          }'
+
+# curl -X POST http://127.0.0.1:7009/api/rule/private/dumpRules \
+#      -H "Content-Type: application/json" \
+#      -H "X-API-KEY: user_api_key" \
+#      -d '{
+#            "format_name": ["all"]
+#          }'

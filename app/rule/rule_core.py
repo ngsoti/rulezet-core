@@ -1,6 +1,7 @@
 
 import re
 import json
+from typing import Any, Dict, List, Optional
 import uuid
 import datetime
 from typing import List
@@ -2082,3 +2083,150 @@ def get_importer_result(sid: str):
 
 def get_importer_list_page(page: int = 1):
     return ImporterResult.query.paginate(page=page, per_page=20, max_per_page=20)
+#####################
+#   Dump all rules  #
+#####################
+def parse_datetime(value: Optional[str]) -> Optional[datetime.datetime]:
+    if not value:
+        return None
+    try:
+        if "T" in value:
+            dt = datetime.datetime.fromisoformat(value)
+        elif " " in value:
+            dt = datetime.datetime.strptime(value, "%Y-%m-%d %H:%M")
+        else:
+            dt = datetime.datetime.strptime(value, "%Y-%m-%d")
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        return dt
+    except Exception:
+        return None
+
+
+
+def get_arg_filter_dump_rule(data: Dict[str, Any]) -> Dict[str, Any]:
+    filters = {}
+
+    def parse_if_needed(val):
+        if val is None:
+            return None
+        if isinstance(val, datetime.datetime):
+            return val.isoformat()
+        if isinstance(val, str) and "T" in val:
+            # Already ISO string, return as-is
+            return val
+        return parse_datetime(val)
+
+    # --- Dates
+    filters["created_after"] = parse_if_needed(data.get("created_after"))
+    filters["created_before"] = parse_if_needed(data.get("created_before"))
+    filters["updated_after"] = parse_if_needed(data.get("updated_after"))
+    filters["updated_before"] = parse_if_needed(data.get("updated_before"))
+
+    # --- Formats
+    format_name = data.get("format_name")
+    if isinstance(format_name, str):
+        filters["format_name"] = None if format_name.lower() == "all" else [format_name]
+    elif isinstance(format_name, list):
+        lowered = [str(f).lower() for f in format_name]
+        filters["format_name"] = None if "all" in lowered else format_name
+    else:
+        filters["format_name"] = None
+
+    # --- Top liked/disliked
+    def safe_int(val):
+        try:
+            return int(val) if val is not None else None
+        except (ValueError, TypeError):
+            return None
+
+    filters["top_liked"] = safe_int(data.get("top_liked"))
+    filters["top_disliked"] = safe_int(data.get("top_disliked"))
+
+    return filters
+
+
+def make_json_safe(obj: Any) -> Any:
+    """
+    Recursively convert datetimes (and dates) to ISO strings so the object
+    can be JSON-serialized by Flask/Flask-RESTX.
+    Leaves other types intact (primitives, dicts, lists, etc).
+    """
+    # Datetime / date -> ISO string
+    if isinstance(obj, (datetime.datetime, datetime.date)):
+        # Prefer full ISO datetime if available
+        try:
+            # if timezone-aware, isoformat will include it
+            return obj.isoformat()
+        except Exception:
+            return str(obj)
+
+    # dict -> map values
+    if isinstance(obj, dict):
+        return {k: make_json_safe(v) for k, v in obj.items()}
+
+    # list/tuple/set -> list (JSON will want arrays)
+    if isinstance(obj, (list, tuple, set)):
+        return [make_json_safe(v) for v in obj]
+
+    # Fallback — leave as-is (primitives are fine)
+    return obj
+
+def get_all_rules_in_json_dump(data: Dict[str, Any]) -> dict:
+    """
+    Retrieve all rules applying the provided filters,
+    and organize them in a JSON structure suitable for open data analysis.
+
+    Returns:
+        dict: JSON dump containing all rules grouped by format, a summary,
+              and export metadata.
+    """
+    filters = get_arg_filter_dump_rule(data)
+    query = Rule.query
+
+    # --- Apply format filter
+    if filters["format_name"] is not None:
+        query = query.filter(Rule.format.in_(filters["format_name"]))
+    print(filters)
+    # --- Apply date filters
+    if filters["created_after"]:
+        query = query.filter(Rule.creation_date >= filters["created_after"])
+    if filters["created_before"]:
+        query = query.filter(Rule.creation_date <= filters["created_before"])
+
+    if filters["updated_after"]:
+        query = query.filter(Rule.last_modif >= filters["updated_after"])
+    if filters["updated_before"]:
+        query = query.filter(Rule.last_modif <= filters["updated_before"])
+
+    # --- Apply top liked/disliked filters
+    if filters["top_liked"]:
+        query = query.order_by(Rule.vote_up.desc()).limit(filters["top_liked"])
+    elif filters["top_disliked"]:
+        query = query.order_by(Rule.vote_down.desc()).limit(filters["top_disliked"])
+
+    rules = query.all()
+
+    # --- Build JSON dump
+    dump = {
+        "rules_by_format": {},
+        "summary_by_format": {}
+    }
+
+    for rule in rules:
+        rule_json = rule.to_json()
+        fmt = getattr(rule, "format", "unknown")
+
+        dump["rules_by_format"].setdefault(fmt, []).append(rule_json)
+        dump["summary_by_format"][fmt] = dump["summary_by_format"].get(fmt, 0) + 1
+
+    dump["summary_by_format"]["total_rules"] = len(rules)
+
+    # --- Export metadata
+    dump["export_info"] = {
+        "rulezet_version": "1.1",
+        "exported_at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+        "source": "rulezet.org"
+    }
+
+    return dump
