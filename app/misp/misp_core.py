@@ -38,28 +38,75 @@ def content_convert_to_misp_object(rule_id: int) -> dict:
         # Create the MISP custom object with the rule format as name
         misp_object = MISPObject(name=fmt, ignore_warning=True)
 
-        # Add content
-        misp_object.add_attribute(
-            object_relation=fmt,
-            value=rule.to_string,
-            type=misp_type,
-            to_ids=True
-        )
+
+
+        # Add rule content
+        if rule.to_string:
+            misp_object.add_attribute(
+                object_relation=fmt,  
+                value=rule.to_string, 
+                type=misp_type,
+                to_ids=True
+            )
 
         # Add rule name
-        misp_object.add_attribute(
-            object_relation=fmt,#f"{fmt}-rule-name",
-            value=rule.title,
-            type='text'
-        )
+        if rule.title:
+            misp_object.add_attribute(
+                object_relation=f"{fmt}-rule-name",
+                value=rule.title,
+                type='text'
+            )
 
-        # Add description if exists
+        # Add description
         if rule.description:
             misp_object.add_attribute(
                 object_relation='comment',
                 value=rule.description,
                 type='comment'
             )
+
+        # Add version
+        if rule.version:
+            misp_object.add_attribute(
+                object_relation='version',
+                value=rule.version,
+                type='text'
+            )
+
+        if rule.source:
+            misp_object.add_attribute(
+                object_relation='reference',
+                value=rule.source,
+                type='link'
+            )
+
+    
+
+
+
+
+        # # Add content
+        # misp_object.add_attribute(
+        #     object_relation=fmt,
+        #     value=rule.to_string,
+        #     type=misp_type,
+        #     to_ids=True
+        # )
+
+        # # Add rule name
+        # misp_object.add_attribute(
+        #     object_relation=fmt,#f"{fmt}-rule-name",
+        #     value=rule.title,
+        #     type='text'
+        # )
+
+        # # Add description if exists
+        # if rule.description:
+        #     misp_object.add_attribute(
+        #         object_relation='comment',
+        #         value=rule.description,
+        #         type='comment'
+        #     )
 
         # Wrap inside a MISP Event to be a valid object export
         event = MISPEvent()
