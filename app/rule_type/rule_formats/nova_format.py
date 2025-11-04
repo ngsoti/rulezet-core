@@ -136,6 +136,17 @@ class NovaRule(RuleType):
 
         return rules
 
+    def get_rule_files_update(self, repo_dir: str) -> List[str]:
+        """
+        Retrieve all Nova rule files (.nova) from a repository.
+        """
+        nova_files = []
+        for root, dirs, files in os.walk(repo_dir):
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+            for file in files:
+                if file.endswith(".nov"):
+                    nova_files.append(os.path.join(root, file))
+        return nova_files
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """
         Search for a Nova rule by its index (for demo purposes).
@@ -143,7 +154,7 @@ class NovaRule(RuleType):
         rule = RuleModel.get_rule(rule_id)
         if rule is None:
             return f"No rule found with ID {rule_id} in the database.", False
-        nova_files = self.get_rule_files(repo_dir)
+        nova_files = self.get_rule_files_update(repo_dir)
         count = 0
         for filepath in nova_files:
             rules = self.extract_rules_from_file(filepath)

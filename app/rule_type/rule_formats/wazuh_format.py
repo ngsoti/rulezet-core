@@ -135,6 +135,20 @@ class WazuhRule(RuleType):
             return []
         return rules
 
+    def get_rule_files_update(self, repo_dir: str) -> List[str]:
+        """
+        Get all Wazuh XML rule files from a repo.
+        """
+        rule_files = []
+        if not os.path.exists(repo_dir):
+            return rule_files
+
+        for root, dirs, files in os.walk(repo_dir):
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+            for file in files:
+                if file.endswith(".xml") and "rules" in file.lower():
+                    rule_files.append(os.path.join(root, file))
+        return rule_files
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """
         Search for a Wazuh rule with given ID inside a repo.
@@ -143,7 +157,7 @@ class WazuhRule(RuleType):
         if not rule:
             return "No rule found in the database.", False
 
-        rule_files = self.get_rule_files(repo_dir)
+        rule_files = self.get_rule_files_update(repo_dir)
         for filepath in rule_files:
             rules = self.extract_rules_from_file(filepath)
             for r in rules:

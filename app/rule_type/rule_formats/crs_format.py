@@ -85,7 +85,7 @@ class CRSRule(RuleType):
     def get_rule_files(self, file: str) -> bool:
         if file.endswith('.conf'):
             return True
-        return False
+        return False    
 
     def extract_rules_from_file(self, filepath: str) -> List[str]:
         with open(filepath, "r", encoding="utf-8") as f:
@@ -94,6 +94,12 @@ class CRSRule(RuleType):
         rules = [f"SecRule {r}" for r in rules]
         return rules
 
+    def get_rule_files_update(self, repo_dir: str) -> List[str]:
+        files = []
+        for ext in ["*.conf"]:
+            files.extend(glob.glob(os.path.join(repo_dir, "**", ext), recursive=True))
+        files = [f for f in files if not os.path.basename(f).startswith(".")]
+        return files
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """
         Search for a CRS rule inside a locally cloned repository.
@@ -102,7 +108,7 @@ class CRSRule(RuleType):
         if not rule:
             return "No rule found in the database.", False
 
-        rule_files = self.get_rule_files(repo_dir)
+        rule_files = self.get_rule_files_update(repo_dir)
 
         for filepath in rule_files:
             rules = self.extract_rules_from_file(filepath)

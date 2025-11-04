@@ -121,7 +121,8 @@ class YaraRule(RuleType):
         if file.endswith(('.yar', '.yara')):
             return True
         return False
-    
+
+        
     def extract_rules_from_file(self, filepath: str) -> List[str]:
         """
         Extract YARA rules from a file.
@@ -252,7 +253,17 @@ class YaraRule(RuleType):
 
         return rules
 
-    
+    def get_rule_files_update(self, repo_dir: str) -> List[str]:
+        """Retrieve all YARA rule files from a repository."""
+        yara_files = []
+        for root, dirs, files in os.walk(repo_dir):
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+            for file in files:
+                if file.startswith('.') or file.startswith('_'):
+                    continue
+                if file.endswith(('.yar', '.yara')):
+                    yara_files.append(os.path.join(root, file))
+        return yara_files
     def find_rule_in_repo(self, repo_url: str, rule_id: int) -> tuple[str, bool]:
         """
         Search for a YARA rule inside a locally cloned GitHub repo.
@@ -263,7 +274,10 @@ class YaraRule(RuleType):
         if not rule:
             return "No rule found in the database.", False
 
-        yara_files = self.get_rule_files(repo_url)
+        yara_files = self.get_rule_files_update(repo_url)
+
+
+
 
         for filepath in yara_files:
             rules = self.extract_rules_from_file(filepath)

@@ -14,34 +14,29 @@
 
   <!-- Filters -->
   <div class="card bg-white shadow-sm border-0 mb-4">
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-4">
-          <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control " placeholder="Search by keywords...">
-        </div>
-        <div class="col-md-3">
-          <select v-model="sortBy" class="form-select">
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="most_likes">Most Liked</option>
-            <option value="least_likes">Least Liked</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <select v-model="ruleType" class="form-select">
-              <option value="">All Types</option>
-              <option v-for="format in rules_formats" :value="format.name" :key="format.id">
-                  [[ format.name ]]
-              </option>
-          </select>
+      <div class="card-body">
+          <div class="row g-3">
+              <div class="col-md-4">
+                <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control " placeholder="Search by keywords...">
+              </div>
+              <div class="col-md-4">
+                <select v-model="sortBy" class="form-select" @change="fetchRules(1)">
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="most_likes">Most Liked</option>
+                  <option value="least_likes">Least Liked</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <select v-model="ruleType" class="form-select" @change="fetchRules(1)">
+                    <option value="">All Types</option>
+                    <option v-for="format in rules_formats" :value="format.name" :key="format.id">
+                        [[ format.name ]]
+                    </option>
+                </select>
+            </div>
+          </div>
       </div>
-        <div class="col-md-2">
-          <button class="btn btn-dark w-100 rounded-pill" @click="fetchRules(1)">
-            <i class="fas fa-sliders-h"></i> Apply
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Rules -->

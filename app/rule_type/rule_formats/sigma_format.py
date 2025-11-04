@@ -140,6 +140,22 @@ class SigmaRule(RuleType):
             return []
         return rules
 
+    def get_rule_files_update(self, repo_dir: str) -> List[str]:
+        """
+        Return all YAML rule files (.yml/.yaml) from the given directory,
+        skipping hidden or underscore-prefixed files and directories.
+        """
+        rule_files = []
+        if not os.path.exists(repo_dir):
+            return rule_files
+        for root, dirs, files in os.walk(repo_dir):
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+            for file in files:
+                if file.startswith('.') or file.startswith('_'):
+                    continue
+                if file.endswith(('.yml', '.yaml')):
+                    rule_files.append(os.path.join(root, file))
+        return rule_files
     def find_rule_in_repo(self, repo_url: str, rule_id: int) -> tuple[str, bool]:
         """
         Search for a Sigma rule inside a locally cloned GitHub repo.
@@ -150,7 +166,7 @@ class SigmaRule(RuleType):
         if not rule:
             return "No rule found in the database.", False
 
-        sigma_files = self.get_rule_files(repo_url)
+        sigma_files = self.get_rule_files_update(repo_url)
 
         for filepath in sigma_files:
             rules = self.extract_rules_from_file(filepath)

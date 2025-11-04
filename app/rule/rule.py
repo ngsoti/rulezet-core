@@ -1507,11 +1507,13 @@ def import_rules_from_github():
             return {"message": "Please enter a valid URL to import rules.", "toast_class": "danger-subtle"}, 400
 
         repo_dir, _ = clone_or_access_repo(repo_url) 
-        
-        info = github_repo_metadata(repo_url , selected_license)
+
 
         if not repo_dir:
             return {"message": "Failed to clone or access the repository.", "toast_class": "danger-subtle"}, 400
+        
+        info = github_repo_metadata(repo_url , selected_license)
+
         
         session_th = SessionModel.Session_class(repo_dir, current_user, info)
         session_th.start()

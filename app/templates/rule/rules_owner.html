@@ -25,29 +25,24 @@
                         @keyup.enter="onEnterKey"
                         class="form-control"
                         placeholder="Search by title, description..."
+                        @change="fetchRules(1)"
                         >
                     </div>
-                    <div class="col-md-3">
-                        <select v-model="sortBy" class="form-select">
+                    <div class="col-md-4">
+                        <select v-model="sortBy" class="form-select" @change="fetchRules(1)">
                         <option value="newest">Most Recent</option>
                         <option value="oldest">Oldest</option>
                         <option value="most_likes">Most Likes</option>
                         <option value="least_likes">Least Likes</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <select v-model="ruleType" class="form-select">
+                    <div class="col-md-4">
+                        <select v-model="ruleType" class="form-select" @change="fetchRules(1)">
                             <option value="">All Types</option>
                             <option v-for="format in rules_formats" :value="format.name" :key="format.id">
                                 [[ format.name ]]
                             </option>
                         </select>
-                    </div>
-                    
-                    <div class="col-md-2">
-                        <button class="btn btn-primary w-100" @click="fetchRules(1)">
-                            <i class="fas fa-filter"></i> Filter
-                        </button>
                     </div>
                 </div>
             </div>

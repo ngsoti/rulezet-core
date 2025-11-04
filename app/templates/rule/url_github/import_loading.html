@@ -8,11 +8,7 @@
 
     <div v-if="!is_finished">
         <p class="text-muted mt-2">
-            Importing rules from <span class="text-primary">
-                <a :href="info_session.repo_url" target="_blank">
-                    [[info_session.repo_url]]
-                </a>
-            </span>.
+            Importing rules 
             This may take a while, please wait...
         </p>
         
@@ -35,7 +31,7 @@
             </span>. 
         </p>
 
-        <div class="card shadow border-0">
+        <div v-if="result_data.info" class="card shadow border-0">
             <div class="card-body p-4 bg-light rounded">
                 <h3 class="fw-bold mb-3">Github information</h3>
                 

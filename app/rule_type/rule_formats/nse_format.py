@@ -151,6 +151,16 @@ class NseRule(RuleType):
         except Exception as e:
             return []
 
+    def get_rule_files_update(self, repo_dir: str) -> List[str]:
+        """
+        Return all .nse files inside a repo directory.
+        """
+        nse_files: List[str] = []
+        for root, _, files in os.walk(repo_dir):
+            for f in files:
+                if f.endswith(".nse"):
+                    nse_files.append(os.path.join(root, f))
+        return nse_files
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """
         Very simple implementation:
@@ -159,7 +169,7 @@ class NseRule(RuleType):
         rule = RuleModel.get_rule(rule_id)
         if rule is None:
             return f"No rule found with ID {rule_id} in the database.", False
-        files = self.get_rule_files(repo_dir)
+        files = self.find_rule_in_repo(repo_dir)
         if 0 <= rule_id < len(files):
             with open(files[rule_id], "r", encoding="utf-8") as f:
                 return f.read() , True
