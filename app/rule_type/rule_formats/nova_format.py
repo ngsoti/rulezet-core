@@ -108,17 +108,13 @@ class NovaRule(RuleType):
             }
         
 
-    def get_rule_files(self, repo_dir: str) -> List[str]:
+    def get_rule_files(self, file: str) -> bool:
         """
         Retrieve all Nova rule files (.nova) from a repository.
         """
-        nova_files = []
-        for root, dirs, files in os.walk(repo_dir):
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
-            for file in files:
-                if file.endswith(".nov"):
-                    nova_files.append(os.path.join(root, file))
-        return nova_files
+        if file.endswith(".nov"):
+            return True
+        return False
 
     def extract_rules_from_file(self, filepath: str) -> List[str]:
         """

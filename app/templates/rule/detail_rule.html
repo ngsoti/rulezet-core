@@ -643,7 +643,7 @@
 {% block script %}
 <script type="module">
     const { createApp, ref , onMounted} = Vue;
-    import { message_list , display_prepared_toast , display_toast} from '/static/js/toaster.js';
+    import { message_list, create_message, display_toast} from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
     
     function highlightJSON() {
@@ -678,12 +678,7 @@
                     window.URL.revokeObjectURL(url);
                 }
 
-                const message = {
-                    message: data.message,
-                    toast_class: data.toast_class,
-                    id: Math.random()
-                };
-                display_prepared_toast(message);
+                create_message(data.message, data.toast_class);
             }
 
             /**
@@ -843,7 +838,7 @@
                     toast_class: data.toast_class,
                     id: Math.random()
                 };
-                await display_prepared_toast(message);
+                create_message(data.message, data.toast_class);
             }
 
             async function favoriteSimilar(similar_rule_id) {
@@ -902,13 +897,8 @@
                         const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseEl);
                         bsCollapse.hide();
                     }
-                } 
-                const message_ = {
-                    message: data.message,
-                    toast_class: data.toast_class,
-                    id: Math.random()
-                };
-                await display_prepared_toast(message_);
+                }
+                create_message(data.message, data.toast_class);
             }
 
             async function deleteComment(commentId) {

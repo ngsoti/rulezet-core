@@ -255,27 +255,13 @@
                                           </div>
                                     </div>
 
-                                    <form method="POST" action="{{ url_for('rule.import_rules_from_github') }}" class="d-flex flex-column" id="github-form" @submit="showParsingModal">
-                                          
-                                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-                                          <div class="mb-3 d-flex"><!-- Anti-autofill leurre -->
-                                                <input type="text" name="fakeusernameremembered" id="fakeusernameremembered" style="display:none">
-                                                <input type="password" name="fakepasswordremembered" id="fakepasswordremembered" style="display:none">
+                <div>
+                    <div class="mb-3">
+                        <input type="text" name="url" class="form-control w-100" id="url" placeholder="https://github.com/your_username/project.git" v-model="url" >
+                    </div>
 
-                                                <input type="text" name="url" class="form-control me-2" id="url" placeholder="https://github.com/your_username/project.git" v-model="url" required >
-                                          </div>
-
-                                          <div id="flash-messages" class="mt-2">
-                                                {% for category, message in get_flashed_messages(with_categories=True) %}
-                                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                                {{ message }}
-                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                                </div>
-                                                {% endfor %}
-                                          </div>
-
-
+                    <div id="github-url-error" style="color: brown;"></div>
 
                                           <div class="mb-3">
                                                 <strong><label for="license-select" class="form-label">License</label></strong>
@@ -285,36 +271,25 @@
                                                 </select>
                                           </div>
 
-                                          <div class="d-flex align-items-center">
-                                                <button type="submit" class="btn btn-primary" id="submit-button">
-                                                <i class="fas fa-paper-plane"></i> Send
-                                                </button>
-                                          </div>
-                                    </form>
-                              </div>
+                    <button v-if="!is_loading" type="submit" class="btn btn-primary" @click="import_git_url()">
+                        <i class="fas fa-paper-plane"></i> Send
+                    </button>
 
-                              <div class="modal fade" id="parsingModal" tabindex="-1" aria-labelledby="parsingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                          <div class="modal-content text-center p-4">
-                                                <div class="modal-body">
-                                                <i class="fas fa-sync-alt fa-spin fa-3x text-primary mb-3"></i>
-                                                <h5 class="mb-2">Parsing rules in progress…</h5>
-                                                <p class="text-muted">This may take a few seconds depending on the repository size.</p>
-                                                <div class="spinner-border text-primary" role="status">
-                                                      <span class="visually-hidden">Loading...</span>
-                                                </div>
-                                                </div>
-                                          </div>
-                                    </div>
-                              </div>
-                        {% else %}
-                        <div class="card p-3">
-                              <pre><code>In progress...</code></pre>
-                        </div>
-                        {% endif %}
-                  </div>
+                    <button v-else class="btn btn-primary" type="button" disabled>
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        <span role="status">Loading...</span>
+                    </button>
+                </div>
             </div>
-      </div>
+
+        </div>
+        {% endif %}
+
+
+            
+        
+
+    </div>
 </div>
 {% endblock %}
 
@@ -381,15 +356,20 @@
 
 
     const { createApp, ref, onMounted } = Vue;
-    import { message_list } from '/static/js/toaster.js';
+    import { message_list, display_toast } from '/static/js/toaster.js';
 
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
             const license = ref([]);
             const selectedLicense = ref("");
-            const url = ref(""); // pour le champ URL
-            const  ruleType = ref('');
+            const url = ref(""); // for URL field
+
+            const rules_formats = ref([])
+            const number_rules_formats = ref(0)
+
+            const is_loading = ref(false)
+            const ruleType = ref('');
 
             async function fetchRules() {
                 const res = await fetch('/rule/get_license');
@@ -409,10 +389,6 @@
             }
 
 
-            
-
-            const rules_formats = ref([])
-            const number_rules_formats = ref(0)
 
             async function fetchRulesFormats() {
                 const res = await fetch('/rule/get_rules_formats')
@@ -426,26 +402,54 @@
                     }
                 }
             }
-            fetchRulesFormats()
+            
+            async function import_git_url() {
+                is_loading.value = true
+                $("#github-url-error").text("")
+                if(url.value){
+                    const res = await fetch(
+                        '/rule/import_rules_from_github',{
+                            headers: { "X-CSRFToken": $("#csrf_token").val(), "Content-Type": "application/json" },
+                            method: "POST",
+                            body: JSON.stringify({"url": url.value, "license": selectedLicense.value})
+                        }
+                    )
+                    if(await res.status == 201){
+                        let loc = await res.json()
+                        console.log(loc);
+                        
+                        window.location.href="/rule/import_loading/"+loc["session_uuid"]
+                    }else{
+                        display_toast(res, true)
+                    }
+                }else{
+                    $("#github-url-error").text("Need to give an url")
+                }
+                is_loading.value = false
+            }
+            
 
             onMounted(() => {
                 fetchRules();
+                fetchRulesFormats();
             });
+
 
             return {
                 message_list,
                 license,
                 selectedLicense,
                 url,
-                showParsingModal,
                 rules_formats,
                 number_rules_formats,
+                is_loading,
+                showParsingModal,
                 fetchRulesFormats,
+                import_git_url,
                 ruleType
             };
         }
     }).mount('#main-container');
-
 
 </script>
 {% endblock %}

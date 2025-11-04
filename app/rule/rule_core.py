@@ -1,21 +1,26 @@
 
-import json
 import re
+import json
 from typing import Any, Dict, List, Optional
 import uuid
 import datetime
-from flask import jsonify
-from flask_login import current_user
+from typing import List
+
 from jsonschema import  ValidationError, validate
-from sqlalchemy import case, func, or_
 import yaml
 import yara
-from app.import_github_project.untils_import import build_externals_dict
+
+from flask import jsonify
+from flask_login import current_user
+from sqlalchemy import case, or_
+from sqlalchemy.orm import joinedload
+
 from .. import db
 from ..db_class.db import *
-from . import rule_core as RuleModel
-from sqlalchemy.orm import joinedload
+
+from app.import_github_project.untils_import import build_externals_dict
 from ..account import account_core as AccountModel
+
 ###################
 #   Rule action   #
 ###################
@@ -23,45 +28,6 @@ from ..account import account_core as AccountModel
 # CRUD
 
 # Create
-
-# def add_rule_core(form_dict , user) -> bool:
-#     """Add a rule"""
-#     title = form_dict["title"].strip()
-
-#     existing_rule = get_rule_by_title(title)
-#     if existing_rule:
-#         print("rule already exist")
-#         return False
-    
-#     if current_user.is_authenticated:
-#         # If the user is authenticated, use their ID
-#         user_id = current_user.id
-#     else:
-#         user_id = user.id if user else None
-
-
-#     new_rule = Rule(
-#         format=form_dict["format"],
-#         title=title,
-#         license=form_dict["license"],
-#         description=form_dict["description"],
-#         uuid=str(uuid.uuid4()),
-#         original_uuid=form_dict["original_uuid"],
-#         source=form_dict["source"],
-#         author=form_dict["author"],
-#         version=form_dict["version"],
-#         user_id=user_id,
-#         creation_date = datetime.datetime.now(tz=datetime.timezone.utc),
-#         last_modif = datetime.datetime.now(tz=datetime.timezone.utc),
-#         vote_up=0,
-#         vote_down=0,
-#         to_string = form_dict["to_string"],
-#         cve_id = form_dict["cve_id"] or None
-#     )
-
-#     db.session.add(new_rule)
-#     db.session.commit()
-#     return new_rule
 
 
 def add_rule_core(form_dict, user) -> bool:
@@ -95,7 +61,7 @@ def add_rule_core(form_dict, user) -> bool:
                     break  # continue to insertion
 
         # Identify user
-        if current_user.is_authenticated:
+        if current_user and current_user.is_authenticated:
             user_id = current_user.id
         else:
             user_id = user.id if user else None
@@ -739,7 +705,7 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
     :param rule_type: Type of the rule (e.g., 'YARA', 'SIGMA')
     """
 
-    if current_user.is_authenticated:
+    if current_user and current_user.is_authenticated:
         user_id = current_user.id
     else:
         user_id = user.id if user else None
@@ -779,108 +745,6 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
     db.session.add(new_invalid_rule)
     db.session.commit()
 
-# Create
-
-
-# YARA_MODULES = {"pe", "math", "cuckoo", "magic", "hash", "dotnet", "elf", "macho"}
-
-# def process_and_import_fixed_rule(bad_rule_obj, raw_content):
-#     """Process a corrected bad rule and attempt to import it into the system."""
-#     try:
-#         rule_type = bad_rule_obj.rule_type
-
-#         if rule_type.upper() == "YARA":
-#             externals = {}
-#             compiled = False
-#             attempts = 0
-#             max_attempts = 10
-#             current_rule_text = raw_content  
-
-#             while not compiled and attempts < max_attempts:
-#                 try:
-#                     yara.compile(source=current_rule_text, externals=externals)
-#                     #print("Compilation réussie")
-#                     compiled = True
-#                 except yara.SyntaxError as e:
-#                     error_msg = str(e)
-#                     #print(f"Tentative {attempts+1} échouée : {error_msg}")
-
-#                     match_id = re.search(r'undefined identifier "(\w+)"', error_msg)
-#                     if match_id:
-#                         var_name = match_id.group(1)
-#                         if var_name in YARA_MODULES:
-#                             current_rule_text = insert_import_module(current_rule_text, var_name)
-#                             #print(f"Module YARA importé : {var_name}")
-#                         else:
-#                             externals[var_name] = "example.txt"
-#                             #print(f"Variable externe ajoutée : {var_name}")
-#                         attempts += 1
-#                         continue
-#                     else:
-#                         return False, error_msg
-
-#             # print(externals)
-#             if not compiled:
-#                 return False, "Failled to parse this rule after many try"
-
-#             rule_name_match = re.search(r'rule\s+(\w+)', current_rule_text)
-#             title = rule_name_match.group(1) if rule_name_match else clean_rule_filename_Yara_v2(bad_rule_obj.file_name) or extract_first_match(current_rule_text, ["title", "Title"]) 
-
-#             description = extract_first_match(current_rule_text, ["description", "Description"])
-#             license = extract_first_match(current_rule_text, ["license", "License"]) or bad_rule_obj.license
-#             author = extract_first_match(current_rule_text, ["author", "Author"])
-#             version = extract_first_match(current_rule_text, ["version", "Version"])
-#             source_url = bad_rule_obj.url
-#             r , cve = detect_cve(description)
-#             rule_dict = {
-#                 "format": "YARA",
-#                 "title": title,
-#                 "license": license,
-#                 "description": description,
-#                 "source": source_url,
-#                 "version": version or "1.0",
-#                 "author": author or "Unknown",
-#                 "to_string": current_rule_text,
-#                 "cve_id": cve
-#             }
-
-
-#         else: 
-#             try:
-#                 rule = yaml.safe_load(raw_content)
-#                 rule_json = json.loads(json.dumps(rule, indent=2, default=str))
-#                 with open("app/import_github_project/sigma_format.json", 'r', encoding='utf-8') as f:
-#                     schema = json.load(f)
-#                 validate(instance=rule_json, schema=schema)
-#             except (ValidationError, FileNotFoundError) as e:
-#                 return False, str(e)
-#             r , cve = detect_cve(rule.get("description", "No description provided"),)
-#             rule_dict = {
-#                 "format": "Sigma",
-#                 "title": rule.get("title", "Untitled"),
-#                 "license": rule.get("license", bad_rule_obj.license),
-#                 "description": rule.get("description", "No description provided"),
-#                 "source": bad_rule_obj.url,
-#                 "version": rule.get("version", "1.0"),
-#                 "author": rule.get("author", "Unknown"),
-#                 "to_string": raw_content,
-#                 "cve_id": cve
-#             }
-
-#         success = RuleModel.add_rule_core(rule_dict, current_user)
-#         if success:
-#             db.session.delete(bad_rule_obj)
-#             db.session.commit()
-#             return True, ""
-#         else:
-#             return False, "Rule already exists or failed to insert."
-
-#     except Exception as e:
-#         db.session.rollback()
-#         return False, str(e)
-
-
-
 
 
 # Read
@@ -898,19 +762,12 @@ def get_bad_rules_page(page, per_page=20) -> InvalidRuleModel:
 def get_invalid_rule_by_id(rule_id) -> Rule:
     """Retrieve an invalid rule by its ID or abort with 404."""
     rule = InvalidRuleModel.query.get(rule_id)
-    if not rule:
-        return None
     return rule
 
 def get_all_bad_rule_user(user_id: int) -> list:
     """Get all the invalid (bad) rules of a specific user"""
     bad_rules = InvalidRuleModel.query.filter_by(user_id=user_id).order_by(InvalidRuleModel.created_at.desc()).all()
     return  bad_rules
-
-def get_user_id_of_bad_rule(rule_id) -> id:
-    """Get the user id of a bad rule with his id"""
-    rule = InvalidRuleModel.query.get(rule_id)
-    return rule.user_id
 
 def get_count_bad_rules_page() -> int:
     """Return the count of bad rules"""
@@ -1975,7 +1832,7 @@ def update_schedule_rules(schedule_id: int, rule_dicts: list[dict]) -> bool:
 
         error = 0
         for rule in rule_dicts:
-            success = RuleModel.add_rule_to_schedule(schedule_id, rule)
+            success = add_rule_to_schedule(schedule_id, rule)
             if not success:
                 error += 1
 
@@ -2221,6 +2078,11 @@ def replace_rule_format(old_format_name: str, new_format_name: str) -> int:
     return count
 
 
+def get_importer_result(sid: str):
+    return ImporterResult.query.filter_by(uuid=sid).first()
+
+def get_importer_list_page(page: int = 1):
+    return ImporterResult.query.paginate(page=page, per_page=20, max_per_page=20)
 #####################
 #   Dump all rules  #
 #####################

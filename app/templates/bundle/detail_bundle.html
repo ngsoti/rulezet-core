@@ -193,7 +193,7 @@
 <script type="module">
   const bundle_id = document.getElementById('bundle-info').dataset.bundleId;
   const { createApp, ref } = Vue;
-  import { display_toast , message_list , display_prepared_toast} from '/static/js/toaster.js';
+  import { display_toast, message_list, create_message} from '/static/js/toaster.js';
 
   createApp({
     delimiters: ['[[', ']]'],
@@ -292,12 +292,7 @@
         a.remove();
         window.URL.revokeObjectURL(url);
 
-        const message = {
-          message: "Bundle download with success",
-          toast_class: "success",
-          id: Math.random()
-        };
-        await display_prepared_toast(message);
+        await create_message("Bundle download with success", "success-subtle");
         
       } else {
         display_toast(res);

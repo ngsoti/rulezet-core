@@ -149,7 +149,7 @@ def detect_cve(text):
     """
 
     vulnerability_patterns = re.compile(
-        r"\bCVE[-\s]?(\d{4})[-\s]?(\d{4,7})\b"                       # CVE pattern
+        r"\b(CVE[-\s]\d{4}[-\s]\d{4,7})\b"                  # CVE pattern
         r"|\b(GCVE-\d+-\d{4}-\d+)\b"                        # GCVE pattern
         r"|\b(GHSA-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4})\b"  # GHSA pattern
         r"|\b(PYSEC-\d{4}-\d{2,5})\b"                       # PYSEC pattern
@@ -170,7 +170,7 @@ def detect_cve(text):
     if all_matches:
         return True, all_matches
     else:
-        return False, []
+        return False, ""
 
 def update_or_clone_repo(repo_url: str) -> str | None:
     """

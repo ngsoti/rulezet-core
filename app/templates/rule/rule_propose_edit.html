@@ -370,8 +370,8 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref , computed} = Vue;
-    import { message_list , display_toast , display_prepared_toast} from '/static/js/toaster.js';
+    const { createApp, ref, computed} = Vue;
+    import { message_list, display_toast, create_message} from '/static/js/toaster.js';
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
@@ -423,14 +423,7 @@
                         fetchRules(current_page.value);
                     }
                 }
-                const message = {
-                    message: result.message,
-                    toast_class: result.toast_class,
-                    id: Math.random()
-                };
-                await display_prepared_toast(message);
-
-                
+                create_message(result.message, result.toast_class);
             }
 
             /**         

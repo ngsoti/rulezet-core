@@ -112,20 +112,13 @@ class WazuhRule(RuleType):
             }
 
 
-    def get_rule_files(self, repo_dir: str) -> List[str]:
+    def get_rule_files(self, file: str) -> bool:
         """
         Get all Wazuh XML rule files from a repo.
         """
-        rule_files = []
-        if not os.path.exists(repo_dir):
-            return rule_files
-
-        for root, dirs, files in os.walk(repo_dir):
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
-            for file in files:
-                if file.endswith(".xml") and "rules" in file.lower():
-                    rule_files.append(os.path.join(root, file))
-        return rule_files
+        if file.endswith(".xml") and "rules" in file.lower():
+            return True
+        return False
 
     def extract_rules_from_file(self, filepath: str) -> List[str]:
         """

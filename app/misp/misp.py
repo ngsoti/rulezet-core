@@ -168,7 +168,7 @@ def generate_diff_json(source, target):
 # {% block script %}
 # <script type="module">
 # const { createApp, ref } = Vue;
-# import { display_toast, prepare_toast, message_list, display_prepared_toast } from '/static/js/toaster.js';
+# import { display_toast,   message_list, display_prepared_toast } from '/static/js/toaster.js';
 
 # createApp({
 #     delimiters: ['[[', ']]'],

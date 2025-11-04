@@ -82,12 +82,10 @@ class CRSRule(RuleType):
                 "to_string": content,
             }
 
-    def get_rule_files(self, repo_dir: str) -> List[str]:
-        files = []
-        for ext in ["*.conf"]:
-            files.extend(glob.glob(os.path.join(repo_dir, "**", ext), recursive=True))
-        files = [f for f in files if not os.path.basename(f).startswith(".")]
-        return files
+    def get_rule_files(self, file: str) -> bool:
+        if file.endswith('.conf'):
+            return True
+        return False
 
     def extract_rules_from_file(self, filepath: str) -> List[str]:
         with open(filepath, "r", encoding="utf-8") as f:

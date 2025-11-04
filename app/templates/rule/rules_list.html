@@ -183,7 +183,7 @@
 {% block script %}
 <script type="module">
   const { createApp, ref, computed } = Vue
-  import { display_toast, prepare_toast, message_list , display_prepared_toast} from '/static/js/toaster.js'
+  import { display_toast, message_list, create_message} from '/static/js/toaster.js'
 
 
   createApp({
@@ -355,12 +355,7 @@
           }
         }
 
-        const message = {
-          message: data.message,
-          toast_class: data.toast_class,
-          id: Math.random()
-        };
-        await display_prepared_toast(message);
+        create_message(data.message, data.toast_class);
       }
 
       return {
