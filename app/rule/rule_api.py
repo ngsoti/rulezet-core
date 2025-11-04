@@ -635,50 +635,53 @@ class ImportRulesFromGithub(Resource):
         if not user:
             return {"success": False, "message": "Unauthorized"}, 403
 
-        data = request.get_json(silent=True) or request.args.to_dict()
-        repo_url = data.get('url')
-        if not repo_url:
-            return {"success": False, "message": "Missing 'url' parameter"}, 400
+        if user.is_admin:
+            data = request.get_json(silent=True) or request.args.to_dict()
+            repo_url = data.get('url')
+            if not repo_url:
+                return {"success": False, "message": "Missing 'url' parameter"}, 400
 
-        selected_license = data.get('license', '').strip()
-        if not selected_license:
-            return {"success": False, "message": "Missing 'license' parameter"}, 400
-
-
-        if not valider_repo_github(repo_url):
-            return {"success": False, "message": "Invalid GitHub URL"}, 400
+            selected_license = data.get('license', '').strip()
+            if not selected_license:
+                return {"success": False, "message": "Missing 'license' parameter"}, 400
 
 
-        repo_dir, exists = clone_or_access_repo(repo_url)
-        if not repo_dir:
-            return {"success": False, "message": "Failed to clone or access the repository"}, 500
+            if not valider_repo_github(repo_url):
+                return {"success": False, "message": "Invalid GitHub URL"}, 400
 
 
-        info = github_repo_metadata(repo_url, selected_license)
+            repo_dir, exists = clone_or_access_repo(repo_url)
+            if not repo_dir:
+                return {"success": False, "message": "Failed to clone or access the repository"}, 500
 
-        try:
-            bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir, info , user))
 
-            delete_existing_repo_folder("Rules_Github")
+            info = github_repo_metadata(repo_url, selected_license)
 
-            response = {
-                "success": True,
-                "imported": imported,
-                "skipped": skipped,
-                "failed": bad_rules
-            }
+            try:
+                bad_rules, imported, skipped = asyncio.run(extract_rule_from_repo(repo_dir, info , user))
 
-            if bad_rules > 0:
-                return response, 207  
+                delete_existing_repo_folder("Rules_Github")
 
-            return response, 200
+                response = {
+                    "success": True,
+                    "imported": imported,
+                    "skipped": skipped,
+                    "failed": bad_rules
+                }
 
-        except Exception as e:
-            return {
-                "success": False,
-                "message": f"An error occurred while importing from: {repo_url}",
-                "error": str(e)
-            }, 500
+                if bad_rules > 0:
+                    return response, 207  
+
+                return response, 200
+
+            except Exception as e:
+                return {
+                    "success": False,
+                    "message": f"An error occurred while importing from: {repo_url}",
+                    "error": str(e)
+                }, 500
+        else:
+            return {"success": False, "message": "You have to be an admin to import"}, 400
 
 
     # curl -X POST http://127.0.0.1:7009/api/rule/private/import_rules_from_github \
