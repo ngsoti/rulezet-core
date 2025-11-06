@@ -279,16 +279,21 @@ def get_rules_from_bundle(bundle_id: int) -> List[Rule]:
 
 def get_bundles_by_rule(rule_id: int) -> List[Bundle]:
     """
-    Retrieve all bundles that contain a specific rule.
+    Retrieve all bundles that contain a specific rule and are publicly accessible.
+    
     :param rule_id: ID of the rule to search for.
-    :return: List of Bundle instances containing the specified rule.
+    :return: List of Bundle instances containing the specified rule and with access=True.
     """
     return (
         db.session.query(Bundle)
         .join(BundleRuleAssociation, BundleRuleAssociation.bundle_id == Bundle.id)
-        .filter(BundleRuleAssociation.rule_id == rule_id)
+        .filter(
+            BundleRuleAssociation.rule_id == rule_id,
+            Bundle.access.is_(True)  # Only include bundles where access == True
+        )
         .all()
     )
+
 
 def toggle_bundle_accessibility(bundle_id: int) -> bool:
     """
