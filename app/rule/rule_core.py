@@ -1,14 +1,9 @@
 
-import re
 import json
 from typing import Any, Dict, List, Optional
 import uuid
 import datetime
 from typing import List
-
-from jsonschema import  ValidationError, validate
-import yaml
-import yara
 
 from flask import jsonify
 from flask_login import current_user
@@ -18,7 +13,6 @@ from sqlalchemy.orm import joinedload
 from .. import db
 from ..db_class.db import *
 
-from app.import_github_project.untils_import import build_externals_dict
 from ..account import account_core as AccountModel
 
 ###################
@@ -155,39 +149,6 @@ def edit_rule_core(form_dict, id) -> tuple[bool,Rule]:
     db.session.commit()
     return True , rule
 
-def compile_yara(external_vars, form_dict) -> tuple[bool, dict]:
-    """Try to compile a YARA rule with external variables. Return updated form_dict if success."""
-    external_vars_temp = external_vars.copy()
-    externals = build_externals_dict(external_vars_temp)
-    rule_str = form_dict["to_string"]
-    while True:
-        try:
-            yara.compile(source=rule_str, externals=externals)
-            form_dict["to_string"] = rule_str
-            return True, form_dict , 'no error'
-        except yara.SyntaxError as e:
-
-            error_msg = str(e)
-            match = re.search(r'undefined identifier "(.*?)"', error_msg)
-            if match:
-                # try to parse it with the new content
-                missing_var = match.group(1)
-                external_vars_temp.append({"type": "string", "name": missing_var})
-                externals = build_externals_dict(external_vars_temp)
-            else:
-                return False , form_dict["to_string"] , error_msg
-
-def load_json_schema_sync(schema_file):
-    """
-    Load a JSON schema synchronously from a file.
-    """
-    try:
-        with open(schema_file, 'r', encoding='utf-8') as f:
-            content = f.read()
-            schema = json.loads(content)
-        return schema
-    except Exception:
-        return None
 
 # Read
 

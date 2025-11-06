@@ -4,10 +4,11 @@ from flask import Blueprint, request, url_for
 from flask_restx import Api, Resource, Namespace
 
 from app.db_class.db import Rule
-from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, git_pull_repo, github_repo_metadata, valider_repo_github
-from app.import_github_project.update_github_project import Check_for_rule_updates
 from app.misp.misp_core import content_convert_to_misp_object
-from app.rule_type.main_format import extract_rule_from_repo, verify_syntax_rule_by_format
+
+from app.rule_format.main_format import extract_rule_from_repo, verify_syntax_rule_by_format
+from app.rule_format.utils_format.utils_import_update import clone_or_access_repo, delete_existing_repo_folder, github_repo_metadata, valider_repo_github
+from app.rule_from_github.update_rule.update_class import Check_for_rule_updates
 from app.utils import utils
 from ..rule import rule_core as RuleModel
 from ..account import account_core as AccountModel

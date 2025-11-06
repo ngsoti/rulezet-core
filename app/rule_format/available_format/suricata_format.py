@@ -2,7 +2,7 @@ import os
 from typing import List, Dict, Any
 from suricataparser import parse_rules, parse_rule
 from ...rule import rule_core as RuleModel
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.utils.utils import detect_cve
 
 

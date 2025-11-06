@@ -2,9 +2,11 @@ import glob
 import os
 import re
 from typing import Any, Dict, List
+
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from ...rule import rule_core as RuleModel
 from flask_login import current_user
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+
 
 import msc_pyparser
 

@@ -3,7 +3,7 @@ import os
 import re
 import uuid
 from typing import Any, Dict, List
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from ...rule import rule_core as RuleModel
 
 class ZeekRule(RuleType):

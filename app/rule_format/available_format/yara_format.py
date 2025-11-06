@@ -2,9 +2,8 @@ import os
 from typing import Dict, Any, List
 import re
 import yara
-
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
-from app.utils.utils import detect_cve, update_or_clone_repo
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from app.utils.utils import detect_cve
 from ...rule import rule_core as RuleModel
 
 #################

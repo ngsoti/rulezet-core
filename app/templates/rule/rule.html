@@ -424,7 +424,6 @@
                     )
                     if(await res.status == 201){
                         let loc = await res.json()
-                        console.log(loc);
                         
                         window.location.href="/rule/import_loading/"+loc["session_uuid"]
                     }else{

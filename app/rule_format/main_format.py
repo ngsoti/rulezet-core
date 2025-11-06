@@ -1,15 +1,7 @@
-from app.rule_type.rule_formats.nse_format import NseRule
-from app.rule_type.rule_formats.wazuh_format import WazuhRule
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from .. import db
 from ..db_class.db import *
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
-from app.rule_type.rule_formats.crs_format import CRSRule
-# from app.rule_type.rule_formats.elastic_format import ElasticDetectionRule
-from app.rule_type.rule_formats.nova_format import NovaRule
-from app.rule_type.rule_formats.sigma_format import SigmaRule
-from app.rule_type.rule_formats.suricata_format import SuricataRule
-from app.rule_type.rule_formats.yara_format import YaraRule
-from app.rule_type.rule_formats.zeek_format import ZeekRule
+
 from ..rule import rule_core as RuleModel
 from flask_login import current_user
 

@@ -5,7 +5,8 @@ from flask import render_template, request, Response
 import json
 import os
 
-from app.import_github_project.untils_import import delete_existing_repo_folder
+
+from app.rule_format.utils_format.utils_import_update import delete_existing_repo_folder
 from app.utils.init_db import create_admin, create_default_user, insert_default_formats, show_admin_first_connection
 
 

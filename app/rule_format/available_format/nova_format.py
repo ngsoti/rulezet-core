@@ -3,8 +3,7 @@ import os
 import re
 from ...rule import rule_core as RuleModel
 
-from dataclasses import dataclass, field
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 
 # Import Nova
 from nova import NovaParser, NovaMatcher

@@ -1,13 +1,12 @@
-import re
 from typing import Dict, Any, List
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 import os
 import yaml
 import json
 from typing import List, Dict, Any, Optional
 from jsonschema import validate, ValidationError
 from ...rule import rule_core as RuleModel
-from app.utils.utils import detect_cve, update_or_clone_repo
+from app.utils.utils import detect_cve
 
 
 ##################
@@ -28,7 +27,7 @@ class SigmaRule(RuleType):
     Concrete implementation of RuleType for Sigma rules.
     """
 
-    def __init__(self, schema_path: str = "app/import_github_project/sigma_format.json"):
+    def __init__(self, schema_path: str = "app/rule_type/schema_format/sigma_format.json"):
         self.schema = self._load_schema(schema_path)
 
     @property

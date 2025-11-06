@@ -711,3 +711,31 @@ class ImporterResult(db.Model):
             "count_per_format": json.loads(self.count_per_format)
         }
         return json_dict
+    
+# class UpdaterResult(db.Model):
+#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+#     uuid = db.Column(db.String(36), index=True, unique=True)
+#     info = db.Column(db.String)
+#     bad_rules = db.Column(db.Integer, index=True)
+#     updated = db.Column(db.Integer, index=True)
+#     skipped = db.Column(db.Integer, index=True)
+#     total = db.Column(db.Integer, index=True)
+#     query_date = db.Column(db.DateTime, index=True)
+#     user_id = db.Column(db.Integer, index=True)
+#     count_per_format = db.Column(db.String)
+
+#     def to_json(self):
+#         json_dict = {
+#             "id": self.id,
+#             "uuid": self.uuid,
+#             "info": json.loads(self.info),
+#             "bad_rules": self.bad_rules,
+#             "updated": self.updated,
+#             "skipped": self.skipped,
+#             "total": self.total,
+#             "query_date": self.query_date.strftime('%Y-%m-%d %H:%M'),
+#             "user_id": self.user_id,
+#             "count_per_format": json.loads(self.count_per_format)
+#         }
+#         return json_dict
+    

@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms.validators import ValidationError
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField
-from wtforms.validators import InputRequired, DataRequired
+from wtforms.validators import InputRequired
 
 from app.db_class.db import Bundle
 

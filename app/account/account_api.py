@@ -8,7 +8,7 @@ from flask_restx import Resource
 from flask import request
 from flask_login import login_user
 from wtforms.validators import  Email
-from app.db_class.db import RuleVote, User
+from app.db_class.db import User
 from app.account import account_core as AccountModel
 from app.utils.utils import get_user_from_api
 from ..rule import rule_core as RuleModel
