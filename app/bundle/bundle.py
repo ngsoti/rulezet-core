@@ -123,8 +123,17 @@ def edit(bundle_id) :
     
 @bundle_blueprint.route("/detail/<int:bundle_id>", methods=['GET' , 'POST'])
 def detail(bundle_id) :     
-    """Go to detail of a bundle"""     
-    return render_template("bundle/detail_bundle.html", bundle_id=bundle_id)
+    """Go to detail of a bundle"""    
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if bundle: 
+        if current_user.is_anonymous():
+            return render_template("access_denied.html"),403
+        elif bundle.access or current_user.is_admin() or current_user.id == bundle.user_id:
+            return render_template("bundle/detail_bundle.html", bundle_id=bundle_id)
+        else:
+            return render_template("access_denied.html"),403
+    else:
+        return render_template("404.html"), 404
     
 
 @bundle_blueprint.route("/get_all_rule", methods=['GET'])
