@@ -87,18 +87,35 @@
                 
                 <div class="card-body">
                     <div class="mb-4">
-                        <p>
-                            <i class="fas fa-align-left me-2 text-secondary"></i>
-                            <strong>Description:</strong>
-                            <span v-if="currentRule.cve_id && currentRule.cve_id !== 'None'" class="badge bg-danger ms-2">
-                                <i class="fas fa-shield-alt me-1"></i>
-                                CVE [[ currentRule.cve_id ]]
+                        <p class="mb-2 d-flex align-items-start flex-wrap">
+                            <i class="fas fa-align-left me-2 text-secondary mt-1"></i>
+                            <strong class="me-2">Description:</strong>
+
+                            <!-- Badges CVE inline -->
+                            <span
+                                v-if="currentRule.cve_id && currentRule.cve_id !== 'None'"
+                                class="d-inline-flex flex-wrap align-items-center"
+                            >
+                                <span
+                                    v-for="(cve, index) in parsedCVE(currentRule.cve_id)"
+                                    :key="index"
+                                    :class="['badge', 'me-1', 'mb-1', getCVEColor(cve)]"
+                                    data-bs-toggle="tooltip"
+                                    :title="'Detected vulnerability ID: ' + cve"
+                                >
+                                    <i :class="getCVEIcon(cve)" class="me-1"></i>
+                                    [[ getCVEPrefix(cve) ]]
+                                    <span class="text-light fw-semibold">[[ getCVENumber(cve) ]]</span>
+                                </span>
                             </span>
                         </p>
-                        <p>{{ rule.description }}</p>
-                    </div>
 
+                        <p class="text-muted" style="white-space: pre-line;">[[ currentRule.description ]]</p>
+                    </div>
                 </div>
+
+
+
             </div>
             <!-- Additional Information Card -->
             <div class="card shadow-lg  mb-4">
@@ -998,8 +1015,63 @@
                 highlightJSON();
             })
 
+            /**
+             * 
+            *   #################
+            *   #       CVE     #
+            *   #################
+            * 
+            * */
+
+            function parsedCVE(cveField) {
+                try {
+                    return JSON.parse(cveField);
+                } catch (e) {
+                    return cveField.replace(/[{}]/g, "").split(",").map(s => s.trim());
+                }
+            }
+            
+            function getCVEColor(cve) {
+                    if (cve.startsWith("CVE")) return "bg-danger"; 
+                    if (cve.startsWith("GHSA")) return "bg-warning text-dark";
+                    if (cve.startsWith("PYSEC")) return "bg-info text-dark"; 
+                    if (cve.startsWith("GSD")) return "bg-secondary"; 
+                    if (cve.startsWith("GCVE")) return "bg-primary"; 
+                    if (cve.startsWith("RHSA")) return "bg-danger-subtle text-dark"; 
+                    if (cve.startsWith("CERTFR")) return "bg-success"; 
+                    if (cve.startsWith("cisco-sa")) return "bg-dark"; 
+                    if (cve.startsWith("wid-sec-w")) return "bg-secondary"; 
+                    if (cve.startsWith("msrc_CVE")) return "bg-purple"; 
+                    return "bg-dark";
+            }
+                
+            function getCVEIcon(cve) {
+                    if (cve.startsWith("CVE")) return "fas fa-shield-alt";
+                    if (cve.startsWith("GHSA")) return "fas fa-bug";
+                    if (cve.startsWith("PYSEC")) return "fas fa-code";
+                    if (cve.startsWith("GSD")) return "fas fa-database";
+                    if (cve.startsWith("GCVE")) return "fas fa-globe";
+                    if (cve.startsWith("RHSA")) return "fas fa-lock";
+                    if (cve.startsWith("CERTFR")) return "fas fa-flag";
+                    if (cve.startsWith("cisco-sa")) return "fas fa-network-wired";
+                    if (cve.startsWith("wid-sec-w")) return "fas fa-exclamation-circle";
+                    if (cve.startsWith("msrc_CVE")) return "fas fa-shield-virus";
+                    return "fas fa-exclamation-triangle";
+                }
+
+            function getCVEPrefix(cve) {
+                    return cve.split("-")[0].toUpperCase();
+                }
+            function getCVENumber(cve) {
+                    return cve.replace(/^[A-Za-z_:-]+/, "").replace(/^-/, "");
+                }
+               
     
             return {
+                getCVEColor,
+                getCVEIcon,
+                getCVEPrefix,
+                getCVENumber,
                 bundleListRule,
                 Ownership,
                 favorite,
@@ -1029,7 +1101,8 @@
                 rule_format,
                 download_rule,
                 csrf_token,
-                favoriteSimilar
+                favoriteSimilar,
+                parsedCVE
             };
         }
     }).mount('#main-container');

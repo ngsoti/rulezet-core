@@ -1,3 +1,4 @@
+import re
 from flask import url_for
 from flask_login import current_user
 from flask_wtf import FlaskForm
@@ -21,7 +22,7 @@ class AddNewRuleForm(FlaskForm):
     source = StringField('Source')
     version = StringField('Version')
     to_string = TextAreaField('Content rule', validators=[InputRequired()])
-    cve_id = StringField('Vulnerability id')
+    cve_id = StringField('Vulnerability id (comma, space, or newline separated)')
     submit = SubmitField('Create rule')
 
     def __init__(self, *args, **kwargs):
@@ -43,10 +44,46 @@ class AddNewRuleForm(FlaskForm):
                 raise ValidationError('Rule already registered.')
 
     def validate_cve_id(self, field):
-        if field.data:
-            valid, matches = detect_cve(field.data)
-            if not valid:
-                raise ValidationError('CVE ID not recognized or invalid format.')
+        """Validate multiple CVE-like IDs entered in the form."""
+        if not field.data:
+            return
+
+        entries = re.split(r'[\s,;]+', field.data.strip())
+        entries = [e for e in entries if e]  
+
+        if not entries:
+            return
+
+        invalid_entries = []
+        valid_entries = []
+
+        cve_pattern = re.compile(
+            r"\b(CVE[-\s]?\d{4}[-\s]?\d{4,7})\b"
+            r"|\b(GCVE-\d+-\d{4}-\d+)\b"
+            r"|\b(GHSA-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4})\b"
+            r"|\b(PYSEC-\d{4}-\d{2,5})\b"
+            r"|\b(GSD-\d{4}-\d{4,5})\b"
+            r"|\b(wid-sec-w-\d{4}-\d{4})\b"
+            r"|\b(cisco-sa-\d{8}-[a-zA-Z0-9]+)\b"
+            r"|\b(RHSA-\d{4}:\d{4})\b"
+            r"|\b(msrc_CVE-\d{4}-\d{4,})\b"
+            r"|\b(CERTFR-\d{4}-[A-Z]{3}-\d{3})\b",
+            re.IGNORECASE
+        )
+
+        for e in entries:
+            if re.fullmatch(cve_pattern, e):
+                valid_entries.append(e.upper())
+            else:
+                invalid_entries.append(e)
+
+        if invalid_entries:
+            raise ValidationError(
+                f"Invalid vulnerability ID(s): {', '.join(invalid_entries)}.<br>"
+                f"Accepted formats: CVE, GCVE, GHSA, PYSEC, GSD, CERT-Bund, Cisco, RedHat, MSRC CVE, CERT-FR."
+            )
+
+        field.data = ",".join(valid_entries)
 
 
 

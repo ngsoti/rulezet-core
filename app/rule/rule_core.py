@@ -1665,3 +1665,26 @@ def get_all_rules_in_json_dump(data: Dict[str, Any]) -> dict:
     }
 
     return dump
+
+def search_rules_by_cve_patterns(cve_patterns: list[str]) -> dict:
+    """
+    Returns a dictionary where each CVE pattern maps to all rules containing it.
+    Each rule is returned as full JSON using Rule.to_json().
+    """
+
+    result = {}
+    for pattern in cve_patterns:
+        # Query rules matching the pattern in cve_id, title, or description
+        like_pattern = f"%{pattern}%"
+        rules = Rule.query.filter(
+            or_(
+                Rule.cve_id.ilike(like_pattern),
+                Rule.description.ilike(like_pattern),
+                Rule.title.ilike(like_pattern)
+            )
+        ).order_by(Rule.last_modif.desc()).all()
+
+        # Convert rules to JSON
+        result[pattern] = [rule.to_json() for rule in rules]
+
+    return result

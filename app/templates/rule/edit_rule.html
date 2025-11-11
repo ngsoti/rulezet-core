@@ -79,16 +79,45 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="form-group">
-                        {{ form.cve_id.label(class_="col-form-label") }}
-                        {{ form.cve_id(class_="form-control",
-                                    placeholder="Enter the Vulnerability id if there is...",
-                                    title="Id format : CVE , GCVE, GHSA, PYSEC, GSD, CERT-Bund, Cisco, RedHat, MSRC CVE or CERT-FR patterns") }}
+                    <div class="form-group mt-3">
+                        <strong>{{ form.cve_id.label(class_="col-form-label") }}</strong>
+
+                        <div class="input-group">
+                            <select id="cve-type" class="form-select" style="max-width: 160px;">
+                                <option value="CVE" selected>CVE</option>
+                                <option value="GHSA">GHSA</option>
+                                <option value="PYSEC">PYSEC</option>
+                                <option value="GSD">GSD</option>
+                                <option value="GCVE">GCVE</option>
+                                <option value="CERTFR">CERTFR</option>
+                                <option value="RHSA">RHSA</option>
+                                <option value="CISCO-SA">Cisco</option>
+                                <option value="MSRC_CVE">MSRC</option>
+                            </select>
+
+                            <input
+                                type="text"
+                                id="cve-id-input"
+                                class="form-control"
+                                placeholder="Enter vulnerability number (e.g., 2024-1234)"
+                                autocomplete="off"
+                            >
+
+                            <button type="button" class="btn btn-dark" id="add-cve-btn">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+
+                        {{ form.cve_id(class_="form-control d-none") }}
+
                         {% if form.cve_id.errors %}
                             <div class="invalid-feedback d-block">
                                 {{ form.cve_id.errors[0] | safe }}
                             </div>
                         {% endif %}
+
+                        <div id="cve-badge-container" class="d-flex flex-wrap gap-2 mb-2 p-3"></div>
+
                     </div>
                 </div>
             </div>
@@ -161,6 +190,108 @@
 
 
 <script>
+    /**
+     * 
+     *  #################
+     *  #   CVE badge   #
+     *  #################
+     * 
+     * */
+    document.addEventListener("DOMContentLoaded", function () {
+        const addBtn = document.getElementById("add-cve-btn");
+        const input = document.getElementById("cve-id-input");
+        const typeSelect = document.getElementById("cve-type");
+        const container = document.getElementById("cve-badge-container");
+        const hiddenInput = document.getElementById("cve_id");
+
+        const colorMap = {
+            "CVE": "badge bg-danger text-light",
+            "GHSA": "badge bg-primary text-light",
+            "PYSEC": "badge bg-warning text-dark",
+            "GSD": "badge bg-success text-light",
+            "GCVE": "badge bg-info text-dark",
+            "CERTFR": "badge bg-secondary text-light",
+            "RHSA": "badge bg-dark text-light",
+            "CISCO-SA": "badge bg-light text-dark border border-dark",
+            "MSRC_CVE": "badge bg-purple text-light"
+        };
+
+        const style = document.createElement('style');
+        style.innerHTML = `.bg-purple { background-color: #6f42c1 !important; }`;
+        document.head.appendChild(style);
+
+        let cveList = [];
+
+        function updateHiddenInput() {
+            hiddenInput.value = cveList.join(",");
+        }
+
+        function createBadge(fullCVE) {
+            const [type] = fullCVE.split('-');
+            const badge = document.createElement("span");
+            badge.className = (colorMap[type] || "badge bg-secondary text-light") + " d-flex align-items-center me-2 mb-2";
+            badge.textContent = fullCVE;
+
+            const removeBtn = document.createElement("button");
+            removeBtn.type = "button";
+            removeBtn.className = "btn-close btn-close-white ms-2";
+            removeBtn.setAttribute("aria-label", "Remove");
+            removeBtn.onclick = () => {
+                badge.remove();
+                const index = cveList.indexOf(fullCVE);
+                if (index !== -1) cveList.splice(index, 1);
+                updateHiddenInput();
+            };
+
+            badge.appendChild(removeBtn);
+            container.appendChild(badge);
+        }
+
+        function addCVE() {
+            const type = typeSelect.value.trim();
+            const id = input.value.trim();
+            if (!id) return false;
+
+            const safeType = type.replace(/\s+/g, '');
+            const safeId = id.replace(/\s+/g, '');
+            const fullCVE = `${safeType}-${safeId}`;
+
+            const validPattern = /^[A-Z0-9_\-]+-\d{4,}-\d+$/i;
+            if (!validPattern.test(fullCVE) || cveList.includes(fullCVE)) {
+                input.classList.add("is-invalid");
+                return false;
+            }
+
+            input.classList.remove("is-invalid");
+            cveList.push(fullCVE);
+            createBadge(fullCVE);
+            updateHiddenInput();
+            input.value = "";
+            return false;
+        }
+
+        addBtn.addEventListener("click", addCVE);
+        input.addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                addCVE();
+            }
+        });
+
+        if (hiddenInput.value) {
+            hiddenInput.value.split(",").forEach(cve => {
+                if (cve.trim()) {
+                    cveList.push(cve.trim());
+                    createBadge(cve.trim());
+                }
+            });
+        }
+    });
+
+
+
+
+
     $(document).ready(function() {
     $('#license-select').select2({
         placeholder: "Search for a license",

@@ -325,6 +325,48 @@ class DetailRule(Resource):
         # curl -X GET http://127.0.0.1:7009/api/rule/public/all_by_user/4
 
 
+    ##############################
+    #   Get all rules by CVE id  #
+    ##############################
+
+
+    @public_ns.route('/search_rules_by_cve')
+    @api.doc(description='Search all rules matching one or more CVE or vulnerability IDs')
+    class RulesByCVE(Resource):
+        @api.doc(params={
+            "cve_ids": "title for the rule",
+        })
+        def get(self):
+            """
+            Query rules by CVE ID(s). 
+            Accepts `cve_ids` as comma-separated string, e.g.:
+            /search_rules_by_cve?cve_ids=CVE-2021-34567,GHSA-xy12-zw34-ab56,....
+            """
+
+            # Parse input CVE(s)
+            raw_cve_ids = request.args.get('cve_ids', '')
+            if not raw_cve_ids:
+                return {"error": "No CVE IDs provided."}, 400
+
+            success , cve_patterns = utils.detect_cve(raw_cve_ids) 
+
+            if not success:
+                return {"error": "No match for CVE id"}
+
+            rules = RuleModel.search_rules_by_cve_patterns(cve_patterns)
+
+            #  Build JSON response by cve patterns
+            
+            return {
+                "count": len(rules),
+                "cve_patterns": cve_patterns,
+                "rules": rules
+            }, 200
+
+    # http://127.0.0.1:7009/api/rule/public/search_rules_by_cve?cve_ids=CVE-2021-34567,GHSA-xy12-zw34-ab56
+
+
+
 # ------------------------------------------------------------------------------------------------------------------- #
 #                                       PRIVATE ENDPOINT (auth required)                                              # 
 # ------------------------------------------------------------------------------------------------------------------- #
