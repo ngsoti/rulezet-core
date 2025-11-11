@@ -1,135 +1,286 @@
-from sqlalchemy import Column, String, DateTime, Boolean, Text, ForeignKey, Integer, JSON
-from sqlalchemy.orm import relationship
-from uuid import uuid4
 import datetime
+import json
+from queue import Queue
+from threading import Thread
+from typing import Optional
+from uuid import uuid4
+
+from flask import current_app
+from flask_login import current_user
+from app import ThreadLocalSession
+from ... import db
+from ...db_class.db import NewRule, RuleStatus, UpdateResult, User
+from ...rule import rule_core as RuleModel
+from ...rule.rule_core import Rule as RuleDB
+
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, load_all_rule_formats
+from app.rule_format.utils_format.utils_import_update import (
+    clone_or_access_repo,
+    delete_existing_repo_folder,
+    git_pull_repo
+)
+
+sessions = []
 
 
-# ============================
-# UpdateResult Table
-# ============================
-class UpdateResult(Base):
+class Update_classs:
     """
-    Represents a single update process (for a set of rules, URLs, or repositories).
-    Each run of the update process creates one UpdateResult entry.
+    Threaded class to manage large batch rule updates
+    across multiple repositories or selected rules.
     """
-    __tablename__ = "update_results"
 
-    uuid = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    
-    # User and mode information
-    current_user = Column(String, nullable=True)   # The username or user ID that triggered the update
-    mode = Column(String, nullable=False)           # Mode used for the update (e.g., 'url', 'rule', 'repo')
+    def __init__(self, repo_sources, user: User, info: dict, mode: str = "by_rule") -> None:
+        self.update_result_id = None
+        self.uuid = str(uuid4())
+        self.thread_count = 4
+        self.jobs = Queue(maxsize=0)
+        self.threads = []
+        self.stopped = False
 
-    # Optional metadata
-    info = Column(Text, nullable=True)              # Optional descriptive info (e.g., CLI args, context)
-    repo_sources = Column(JSON, nullable=True)      # List or dict of repository URLs/sources used in this update
+        self.repo_sources = repo_sources
+        self.mode = mode
+        self.current_user = user
+        self.info = info
+        self.repo_cache = {}
 
-    # Stats tracking
-    not_found = Column(Integer, default=0)          # Number of rules not found
-    found = Column(Integer, default=0)              # Number of rules found
-    updated = Column(Integer, default=0)            # Number of rules updated
-    skipped = Column(Integer, default=0)            # Number of rules skipped
+        # Stats
+        self.bad_rules = 0
+        self.updated = 0
+        self.not_found = 0
+        self.found = 0
+        self.skipped = 0
+        self.total = 0
 
-    # Technical parameters
-    thread_count = Column(Integer, default=4)       # Number of threads used in the update process
-    query_date = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))  # When the update ran
+        self.query_date = datetime.datetime.now(tz=datetime.timezone.utc)
 
-    # Relationships
-    rule_statuses = relationship("RuleStatus", back_populates="update_result", cascade="all, delete-orphan")
-    new_rules = relationship("NewRule", back_populates="update_result", cascade="all, delete-orphan")
+        self.db_update = UpdateResult(
+            uuid=self.uuid,
+            user_id=self.current_user.id,
+            mode=self.mode,
+            info=json.dumps(self.info),
+            repo_sources=json.dumps(self.repo_sources),
+            thread_count=self.thread_count,
+            query_date=self.query_date,
+        )
+        db.session.add(self.db_update)
+        db.session.commit()
+        self.update_result_id = self.db_update.id
+        print(f"[INIT] UpdateResult ID = {self.update_result_id}")
 
-    def to_json(self):
+
+    # ------------------ MAIN METHODS ------------------
+
+    def start(self):
+        print("[START] Preparing jobs for update...")
+        cp = 0
+
+        if self.mode == "by_url":
+            print("[MODE] by_url")
+            for url in self.repo_sources:
+                repo_dir, exists = clone_or_access_repo(url)
+                if not exists:
+                    continue
+                git_pull_repo(repo_dir)
+                rule_items = RuleModel.get_all_rule_by_url_github(url)
+                self.total += len(rule_items)
+
+                for rule in rule_items:
+                    cp += 1
+                    self.jobs.put((cp, repo_dir, rule.id))
+                load_all_rule_formats()
+
+        else:
+            print("[MODE] by_rule")
+            sources = RuleModel.get_sources_from_ids(self.repo_sources)
+            for src in sources:
+                repo_dir, exists = clone_or_access_repo(src)
+                if exists:
+                    git_pull_repo(repo_dir)
+                    self.repo_cache[src] = repo_dir
+
+            for rule_id in self.repo_sources:
+                rule = RuleModel.get_rule(rule_id)
+                if not rule:
+                    continue
+                repo_dir = self.repo_cache.get(rule.source)
+                cp += 1
+                self.jobs.put((cp, repo_dir, rule))
+
+        self.total = cp
+
+        for _ in range(self.thread_count):
+            worker = Thread(target=self.process, args=[current_app._get_current_object(), current_user._get_current_object()])
+            worker.daemon = True
+            worker.start()
+            self.threads.append(worker)
+
+        
+
+    def status(self):
+        if self.jobs.empty():
+            self.stop()
+        remaining = max(self.jobs.qsize(), len(self.threads))
+        complete = self.total - remaining
+        print("ahhhhh")
         return {
-            "uuid": self.uuid,
-            "mode": self.mode,
-            "current_user": self.current_user,
-            "info": self.info,
-            "repo_sources": self.repo_sources,
-            "not_found": self.not_found,
+            "id": self.uuid,
+            "total": self.total,
+            "complete": complete,
+            "remaining": remaining,
+            "stopped": self.stopped,
             "found": self.found,
             "updated": self.updated,
             "skipped": self.skipped,
-            "thread_count": self.thread_count,
-            "query_date": self.query_date.isoformat() if self.query_date else None,
+            "not_found": self.not_found,
+            "bad_rules": self.bad_rules,
+            "total": self.total
         }
 
+    def stop(self):
+        self.jobs.queue.clear()
+        for i, worker in enumerate(self.threads):
+            worker.join()  # attendre tous les threads
+        self.threads.clear()
 
-# ============================
-# RuleStatus Table
-# ============================
-class RuleStatus(Base):
-    """
-    Represents the result of checking or updating one specific rule.
-    Each rule analyzed during an update has one corresponding RuleStatus record.
-    """
-    __tablename__ = "rule_statuses"
+        print("############################################################")
+        self.save_info()
+        print("*******************************************")
+        if self in sessions:
+            sessions.remove(self)
 
-    uuid = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    update_result_uuid = Column(String, ForeignKey("update_results.uuid", ondelete="CASCADE"), nullable=False)
-    
-    date = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))  # When the rule was processed
-    name_rule = Column(String, nullable=False)           # Rule name or identifier
-    rule_id = Column(String, nullable=True)              # Unique rule ID if available
-    message = Column(Text, nullable=True)                # Log or status message for debugging
-    
-    found = Column(Boolean, default=False)               # Whether the rule was found in the repository
-    update_available = Column(Boolean, default=False)    # Whether an update is available for the rule
-    rule_syntax_valid = Column(Boolean, default=True)    # Whether the rule syntax is valid
-    error = Column(Boolean, default=False)               # Whether an error occurred when processing this rule
-
-    history_id = Column(String, nullable=True)           # Reference to RuleUpdateHistory if applicable
-
-    update_result = relationship("UpdateResult", back_populates="rule_statuses")
-
-    def to_json(self):
-        return {
-            "uuid": self.uuid,
-            "update_result_uuid": self.update_result_uuid,
-            "date": self.date.isoformat() if self.date else None,
-            "name_rule": self.name_rule,
-            "rule_id": self.rule_id,
-            "message": self.message,
-            "found": self.found,
-            "update_available": self.update_available,
-            "rule_syntax_valid": self.rule_syntax_valid,
-            "error": self.error,
-            "history_id": self.history_id,
-        }
+        delete_existing_repo_folder("Rules_Github")
 
 
-# ============================
-# NewRule Table
-# ============================
-class NewRule(Base):
-    """
-    Represents a new rule that was discovered during an update process.
-    For example, a rule that did not previously exist locally but was found in a remote source.
-    """
-    __tablename__ = "new_rules"
+    # ------------------ WORKER PROCESS ------------------
 
-    uuid = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    update_result_uuid = Column(String, ForeignKey("update_results.uuid", ondelete="CASCADE"), nullable=False)
+    def process(self, loc_app, user: User):
+        print("[THREAD] Worker started")
+        
+        with loc_app.app_context():
+            from sqlalchemy.orm import scoped_session, sessionmaker
+            Session = scoped_session(sessionmaker(bind=db.engine))
+            session = Session()
 
-    date = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))  # When the new rule was found
-    name_rule = Column(String, nullable=False)             # The name of the new rule
-    rule_content = Column(Text, nullable=False)            # Full rule content (e.g., the rule body)
-    message = Column(Text, nullable=True)                  # Optional log or message
-    
-    rule_syntax_valid = Column(Boolean, default=True)      # Whether the new rule’s syntax is valid
-    error = Column(Boolean, default=False)                 # Whether an error occurred during validation
-    accept = Column(Boolean, default=False)                # Whether the new rule was accepted/imported
+            try:
+                while not self.jobs.empty():
+                    _, repo_dir, rule_id = self.jobs.get()
+                    print(f"[THREAD] Processing Rule ID {rule_id}...")
 
-    update_result = relationship("UpdateResult", back_populates="new_rules")
+                    # Récupération de la règle dans cette session
+                    rule = session.get(RuleDB, rule_id)
+                    if not rule:
+                        print(f"[THREAD] ERROR: Rule {rule_id} not found in DB")
+                        self.bad_rules += 1
+                        self.jobs.task_done()
+                        continue
 
-    def to_json(self):
-        return {
-            "uuid": self.uuid,
-            "update_result_uuid": self.update_result_uuid,
-            "date": self.date.isoformat() if self.date else None,
-            "name_rule": self.name_rule,
-            "rule_content": self.rule_content,
-            "message": self.message,
-            "rule_syntax_valid": self.rule_syntax_valid,
-            "error": self.error,
-            "accept": self.accept,
-        }
+                    message_dict, success, new_rule_content = Check_for_rule_updates(rule_id, repo_dir)
+
+                    if not success:
+                        print(f"[THREAD] Rule {rule_id} not found in repo")
+                        self.not_found += 1
+                    elif new_rule_content:
+                        print(f"[THREAD] Rule {rule_id} update found")
+                        self.updated += 1
+                        self.found += 1
+                    else:
+                        print(f"[THREAD] Rule {rule_id} no changes detected")
+                        self.found += 1
+
+                    # Créer status pour cette mise à jour
+                    rule_status = RuleStatus(
+                        update_result_id=self.update_result_id,
+                        name_rule=rule.title,
+                        rule_id=str(rule_id),
+                        message=message_dict.get("message", ""),
+                        found=success,
+                        update_available=bool(new_rule_content),
+                        rule_syntax_valid=True,
+                        error=not success
+                    )
+                    session.add(rule_status)
+
+                    if success and new_rule_content:
+                        history_id = RuleModel.create_rule_history({
+                            "id": rule_id,
+                            "title": rule.title,
+                            "success": success,
+                            "message": message_dict.get("message", ""),
+                            "new_content": new_rule_content,
+                            "old_content": rule.to_string
+                        })
+                        rule_status.history_id = history_id
+
+                    try:
+                        session.commit()
+                    except Exception as e:
+                        print(f"[THREAD] DB commit failed for Rule {rule_id}: {e}")
+                        session.rollback()
+
+                    self.jobs.task_done()
+            finally:
+                session.close()
+                Session.remove()  # Important pour scoped_session
+
+
+
+    # ------------------ SAVE TO DATABASE ------------------
+
+    def save_info(self):
+        self.db_update.not_found = self.not_found
+        self.db_update.found = self.found
+        self.db_update.updated = self.updated
+        self.db_update.skipped = self.skipped
+        self.db_update.total = self.total
+        db.session.commit()
+        return self.db_update
+
+
+# ------------------ GENERIC UPDATE CHECKER ------------------
+
+def Check_for_rule_updates(rule_id: int, repo_dir: str):
+    rule = RuleModel.get_rule(rule_id)
+    if not rule:
+        print(f"[CHECK] Rule ID {rule_id} not found locally")
+        return {"message": f"No rule found with ID {rule_id}", "success": False}, False, None
+
+    print(f"[CHECK] Loaded rule '{rule.title}' with format '{rule.format}'")
+
+    rule_format = (rule.format or "").lower()
+    rule_class: Optional[RuleType] = None
+    for subclass in RuleType.__subclasses__():
+        instance = subclass()
+        if instance.format.lower() == rule_format:
+            rule_class = instance
+            break
+
+    if not rule_class:
+        print(f"[CHECK] No handler for format '{rule.format}'")
+        return {"message": f"No handler for format: {rule.format}", "success": False}, False, None
+
+    try:
+        found_rule, success = rule_class.find_rule_in_repo(repo_dir, rule_id)
+    except Exception as e:
+        print(f"[CHECK] Exception scanning repo: {e}")
+        return {"message": f"Error scanning repo: {e}", "success": False}, False, None
+
+    if not success:
+        print(f"[CHECK] Rule {rule_id} not found in repo")
+        return {"message": f"Rule not found in repo: {found_rule}", "success": False}, False, None
+
+    validation_result = rule_class.validate(found_rule)
+
+    if rule.to_string != validation_result.normalized_content:
+        if not validation_result.ok:
+            print(f"[CHECK] Rule {rule_id} update invalid: {validation_result.errors}")
+            return {
+                "message": f"Update found but invalid: {validation_result.errors}",
+                "success": True,
+                "new_content": validation_result.normalized_content
+            }, True, validation_result.normalized_content
+        else:
+            print(f"[CHECK] Rule {rule_id} update valid")
+            return {"message": "Update found for this rule.", "success": True, "new_content": validation_result.normalized_content}, True, validation_result.normalized_content
+    else:
+        print(f"[CHECK] Rule {rule_id} unchanged")
+        return {"message": "No change detected.", "success": True, "new_content": None}, True, None

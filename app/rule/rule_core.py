@@ -1477,8 +1477,17 @@ def replace_rule_format(old_format_name: str, new_format_name: str) -> int:
 def get_importer_result(sid: str):
     return ImporterResult.query.filter_by(uuid=sid).first()
 
+def get_updater_result(sid: str):
+    return UpdateResult.query.filter_by(uuid=sid).first()
+
+# def get_updater_result_page(sid: str , page: int):
+#      return UpdateResult.query.filter_by(uuid=sid).first()
+
 def get_importer_list_page(page: int = 1):
     return ImporterResult.query.paginate(page=page, per_page=20, max_per_page=20)
+
+def get_updater_list_page(page: int = 1):
+    return UpdateResult.query.paginate(page=page, per_page=20, max_per_page=20)
 #####################
 #   Dump all rules  #
 #####################
@@ -1583,7 +1592,6 @@ def get_all_rules_in_json_dump(data: Dict[str, Any]) -> dict:
     # --- Apply format filter
     if filters["format_name"] is not None:
         query = query.filter(Rule.format.in_(filters["format_name"]))
-    print(filters)
     # --- Apply date filters
     if filters["created_after"]:
         query = query.filter(Rule.creation_date >= filters["created_after"])

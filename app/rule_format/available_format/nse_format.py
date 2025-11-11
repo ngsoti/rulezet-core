@@ -169,8 +169,8 @@ class NseRule(RuleType):
         rule = RuleModel.get_rule(rule_id)
         if rule is None:
             return f"No rule found with ID {rule_id} in the database.", False
-        files = self.find_rule_in_repo(repo_dir)
+        files = self.get_rule_files_update(repo_dir)
         if 0 <= rule_id < len(files):
             with open(files[rule_id], "r", encoding="utf-8") as f:
                 return f.read() , True
-        return f"Nmap Rule with ID '{rule.uuid}' not found inside repo.", False
+        return f"Nmap Rule with ID '{rule.id}' not found inside repo.", False

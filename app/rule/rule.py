@@ -637,7 +637,6 @@ def get_rules_propose_edit_page() -> jsonify:
     if current_user.is_admin():
         rules_pendings = RuleModel.get_rules_edit_propose_page_pending_admin(page)
     else:
-        print("he")
         rules_pendings = RuleModel.get_rules_edit_propose_page_pending(page)
     if rules_pendings:
         rules_pendings_list = [rule_pending.to_json() for rule_pending in rules_pendings]
@@ -1580,16 +1579,84 @@ def history_github_importer_list():
             "total_pages": github_importer_list.pages}, 200
 
 
+# @rule_blueprint.route("/import_get_session_running", methods=['GET'])
+# @login_required
+# def import_get_session_running():
+#     return [{"uuid": s.uuid, "info": s.info} for s in SessionModel.sessions]
+
 @rule_blueprint.route("/import_get_session_running", methods=['GET'])
 @login_required
 def import_get_session_running():
-    return [{"uuid": s.uuid, "info": s.info} for s in SessionModel.sessions]
+    import_sessions = [
+        {"uuid": s.uuid, "info": s.info} 
+        for s in SessionModel.sessions
+    ]
+
+    update_sessions = [
+        {"uuid": s.uuid, "info": s.info} 
+        for s in UpdateModel.sessions
+    ]
+
+    return {
+        "import_sessions": import_sessions,
+        "update_sessions": update_sessions
+    }
 
 
 #############
 #   Update  #
 #############
 
+@rule_blueprint.route("/history_github_updater/list", methods=['GET'])
+@login_required
+def history_github_updater_list():
+    page = request.args.get('page', 1, type=int)
+    github_updater_list = RuleModel.get_updater_list_page(page)
+
+    return {"history": [g.to_json() for g in github_updater_list], 
+            "total_history": github_updater_list.total, 
+            "total_pages": github_updater_list.pages}, 200
+
+@rule_blueprint.route("/update_loading/<sid>", methods=['GET'])
+@login_required
+def update_loading(sid):
+    for s in UpdateModel.sessions:
+        if s.uuid == sid:
+            return render_template("rule/update_github/update_loading.html", sid=sid)
+    r = RuleModel.get_updater_result(sid)
+    if r:
+        return render_template("rule/update_github/update_loading.html", sid=sid)
+    return render_template("404.html"), 404
+
+@rule_blueprint.route("/update_loading_status/<sid>", methods=['GET'])
+@login_required
+def update_loading_status(sid):
+    is_finished = request.args.get('is_finished', 'false', type=str)
+    if not is_finished == 'true':
+        for s in UpdateModel.sessions:
+            if s.uuid == sid:
+                return jsonify(s.status())
+        
+    r = RuleModel.get_updater_result(sid)
+
+    if r:
+        loc = r.to_json()
+        loc["complete"] = loc["total"]
+        loc["remaining"] = 0
+        return loc
+    return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
+
+@rule_blueprint.route("/update_get_info_session/<sid>", methods=['GET'])
+@login_required
+def update_get_info_session(sid):
+    for s in UpdateModel.sessions:
+        if s.uuid == sid:
+            return jsonify(s.info)
+        
+    r = RuleModel.get_updater_result(sid)
+    if r:
+        return json.loads(r.info)
+    return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
 
 
 @rule_blueprint.route("/check_updates_by_url", methods=["POST"])
@@ -1599,38 +1666,38 @@ def check_updates_by_url():
     Check for updates across multiple GitHub URLs (repositories).
     Each repo is cloned/pulled, and rules inside are checked in parallel.
     """
-    try:
-        data = request.get_json()
-        urls = data.get("url", None)
+    # try:
+       
 
-        if not urls or not isinstance(urls, list):
-            return {
-                "message": "Invalid or missing URL list.",
-                "nb_update": 0,
-                "results": [],
-                "success": False,
-                "toast_class": "danger-subtle"
-            }, 400
+    # except Exception as e:
+    #     return {"message": f"Error while checking updates: {str(e)}", "toast_class": "danger-subtle"}, 500
+    data = request.get_json()
+    urls = data.get("url", None)
 
-        valid_urls = [u.get("url") for u in urls if u.get("url") and valider_repo_github(u.get("url"))]
-        if not valid_urls:
-            return {"message": "No valid GitHub URLs provided.", "toast_class": "danger-subtle"}, 400
-
-        info = {"mode": "by_url", "count": len(valid_urls), "initiated_by": current_user.first_name}
-
-        # Lancement du thread principal (comme pour l'import)
-        update_session = UpdateModel.Update_class(valid_urls, current_user, info, mode="by_url")
-        update_session.start()
-        UpdateModel.sessions.append(update_session)
-
+    if not urls or not isinstance(urls, list):
         return {
-            "message": "Update check started successfully. Processing repositories...",
-            "session_uuid": update_session.uuid,
-            "toast_class": "success-subtle"
-        }, 201
+            "message": "Invalid or missing URL list.",
+            "nb_update": 0,
+            "results": [],
+            "success": False,
+            "toast_class": "danger-subtle"
+        }, 400
 
-    except Exception as e:
-        return {"message": f"Error while checking updates: {str(e)}", "toast_class": "danger-subtle"}, 500
+    valid_urls = [u.get("url") for u in urls if u.get("url") and valider_repo_github(u.get("url"))]
+    if not valid_urls:
+        return {"message": "No valid GitHub URLs provided.", "toast_class": "danger-subtle"}, 400
+
+    info = {"mode": "by_url", "count": len(valid_urls), "initiated_by": current_user.first_name}
+
+    update_session = UpdateModel.Update_class(valid_urls, current_user, info, mode="by_url")
+    update_session.start()
+    UpdateModel.sessions.append(update_session)
+
+    return {
+        "message": "Update check started successfully. Processing repositories...",
+        "session_uuid": update_session.uuid,
+        "toast_class": "success-subtle"
+    }, 201
 
 
 @rule_blueprint.route("/check_updates_by_rule", methods=["POST"])
@@ -1653,9 +1720,8 @@ def check_updates_by_rule():
                 "toast_class": "danger-subtle"
             }, 400
 
-        info = {"mode": "by_rule", "count": len(rule_ids), "initiated_by": current_user.username}
+        info = {"mode": "by_rule", "count": len(rule_ids), "initiated_by": current_user.first_name}
 
-        # Lancement du processus d’update
         update_session = UpdateModel.Update_class(rule_ids, current_user, info, mode="by_rule")
         update_session.start()
         UpdateModel.sessions.append(update_session)

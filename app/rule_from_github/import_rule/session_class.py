@@ -89,7 +89,7 @@ class Session_class:
             'stopped' : self.stopped,
             "bad_rules": self.bad_rules,
             "imported": self.imported,
-            "skipped": self.skipped
+            "skipped": self.skipped,
         }
 
     def status_for_test(self):

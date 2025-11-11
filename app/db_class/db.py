@@ -108,7 +108,7 @@ class Rule(db.Model):
         user = User.query.get(self.user_id)  
         return user.first_name + " " + user.last_name if user else None
 
-
+    
     def to_json(self):
         is_favorited = False
         if not current_user.is_anonymous():
@@ -712,30 +712,143 @@ class ImporterResult(db.Model):
         }
         return json_dict
     
-# class UpdaterResult(db.Model):
-#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-#     uuid = db.Column(db.String(36), index=True, unique=True)
-#     info = db.Column(db.String)
-#     bad_rules = db.Column(db.Integer, index=True)
-#     updated = db.Column(db.Integer, index=True)
-#     skipped = db.Column(db.Integer, index=True)
-#     total = db.Column(db.Integer, index=True)
-#     query_date = db.Column(db.DateTime, index=True)
-#     user_id = db.Column(db.Integer, index=True)
-#     count_per_format = db.Column(db.String)
+class UpdateResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid = db.Column(db.String(36), index=True, unique=True)
 
-#     def to_json(self):
-#         json_dict = {
-#             "id": self.id,
-#             "uuid": self.uuid,
-#             "info": json.loads(self.info),
-#             "bad_rules": self.bad_rules,
-#             "updated": self.updated,
-#             "skipped": self.skipped,
-#             "total": self.total,
-#             "query_date": self.query_date.strftime('%Y-%m-%d %H:%M'),
-#             "user_id": self.user_id,
-#             "count_per_format": json.loads(self.count_per_format)
-#         }
-#         return json_dict
-    
+    user_id = db.Column(db.String, index=True)        # user that triggered the update
+    mode = db.Column(db.String, nullable=False)        # update mode: url / rule / repo
+
+    info = db.Column(db.Text, nullable=True)           # optional info (json encoded string)
+    repo_sources = db.Column(db.Text, nullable=True)   # json list or dict encoded as text
+
+    not_found = db.Column(db.Integer, default=0)
+    found = db.Column(db.Integer, default=0)
+    updated = db.Column(db.Integer, default=0)
+    skipped = db.Column(db.Integer, default=0)
+    total = db.Column(db.Integer, index=True)
+
+    thread_count = db.Column(db.Integer, default=4)
+    query_date = db.Column(db.DateTime, index=True)
+
+    # Relationships
+    rule_statuses = db.relationship(
+        "RuleStatus",
+        backref="update_result",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    new_rules = db.relationship(
+        "NewRule",
+        backref="update_result",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "user_id": self.user_id,
+            "mode": self.mode,
+            "info": json.loads(self.info) if self.info else None,
+            "repo_sources": json.loads(self.repo_sources) if self.repo_sources else None,
+            "not_found": self.not_found,
+            "found": self.found,
+            "updated": self.updated,
+            "skipped": self.skipped,
+            "total": self.total,
+            "thread_count": self.thread_count,
+            "query_date": self.query_date.strftime('%Y-%m-%d %H:%M') if self.query_date else None,
+            "rules": [rule.to_json() for rule in self.rule_statuses] if self.rule_statuses else [],
+            "new_rules": [nr.to_json() for nr in self.new_rules] if self.new_rules else []
+        }
+
+class RuleStatus(db.Model):
+    __tablename__ = "rule_status"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid = db.Column(db.String(36), index=True, unique=True)
+
+    update_result_id = db.Column(
+        db.Integer,
+        db.ForeignKey("update_result.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    date = db.Column(db.DateTime, index=True)
+    name_rule = db.Column(db.String, nullable=False)
+    rule_id = db.Column(db.String, nullable=True)
+
+    message = db.Column(db.Text, nullable=True)
+
+    found = db.Column(db.Boolean, default=False)
+    update_available = db.Column(db.Boolean, default=False)
+    rule_syntax_valid = db.Column(db.Boolean, default=True)
+    error = db.Column(db.Boolean, default=False)
+
+    history_id = db.Column(db.String, nullable=True)
+    def get_format(self):
+        """Return the format of the rule associated with this RuleStatus."""
+        if not self.rule_id:
+            return None
+
+        rule = Rule.query.get(self.rule_id)
+        return rule.format if rule else None
+
+         
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "update_result_id": self.update_result_id,
+            "date": self.date.strftime('%Y-%m-%d %H:%M') if self.date else None,
+            "name_rule": self.name_rule,
+            "rule_id": self.rule_id,
+            "message": self.message,
+            "found": self.found,
+            "update_available": self.update_available,
+            "rule_syntax_valid": self.rule_syntax_valid,
+            "error": self.error,
+            "history_id": self.history_id,
+            "format": self.get_format()
+        }
+
+class NewRule(db.Model):
+    __tablename__ = "new_rule"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid = db.Column(db.String(36), index=True, unique=True)
+
+    update_result_id = db.Column(
+        db.Integer,
+        db.ForeignKey("update_result.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    date = db.Column(db.DateTime, index=True)
+    name_rule = db.Column(db.String, nullable=False)
+    rule_content = db.Column(db.Text, nullable=False)
+
+    message = db.Column(db.Text, nullable=True)
+
+    rule_syntax_valid = db.Column(db.Boolean, default=True)
+    error = db.Column(db.Boolean, default=False)
+    accept = db.Column(db.Boolean, default=False)
+
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "update_result_id": self.update_result_id,
+            "date": self.date.strftime('%Y-%m-%d %H:%M') if self.date else None,
+            "name_rule": self.name_rule,
+            "rule_content": self.rule_content,
+            "message": self.message,
+            "rule_syntax_valid": self.rule_syntax_valid,
+            "error": self.error,
+            "accept": self.accept,
+        }
