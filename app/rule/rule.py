@@ -141,7 +141,7 @@ def get_rules_page_filter() -> jsonify:
         "rule": [r.to_json() for r in rules],
         "total_rules": total_rules,
         "total_pages": ceil(total_rules / per_page)
-    })
+    }),200
 
 
 #####################

@@ -38,6 +38,18 @@ body.dark-mode {
   --navbar-text-color: #f1f1f1;
   --rule-name-color: rgb(10, 88, 202);
 }
+/**
+  *
+  *****************
+  * Canva search  *
+  *****************
+  **/
+
+  #offcanvasSearch {
+    --bs-offcanvas-width: 700px;
+    background-color: var(--bg-color);
+    
+  }
 
 /**
   **************
