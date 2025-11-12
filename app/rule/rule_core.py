@@ -1668,23 +1668,55 @@ def get_all_rules_in_json_dump(data: Dict[str, Any]) -> dict:
 
 def search_rules_by_cve_patterns(cve_patterns: list[str]) -> dict:
     """
-    Returns a dictionary where each CVE pattern maps to all rules containing it.
-    Each rule is returned as full JSON using Rule.to_json().
+    Search for rules matching any given CVE pattern in their ID, title, or description.
+    
+    Args:
+        cve_patterns (list[str]): List of CVE identifiers or partial patterns (e.g., ["CVE-2021", "CVE-2019-6813"]).
+
+    Returns:
+        dict: A dictionary mapping each input CVE pattern to a list of rules (in JSON format) 
+              that contain the pattern in their 'cve_id', 'title', or 'description'.
+              
+              Example:
+              {
+                  "CVE-2021": [
+                      {
+                          "id": 123,
+                          "title": "Vulnerability in XYZ",
+                          "cve_id": "CVE-2021-12345",
+                          "detail_url": "https://rulezet.org/rule/detail_rule/123",
+                          ...
+                      },
+                      ...
+                  ],
+                  "CVE-2019-6813": [...]
+              }
     """
 
+    base_url = "https://rulezet.org/rule/detail_rule/"
     result = {}
-    for pattern in cve_patterns:
-        # Query rules matching the pattern in cve_id, title, or description
-        like_pattern = f"%{pattern}%"
-        rules = Rule.query.filter(
-            or_(
-                Rule.cve_id.ilike(like_pattern),
-                Rule.description.ilike(like_pattern),
-                Rule.title.ilike(like_pattern)
-            )
-        ).order_by(Rule.last_modif.desc()).all()
 
-        # Convert rules to JSON
-        result[pattern] = [rule.to_json() for rule in rules]
+    for pattern in cve_patterns:
+        like_pattern = f"%{pattern}%"
+
+        # Find rules matching the CVE pattern
+        rules = (
+            Rule.query.filter(
+                or_(
+                    Rule.cve_id.ilike(like_pattern),
+                    Rule.description.ilike(like_pattern),
+                    Rule.title.ilike(like_pattern)
+                )
+            )
+            .order_by(Rule.last_modif.desc())
+            .all()
+        )
+
+        # Convert each rule to JSON and append the rule detail URL
+        result[pattern] = []
+        for rule in rules:
+            rule_json = rule.to_json()
+            rule_json["detail_url"] = f"{base_url}{rule.id}"
+            result[pattern].append(rule_json)
 
     return result

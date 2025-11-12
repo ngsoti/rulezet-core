@@ -107,7 +107,7 @@ class YaraRule(RuleType):
             return {
                 "format": "yara",
                 "title": "Invalid Rule",
-                 "license":  info["license"] or "unknown",
+                "license":  info["license"] or "unknown",
                 "description": f"Error parsing metadata: {e}",
                 "version": "N/A",
                 "source": info["repo_url"],
