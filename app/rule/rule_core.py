@@ -1480,8 +1480,32 @@ def get_importer_result(sid: str):
 def get_updater_result(sid: str):
     return UpdateResult.query.filter_by(uuid=sid).first()
 
-# def get_updater_result_page(sid: str , page: int):
-#      return UpdateResult.query.filter_by(uuid=sid).first()
+def get_updater_result_new_rule_page(sid: str, page: int, per_page: int = 30):
+    """
+    Retrieve paginated NewRule entries linked to the UpdateResult with UUID = sid
+    """
+    update_result = UpdateResult.query.filter_by(uuid=sid).first()
+    if not update_result:
+        return None
+
+    return NewRule.query.filter_by(update_result_id=update_result.id).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+def get_updater_result_rule_page(sid: str, page: int, per_page: int = 30):
+    """
+    Retrieve paginated RuleStatus entries linked to the UpdateResult with UUID = sid,
+    prioritizing rules that have an update available.
+    """
+    update_result = UpdateResult.query.filter_by(uuid=sid).first()
+    if not update_result:
+        return None
+
+    # Prioritize rules with update_available=True, then by date ascending
+    return RuleStatus.query.filter_by(update_result_id=update_result.id)\
+        .order_by(RuleStatus.update_available.desc(), RuleStatus.date.asc())\
+        .paginate(page=page, per_page=per_page, error_out=False)
+
 
 def get_importer_list_page(page: int = 1):
     return ImporterResult.query.paginate(page=page, per_page=20, max_per_page=20)

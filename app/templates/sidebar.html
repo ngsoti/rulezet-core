@@ -38,18 +38,13 @@
                     <ul class="dropdown-menu" aria-labelledby="rulesDropdown">
                         <li>
                             <a class="dropdown-item" href="/rule/rules_list">
-                                <i class="fa-solid fa-list fa-fw me-2"></i> All Rules
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="/rule/list_github_url">
-                                <i class="fa-brands fa-github fa-fw me-2"></i> Github list
+                                <i class="fa-solid fa-list fa-fw me-2"></i> Rules <Link:manifest></Link:manifest>ist
                             </a>
                         </li>
                         {% if current_user.is_authenticated %}
                             <li>
                                 <a class="dropdown-item position-relative" href="/rule/rule_propose_edit">
-                                    <i class="fa-solid fa-lightbulb fa-fw me-2"></i> Rule proposal
+                                    <i class="fa-solid fa-lightbulb fa-fw me-2"></i> Rule Proposal
                                     <template v-if="changes_to_validate">
                                         <span 
                                             v-if="changes_to_validate > 0" 
@@ -70,13 +65,7 @@
                                     <i class="fas fa-hammer fa-fw me-2"></i> Add Rule
                                 </a>
                             </li>
-                            {% if current_user.is_admin() %}
-                                <li>
-                                    <a class="dropdown-item" href="/rule/manage_format_rule">
-                                        <i class="fa-solid fa-file-code fa-fw me-2"></i> Manage Format
-                                    </a>
-                                </li>
-                            {% else %}
+                            {% if not current_user.is_admin() %}
                                 <li>
                                     <a href="/admin/request" class="dropdown-item position-relative">
                                         <i class="fa-solid fa-envelope fa-fw me-2"></i>
@@ -95,34 +84,65 @@
                                 </li>
                             {% endif %}
                         {% endif %}
-                        <li>
-                            <a class="dropdown-item" href="/rule/history_github_importer">
-                                <i class="fa-solid fa-file-import fa-fw me-2"></i> Github importer
-                            </a>
-                        </li>
+                        
                     </ul>
                 </div>
 
             </li>
-
-            
+            {% if current_user.is_authenticated %}
+            <li class="nav-item mx-2">
+                <div class="dropdown">
+                    <a class="nav-link dropdown-toggle text-dark fw-semibold" type="button" id="githubDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-brands fa-github fa-fw me-1"></i> Github Detection
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="githubDropdown">
+                        <li>
+                            <a class="dropdown-item" href="/rule/list_github_url">
+                                <i class="fa-solid fa-list fa-fw me-2"></i> Github List
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/rule/history_github_importer">
+                                <i class="fa-solid fa-bars-progress fa-fw me-2"></i> Manage Github
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/rule/create_rule?tab=github">
+                                <i class="fa-solid fa-file-import fa-fw me-2"></i> Import Rules
+                            </a>
+                        </li>
+                        <li class="position-relative d-flex align-items-center">
+                            <a class="dropdown-item pe-2" href="/rule/update_github/update_rules_from_github">
+                                <i class="fa-solid fa-rotate fa-fw me-2"></i> Update Rules
+                            </a>
+                            <template v-if="update_to_validate && update_to_validate > 0">
+                                <span class="position-absolute ms-1 badge rounded-pill bg-danger">
+                                    [[ update_to_validate ]]
+                                </span>
+                            </template>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
 
             {% if current_user.is_authenticated %}
                 {% if current_user.is_admin() %}
+                    <!-- Admin section-->
                    <li class="nav-item dropdown mx-2 position-relative">
                         <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-user fa-fw me-1"></i> Admin section
+                           <i class="fa-solid fa-lock fa-fw me-1"></i> Admin Section
                         </a>
 
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
                             <li>
                                 <a href="/account/all_users" class="dropdown-item">
-                                    <i class="fa-solid fa-users fa-fw me-2"></i> All users
+                                    <i class="fa-solid fa-users fa-fw me-2"></i> Users List
                                 </a>
                             </li>
                             <li>
                                 <a href="/rule/rules_reported" class="dropdown-item">
-                                    <i class="fa-solid fa-triangle-exclamation fa-fw me-2"></i> Reported rule
+                                    <i class="fa-solid fa-triangle-exclamation fa-fw me-2"></i> Reported Rule
                                 </a>
                             </li>
                             <li>
@@ -138,6 +158,11 @@
                                         <span class="visually-hidden">unread messages</span>
                                     </span>
                                     </template>
+                                </a>
+                            </li>
+                             <li>
+                                <a class="dropdown-item" href="/rule/manage_format_rule">
+                                    <i class="fa-solid fa-file-code fa-fw me-2"></i> Manage Format
                                 </a>
                             </li>
                         </ul>
@@ -170,16 +195,6 @@
                             <i class="fa-solid fa-user-shield fa-fw me-2"></i> My Rules
                         </a>
                     </li>
-                    <li class="position-relative d-flex align-items-center">
-                        <a class="dropdown-item pe-2" href="/rule/update_github/update_rules_from_github">
-                            <i class="fa-solid fa-tags fa-fw me-2"></i> Update rules
-                        </a>
-                        <template v-if="update_to_validate && update_to_validate > 0">
-                            <span class="position-absolute ms-1 badge rounded-pill bg-danger">
-                                [[ update_to_validate ]]
-                            </span>
-                        </template>
-                    </li>
                     <li>
                         <a href="/account/favorite" class="dropdown-item">
                             <i class="fa-solid fa-star fa-fw me-2 "></i> Favorite
@@ -204,6 +219,7 @@
                     {% endif %}
                 </ul>
             </li>
+            <!-- Notification -->
             <li class="nav-item dropdown mx-2 position-relative d-flex align-items-center">
                 <a  class="nav-link text-dark fw-semibold position-relative" href="#"  id="notificationsDropdown"   role="button"  data-bs-toggle="dropdown"  aria-expanded="false">
                     <i class="fa-solid fa-bell fa-lg"></i>
@@ -266,67 +282,67 @@
     </div>
 </nav>
 
-        <script type="module">
-            const {createApp, ref, onMounted, computed} = Vue
-            createApp({
-                delimiters: ['[[', ']]'],
-                setup() {
+<script type="module">
+    const {createApp, ref, onMounted, computed} = Vue
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
 
-                    const requests_to_validate = ref(0)
-                    const changes_to_validate = ref(0)
-                    const repport_to_validate = ref(0)
-                    const update_to_validate = ref(0)
-                    const total_notifications = computed(() => {
-                        return (
-                            Number(requests_to_validate.value || 0) +
-                            Number(changes_to_validate.value || 0) +
-                            Number(repport_to_validate.value || 0) +
-                            Number(update_to_validate.value || 0)
-                        )
-                    })
+            const requests_to_validate = ref(0)
+            const changes_to_validate = ref(0)
+            const repport_to_validate = ref(0)
+            const update_to_validate = ref(0)
+            const total_notifications = computed(() => {
+                return (
+                    Number(requests_to_validate.value || 0) +
+                    Number(changes_to_validate.value || 0) +
+                    Number(repport_to_validate.value || 0) +
+                    Number(update_to_validate.value || 0)
+                )
+            })
 
-                    
+            
 
-                    onMounted(() => {
-                        getNbRequestAdmin()
-                        getNbChanges()
-                        getNbRepport()
-                        getNbUpdate()
-                    });
-                    async function getNbRequestAdmin() {
-                        const res = await fetch('/request_to_check')
-                        const data = await res.json()
-                        requests_to_validate.value = data.count | 0
-                    }
+            onMounted(() => {
+                getNbRequestAdmin()
+                getNbChanges()
+                getNbRepport()
+                getNbUpdate()
+            });
+            async function getNbRequestAdmin() {
+                const res = await fetch('/request_to_check')
+                const data = await res.json()
+                requests_to_validate.value = data.count | 0
+            }
 
-                    async function getNbChanges() {
-                        const res = await fetch('/rule/change_to_check')
-                        const data = await res.json()
-                        changes_to_validate.value = data.count | 0
-                    }
-
-
-                    async function getNbRepport() {
-                        const res = await fetch('/rule/repport_to_check')
-                        const data = await res.json()
-                        repport_to_validate.value = data.count | 0
-                    }
-                    async function getNbUpdate() {
-                        const res = await fetch('/rule/update_to_check')
-                        const data = await res.json()
-                        update_to_validate.value = data.count | 0
-                    }
+            async function getNbChanges() {
+                const res = await fetch('/rule/change_to_check')
+                const data = await res.json()
+                changes_to_validate.value = data.count | 0
+            }
 
 
-                    return {
-                        requests_to_validate,
-                        changes_to_validate,
-                        repport_to_validate,
-                        update_to_validate,
-                        total_notifications
-                    }},
-            }).mount('.navbar')
-        </script>
+            async function getNbRepport() {
+                const res = await fetch('/rule/repport_to_check')
+                const data = await res.json()
+                repport_to_validate.value = data.count | 0
+            }
+            async function getNbUpdate() {
+                const res = await fetch('/rule/update_to_check')
+                const data = await res.json()
+                update_to_validate.value = data.count | 0
+            }
+
+
+            return {
+                requests_to_validate,
+                changes_to_validate,
+                repport_to_validate,
+                update_to_validate,
+                total_notifications
+            }},
+    }).mount('.navbar')
+</script>
 
 
 

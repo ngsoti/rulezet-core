@@ -229,7 +229,6 @@ def edit_rule(rule_id) -> render_template:
             
             # try to compile or verify the syntax of the rule (in the format choose)
             valide , error = verify_syntax_rule_by_format(rule_dict)
-
             if not valide:
                 return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
             
@@ -1613,7 +1612,7 @@ def history_github_updater_list():
     page = request.args.get('page', 1, type=int)
     github_updater_list = RuleModel.get_updater_list_page(page)
 
-    return {"history": [g.to_json() for g in github_updater_list], 
+    return {"history": [g.to_json_list() for g in github_updater_list], 
             "total_history": github_updater_list.total, 
             "total_pages": github_updater_list.pages}, 200
 
@@ -1640,11 +1639,54 @@ def update_loading_status(sid):
     r = RuleModel.get_updater_result(sid)
 
     if r:
-        loc = r.to_json()
+        loc = r.to_json_list()
         loc["complete"] = loc["total"]
         loc["remaining"] = 0
         return loc
     return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
+
+
+@rule_blueprint.route("/update_loading_status/<sid>/get_news_rules", methods=['GET'])
+@login_required
+def get_news_rules(sid):
+    page = request.args.get('page', 1, type=int)  
+
+
+    # Retrieve paginated results
+    paginated = RuleModel.get_updater_result_new_rule_page(sid, page=page)
+    rules = paginated.items
+
+    if rules:
+        rules_list = [rule.to_json() for rule in rules]
+
+        return {
+            "rules": rules_list,
+            "total_pages": paginated.pages,
+            "total_rules": paginated.total,
+        }
+
+    return {"message": "Session not found", "toast_class": "danger-subtle"}, 404
+
+@rule_blueprint.route("/update_loading_status/<sid>/get_rules", methods=['GET'])
+@login_required
+def get_rules(sid):
+    page = request.args.get('page', 1, type=int)  
+
+
+    # Retrieve paginated results
+    paginated = RuleModel.get_updater_result_rule_page(sid, page=page)
+    rules = paginated.items
+
+    if rules:
+        rules_list = [rule.to_json() for rule in rules]
+
+        return {
+            "rules": rules_list,
+            "total_pages": paginated.pages,
+            "total_rules": paginated.total,
+        }
+
+    return {"message": "Session not found", "toast_class": "danger-subtle"}, 404
 
 @rule_blueprint.route("/update_get_info_session/<sid>", methods=['GET'])
 @login_required

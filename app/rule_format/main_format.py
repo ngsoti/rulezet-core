@@ -1,6 +1,7 @@
-from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult, load_all_rule_formats
 from .. import db
 from ..db_class.db import *
+from app.rule_format.available_format import * 
 
 from ..rule import rule_core as RuleModel
 from flask_login import current_user
@@ -105,19 +106,17 @@ def verify_syntax_rule_by_format(rule_dict: dict) -> tuple[bool, str]:
     """
 
     rule_format = rule_dict.get("format", "").lower()
-
     if not rule_format:
         return False, "Missing rule format."
-
+    load_all_rule_formats()
     matching_class = None
     for cls in RuleType.__subclasses__():
         try:
             if cls().format.lower() == rule_format:
                 matching_class = cls
                 break
-        except Exception:
+        except Exception as e:
             continue
-
     if not matching_class:
         return False, f"Format '{rule_format}' is not supported."
 

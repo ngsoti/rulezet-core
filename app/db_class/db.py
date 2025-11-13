@@ -764,6 +764,26 @@ class UpdateResult(db.Model):
             "rules": [rule.to_json() for rule in self.rule_statuses] if self.rule_statuses else [],
             "new_rules": [nr.to_json() for nr in self.new_rules] if self.new_rules else []
         }
+    
+    def to_json_list(self):
+          return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "user_id": self.user_id,
+            "mode": self.mode,
+            "info": json.loads(self.info) if self.info else None,
+            "repo_sources": json.loads(self.repo_sources) if self.repo_sources else None,
+            "not_found": self.not_found,
+            "found": self.found,
+            "updated": self.updated,
+            "skipped": self.skipped,
+            "total": self.total,
+            "thread_count": self.thread_count,
+            "query_date": self.query_date.strftime('%Y-%m-%d %H:%M') if self.query_date else None,
+            "new_rules": len(self.new_rules) if self.new_rules else 0
+
+        }
+    
 
 class RuleStatus(db.Model):
     __tablename__ = "rule_status"

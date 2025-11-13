@@ -118,7 +118,7 @@
                             <th scope="col">GitHub Source(s)</th>
                             <th scope="col" class="text-center">Found</th>
                             <th scope="col" class="text-center">New Rules</th>
-                            <th scope="col" class="text-center">Total</th>
+                            <th scope="col" class="text-center">Updated</th>
                             <th scope="col" class="text-center">Mode</th>
                             <th scope="col" class="text-center">Date</th>
                             </tr>
@@ -148,10 +148,10 @@
                                 [[ history.found ?? 0 ]]
                             </td>
                             <td class="text-center">
-                                [[ history.new_rules?.length ?? 0 ]]
+                                [[ history.new_rules ?? 0 ]]
                             </td>
                             <td class="text-center">
-                                [[ history.total ?? 0 ]]
+                                [[ history.updated ?? 0 ]]
                             </td>
                             <td class="text-center text-capitalize">
                                 [[ history.mode ]]

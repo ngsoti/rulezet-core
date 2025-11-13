@@ -306,34 +306,32 @@
 {% block script %}
 <script type="module">
     document.addEventListener('DOMContentLoaded', function() {
-        const params = new URLSearchParams(window.location.search);
-        const tab = params.get('tab');
-        if (tab === 'github') {
-            const githubTab = document.querySelector('#github-tab');
-            const githubPane = document.querySelector('#github');
-            const manualTab = document.querySelector('#manual-tab');
-            const manualPane = document.querySelector('#manual');
-    
-            manualTab.classList.remove('active');
-            manualPane.classList.remove('show', 'active');
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
 
+      const manualTab = document.querySelector('#chap1-tab');
+      const manualPane = document.querySelector('#chap1-pane');
+      const parseTab = document.querySelector('#chap2-tab');
+      const parsePane = document.querySelector('#chap2-pane');
+      const githubTab = document.querySelector('#chap3-tab');
+      const githubPane = document.querySelector('#chap3-pane');
+
+      [manualTab, parseTab, githubTab].forEach(t => t.classList.remove('active'));
+      [manualPane, parsePane, githubPane].forEach(p => p.classList.remove('show','active'));
+
+      if (tab === 'github') {
             githubTab.classList.add('active');
-            githubPane.classList.add('show', 'active');
-
-        }
-        if (tab === 'parse') {
-            const parseTab = document.querySelector('#parse-tab');
-            const parsePane = document.querySelector('#parse');
-            const manualTab = document.querySelector('#manual-tab');
-            const manualPane = document.querySelector('#manual');
-
-            manualTab.classList.remove('active');
-            manualPane.classList.remove('show', 'active');
-
+            githubPane.classList.add('show','active');
+      } else if (tab === 'parse') {
             parseTab.classList.add('active');
-            parsePane.classList.add('show', 'active');
-        }
-    });
+            parsePane.classList.add('show','active');
+      } else {
+
+            manualTab.classList.add('active');
+            manualPane.classList.add('show','active');
+      }
+      });
+
 
     
      $(document).ready(function() {
