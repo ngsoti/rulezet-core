@@ -96,17 +96,19 @@
                                 v-if="currentRule.cve_id && currentRule.cve_id !== 'None'"
                                 class="d-inline-flex flex-wrap align-items-center"
                             >
-                                <span
+                                <a
                                     v-for="(cve, index) in parsedCVE(currentRule.cve_id)"
                                     :key="index"
                                     :class="['badge', 'me-1', 'mb-1', getCVEColor(cve)]"
                                     data-bs-toggle="tooltip"
                                     :title="'Detected vulnerability ID: ' + cve"
+                                    :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()"
+                                    target="_blank"
                                 >
                                     <i :class="getCVEIcon(cve)" class="me-1"></i>
                                     [[ getCVEPrefix(cve) ]]
                                     <span class="text-light fw-semibold">[[ getCVENumber(cve) ]]</span>
-                                </span>
+                                </a>
                             </span>
                         </p>
 

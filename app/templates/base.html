@@ -73,6 +73,21 @@
         <script>dayjs.extend(window.dayjs_plugin_relativeTime)</script>
         <script src="{{ url_for('static',filename='js/zxcvbn.js') }}"></script>
         <script src="{{ url_for('static',filename='js/blur.js')}}"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const scrollToTopBtn = document.getElementById("scrollToTopBtn");
+                if (!scrollToTopBtn) return; 
+
+                window.addEventListener("scroll", () => {
+                    scrollToTopBtn.style.display = (window.scrollY > 300) ? "flex" : "none";
+                });
+
+                scrollToTopBtn.addEventListener("click", () => {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                });
+            });
+        </script>
+
     </head>
     <body>
         {% include 'sidebar.html' %}
@@ -98,6 +113,9 @@
                             </template>
                         </div>
                     </div>
+                    <!-- Scroll to top -->
+                   <button id="scrollToTopBtn" title="Retour en haut">↑</button>
+
                     {% block content %}
                     {% endblock %}
                 </main>
@@ -111,26 +129,20 @@
                 <div class="container">
                     <div class="row align-items-center justify-content-between">
 
-                    <!-- Logo / Version -->
-                    <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
-                        <small class="fw-bold text-uppercase">
-                        <span class="text-primary">Rulezet</span> <span class="badge bg-secondary ms-1">v1.1</span>
-                        </small>
-                    </div>
+                        <!-- Logo / Version -->
+                        <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
+                            <small class="fw-bold text-uppercase">
+                            <span class="text-primary">Rulezet</span> <span class="badge bg-secondary ms-1">v1.1</span>
+                            </small>
+                        </div>
 
-                    <!-- Scroll to top -->
-                    <div class="col-md-4 text-center mb-3 mb-md-0">
-                        <button id="scrollToTopBtn" class="btn btn-outline-light rounded-circle" title="Back to top" style="width: 40px; height: 40px;">
-                        <i class="fas fa-arrow-up"></i>
-                        </button>
-                    </div>
-
-                    <!-- Theme toggle -->
-                    <div class="col-md-4 text-center text-md-end mb-3 mb-md-0">
-                        <button id="toggle-theme" class="btn btn-outline-light rounded-circle" title="Toggle theme" style="width: 40px; height: 40px;">
-                        <i id="theme-icon" class="fas fa-sun"></i>
-                        </button>
-                    </div>
+                        
+                        <!-- Theme toggle -->
+                        <div class="col-md-4 text-center text-md-end mb-3 mb-md-0">
+                            <button id="toggle-theme" class="btn btn-outline-light rounded-circle" title="Toggle theme" style="width: 40px; height: 40px;">
+                            <i id="theme-icon" class="fas fa-sun"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Divider -->
@@ -152,6 +164,7 @@
 
         {% block script %}
         <script type="module">
+              
             const {createApp, ref} = Vue
             createApp({
                 delimiters: ['[[', ']]'],

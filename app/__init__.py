@@ -4,7 +4,7 @@ from flask_wtf import CSRFProtect
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_session import Session
-
+from app.api import api_blueprint
 from config import config as Config
 import os
 
@@ -35,7 +35,7 @@ def create_app():
     sess.init_app(app)
 
     
-
+    app.register_blueprint(api_blueprint)
     
 
     #delete_existing_repo_folder("Rules_Github")
@@ -63,13 +63,13 @@ def create_app():
     from app.account.account_api import api_account_blueprint
     from app.bundle.bundle_api import api_bundle_blueprint
 
-    csrf.exempt(api_rule_blueprint)
-    csrf.exempt(api_account_blueprint)
-    csrf.exempt(api_bundle_blueprint)
+    # csrf.exempt(api_rule_blueprint)
+    # csrf.exempt(api_account_blueprint)
+    # csrf.exempt(api_bundle_blueprint)
 
-    app.register_blueprint(api_rule_blueprint, url_prefix="/api/rule")
-    app.register_blueprint(api_account_blueprint, url_prefix="/api/account")
-    app.register_blueprint(api_bundle_blueprint, url_prefix="/api/bundle")
+    # app.register_blueprint(api_rule_blueprint, url_prefix="/api/rule")
+    # app.register_blueprint(api_account_blueprint, url_prefix="/api/account")
+    # app.register_blueprint(api_bundle_blueprint, url_prefix="/api/bundle")
 
     return app
     
