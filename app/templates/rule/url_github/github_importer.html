@@ -115,7 +115,7 @@
                         <thead class="table-light">
                             <tr>
                             <th scope="col" class="text-center">#</th>
-                            <th scope="col">GitHub Source(s)</th>
+                            <th scope="col">URLs / Rules</th>
                             <th scope="col" class="text-center">Found</th>
                             <th scope="col" class="text-center">New Rules</th>
                             <th scope="col" class="text-center">Updated</th>
@@ -134,14 +134,28 @@
 
                             <!-- GitHub Repositories -->
                             <td>
-                                <div v-if="Array.isArray(history.repo_sources)">
-                                <span v-for="(repo, rIndex) in history.repo_sources" :key="rIndex" class="badge bg-secondary me-1" >
-                                    [[ repo ]]
-                                </span>
-                                </div>
-                                <div v-else>
-                                [[ history.info.repo_url || '—' ]]
-                                </div>
+                                <template v-if="history.mode === 'by_url'">
+                                    <div v-if="Array.isArray(history.repo_sources)">
+                                        <span v-for="(repo, rIndex) in history.repo_sources" :key="rIndex" class="badge bg-secondary me-1" >
+                                            [[ repo ]]
+                                        </span>
+                                    </div>
+                                    <div v-else>
+                                        [[ history.info.repo_url || '—' ]]
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div v-if="Array.isArray(history.rule_name_by_rule_mode)">
+                                        <span v-for="(repo, rIndex) in history.rule_name_by_rule_mode" :key="rIndex" class="badge bg-secondary me-1" >
+                                            [[ repo ]]
+                                        </span>
+                                    </div>
+                                    <div v-else>
+                                        [[ history.info.repo_url || '—' ]]
+                                    </div>
+                                </template>
+                               
+                                
                             </td>
 
                             <td class="text-center">
@@ -196,77 +210,77 @@
 
     <!-- Modal -->
     <div class="modal fade" id="staticBackdrop" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h1 class="modal-title fs-5" id="staticBackdropLabel">Running Sessions</h1>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="staticBackdropLabel">Running Sessions</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
 
-      <div class="modal-body">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead class="table-light">
-              <tr>
-                <th class="text-center" style="width: 50px;">#</th>
-                <th>Repository / Source</th>
-                <th class="text-center">Type</th>
-                <th class="text-center">Mode</th>
-                <th class="text-center">Started By</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Import sessions -->
-              <tr
-                v-for="(running, index) in running_sessions"
-                :key="'import-' + index"
-                @click="goto(running.uuid)"
-                style="cursor: pointer;"
-                class="table-info"
-              >
-                <td class="text-center">[[ index + 1 ]]</td>
-                <td>[[ running.info.repo_url || (running.info.repo_sources?.join(', ') || 'N/A') ]]</td>
-                <td class="text-center">
-                  <span class="badge bg-primary">Import</span>
-                </td>
-                <td class="text-center text-capitalize">[[ running.info.mode || '-' ]]</td>
-                <td class="text-center">[[ running.info.initiated_by || 'Unknown' ]]</td>
-              </tr>
+            <div class="modal-body">
+                <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="text-center" style="width: 50px;">#</th>
+                        <th>Repository / Source</th>
+                        <th class="text-center">Type</th>
+                        <th class="text-center">Mode</th>
+                        <th class="text-center">Started By</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- Import sessions -->
+                    <tr
+                        v-for="(running, index) in running_sessions"
+                        :key="'import-' + index"
+                        @click="goto(running.uuid)"
+                        style="cursor: pointer;"
+                        class="table-info"
+                    >
+                        <td class="text-center">[[ index + 1 ]]</td>
+                        <td>[[ running.info.repo_url || (running.info.repo_sources?.join(', ') || 'N/A') ]]</td>
+                        <td class="text-center">
+                        <span class="badge bg-primary">Import</span>
+                        </td>
+                        <td class="text-center text-capitalize">[[ running.info.mode || '-' ]]</td>
+                        <td class="text-center">[[ running.info.initiated_by || 'Unknown' ]]</td>
+                    </tr>
 
-              <!-- Update sessions -->
-              <tr
-                v-for="(running, index) in running_sessions_update"
-                :key="'update-' + index"
-                @click="gotoUpdate(running.uuid)"
-                style="cursor: pointer;"
-                class="table-warning"
-              >
-                <td class="text-center">[[ running_sessions.length + index + 1 ]]</td>
-                <td>[[ running.info.repo_url || (running.info.repo_sources?.join(', ') || 'N/A') ]]</td>
-                <td class="text-center">
-                  <span class="badge bg-warning text-dark">Update</span>
-                </td>
-                <td class="text-center text-capitalize">[[ running.info.mode || '-' ]]</td>
-                <td class="text-center">[[ running.info.initiated_by || 'Unknown' ]]</td>
-              </tr>
+                    <!-- Update sessions -->
+                    <tr
+                        v-for="(running, index) in running_sessions_update"
+                        :key="'update-' + index"
+                        @click="gotoUpdate(running.uuid)"
+                        style="cursor: pointer;"
+                        class="table-warning"
+                    >
+                        <td class="text-center">[[ running_sessions.length + index + 1 ]]</td>
+                        <td>[[ running.info.repo_url || (running.info.repo_sources?.join(', ') || 'N/A') ]]</td>
+                        <td class="text-center">
+                        <span class="badge bg-warning text-dark">Update</span>
+                        </td>
+                        <td class="text-center text-capitalize">[[ running.info.mode || '-' ]]</td>
+                        <td class="text-center">[[ running.info.initiated_by || 'Unknown' ]]</td>
+                    </tr>
 
-              <!-- No sessions -->
-              <tr v-if="running_sessions.length === 0 && running_sessions_update.length === 0">
-                <td colspan="5" class="text-center text-muted py-3">
-                  No running sessions at the moment.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                    <!-- No sessions -->
+                    <tr v-if="running_sessions.length === 0 && running_sessions_update.length === 0">
+                        <td colspan="5" class="text-center text-muted py-3">
+                        No running sessions at the moment.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+            </div>
         </div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
     </div>
-  </div>
-</div>
 
 
     

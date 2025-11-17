@@ -108,6 +108,9 @@ class Rule(db.Model):
         user = User.query.get(self.user_id)  
         return user.first_name + " " + user.last_name if user else None
 
+    def get_rule_name_by_id(id):
+        rule = Rule.query.get(id)
+        return rule.title if rule else None
     
     def to_json(self):
         is_favorited = False
@@ -746,6 +749,33 @@ class UpdateResult(db.Model):
         lazy=True
     )
 
+
+    def _get_rule_name_by_mode(self):
+        if self.mode != "by_rule":
+            return None
+
+        try:
+            repo_data = json.loads(self.repo_sources) if self.repo_sources else None
+            if not repo_data:
+                return None
+
+            rule_ids = repo_data if isinstance(repo_data, list) else [repo_data]
+
+            rule_names = []
+            for rid in rule_ids:
+                rule = Rule.get_rule_name_by_id(rid)
+                if rule:
+                    rule_names.append(rule if isinstance(rule, str) else getattr(rule, "title", str(rule)))
+                else:
+                    rule_names.append(f"Rule {rid} not found")
+
+            return rule_names if len(rule_names) > 1 else rule_names[0]
+
+        except Exception as e:
+            print(f"[UpdateResult] Error in _get_rule_name_by_mode: {e}")
+            return None
+
+
     def to_json(self):
         return {
             "id": self.id,
@@ -773,6 +803,7 @@ class UpdateResult(db.Model):
             "mode": self.mode,
             "info": json.loads(self.info) if self.info else None,
             "repo_sources": json.loads(self.repo_sources) if self.repo_sources else None,
+            "rule_name_by_rule_mode": self._get_rule_name_by_mode(),
             "not_found": self.not_found,
             "found": self.found,
             "updated": self.updated,
@@ -781,7 +812,6 @@ class UpdateResult(db.Model):
             "thread_count": self.thread_count,
             "query_date": self.query_date.strftime('%Y-%m-%d %H:%M') if self.query_date else None,
             "new_rules": len(self.new_rules) if self.new_rules else 0
-
         }
     
 

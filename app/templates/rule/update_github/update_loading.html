@@ -20,7 +20,12 @@
 
     <!-- Finished update -->
     <div v-if="is_finished" class="container col-md-11 justify-content-center my-5">
-
+        <!-- <template v-if="result_data.info.github_metadata && result_data.info.github_metadata.mode == by_url">
+            URL
+        </template>
+        <template v-else>
+            rule
+        </template> -->
         <!-- Accordion for repos -->
         <div v-if="result_data.info && result_data.info.github_metadata && result_data.info.github_metadata.length" >
             <div class="card p-3">

@@ -10,7 +10,7 @@ from flask import current_app
 from flask_login import current_user
 from ... import db
 
-from ...db_class.db import RuleStatus, UpdateResult, User, NewRule
+from ...db_class.db import Rule, RuleStatus, UpdateResult, User, NewRule
 from ...rule import rule_core as RuleModel
 from ...rule.rule_core import Rule as RuleDB
 
@@ -73,8 +73,8 @@ class Update_class:
                 git_pull_repo(repo_dir)
 
                 # -------- IMPORT NEW RULES (ONLY ONCE PER REPO) --------
-                self.import_new_rules_from_repo(repo_dir)
-                self._import_done_for_repo.add(repo_dir)
+                # self.import_new_rules_from_repo(repo_dir)
+                # self._import_done_for_repo.add(repo_dir)
 
                 rule_items = RuleModel.get_all_rule_by_url_github(url)
                 self.total += len(rule_items)
@@ -86,25 +86,44 @@ class Update_class:
 
         else:
             sources = RuleModel.get_sources_from_ids(self.repo_sources)
+            load_all_rule_formats()
+
             for src in sources:
                 repo_dir, exists = clone_or_access_repo(src)
-                if exists:
+                if exists and repo_dir:
                     git_pull_repo(repo_dir)
+                    # assure-toi d'utiliser une clé qui correspondra à rule.source (str)
                     self.repo_cache[src] = repo_dir
-
-                    # -------- IMPORT NEW RULES --------
-                    self.import_new_rules_from_repo(repo_dir)
-                    self._import_done_for_repo.add(repo_dir)
+                else:
+                    # on veut quand même garder la clé mais avec None pour debug (optionnel)
+                    self.repo_cache[src] = None
 
             for rule_id in self.repo_sources:
                 rule = RuleModel.get_rule(rule_id)
                 if not rule:
                     continue
-                repo_dir = self.repo_cache.get(rule.source)
-                cp += 1
-                self.jobs.put((cp, repo_dir, rule))
 
-        self.total = cp
+                # essaye de récupérer repo_dir depuis le cache en utilisant rule.source
+                repo_dir = self.repo_cache.get(rule.source)
+
+                # si absent, essaye de cloner / accéder au repo en utilisant rule.source
+                if not repo_dir and isinstance(rule.source, str):
+                    repo_dir, exists = clone_or_access_repo(rule.source)
+                    if exists and repo_dir:
+                        git_pull_repo(repo_dir)
+                        self.repo_cache[rule.source] = repo_dir
+                    else:
+                        # log + skip le job si on n'a pas de repo valide
+                        with self.lock:
+                            self.skipped += 1
+                        continue
+
+                cp += 1
+                self.jobs.put((cp, repo_dir, rule.id))
+
+
+                
+            self.total = cp
 
         for _ in range(self.thread_count):
             worker = Thread(
@@ -237,16 +256,47 @@ class Update_class:
             _, repo_dir, rule_id = self.jobs.get()
 
             with loc_app.app_context():
+                # --- sécurité : repo_dir manquant ---
+                if not repo_dir:
+                    with self.lock:
+                        self.skipped += 1
+                        self.rule_status_list.append({
+                            "update_result_uuid": self.uuid,
+                            "name_rule": f"Rule {rule_id}",
+                            "rule_id": str(rule_id),
+                            "message": "Repo path not available (NoneType)",
+                            "found": False,
+                            "update_available": False,
+                            "rule_syntax_valid": False,
+                            "error": True,
+                            "history_id": None
+                        })
+                    self.jobs.task_done()
+                    continue
+
+                # --- récupérer la règle ---
                 rule = RuleModel.get_rule(rule_id)
                 if not rule:
                     with self.lock:
                         self.skipped += 1
+                        self.rule_status_list.append({
+                            "update_result_uuid": self.uuid,
+                            "name_rule": f"Rule {rule_id}",
+                            "rule_id": str(rule_id),
+                            "message": "Rule not found in database",
+                            "found": False,
+                            "update_available": False,
+                            "rule_syntax_valid": False,
+                            "error": True,
+                            "history_id": None
+                        })
                     self.jobs.task_done()
                     continue
 
+                # --- vérifier les mises à jour ---
                 message_dict, success, new_rule_content = Check_for_rule_updates(rule_id, repo_dir)
 
-                # Create history if needed
+                # --- créer un historique si besoin ---
                 history_id = None
                 if success and new_rule_content:
                     history_id = RuleModel.create_rule_history({
@@ -262,6 +312,7 @@ class Update_class:
                 msg = message_dict.get("message", "") or ""
                 syntax_valid = not ("Update found but invalid:" in msg)
 
+                # --- mise à jour du statut ---
                 with self.lock:
                     self.rule_status_list.append({
                         "update_result_uuid": self.uuid,
@@ -275,18 +326,22 @@ class Update_class:
                         "history_id": history_id
                     })
 
+            # signaler que le job est terminé
             self.jobs.task_done()
+
 
     # ------------------ SAVE TO DATABASE ------------------
 
     def save_info(self):
         extended_info = dict(self.info)
 
-        extended_info["github_metadata"] = [
-            {"url": repo_url, **github_repo_metadata(repo_url, None)}
-            for repo_url in self.repo_sources
-            if github_repo_metadata(repo_url, None)
-        ]
+
+        if self.mode == 'by_url':
+            extended_info["github_metadata"] = [
+                {"url": repo_url, **github_repo_metadata(repo_url, None)}
+                for repo_url in self.repo_sources
+                if github_repo_metadata(repo_url, None)
+            ]
 
         s = UpdateResult(
             uuid=self.uuid,

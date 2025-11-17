@@ -1654,18 +1654,24 @@ def get_news_rules(sid):
 
     # Retrieve paginated results
     paginated = RuleModel.get_updater_result_new_rule_page(sid, page=page)
+
+    if not paginated :
+        return {"message": "Session not found", "toast_class": "danger-subtle"}, 404
     rules = paginated.items
 
-    if rules:
+    if len(rules) > 0:
         rules_list = [rule.to_json() for rule in rules]
 
         return {
             "rules": rules_list,
             "total_pages": paginated.pages,
             "total_rules": paginated.total,
-        }
+        }, 200
+    return{
+        "rules": []
 
-    return {"message": "Session not found", "toast_class": "danger-subtle"}, 404
+    }, 200
+
 
 @rule_blueprint.route("/update_loading_status/<sid>/get_rules", methods=['GET'])
 @login_required
@@ -1675,6 +1681,9 @@ def get_rules(sid):
 
     # Retrieve paginated results
     paginated = RuleModel.get_updater_result_rule_page(sid, page=page)
+    if not paginated :
+        return {"message": "Session not found", "toast_class": "danger-subtle"}, 404
+
     rules = paginated.items
 
     if rules:
@@ -1684,10 +1693,9 @@ def get_rules(sid):
             "rules": rules_list,
             "total_pages": paginated.pages,
             "total_rules": paginated.total,
-        }
+        }, 200
 
-    return {"message": "Session not found", "toast_class": "danger-subtle"}, 404
-
+   
 @rule_blueprint.route("/update_get_info_session/<sid>", methods=['GET'])
 @login_required
 def update_get_info_session(sid):

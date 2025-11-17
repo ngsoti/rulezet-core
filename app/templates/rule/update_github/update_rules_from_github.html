@@ -117,7 +117,7 @@
 
                 <p class="text-center mt-3 text-muted">Total Rules found: [[ total_rules ]]</p>
 
-                <div v-if="loading" class="d-flex justify-content-center my-5">
+                <div v-if="loading_" class="d-flex justify-content-center my-5">
                     <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                     </div>
@@ -190,7 +190,7 @@
                     </div>
 
                     <div class="mt-3 d-flex justify-content-center">
-                        <button v-if="!is_loading" class="btn btn-dark rounded-pill" @click="foundUpdateWithRule()">
+                        <button v-if="!is_loading_" class="btn btn-dark rounded-pill" @click="foundUpdateWithRule()">
                             <i class="fas fa-sliders-h"></i>
                             Found updates for [[ selected_rules.length ]] Rule(s)
                         </button>
@@ -203,40 +203,6 @@
                 </div>
             </div>
         </div>
-    </div>
-    <div class="mt-4" v-if="updateResults && updateResults.length > 0">
-        <h5>Update Check Results ( [[ updateResults.length]])</h5>
-        <table class="table table-bordered table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>Rule Title</th>
-                    <th>Status</th>
-                    <th>Message</th>
-                    <th>Details</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="result in updateResults" :key="result.id">
-                    <td>[[ result.title ]]</td>
-                    <td>
-                        <span v-if="result.success && result.new_content" class="text-success">
-                            <i class="fas fa-info-circle"></i> Up-to-date
-                        </span>
-                        <span v-else class="text-danger">
-                            <i class="fas fa-exclamation-triangle"></i> Failed
-                        </span>
-                    </td>
-                    <td>[[ result.message ]]</td>
-                    <td>
-                        <a class="btn btn-sm btn-primary" :href="'/rule/update_github/choose_changes?id=' + result.history_id"  > 
-                            <!-- target="_blank" -->
-                            <i class="fas fa-code-branch"></i> Compare Changes
-                        </a>
-
-                    </td>
-                </tr>
-            </tbody>
-        </table>
     </div>
     <div class="mt-5" v-if="old_choice.length > 0">
             <div class="card shadow-sm border-0">
@@ -308,6 +274,7 @@ createApp({
         const total_pages = ref(1)
         const searchQuery = ref('')
         const loading = ref(true)
+        
 
         async function fetchUrlGithub(page) {
             loading.value = true
@@ -405,9 +372,11 @@ createApp({
         const current_rule_page = ref(1)
         const total_rule_pages = ref(1)
         const rule_searchQuery = ref('')
+        const is_loading_ = ref(false)
+        const loading_ = ref(true)
 
         async function fetchRulesWithGithubUrl(page) {
-            loading.value = true
+            loading_.value = true
             const params = new URLSearchParams({ page, search: rule_searchQuery.value || '' })
             const res = await fetch('/rule/get_rules_with_github_url?' + params.toString())
             const data = await res.json()
@@ -417,7 +386,7 @@ createApp({
                 total_rules.value = data.total_rule || 0
                 total_rule_pages.value = data.total_pages || 1
                 current_rule_page.value = page
-                loading.value = false
+                loading_.value = false
             }
         }
 
@@ -449,26 +418,29 @@ createApp({
             if (selected_rules.value.length === 0) {
                 create_message('Select at least one Rule.', 'danger-subtle');
             }
+            is_loading_.value = true
             const res = await fetch("/rule/check_updates_by_rule", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "X-CSRFToken": csrf_token },
                 body: JSON.stringify({ rules: selected_rules.value.map(r => r.id) }),
             })
-            if (res.status === 200) {
-                const data = await res.json();
-                updateResults.value = data.results;
+            if (res.status === 201) {
+                is_loading_.value = false
+                let loc = await res.json()     
+                window.location.href="/rule/update_loading/"+loc["session_uuid"]
+                // updateResults.value = data.results;
 
-                var message = ''
-                var toast_class = ''
+                // var message = ''
+                // var toast_class = ''
 
-                if (data.nb_update === 0){
-                    message = 'No updates found.'
-                    toast_class = 'info-subtle'
-                }else{
-                    message = 'Updates found!'
-                    toast_class = 'success-subtle'
-                }
-                create_message(message , toast_class)
+                // if (data.nb_update === 0){
+                //     message = 'No updates found.'
+                //     toast_class = 'info-subtle'
+                // }else{
+                //     message = 'Updates found!'
+                //     toast_class = 'success-subtle'
+                // }
+                // create_message(message , toast_class)
                 
             }
         }
@@ -482,7 +454,7 @@ createApp({
             ruleVisiblePages, fetchRulesWithGithubUrl, onSearchInputRule, selected_rules, toggleRule, removeRule,
             foundUpdateWithRule,
 
-            old_choice, old_current_page, old_total_page, fetchOldRules,
+            old_choice, old_current_page, old_total_page, fetchOldRules,loading_, is_loading_,
             loading,is_loading
         }
     }
