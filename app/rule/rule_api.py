@@ -15,6 +15,7 @@ from app.utils.decorators import api_required
 
 # Create the blueprint
 api_rule_blueprint = Blueprint('api_rule', __name__)
+# rule_ns  = Namespace("rule", description="Endpoints to manage rules")
 
 # https://rulezet.org/api/rule/doc/
 # http://127.0.0.1:7009/api/rule/swagger.json

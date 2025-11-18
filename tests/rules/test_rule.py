@@ -1,5 +1,131 @@
 # ##################################################__Test__Rules__########################################################
 
+"""
+Unified Test Cases for Rule Endpoints
+
+Includes tests for:
+1. /searchPage - searching and paginating rules
+2. /Convert_MISP - searching rules and converting them to MISP objects
+"""
+
+import pytest
+from flask import url_for
+
+# --------------------------
+# API Endpoints
+# --------------------------
+SEARCH_API_ENDPOINT = "/api/rule/public/searchPage"
+MISP_API_ENDPOINT = "/api/rule/public/Convert_MISP"
+
+# --------------------------
+# Helper functions
+# --------------------------
+def make_get(client, endpoint, params=None, headers=None):
+    """Helper to perform GET request with query params."""
+    return client.get(endpoint, query_string=params or {}, headers=headers or {})
+
+# ==================================================
+# /searchPage Endpoint Tests
+# ==================================================
+def test_search_default(client):
+    response = make_get(client, SEARCH_API_ENDPOINT)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert "results" in json_data
+    assert json_data["pagination"]["current_page"] == 1
+
+def test_search_with_query(client):
+    params = {"search": "detect"}
+    response = make_get(client, SEARCH_API_ENDPOINT, params=params)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert all("detect" in rule["title"] for rule in json_data["results"] if rule["title"])
+
+def test_search_with_author(client):
+    params = {"author": "John"}
+    response = make_get(client, SEARCH_API_ENDPOINT, params=params)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert all(rule["author"] == "John" for rule in json_data["results"])
+
+def test_search_with_rule_type(client):
+    params = {"rule_type": "sigma"}
+    response = make_get(client, SEARCH_API_ENDPOINT, params=params)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert all(rule["format"] == "sigma" for rule in json_data["results"])
+
+def test_search_with_invalid_rule_type(client):
+    params = {"rule_type": "sigmdddda"}
+    response = make_get(client, SEARCH_API_ENDPOINT, params=params)
+    assert response.status_code == 400
+    assert b"Format is not supported." in response.data
+
+def test_search_with_sort_by(client):
+    params = {"sort_by": "newest"}
+    response = make_get(client, SEARCH_API_ENDPOINT, params=params)
+    assert response.status_code == 200
+
+def test_search_with_pagination(client):
+    params = {"page": 2, "per_page": 5}
+    response = make_get(client, SEARCH_API_ENDPOINT, params=params)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert json_data["pagination"]["current_page"] == 2
+    assert len(json_data["results"]) <= 5
+
+def test_search_invalid_sort(client):
+    params = {"sort_by": "invalid_sort"}
+    response = make_get(client, SEARCH_API_ENDPOINT, params=params)
+    assert response.status_code == 400
+    assert b"Invalid sort_by" in response.data
+
+# ==================================================
+# /Convert_MISP Endpoint Tests
+# ==================================================
+def test_convert_misp_default(client):
+    response = make_get(client, MISP_API_ENDPOINT)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert "results" in json_data
+
+def test_convert_misp_with_search(client):
+    params = {"search": "mars"}
+    response = make_get(client, MISP_API_ENDPOINT, params=params)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert all("mars" in rule["title"] for rule in json_data["results"] if rule["title"])
+
+def test_convert_misp_with_author(client):
+    params = {"author": "John"}
+    response = make_get(client, MISP_API_ENDPOINT, params=params)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert all(rule["author"] == "John" for rule in json_data["results"])
+
+def test_convert_misp_with_rule_type(client):
+    params = {"rule_type": "sigma"}
+    response = make_get(client, MISP_API_ENDPOINT, params=params)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert all(rule["format"] == "sigma" for rule in json_data["results"])
+
+def test_convert_misp_with_sort(client):
+    params = {"sort_by": "newest"}
+    response = make_get(client, MISP_API_ENDPOINT, params=params)
+    assert response.status_code == 200
+
+def test_convert_misp_invalid_sort(client):
+    params = {"sort_by": "invalid_sort"}
+    response = make_get(client, MISP_API_ENDPOINT, params=params)
+    assert response.status_code == 400
+    assert b"Invalid sort_by" in response.data
+
+
+
+
+
+
 # ###############
 # #   Api key   #
 # ###############
