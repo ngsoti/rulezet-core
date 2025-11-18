@@ -91,6 +91,7 @@ from .account.account_private_api import account_private_ns
 # -------------------------------------------------------------
 
 # Rule API
+
 api.add_namespace(rule_public_ns,  path="/rule/public")
 api.add_namespace(rule_private_ns, path="/rule/private")
 

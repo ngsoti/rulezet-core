@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource
 
 bundle_public_ns = Namespace(
-    "BundlePublic",
+    "Public action on Bundle ✅",
     description="Public bundle operations"
 )
 

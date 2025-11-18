@@ -26,7 +26,6 @@ def create_bundle(form_dict , user) -> Bundle:
     :param user_id: ID of the user who creates the bundle (required).
     :return: The created Bundle instance.
     """
-
     new_bundle = Bundle(
         name=form_dict["name"],
         description=form_dict["description"],
