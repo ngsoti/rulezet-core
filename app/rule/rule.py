@@ -949,9 +949,9 @@ def update_github_rule() -> render_template:
 
 
     history = RuleModel.get_history_rule_by_id(history_id)
-    
+    rule_ = RuleModel.get_rule(history.rule_id)
 
-    if current_user.is_admin() or history.analyzed_by_user_id == current_user.id:
+    if current_user.is_admin() or rule_.user_id == current_user.id:
         if decision == 'accepted':
             rule = RuleModel.get_rule(history.rule_id)
             if rule:

@@ -1385,6 +1385,7 @@ def get_all_format() -> list[dict]:
 
 def get_all_url_github_page(page: int = 1, search: str = None):
     """Get paginated unique GitHub project URLs from Rule.source and return pagination + total count."""
+    
     github_pattern = r'^https?://(www\.)?github\.com/[\w\-_]+/[\w\-_]+'
 
     query = Rule.query.filter(Rule.source.isnot(None))
@@ -1451,13 +1452,20 @@ def get_all_rule_by_url_github_page(page: int = 1, search: str = None, url: str 
 
 def get_all_rule_by_url_github(url: str = None):
     """Get list of Rules whose source contains a specific GitHub project URL."""
-    
-    query = Rule.query.filter(Rule.source != None)
-    
-    if url:
-        query = query.filter(Rule.source.ilike(f"%{url}%"))
-    
+    query = Rule.query.filter(Rule.source.isnot(None))
+
+    if current_user.is_admin():
+        if url:
+            query = query.filter(Rule.source.ilike(f"%{url}%"))
+
+    else:
+        query = query.filter(Rule.user_id == current_user.id)
+
+        if url:
+            query = query.filter(Rule.source.ilike(f"%{url}%"))
+
     return query.all()
+
 
 
 def get_all_rule_by_github_url_page(search: str = None, page: int = 1):
