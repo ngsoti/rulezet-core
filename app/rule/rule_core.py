@@ -1668,55 +1668,62 @@ def get_all_rules_in_json_dump(data: Dict[str, Any]) -> dict:
 
 def search_rules_by_cve_patterns(cve_patterns: list[str]) -> dict:
     """
-    Search for rules matching any given CVE pattern in their ID, title, or description.
+    Search for rules matching CVE patterns and return a structured result.
+    Only include rule lists for patterns that return results.
     
-    Args:
-        cve_patterns (list[str]): List of CVE identifiers or partial patterns (e.g., ["CVE-2021", "CVE-2019-6813"]).
-
     Returns:
-        dict: A dictionary mapping each input CVE pattern to a list of rules (in JSON format) 
-              that contain the pattern in their 'cve_id', 'title', or 'description'.
-              
-              Example:
-              {
-                  "CVE-2021": [
-                      {
-                          "id": 123,
-                          "title": "Vulnerability in XYZ",
-                          "cve_id": "CVE-2021-12345",
-                          "detail_url": "https://rulezet.org/rule/detail_rule/123",
-                          ...
-                      },
-                      ...
-                  ],
-                  "CVE-2019-6813": [...]
-              }
+        dict {
+            "totals": {"CVE-2021": 10, "CVE-2019-6813": 2},
+            "total_all_rules": 12,
+            "rules": {
+                "CVE-2021": [...],
+                "CVE-2019-6813": [...]
+            }
+        }
     """
-
+    
     base_url = "https://rulezet.org/rule/detail_rule/"
-    result = {}
+
+    totals = {}
+    rules_by_pattern = {}
+
+    total_all = 0  # total global de règles trouvées
 
     for pattern in cve_patterns:
         like_pattern = f"%{pattern}%"
 
-        # Find rules matching the CVE pattern
+        # Query rules
         rules = (
             Rule.query.filter(
                 or_(
                     Rule.cve_id.ilike(like_pattern),
                     Rule.description.ilike(like_pattern),
-                    Rule.title.ilike(like_pattern)
+                    Rule.title.ilike(like_pattern),
                 )
             )
             .order_by(Rule.last_modif.desc())
             .all()
         )
 
-        # Convert each rule to JSON and append the rule detail URL
-        result[pattern] = []
-        for rule in rules:
-            rule_json = rule.to_json()
-            rule_json["detail_url"] = f"{base_url}{rule.id}"
-            result[pattern].append(rule_json)
+        # Nombre de règles trouvées pour ce pattern
+        count = len(rules)
+        totals[pattern] = count
+        total_all += count
 
-    return result
+        # Si 0 résultats → ne pas ajouter dans rules
+        if count == 0:
+            continue
+
+        # Ajouter les règles formatées
+        rules_by_pattern[pattern] = []
+        for rule in rules:
+            r = rule.to_json()
+            r["detail_url"] = f"{base_url}{rule.id}"
+            rules_by_pattern[pattern].append(r)
+
+    return {
+        "totals": totals,
+        "total_all_rules": total_all,
+        "rules": rules_by_pattern
+    }
+

@@ -354,7 +354,7 @@ class DetailRule(Resource):
             if not success:
                 return {"error": "No match for CVE id"}
 
-            rules = RuleModel.search_rules_by_cve_patterns(cve_patterns)
+            rules , totals = RuleModel.search_rules_by_cve_patterns(cve_patterns)
 
             #  Build JSON response by cve patterns
             

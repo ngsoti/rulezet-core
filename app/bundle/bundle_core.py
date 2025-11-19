@@ -78,6 +78,35 @@ def get_all_bundles_page(page: int, search: str| None, own: bool) -> dict:
 
     return query.order_by(Bundle.created_at.desc()).paginate(page=page, per_page=20)
 
+def get_all_bundles(search: str | None, own: bool):
+    """
+    Return a list of filtered bundles (no pagination).
+    """
+    query = Bundle.query
+
+    # Search filter
+    if search:
+        like_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Bundle.name.ilike(like_pattern),
+                Bundle.description.ilike(like_pattern)
+            )
+        )
+
+    # Filter by owner
+    if own:
+        if current_user.is_authenticated:
+            query = query.filter_by(user_id=current_user.id)
+    query = query.filter_by(access=True)
+
+    # Execute query
+    items = query.order_by(Bundle.created_at.desc()).all()
+
+    return {
+        "total": len(items),
+        "items": items
+    }
 
 
 def get_total_bundles_count() -> int:

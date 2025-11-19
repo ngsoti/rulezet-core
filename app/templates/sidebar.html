@@ -335,9 +335,10 @@
             <div v-if="rules_list && rules_list.rule && rules_list.rule.length > 0" class="list-group">
                <a v-for="rule in rules_list.rule" 
                   :key="rule.id" 
-                  :href="`https://rulezet.org/rule/detail_rule/${rule.id}`" 
+                  :href="`/rule/detail_rule/${rule.id}`" 
                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-2 rounded shadow-sm">
                <div>
+                  [[ rule.id]]
                   <h6 class="mb-1 fw-bold text-primary">[[ rule.title ]]</h6>
                   <small class="text-muted">[[ rule.description ]]</small>
                </div>

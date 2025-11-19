@@ -474,7 +474,6 @@ class RulesByCVE(Resource):
         Search rules by CVE or vulnerability IDs.
         Accepts multiple IDs as a comma-separated list.
         """
-        # Extract raw input
         raw_cve_ids = request.args.get('cve_ids', '')
         if not raw_cve_ids:
             return {"error": "No CVE IDs provided."}, 400
@@ -484,12 +483,13 @@ class RulesByCVE(Resource):
         if not success:
             return {"error": "No match for CVE ID"}, 400
 
-        # Fetch matching rules
-        rules = RuleModel.search_rules_by_cve_patterns(cve_patterns)
+        # Perform search
+        result = RuleModel.search_rules_by_cve_patterns(cve_patterns)
 
         return {
-            "count": len(rules),
             "cve_patterns": cve_patterns,
-            "rules": rules
+            "total_all_rules": result["total_all_rules"],
+            "totals_by_cve": result["totals"],
+            "rules": result["rules"]  # only patterns with >0 results appear
         }, 200
 
