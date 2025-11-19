@@ -1,172 +1,186 @@
-{% extends 'base.html' %}
-
-{% block content %}
+{% extends 'base.html' %} {% block content %}
 <div class="container py-4" id="main-container">
-
-    <!-- Rule Summary -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header text-primary d-flex align-items-center">
-            <i class="fas fa-info-circle me-2"></i>
-            <strong>Rule Summary</strong>
-        </div>
-
-        <div class="card-body" v-if="rule">
-            <h4 class="card-title mb-3">[[ rule.title ]]</h4>
-            <ul class="list-group list-group-flush mb-3">
-                <li class="list-group-item"><strong>Description:</strong> [[ rule.description ]]</li>
-                <li class="list-group-item"><strong>Author:</strong> [[ rule.author ]]</li>
-                <li class="list-group-item"><strong>License:</strong> [[ rule.license ]]</li>
-                <li class="list-group-item"><strong>Source:</strong> [[ rule.source ]]</li>
-                <li class="list-group-item"><strong>Format:</strong> [[ rule.format ]]</li>
-                <li class="list-group-item"><strong>Version:</strong> [[ rule.version ]]</li>
-                <li class="list-group-item"><strong>Created:</strong> [[ rule.creation_date ]]</li>
-                <li class="list-group-item"><strong>Modified:</strong> [[ rule.last_modif ]]</li>
-            </ul>
-
-            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse"
-                :data-bs-target="`#ruleContent${rule.id}`" aria-expanded="false" 
-                :aria-controls="`ruleContent${rule.id}`">
-                <i class="fas fa-code me-1"></i> Show Rule Preview
-            </button>
-
-            <div class="collapse mt-3" :id="`ruleContent${rule.id}`">
-                <div class="bg-light border rounded p-3">
-                    <strong>Rule Preview:</strong>
-                    <pre class="bg-light rounded mt-2 px-3 py-2"><code>[[ rule.to_string ]]</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="card-body text-muted" v-else>
-            <em>Loading rule data...</em>
-        </div>
+  <!-- Rule Summary -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header text-primary d-flex align-items-center">
+      <i class="fas fa-info-circle me-2"></i>
+      <strong>Rule Summary</strong>
     </div>
 
-    <!-- Report Form -->
-    <div class="card shadow-sm">
-        <div class="card-header  text-danger d-flex align-items-center" style="background-color:rgb(233, 149, 138)">
-            <i class="fas fa-flag me-2"></i>
-            <strong>Report This Rule</strong>
+    <div class="card-body" v-if="rule">
+      <h4 class="card-title mb-3">[[ rule.title ]]</h4>
+      <ul class="list-group list-group-flush mb-3">
+        <li class="list-group-item">
+          <strong>Description:</strong> [[ rule.description ]]
+        </li>
+        <li class="list-group-item">
+          <strong>Author:</strong> [[ rule.author ]]
+        </li>
+        <li class="list-group-item">
+          <strong>License:</strong> [[ rule.license ]]
+        </li>
+        <li class="list-group-item">
+          <strong>Source:</strong> [[ rule.source ]]
+        </li>
+        <li class="list-group-item">
+          <strong>Format:</strong> [[ rule.format ]]
+        </li>
+        <li class="list-group-item">
+          <strong>Version:</strong> [[ rule.version ]]
+        </li>
+        <li class="list-group-item">
+          <strong>Created:</strong> [[ rule.creation_date ]]
+        </li>
+        <li class="list-group-item">
+          <strong>Modified:</strong> [[ rule.last_modif ]]
+        </li>
+      </ul>
+
+      <button
+        class="btn btn-outline-secondary"
+        type="button"
+        data-bs-toggle="collapse"
+        :data-bs-target="`#ruleContent${rule.id}`"
+        aria-expanded="false"
+        :aria-controls="`ruleContent${rule.id}`">
+        <i class="fas fa-code me-1"></i> Show Rule Preview
+      </button>
+
+      <div class="collapse mt-3" :id="`ruleContent${rule.id}`">
+        <div class="bg-light border rounded p-3">
+          <strong>Rule Preview:</strong>
+          <pre
+            class="bg-light rounded mt-2 px-3 py-2"><code>[[ rule.to_string ]]</code></pre>
         </div>
-
-        <div class="card-body">
-            <form @submit.prevent="submitReport">
-                <div class="mb-3">
-                    <label for="reason" class="form-label">Reason</label>
-                    <select id="reason" class="form-select" v-model="reason" required>
-                        <option disabled value="">-- Select a reason --</option>
-                        <option>Plagiarism</option>
-                        <option>Malicious content</option>
-                        <option>Incorrect or misleading</option>
-                        <option>Inappropriate content</option>
-                        <option>Other</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label for="message" class="form-label">Additional Comments</label>
-                    <textarea id="message" class="form-control" v-model="message" rows="4"
-                        placeholder="Optional details..."></textarea>
-                </div>
-
-                <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-paper-plane me-1"></i> Submit Report
-                </button>
-            </form>
-        </div>
+      </div>
     </div>
 
+    <div class="card-body text-muted" v-else>
+      <em>Loading rule data...</em>
+    </div>
+  </div>
+
+  <!-- Report Form -->
+  <div class="card shadow-sm">
+    <div
+      class="card-header text-danger d-flex align-items-center"
+      style="background-color: rgb(233, 149, 138)">
+      <i class="fas fa-flag me-2"></i>
+      <strong>Report This Rule</strong>
+    </div>
+
+    <div class="card-body">
+      <form @submit.prevent="submitReport">
+        <div class="mb-3">
+          <label for="reason" class="form-label">Reason</label>
+          <select id="reason" class="form-select" v-model="reason" required>
+            <option disabled value="">-- Select a reason --</option>
+            <option>Plagiarism</option>
+            <option>Malicious content</option>
+            <option>Incorrect or misleading</option>
+            <option>Inappropriate content</option>
+            <option>Other</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="message" class="form-label">Additional Comments</label>
+          <textarea
+            id="message"
+            class="form-control"
+            v-model="message"
+            rows="4"
+            placeholder="Optional details..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-danger">
+          <i class="fas fa-paper-plane me-1"></i> Submit Report
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
-{% endblock %}
-
-
-{% block script %}
+{% endblock %} {% block script %}
 <script type="module">
-    const { createApp, ref, computed } = Vue
-    import { message_list , display_toast} from '/static/js/toaster.js'
+  const { createApp, ref, computed } = Vue;
+  import { message_list, display_toast } from "/static/js/toaster.js";
 
-    createApp({
-        delimiters: ['[[', ']]'],
-        setup() {
+  createApp({
+    delimiters: ["[[", "]]"],
+    setup() {
+      /*###################################_Show_the_rule_to_repport_#################*/
+      var rule_id = "{{ rule_id }}";
+      var rule = ref();
 
-            /*###################################_Show_the_rule_to_repport_#################*/
-            var rule_id = "{{ rule_id }}"
-            var rule = ref()
+      /**
+       *          #################
+       *          #   show rule   #
+       *          #################
+       * */
 
-            /**
-             *          #################
-             *          #   show rule   #
-             *          #################
-             * */
-        
-            async function fetchRule() {
-                
-                const res = await fetch('/rule/get_rule?rule_id='+ rule_id)
-                if(await res.status == 200){ 
-                    const data = await res.json()
-                    if(data.success){
-                        rule.value = data.rule
-                    }
-                }else{
-                    // display_toast(res);
-                    
-                }
-            }
-            fetchRule()
-
-            /*###################################_form_section_###############################*/
-            const csrf_token = '{{ csrf_token() }}';
-            const reason = ref('')
-            const message = ref('')
-
-            /**
-             *          ###################
-             *          #   report rule   #
-             *          ###################
-             * */
-
-            async function submitReport() {
-                if (!rule.value || !reason.value) {
-                    alert("Please select a reason to report.");
-                    return;
-                }
-
-                const payload = {
-                    rule_id: rule.value.id,
-                    reason: reason.value,
-                    message: message.value
-                };
-
-                const res = await fetch("/rule/report_rule", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrf_token  
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-
-
-                if (res.ok ) {
-                    reason.value = '';
-                    message.value = '';
-                    //window.location.href = document.referrer || '/'; 
-                } 
-                display_toast(res)
-            }
-
-
-
-            return {
-                message_list,
-                rule,
-                reason,
-                message,
-                submitReport
-            }
-
+      async function fetchRule() {
+        const res = await fetch("/rule/get_rule?rule_id=" + rule_id);
+        if ((await res.status) == 200) {
+          const data = await res.json();
+          if (data.success) {
+            rule.value = data.rule;
+          }
+        } else {
+          // display_toast(res);
         }
-    }).mount('#main-container')
+      }
+      fetchRule();
+
+
+
+      /*###################################_form_section_###############################*/
+      const csrf_token = "{{ csrf_token() }}";
+      const reason = ref("");
+      const message = ref("");
+
+      /**
+       *          ###################
+       *          #   report rule   #
+       *          ###################
+       * */
+
+      async function submitReport() {
+        if (!rule.value || !reason.value) {
+          alert("Please select a reason to report.");
+          return;
+        }
+
+        const payload = {
+          rule_id: rule.value.id,
+          reason: reason.value,
+          message: message.value,
+        };
+
+        const res = await fetch("/rule/report_rule", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrf_token,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          reason.value = "";
+          message.value = "";
+          //window.location.href = document.referrer || '/';
+        }
+        display_toast(res);
+      }
+
+      return {
+        message_list,
+        rule,
+        reason,
+        message,
+        submitReport,
+      };
+    },
+  }).mount("#main-container");
 </script>
 {% endblock %}

@@ -425,110 +425,110 @@ class ImportRulesFromGithub(Resource):
 #   update rules from a github    #
 ###################################
 
-@rule_private_ns.route("/check_updates")
-@rule_private_ns.doc(
-    description="""
-Check if the selected rules have updates in their respective repositories.  
-This endpoint allows users to verify whether the rules they are tracking have been updated upstream.
+# @rule_private_ns.route("/check_updates")
+# @rule_private_ns.doc(
+#     description="""
+# Check if the selected rules have updates in their respective repositories.  
+# This endpoint allows users to verify whether the rules they are tracking have been updated upstream.
 
-**Authentication:** Requires a valid **API Key** in the request headers.
+# **Authentication:** Requires a valid **API Key** in the request headers.
 
-### Query Parameters
+# ### Query Parameters
 
-| Parameter | Type       | Required | Description |
-|-----------|------------|----------|-------------|
-| rules     | list[dict] | Yes      | A list of rules to check for updates. Each rule should be represented as an object containing `id` (integer, required) and optionally `title` (string). |
+# | Parameter | Type       | Required | Description |
+# |-----------|------------|----------|-------------|
+# | rules     | list[dict] | Yes      | A list of rules to check for updates. Each rule should be represented as an object containing `id` (integer, required) and optionally `title` (string). |
 
-### Headers
+# ### Headers
 
-| Header     | Type   | Required | Description |
-|------------|--------|----------|-------------|
-| X-API-KEY  | string | Yes      | Your personal API key for authentication. |
+# | Header     | Type   | Required | Description |
+# |------------|--------|----------|-------------|
+# | X-API-KEY  | string | Yes      | Your personal API key for authentication. |
 
-### Responses
+# ### Responses
 
-- **200 OK** – Successfully checked updates.
-    ```json
-    {
-    "message": "Search completed successfully. All selected rules have been processed without issues.",
-    "nb_update": 3,
-    "results": [
-        {
-        "id": 2,
-        "title": "Example Rule 2",
-        "success": true,
-        "message": "Rule updated successfully",
-        "new_content": "rule example { condition: true }",
-        "old_content": "rule example { condition: false }",
-        "history_id": 101
-        }
-    ],
-    "success": true,
-    "toast_class": "success"
-    }
+# - **200 OK** – Successfully checked updates.
+#     ```json
+#     {
+#     "message": "Search completed successfully. All selected rules have been processed without issues.",
+#     "nb_update": 3,
+#     "results": [
+#         {
+#         "id": 2,
+#         "title": "Example Rule 2",
+#         "success": true,
+#         "message": "Rule updated successfully",
+#         "new_content": "rule example { condition: true }",
+#         "old_content": "rule example { condition: false }",
+#         "history_id": 101
+#         }
+#     ],
+#     "success": true,
+#     "toast_class": "success"
+#     }
 
-- **403 Forbidden** – Missing or invalid API key.
-    ```json
-    {"success": false, "message": "Unauthorized"}
+# - **403 Forbidden** – Missing or invalid API key.
+#     ```json
+#     {"success": false, "message": "Unauthorized"}
 
-- **400 Bad Request** – Invalid or missing rules parameter.
-    ```json
-    {"success": false, "message": "Missing or empty 'rules' parameter"}
+# - **400 Bad Request** – Invalid or missing rules parameter.
+#     ```json
+#     {"success": false, "message": "Missing or empty 'rules' parameter"}
 
-Example cURL Request
+# Example cURL Request
 
-curl -X POST http://127.0.0.1:7009/api/rule/private/check_updates \
--H "Content-Type: application/json" \
--H "X-API-KEY: <USER_API_KEY>" \
--d '{
-    "rules": [
-        {"id": 2},{"id": 3}, {"id": 4},{"id": 5},{"id": 6},{"id": 7},{"id":8},{"id": 9},{"id": 10}
-    ]
-}'
+# curl -X POST http://127.0.0.1:7009/api/rule/private/check_updates \
+# -H "Content-Type: application/json" \
+# -H "X-API-KEY: <USER_API_KEY>" \
+# -d '{
+#     "rules": [
+#         {"id": 2},{"id": 3}, {"id": 4},{"id": 5},{"id": 6},{"id": 7},{"id":8},{"id": 9},{"id": 10}
+#     ]
+# }'
 
-"""
-)
-class RuleUpdateCheck(Resource):
-    @api_required
-    def post(self):
-        """Check updates for selected rules"""
-        user = utils.get_user_from_api(request.headers)
-        if not user:
-            return {"success": False, "message": "Unauthorized"}, 403
+# """
+# )
+# class RuleUpdateCheck(Resource):
+#     @api_required
+#     def post(self):
+#         """Check updates for selected rules"""
+#         user = utils.get_user_from_api(request.headers)
+#         if not user:
+#             return {"success": False, "message": "Unauthorized"}, 403
 
-        data = request.get_json()
-        rule_items = data.get("rules", [])
-        if not rule_items:
-            return {"success": False, "message": "Missing or empty 'rules' parameter"}, 400
+#         data = request.get_json()
+#         rule_items = data.get("rules", [])
+#         if not rule_items:
+#             return {"success": False, "message": "Missing or empty 'rules' parameter"}, 400
 
-        results = []
-        for item in rule_items:
-            rule_id = item.get("id")
-            title = item.get("title", "Unknown Title")
-            rule = RuleModel.get_rule(rule_id)
-            message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
+#         results = []
+#         for item in rule_items:
+#             rule_id = item.get("id")
+#             title = item.get("title", "Unknown Title")
+#             rule = RuleModel.get_rule(rule_id)
+#             message_dict, success, new_rule_content = Check_for_rule_updates(rule_id)
 
-            if success and new_rule_content:
-                result = {
-                    "id": rule_id,
-                    "title": title,
-                    "success": success,
-                    "message": message_dict.get("message", "No message"),
-                    "new_content": new_rule_content,
-                    "old_content": rule.to_string if rule else "Error loading the rule"
-                }
+#             if success and new_rule_content:
+#                 result = {
+#                     "id": rule_id,
+#                     "title": title,
+#                     "success": success,
+#                     "message": message_dict.get("message", "No message"),
+#                     "new_content": new_rule_content,
+#                     "old_content": rule.to_string if rule else "Error loading the rule"
+#                 }
 
-                history_id = RuleModel.create_rule_history(result)
-                result["history_id"] = history_id if history_id is not None else None
-                results.append(result)
+#                 history_id = RuleModel.create_rule_history(result)
+#                 result["history_id"] = history_id if history_id is not None else None
+#                 results.append(result)
 
-        return {
-            "message": "Search completed successfully. All selected rules have been processed without issues.",
-            "nb_update": len(results),
-            "results": results,
-            "success": True,
-            "toast_class": "success"
-        }, 200
+#         return {
+#             "message": "Search completed successfully. All selected rules have been processed without issues.",
+#             "nb_update": len(results),
+#             "results": results,
+#             "success": True,
+#             "toast_class": "success"
+#         }, 200
 
 #####################################################
 #        dump of all the rules as open data         #

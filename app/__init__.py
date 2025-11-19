@@ -56,18 +56,11 @@ def create_app():
     app.register_blueprint(rule_blueprint, url_prefix="/rule")
     app.register_blueprint(bundle_blueprint, url_prefix="/bundle")
 
-    # from .rule.rule_api import api_rule_blueprint
-    # from app.account.account_api import api_account_blueprint
-    # from app.bundle.bundle_api import api_bundle_blueprint
     from app.api.api import api_blueprint
 
     csrf.exempt(api_blueprint)
-    # csrf.exempt(api_account_blueprint)
-    # csrf.exempt(api_bundle_blueprint)
-
+   
     app.register_blueprint(api_blueprint, url_prefix="/api")
-    # app.register_blueprint(api_account_blueprint, url_prefix="/api/account")
-    # app.register_blueprint(api_bundle_blueprint, url_prefix="/api/bundle")
 
     return app
     

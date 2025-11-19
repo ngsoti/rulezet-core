@@ -83,7 +83,22 @@
                         </div>
                     </div>
                 </div>
-                
+                <div class="p-1 m-1">
+                    <span v-if="currentRule.cve_id && currentRule.cve_id !== 'None'" class="d-inline-flex flex-wrap align-items-center">
+                        <a v-for="(cve, index) in parsedCVE(currentRule.cve_id)" 
+                        :key="index" 
+                        :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()" 
+                        target="_blank"
+                        :class="['badge', 'me-1', 'mb-1', getCVEColor(cve)]" 
+                        data-bs-toggle="tooltip" 
+                        :title="'Detected vulnerability ID: ' + cve"
+                        style="text-decoration: none;">
+                            <i :class="getCVEIcon(cve)" class="me-1"></i>
+                            [[ getCVEPrefix(cve) ]]
+                            <span class="text-light fw-semibold">[[ getCVENumber(cve) ]]</span>
+                        </a>
+                    </span>
+                </div>
                 
                 <div class="card-body">
                     <div class="mb-4">
@@ -92,7 +107,7 @@
                             <strong class="me-2">Description:</strong>
 
                             <!-- Badges CVE inline -->
-                            <span
+                            <!-- <span
                                 v-if="currentRule.cve_id && currentRule.cve_id !== 'None'"
                                 class="d-inline-flex flex-wrap align-items-center"
                             >
@@ -109,7 +124,7 @@
                                     [[ getCVEPrefix(cve) ]]
                                     <span class="text-light fw-semibold">[[ getCVENumber(cve) ]]</span>
                                 </a>
-                            </span>
+                            </span> -->
                         </p>
 
                         <p class="text-muted" style="white-space: pre-line;">[[ currentRule.description ]]</p>

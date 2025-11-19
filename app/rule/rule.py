@@ -1697,7 +1697,6 @@ def check_updates_by_rule():
 #   Github url section  #
 #########################
 
-
 @rule_blueprint.route("/list_github_url", methods=['GET'])
 def list_github_url() :
     """Go to the list of all github url"""

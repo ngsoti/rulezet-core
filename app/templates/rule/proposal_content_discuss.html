@@ -14,13 +14,15 @@
             <div class="card-body">
                 <h5 class="card-title">
                     <i class="fas fa-user me-2 text-secondary"></i> Proposed by :
-                    <a :href="`/account/detail_user/${proposal.user_id}`" style="text-decoration-line: underline;" title="View more about this user">
+                    <a :href="`/account/detail_user/${proposal.user_id}`" style="text-decoration-line: underline;"
+                        title="View more about this user">
                         [[ proposal.user_name ]]
                     </a>
                 </h5>
                 <p class="card-text">
                     <i class="fas fa-comment-dots me-2"></i>
-                    <strong>Message:</strong> <template v-if="proposal.message != '' " >[[ proposal.message ]] </template> <template v-else> no message</template>
+                    <strong>Message:</strong> <template v-if="proposal.message != '' ">[[ proposal.message ]]
+                    </template> <template v-else> no message</template>
                 </p>
                 <p class="card-text">
                     <i class="fas fa-clock me-2"></i>
@@ -34,7 +36,7 @@
                     <span class="badge bg-danger" v-else>Rejected</span>
                 </p>
             </div>
-        </div>    
+        </div>
         <div class="row mt-4">
             <div class="row mt-3">
                 <div class="col-md-6 mb-3">
@@ -43,15 +45,14 @@
                         style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
                         <div v-for="(line2, i) in getProposedContentLines(proposal.proposed_content)" :key="i">
                             <span v-if="line2.trim() !== ''"
-                                :class="{'text-success': isLineNew(line2, proposal.old_content)}"
-                                class="d-block">
+                                :class="{'text-success': isLineNew(line2, proposal.old_content)}" class="d-block">
                                 [[ line2 ]]
                             </span>
                         </div>
                     </div>
                 </div>
 
-                
+
                 <div class="col-md-6 mb-3">
                     <strong>Old Content:</strong>
                     <div class="bg-light p-3 rounded border"
@@ -75,9 +76,10 @@
         <div v-if="comments.length === 0" class="alert alert-secondary">
             No comments yet.
         </div>
-    
+
         <ul class="list-group mb-4" v-else>
-            <li v-for="comment in comments" :key="comment.id" class="list-group-item d-flex justify-content-between align-items-start">
+            <li v-for="comment in comments" :key="comment.id"
+                class="list-group-item d-flex justify-content-between align-items-start">
                 <div>
                     <h6 class="mb-1">
                         <i class="fas fa-user-circle  me-2"></i>
@@ -90,13 +92,14 @@
                     <button class="btn btn-sm btn-outline-danger ms-3" @click="deleteComment(comment.id)">
                         <i class="fas fa-trash-alt"></i>
                     </button>
-                </template>          
+                </template>
             </li>
         </ul>
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">Add a Comment</h5>
-                <textarea v-model="newComment" class="form-control" rows="3" placeholder="Write your comment here..."></textarea>
+                <textarea v-model="newComment" class="form-control" rows="3"
+                    placeholder="Write your comment here..."></textarea>
                 <button @click="submitComment" class="btn btn-primary mt-2">
                     <i class="fas fa-paper-plane"></i> Submit
                 </button>
@@ -142,16 +145,16 @@
             const proposal = ref(null)
 
             async function fetchRuleProposal() {
-                const res = await fetch('/rule/get_proposal?id='+proposalId)
-                if(res.ok) {
+                const res = await fetch('/rule/get_proposal?id=' + proposalId)
+                if (res.ok) {
                     const data = await res.json();
                     proposal.value = data.proposal;
                 }
-                
+
             }
 
             fetchRuleProposal();
-            
+
             /**
              *          ##########################
              *          #       Fetch comment    #
@@ -163,10 +166,10 @@
 
             async function fetchComments() {
                 try {
-                    const res = await fetch(`/rule/discuss?id=`+proposalId);
+                    const res = await fetch(`/rule/discuss?id=` + proposalId);
                     if (res.ok) {
                         comments.value = await res.json();
-                    } 
+                    }
                 } catch (err) {
                     alert(err)
                 }
@@ -176,18 +179,18 @@
 
             async function submitComment() {
                 const content = newComment.value.trim()
-                if(content != ""){
-                    const res = await fetch(`/rule/add_comment_discuss?id=`+proposalId+'&content='+content )
+                if (content != "") {
+                    const res = await fetch(`/rule/add_comment_discuss?id=` + proposalId + '&content=' + content)
                     if (res.ok) {
                         const comment = await res.json();
                         comments.value.push(comment);
                         newComment.value = '';
-                    } 
+                    }
                 }
             }
 
             async function deleteComment(commentId) {
-                const res = await fetch('/rule/delete_comment?id='+commentId)
+                const res = await fetch('/rule/delete_comment?id=' + commentId)
                 if (res.ok) {
                     comments.value = comments.value.filter(c => c.id !== commentId);
                 } else {
@@ -199,7 +202,7 @@
              *          #############################
              *          #   color lines for changes  #
              *          #############################
-             * */  
+             * */
 
             function getOldContentLines(content) {
                 return content.split('\n');
@@ -212,22 +215,22 @@
             function isLineNew(line, oldContent) {
                 const normalizedLine = line.trim();
                 const normalizedOldContent = oldContent.split('\n').map(l => l.trim());
-                
-                return !normalizedOldContent.includes(normalizedLine); 
+
+                return !normalizedOldContent.includes(normalizedLine);
             }
 
             function isLineDeleted(line, proposedContent) {
                 const normalizedLine = line.trim();
                 const normalizedProposedContent = proposedContent.split('\n').map(l => l.trim());
-                
-                return !normalizedProposedContent.includes(normalizedLine);  
+
+                return !normalizedProposedContent.includes(normalizedLine);
             }
-            
+
             function isLineIdentical(line, content) {
                 const normalizedLine = line.trim();
                 const normalizedContent = content.split('\n').map(l => l.trim());
-                
-                return normalizedContent.includes(normalizedLine);  
+
+                return normalizedContent.includes(normalizedLine);
             }
 
 

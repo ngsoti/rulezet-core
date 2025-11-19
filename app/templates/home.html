@@ -28,7 +28,7 @@
                   [[ rule.title ]]
               </a>
               </span>
-            </h5>
+            </h5> 
             <div class="d-flex ms-auto">
               <template v-if="parseInt('{{ current_user.id }}') === rule.user_id || current_user_is_admin">
                 <a :href="`rule/edit_rule/${rule.id}`" class="btn btn-secondary btn-sm me-2" title="Edit the rule">
@@ -61,9 +61,24 @@
                   :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
                 <i class="fa-solid fa-star" :class="rule.is_favorited ? 'text-warning' : 'text-white'"></i>
               </a>
-            </div>
+            </div>            
           </div>
-
+          <div class="p-1 m-1">
+              <span v-if="rule.cve_id && rule.cve_id !== 'None'" class="d-inline-flex flex-wrap align-items-center">
+                <a v-for="(cve, index) in parsedCVE(rule.cve_id)" 
+                  :key="index" 
+                  :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()" 
+                  target="_blank"
+                  :class="['badge', 'me-1', 'mb-1', getCVEColor(cve)]" 
+                  data-bs-toggle="tooltip" 
+                  :title="'Detected vulnerability ID: ' + cve"
+                  style="text-decoration: none;">
+                    <i :class="getCVEIcon(cve)" class="me-1"></i>
+                    [[ getCVEPrefix(cve) ]]
+                    <span class="text-light fw-semibold">[[ getCVENumber(cve) ]]</span>
+                </a>
+              </span>
+            </div>
           <!-- Card Body -->
           <div class="card-body">
             <p><strong>Description:</strong> [[ rule.description ]]</p>
@@ -215,6 +230,58 @@
           window.location.href = `/account/login`;
         } 
       }
+
+         /**
+        * 
+        *   #################
+        *   #       CVE     #
+        *   #################
+        * 
+        * */
+
+        function parsedCVE(cveField) {
+            try {
+                return JSON.parse(cveField);
+            } catch (e) {
+                return cveField.replace(/[{}]/g, "").split(",").map(s => s.trim());
+            }
+        }
+        
+        function getCVEColor(cve) {
+                if (cve.startsWith("CVE")) return "bg-danger"; 
+                if (cve.startsWith("GHSA")) return "bg-warning text-dark";
+                if (cve.startsWith("PYSEC")) return "bg-info text-dark"; 
+                if (cve.startsWith("GSD")) return "bg-secondary"; 
+                if (cve.startsWith("GCVE")) return "bg-primary"; 
+                if (cve.startsWith("RHSA")) return "bg-danger-subtle text-dark"; 
+                if (cve.startsWith("CERTFR")) return "bg-success"; 
+                if (cve.startsWith("cisco-sa")) return "bg-dark"; 
+                if (cve.startsWith("wid-sec-w")) return "bg-secondary"; 
+                if (cve.startsWith("msrc_CVE")) return "bg-purple"; 
+                return "bg-dark";
+        }
+            
+        function getCVEIcon(cve) {
+                if (cve.startsWith("CVE")) return "fas fa-shield-alt";
+                if (cve.startsWith("GHSA")) return "fas fa-bug";
+                if (cve.startsWith("PYSEC")) return "fas fa-code";
+                if (cve.startsWith("GSD")) return "fas fa-database";
+                if (cve.startsWith("GCVE")) return "fas fa-globe";
+                if (cve.startsWith("RHSA")) return "fas fa-lock";
+                if (cve.startsWith("CERTFR")) return "fas fa-flag";
+                if (cve.startsWith("cisco-sa")) return "fas fa-network-wired";
+                if (cve.startsWith("wid-sec-w")) return "fas fa-exclamation-circle";
+                if (cve.startsWith("msrc_CVE")) return "fas fa-shield-virus";
+                return "fas fa-exclamation-triangle";
+            }
+
+        function getCVEPrefix(cve) {
+                return cve.split("-")[0].toUpperCase();
+            }
+        function getCVENumber(cve) {
+                return cve.replace(/^[A-Za-z_:-]+/, "").replace(/^-/, "");
+            }
+
       
       return {
         message_list,
@@ -225,7 +292,12 @@
         checkIfUserIsConnected,
         fetchCurrentUser,
         favorite,
-        fetchRecentRules
+        fetchRecentRules,
+        parsedCVE,
+        getCVEColor,
+        getCVEIcon,
+        getCVEPrefix,
+        getCVENumber,
       }
     }
   }).mount('#main-container')
