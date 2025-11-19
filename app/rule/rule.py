@@ -407,8 +407,10 @@ def get_current_rule() -> jsonify:
 def detail_rule(rule_id)-> render_template:
     """Get the detail of the current rule"""
     rule = RuleModel.get_rule(rule_id)
+    rule_misp = content_convert_to_misp_object(rule_id)
+    rule_to_json = json.dumps(rule.to_dict(), indent=4)
     if rule:
-        return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string)
+        return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp=rule_misp, rule_to_json=rule_to_json)
     return render_template("404.html")
     
 
@@ -637,7 +639,6 @@ def get_rules_propose_edit_page() -> jsonify:
     if current_user.is_admin():
         rules_pendings = RuleModel.get_rules_edit_propose_page_pending_admin(page)
     else:
-        print("he")
         rules_pendings = RuleModel.get_rules_edit_propose_page_pending(page)
     if rules_pendings:
         rules_pendings_list = [rule_pending.to_json() for rule_pending in rules_pendings]
@@ -709,7 +710,7 @@ def propose_edit(rule_id) -> redirect:
 
     rule = RuleModel.get_rule(rule_id)
 
-    if rule.to_string == proposed_content:
+    if rule.to_string.strip() == proposed_content.strip():
         flash("Proposed content is the same as the current content.", "warning")
         return redirect(url_for('rule.detail_rule', rule_id=rule_id))
     

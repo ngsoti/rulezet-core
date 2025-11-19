@@ -1,212 +1,222 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1">
-        <title>RULEZET</title>
 
-        <!-- CSS -->
-        <link rel="icon" href="{{ url_for('static',filename='image/logo_rulezet_bg.png') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2.min.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2-bootstrap-5-theme.min.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='bootstrap-5.3.0/css/bootstrap.min.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/fontawesome.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/solid.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/brands.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/jquery-ui.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/core.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/sidebar.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/importer.css') }}">
-        <!-- CodeMirror CSS (core + themes) -->
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/dracula.min.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/monokai.min.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/eclipse.min.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/material.min.css" rel="stylesheet">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>RULEZET</title>
 
-         <!-- Color for json -->
-        <!-- Highlight.js CSS -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css"> <!-- Change this line for another JSON color -->
+    <!-- CSS -->
+    <link rel="icon" href="{{ url_for('static',filename='image/logo_rulezet_bg.png') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2.min.css') }}">
+    <link rel="stylesheet" type="text/css"
+        href="{{ url_for('static',filename='css/select2-bootstrap-5-theme.min.css') }}">
+    <link rel="stylesheet" type="text/css"
+        href="{{ url_for('static',filename='bootstrap-5.3.0/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" type="text/css"
+        href="{{ url_for('static',filename='fontawesome-6.3.0/css/fontawesome.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/solid.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/brands.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/jquery-ui.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/core.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/sidebar.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/importer.css') }}">
+    <!-- CodeMirror CSS (core + themes) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/dracula.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/monokai.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/eclipse.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/material.min.css" rel="stylesheet">
 
-        <!-- Highlight.js JS -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+    <!-- Color for json -->
+    <!-- Highlight.js CSS -->
 
-        <!-- Scripts -->
-        <!-- CodeMirror JavaScript -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/javascript/javascript.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/python/python.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/css/css.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/xml/xml.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/yaml/yaml.min.js"></script>
-        <!-- CodeMirror CSS & JS -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
-        <script>
-            (function() {
-                let savedTheme = localStorage.getItem('theme');
-                if (!savedTheme) {
-                    savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                }
-                document.documentElement.classList.add(savedTheme + '-mode');
-                const style = document.createElement('style');
-                style.innerHTML = `* { transition: none !important; }`;
-                document.head.appendChild(style);
-                window.addEventListener('DOMContentLoaded', () => style.remove());
-            })();
-        </script>
-        <script src="{{ url_for('static',filename='js/popper.min.js') }}"></script>
-        <script src="{{ url_for('static',filename='bootstrap-5.3.0/js/bootstrap.min.js') }}"></script>
-        <script src="{{ url_for('static',filename='js/jquery.min.js') }}"></script>
-        <script src="{{ url_for('static',filename='js/jquery-ui.js') }}"></script>
-        <script src="{{ url_for('static',filename='js/select2.min.js') }}"></script>
-        <script src="{{ url_for('static',filename='js/vue.global.js') }}"></script>
-        <script src="{{ url_for('static',filename='js/dayjs/dayjs.min.js') }}"></script>
-        <script src="{{ url_for('static',filename='js/dayjs/dayjs-utc.js') }}"></script>
-        <script src="{{ url_for('static',filename='js/dayjs/dayjs-relativeTime.js') }}"></script>
-        <script>dayjs.extend(window.dayjs_plugin_utc)</script>
-        <script>dayjs.extend(window.dayjs_plugin_relativeTime)</script>
-        <script src="{{ url_for('static',filename='js/zxcvbn.js') }}"></script>
-        <script src="{{ url_for('static',filename='js/blur.js')}}"></script>
-        <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                const scrollToTopBtn = document.getElementById("scrollToTopBtn");
-                if (!scrollToTopBtn) return; 
+    <!-- Change this line for another JSON color -->
 
-                window.addEventListener("scroll", () => {
-                    scrollToTopBtn.style.display = (window.scrollY > 300) ? "flex" : "none";
-                });
 
-                scrollToTopBtn.addEventListener("click", () => {
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                });
+    <!-- Scripts -->
+    <!-- CodeMirror JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/javascript/javascript.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/python/python.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/css/css.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/mode/xml/xml.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/yaml/yaml.min.js"></script>
+    <!-- CodeMirror CSS & JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/eclipse.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
+    <script>
+        (function () {
+            let savedTheme = localStorage.getItem('theme');
+            if (!savedTheme) {
+                savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.classList.add(savedTheme + '-mode');
+            const style = document.createElement('style');
+            style.innerHTML = `* { transition: none !important; }`;
+            document.head.appendChild(style);
+            window.addEventListener('DOMContentLoaded', () => style.remove());
+        })();
+    </script>
+    <script src="{{ url_for('static',filename='js/popper.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='bootstrap-5.3.0/js/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/jquery-ui.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/select2.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/vue.global.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/dayjs/dayjs.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/dayjs/dayjs-utc.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/dayjs/dayjs-relativeTime.js') }}"></script>
+    <script>dayjs.extend(window.dayjs_plugin_utc)</script>
+    <script>dayjs.extend(window.dayjs_plugin_relativeTime)</script>
+    <script src="{{ url_for('static',filename='js/zxcvbn.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/blur.js')}}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const scrollToTopBtn = document.getElementById("scrollToTopBtn");
+            if (!scrollToTopBtn) return;
+
+            window.addEventListener("scroll", () => {
+                scrollToTopBtn.style.display = (window.scrollY > 300) ? "flex" : "none";
             });
-        </script>
 
-    </head>
-    <body>
-        {% include 'sidebar.html' %}
-        <div class="d-flex flex-column min-vh-100">
-            <div class="flex-grow-1 container" id="main-container">
-                <main class="col ps-md-4 pt-2">
-                    {% include 'macros/_flashes.html' %}
-                    <div aria-live="polite" aria-atomic="true" class="">
-                        <div class="toast-container start-50 translate-middle-x top-0 p-3" style="position: fixed;">
-                            <template v-if="message_list">
-                                <template v-for="message in message_list" v-key="message.id">
-                                    <div :id="`liveToast-${message.id}`" :class="`toast bg-${message.toast_class}`" role="alert" aria-live="assertive" data-bs-delay="5000" aria-atomic="true" style="--bs-toast-spacing: 0.5rem;">
-                                        <div class="d-flex">
-                                            <div class="toast-body">
-                                                <template v-if="message.message">
-                                                    <i :class="message.icon" style="margin-right: 5px;"></i> [[message.message]]
-                                                </template>
-                                            </div>
-                                            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            scrollToTopBtn.addEventListener("click", () => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+        });
+    </script>
+
+</head>
+
+<body>
+    {% include 'sidebar.html' %}
+    <div class="d-flex flex-column min-vh-100">
+        <div class="flex-grow-1 container" id="main-container">
+            <main class="col ps-md-4 pt-2">
+                {% include 'macros/_flashes.html' %}
+                <div aria-live="polite" aria-atomic="true" class="">
+                    <div class="toast-container start-50 translate-middle-x top-0 p-3" style="position: fixed;">
+                        <template v-if="message_list">
+                            <template v-for="message in message_list" v-key="message.id">
+                                <div :id="`liveToast-${message.id}`" :class="`toast bg-${message.toast_class}`"
+                                    role="alert" aria-live="assertive" data-bs-delay="5000" aria-atomic="true"
+                                    style="--bs-toast-spacing: 0.5rem;">
+                                    <div class="d-flex">
+                                        <div class="toast-body">
+                                            <template v-if="message.message">
+                                                <i :class="message.icon" style="margin-right: 5px;"></i>
+                                                [[message.message]]
+                                            </template>
                                         </div>
+                                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"
+                                            aria-label="Close"></button>
                                     </div>
-                                </template>
+                                </div>
                             </template>
-                        </div>
-                    </div>
-                    <!-- Scroll to top -->
-                   <button id="scrollToTopBtn" title="Retour en haut"><i class="fa-solid fa-up-long"></i></button>
-
-                    {% block content %}
-                    {% endblock %}
-                </main>
-                {% if csrf_token()|safe %}
-                    <div style="visibility: hidden; display: none">
-                        <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token()|safe }}">
-                    </div>
-                {% endif %}
-            </div>
-            <footer class="bg-dark text-white py-4 mt-auto border-top border-secondary shadow-lg">
-                <div class="container">
-                    <div class="row align-items-center justify-content-between">
-
-                        <!-- Logo / Version -->
-                        <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
-                            <small class="fw-bold text-uppercase">
-                            <span class="text-primary">Rulezet</span> <span class="badge bg-secondary ms-1">v1.1</span>
-                            </small>
-                        </div>
-
-                        
-                        <!-- Theme toggle -->
-                        <div class="col-md-4 text-center text-md-end mb-3 mb-md-0">
-                            <button id="toggle-theme" class="btn btn-outline-light rounded-circle" title="Toggle theme">
-                            <i id="theme-icon" class="fas fa-sun"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Divider -->
-                    <hr class="border-secondary my-3">
-
-                    <!-- Footer bottom -->
-                    <div class="row justify-content-center">
-                        <div class="col-auto d-flex align-items-center gap-3">
-                            <small class="text-muted mb-0">&copy; 2025 <strong>RULEZET</strong>. All rights reserved.</small>
-                            <a href="https://github.com/ngsoti/rulezet-core.git" target="_blank" class="btn btn-outline-light d-flex align-items-center btn-sm px-3">
-                                <i class="fa-brands fa-github"></i>
-                            </a>
-                        </div>
+                        </template>
                     </div>
                 </div>
-            </footer>
+                <!-- Scroll to top -->
+                <button id="scrollToTopBtn" title="Retour en haut"><i class="fa-solid fa-up-long"></i></button>
 
+                {% block content %}
+                {% endblock %}
+            </main>
+            {% if csrf_token()|safe %}
+            <div style="visibility: hidden; display: none">
+                <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token()|safe }}">
+            </div>
+            {% endif %}
         </div>
+        <footer class="bg-dark text-white py-4 mt-auto border-top border-secondary shadow-lg">
+            <div class="container">
+                <div class="row align-items-center justify-content-between">
 
-        {% block script %}
-        <script type="module">
-              
-            const {createApp, ref} = Vue
-            createApp({
-                delimiters: ['[[', ']]'],
-                setup() {},
-            }).mount('#main-container')
-        </script>
-        {% endblock %}
-        <script>
-            $(document).ready(function() {
-                $('.message').each((i, el) => {
-                    const $el = $(el);
-                    const $xx = $el.find('.close');
-                    const sec = $el.data('autohide');
-                    const triggerRemove = () => clearTimeout($el.trigger('remove').T);
-                    $el.one('remove', () => $el.remove());
-                    $xx.one('click', triggerRemove);
-                    if (sec) $el.T = setTimeout(triggerRemove, sec * 1000);
-                });
+                    <!-- Logo / Version -->
+                    <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
+                        <small class="fw-bold text-uppercase">
+                            <span class="text-primary">Rulezet</span> <span class="badge bg-secondary ms-1">v1.1</span>
+                        </small>
+                    </div>
+
+
+                    <!-- Theme toggle -->
+                    <div class="col-md-4 text-center text-md-end mb-3 mb-md-0">
+                        <button id="toggle-theme" class="btn btn-outline-light rounded-circle" title="Toggle theme">
+                            <i id="theme-icon" class="fas fa-sun"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <hr class="border-secondary my-3">
+
+                <!-- Footer bottom -->
+                <div class="row justify-content-center">
+                    <div class="col-auto d-flex align-items-center gap-3">
+                        <small class="text-muted mb-0">&copy; 2025 <strong>RULEZET</strong>. All rights
+                            reserved.</small>
+                        <a href="https://github.com/ngsoti/rulezet-core.git" target="_blank"
+                            class="btn btn-outline-light d-flex align-items-center btn-sm px-3">
+                            <i class="fa-brands fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    {% block script %}
+    <script type="module">
+
+        const { createApp, ref } = Vue
+        createApp({
+            delimiters: ['[[', ']]'],
+            setup() { },
+        }).mount('#main-container')
+    </script>
+    {% endblock %}
+    <script>
+        $(document).ready(function () {
+            $('.message').each((i, el) => {
+                const $el = $(el);
+                const $xx = $el.find('.close');
+                const sec = $el.data('autohide');
+                const triggerRemove = () => clearTimeout($el.trigger('remove').T);
+                $el.one('remove', () => $el.remove());
+                $xx.one('click', triggerRemove);
+                if (sec) $el.T = setTimeout(triggerRemove, sec * 1000);
             });
-            (function(){
-                const html = document.documentElement;
-                const icon = document.getElementById("theme-icon");
-                const toggle = document.getElementById("toggle-theme");
-                function setBootstrapTheme(theme) {
-                    html.classList.remove("light-mode","dark-mode");
-                    html.classList.add(theme + "-mode");
-                    if (document.body) {
-                    document.body.classList.remove("light-mode","dark-mode");
+        });
+        (function () {
+            const html = document.documentElement;
+            const icon = document.getElementById("theme-icon");
+            const toggle = document.getElementById("toggle-theme");
+            function setBootstrapTheme(theme) {
+                html.classList.remove("light-mode", "dark-mode");
+                html.classList.add(theme + "-mode");
+                if (document.body) {
+                    document.body.classList.remove("light-mode", "dark-mode");
                     document.body.classList.add(theme + "-mode");
-                    }
-                    if (icon) icon.className = theme === "dark" ? "fas fa-moon" : "fas fa-sun";
-                    localStorage.setItem("theme", theme);
                 }
-                const savedTheme = localStorage.getItem("theme") || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                setBootstrapTheme(savedTheme);
-                if (toggle) {
-                    toggle.addEventListener("click", () => {
+                if (icon) icon.className = theme === "dark" ? "fas fa-moon" : "fas fa-sun";
+                localStorage.setItem("theme", theme);
+            }
+            const savedTheme = localStorage.getItem("theme") || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            setBootstrapTheme(savedTheme);
+            if (toggle) {
+                toggle.addEventListener("click", () => {
                     const isDark = html.classList.contains("dark-mode");
                     setBootstrapTheme(isDark ? "light" : "dark");
-                    });
-                }
-            })();
-        </script>
-    </body>
+                });
+            }
+        })();
+    </script>
+</body>
+
 </html>
