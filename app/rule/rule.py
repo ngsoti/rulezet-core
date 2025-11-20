@@ -704,7 +704,8 @@ def propose_edit(rule_id) -> redirect:
     message = data.get('message')
     if not proposed_content:
         flash("Proposed content cannot be empty.", "error")
-        return redirect(url_for('rule.detail_rule', rule_id=rule_id))
+        # return redirect(url_for('rule.detail_rule', rule_id=rule_id))
+        return redirect(url_for('rule.detail_rule', rule_id=rule_id) + "#chap2-pane")
     
     # verify if the proposed content is different from the current content and verify the syntax
 
@@ -712,14 +713,14 @@ def propose_edit(rule_id) -> redirect:
 
     if rule.to_string.strip() == proposed_content.strip():
         flash("Proposed content is the same as the current content.", "warning")
-        return redirect(url_for('rule.detail_rule', rule_id=rule_id))
+        return redirect(url_for('rule.detail_rule', rule_id=rule_id) + "#chap2-pane")
     
     rule_dict = rule.to_json()
     rule_dict['to_string'] = proposed_content
     valide , error = verify_syntax_rule_by_format(rule_dict)
     if not valide:
         flash(f"Syntax error in proposed content: {error}", "error")
-        return redirect(url_for('rule.detail_rule', rule_id=rule_id))
+        return redirect(url_for('rule.detail_rule', rule_id=rule_id) + "#chap2-pane")
 
     success = RuleModel.propose_edit_core(rule_id, proposed_content, message)
     if success:

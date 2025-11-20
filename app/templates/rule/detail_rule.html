@@ -692,9 +692,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script> -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/base16/dracula.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-<script type="module">
 
-    const { createApp, ref, onMounted } = Vue;
+<script type="module">
+    const { createApp, ref, onMounted, nextTick } = Vue;
     import { message_list, create_message, display_toast } from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
 
@@ -744,7 +744,6 @@
                 const res = await fetch('/rule/get_current_user')
                 const data = await res.json()
                 current_user_is_admin.value = data.user
-
             }
 
             async function checkIfUserIsConnected() {
@@ -1025,19 +1024,41 @@
              * */
 
             const editor = ref(null);
-            onMounted(() => {
-                editor.value = CodeMirror.fromTextArea(
-                    document.getElementById("rule_content"),
-                    {
-                        theme: "dracula",
-                        lineWrapping: true,
-                        tabSize: 2,
-                        // lineNumbers: true,
-                        indentUnit: 2
-                    }
-                );
 
-                editor.value.setSize(null, "600px");
+            onMounted(() => {
+                document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                    tab.addEventListener("shown.bs.tab", (e) => {
+                        const target = e.target.getAttribute("href");
+                        if (target === "#chap2-pane") {
+                            if (editor.value == null) {
+                                editor.value = CodeMirror.fromTextArea(
+                                    document.getElementById("rule_content"),
+                                    {
+                                        theme: "dracula",
+                                        lineWrapping: true,
+                                        tabSize: 2,
+                                        indentUnit: 2
+                                    }
+                                );
+
+                                editor.value.setSize(null, "600px");
+                            }
+
+                        }
+                    });
+                });
+            });
+
+            document.addEventListener("DOMContentLoaded", () => {
+                const hash = window.location.hash;
+
+                if (hash) {
+                    const tabLink = document.querySelector(`[href="${hash}"]`);
+                    if (tabLink) {
+                        const tab = new bootstrap.Tab(tabLink);
+                        tab.show();
+                    }
+                }
             });
 
             onMounted(() => {
