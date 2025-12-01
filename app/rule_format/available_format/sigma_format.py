@@ -14,20 +14,12 @@ from app.utils.utils import detect_cve
 ##################
 
 
-#
-#   Implement the sigma section with check all the abstract method.
-#
-
-#-----------------------------------------------#
-#   Other method to help (add import ....)      #
-#-----------------------------------------------#
-
 class SigmaRule(RuleType):
     """
     Concrete implementation of RuleType for Sigma rules.
     """
 
-    def __init__(self, schema_path: str = "app/rule_type/schema_format/sigma_format.json"):
+    def __init__(self, schema_path: str = "app/rule_format/schema_format/sigma_format.json"):
         self.schema = self._load_schema(schema_path)
 
     @property
@@ -36,10 +28,7 @@ class SigmaRule(RuleType):
 
     def get_class(self) -> str:
         return "SigmaRule"
-    #---------------------#
-    #   Abstract section  #
-    #---------------------#
-
+    
     def _load_schema(self, schema_file: str) -> Optional[Dict[str, Any]]:
         """Load the Sigma JSON schema into memory."""
         if not os.path.exists(schema_file):
@@ -54,8 +43,10 @@ class SigmaRule(RuleType):
         """
         try:
             rule = yaml.safe_load(content)
-            if not rule:
-                return ValidationResult(ok=False, errors=["Empty or invalid YAML content."])
+            
+            # Correction de robustesse contre None/vide
+            if rule is None or not isinstance(rule, dict):
+                return ValidationResult(ok=False, errors=["Empty or invalid YAML content or not a single rule object."], normalized_content=content)
 
             # Normalize to JSON then reload for schema validation
             rule_json_str = json.dumps(rule, indent=2, default=str)
@@ -72,16 +63,26 @@ class SigmaRule(RuleType):
         except Exception as e:
             return ValidationResult(ok=False, errors=[str(e)], normalized_content=content)
 
-    def parse_metadata(self, content: str, info: Dict, validation_result: str) -> Dict[str, Any]:
+    def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
         """
         Extract key metadata from a Sigma rule.
         """
+        title = "Untitled"
         try:
+            rule = yaml.safe_load(content)
 
-            rule = yaml.safe_load(content) or {}
+            # Correction de robustesse pour gérer None
+            if rule is None or not isinstance(rule, dict):
+                rule_id_hint = info.get("original_uuid") or "Unknown"
+                title = f"Untitled Sigma Rule ID:{rule_id_hint}"
+                raise ValueError("Content is empty, not valid YAML, or not a single rule object.")
+            
+            title = rule.get("title", "Untitled")
+            
             _, cve = detect_cve(rule.get("description", ""))
+
             return {
-                "title": rule.get("title", "Untitled"),
+                "title": title,
                 "format": "sigma",
                 "license": rule.get("license") or info.get("license", "Unknown"),
                 "description": rule.get("description", "No description provided"),
@@ -90,18 +91,18 @@ class SigmaRule(RuleType):
                 "cve_id": cve,
                 "original_uuid": rule.get("id", "Unknown"),
                 "source": rule.get("source") or info.get("repo_url", "Unknown") ,
-                "to_string": content or validation_result.normalized_content #yaml.safe_dump(rule, sort_keys=False, allow_unicode=True) or validation_result.normalized_content,
+                "to_string": content or validation_result.normalized_content,
             }
         except Exception as e:
             return {
                 "format": "sigma",
-                "title": "Invalid Rule",
-                 "license":  info["license"] or "unknown",
+                "title": f"{title} (Metadata Error)",
+                "license":  info.get("license", "unknown"),
                 "description": f"Error parsing metadata: {e}",
                 "version": "N/A",
-                "source": info["repo_url"],
+                "source": info.get("repo_url", "Unknown"),
                 "original_uuid":  "Unknown",
-                "author": info["author"] or "Unknown",
+                "author": info.get("author", "Unknown"),
                 "cve_id": None,
                 "to_string": content,
             }
@@ -127,13 +128,18 @@ class SigmaRule(RuleType):
                 content = f.read()
                 parsed = yaml.safe_load(content)
 
+                if parsed is None:
+                    return [] 
+                
                 if isinstance(parsed, dict):
                     # Single rule per file
                     rules.append(content)
                 elif isinstance(parsed, list):
                     # Multiple rules in a single file
                     for rule in parsed:
-                        rules.append(yaml.safe_dump(rule, sort_keys=False, allow_unicode=True))
+                        # CORRECTION : Assurez-vous que l'élément est un dict avant de le dumper
+                        if isinstance(rule, dict):
+                            rules.append(yaml.safe_dump(rule, sort_keys=False, allow_unicode=True))
         except Exception:
             # If the file cannot be read or parsed, return empty list
             return []
@@ -155,6 +161,7 @@ class SigmaRule(RuleType):
                 if file.endswith(('.yml', '.yaml')):
                     rule_files.append(os.path.join(root, file))
         return rule_files
+    
     def find_rule_in_repo(self, repo_url: str, rule_id: int) -> tuple[str, bool]:
         """
         Search for a Sigma rule inside a locally cloned GitHub repo.
@@ -172,9 +179,10 @@ class SigmaRule(RuleType):
             for r in rules:
                 try:
                     parsed_rule = yaml.safe_load(r)
-                    if not parsed_rule:
+                    if not parsed_rule or not isinstance(parsed_rule, dict):
                         continue
 
+                    # Recherche par titre (nom de la règle) ou par l'ID d'origine
                     if parsed_rule.get("title") == rule.title or parsed_rule.get("id") == rule.original_uuid:
                         return r, True
                 except Exception:

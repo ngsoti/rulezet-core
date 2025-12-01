@@ -228,6 +228,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str):
     """
 
     # Trouver la classe correspondant au format
+    load_all_rule_formats()
     matching_class = None
     for RuleClass in RuleType.__subclasses__():
         try:

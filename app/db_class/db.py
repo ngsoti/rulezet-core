@@ -877,7 +877,7 @@ class NewRule(db.Model):
         db.ForeignKey("update_result.id", ondelete="CASCADE"),
         nullable=False
     )
-
+    format = db.Column(db.String(50), nullable=True)
     date = db.Column(db.DateTime, index=True)
     name_rule = db.Column(db.String, nullable=False)
     rule_content = db.Column(db.Text, nullable=False)
@@ -898,6 +898,7 @@ class NewRule(db.Model):
             "name_rule": self.name_rule,
             "rule_content": self.rule_content,
             "message": self.message,
+            "format": self.format,
             "rule_syntax_valid": self.rule_syntax_valid,
             "error": self.error,
             "accept": self.accept,

@@ -35,7 +35,6 @@ class NovaRule(RuleType):
             - at least one of keywords, semantics, llm
         """
         errors = []
-        # Vérification des sections obligatoires
         if "meta:" not in content:
             errors.append("Missing 'meta' section")
         if "condition:" not in content:
@@ -53,7 +52,7 @@ class NovaRule(RuleType):
 
         try:
             parser = NovaParser()
-            rule = parser.parse(content)
+            parser.parse(content)
             return ValidationResult(
                 ok=True,
                 errors=[],
@@ -68,40 +67,48 @@ class NovaRule(RuleType):
                 normalized_content=content
             )
 
-    def parse_metadata(self, content: str, info: Dict , validation_result: str) -> Dict[str, Any]:
+    def parse_metadata(self, content: str, info: Dict , validation_result: ValidationResult) -> Dict[str, Any]:
         """
         Extract metadata from the Nova rule.
         """
+        rule_name = "unknown_rule"
         try:
             parser = NovaParser()
-            rule = parser.parse(content)
-
-            # Basic fields
-            meta = getattr(rule, "meta", {})
+            rule = parser.parse(content) 
+            
+            meta_dict = getattr(rule, "meta", {})
             rule_name = getattr(rule, "name", "unknown_rule")
-            _, cve = detect_cve(meta.get("description", "No description provided"))
+            
+            if not rule_name and hasattr(rule, 'attributes') and 'rule_name' in rule.attributes:
+                 rule_name = rule.attributes['rule_name']
+
+            description = meta_dict.get("description") or info.get("description") or  "No description provided"
+            _, cve = detect_cve(description)
+            
+            normalized_content = getattr(validation_result, 'normalized_content', content)
+            
             return {
                 "format": "nova",
-                "title": rule_name,
-                "license": meta.get("license") or info["license"] or "unknown",
-                "source": meta.get("source") or info["repo_url"],
-                "version": meta.get("version", "1.0"),
-                "original_uuid": meta.get("id") or  "Unknown",
-                "description": meta.get("description") or info["description"] or  "No description provided",
-                "author": meta.get("author", "Unknown"),
-                "to_string": validation_result.normalized_content,
+                "title": rule_name, 
+                "license": meta_dict.get("license") or info.get("license", "unknown"),
+                "source": meta_dict.get("source") or info.get("repo_url"),
+                "version": meta_dict.get("version", "1.0"),
+                "original_uuid": meta_dict.get("uuid") or  "Unknown",
+                "description": description,
+                "author": meta_dict.get("author", "Unknown"),
+                "to_string": normalized_content,
                 "cve_id": cve
             }
         except Exception as e:
             return {
                 "format": "nova",
-                "title": "Invalid Rule",
-                 "license":  info["license"] or "unknown",
+                "title": f"{rule_name} (Metadata Error)",
+                "license":  info.get("license", "unknown"),
                 "description": f"Error parsing metadata: {e}",
                 "version": "N/A",
-                "source": info["repo_url"],
+                "source": info.get("repo_url", "Unknown"),
                 "original_uuid":  "Unknown",
-                "author": info["author"] or "Unknown",
+                "author": info.get("author", "Unknown"),
                 "cve_id": None,
                 "to_string": content,
             }
@@ -109,7 +116,7 @@ class NovaRule(RuleType):
 
     def get_rule_files(self, file: str) -> bool:
         """
-        Retrieve all Nova rule files (.nova) from a repository.
+        Retrieve all Nova rule files (.nov) from a repository.
         """
         if file.endswith(".nov"):
             return True
@@ -137,7 +144,7 @@ class NovaRule(RuleType):
 
     def get_rule_files_update(self, repo_dir: str) -> List[str]:
         """
-        Retrieve all Nova rule files (.nova) from a repository.
+        Retrieve all Nova rule files (.nov) from a repository.
         """
         nova_files = []
         for root, dirs, files in os.walk(repo_dir):
@@ -147,18 +154,29 @@ class NovaRule(RuleType):
                     nova_files.append(os.path.join(root, file))
         return nova_files
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
-        """
-        Search for a Nova rule by its index (for demo purposes).
-        """
-        rule = RuleModel.get_rule(rule_id)
-        if rule is None:
-            return f"No rule found with ID {rule_id} in the database.", False
-        nova_files = self.get_rule_files_update(repo_dir)
-        count = 0
-        for filepath in nova_files:
-            rules = self.extract_rules_from_file(filepath)
-            for r in rules:
-                if count == rule_id:
-                    return r
-                count += 1
-        return f"Nova Rule with ID '{rule.uuid}' not found inside repo.", False
+            """
+            Search for a Nova rule inside a locally cloned repository using the rule's title (name).
+            """
+            rule = RuleModel.get_rule(rule_id)
+            if rule is None:
+                return f"No rule found with ID {rule_id} in the database.", False
+
+            target_rule_name = rule.title 
+
+            if not target_rule_name:
+                return f"Rule {rule_id} has no title in DB.", False
+
+            nova_files = self.get_rule_files_update(repo_dir)
+
+            for filepath in nova_files:
+                rules = self.extract_rules_from_file(filepath)
+                for r in rules:
+                    match = re.search(r'rule\s+(\w+)', r, re.IGNORECASE)
+                    
+                    if match:
+                        found_rule_name = match.group(1)
+
+                        if found_rule_name == target_rule_name:
+                            return r, True
+
+            return f"Nova Rule '{target_rule_name}' not found inside local repo.", False

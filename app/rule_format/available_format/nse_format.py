@@ -58,32 +58,33 @@ class NseRule(RuleType):
         return ValidationResult(ok=(len(errors) == 0), errors=errors, warnings=warnings, normalized_content=content)
 
 
-    def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult ) -> Dict[str, Any]:
+    def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
         """
         Extract metadata from an NSE rule.
         """
+        filepath = info.get("filepath")
+        title = os.path.splitext(os.path.basename(filepath))[0] if filepath else "unknown_rule"
+
         try:
             meta: Dict[str, Any] = {}
-
-            # description = [[ ... ]]
+            
             m = re.search(r'description\s*=\s*\[\[([\s\S]*?)\]\]', content)
             if m:
                 meta["description"] = m.group(1).strip()
                 _, cve = detect_cve(meta["description"]or "")
+            else:
+                cve = None
 
-            # author / license / version
             for key in ("author", "license", "version"):
                 m = re.search(rf'{key}\s*=\s*["\'](.+?)["\']', content)
                 if m:
                     meta[key] = m.group(1).strip()
 
-            # categories = {"a","b"}
             m = re.search(r'categories\s*=\s*\{([^\}]*)\}', content)
             if m:
                 items = re.findall(r'["\'](.*?)["\']', m.group(1))
                 meta["categories"] = items
 
-            # detect rule type
             if re.search(r'\bportrule\b', content):
                 meta["rule_type"] = "portrule"
             elif re.search(r'\bhostrule\b', content):
@@ -93,13 +94,8 @@ class NseRule(RuleType):
             else:
                 meta["rule_type"] = "unknown"
 
-            filepath = info.get("filepath")
-            if filepath:
-                title = os.path.splitext(os.path.basename(filepath))[0]
-            else:
-                title = "unknown_rule"
+            normalized_content = getattr(validation_result, 'normalized_content', content)
 
-           
             return {
                 "format": "nse",
                 "title": title,
@@ -111,18 +107,18 @@ class NseRule(RuleType):
                 "author": meta.get("author", "Unknown"),
                 "categories": meta.get("categories", []),
                 "rule_type": meta.get("rule_type", "unknown"),
-                "to_string": validation_result.normalized_content or content,
-                "cve_id": None,  # NSE scripts rarely contain explicit CVEs
+                "to_string": normalized_content,
+                "cve_id": cve, 
             }
 
         except Exception as e:
             return {
                 "format": "nse",
-                "title": "Invalid Rule",
+                "title": f"{title} (Metadata Error)",
                 "license": info.get("license") or "unknown",
                 "description": f"Error parsing metadata: {e}",
                 "version": "N/A",
-                "source": info.get("repo_url"),
+                "source": info.get("repo_url", "Unknown"),
                 "original_uuid": "Unknown",
                 "author": info.get("author") or "Unknown",
                 "categories": [],

@@ -3,31 +3,34 @@
 
 {% block content %}
 <div class="container mt-4" v-cloak>
-   
+
     <h2 class="fw-bold mb-1 text-center text-primary">
-        <i class="fas fa-shield-alt me-2"></i>  {{ rule.title }}
+        <i class="fas fa-shield-alt me-2"></i> {{ rule.title }}
     </h2>
     <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
     <p class="text-muted mt-2">
         Here you can find all the details about the rule "<strong>{{ rule.title }}</strong>".
         Propose edits, view related rules, and engage with the community through comments.
     </p>
-    
 
-    <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist" >
+
+    <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist">
         <li class="nav-item flex-fill text-center">
-            <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab" aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
-                    Detail Rule
+            <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab"
+                aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
+                Detail Rule
             </a>
         </li>
         <li class="nav-item flex-fill text-center">
-            <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab" aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
-                    Suggest an Edit
+            <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab"
+                aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
+                Suggest an Edit
             </a>
         </li>
         <li class="nav-item flex-fill text-center">
-            <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab" aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
-                    Pull Request
+            <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab"
+                aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
+                Pull Request
             </a>
         </li>
     </ul>
@@ -41,56 +44,65 @@
                     <div class="row align-items-center">
                         <div class="col-9">
                             <h5>
-                                <i class="fas fa-shield-alt me-2 text-primary mb-0 text-truncate"></i> <span class="mb-2" style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">{{ rule.title }}</span>
+                                <i class="fas fa-shield-alt me-2 text-primary mb-0 text-truncate"></i> <span
+                                    class="mb-2"
+                                    style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">{{
+                                    rule.title }}</span>
                             </h5>
                         </div>
                         <div class="col-3 text-end">
                             {% if current_user.is_authenticated %}
-                                {% if current_user.id == rule.user_id or current_user.is_admin() %}
-                                <a :href="`/rule/edit_rule/{{rule.id}}`" class="btn btn-secondary btn-sm me-2" title="Edit the rule">
-                                    <i class="fas fa-pen"></i>
-                                </a>
-                                <button type="button" class="btn btn-danger btn-sm me-2" title="Delete the rule" data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+{{rule.id}}">
-                                    <i class="fa-solid fa-trash fa-fw"></i>
-                                </button>
-                                <div class="modal fade" :id="'delete_rule_modal_'+{{rule.id}}" tabindex="-1" aria-labelledby="delete_rule_modal" aria-hidden="true">
-                                    <div class="modal-dialog modal-sm">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h1 class="modal-title fs-5 text-truncate" style=" max-width: 200px;" id="delete_rule_modal">
-                                                    Delete {{ rule.title }} ?
-                                                </h1>
-                                                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                <button class="btn btn-danger" @click="deleteRule()">
-                                                    <i class="fa-solid fa-trash"></i> Confirm
-                                                </button>
-                                            </div>
+                            {% if current_user.id == rule.user_id or current_user.is_admin() %}
+                            <a :href="`/rule/edit_rule/{{rule.id}}`" class="btn btn-secondary btn-sm me-2"
+                                title="Edit the rule">
+                                <i class="fas fa-pen"></i>
+                            </a>
+                            <button type="button" class="btn btn-danger btn-sm me-2" title="Delete the rule"
+                                data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+{{rule.id}}">
+                                <i class="fa-solid fa-trash fa-fw"></i>
+                            </button>
+                            <div class="modal fade" :id="'delete_rule_modal_'+{{rule.id}}" tabindex="-1"
+                                aria-labelledby="delete_rule_modal" aria-hidden="true">
+                                <div class="modal-dialog modal-sm">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h1 class="modal-title fs-5 text-truncate" style=" max-width: 200px;"
+                                                id="delete_rule_modal">
+                                                Delete {{ rule.title }} ?
+                                            </h1>
+                                            <button class="btn-close" data-bs-dismiss="modal"
+                                                aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary"
+                                                data-bs-dismiss="modal">Close</button>
+                                            <button class="btn btn-danger" @click="deleteRule()">
+                                                <i class="fa-solid fa-trash"></i> Confirm
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                                {% endif %}
-                                <a @click="favorite()"
-                                    class="btn btn-success btn-sm me-2"
-                                    :title="currentRule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
-                                    <i class="fa-solid fa-star"
-                                        :class="currentRule.is_favorited ? 'text-warning' : 'text-white'">
-                                    </i>
-                                </a>
+                            </div>
+                            {% endif %}
+                            <a @click="favorite()" class="btn btn-success btn-sm me-2"
+                                :title="currentRule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
+                                <i class="fa-solid fa-star"
+                                    :class="currentRule.is_favorited ? 'text-warning' : 'text-white'">
+                                </i>
+                            </a>
                             {% endif %}
                         </div>
                     </div>
                 </div>
-                
-                
+
+
                 <div class="card-body">
                     <div class="mb-4">
                         <p>
                             <i class="fas fa-align-left me-2 text-secondary"></i>
                             <strong>Description:</strong>
-                            <span v-if="currentRule.cve_id && currentRule.cve_id !== 'None'" class="badge bg-danger ms-2">
+                            <span v-if="currentRule.cve_id && currentRule.cve_id !== 'None'"
+                                class="badge bg-danger ms-2">
                                 <i class="fas fa-shield-alt me-1"></i>
                                 CVE [[ currentRule.cve_id ]]
                             </span>
@@ -126,9 +138,9 @@
                             <p><i class="fas fa-link me-2 text-secondary"></i><strong>Source :</strong></p>
                             <p>
                                 {% if rule.source.startswith('http') %}
-                                    <a href="{{ rule.source }}" target="_blank">{{ rule.source }}</a>
+                                <a href="{{ rule.source }}" target="_blank">{{ rule.source }}</a>
                                 {% else %}
-                                    {{ rule.source }}
+                                {{ rule.source }}
                                 {% endif %}
                             </p>
                         </div>
@@ -136,11 +148,13 @@
 
                     <div class="row ">
                         <div class="col-md-6">
-                            <p><i class="fas fa-calendar-plus me-2 text-secondary"></i><strong>Creation date :</strong></p>
+                            <p><i class="fas fa-calendar-plus me-2 text-secondary"></i><strong>Creation date :</strong>
+                            </p>
                             <p>{{ rule.creation_date.strftime('%d/%m/%Y %H:%M:%S') }}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><i class="fas fa-calendar-alt me-2 text-secondary"></i><strong>Modification date :</strong></p>
+                            <p><i class="fas fa-calendar-alt me-2 text-secondary"></i><strong>Modification date
+                                    :</strong></p>
                             <p>{{ rule.last_modif.strftime('%d/%m/%Y %H:%M:%S') }}</p>
                         </div>
                     </div>
@@ -175,9 +189,10 @@
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Rule Content</h5>
 
-                    <button id="copyBtn" title="Copy content" class="btn btn-outline-primary btn-sm" onclick="copyToClipboard()">
-                    <i id="copyIcon" class="fas fa-copy me-1"></i>
-                    <span id="copyText">Copy</span>
+                    <button id="copyBtn" title="Copy content" class="btn btn-outline-primary btn-sm"
+                        onclick="copyToClipboard()">
+                        <i id="copyIcon" class="fas fa-copy me-1"></i>
+                        <span id="copyText">Copy</span>
                     </button>
                 </div>
 
@@ -186,15 +201,15 @@
                     <ul class="nav nav-tabs nav-fill mb-3" id="ruleTabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="normal-tab" data-bs-toggle="tab"
-                            data-bs-target="#normal" type="button" role="tab">Normal</button>
+                                data-bs-target="#normal" type="button" role="tab">Normal</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="json-tab" data-bs-toggle="tab"
-                            data-bs-target="#json" type="button" role="tab">JSON</button>
+                            <button class="nav-link" id="json-tab" data-bs-toggle="tab" data-bs-target="#json"
+                                type="button" role="tab">JSON</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="misp-tab" data-bs-toggle="tab"
-                            data-bs-target="#misp" type="button" role="tab">MISP Object</button>
+                            <button class="nav-link" id="misp-tab" data-bs-toggle="tab" data-bs-target="#misp"
+                                type="button" role="tab">MISP Object</button>
                         </li>
                     </ul>
 
@@ -213,7 +228,9 @@
                     </div>
                 </div>
 
-                <a :href="'/rule/history/' + currentRule.id" class="btn btn-sm btn-secondary" title="View all changes of the rule"> <i class="fas fa-clock me-1"></i> History ([[ currentRuleHistoryCount > 0 ? currentRuleHistoryCount : 0 ]]) </a>
+                <a :href="'/rule/history/' + currentRule.id" class="btn btn-sm btn-secondary"
+                    title="View all changes of the rule"> <i class="fas fa-clock me-1"></i> History ([[
+                    currentRuleHistoryCount > 0 ? currentRuleHistoryCount : 0 ]]) </a>
             </div>
 
             <!-- Actions Card -->
@@ -223,7 +240,8 @@
                     <div class="d-flex align-items-center flex-wrap">
                         <!-- Download button -->
                         <div class="dropdown mb-2">
-                            <button class="btn btn-success dropdown-toggle " type="button" id="downloadMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-success dropdown-toggle " type="button" id="downloadMenuButton"
+                                data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-download me-1"></i> Download
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="downloadMenuButton">
@@ -231,52 +249,61 @@
                                     <button class="dropdown-item" @click="download_rule('txt')">Download Rule</button>
                                 </li>
                                 <li>
-                                    <button class="dropdown-item" @click="download_rule('misp')">Download as MISP Object</button>
+                                    <button class="dropdown-item" @click="download_rule('misp')">Download as MISP
+                                        Object</button>
                                 </li>
                                 <li>
-                                    <button class="dropdown-item" @click="download_rule('json')">Download as JSON</button>
+                                    <button class="dropdown-item" @click="download_rule('json')">Download as
+                                        JSON</button>
                                 </li>
                             </ul>
                         </div>
 
-                        
+
                         {% if current_user.is_authenticated %}
-                            <!-- Request Ownership button -->
-                            {% if rule.user_id != current_user.id%}
-                                <div class="ms-2 mb-2">
-                                    <button class="btn btn-warning m-2" data-bs-toggle="modal" :data-bs-target="'#ownershipModal' + {{ rule.id }}" title="Ask to become the owner of this rule">
-                                        <i class="fas fa-user-shield me-1"></i> Request Ownership
-                                    </button>
-                                    <!-- Modal -->
-                                    <div class="modal fade" :id="'ownershipModal' + {{ rule.id }}" tabindex="-1" aria-labelledby="ownershipModalLabel" aria-hidden="true">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title" id="ownershipModalLabel">Request Ownership</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <p>Do you want to request ownership for:</p>
-                                                    <ul>
-                                                    <li><strong>This specific rule</strong> only</li>
-                                                    <li><strong>All rules</strong> that come from the same source: <code>{{ rule.source }}</code></li>
-                                                    </ul>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                    <button class="btn btn-warning" @click="Ownership({{ rule.id }}, 1)" data-bs-dismiss="modal">
-                                                    Only this rule
-                                                    </button>
-                                                    <button class="btn btn-primary" @click="Ownership({{ rule.id }}, 2)" data-bs-dismiss="modal">
-                                                    All rules from this source
-                                                    </button>
-                                                </div>
-                                            </div>
+                        <!-- Request Ownership button -->
+                        {% if rule.user_id != current_user.id%}
+                        <div class="ms-2 mb-2">
+                            <button class="btn btn-warning m-2" data-bs-toggle="modal"
+                                :data-bs-target="'#ownershipModal' + {{ rule.id }}"
+                                title="Ask to become the owner of this rule">
+                                <i class="fas fa-user-shield me-1"></i> Request Ownership
+                            </button>
+                            <!-- Modal -->
+                            <div class="modal fade" :id="'ownershipModal' + {{ rule.id }}" tabindex="-1"
+                                aria-labelledby="ownershipModalLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="ownershipModalLabel">Request Ownership</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Do you want to request ownership for:</p>
+                                            <ul>
+                                                <li><strong>This specific rule</strong> only</li>
+                                                <li><strong>All rules</strong> that come from the same source:
+                                                    <code>{{ rule.source }}</code></li>
+                                            </ul>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button class="btn btn-warning" @click="Ownership({{ rule.id }}, 1)"
+                                                data-bs-dismiss="modal">
+                                                Only this rule
+                                            </button>
+                                            <button class="btn btn-primary" @click="Ownership({{ rule.id }}, 2)"
+                                                data-bs-dismiss="modal">
+                                                All rules from this source
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                                
-                            {% endif%}
+                            </div>
+                        </div>
+
+                        {% endif%}
                         {% endif%}
                     </div>
                     <!-- Votes -->
@@ -288,13 +315,15 @@
                             <button @click="vote('down')" class="btn btn-danger btn-sm" title="Dislike this rule">
                                 <i class="fas fa-thumbs-down"></i> [[ currentRule.vote_down ]]
                             </button>
-                            <a class="btn btn-secondary btn-sm dropdown-toggle m-2" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown"aria-expanded="false" title="More actions">
+                            <a class="btn btn-secondary btn-sm dropdown-toggle m-2" href="#" role="button"
+                                id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false"
+                                title="More actions">
                                 <i class="fas fa-ellipsis-v"></i>
-                                </a>
+                            </a>
 
-                                <ul class="dropdown-menu dropdown-menu-end " aria-labelledby="dropdownMenuLink">
-                                    <li><a class="dropdown-item" :href="`/rule/report/{{rule.id}}`">Report rule</a></li>
-                                </ul>
+                            <ul class="dropdown-menu dropdown-menu-end " aria-labelledby="dropdownMenuLink">
+                                <li><a class="dropdown-item" :href="`/rule/report/{{rule.id}}`">Report rule</a></li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -306,7 +335,7 @@
                 <div class="card-header bg-light position-relative">
                     <h5 class="mb-0"><i class="fa-solid fa-users-gear me-2 "></i>Contributors to Rule
                 </div>
-            
+
                 <div v-if="contributor_list.length === 0" class="alert alert-info">
                     <i class="fa fa-info-circle me-1"></i> No contributors found for this rule.
                 </div>
@@ -318,8 +347,9 @@
                                 <i class="fa-solid fa-user-circle fa-2x me-3 text-secondary"></i>
                                 <div>
                                     <h6 class="card-title mb-1">
-                                        <a :href="`/account/detail_user/${contributor.user_id}`" style="text-decoration-line: underline;" title="View more about this user">
-                                            [[ contributor.user_name ]] 
+                                        <a :href="`/account/detail_user/${contributor.user_id}`"
+                                            style="text-decoration-line: underline;" title="View more about this user">
+                                            [[ contributor.user_name ]]
                                         </a>
                                         <span class="badge bg-success ms-2">
                                             <i class="fa-solid fa-check"></i> Contributor
@@ -337,7 +367,7 @@
                 <div class="card-header bg-light position-relative">
                     <h5 class="mb-0"><i class="fa-solid fa-clipboard-list me-2 "></i> Part of Bundle
                 </div>
-                
+
                 <div v-if="bundleListRule.length === 0" class="alert alert-info d-flex align-items-center">
                     <i class="fas fa-info-circle me-2"></i>
                     <div>No bundle is associated with this rule.</div>
@@ -347,12 +377,14 @@
                     <div class="col" v-for="bundle in bundleListRule" :key="bundle.id">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-body d-flex align-items-start gap-3">
-                                <div class="icon-wrapper bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <div class="icon-wrapper bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
                                     <i class="fas fa-boxes-stacked fa-lg"></i>
                                 </div>
                                 <div class="flex-grow-1">
                                     <h6 class="card-title mb-0">
-                                        <a :href="`/bundle/detail/${bundle.id}`" class="text-decoration-none text-dark" title="View more about this bundle">
+                                        <a :href="`/bundle/detail/${bundle.id}`" class="text-decoration-none text-dark"
+                                            title="View more about this bundle">
                                             [[ bundle.name ]]
                                         </a>
                                     </h6>
@@ -369,7 +401,7 @@
             <div class="card shadow-lg  mb-4 ">
                 <div class="card-header bg-light position-relative">
                     <h5 class="mb-0">
-                    <i class="fas fa-shield-alt me-2"></i>Related Rules
+                        <i class="fas fa-shield-alt me-2"></i>Related Rules
                     </h5>
                 </div>
 
@@ -386,23 +418,24 @@
                                         <h6 class="text-truncate mb-0 text-primary">
                                             <i class="fas fa-shield-alt me-2"></i> [[ rule.title ]]
                                         </h6>
-                                        <a @click="favoriteSimilar(rule.id)"
-                                            class="btn btn-success btn-sm me-2"
+                                        <a @click="favoriteSimilar(rule.id)" class="btn btn-success btn-sm me-2"
                                             :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
                                             <i class="fa-solid fa-star"
                                                 :class="rule.is_favorited ? 'text-warning' : 'text-white'">
                                             </i>
                                         </a>
                                     </div>
-                                    
+
                                 </div>
                                 <div class="card-body d-flex flex-column">
                                     <span class="small mb-2">[[ rule.description ]]</span>
                                     <span><strong>Author:</strong> [[ rule.author ]]</span>
-                                    <span><strong>Format:</strong> <span class="badge text-bg-primary "> [[ rule.format ]] </span></span>
+                                    <span><strong>Format:</strong> <span class="badge text-bg-primary "> [[ rule.format
+                                            ]] </span></span>
                                     <hr>
                                     <div class=" text-center">
-                                        <a :href="rule.id" title="View more about this rule" class="btn btn-sm btn-primary">
+                                        <a :href="rule.id" title="View more about this rule"
+                                            class="btn btn-sm btn-primary">
                                             View more
                                         </a>
                                     </div>
@@ -417,42 +450,40 @@
             <div class="card shadow-lg  mb-4">
                 <div class="card-header bg-light">
                     <h5 class="mb-0">
-                        <i class="fas fa-comments"></i> Comments 
+                        <i class="fas fa-comments"></i> Comments
                         <span class="badge bg-secondary ms-2">[[ comments_list.length ]]</span>
                         <template v-if="comments_list.length > 0">
-                            <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse" data-bs-target="#commentsCollapse" aria-expanded="true" aria-controls="commentsCollapse">
+                            <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#commentsCollapse" aria-expanded="true"
+                                aria-controls="commentsCollapse">
                                 <i class="fas fa-eye"></i> Show/Hide Comments
                             </button>
                         </template>
                     </h5>
                 </div>
-                
+
                 <div class="card-body">
 
                     {% if current_user.is_authenticated %}
                     <form @submit.prevent="submitComment">
                         <input type="hidden" name="csrf_token" :value="csrf_token" />
-                        
+
                         <div class="mb-3">
                             <label for="commentContent" class="form-label">Leave a comment:</label>
-                            <textarea
-                                class="form-control"
-                                id="commentContent"
-                                v-model="newCommentContent"
-                                rows="3"
-                                placeholder="Your comment here..."
-                                required>
+                            <textarea class="form-control" id="commentContent" v-model="newCommentContent" rows="3"
+                                placeholder="Your comment here..." required>
                             </textarea>
                         </div>
-                    
+
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-paper-plane"></i> Post Comment
                         </button>
                     </form>
-                    
+
                     {% else %}
                     <div class="alert alert-info">
-                        <i class="fas fa-sign-in-alt"></i> Please <a href="{{ url_for('account.login') }}">log in</a> to post a comment.
+                        <i class="fas fa-sign-in-alt"></i> Please <a href="{{ url_for('account.login') }}">log in</a> to
+                        post a comment.
                     </div>
                     {% endif %}
 
@@ -460,7 +491,8 @@
 
                     <!-- Existing comments section, collapsible -->
                     <template v-if="comments_list && comments_list.length > 0">
-                        <div class="collapse show" id="commentsCollapse" v-for="(comment, index) in comments_list" :key="comment.id">
+                        <div class="collapse show" id="commentsCollapse" v-for="(comment, index) in comments_list"
+                            :key="comment.id">
                             <div class="mb-4">
                                 <div class="d-flex justify-content-between">
                                     <div>
@@ -476,40 +508,33 @@
                                 <div class="mt-2">
                                     <div class="d-flex justify-content-between">
                                         <div class="d-flex gap-3">
-                                            <template v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
+                                            <template
+                                                v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
                                                 <!-- Edit Button -->
-                                                <button
-                                                    class="btn btn-warning btn-sm"
-                                                    type="button"
-                                                    data-bs-toggle="collapse"
-                                                    :data-bs-target="'#editForm' + comment.id"
-                                                    aria-expanded="false"
-                                                    :aria-controls="'editForm' + comment.id">
-                                                    <i class="fas fa-pen"></i> 
+                                                <button class="btn btn-warning btn-sm" type="button"
+                                                    data-bs-toggle="collapse" :data-bs-target="'#editForm' + comment.id"
+                                                    aria-expanded="false" :aria-controls="'editForm' + comment.id">
+                                                    <i class="fas fa-pen"></i>
                                                 </button>
-                                    
+
                                                 <!-- Delete Button -->
-                                                <button
-                                                    @click="deleteComment(comment.id)"
+                                                <button @click="deleteComment(comment.id)"
                                                     class="btn btn-danger btn-sm">
-                                                    <i class="fas fa-trash-alt"></i> 
+                                                    <i class="fas fa-trash-alt"></i>
                                                 </button>
                                             </template>
                                         </div>
                                     </div>
                                 </div>
                                 <!-- Collapse Zone Below (Edit Form) -->
-                                <template v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
+                                <template
+                                    v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
                                     <div class="collapse mt-2 w-100" :id="'editForm' + comment.id">
                                         <form @submit.prevent="editComment(comment.id)">
                                             <input type="hidden" name="csrf_token" :value="csrf_token" />
                                             <div class="input-group">
-                                                <input
-                                                    type="text"
-                                                    class="form-control"
-                                                    v-model="comment.editContent"
-                                                    required
-                                                />
+                                                <input type="text" class="form-control" v-model="comment.editContent"
+                                                    required />
 
                                                 <button type="submit" class="btn btn-warning">
                                                     <i class="fas fa-edit"></i> Save
@@ -525,40 +550,30 @@
 
                     <template v-else>
                         <p><i class="fas fa-info-circle"></i> No comments yet. Be the first to comment!</p>
-                    </template>          
+                    </template>
                 </div>
-            </div>            
+            </div>
             <div id="rule_id" data-rule-id="{{ rule.id }}"></div>
         </div>
         <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
             <div class="card card-body shadow-sm" id="main-container">
                 {% if current_user.is_authenticated %}
                 <form action="{{ url_for('rule.propose_edit', rule_id=rule.id) }}" method="post">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
                     <!-- Rule Content -->
                     <div class="form-group mb-4">
                         <label for="rule_content" class="fw-bold">Rule Content</label><span style="color:red"> *</span>
-                        <textarea 
-                            id="rule_content" 
-                            name="rule_content" 
-                            class="form-control" 
-                            rows="15" 
-                            placeholder="Enter the modified rule content here"
-                            v-text="rule_format.normal"
+                        <textarea id="rule_content" name="rule_content" class="form-control" rows="15"
+                            placeholder="Enter the modified rule content here" v-text="rule_format.normal"
                             required></textarea>
                     </div>
 
                     <!-- Optional message -->
                     <div class="form-group mb-4">
                         <label for="message" class="fw-bold">Message or Justification</label>
-                        <input 
-                            id="message" 
-                            type="text" 
-                            name="message" 
-                            class="form-control" 
-                            placeholder="Explain the changes you made or provide any additional context"
-                        >
+                        <input id="message" type="text" name="message" class="form-control"
+                            placeholder="Explain the changes you made or provide any additional context">
                     </div>
 
                     <!-- Submit button -->
@@ -571,60 +586,61 @@
                 {% else %}
                 <div class="card shadow-lg  mb-4">
                     <div class="card-body text-center">
-                        <p>Please <a href="{{ url_for('account.login') }}" class="text-primary">log in</a> to propose an edit.</p>
+                        <p>Please <a href="{{ url_for('account.login') }}" class="text-primary">log in</a> to propose an
+                            edit.</p>
                     </div>
                 </div>
-                {% endif %}    
+                {% endif %}
             </div>
-            
 
-            
+
+
         </div>
         <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
             <div class="card card-body shadow-sm" id="main-container">
-                <div v-if="pull_request_list.length === 0" >
+                <div v-if="pull_request_list.length === 0">
                     <p> <i class="fas fa-info-circle"></i> No edit proposals found for this rule.</p>
                 </div>
-            
+
                 <div v-else class="list-group mt-3">
-                    <a v-for="proposal in pull_request_list" :key="proposal.id" :href="'/rule/proposal_content_discuss?id=' + proposal.id" 
-                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center  shadow-sm mb-2 rounded-3 transition" style="background-color: var(--code-bg-color);">
+                    <a v-for="proposal in pull_request_list" :key="proposal.id"
+                        :href="'/rule/proposal_content_discuss?id=' + proposal.id"
+                        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center  shadow-sm mb-2 rounded-3 transition"
+                        style="background-color: var(--code-bg-color);">
                         <div class="d-flex flex-column flex-grow-1 p-2">
-                        <div class="d-flex align-items-center mb-1">
-                            <i class="fas fa-user-edit text-primary me-2"></i>
-                            <strong class="me-1">[[ proposal.user_name ]]</strong>
-                            <span class="text-muted">submitted a change</span>
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fas fa-user-edit text-primary me-2"></i>
+                                <strong class="me-1">[[ proposal.user_name ]]</strong>
+                                <span class="text-muted">submitted a change</span>
+                            </div>
+
+                            <div class="text-muted small">
+                                <i class="fas fa-clock me-1"></i> [[ proposal.timestamp ]]
+                            </div>
+
+                            <div class="text-secondary mt-1">
+                                <i class="fas fa-pen me-1"></i>
+                                [[ proposal.message || 'No message' ]]
+                            </div>
                         </div>
 
-                        <div class="text-muted small">
-                            <i class="fas fa-clock me-1"></i> [[ proposal.timestamp ]]
-                        </div>
-
-                        <div class="text-secondary mt-1">
-                            <i class="fas fa-pen me-1"></i>
-                            [[ proposal.message || 'No message' ]]
-                        </div>
-                        </div>
-
-                        <span
-                        class="badge fs-6 px-3 py-2 text-capitalize shadow-sm"
-                        :class="{
+                        <span class="badge fs-6 px-3 py-2 text-capitalize shadow-sm" :class="{
                             'bg-success text-light': proposal.status === 'accepted',
                             'bg-danger text-light': proposal.status === 'rejected',
                             'bg-warning text-dark': proposal.status !== 'accepted' && proposal.status !== 'rejected'
-                        }"
-                        >
-                        <i class="fas fa-info-circle me-1"></i> [[ proposal.status ]]
+                        }">
+                            <i class="fas fa-info-circle me-1"></i> [[ proposal.status ]]
                         </span>
                     </a>
                 </div>
 
-            
+
                 <!-- Pagination -->
                 <nav v-if="total_pages > 1" class="mt-4">
                     <ul class="pagination justify-content-center">
                         <li class="page-item" :class="{ disabled: current_page === 1 }">
-                            <a class="page-link" href="#" @click.prevent="fetchPullRequest(current_page - 1)">Previous</a>
+                            <a class="page-link" href="#"
+                                @click.prevent="fetchPullRequest(current_page - 1)">Previous</a>
                         </li>
                         <li class="page-item disabled">
                             <span class="page-link">[[ current_page ]]</span>
@@ -642,10 +658,10 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref , onMounted} = Vue;
-    import { message_list, create_message, display_toast} from '/static/js/toaster.js';
+    const { createApp, ref, onMounted } = Vue;
+    import { message_list, create_message, display_toast } from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
-    
+
     function highlightJSON() {
         document.querySelectorAll('pre code.json').forEach(block => hljs.highlightElement(block))
     }
@@ -663,7 +679,7 @@
                 });
 
                 const res = await fetch('/rule/download_rule?' + params.toString());
-                const data = await res.json(); 
+                const data = await res.json();
 
                 if (res.ok && data.success) {
 
@@ -671,7 +687,7 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = data.filename; 
+                    a.download = data.filename;
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
@@ -696,7 +712,7 @@
                 if (res.ok) {
                     const data = await res.json()
                     rule_format.value = data.formats
-                } 
+                }
             }
             get_rule_in_each_format(rule_id)
 
@@ -706,7 +722,7 @@
             const currentRuleHistoryCount = ref(0)
 
 
-            async function fetchCurrentUser(){
+            async function fetchCurrentUser() {
                 const res = await fetch('/rule/get_current_user')
                 const data = await res.json()
                 current_user_is_admin.value = data.user
@@ -717,8 +733,8 @@
                 const res = await fetch('/get_current_user_connected');
                 const data = await res.json();
                 current_user_is_connected.value = data.is_authenticated;
-                if(data.is_authenticated == true){
-                fetchCurrentUser()
+                if (data.is_authenticated == true) {
+                    fetchCurrentUser()
                 }
             }
 
@@ -728,7 +744,7 @@
                 const params = new URLSearchParams({
                     rule_id
                 })
-                const res = await fetch(`/rule/get_rule_history_count?`+ params.toString());
+                const res = await fetch(`/rule/get_rule_history_count?` + params.toString());
                 if (res.ok) {
                     const data = await res.json();
                     currentRuleHistoryCount.value = data.count;
@@ -745,15 +761,15 @@
             const currentRule = ref([])
 
 
-             async function fetchCurrentRule(){
+            async function fetchCurrentRule() {
                 const response = await fetch('/rule/get_current_rule?rule_id=' + rule_id)
                 if (response.ok) {
                     const data = await response.json();
-                    currentRule.value = data.rule; 
-                } 
+                    currentRule.value = data.rule;
+                }
             }
 
-    
+
             /**
              *          #######################
              *          # Rule part of bundle #
@@ -761,12 +777,12 @@
              * */
             const bundleListRule = ref([])  // list of bundles where this rule is part of
 
-            async function fetchBundleList(){
+            async function fetchBundleList() {
                 const response = await fetch('/bundle/get_bundle_list_rule_part_of?rule_id=' + rule_id)
                 if (response.ok) {
                     const data = await response.json();
-                    bundleListRule.value = data.bundles || []; 
-                } 
+                    bundleListRule.value = data.bundles || [];
+                }
             }
             fetchBundleList()
 
@@ -780,36 +796,36 @@
                 const params = new URLSearchParams({
                     id: rule_id
                 })
-                const res = await fetch('/rule/delete_rule?'+ params.toString())
-                if(await res.status == 200){
-                    var myModalEl = document.getElementById('delete_rule_modal_'+rule_id);
+                const res = await fetch('/rule/delete_rule?' + params.toString())
+                if (await res.status == 200) {
+                    var myModalEl = document.getElementById('delete_rule_modal_' + rule_id);
                     var modal = bootstrap.Modal.getInstance(myModalEl)
                     modal.hide();
                     window.location.href = `/rule/rules_list`;
-                } 
+                }
                 //display_toast(res)
-                
+
             }
 
             async function vote(voteType) {
-                if(current_user_is_connected.value == true){
+                if (current_user_is_connected.value == true) {
                     const res = await fetch(`/rule/vote_rule?id=${rule_id}&vote_type=${voteType}`, { method: 'GET' })
                     const data = await res.json()
-                    
+
                     currentRule.value.vote_up = data.vote_up
                     currentRule.value.vote_down = data.vote_down
-                }else{
+                } else {
                     window.location.href = `/account/login`;
                 }
             }
 
-            async function Ownership(rule_id , choice){
-                if(choice == 1){
+            async function Ownership(rule_id, choice) {
+                if (choice == 1) {
                     var source = ""
-                }else{
+                } else {
                     var source = "{{ rule.source }}"
                 }
-                
+
                 const params = new URLSearchParams({
                     rule_id,
                     source,
@@ -817,17 +833,17 @@
                 })
                 const response = await fetch('/owner_request?' + params.toString())
                 if (await response.status == 200) {
-                    var myModalEle = document.getElementById('ownershipModal' + "{{ rule.id }}" );
+                    var myModalEle = document.getElementById('ownershipModal' + "{{ rule.id }}");
                     var modal = bootstrap.Modal.getInstance(myModalEle)
                     modal.hide();
-                } 
+                }
                 display_toast(response)
             }
 
 
             async function favorite() {
                 const res = await fetch(`/rule/favorite/${rule_id}`);
-                const data = await res.json(); 
+                const data = await res.json();
 
                 if (res.ok) {
                     currentRule.value.is_favorited = data.is_favorited;
@@ -843,7 +859,7 @@
 
             async function favoriteSimilar(similar_rule_id) {
                 const res = await fetch(`/rule/favorite/${similar_rule_id}`);
-                const data = await res.json(); 
+                const data = await res.json();
 
                 if (res.ok) {
                     const rule = similar_rules_list.value.find(r => r.id === similar_rule_id);
@@ -864,12 +880,12 @@
             const total_comments = ref(0)
             const newCommentContent = ref("");
 
-            async function submitComment(){
-                const response = await fetch('/rule/comment_add?new_content='+ newCommentContent.value + '&rule_id=' + rule_id)
+            async function submitComment() {
+                const response = await fetch('/rule/comment_add?new_content=' + newCommentContent.value + '&rule_id=' + rule_id)
                 if (response.ok) {
                     const data = await response.json();
-                    comments_list.value.unshift(data.comment); 
-                    newCommentContent.value = ""; 
+                    comments_list.value.unshift(data.comment);
+                    newCommentContent.value = "";
                 } else {
                     alert('Error while adding comment.');
                 }
@@ -881,7 +897,7 @@
                 const res = await fetch('/rule/edit_comment?commentID=' + commentId + '&newContent=' + encodeURIComponent(comment.editContent));
                 const data = await res.json();
                 if (res.ok) {
-                    
+
                     const index = comments_list.value.findIndex(c => c.id === commentId);
                     if (index !== -1) {
                         comments_list.value[index].content = data.updatedComment.content;
@@ -896,17 +912,17 @@
             }
 
             async function deleteComment(commentId) {
-                const res = await fetch('/rule/comment_delete/' + commentId );
+                const res = await fetch('/rule/comment_delete/' + commentId);
                 if (res.ok) {
                     const index = comments_list.value.findIndex(c => c.id === commentId);
                     if (index !== -1) {
-                        comments_list.value.splice(index, 1);  
+                        comments_list.value.splice(index, 1);
                     }
-                } 
+                }
                 display_toast(res)
             }
 
-            async function fetchComments(page ) {
+            async function fetchComments(page) {
                 const res = await fetch('get_comments_page?page=' + page + '&rule_id=' + rule_id)
                 const data = await res.json()
                 comments_list.value = data.comments_list.map(comment => ({
@@ -929,15 +945,15 @@
             const total_pages = ref(1);
 
             async function fetchPullRequest(page) {
-                const res = await fetch('/rule/get_rules_propose_page?page='+page+'&rule_id='+rule_id);
-                if(res){
+                const res = await fetch('/rule/get_rules_propose_page?page=' + page + '&rule_id=' + rule_id);
+                if (res) {
                     const data = await res.json();
-                    if(data){
+                    if (data) {
                         pull_request_list.value = data.rules_list;
                         total_pages.value = data.total_pages_pending;
                         current_page.value = page;
                     }
-                    
+
                 }
             }
             fetchPullRequest(1)
@@ -950,13 +966,13 @@
             const contributor_list = ref([])
 
             async function fetchContributor() {
-                const res = await fetch('/rule/get_contributor?rule_id='+rule_id);
-                if(res){
+                const res = await fetch('/rule/get_contributor?rule_id=' + rule_id);
+                if (res) {
                     const data = await res.json();
-                    if(data){
+                    if (data) {
                         contributor_list.value = data.contributors;
                     }
-                    
+
                 }
             }
             fetchContributor()
@@ -969,11 +985,11 @@
 
             const similar_rules_list = ref([])
 
-            async function fetch_similar_rules_list(){
-                const res = await fetch('/rule/get_similar_rule?rule_id='+rule_id);
-                if(res){
+            async function fetch_similar_rules_list() {
+                const res = await fetch('/rule/get_similar_rule?rule_id=' + rule_id);
+                if (res) {
                     const data = await res.json();
-                    if(data){
+                    if (data) {
                         similar_rules_list.value = data.similar_rules;
                     }
                 }
@@ -991,14 +1007,14 @@
              *          ###############
              * */
 
-           
+
 
             onMounted(() => {
                 fetchCurrentRule()
                 highlightJSON();
             })
 
-    
+
             return {
                 bundleListRule,
                 Ownership,
@@ -1072,4 +1088,3 @@
     }
 </script>
 {% endblock %}
-

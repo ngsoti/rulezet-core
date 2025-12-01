@@ -1737,7 +1737,15 @@ def check_updates_by_url():
     if not valid_urls:
         return {"message": "No valid GitHub URLs provided.", "toast_class": "danger-subtle"}, 400
 
-    info = {"mode": "by_url", "count": len(valid_urls), "initiated_by": current_user.first_name}
+    info = {
+        "mode": "by_url", 
+        "count": len(valid_urls), 
+        "initiated_by": current_user.first_name, 
+        "repo_url": valid_urls[0], 
+        "license": None, 
+        "author": current_user.last_name, 
+        "descriprtion": None
+    }
 
     update_session = UpdateModel.Update_class(valid_urls, current_user, info, mode="by_url")
     update_session.start()
@@ -1979,3 +1987,79 @@ def get_rules_with_github_url():
         "total_rule": total,
         "total_pages": pagination.pages
     }), 200
+
+@rule_blueprint.route('/fix_new_rule/<int:new_rule_id>', methods=['GET'])
+@login_required
+def fix_new_rule(new_rule_id: int):
+    """
+    Moves an invalid rule from the temporary NewRule table to InvalidRuleModel 
+    for manual correction by the user, relying entirely on the RuleModel service layer.
+    """
+    
+    temp_rule = RuleModel.get_new_rule(new_rule_id) 
+
+    if not temp_rule:
+        flash(f"Temporary rule ID {new_rule_id} not found.", "danger")
+        return redirect(url_for('rule.rules_summary')) 
+
+    if temp_rule.rule_syntax_valid:
+        flash("This rule is already marked as valid. Use 'Add Rule' instead.", "info")
+        return redirect(request.referrer or url_for('rule.rules_summary'))
+
+    result_obj, error_message = RuleModel.save_invalid_rule_from_new_rule(
+        new_rule_obj=temp_rule, 
+        user=current_user
+    )
+
+    if error_message:
+        flash(f"Error saving rule for correction: {error_message}", "danger")
+        return redirect(url_for('rule.rules_summary'))
+
+    flash(f"Rule '{temp_rule.name_rule}' moved to manual correction.", "warning")
+    
+    return redirect(url_for('rule.edit_bad_rule', rule_id=result_obj.id))
+
+
+# # ----------------------------------------------------------------------
+# # --- Route 2 : ADD VALID RULE (Importation immédiate de la règle) ---
+# # ----------------------------------------------------------------------
+# @rule_blueprint.route('/add_new_rule/<int:new_rule_id>', methods=['GET'])
+# @login_required
+# def add_new_rule(new_rule_id: int):
+#     """
+#     Retrieves the valid rule content and imports it using the full parsing logic.
+#     """
+#     # 1. Récupérer la règle temporaire
+#     temp_rule = NewRule.query.get(new_rule_id)
+    
+#     if not temp_rule:
+#         flash(f"Temporary rule ID {new_rule_id} not found.", "danger")
+#         return redirect(url_for('rule.rules_summary'))
+
+#     if not temp_rule.rule_syntax_valid:
+#         flash("This rule is marked as invalid. Use 'Fix Rule' instead.", "danger")
+#         return redirect(request.referrer or url_for('rule.rules_summary'))
+
+#     content = temp_rule.rule_content
+#     format = temp_rule.format or "Unknown"
+
+#     # 2. Appeler la fonction d'importation/parsing
+#     success, message, imported_object = parse_rule_by_format(content, current_user, format)
+    
+#     if success:
+#         # db.session.delete(temp_rule) # Optionnel: supprimer l'entrée temporaire
+#         # db.session.commit()
+#         flash(f"Rule successfully imported: {message}", "success")
+        
+#         # 3. Rediriger vers la page de détail de la nouvelle règle
+#         # On suppose que imported_object est l'instance Rule ajoutée
+#         return redirect(url_for('rule.detail_rule', rule_id=imported_object.id))
+#     else:
+#         flash(f"Import failed: {message}", "danger")
+        
+#         # Si la fonction retourne une BadRule en cas d'échec (comme le ferait parse_rule_by_format)
+#         if isinstance(imported_object, InvalidRuleModel): 
+#             # Rediriger vers l'éditeur pour une correction manuelle
+#              return redirect(url_for('rule.edit_bad_rule', rule_id=imported_object.id))
+
+#         return redirect(url_for('rule.rules_summary'))

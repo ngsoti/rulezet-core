@@ -35,10 +35,10 @@ class YaraRule(RuleType):
     def get_class(self) -> str:
         return "YaraRule"
 
-    #---------------------#
+    # ---------------------#
     #   Abstract section  #
-    #---------------------#
-    
+    # ---------------------#
+
     def validate(self, content: str, **kwargs) -> ValidationResult:
         """Try to compile the YARA rule, auto-adding imports if necessary."""
         externals = {}
@@ -49,7 +49,8 @@ class YaraRule(RuleType):
         while attempts < max_attempts:
             try:
                 yara.compile(source=current_rule_text, externals=externals)
-                return ValidationResult(ok=True , errors="" ,normalized_content=current_rule_text)
+                # Correction: S'assurer que normalized_content est le texte final
+                return ValidationResult(ok=True, errors=[], normalized_content=current_rule_text)
             except yara.SyntaxError as e:
                 error_msg = str(e)
 
@@ -63,55 +64,68 @@ class YaraRule(RuleType):
                     attempts += 1
                     continue
 
-                return ValidationResult(ok=False, errors=[error_msg],  normalized_content=current_rule_text)
+                return ValidationResult(ok=False, errors=[error_msg], normalized_content=current_rule_text)
 
-        return ValidationResult(ok=False, errors=["Max validation attempts exceeded"] , normalized_content=current_rule_text)
+        return ValidationResult(ok=False, errors=["Max validation attempts exceeded"], normalized_content=current_rule_text)
 
-    
-
-    def parse_metadata(self, content: str , info: Dict , validation_result: str) -> Dict[str, Any]:
+    def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
         """Extract metadata and normalize it into a rule dict."""
-        # --- Extract meta block ---
+        
+        # --- 1. Extract rule name first (MUST be present for identification) ---
+        rule_name_match = re.search(r'rule\s+(\w+)', content)
+        rule_name = rule_name_match.group(1) if rule_name_match else "UNKNOWN_RULE_NAME"
+        
         try:
-
+            # --- 2. Extract optional meta block ---
             meta = {}
-            meta_block = re.search(r'meta\s*:\s*(.*?)\n\s*\w+\s*:', content, re.DOTALL)
+            # Utiliser la version normalisée si disponible, sinon le contenu brut
+            source_content = validation_result.normalized_content if validation_result.normalized_content else content
+            
+            # Recherche du bloc meta (entre 'meta:' et la prochaine section comme 'strings:' ou 'condition:')
+            meta_block = re.search(r'meta\s*:\s*(.*?)\n\s*(?:strings|condition|private|global)\s*:', source_content, re.DOTALL | re.IGNORECASE)
+            
             if meta_block:
-                entries = re.findall(r'(\w+)\s*=\s*"(.*?)"', meta_block.group(1))
+                # Si le bloc 'strings:' ou 'condition:' n'est pas trouvé immédiatement après,
+                # on utilise une approche plus tolérante :
+                meta_content = meta_block.group(1)
+                entries = re.findall(r'(\w+)\s*=\s*"(.*?)"', meta_content, re.DOTALL)
                 for key, val in entries:
                     meta[key] = val
+            
+            # --- 3. Detect CVE in description ---
+            # Utiliser le nom de la règle si aucune description méta n'est trouvée
+            description = meta.get("description") or f"Rule {rule_name} (No description metadata provided)."
+            _, cve = detect_cve(description)
 
-            # --- Extract rule name ---
-            rule_name_match = re.search(r'rule\s+(\w+)', content)
-            rule_name = rule_name_match.group(1) if rule_name_match else "unknown_rule"
-
-            # --- Detect CVE in description ---
-            _, cve = detect_cve(meta.get("description", "No description provided"))
-
-            # --- Build normalized dict ---
+            # --- 4. Build normalized dict ---
             rule_dict = {
                 "format": "yara",
-                "title": rule_name,
-                "license": meta.get("license") or info["license"] or "unknown",
-                "description": meta.get("description") or info["description"] or  "No description provided",
-                "source": info["repo_url"] or meta.get("source") or "Unknown",
+                # Utiliser le nom de règle extrait en première étape (garanti non vide si match)
+                "title": rule_name, 
+                "license": meta.get("license") or info.get("license", "unknown"),
+                "description": description,
+                "source": info.get("repo_url") or meta.get("source") or "Unknown",
                 "version": meta.get("version", "1.0"),
-                "original_uuid": meta.get("id") or  "Unknown",
-                "author": meta.get("author") or info["author"] or "Unknown",
-                "to_string": validation_result.normalized_content,
+                "original_uuid": meta.get("id") or "Unknown",
+                "author": meta.get("author") or info.get("author", "Unknown"),
+                # Utiliser le contenu normalisé après validation
+                "to_string": source_content, 
                 "cve_id": cve
             }
             return rule_dict
+            
         except Exception as e:
+            # Si une erreur survient, nous garantissons que 'title' n'est PAS "Invalid Rule" 
+            # mais le nom réel (s'il existe) pour le traitement.
             return {
                 "format": "yara",
-                "title": "Invalid Rule",
-                 "license":  info["license"] or "unknown",
-                "description": f"Error parsing metadata: {e}",
+                "title": rule_name, # <-- **CORRECTION CLÉ** : Utiliser le nom extrait
+                "license": info.get("license", "unknown"),
+                "description": f"Error parsing optional metadata in rule '{rule_name}': {e}",
                 "version": "N/A",
-                "source": info["repo_url"],
-                "original_uuid":  "Unknown",
-                "author": info["author"] or "Unknown",
+                "source": info.get("repo_url", "Unknown"),
+                "original_uuid": "Unknown",
+                "author": info.get("author", "Unknown"),
                 "cve_id": None,
                 "to_string": content,
             }

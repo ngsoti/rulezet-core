@@ -46,6 +46,11 @@ class CRSRule(RuleType):
         """
         Parse the single CRS rule
         """
+        rule_id = None
+    
+        id_match = re.search(r'id:(\d+)', content)
+        base_id = id_match.group(1) if id_match else "Unknown"
+
         try:
             mparser = msc_pyparser.MSCParser()
             mparser.parser.parse(validation_result.normalized_content, debug=False)
@@ -58,13 +63,20 @@ class CRSRule(RuleType):
                             rule_id = action["act_arg"]
                             break
 
+            if rule_id is None:
+                rule_id = base_id
+        
+            author = info.get("author", "Unknown")
+            if hasattr(current_user, 'first_name'):
+                author = info.get("author", current_user.first_name)
+
             return {
-                "title": f"CRS Rule {rule_id}" if rule_id else "CRS Rule",
-                "format": "CRS",
+                "title": f"CRS Rule {rule_id}" if rule_id != "Unknown" else "CRS Rule",
+                "format": "crs",
                 "license": info.get("license", "Unknown"),
                 "description": info.get("description", "No description provided"),
                 "version": "1.0",
-                "author": info.get("author", current_user.first_name),
+                "author": author,
                 "cve_id": None,
                 "original_uuid": rule_id or "Unknown",
                 "source": info.get("repo_url", "Unknown"),
@@ -73,12 +85,12 @@ class CRSRule(RuleType):
         except Exception as e:
             return {
                 "format": "crs",
-                "title": "Invalid Rule",
+                "title": f"CRS Rule {base_id} (Metadata Error)",
                 "license": info.get("license", "unknown"),
                 "description": f"Error parsing metadata: {e}",
                 "version": "N/A",
                 "source": info.get("repo_url", "Unknown"),
-                "original_uuid": "Unknown",
+                "original_uuid": base_id,
                 "author": info.get("author", "Unknown"),
                 "cve_id": None,
                 "to_string": content,

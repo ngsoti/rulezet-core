@@ -42,20 +42,22 @@ class ZeekRule(RuleType):
         except Exception as e:
             return ValidationResult(ok=False, errors=[str(e)], normalized_content=content)
 
-    def parse_metadata(self, content: str, info: Dict, validation_result: str) -> Dict[str, Any]:
+    def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
         """
         Parse a Zeek rule and extract metadata.
         The title is based on the function/event/hook name.
         """
+        
+        pattern = re.compile(r"\b(event|function|hook)\s+([a-zA-Z0-9_]+)\s*\(")
+        match = pattern.search(content)
+        if not match:
+            title = f"ZeekRule-{uuid.uuid4()}"
+        else:
+            _, rule_name = match.groups()
+            title = rule_name
+        
         try:
-            # Regex to find function/event/hook
-            pattern = re.compile(r"\b(event|function|hook)\s+([a-zA-Z0-9_]+)\s*\(")
-            match = pattern.search(content)
-            if not match:
-                title = f"ZeekRule-{uuid.uuid4()}"
-            else:
-                _, rule_name = match.groups()
-                title = rule_name
+            normalized_content = getattr(validation_result, 'normalized_content', content)
 
             return {
                 "format": "zeek",
@@ -67,13 +69,13 @@ class ZeekRule(RuleType):
                 "author": info.get("author", "Unknown"),
                 "cve_id": info.get("cve_id", None),
                 "source": info.get("repo_url", ""),
-                "to_string": content.strip(),
+                "to_string": normalized_content.strip(),
             }
 
         except Exception as e:
             return {
                 "format": "zeek",
-                "title": f"ZeekRule-{uuid.uuid4()}",
+                "title": f"{title} (Parsing Error)",
                 "license": info.get("license", "unknown"),
                 "description": f"Error parsing rule: {e}",
                 "version": "N/A",
@@ -83,7 +85,6 @@ class ZeekRule(RuleType):
                 "source": info.get("repo_url", ""),
                 "to_string": content,
             }
-
     def get_rule_files(self, file: str) -> bool:
         """
         Retrieve all .zeek files in a local repository.

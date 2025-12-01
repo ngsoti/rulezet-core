@@ -1,10 +1,10 @@
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import uuid
 import datetime
 from typing import List
-
+from sqlalchemy.exc import SQLAlchemyError
 from flask import jsonify
 from flask_login import current_user
 from sqlalchemy import case, or_
@@ -339,9 +339,12 @@ def get_all_editor_from_rules_list(rules):
     """
     return list({rule.user_id for rule in rules if rule.user_id})
 
-def get_rule_by_title(title) -> str:
+def get_rules_by_title(title) -> str:
     """Return the rule from the title"""
     return Rule.query.filter_by(title=title).all()
+def get_rule_by_title(title) -> str:
+    """Return the rule from the title"""
+    return Rule.query.filter_by(title=title).first()
 
 def get_rule_by_source(source_) -> str:
     """Return all the rule from the source"""
@@ -531,6 +534,81 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
 
     db.session.add(new_invalid_rule)
     db.session.commit()
+
+def save_invalid_rule_from_new_rule(new_rule_obj: 'NewRule', user: 'User') -> Tuple[Optional['InvalidRuleModel'], Optional[str]]:
+    """
+    Creates or retrieves an InvalidRuleModel object from NewRule data, using global db session.
+
+    This function handles data persistence, checking for existing invalid rules,
+    and database exception management.
+
+    :param new_rule_obj: The instance of the temporary rule (NewRule) to process.
+    :param user: The user triggering the action (User object).
+    :return: A tuple (InvalidRuleModel object, None) on success, 
+             or (None, error_message) on DB or unexpected failure.
+    """
+    
+    # --- 1. Data Preparation ---
+    
+    user_id = user.id
+    
+    # Use data from the NewRule object
+    file_name = new_rule_obj.name_rule
+    error_message = new_rule_obj.message or "Syntax error during update process."
+    raw_content = new_rule_obj.rule_content
+    # Use 'format' attribute from NewRule (assuming it was added in the migration)
+    rule_type = getattr(new_rule_obj, 'format', 'Unknown') or "Unknown"
+    
+    # Context fields (using getattr for safe access if NewRule lacks these)
+    repo_url = getattr(new_rule_obj, 'source', 'Update Process')
+    license_name = getattr(new_rule_obj, 'license', 'Unknown')
+    
+    try:
+        # --- 2. Check for Existing Invalid Rule (Prevent Duplicates) ---
+        
+        existing = InvalidRuleModel.query.filter_by(
+            file_name=file_name,
+            error_message=error_message,
+            raw_content=raw_content,
+            rule_type=rule_type,
+            user_id=user_id
+        ).first()
+        
+        if existing:
+            # The invalid rule already exists in the correction table
+            return existing, None
+
+        # --- 3. Create and Save New Invalid Rule ---
+        
+        new_invalid_rule = InvalidRuleModel(
+            user_id=user_id,
+            file_name=file_name,
+            error_message=error_message,
+            raw_content=raw_content,
+            rule_type=rule_type,
+            url=repo_url,
+            license=license_name,
+            created_at=datetime.datetime.now(tz=datetime.timezone.utc)
+        )
+        
+        db.session.add(new_invalid_rule)
+        
+        # Optional: Delete the temporary NewRule entry
+        # db.session.delete(new_rule_obj) 
+        
+        db.session.commit()
+        
+        return new_invalid_rule, None
+    
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        # Return the original database error message
+        return None, f"Database error during correction save: {e.orig}"
+        
+    except Exception as e:
+        # Handle any other non-DB exceptions
+        db.session.rollback()
+        return None, f"Unexpected error during save: {e}"
 
 # Read
 
@@ -1658,3 +1736,6 @@ def get_all_rules_in_json_dump(data: Dict[str, Any]) -> dict:
     }
 
     return dump
+
+def get_new_rule(new_rule_id):
+    return NewRule.query.get(new_rule_id)
