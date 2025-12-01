@@ -2,7 +2,7 @@ import os
 import re
 import subprocess
 from typing import Any, Dict, List
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.utils.utils import detect_cve
 from ...rule import rule_core as RuleModel
 
@@ -58,32 +58,33 @@ class NseRule(RuleType):
         return ValidationResult(ok=(len(errors) == 0), errors=errors, warnings=warnings, normalized_content=content)
 
 
-    def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult ) -> Dict[str, Any]:
+    def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
         """
         Extract metadata from an NSE rule.
         """
+        filepath = info.get("filepath")
+        title = os.path.splitext(os.path.basename(filepath))[0] if filepath else "unknown_rule"
+
         try:
             meta: Dict[str, Any] = {}
-
-            # description = [[ ... ]]
+            
             m = re.search(r'description\s*=\s*\[\[([\s\S]*?)\]\]', content)
             if m:
                 meta["description"] = m.group(1).strip()
                 _, cve = detect_cve(meta["description"]or "")
+            else:
+                cve = None
 
-            # author / license / version
             for key in ("author", "license", "version"):
                 m = re.search(rf'{key}\s*=\s*["\'](.+?)["\']', content)
                 if m:
                     meta[key] = m.group(1).strip()
 
-            # categories = {"a","b"}
             m = re.search(r'categories\s*=\s*\{([^\}]*)\}', content)
             if m:
                 items = re.findall(r'["\'](.*?)["\']', m.group(1))
                 meta["categories"] = items
 
-            # detect rule type
             if re.search(r'\bportrule\b', content):
                 meta["rule_type"] = "portrule"
             elif re.search(r'\bhostrule\b', content):
@@ -93,13 +94,8 @@ class NseRule(RuleType):
             else:
                 meta["rule_type"] = "unknown"
 
-            filepath = info.get("filepath")
-            if filepath:
-                title = os.path.splitext(os.path.basename(filepath))[0]
-            else:
-                title = "unknown_rule"
+            normalized_content = getattr(validation_result, 'normalized_content', content)
 
-           
             return {
                 "format": "nse",
                 "title": title,
@@ -111,18 +107,18 @@ class NseRule(RuleType):
                 "author": meta.get("author", "Unknown"),
                 "categories": meta.get("categories", []),
                 "rule_type": meta.get("rule_type", "unknown"),
-                "to_string": validation_result.normalized_content or content,
-                "cve_id": None,  # NSE scripts rarely contain explicit CVEs
+                "to_string": normalized_content,
+                "cve_id": cve, 
             }
 
         except Exception as e:
             return {
                 "format": "nse",
-                "title": "Invalid Rule",
+                "title": f"{title} (Metadata Error)",
                 "license": info.get("license") or "unknown",
                 "description": f"Error parsing metadata: {e}",
                 "version": "N/A",
-                "source": info.get("repo_url"),
+                "source": info.get("repo_url", "Unknown"),
                 "original_uuid": "Unknown",
                 "author": info.get("author") or "Unknown",
                 "categories": [],
@@ -169,8 +165,8 @@ class NseRule(RuleType):
         rule = RuleModel.get_rule(rule_id)
         if rule is None:
             return f"No rule found with ID {rule_id} in the database.", False
-        files = self.find_rule_in_repo(repo_dir)
+        files = self.get_rule_files_update(repo_dir)
         if 0 <= rule_id < len(files):
             with open(files[rule_id], "r", encoding="utf-8") as f:
                 return f.read() , True
-        return f"Nmap Rule with ID '{rule.uuid}' not found inside repo.", False
+        return f"Nmap Rule with ID '{rule.id}' not found inside repo.", False

@@ -5,13 +5,16 @@ from queue import Queue
 from threading import Thread
 from uuid import uuid4
 
-from app.import_github_project.untils_import import delete_existing_repo_folder
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType
-from .. import db
-from ..db_class.db import ImporterResult, User
-from . import rule_core as RuleModel
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, load_all_rule_formats
+from app.rule_format.utils_format.utils_import_update import delete_existing_repo_folder
+
+from ... import db
+from ...db_class.db import ImporterResult, User
+from ...rule import rule_core as RuleModel
 from flask import current_app
 from flask_login import current_user
+
+
 
 sessions = list()
 
@@ -40,8 +43,8 @@ class Session_class:
                 dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
                 for file in files:
                     if not file.startswith('.') or not file.startswith('_'):
+                        load_all_rule_formats()
                         subclasses = RuleType.__subclasses__()
-
                         for RuleClass in subclasses:
                             rule_instance = RuleClass()
 
@@ -59,6 +62,7 @@ class Session_class:
                                 cp += 1
                                 self.jobs.put((cp, file, os.path.join(root, file), rule_instance))
                                 break
+
         self.total = cp
 
         #need the index and the url in each queue item.
@@ -85,8 +89,8 @@ class Session_class:
             'stopped' : self.stopped,
             "bad_rules": self.bad_rules,
             "imported": self.imported,
-            "skipped": self.skipped
-            }
+            "skipped": self.skipped,
+        }
 
     def status_for_test(self):
         return {
@@ -95,7 +99,7 @@ class Session_class:
             'complete': 5,
             'remaining': 5,
             "nb_errors": 0
-            }
+        }
 
     def stop(self):
         """Stop the current queue and worker"""
@@ -103,11 +107,10 @@ class Session_class:
 
         for worker in self.threads:
             worker.join(3.5)
-
         self.threads.clear()
         self.save_info()
         sessions.remove(self)
-        delete_existing_repo_folder("Rules_Github")
+        success = delete_existing_repo_folder("app/rule_from_github/Rules_Github")
         del self
 
     def process(self, loc_app, user: User):

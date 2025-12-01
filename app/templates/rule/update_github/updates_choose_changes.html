@@ -22,7 +22,11 @@
                 <li class="list-group-item text-danger" v-else>
                     <i class="fas fa-times-circle me-2"></i> Update Failed
                 </li>
-                <li class="list-group-item"><strong>Message:</strong> [[ owner_rule.message ]]</li>
+                <li class="list-group-item"><strong>Statue:</strong> 
+                    <span :class="['badge ms-1', owner_rule.message === 'rejected' ? 'bg-danger' : 'bg-success']">
+                        [[ owner_rule.message ]]
+                    </span>
+                </li>
             </ul>
 
              <div class="row mt-4">

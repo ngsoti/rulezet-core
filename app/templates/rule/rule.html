@@ -4,25 +4,29 @@
 
 
 <div class="container mt-4">
-  <h2 class="fw-bold mb-1 text-center text-primary">Create a Rule</h2>
-  <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
-  <p class="text-muted mt-2">
-      Use the form below to manually submit a new detection rule, parse an existing rule, or import rules from a GitHub repository. Select the appropriate tab to get started.
-  </p>
+      <h2 class="fw-bold mb-1 text-center text-primary">Create a Rule</h2>
+      <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+      <p class="text-muted mt-2">
+            Use the form below to manually submit a new detection rule, parse an existing rule, or import rules from a
+            GitHub repository. Select the appropriate tab to get started.
+      </p>
       <div>
             <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist">
                   <li class="nav-item flex-fill text-center">
-                        <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab" aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
+                        <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab"
+                              aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
                               Manual Submission
                         </a>
                   </li>
                   <li class="nav-item flex-fill text-center">
-                        <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab" aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
+                        <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab"
+                              aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
                               Parse a Rule
                         </a>
                   </li>
                   <li class="nav-item flex-fill text-center">
-                        <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab" aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
+                        <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab"
+                              aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
                               GitHub URL
                         </a>
                   </li>
@@ -33,16 +37,18 @@
                         <div class="card card-body shadow-sm" id="main-container">
                               <form action="" method="post" id="form">
                                     {{ form.hidden_tag() }}
-                              
+
                                     <div class="row mb-3">
                                           <div class="col-md-6">
                                                 <div class="form-group">
-                                                      <strong>{{ form.title.label(class_="col-form-label") }} <span style="color:red">*</span></strong>
+                                                      <strong>{{ form.title.label(class_="col-form-label") }} <span
+                                                                  style="color:red">*</span></strong>
 
                                                       {{ form.title(
-                                                            class_="form-control",
-                                                            placeholder="Enter the rule title...",
-                                                            title="This is the title of your rule (e.g. SQL Injection Detection)"
+                                                      class_="form-control",
+                                                      placeholder="Enter the rule title...",
+                                                      title="This is the title of your rule (e.g. SQL Injection
+                                                      Detection)"
                                                       ) }}
 
                                                       {% if form.title.errors %}
@@ -55,30 +61,31 @@
 
                                           <div class="col-md-6">
                                                 <div class="form-group">
-                                                      <strong>{{ form.format.label(class_="col-form-label") }} <span style="color:red">*</span></strong>
+                                                      <strong>{{ form.format.label(class_="col-form-label") }} <span
+                                                                  style="color:red">*</span></strong>
 
                                                       {{ form.format(class_="form-select",
-                                                            placeholder="Choose a rule format...",
-                                                            title="Format of the rule") }}
+                                                      placeholder="Choose a rule format...",
+                                                      title="Format of the rule") }}
 
                                                       {% if form.format.errors %}
-                                                            <div class="invalid-feedback d-block">
+                                                      <div class="invalid-feedback d-block">
                                                             {{ form.format.errors[0] | safe }}
-                                                            </div>
+                                                      </div>
                                                       {% endif %}
                                                 </div>
                                           </div>
                                     </div>
-                              
+
                                     <div class="row mb-3">
                                           <div class="col-md-6">
                                                 <div class="form-group">
                                                       <strong>{{ form.license.label(class_="col-form-label") }}</strong>
                                                       {{ form.license(class_="
-                                                            form-control", 
-                                                            id="license-select",
-                                                            placeholder="Choose a license...",
-                                                            title="License for the visibility of the rule") }}
+                                                      form-control",
+                                                      id="license-select",
+                                                      placeholder="Choose a license...",
+                                                      title="License for the visibility of the rule") }}
                                                       {% if form.license.errors %}
                                                       <div class="invalid-feedback d-block">
                                                             {{ form.license.errors[0] | safe }}
@@ -90,8 +97,8 @@
                                                 <div class="form-group">
                                                       <strong>{{ form.source.label(class_="col-form-label") }}</strong>
                                                       {{ form.source(class_="form-control",
-                                                            placeholder="Enter the rule source...",
-                                                            title="Source to find the rule in the net") }}
+                                                      placeholder="Enter the rule source...",
+                                                      title="Source to find the rule in the net") }}
                                                       {% if form.source.errors %}
                                                       <div class="invalid-feedback d-block">
                                                             {{ form.source.errors[0] | safe }}
@@ -101,10 +108,11 @@
                                           </div>
                                           <div class="col-md-6">
                                                 <div class="form-group">
-                                                      <strong>{{ form.version.label(class_="col-form-label") }} </strong>
+                                                      <strong>{{ form.version.label(class_="col-form-label") }}
+                                                      </strong>
                                                       {{ form.version(class_="form-control",
-                                                            placeholder="Enter the rule version (1.0 or 1)...",
-                                                            title="Source to find the rule in the net") }}
+                                                      placeholder="Enter the rule version (1.0 or 1)...",
+                                                      title="Source to find the rule in the net") }}
                                                       {% if form.version.errors %}
                                                       <div class="invalid-feedback d-block">
                                                             {{ form.version.errors[0] | safe }}
@@ -117,7 +125,8 @@
                                                       <strong>{{ form.cve_id.label(class_="col-form-label") }}</strong>
 
                                                       <div class="input-group">
-                                                            <select id="cve-type" class="form-select" style="max-width: 160px;">
+                                                            <select id="cve-type" class="form-select"
+                                                                  style="max-width: 160px;">
                                                                   <option value="CVE" selected>CVE</option>
                                                                   <option value="GHSA">GHSA</option>
                                                                   <option value="PYSEC">PYSEC</option>
@@ -129,8 +138,10 @@
                                                                   <option value="MSRC_CVE">MSRC</option>
                                                             </select>
 
-                                                      <input type="text" id="cve-id-input" class="form-control" placeholder="Enter the vulnerability number (e.g., 2024-1234)" 
-                                                            autocomplete="off" onkeydown="return event.key !== 'Enter' || addCVE();" />
+                                                            <input type="text" id="cve-id-input" class="form-control"
+                                                                  placeholder="Enter the vulnerability number (e.g., 2024-1234)"
+                                                                  autocomplete="off"
+                                                                  onkeydown="return event.key !== 'Enter' || addCVE();" />
 
 
                                                             <button type="button" class="btn btn-dark" id="add-cve-btn">
@@ -145,19 +156,23 @@
                                                       </div>
                                                       {% endif %}
 
-                                                      <div id="cve-badge-container" class="d-flex flex-wrap gap-2 mb-2 p-3"></div>
+                                                      <div id="cve-badge-container"
+                                                            class="d-flex flex-wrap gap-2 mb-2 p-3"></div>
 
                                                 </div>
                                           </div>
-                                    </div> 
-                              
+                                    </div>
+
                                     <div class="row mb-3">
                                           <div class="col">
                                                 <div class="form-group">
-                                                      <strong>{{ form.description.label(class_="col-form-label") }}</strong>
+                                                      <strong>{{ form.description.label(class_="col-form-label")
+                                                            }}</strong>
                                                       {{ form.description(class_="form-control", rows=4,
-                                                            placeholder="Enter the description of the rule (context, explain...)...",
-                                                            title="Description for the context, the syntax... to help the community to found it") }}
+                                                      placeholder="Enter the description of the rule (context,
+                                                      explain...)...",
+                                                      title="Description for the context, the syntax... to help the
+                                                      community to found it") }}
                                                       {% if form.description.errors %}
                                                       <div class="invalid-feedback d-block">
                                                             {{ form.description.errors[0] | safe }}
@@ -170,10 +185,13 @@
                                     <div class="row mb-3">
                                           <div class="col">
                                                 <div class="form-group">
-                                                      <strong>{{ form.original_uuid.label(class_="col-form-label") }}</strong>
+                                                      <strong>{{ form.original_uuid.label(class_="col-form-label")
+                                                            }}</strong>
                                                       {{ form.original_uuid(class_="form-control", rows=4,
-                                                            placeholder="Enter the original uuid if the rule has already one...",
-                                                            title="UUID to the rule. (one will be generate after the creation of the rule)") }}
+                                                      placeholder="Enter the original uuid if the rule has already
+                                                      one...",
+                                                      title="UUID to the rule. (one will be generate after the creation
+                                                      of the rule)") }}
                                                       {% if form.original_uuid.errors %}
                                                       <div class="invalid-feedback d-block">
                                                             {{ form.original_uuid.errors[0] | safe }}
@@ -182,7 +200,7 @@
                                                 </div>
                                           </div>
                                     </div>
-                              
+
                                     <div class="mb-3">
                                           {% if error %}
                                           <div class="alert alert-danger d-flex align-items-center" role="alert">
@@ -194,57 +212,67 @@
                                           {% endif %}
 
                                           <div class="form-group">
-                                                <strong>{{ form.to_string.label(class_="col-form-label") }} <span style="color:red">*</span></strong>
-                                          
-                                                <textarea id="editor" name="to_string">{{ (form.to_string.data or '') | e }}</textarea>
+                                                <strong>{{ form.to_string.label(class_="col-form-label") }} <span
+                                                            style="color:red">*</span></strong>
 
-                                          
+                                                <textarea id="editor"
+                                                      name="to_string">{{ (form.to_string.data or '') | e }}</textarea>
+
+
                                                 {% if form.to_string.errors %}
-                                                      <div class="invalid-feedback d-block">
-                                                            {{ form.to_string.errors[0] | safe }}
-                                                      </div>
+                                                <div class="invalid-feedback d-block">
+                                                      {{ form.to_string.errors[0] | safe }}
+                                                </div>
                                                 {% endif %}
                                           </div>
                                     </div>
-                              
+
                                     <div class="text-center">
                                           {{ form.submit(class='btn btn-primary') }}
                                     </div>
                               </form>
-                        
-                              
-                              
+
+
+
                         </div>
                   </div>
                   <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
                         <div class="card card-body shadow-sm" id="main-container">
-                              <form method="POST" action="{{ url_for('rule.parse_rule') }}" 
-                                    class="d-flex flex-column" 
-                                    id="github-form"  novalidate>
+                              <form method="POST" action="{{ url_for('rule.parse_rule') }}" class="d-flex flex-column"
+                                    id="github-form" novalidate>
 
                                     <div id="flash-messages" class="mt-2">
                                           {% for category, message in get_flashed_messages(with_categories=True) %}
-                                          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                          <div class="alert alert-{{ category }} alert-dismissible fade show"
+                                                role="alert">
                                                 {{ message }}
-                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert"
+                                                      aria-label="Close"></button>
                                           </div>
                                           {% endfor %}
                                     </div>
-                                    
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-                                    <input type="text" name="fakeusernameremembered" id="fakeusernameremembered" style="display:none">
-                                    <input type="password" name="fakepasswordremembered" id="fakepasswordremembered" style="display:none">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+                                    <input type="text" name="fakeusernameremembered" id="fakeusernameremembered"
+                                          style="display:none">
+                                    <input type="password" name="fakepasswordremembered" id="fakepasswordremembered"
+                                          style="display:none">
 
                                     <div class="mb-3">
-                                          <strong><label for="content" class="form-label">Rule content<span style="color:red">*</span></label></strong>
-                                          <textarea id="content" name="content" rows="6"   placeholder="Paste your rule content here..."  required></textarea>
+                                          <strong><label for="content" class="form-label">Rule content<span
+                                                            style="color:red">*</span></label></strong>
+                                          <textarea id="content" name="content" rows="6"
+                                                placeholder="Paste your rule content here..." required></textarea>
                                     </div>
 
                                     <div class="mb-3">
-                                          <strong><label for="format" class="form-label">Rule format <span style="color:red">*</span></label></strong>
-                                          <select v-model="ruleType" name="format" id="format" class="form-select form-select-sm " required>
-                                                <option v-for="format in rules_formats" :value="format.name" :key="format.id">
+                                          <strong><label for="format" class="form-label">Rule format <span
+                                                            style="color:red">*</span></label></strong>
+                                          <select v-model="ruleType" name="format" id="format"
+                                                class="form-select form-select-sm " required>
+                                                <option v-for="format in rules_formats" :value="format.name"
+                                                      :key="format.id">
                                                       [[ format.name ]]
                                                 </option>
                                           </select>
@@ -252,71 +280,81 @@
 
                                     <div class="text-center">
                                           <button type="submit" class="btn btn-primary" id="submit-button">
-                                          Parse
+                                                Parse
                                           </button>
                                     </div>
                               </form>
 
-                              </div>
+                        </div>
                   </div>
                   <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
-                        
+
                         <div class="card p-4 shadow-sm mb-3">
                               <h5 class="mb-2 d-flex align-items-center">
                                     <strong>
                                           <label for="url" class="form-label m-0">
-                                                Import rules from GitHub project with URL 
-                                          </label> 
+                                                Import rules from GitHub project with URL
+                                          </label>
                                           <span style="color:red">*</span>
                                     </strong>
-                                    <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse" data-bs-target="#ruleInfo" role="button" aria-expanded="false" aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
+                                    <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse"
+                                          data-bs-target="#ruleInfo" role="button" aria-expanded="false"
+                                          aria-controls="ruleInfo" style="cursor:pointer;" title="More info"></i>
                               </h5>
 
                               <div class="collapse" id="ruleInfo">
                                     <div class="alert alert-info mt-2">
-                                          The script will attempt to parse the rules from the GitHub repository according to their format (YARA, Sigma, Zeek, Suricata). 
-                                          If any issues are detected during the rule validation, you will have the opportunity to review and correct them in the "Bad Rules" section.
+                                          The script will attempt to parse the rules from the GitHub repository
+                                          according to their format (YARA, Sigma, Zeek, Suricata).
+                                          If any issues are detected during the rule validation, you will have the
+                                          opportunity to review and correct them in the "Bad Rules" section.
                                     </div>
                               </div>
 
                               {% if current_user.is_admin() %}
-                                    <div>
-                                          <div class="mb-3">
-                                                <input type="text" name="url" class="form-control w-100" id="url" placeholder="https://github.com/your_username/project.git" v-model="url" >
-                                          </div>
-
-                                          <div id="github-url-error" style="color: brown;"></div>
-
-                                                                  <div class="mb-3">
-                                                                        <strong><label for="license-select" class="form-label">License</label></strong>
-                                                                        <select id="license-select" name="license" class="form-control" v-model="selectedLicense">
-                                                                              <option disabled value="">No license</option>
-                                                                              <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
-                                                                        </select>
-                                                                  </div>
-
-                                          <button v-if="!is_loading" type="submit" class="btn btn-primary" @click="import_git_url()">
-                                                <i class="fas fa-paper-plane"></i> Send
-                                          </button>
-
-                                          <button v-else class="btn btn-primary" type="button" disabled>
-                                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                                                <span role="status">Loading...</span>
-                                          </button>
+                              <div>
+                                    <div class="mb-3">
+                                          <input type="text" name="url" class="form-control w-100" id="url"
+                                                placeholder="https://github.com/your_username/project.git"
+                                                v-model="url">
                                     </div>
+
+                                    <div id="github-url-error" style="color: brown;"></div>
+
+                                    <div class="mb-3">
+                                          <strong><label for="license-select"
+                                                      class="form-label">License</label></strong>
+                                          <select id="license-select" name="license" class="form-control"
+                                                v-model="selectedLicense">
+                                                <option disabled value="">No license</option>
+                                                <option v-for="item in license" :key="item" :value="item">[[ item ]]
+                                                </option>
+                                          </select>
+                                    </div>
+
+                                    <button v-if="!is_loading" type="submit" class="btn btn-primary"
+                                          @click="import_git_url()">
+                                          <i class="fas fa-paper-plane"></i> Send
+                                    </button>
+
+                                    <button v-else class="btn btn-primary" type="button" disabled>
+                                          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                          <span role="status">Loading...</span>
+                                    </button>
+                              </div>
                               {% else %}
-                                    <div>
-                                          <span class="mt-2">
-                                                <strong>You need to be an admin to import rules from GitHub.</strong>
-                                          </span>
-                                          
-                                          
-                                          
-                                          <div class="mt-2">
-                                                <a href="/account/login" class="btn btn-primary">Login</a>
-                                          </div>
-                                          
+                              <div>
+                                    <span class="mt-2">
+                                          <strong>You need to be an admin to import rules from GitHub.</strong>
+                                    </span>
+
+
+
+                                    <div class="mt-2">
+                                          <a href="/account/login" class="btn btn-primary">Login</a>
                                     </div>
+
+                              </div>
                               {% endif %}
                         </div>
                   </div>
@@ -422,12 +460,12 @@
             if (hiddenInput.value) {
                   hiddenInput.value.split(",").forEach(cve => {
                         if (cve.trim()) {
-                        cveList.push(cve.trim());
-                        createBadge(cve.trim());
+                              cveList.push(cve.trim());
+                              createBadge(cve.trim());
                         }
                   });
             }
-            });
+      });
 
       /**
        * 
@@ -439,7 +477,7 @@
 
 
 
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener('DOMContentLoaded', function () {
             const params = new URLSearchParams(window.location.search);
             const tab = params.get('tab');
 
@@ -452,146 +490,144 @@
 
             // d'abord reset tous
             [manualTab, parseTab, githubTab].forEach(t => t.classList.remove('active'));
-            [manualPane, parsePane, githubPane].forEach(p => p.classList.remove('show','active'));
+            [manualPane, parsePane, githubPane].forEach(p => p.classList.remove('show', 'active'));
 
             if (tab === 'github') {
                   githubTab.classList.add('active');
-                  githubPane.classList.add('show','active');
+                  githubPane.classList.add('show', 'active');
             } else if (tab === 'parse') {
                   parseTab.classList.add('active');
-                  parsePane.classList.add('show','active');
+                  parsePane.classList.add('show', 'active');
             } else {
                   // default = manual
                   manualTab.classList.add('active');
-                  manualPane.classList.add('show','active');
+                  manualPane.classList.add('show', 'active');
             }
+      });
+
+
+
+      $(document).ready(function () {
+            $('#license-select').select2({
+                  placeholder: "Search for a license",
+                  allowClear: true,
+                  width: '100%'
+            });
+
+            const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+                  lineNumbers: true,
+                  mode: "yaml",
+                  theme: "monokai",
+                  matchBrackets: true,
+                  autoRefresh: true
+            });
+
+            const editor2 = CodeMirror.fromTextArea(document.getElementById("content"), {
+                  lineNumbers: true,
+                  mode: "yaml",
+                  theme: "monokai",
+                  matchBrackets: true,
+                  autoRefresh: true
             });
 
 
-    
-     $(document).ready(function() {
-        $('#license-select').select2({
-            placeholder: "Search for a license",
-            allowClear: true,
-            width: '100%' 
-        });
-
-        const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-            lineNumbers: true,
-            mode: "yaml",  
-            theme: "monokai",
-            matchBrackets: true,
-            autoRefresh: true
-        });
-
-        const editor2 = CodeMirror.fromTextArea(document.getElementById("content"), {
-            lineNumbers: true,
-            mode: "yaml",  
-            theme: "monokai",
-            matchBrackets: true,
-            autoRefresh: true
-        });
+      });
 
 
-    });
+      const { createApp, ref, onMounted } = Vue;
+      import { message_list, display_toast } from '/static/js/toaster.js';
 
+      createApp({
+            delimiters: ['[[', ']]'],
+            setup() {
+                  const license = ref([]);
+                  const selectedLicense = ref("");
+                  const url = ref(""); // for URL field
 
-    const { createApp, ref, onMounted } = Vue;
-    import { message_list, display_toast } from '/static/js/toaster.js';
+                  const rules_formats = ref([])
+                  const number_rules_formats = ref(0)
 
-    createApp({
-        delimiters: ['[[', ']]'],
-        setup() {
-            const license = ref([]);
-            const selectedLicense = ref("");
-            const url = ref(""); // for URL field
+                  const is_loading = ref(false)
+                  const ruleType = ref('');
 
-            const rules_formats = ref([])
-            const number_rules_formats = ref(0)
+                  async function fetchRules() {
+                        const res = await fetch('/rule/get_license');
+                        const data = await res.json();
+                        license.value = data.licenses;
+                  }
 
-            const is_loading = ref(false)
-            const ruleType = ref('');
-
-            async function fetchRules() {
-                const res = await fetch('/rule/get_license');
-                const data = await res.json();
-                license.value = data.licenses;
-            }
-
-            function showParsingModal(event) {
-                if (!url.value.trim()) {
-                    alert("The URL field is required.");
-                    return;
-                }
-                const modal = new bootstrap.Modal(document.getElementById('parsingModal'));
-                modal.show();
-
-                event.target.submit();
-            }
-
-
-
-            async function fetchRulesFormats() {
-                const res = await fetch('/rule/get_rules_formats')
-                const data = await res.json()
-                if (res.status === 200){
-                    rules_formats.value = data.formats 
-                    number_rules_formats.value = data.length | 0
-
-                    if (rules_formats.value.length > 0) {
-                        ruleType.value = rules_formats.value[0].name;
-                    }
-                }
-            }
-            
-            async function import_git_url() {
-                is_loading.value = true
-                $("#github-url-error").text("")
-                if(url.value){
-                    const res = await fetch(
-                        '/rule/import_rules_from_github',{
-                            headers: { "X-CSRFToken": $("#csrf_token").val(), "Content-Type": "application/json" },
-                            method: "POST",
-                            body: JSON.stringify({"url": url.value, "license": selectedLicense.value})
+                  function showParsingModal(event) {
+                        if (!url.value.trim()) {
+                              alert("The URL field is required.");
+                              return;
                         }
-                    )
-                    if(await res.status == 201){
-                        let loc = await res.json()
-                        console.log(loc);
-                        
-                        window.location.href="/rule/import_loading/"+loc["session_uuid"]
-                    }else{
-                        display_toast(res, true)
-                    }
-                }else{
-                    $("#github-url-error").text("Need to give an url")
-                }
-                is_loading.value = false
+                        const modal = new bootstrap.Modal(document.getElementById('parsingModal'));
+                        modal.show();
+
+                        event.target.submit();
+                  }
+
+
+
+                  async function fetchRulesFormats() {
+                        const res = await fetch('/rule/get_rules_formats')
+                        const data = await res.json()
+                        if (res.status === 200) {
+                              rules_formats.value = data.formats
+                              number_rules_formats.value = data.length | 0
+
+                              if (rules_formats.value.length > 0) {
+                                    ruleType.value = rules_formats.value[0].name;
+                              }
+                        }
+                  }
+
+                  async function import_git_url() {
+                        is_loading.value = true
+                        $("#github-url-error").text("")
+                        if (url.value) {
+                              const res = await fetch(
+                                    '/rule/import_rules_from_github', {
+                                    headers: { "X-CSRFToken": $("#csrf_token").val(), "Content-Type": "application/json" },
+                                    method: "POST",
+                                    body: JSON.stringify({ "url": url.value, "license": selectedLicense.value })
+                              }
+                              )
+                              if (await res.status == 201) {
+                                    let loc = await res.json()
+
+                                    window.location.href = "/rule/import_loading/" + loc["session_uuid"]
+                              } else {
+                                    display_toast(res, true)
+                              }
+                        } else {
+                              $("#github-url-error").text("Need to give an url")
+                        }
+                        is_loading.value = false
+                  }
+
+
+                  onMounted(() => {
+                        fetchRules();
+                        fetchRulesFormats();
+                  });
+
+
+                  return {
+                        message_list,
+                        license,
+                        selectedLicense,
+                        url,
+                        rules_formats,
+                        number_rules_formats,
+                        is_loading,
+                        showParsingModal,
+                        fetchRulesFormats,
+                        import_git_url,
+                        ruleType
+                  };
             }
-            
-
-            onMounted(() => {
-                fetchRules();
-                fetchRulesFormats();
-            });
-
-
-            return {
-                message_list,
-                license,
-                selectedLicense,
-                url,
-                rules_formats,
-                number_rules_formats,
-                is_loading,
-                showParsingModal,
-                fetchRulesFormats,
-                import_git_url,
-                ruleType
-            };
-        }
-    }).mount('#main-container');
+      }).mount('#main-container');
 
 </script>
 {% endblock %}
-

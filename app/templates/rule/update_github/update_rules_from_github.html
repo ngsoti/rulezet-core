@@ -10,28 +10,32 @@
             <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
         </h2>
         <p class="text-muted mt-2 text-center">
-            Use the tabs below to check for updates to your rules from GitHub sources. You can search by GitHub URLs or by individual rules to ensure you have the latest versions.
+            Use the tabs below to check for updates to your rules from GitHub sources. You can search by GitHub URLs or
+            by individual rules to ensure you have the latest versions.
         </p>
     </div>
 
     <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist">
-            <li class="nav-item flex-fill text-center">
-                <a class="nav-link active" id="github-tab" data-bs-toggle="tab" href="#github-pane" role="tab" aria-controls="github" aria-selected="true" style="color: var(--text-color);">
-                        By Github
-                </a>
-            </li>
-            <li class="nav-item flex-fill text-center">
-                <a class="nav-link" id="rule-tab" data-bs-toggle="tab" href="#rule-pane" role="tab" aria-controls="rule-pane" aria-selected="false" style="color: var(--text-color);">
-                        By Rule
-                </a>
-            </li>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link active" id="github-tab" data-bs-toggle="tab" href="#github-pane" role="tab"
+                aria-controls="github" aria-selected="true" style="color: var(--text-color);">
+                By Url
+            </a>
+        </li>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="rule-tab" data-bs-toggle="tab" href="#rule-pane" role="tab"
+                aria-controls="rule-pane" aria-selected="false" style="color: var(--text-color);">
+                By Rule
+            </a>
+        </li>
     </ul>
 
     <div class="tab-content" id="exampleTabsContent">
         <div class="tab-pane fade show active" id="github-pane" role="tabpanel" aria-labelledby="github-tab">
             <div class="card p-3">
-                 <div class="d-flex mb-3">
-                    <input v-model="searchQuery" @keyup.enter="fetchUrlGithub(1)" class="form-control" placeholder="Search for GitHub URLs..." @input="onSearchInput">
+                <div class="d-flex mb-3">
+                    <input v-model="searchQuery" @keyup.enter="fetchUrlGithub(1)" class="form-control"
+                        placeholder="Search for GitHub URLs..." @input="onSearchInput">
                 </div>
                 <p class="text-center mt-3 text-muted" v-if="!loading">Total URLs found: [[ total_url ]]</p>
 
@@ -46,9 +50,11 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="(url, index) in github_url" :key="index" @click="toggleUrl(url)" style="cursor: pointer;">
+                                <tr v-for="(url, index) in github_url" :key="index" @click="toggleUrl(url)"
+                                    style="cursor: pointer;">
                                     <td class="text-center">
-                                        <input type="checkbox" :checked="selected_urls.includes(url)" @change.stop="toggleUrl(url)">
+                                        <input type="checkbox" :checked="selected_urls.includes(url)"
+                                            @change.stop="toggleUrl(url)">
                                     </td>
                                     <td>[[ url.url ]]</td>
                                     <td>[[ url.rule_count ]]</td>
@@ -59,7 +65,7 @@
                 </div>
                 <div v-if="loading" class="d-flex justify-content-center my-5">
                     <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+                        <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
 
@@ -67,16 +73,20 @@
                 <nav v-if="total_pages > 1" aria-label="GitHub pagination">
                     <ul class="pagination justify-content-center">
                         <li class="page-item" :class="{ disabled: current_page === 1 }">
-                            <button class="page-link" @click="fetchUrlGithub(current_page - 1)" :disabled="current_page === 1">Previous</button>
+                            <button class="page-link" @click="fetchUrlGithub(current_page - 1)"
+                                :disabled="current_page === 1">Previous</button>
                         </li>
 
-                        <li v-for="page in visiblePages" :key="page" class="page-item" :class="{ active: page === current_page, disabled: page === '...' }">
-                            <button class="page-link" v-if="page !== '...'" @click="fetchUrlGithub(page)">[[ page ]]</button>
+                        <li v-for="page in visiblePages" :key="page" class="page-item"
+                            :class="{ active: page === current_page, disabled: page === '...' }">
+                            <button class="page-link" v-if="page !== '...'" @click="fetchUrlGithub(page)">[[ page
+                                ]]</button>
                             <span class="page-link" v-else>...</span>
                         </li>
 
                         <li class="page-item" :class="{ disabled: current_page === total_pages }">
-                            <button class="page-link" @click="fetchUrlGithub(current_page + 1)" :disabled="current_page === total_pages">Next</button>
+                            <button class="page-link" @click="fetchUrlGithub(current_page + 1)"
+                                :disabled="current_page === total_pages">Next</button>
                         </li>
                     </ul>
                 </nav>
@@ -89,16 +99,23 @@
                     </div>
 
                     <div class="d-flex flex-wrap gap-2">
-                        <span v-for="(url, idx) in selected_urls" :key="idx" class="badge bg-primary d-flex align-items-center gap-1">
+                        <span v-for="(url, idx) in selected_urls" :key="idx"
+                            class="badge bg-primary d-flex align-items-center gap-1">
                             [[ url.url ]]
-                            <button type="button" class="btn-close btn-close-white btn-sm" @click="removeUrl(url)"></button>
+                            <button type="button" class="btn-close btn-close-white btn-sm"
+                                @click="removeUrl(url)"></button>
                         </span>
                     </div>
 
                     <div class="mt-3 d-flex justify-content-center">
-                        <button class="btn btn-dark rounded-pill" @click="foundUpdateWithUrl()">
+                        <button v-if="!is_loading" class="btn btn-dark rounded-pill" @click="foundUpdateWithUrl()">
                             <i class="fas fa-sliders-h"></i>
                             Found updates for [[ selected_urls.length ]] GitHub URL(s)
+                        </button>
+
+                        <button v-else class="btn btn-dark rounded-pill" type="button" disabled>
+                            <span class="spinner-border spinner-border-sm text-light" aria-hidden="true"></span>
+                            <span role="status" class="p-2">Loading...</span>
                         </button>
                     </div>
                 </div>
@@ -107,14 +124,15 @@
         <div class="tab-pane fade" id="rule-pane" role="tabpanel" aria-labelledby="rule-tab">
             <div class="card p-3">
                 <div class="d-flex mb-3">
-                    <input v-model="rule_searchQuery" @keyup.enter="fetchRulesWithGithubUrl(1)" class="form-control" placeholder="Search for Rules..." @input="onSearchInputRule">
+                    <input v-model="rule_searchQuery" @keyup.enter="fetchRulesWithGithubUrl(1)" class="form-control"
+                        placeholder="Search for Rules..." @input="onSearchInputRule">
                 </div>
 
                 <p class="text-center mt-3 text-muted">Total Rules found: [[ total_rules ]]</p>
 
-                <div v-if="loading" class="d-flex justify-content-center my-5">
+                <div v-if="loading_" class="d-flex justify-content-center my-5">
                     <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+                        <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
 
@@ -130,9 +148,11 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="rule in rule_with_github_url" :key="rule.id" style="cursor: pointer;" @click="toggleRule(rule)" :title="rule.to_string">
+                                <tr v-for="rule in rule_with_github_url" :key="rule.id" style="cursor: pointer;"
+                                    @click="toggleRule(rule)" :title="rule.to_string">
                                     <td class="text-center">
-                                        <input type="checkbox" :checked="selected_rules.includes(rule)" @change.stop="toggleRule(rule)">
+                                        <input type="checkbox" :checked="selected_rules.includes(rule)"
+                                            @change.stop="toggleRule(rule)">
                                     </td>
                                     <td>
                                         <span class="text-decoration-none text-primary fw-semibold">
@@ -144,7 +164,7 @@
                                         <span class="badge bg-primary me-1">
                                             [[ rule.format ]]
                                         </span>
-                                        
+
                                     </td>
                                 </tr>
                             </tbody>
@@ -156,16 +176,20 @@
                 <nav v-if="total_rule_pages > 1" aria-label="Rule pagination">
                     <ul class="pagination justify-content-center">
                         <li class="page-item" :class="{ disabled: current_rule_page === 1 }">
-                            <button class="page-link" @click="fetchRulesWithGithubUrl(current_rule_page - 1)" :disabled="current_rule_page === 1">Previous</button>
+                            <button class="page-link" @click="fetchRulesWithGithubUrl(current_rule_page - 1)"
+                                :disabled="current_rule_page === 1">Previous</button>
                         </li>
 
-                        <li v-for="page in ruleVisiblePages" :key="page" class="page-item" :class="{ active: page === current_rule_page, disabled: page === '...' }">
-                            <button class="page-link" v-if="page !== '...'" @click="fetchRulesWithGithubUrl(page)">[[ page ]]</button>
+                        <li v-for="page in ruleVisiblePages" :key="page" class="page-item"
+                            :class="{ active: page === current_rule_page, disabled: page === '...' }">
+                            <button class="page-link" v-if="page !== '...'" @click="fetchRulesWithGithubUrl(page)">[[
+                                page ]]</button>
                             <span class="page-link" v-else>...</span>
                         </li>
 
                         <li class="page-item" :class="{ disabled: current_rule_page === total_rule_pages }">
-                            <button class="page-link" @click="fetchRulesWithGithubUrl(current_rule_page + 1)" :disabled="current_rule_page === total_rule_pages">Next</button>
+                            <button class="page-link" @click="fetchRulesWithGithubUrl(current_rule_page + 1)"
+                                :disabled="current_rule_page === total_rule_pages">Next</button>
                         </li>
                     </ul>
                 </nav>
@@ -178,101 +202,79 @@
                     </div>
 
                     <div class="d-flex flex-wrap gap-2">
-                        <span v-for="(rule, idx) in selected_rules" :key="rule.id" class="badge bg-primary d-flex align-items-center gap-1">
+                        <span v-for="(rule, idx) in selected_rules" :key="rule.id"
+                            class="badge bg-primary d-flex align-items-center gap-1">
                             [[ rule.title ]]
-                            <button type="button" class="btn-close btn-close-white btn-sm" @click="removeRule(rule)"></button>
+                            <button type="button" class="btn-close btn-close-white btn-sm"
+                                @click="removeRule(rule)"></button>
                         </span>
                     </div>
 
                     <div class="mt-3 d-flex justify-content-center">
-                        <button class="btn btn-dark rounded-pill" @click="foundUpdateWithRule()">
+                        <button v-if="!is_loading_" class="btn btn-dark rounded-pill" @click="foundUpdateWithRule()">
                             <i class="fas fa-sliders-h"></i>
                             Found updates for [[ selected_rules.length ]] Rule(s)
+                        </button>
+
+                        <button v-else class="btn btn-dark rounded-pill" type="button" disabled>
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                            <span role="status">Loading...</span>
                         </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="mt-4" v-if="updateResults.length > 0">
-        <h5>Update Check Results ( [[ updateResults.length]])</h5>
-        <table class="table table-bordered table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>Rule Title</th>
-                    <th>Status</th>
-                    <th>Message</th>
-                    <th>Details</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="result in updateResults" :key="result.id">
-                    <td>[[ result.title ]]</td>
-                    <td>
-                        <span v-if="result.success && result.new_content" class="text-success">
-                            <i class="fas fa-info-circle"></i> Up-to-date
-                        </span>
-                        <span v-else class="text-danger">
-                            <i class="fas fa-exclamation-triangle"></i> Failed
-                        </span>
-                    </td>
-                    <td>[[ result.message ]]</td>
-                    <td>
-                        <a class="btn btn-sm btn-primary" :href="'/rule/update_github/choose_changes?id=' + result.history_id"  > 
-                            <!-- target="_blank" -->
-                            <i class="fas fa-code-branch"></i> Compare Changes
-                        </a>
-
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
     <div class="mt-5" v-if="old_choice.length > 0">
-            <div class="card shadow-sm border-0">
-                <div class="card-header  text-white d-flex align-items-center">
-                    <i class="fas fa-history me-2" style=" word-break: break-word; color: rgb(10, 88, 202)"></i>
-                    <h5 class="mb-0" style=" word-break: break-word; color: rgb(10, 88, 202)">Update Check Results (pending) <span class="badge bg-light text-primary ms-2">[[ old_choice.length ]]</span></h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-bordered mb-0">
-                            <thead class="table-light text-center">
-                                <tr>
-                                    <th scope="col"><i class="fas fa-tag me-1"></i> Rule Title</th>
-                                    <th scope="col"><i class="fas fa-info-circle me-1"></i> Status</th>
-                                    <th scope="col"><i class="fas fa-comment-dots me-1"></i> Message</th>
-                                    <th scope="col"><i class="fas fa-code-branch me-1"></i> Details</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="result in old_choice" :key="result.id">
-                                    <td>
-                                        <a :href="`/rule/detail_rule/${result.rule_id}`" title="view more about this rule" >
-                                            <i class="fas fa-shield-alt me-2 text-primary"></i> <span class="mb-2" style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">[[ result.rule_title ]]</span>
-                                        </a>
-                                    </td>
-                                    <td class="text-center">
-                                        <span v-if="result.success && result.new_content" class="text-success fw-semibold">
-                                            <i class="fas fa-check-circle me-1"></i> Up-to-date
-                                        </span>
-                                        <span v-else class="text-danger fw-semibold">
-                                            <i class="fas fa-times-circle me-1"></i> Failed
-                                        </span>
-                                    </td>
-                                    <td>[[ result.message ]]</td>
-                                    <td class="text-center">
-                                        <a class="btn btn-sm btn-outline-primary" :href="'/rule/update_github/choose_changes?id=' + result.id">
-                                            <i class="fas fa-code-branch me-1"></i> Compare
-                                        </a>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+        <div class="card shadow-sm border-0">
+            <div class="card-header  text-white d-flex align-items-center">
+                <i class="fas fa-history me-2" style=" word-break: break-word; color: rgb(10, 88, 202)"></i>
+                <h5 class="mb-0" style=" word-break: break-word; color: rgb(10, 88, 202)">Update Check Results (pending)
+                    <span class="badge bg-light text-primary ms-2">[[ old_choice.length ]]</span>
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered mb-0">
+                        <thead class="table-light text-center">
+                            <tr>
+                                <th scope="col"><i class="fas fa-tag me-1"></i> Rule Title</th>
+                                <th scope="col"><i class="fas fa-info-circle me-1"></i> Status</th>
+                                <th scope="col"><i class="fas fa-comment-dots me-1"></i> Message</th>
+                                <th scope="col"><i class="fas fa-code-branch me-1"></i> Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="result in old_choice" :key="result.id">
+                                <td>
+                                    <a :href="`/rule/detail_rule/${result.rule_id}`" title="view more about this rule">
+                                        <i class="fas fa-shield-alt me-2 text-primary"></i> <span class="mb-2"
+                                            style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">[[
+                                            result.rule_title ]]</span>
+                                    </a>
+                                </td>
+                                <td class="text-center">
+                                    <span v-if="result.success && result.new_content" class="text-success fw-semibold">
+                                        <i class="fas fa-check-circle me-1"></i> Up-to-date
+                                    </span>
+                                    <span v-else class="text-danger fw-semibold">
+                                        <i class="fas fa-times-circle me-1"></i> Failed
+                                    </span>
+                                </td>
+                                <td>[[ result.message ]]</td>
+                                <td class="text-center">
+                                    <a class="btn btn-sm btn-outline-primary"
+                                        :href="'/rule/update_github/choose_changes?id=' + result.id">
+                                        <i class="fas fa-code-branch me-1"></i> Compare
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
+    </div>
 
 
 </div>
@@ -282,197 +284,215 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, computed } = Vue
-    import { message_list, create_message, display_toast} from '/static/js/toaster.js'
+    import { message_list, create_message, display_toast } from '/static/js/toaster.js'
 
-createApp({
-    delimiters: ['[[', ']]'],
-    setup() {
-        const csrf_token = '{{ csrf_token() }}'
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const csrf_token = '{{ csrf_token() }}'
 
-        // ##########################
-        // #      BY GITHUB TAB     #
-        // ##########################
-        const github_url = ref([])
-        const total_url = ref(0)
-        const current_page = ref(1)
-        const total_pages = ref(1)
-        const searchQuery = ref('')
-        const loading = ref(true)
+            // ##########################
+            // #      BY GITHUB TAB     #
+            // ##########################
+            const github_url = ref([])
+            const total_url = ref(0)
+            const current_page = ref(1)
+            const total_pages = ref(1)
+            const searchQuery = ref('')
+            const loading = ref(true)
 
-        async function fetchUrlGithub(page) {
-            loading.value = true
-            const params = new URLSearchParams({ page, search: searchQuery.value || '' })
-            const res = await fetch('/rule/get_url_github?' + params.toString())
-            const data = await res.json()
-            if (res.status === 200) {
-                github_url.value = data.github_url || []
-                total_url.value = data.total_url || 0
-                total_pages.value = data.total_pages || 1
-                current_page.value = page
-                loading.value = false
-            }
-        }
-        fetchUrlGithub(1)
 
-        const visiblePages = computed(() => {
-            const total = total_pages.value, current = current_page.value, pages = []
-            if (total <= 7) for (let i = 1; i <= total; i++) pages.push(i)
-            else if (current <= 4) pages.push(1,2,3,4,5,'...',total)
-            else if (current >= total - 3) pages.push(1,'...',total-4,total-3,total-2,total-1,total)
-            else pages.push(1,'...',current-1,current,current+1,'...',total)
-            return pages
-        })
-
-        async function onSearchInput() { await fetchUrlGithub(1) }
-
-        const selected_urls = ref([])
-        const toggleUrl = url => {
-            if (selected_urls.value.includes(url))
-                selected_urls.value = selected_urls.value.filter(u => u !== url)
-            else selected_urls.value.push(url)
-        }
-        const removeUrl = url => { selected_urls.value = selected_urls.value.filter(u => u !== url) }
-
-        const updateResults = ref([])
-
-        async function foundUpdateWithUrl() {
-            if (selected_urls.value.length === 0) {
-                create_message('You have to select at least one GitHub URL.','danger-subtle');
-                return;
-            }
-            const response = await fetch("/rule/check_updates_by_url", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": csrf_token
-                },
-                body: JSON.stringify({ url: selected_urls.value }),
-            });   
-            let data = null;    
-            if (response.status === 200) {
-                data = await response.json();
-                updateResults.value = data.results;
-
-                if (data.nb_update === 0) {
-                    create_message('No updates found for the selected rules.', 'info-subtle');
-                }else{
-                    create_message('Updates found for the selected url(s)', 'success-subtle');
+            async function fetchUrlGithub(page) {
+                loading.value = true
+                const params = new URLSearchParams({ page, search: searchQuery.value || '' })
+                const res = await fetch('/rule/get_url_github?' + params.toString())
+                const data = await res.json()
+                if (res.status === 200) {
+                    github_url.value = data.github_url || []
+                    total_url.value = data.total_url || 0
+                    total_pages.value = data.total_pages || 1
+                    current_page.value = page
+                    loading.value = false
                 }
             }
+            fetchUrlGithub(1)
 
-        }
-            
-        const old_choice = ref([])             
-        const old_current_page = ref(1)        
-        const old_total_page = ref(0)         
-
-        async function fetchOldRules(page) {
-            const params = new URLSearchParams({
-                page
-            });
-
-            const res = await fetch('/rule/get_old_rule_choice?' + params.toString());
-            if (res.status === 200) {
-                const data = await res.json();
-                old_choice.value = data.rule;
-                old_current_page.value = page;
-                old_total_page.value = data.total_pages;
-            }
-        }
-        fetchOldRules(1)
-
-
-        // ##########################
-        // #       BY RULE TAB      #
-        // ##########################
-
-
-        const rule_with_github_url = ref([])
-        const total_rules = ref(0)
-        const current_rule_page = ref(1)
-        const total_rule_pages = ref(1)
-        const rule_searchQuery = ref('')
-
-        async function fetchRulesWithGithubUrl(page) {
-            loading.value = true
-            const params = new URLSearchParams({ page, search: rule_searchQuery.value || '' })
-            const res = await fetch('/rule/get_rules_with_github_url?' + params.toString())
-            const data = await res.json()
-
-            if (res.status === 200) {
-                rule_with_github_url.value = data.github_rules || []
-                total_rules.value = data.total_rule || 0
-                total_rule_pages.value = data.total_pages || 1
-                current_rule_page.value = page
-                loading.value = false
-            }
-        }
-
-        fetchRulesWithGithubUrl(1)
-
-        const ruleVisiblePages = computed(() => {
-            const total = total_rule_pages.value, current = current_rule_page.value, pages = []
-            if (total <= 7) for (let i = 1; i <= total; i++) pages.push(i)
-            else if (current <= 4) pages.push(1,2,3,4,5,'...',total)
-            else if (current >= total - 3) pages.push(1,'...',total-4,total-3,total-2,total-1,total)
-            else pages.push(1,'...',current-1,current,current+1,'...',total)
-            return pages
-        })
-
-        async function onSearchInputRule() { await fetchRulesWithGithubUrl(1) }
-
-
-        const selected_rules = ref([])
-
-        const toggleRule = rule => {
-            if (selected_rules.value.includes(rule))
-                selected_rules.value = selected_rules.value.filter(r => r !== rule)
-            else selected_rules.value.push(rule)
-        }
-
-        const removeRule = rule => { selected_rules.value = selected_rules.value.filter(r => r !== rule) }
-
-        async function foundUpdateWithRule() {
-            if (selected_rules.value.length === 0) {
-                create_message('Select at least one Rule.', 'danger-subtle');
-            }
-            const res = await fetch("/rule/check_updates_by_rule", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-CSRFToken": csrf_token },
-                body: JSON.stringify({ rules: selected_rules.value.map(r => r.id) }),
+            const visiblePages = computed(() => {
+                const total = total_pages.value, current = current_page.value, pages = []
+                if (total <= 7) for (let i = 1; i <= total; i++) pages.push(i)
+                else if (current <= 4) pages.push(1, 2, 3, 4, 5, '...', total)
+                else if (current >= total - 3) pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                else pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                return pages
             })
-            if (res.status === 200) {
-                const data = await res.json();
-                updateResults.value = data.results;
 
-                var message = ''
-                var toast_class = ''
+            async function onSearchInput() { await fetchUrlGithub(1) }
 
-                if (data.nb_update === 0){
-                    message = 'No updates found.'
-                    toast_class = 'info-subtle'
-                }else{
-                    message = 'Updates found!'
-                    toast_class = 'success-subtle'
+            const selected_urls = ref([])
+
+            const toggleUrl = (url) => {
+                if (selected_urls.value[0] === url) {
+                    selected_urls.value = []
+                    return
                 }
-                create_message(message , toast_class)
-                
+                selected_urls.value = [url]
+            }
+
+            const removeUrl = (url) => {
+                if (selected_urls.value[0] === url) {
+                    selected_urls.value = []
+                }
+            }
+
+
+
+            const updateResults = ref([])
+            const is_loading = ref(false)
+
+            async function foundUpdateWithUrl() {
+                if (selected_urls.value.length === 0) {
+                    create_message('You have to select at least one GitHub URL.', 'danger-subtle');
+                    return;
+                }
+                is_loading.value = true
+                const response = await fetch("/rule/check_updates_by_url", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrf_token
+                    },
+                    body: JSON.stringify({ url: selected_urls.value }),
+                });
+
+
+                let data = null;
+                if (response.status === 201) {
+
+                    let loc = await response.json()
+                    window.location.href = "/rule/update_loading/" + loc["session_uuid"]
+
+                }
+                is_loading.value = false
+
+
+            }
+
+            const old_choice = ref([])
+            const old_current_page = ref(1)
+            const old_total_page = ref(0)
+
+            async function fetchOldRules(page) {
+                const params = new URLSearchParams({
+                    page
+                });
+
+                const res = await fetch('/rule/get_old_rule_choice?' + params.toString());
+                if (res.status === 200) {
+                    const data = await res.json();
+                    old_choice.value = data.rule;
+                    old_current_page.value = page;
+                    old_total_page.value = data.total_pages;
+                }
+            }
+            fetchOldRules(1)
+
+
+            // ##########################
+            // #       BY RULE TAB      #
+            // ##########################
+
+
+            const rule_with_github_url = ref([])
+            const total_rules = ref(0)
+            const current_rule_page = ref(1)
+            const total_rule_pages = ref(1)
+            const rule_searchQuery = ref('')
+            const is_loading_ = ref(false)
+            const loading_ = ref(true)
+
+            async function fetchRulesWithGithubUrl(page) {
+                loading_.value = true
+                const params = new URLSearchParams({ page, search: rule_searchQuery.value || '' })
+                const res = await fetch('/rule/get_rules_with_github_url?' + params.toString())
+                const data = await res.json()
+
+                if (res.status === 200) {
+                    rule_with_github_url.value = data.github_rules || []
+                    total_rules.value = data.total_rule || 0
+                    total_rule_pages.value = data.total_pages || 1
+                    current_rule_page.value = page
+                    loading_.value = false
+                }
+            }
+
+            fetchRulesWithGithubUrl(1)
+
+            const ruleVisiblePages = computed(() => {
+                const total = total_rule_pages.value, current = current_rule_page.value, pages = []
+                if (total <= 7) for (let i = 1; i <= total; i++) pages.push(i)
+                else if (current <= 4) pages.push(1, 2, 3, 4, 5, '...', total)
+                else if (current >= total - 3) pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                else pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                return pages
+            })
+
+            async function onSearchInputRule() { await fetchRulesWithGithubUrl(1) }
+
+
+            const selected_rules = ref([])
+
+            const toggleRule = rule => {
+                if (selected_rules.value.includes(rule))
+                    selected_rules.value = selected_rules.value.filter(r => r !== rule)
+                else selected_rules.value.push(rule)
+            }
+
+            const removeRule = rule => { selected_rules.value = selected_rules.value.filter(r => r !== rule) }
+
+            async function foundUpdateWithRule() {
+                if (selected_rules.value.length === 0) {
+                    create_message('Select at least one Rule.', 'danger-subtle');
+                }
+                is_loading_.value = true
+                const res = await fetch("/rule/check_updates_by_rule", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrf_token },
+                    body: JSON.stringify({ rules: selected_rules.value.map(r => r.id) }),
+                })
+                if (res.status === 201) {
+                    is_loading_.value = false
+                    let loc = await res.json()
+                    window.location.href = "/rule/update_loading/" + loc["session_uuid"]
+                    // updateResults.value = data.results;
+
+                    // var message = ''
+                    // var toast_class = ''
+
+                    // if (data.nb_update === 0){
+                    //     message = 'No updates found.'
+                    //     toast_class = 'info-subtle'
+                    // }else{
+                    //     message = 'Updates found!'
+                    //     toast_class = 'success-subtle'
+                    // }
+                    // create_message(message , toast_class)
+
+                }
+            }
+
+            return {
+                message_list,
+                github_url, total_url, current_page, total_pages, searchQuery, visiblePages,
+                fetchUrlGithub, onSearchInput, selected_urls, toggleUrl, removeUrl, foundUpdateWithUrl, updateResults,
+
+                rule_with_github_url, total_rules, current_rule_page, total_rule_pages, rule_searchQuery,
+                ruleVisiblePages, fetchRulesWithGithubUrl, onSearchInputRule, selected_rules, toggleRule, removeRule,
+                foundUpdateWithRule,
+
+                old_choice, old_current_page, old_total_page, fetchOldRules, loading_, is_loading_,
+                loading, is_loading
             }
         }
-
-        return {
-            message_list,
-            github_url, total_url, current_page, total_pages, searchQuery, visiblePages,
-            fetchUrlGithub, onSearchInput, selected_urls, toggleUrl, removeUrl, foundUpdateWithUrl, updateResults,
-
-            rule_with_github_url, total_rules, current_rule_page, total_rule_pages, rule_searchQuery,
-            ruleVisiblePages, fetchRulesWithGithubUrl, onSearchInputRule, selected_rules, toggleRule, removeRule,
-            foundUpdateWithRule,
-
-            old_choice, old_current_page, old_total_page, fetchOldRules,
-            loading
-        }
-    }
-}).mount('#main-container')
+    }).mount('#main-container')
 </script>
 {% endblock %}

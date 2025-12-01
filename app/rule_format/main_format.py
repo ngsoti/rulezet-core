@@ -1,15 +1,8 @@
-from app.rule_type.rule_formats.nse_format import NseRule
-from app.rule_type.rule_formats.wazuh_format import WazuhRule
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult, load_all_rule_formats
 from .. import db
 from ..db_class.db import *
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
-from app.rule_type.rule_formats.crs_format import CRSRule
-# from app.rule_type.rule_formats.elastic_format import ElasticDetectionRule
-from app.rule_type.rule_formats.nova_format import NovaRule
-from app.rule_type.rule_formats.sigma_format import SigmaRule
-from app.rule_type.rule_formats.suricata_format import SuricataRule
-from app.rule_type.rule_formats.yara_format import YaraRule
-from app.rule_type.rule_formats.zeek_format import ZeekRule
+from app.rule_format.available_format import * 
+
 from ..rule import rule_core as RuleModel
 from flask_login import current_user
 
@@ -113,19 +106,17 @@ def verify_syntax_rule_by_format(rule_dict: dict) -> tuple[bool, str]:
     """
 
     rule_format = rule_dict.get("format", "").lower()
-
     if not rule_format:
         return False, "Missing rule format."
-
+    load_all_rule_formats()
     matching_class = None
     for cls in RuleType.__subclasses__():
         try:
             if cls().format.lower() == rule_format:
                 matching_class = cls
                 break
-        except Exception:
+        except Exception as e:
             continue
-
     if not matching_class:
         return False, f"Format '{rule_format}' is not supported."
 
@@ -237,6 +228,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str):
     """
 
     # Trouver la classe correspondant au format
+    load_all_rule_formats()
     matching_class = None
     for RuleClass in RuleType.__subclasses__():
         try:

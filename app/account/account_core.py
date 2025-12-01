@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Tuple
+from typing import  Tuple
 from flask_login import current_user
 from sqlalchemy import or_
 

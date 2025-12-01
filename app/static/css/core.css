@@ -9,6 +9,12 @@
     display: none;
   }
 
+  /*---------------Size_Website---------------*/
+  .container {
+    max-width: 85% !important;  
+  }
+
+
 
   :root {
   --bg-color: #ffffff;

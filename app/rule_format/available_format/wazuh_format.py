@@ -1,8 +1,8 @@
 import os
 import xml.etree.ElementTree as ET
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from ...rule import rule_core as RuleModel
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.utils.utils import detect_cve
 
 
@@ -56,6 +56,9 @@ class WazuhRule(RuleType):
         """
         Extract metadata from a Wazuh rule.
         """
+        rule_id = "Unknown"
+        description = "No description provided"
+        
         try:
             root = ET.fromstring(content)
 
@@ -67,7 +70,7 @@ class WazuhRule(RuleType):
             if rule is None:
                 return {
                     "format": "wazuh",
-                    "title": f"Invalid Rule",
+                    "title": f"Wazuh Rule (No <rule> element)",
                     "description": "No <rule> element found",
                     "license": info.get("license", "unknown"),
                     "version": "N/A",
@@ -78,11 +81,15 @@ class WazuhRule(RuleType):
                     "to_string": validation_result.normalized_content or content,
                 }
 
+            rule_id = rule.get("id", "Unknown")
             description = rule.findtext("description")
+
             if not description:
-                description = f"Wazuh rule {rule.get('id', 'Unknown')}"
+                description = f"Wazuh rule ID:{rule_id}"
 
             _, cve = detect_cve(description)
+            
+            normalized_content = validation_result.normalized_content if hasattr(validation_result, 'normalized_content') else content
 
             return {
                 "format": "wazuh",
@@ -92,21 +99,21 @@ class WazuhRule(RuleType):
                 "version": rule.get("level", "1"),
                 "author": info.get("author", "Unknown"),
                 "cve_id": cve,
-                "original_uuid": rule.get("id", "Unknown"),
+                "original_uuid": rule_id,
                 "source": info.get("repo_url", ""),
-                "to_string": validation_result.normalized_content or content,
+                "to_string": normalized_content,
             }
 
         except Exception as e:
             return {
                 "format": "wazuh",
-                "title": "Invalid Rule",
+                "title": f"Wazuh Rule ID:{rule_id} (Parsing Error)",
                 "description": f"Error parsing metadata: {e}",
                 "license": info.get("license", "unknown"),
                 "version": "N/A",
                 "author": info.get("author", "Unknown"),
                 "cve_id": None,
-                "original_uuid": "Unknown",
+                "original_uuid": rule_id,
                 "source": info.get("repo_url", ""),
                 "to_string": content,
             }
