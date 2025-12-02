@@ -26,9 +26,8 @@
 
             <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
               <button class="btn btn-outline-secondary btn-sm ms-3"
-                      :class="bundle.access ? 'btn-outline-success' : 'btn-outline-danger'"
-                      @click="edit_access(bundle.id)"
-                      :title="bundle.access ? 'Make Private' : 'Make Public'">
+                :class="bundle.access ? 'btn-outline-success' : 'btn-outline-danger'" @click="edit_access(bundle.id)"
+                :title="bundle.access ? 'Make Private' : 'Make Public'">
                 <i :class="bundle.access ? 'fas fa-lock-open' : 'fas fa-lock'"></i>
                 <span class="ms-1">[[ bundle.access ? 'Public' : 'Private' ]]</span>
               </button>
@@ -38,7 +37,7 @@
                 <i :class="bundle.access ? 'fas fa-lock-open' : 'fas fa-lock'"></i>
                 <span class="ms-1">[[ bundle.access ? 'Public' : 'Private' ]]</span>
               </span>
-            </template>  
+            </template>
           </div>
 
           <div class="d-flex align-items-center">
@@ -46,15 +45,15 @@
               <i class="fas fa-download me-1"></i>
             </button>
             {% if current_user.is_authenticated %}
-              <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
-                <a :href="`/bundle/edit/${bundle_id}`" class="btn btn-secondary btn-sm ms-2" title="Edit Bundle">
-                  <i class="fas fa-pen"></i>
-                </a>
-                <button type="button" class="btn btn-danger btn-sm ms-2" title="Delete the bundle"
-                        data-bs-toggle="modal" :data-bs-target="'#delete_bundle_modal_'+bundle.id">
-                  <i class="fa-solid fa-trash fa-fw"></i>
-                </button>
-              </template>
+            <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
+              <a :href="`/bundle/edit/${bundle_id}`" class="btn btn-secondary btn-sm ms-2" title="Edit Bundle">
+                <i class="fas fa-pen"></i>
+              </a>
+              <button type="button" class="btn btn-danger btn-sm ms-2" title="Delete the bundle" data-bs-toggle="modal"
+                :data-bs-target="'#delete_bundle_modal_'+bundle.id">
+                <i class="fa-solid fa-trash fa-fw"></i>
+              </button>
+            </template>
             {% endif %}
           </div>
         </div>
@@ -86,12 +85,12 @@
     <!-- Carte Rules -->
     <div class="card bg-white shadow-sm border-0 mb-4">
       <div class="card-body">
-          <div class="d-flex align-items-center mb-3">
-            <h4 class="mb-0 text-primary">Rules included in this bundle</h4>
-            <span class="badge bg-primary ms-2">
-              [[ rules.length ]]
-            </span>
-          </div>
+        <div class="d-flex align-items-center mb-3">
+          <h4 class="mb-0 text-primary">Rules included in this bundle</h4>
+          <span class="badge bg-primary ms-2">
+            [[ rules.length ]]
+          </span>
+        </div>
         <template v-if="rules.length === 0">
           <div class="alert alert-warning text-center shadow-sm mt-3">
             <i class="fas fa-circle-info me-2"></i>
@@ -101,55 +100,63 @@
 
         <template v-else>
           <ul class="list-group list-group-flush mt-3">
-            <li v-for="(item, index) in rules" :key="item.rule.id" class="list-group-item">
+            <li v-for="(item, index) in rules" :key="item.rule.cve_id" class="list-group-item">
 
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div>
                   <span class="badge bg-secondary me-2">[[ item.rule.format ]]</span>
                   <a :href="`/rule/detail_rule/${item.rule.id}`" title="View more about this rule">
-                    [[ item.rule.title ]]
+                    <h5 class="d-inline fw-bold text-primary mb-0 me-2">[[ item.rule.title ]]</h3>
                   </a>
-                  <template v-if="item.rule.cve_id && item.rule.cve_id !== 'None'">
-                    <strong>[[ item.rule.cve_id ]]</strong>
-                  </template>
+                  <a v-for="(cve, index) in parsedCVE(item.rule.cve_id)" :key="index"
+                    :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()" target="_blank"
+                    :class="['badge', 'me-1', 'mb-1', getCVEColor(cve)]" data-bs-toggle="tooltip"
+                    :title="'Detected vulnerability ID: ' + cve" style="text-decoration: none;">
+
+                    <i :class="getCVEIcon(cve)" class="me-1"></i>
+                    [[ getCVEPrefix(cve) ]]
+                    <span class="text-light fw-semibold">[[ getCVENumber(cve) ]]</span>
+                  </a>
+
+
                 </div>
 
                 {% if current_user.is_authenticated %}
-                  <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
-                    <div>
-                      <button type="button" class="btn btn-sm " title="Edit the description"
-                              data-bs-toggle="modal"
-                              :data-bs-target="'#description_bundle_modal_'+item.rule.id"
-                              @click="item.new_description = item.association.description">
-                        <i class="fa-solid fa-pen fa-fw"></i>
-                      </button>
+                <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
+                  <div>
+                    <button type="button" class="btn btn-sm " title="Edit the description" data-bs-toggle="modal"
+                      :data-bs-target="'#description_bundle_modal_'+item.rule.id"
+                      @click="item.new_description = item.association.description">
+                      <i class="fa-solid fa-pen fa-fw"></i>
+                    </button>
 
-                      <div class="modal fade" :id="'description_bundle_modal_'+item.rule.id" tabindex="-1" aria-labelledby="description_bundle_modal" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                          <div class="modal-content">
-                            <div class="modal-header">
-                              <h1 class="modal-title fs-5 text-dark">Edit description for [[ item.rule.title ]]</h1>
-                              <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal fade" :id="'description_bundle_modal_'+item.rule.id" tabindex="-1"
+                      aria-labelledby="description_bundle_modal" aria-hidden="true">
+                      <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h1 class="modal-title fs-5 text-dark">Edit description for [[ item.rule.title ]]</h1>
+                            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            <div class="mb-3">
+                              <label for="bundleNewDescription" class="form-label fw-bold">New description</label>
+                              <textarea id="bundleNewDescription" v-model="item.new_description" class="form-control"
+                                rows="3" placeholder="Enter the new description here..."></textarea>
                             </div>
-                            <div class="modal-body">
-                              <div class="mb-3">
-                                <label for="bundleNewDescription" class="form-label fw-bold">New description</label>
-                                <textarea id="bundleNewDescription" v-model="item.new_description"
-                                          class="form-control" rows="3" placeholder="Enter the new description here..."></textarea>
-                              </div>
-                            </div>
-                            <div class="modal-footer">
-                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                              <button class="btn btn-success" @click="saveNewDescription(item.association.id , item)">
-                                <i class="fa-solid fa-check"></i> Save
-                              </button>
-                            </div>
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button class="btn btn-success" @click="saveNewDescription(item.association.id , item)">
+                              <i class="fa-solid fa-check"></i> Save
+                            </button>
                           </div>
                         </div>
                       </div>
-
                     </div>
-                  </template>
+
+                  </div>
+                </template>
                 {% endif %}
               </div>
 
@@ -193,7 +200,7 @@
 <script type="module">
   const bundle_id = document.getElementById('bundle-info').dataset.bundleId;
   const { createApp, ref } = Vue;
-  import { display_toast, message_list, create_message} from '/static/js/toaster.js';
+  import { display_toast, message_list, create_message } from '/static/js/toaster.js';
 
   createApp({
     delimiters: ['[[', ']]'],
@@ -232,108 +239,184 @@
 
       async function deleteBundle(id, index) {
         const params = new URLSearchParams({
-            id
+          id
         })
-        const res = await fetch('/bundle/delete?'+ params.toString())
-        if(await res.status == 200){
-            var myModalEl = document.getElementById('delete_bundle_modal_'+id);
-            var modal = bootstrap.Modal.getInstance(myModalEl)
-            modal.hide();
-            window.location.href = `/bundle/list`;
-        } else{
+        const res = await fetch('/bundle/delete?' + params.toString())
+        if (await res.status == 200) {
+          var myModalEl = document.getElementById('delete_bundle_modal_' + id);
+          var modal = bootstrap.Modal.getInstance(myModalEl)
+          modal.hide();
+          window.location.href = `/bundle/list`;
+        } else {
           display_toast(res)
         }
-    }
+      }
 
-    async function edit_access(id) {
+      async function edit_access(id) {
         const params = new URLSearchParams({
-            id
+          id
         })
-        const res = await fetch('/bundle/edit_access?'+ params.toString())
-        if(await res.status == 200){
-            bundle.value.access = !bundle.value.access
-        } 
+        const res = await fetch('/bundle/edit_access?' + params.toString())
+        if (await res.status == 200) {
+          bundle.value.access = !bundle.value.access
+        }
         display_toast(res)
-    }
+      }
 
 
-    async function saveNewDescription(association_id , item){
+      async function saveNewDescription(association_id, item) {
         if (item.new_description !== undefined && item.new_description.trim() !== "") {
-        
-        const params = new URLSearchParams({
-          new_description: item.new_description,
-          association_id
-        })
-        const res = await fetch('/bundle/change_description?'+ params.toString())
-        if(await res.status == 200){
+
+          const params = new URLSearchParams({
+            new_description: item.new_description,
+            association_id
+          })
+          const res = await fetch('/bundle/change_description?' + params.toString())
+          if (await res.status == 200) {
             item.association.description = item.new_description; // or fetch the rule ?
-            var myModalEl = document.getElementById('description_bundle_modal_'+item.rule.id);
+            var myModalEl = document.getElementById('description_bundle_modal_' + item.rule.id);
             var modal = bootstrap.Modal.getInstance(myModalEl)
             modal.hide();
-        } 
-        display_toast(res)
+          }
+          display_toast(res)
+        }
       }
-    }
 
-    async function DownloadBundle() {
-      const params = new URLSearchParams({ bundle_id });
-      const res = await fetch('/bundle/download?' + params.toString());
+      async function DownloadBundle() {
+        const params = new URLSearchParams({ bundle_id });
+        const res = await fetch('/bundle/download?' + params.toString());
 
-      if (res.status === 200) {
-        const blob = await res.blob();
+        if (res.status === 200) {
+          const blob = await res.blob();
 
-        // download section
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${bundle.value.name}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
+          // download section
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${bundle.value.name}.zip`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
 
-        await create_message("Bundle download with success", "success-subtle");
-        
-      } else {
-        display_toast(res);
+          await create_message("Bundle download with success", "success-subtle");
+
+        } else {
+          display_toast(res);
+        }
       }
-    }
-    const current_user_is_connected = ref("{{ current_user.is_authenticated }}");
-    if(current_user_is_connected.value == "True"){
+      const current_user_is_connected = ref("{{ current_user.is_authenticated }}");
+      if (current_user_is_connected.value == "True") {
         current_user_is_connected.value = true
-    }else{
+      } else {
         current_user_is_connected.value = false
-    }
-    async function vote(voteType, bundleId) {
-        if(current_user_is_connected.value == true){
-          const params = new URLSearchParams({ bundleId ,voteType });
+      }
+      async function vote(voteType, bundleId) {
+        if (current_user_is_connected.value == true) {
+          const params = new URLSearchParams({ bundleId, voteType });
           const res = await fetch('/bundle/evaluate?' + params.toString());
           const data = await res.json()
-          
+
           bundle.value.vote_up = data.vote_up
           bundle.value.vote_down = data.vote_down
-        }else{
+        } else {
           window.location.href = `/account/login`;
         }
-         
-    }
-    /**
-     *          #########################
-     *          #   security section    #
-     *          #########################
-     */
 
-    const is_admin = ref(false)
+      }
+      /**
+       *          #########################
+       *          #   security section    #
+       *          #########################
+       */
 
-    async function fetchCurrentUser() {
+      const is_admin = ref(false)
+
+      async function fetchCurrentUser() {
         const res = await fetch('/rule/get_current_user')
-        if(res){
-            const data = await res.json()
-            is_admin.value = data.user
+        if (res) {
+          const data = await res.json()
+          is_admin.value = data.user
         }
-    }
-    fetchCurrentUser()
+      }
+      fetchCurrentUser()
 
+      function parsedCVE(cveField) {
+        if (!cveField) return [];
+
+        // Tentative JSON (tableau ou string)
+        try {
+          const parsed = JSON.parse(cveField);
+          if (Array.isArray(parsed)) return parsed;
+          if (typeof parsed === "string") return [parsed];
+        } catch (e) {
+          // Ignore error, fallback below
+        }
+
+        // Format type: "{CVE-...,GHSA-...}" ou "CVE-..., GHSA-..."
+        return cveField
+          .replace(/[{}[\]]/g, "")        // enlève {}, []
+          .split(",")                     // découpe multi-CVE
+          .map(s => s.trim())             // nettoie
+          .filter(s => s.length > 0);     // supprime vide
+      }
+
+
+      // --------------------------------------------
+      // COULEURS
+      // --------------------------------------------
+      function getCVEColor(cve) {
+        if (!cve) return "bg-dark";
+
+        if (cve.startsWith("CVE")) return "bg-danger";
+        if (cve.startsWith("GHSA")) return "bg-warning text-dark";
+        if (cve.startsWith("PYSEC")) return "bg-info text-dark";
+        if (cve.startsWith("GSD")) return "bg-secondary";
+        if (cve.startsWith("GCVE")) return "bg-primary";
+        if (cve.startsWith("RHSA")) return "bg-danger-subtle text-dark";
+        if (cve.startsWith("CERTFR")) return "bg-success";
+        if (cve.startsWith("cisco-sa")) return "bg-dark";
+        if (cve.startsWith("wid-sec-w")) return "bg-secondary";
+        if (cve.startsWith("msrc_CVE")) return "bg-purple";
+
+        return "bg-dark"; // fallback
+      }
+
+
+      // --------------------------------------------
+      // ICONES
+      // --------------------------------------------
+      function getCVEIcon(cve) {
+        if (!cve) return "fas fa-exclamation-triangle";
+
+        if (cve.startsWith("CVE")) return "fas fa-shield-alt";
+        if (cve.startsWith("GHSA")) return "fas fa-bug";
+        if (cve.startsWith("PYSEC")) return "fas fa-code";
+        if (cve.startsWith("GSD")) return "fas fa-database";
+        if (cve.startsWith("GCVE")) return "fas fa-globe";
+        if (cve.startsWith("RHSA")) return "fas fa-lock";
+        if (cve.startsWith("CERTFR")) return "fas fa-flag";
+        if (cve.startsWith("cisco-sa")) return "fas fa-network-wired";
+        if (cve.startsWith("wid-sec-w")) return "fas fa-exclamation-circle";
+        if (cve.startsWith("msrc_CVE")) return "fas fa-shield-virus";
+
+        return "fas fa-exclamation-triangle"; // fallback
+      }
+
+
+      // --------------------------------------------
+      // UTILITAIRES
+      // --------------------------------------------
+      function getCVEPrefix(cve) {
+        if (!cve) return "";
+        return cve.split("-")[0].toUpperCase();
+      }
+
+      function getCVENumber(cve) {
+        if (!cve) return "";
+        // Enlève tout sauf la partie numérique
+        return cve.replace(/^[A-Za-z_:-]+/, "").replace(/^-/, "");
+      }
 
       return {
         bundle,
@@ -347,7 +430,12 @@
         deleteBundle,
         saveNewDescription,
         DownloadBundle,
-        current_user_is_connected
+        current_user_is_connected,
+        parsedCVE,
+        getCVEColor,
+        getCVEIcon,
+        getCVEPrefix,
+        getCVENumber
       };
     }
   }).mount('#main-container');

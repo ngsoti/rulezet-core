@@ -119,15 +119,9 @@ class YaraRule(RuleType):
             # mais le nom réel (s'il existe) pour le traitement.
             return {
                 "format": "yara",
-<<<<<<< HEAD:app/rule_type/rule_formats/yara_format.py
-                "title": "Invalid Rule",
-                "license":  info["license"] or "unknown",
-                "description": f"Error parsing metadata: {e}",
-=======
                 "title": rule_name, # <-- **CORRECTION CLÉ** : Utiliser le nom extrait
                 "license": info.get("license", "unknown"),
                 "description": f"Error parsing optional metadata in rule '{rule_name}': {e}",
->>>>>>> origin/dev_update:app/rule_format/available_format/yara_format.py
                 "version": "N/A",
                 "source": info.get("repo_url", "Unknown"),
                 "original_uuid": "Unknown",

@@ -539,7 +539,7 @@ def comment_rule() -> jsonify:
     comments = RuleModel.get_comment_page(page , rule_id)
     total_comments = RuleModel.get_total_comments_count()
     if comments:
-        comments_list = [c.to_json for c in comments]
+        comments_list = [c.to_json() for c in comments]
         return {"comments_list": comments_list, "total_comments": total_comments}
     return {"message": "No Comments"}, 404
 

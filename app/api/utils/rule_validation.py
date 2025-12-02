@@ -8,7 +8,9 @@ Standalone functions for validating rule search parameters, pagination, and veri
 """
 
 from typing import Any, Tuple, Type
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType
+
 
 # --------------------------
 # Validation functions

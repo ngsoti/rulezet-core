@@ -46,8 +46,8 @@
                             <h5>
                                 <i class="fas fa-shield-alt me-2 text-primary mb-0 text-truncate"></i> <span
                                     class="mb-2"
-                                    style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">{{
-                                    rule.title }}</span>
+                                    style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">
+                                    {{rule.title }}</span>
                             </h5>
                         </div>
                         <div class="col-3 text-end">
@@ -315,11 +315,9 @@
                                             <ul>
                                                 <li><strong>This specific rule</strong> only</li>
                                                 <li><strong>All rules</strong> that come from the same source:
-                                                    <<<<<<< HEAD <code>{{ rule.source }}</code>
+                                                    <code>{{ rule.source }}</code>
                                                 </li>
-                                                =======
-                                                <code>{{ rule.source }}</code></li>
-                                                >>>>>>> origin/dev_update
+
                                             </ul>
                                         </div>
                                         <div class="modal-footer">
@@ -599,17 +597,12 @@
                     <!-- Rule Content -->
                     <div class="form-group mb-4">
                         <label for="rule_content" class="fw-bold">Rule Content</label><span style="color:red"> *</span>
-                        <textarea id="rule_content" name="rule_content" class="form-control" rows="15" <<<<<<< HEAD
-                            placeholder="Enter the modified rule content here" required>{{ rule.to_string}}
-                        </textarea>
-                        =======
-                        placeholder="Enter the modified rule content here" v-text="rule_format.normal"
-                        required></textarea>
-                        >>>>>>> origin/dev_update
+                        <textarea id="rule_content" name="rule_content" class="form-control" rows="15"
+                            placeholder="Enter the modified rule content here" required>{{rule_content}}</textarea>
                     </div>
 
                     <!-- Optional message -->
-                    <div class="form-group mb-4">
+                    <div class=" form-group mb-4">
                         <label for="message" class="fw-bold">Message or Justification</label>
                         <input id="message" type="text" name="message" class="form-control"
                             placeholder="Explain the changes you made or provide any additional context">
@@ -631,7 +624,7 @@
                 </div>
                 {% endif %}
             </div>
-            <<<<<<< HEAD=======>>>>>>> origin/dev_update
+
         </div>
         <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
             <div class="card card-body shadow-sm" id="main-container">
@@ -1052,6 +1045,8 @@
              * */
 
             const editor = ref(null);
+
+
 
             onMounted(() => {
                 document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {

@@ -7,9 +7,9 @@ from flask_restx import Resource, Namespace
 
 from app.api.utils.rule_validation import *
 from app.db_class.db import Rule
-from app.import_github_project.untils_import import clone_or_access_repo, delete_existing_repo_folder, github_repo_metadata, valider_repo_github
-from app.import_github_project.update_github_project import Check_for_rule_updates
-from app.rule_type.main_format import extract_rule_from_repo, verify_syntax_rule_by_format
+
+from app.rule_format.main_format import extract_rule_from_repo, verify_syntax_rule_by_format
+from app.rule_format.utils_format.utils_import_update import clone_or_access_repo, delete_existing_repo_folder, github_repo_metadata, valider_repo_github
 from app.utils import utils
 from app.utils.decorators import api_required
 from ...rule import rule_core as RuleModel
