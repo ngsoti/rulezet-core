@@ -710,7 +710,7 @@ def propose_edit(rule_id) -> redirect:
 
     rule = RuleModel.get_rule(rule_id)
 
-    if rule.to_string.strip() == proposed_content.strip():
+    if rule.to_string == proposed_content:
         flash("Proposed content is the same as the current content.", "warning")
         return redirect(url_for('rule.detail_rule', rule_id=rule_id) + "#chap2-pane")
     

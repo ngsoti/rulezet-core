@@ -210,7 +210,6 @@ class Update_class:
                         
                         if existing_rule:
                             # Sub-case 1.1: Rule EXISTS (Attempt Update)
-                            print("Found existing rule. Checking for update.")
                             
                             # Use self.local_repo_path instead of self.repo_sources
                             message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.id, self.local_repo_path ) 
@@ -262,11 +261,9 @@ class Update_class:
                                 #format=metadata.get("format") 
                             )
                             self.new_rules_list.append(new_rule_obj)
-                            print("New valid rule added to list.")
 
                     else:
                         # Case 2: Rule is INVALID (Log as New Invalid Rule for Correction)
-                        print("Invalid syntax detected. Adding to NewRule list for correction.")
 
                         # Extract errors and warnings for the message
                         error_details = []
@@ -344,7 +341,6 @@ class Update_class:
 # ------------------ RULE UPDATE CHECKER ------------------
 
 def Check_for_rule_updates(rule_id: int, repo_dir: str):
-    print(rule_id)
     rule = RuleModel.get_rule(rule_id)
     if not rule:
         return {"message": f"No rule found with ID {rule_id}", "success": False}, False, None

@@ -38,36 +38,7 @@
             </div>
         </div>
         <div class="row mt-4">
-            <div class="row mt-3">
-                <div class="col-md-6 mb-3">
-                    <strong>Proposed Content:</strong>
-                    <div class="bg-light p-3 rounded border"
-                        style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
-                        <div v-for="(line2, i) in getProposedContentLines(proposal.proposed_content)" :key="i">
-                            <span v-if="line2.trim() !== ''"
-                                :class="{'text-success': isLineNew(line2, proposal.old_content)}" class="d-block">
-                                [[ line2 ]]
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-
-                <div class="col-md-6 mb-3">
-                    <strong>Old Content:</strong>
-                    <div class="bg-light p-3 rounded border"
-                        style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
-                        <div v-for="(line2, i) in getOldContentLines(proposal.old_content)" :key="i">
-                            <span v-if="line2.trim() !== ''"
-                                :class="{'text-danger': isLineDeleted(line2, proposal.proposed_content)}"
-                                class="d-block">
-                                [[ line2 ]]
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+            <div id="myDiffElement"></div>
         </div>
 
 
@@ -114,9 +85,11 @@
 {% endblock %}
 
 {% block script %}
+
 <script type="module">
-    const { createApp, ref } = Vue;
+    const { createApp, ref, nextTick } = Vue;
     import { message_list } from '/static/js/toaster.js';
+    import { renderDiff } from "/static/js/diff_macro.js";
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
@@ -149,6 +122,17 @@
                 if (res.ok) {
                     const data = await res.json();
                     proposal.value = data.proposal;
+
+                    if (proposal.value) {
+                        await nextTick(() => {
+                            renderDiff(
+                                proposal.value.old_content,
+                                proposal.value.proposed_content,
+                                "myDiffElement",
+                                "twoText"
+                            );
+                        });
+                    }
                 }
 
             }

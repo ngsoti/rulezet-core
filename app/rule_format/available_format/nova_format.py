@@ -138,7 +138,7 @@ class NovaRule(RuleType):
                 if r:
                     rules.append(r)
         except Exception as e:
-            print(f"[extract_rules_from_file] Error parsing {filepath}: {e}")
+            return []
 
         return rules
 

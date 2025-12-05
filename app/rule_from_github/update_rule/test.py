@@ -200,7 +200,6 @@ class Update_class:
                         existing_rule = RuleModel.get_rule_by_title(name)
                         if existing_rule:
                             #Update
-                            print("Found")
                             message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.id, self.repo_sources )
                             # --- créer un historique si besoin ---
                             history_id = None
@@ -245,17 +244,8 @@ class Update_class:
                                 error=not validation_result.ok,
                                 accept=False
                             )
-                            if new_rule_obj:
-                                print("ouiii")
-                            else:
-                                print("ahhhhhhhhhhhhhhhhhhhhhhhhhhh")
 
                             self.new_rules_list.append(new_rule_obj)
-                            print("new")
-                    else:
-                        # the rule is a bad rule but can existe anyway
-                        # add to new rule
-                        print("Invalide syntaxe")
 
                     # break
             self.jobs.task_done()

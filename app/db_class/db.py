@@ -772,7 +772,6 @@ class UpdateResult(db.Model):
             return rule_names if len(rule_names) > 1 else rule_names[0]
 
         except Exception as e:
-            print(f"[UpdateResult] Error in _get_rule_name_by_mode: {e}")
             return None
 
 

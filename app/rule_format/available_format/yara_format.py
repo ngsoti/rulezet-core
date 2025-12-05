@@ -262,7 +262,7 @@ class YaraRule(RuleType):
                 i += 1
 
         except Exception as e:
-            print(f"[extract_rules_from_file] Error parsing {filepath}: {e}")
+            return []
 
         return rules
 
