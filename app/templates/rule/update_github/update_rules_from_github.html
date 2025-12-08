@@ -28,6 +28,12 @@
                 By Rule
             </a>
         </li>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="change-tab" data-bs-toggle="tab" href="#change-pane" role="tab"
+                aria-controls="change-pane" aria-selected="false" style="color: var(--text-color);">
+                To be Updated <span class="badge bg-primary">[[ old_choice.length ]]</span>
+            </a>
+        </li>
     </ul>
 
     <div class="tab-content" id="exampleTabsContent">
@@ -38,34 +44,41 @@
                         placeholder="Search for GitHub URLs..." @input="onSearchInput">
                 </div>
                 <p class="text-center mt-3 text-muted" v-if="!loading">Total URLs found: [[ total_url ]]</p>
-
-                <div v-if="github_url.length > 0">
-                    <div class="table-responsive" v-if="!loading">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th scope="col" class="text-center">Select</th>
-                                    <th scope="col">GitHub URL</th>
-                                    <th scope="col">Number of Rules</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(url, index) in github_url" :key="index" @click="toggleUrl(url)"
-                                    style="cursor: pointer;">
-                                    <td class="text-center">
-                                        <input type="checkbox" :checked="selected_urls.includes(url)"
-                                            @change.stop="toggleUrl(url)">
-                                    </td>
-                                    <td>[[ url.url ]]</td>
-                                    <td>[[ url.rule_count ]]</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
                 <div v-if="loading" class="d-flex justify-content-center my-5">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div v-else>
+                    <div v-if="github_url.length > 0">
+                        <div class="table-responsive" v-if="!loading">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" class="text-center">Select</th>
+                                        <th scope="col">GitHub URL</th>
+                                        <th scope="col">Number of Rules</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(url, index) in github_url" :key="index" @click="toggleUrl(url)"
+                                        style="cursor: pointer;">
+                                        <td class="text-center">
+                                            <input type="checkbox" :checked="selected_urls.includes(url)"
+                                                @change.stop="toggleUrl(url)">
+                                        </td>
+                                        <td>[[ url.url ]]</td>
+                                        <td>[[ url.rule_count ]]</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div v-else>
+                        <!-- No results -->
+                        <div class="text-center">
+                            <h5 class="text-muted">No results found</h5>
+                        </div>
                     </div>
                 </div>
 
@@ -135,42 +148,51 @@
                         <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
+                <div v-else>
+                    <div v-if="rule_with_github_url.length > 0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" class="text-center">Select</th>
+                                        <th scope="col">Rule Title</th>
+                                        <th scope="col">GitHub Source</th>
+                                        <th scope="col">Format</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="rule in rule_with_github_url" :key="rule.id" style="cursor: pointer;"
+                                        @click="toggleRule(rule)" :title="rule.to_string">
+                                        <td class="text-center">
+                                            <input type="checkbox" :checked="selected_rules.includes(rule)"
+                                                @change.stop="toggleRule(rule)">
+                                        </td>
+                                        <td>
+                                            <span class="text-decoration-none text-primary fw-semibold">
+                                                [[ rule.title ]]
+                                            </span>
+                                        </td>
+                                        <td>[[ rule.source ]]</td>
+                                        <td>
+                                            <span class="badge bg-primary me-1">
+                                                [[ rule.format ]]
+                                            </span>
 
-                <div v-if="rule_with_github_url.length > 0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th scope="col" class="text-center">Select</th>
-                                    <th scope="col">Rule Title</th>
-                                    <th scope="col">GitHub Source</th>
-                                    <th scope="col">Format</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="rule in rule_with_github_url" :key="rule.id" style="cursor: pointer;"
-                                    @click="toggleRule(rule)" :title="rule.to_string">
-                                    <td class="text-center">
-                                        <input type="checkbox" :checked="selected_rules.includes(rule)"
-                                            @change.stop="toggleRule(rule)">
-                                    </td>
-                                    <td>
-                                        <span class="text-decoration-none text-primary fw-semibold">
-                                            [[ rule.title ]]
-                                        </span>
-                                    </td>
-                                    <td>[[ rule.source ]]</td>
-                                    <td>
-                                        <span class="badge bg-primary me-1">
-                                            [[ rule.format ]]
-                                        </span>
-
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div v-else>
+                        <!-- No results -->
+                        <div class="text-center">
+                            <h5 class="text-muted">No results found</h5>
+                        </div>
                     </div>
                 </div>
+
+
 
                 <!-- Pagination -->
                 <nav v-if="total_rule_pages > 1" aria-label="Rule pagination">
@@ -224,53 +246,93 @@
                 </div>
             </div>
         </div>
-    </div>
-    <div class="mt-5" v-if="old_choice.length > 0">
-        <div class="card shadow-sm border-0">
-            <div class="card-header  text-white d-flex align-items-center">
-                <i class="fas fa-history me-2" style=" word-break: break-word; color: rgb(10, 88, 202)"></i>
-                <h5 class="mb-0" style=" word-break: break-word; color: rgb(10, 88, 202)">Update Check Results (pending)
-                    <span class="badge bg-light text-primary ms-2">[[ old_choice.length ]]</span>
-                </h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-bordered mb-0">
-                        <thead class="table-light text-center">
-                            <tr>
-                                <th scope="col"><i class="fas fa-tag me-1"></i> Rule Title</th>
-                                <th scope="col"><i class="fas fa-info-circle me-1"></i> Status</th>
-                                <th scope="col"><i class="fas fa-comment-dots me-1"></i> Message</th>
-                                <th scope="col"><i class="fas fa-code-branch me-1"></i> Details</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="result in old_choice" :key="result.id">
-                                <td>
-                                    <a :href="`/rule/detail_rule/${result.rule_id}`" title="view more about this rule">
-                                        <i class="fas fa-shield-alt me-2 text-primary"></i> <span class="mb-2"
-                                            style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">[[
-                                            result.rule_title ]]</span>
-                                    </a>
-                                </td>
-                                <td class="text-center">
-                                    <span v-if="result.success && result.new_content" class="text-success fw-semibold">
-                                        <i class="fas fa-check-circle me-1"></i> Up-to-date
-                                    </span>
-                                    <span v-else class="text-danger fw-semibold">
-                                        <i class="fas fa-times-circle me-1"></i> Failed
-                                    </span>
-                                </td>
-                                <td>[[ result.message ]]</td>
-                                <td class="text-center">
-                                    <a class="btn btn-sm btn-outline-primary"
-                                        :href="'/rule/update_github/choose_changes?id=' + result.id">
-                                        <i class="fas fa-code-branch me-1"></i> Compare
-                                    </a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+        <div class="tab-pane fade" id="change-pane" role="tabpanel" aria-labelledby="change-tab">
+            <div class="card p-3">
+                <div class="d-flex mb-3">
+                    <input v-model="searchQueryChanges" @keyup.enter="fetchOldRules(1)" class="form-control"
+                        placeholder="Search for changes..." @input="onSearchInputChanges">
+                </div>
+                <p class="text-center text-muted" v-if="!loading">Total changes found: [[ total_changes ]]</p>
+                <div v-if="old_choice.length > 0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Format</th>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Message</th>
+                                    <th>Action
+
+                                        <template v-if="old_choice.length > 0">
+                                            <button type="button" class="btn btn-sm btn-success float-end"
+                                                @click="acceptAll()" title="Accept all changes">
+                                                <i class="fas fa-check text-white"></i>All
+                                            </button>
+                                        </template>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="result in old_choice" :key="result.id">
+                                    <td>
+                                        <template v-if="result.rule_format">
+                                            <span class="badge bg-primary">[[ result.rule_format ]]</span>
+                                        </template>
+                                        <template v-else>
+                                            <span class="badge bg-secondary">Unknown</span>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <a :href="`/rule/detail_rule/${result.rule_id}`"
+                                            title="view more about this rule">[[
+                                            result.rule_title ]]
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        <span v-if="result.success && result.new_content"
+                                            class="text-success fw-semibold">
+                                            <i class="fas fa-check-circle me-1"></i> Update found
+                                        </span>
+                                        <span v-else class="text-danger fw-semibold">
+                                            <i class="fas fa-times-circle me-1"></i> Failed
+                                        </span>
+                                    </td>
+                                    <td>[[ result.message ]]</td>
+                                    <td class="d-flex gap-2 justify-content-center">
+                                        <a class="btn btn-primary text-center" style="width: 40px;"
+                                            :href="'/rule/update_github/choose_changes?id=' + result.id"
+                                            title="Compare the change">
+                                            <i class="fas fa-code-branch"></i>
+                                        </a>
+
+
+                                        <button class="btn btn-success text-center" style="width: 40px;"
+                                            @click="decisionRule(rule.history_id , 'accepted')"
+                                            title="Accept the change">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+
+                                        <button class="btn btn-danger text-center" style="width: 40px;"
+                                            @click="decisionRule(rule.history_id , 'rejected')"
+                                            title="Refuse the change">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+
+
+
+
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div v-else>
+                    <!-- No results -->
+                    <div class="text-center">
+                        <h5 class="text-muted">No results found</h5>
+                    </div>
                 </div>
             </div>
         </div>
@@ -290,6 +352,48 @@
         delimiters: ['[[', ']]'],
         setup() {
             const csrf_token = '{{ csrf_token() }}'
+
+            /**
+            * 
+            *  #####################
+            *  #   Accepted all    #
+            *  #####################
+            * 
+            * */
+
+            async function acceptAll() {
+                const res = await fetch('/rule/accept_all_changes')
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+                fetchOldRules(1)
+            }
+
+            async function decisionRule(history_id, decision) {
+                const params = new URLSearchParams({
+                    history_id,
+                    decision,
+                })
+                const res = await fetch('/rule/update_github_rule/changes_decision?' + params.toString())
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+                fetchOldRules(1)
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             // ##########################
             // #      BY GITHUB TAB     #
@@ -380,22 +484,30 @@
             const old_choice = ref([])
             const old_current_page = ref(1)
             const old_total_page = ref(0)
+            const searchQueryChanges = ref('')
+            const loadingChanges = ref(true)
+            const total_changes = ref(0)
 
             async function fetchOldRules(page) {
+                loadingChanges.value = true
                 const params = new URLSearchParams({
-                    page
+                    page,
+                    search: searchQueryChanges.value || ''
                 });
 
-                const res = await fetch('/rule/get_old_rule_choice?' + params.toString());
+                const res = await fetch('/rule/get_rule_changes?' + params.toString());
                 if (res.status === 200) {
+
                     const data = await res.json();
                     old_choice.value = data.rule;
                     old_current_page.value = page;
                     old_total_page.value = data.total_pages;
+                    total_changes.value = data.total_rules
+                    loadingChanges.value = false
                 }
             }
             fetchOldRules(1)
-
+            async function onSearchInputChanges() { await fetchOldRules(1) }
 
             // ##########################
             // #       BY RULE TAB      #
@@ -490,7 +602,7 @@
                 foundUpdateWithRule,
 
                 old_choice, old_current_page, old_total_page, fetchOldRules, loading_, is_loading_,
-                loading, is_loading
+                loading, is_loading, loadingChanges, searchQueryChanges, onSearchInputChanges, total_changes, acceptAll, decisionRule
             }
         }
     }).mount('#main-container')

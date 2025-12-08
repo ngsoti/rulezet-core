@@ -258,7 +258,7 @@ class Update_class:
                                 error=False,
                                 accept=False,
                                 # Ensure 'format' is set if available
-                                #format=metadata.get("format") 
+                                format=metadata.get("format") 
                             )
                             self.new_rules_list.append(new_rule_obj)
 

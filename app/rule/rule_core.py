@@ -93,6 +93,7 @@ def rule_exists(Metadata: dict) -> tuple[bool, int]:
     - If no original_uuid is provided: check by title.
     - If original_uuid is provided: check by original_uuid.
     """
+
     original_uuid = str(Metadata.get("original_uuid") or "").strip()
     if original_uuid.lower() == "none":
         original_uuid = ""
@@ -104,6 +105,9 @@ def rule_exists(Metadata: dict) -> tuple[bool, int]:
 
     if not existing_rules:
         return False, None
+
+    if not isinstance(existing_rules, list):
+        existing_rules = [existing_rules]
 
     for r in existing_rules:
         # Case 1 : without original_uuid → compare title only
@@ -1330,13 +1334,17 @@ def get_history_rule_(page, rule_id) -> list:
         RuleUpdateHistory.message == "accepted" 
     ).paginate(page=page, per_page=30, max_per_page=30)
 
-def get_old_rule_choice(page) -> list:
+def get_old_rule_choice(page , search=None) -> list:
     """Get all the old choice to make"""    
-    return RuleUpdateHistory.query.filter(
+    query = RuleUpdateHistory.query.filter(
         RuleUpdateHistory.message != "accepted",
         RuleUpdateHistory.message != "rejected",
         RuleUpdateHistory.analyzed_by_user_id == current_user.id
-    ).paginate(page=page, per_page=30, max_per_page=30)
+    )
+    if search:
+        query = query.filter(RuleUpdateHistory.rule_title.ilike(f"%{search}%"))
+    return query.paginate(page=page, per_page=20, max_per_page=20)
+
 
 def get_update_pending():
     """Get all the schedules with pending updates for the current user"""
@@ -1808,3 +1816,79 @@ def search_rules_by_cve_patterns(cve_patterns: list[str]) -> dict:
 
 def get_new_rule(new_rule_id):
     return NewRule.query.get(new_rule_id)
+
+
+
+
+def get_rule_update_list(sid):
+    update_result = UpdateResult.query.filter_by(uuid=sid).first()
+    if not update_result:
+        return None , 0
+    # filter by update result update_available == true and the number of rules
+    rule_udpate_list = RuleStatus.query.filter_by(update_result_id=update_result.id, update_available=True).all()
+    return rule_udpate_list, len(rule_udpate_list)
+
+def accept_all_update(rule_udpate_list):
+    # for each rule take the history_id associated
+   try:
+       for rule in rule_udpate_list:
+           rule.update_available = False
+           rule.message = "Updated successfully"
+
+           history_id = rule.history_id
+           history = RuleUpdateHistory.query.filter_by(id=history_id).first()
+           history.message = "accepted"
+           history.success = True
+           db.session.commit()
+       return True
+   except Exception as e:
+       print(e)
+       return False
+   
+
+def get_rule_update_from_updater_by_rule_id_and_change_statue(rule_id, updater_id):
+    rule = RuleStatus.query.filter_by(
+        rule_id=str(rule_id),
+        update_result_id=updater_id
+    ).first()
+
+    if rule:
+        rule.update_available = False
+        rule.message = "Updated successfully"
+        db.session.commit()   
+        return True
+
+    return False
+
+def get_format_name(id):
+    rule = RuleStatus.query.filter_by(rule_id=id).first()
+    reel_rule = get_rule(rule.rule_id)
+    return reel_rule.format or "no format"
+
+def get_updater_result_by_id(sid: int):
+    """Retrieve UpdateResult by its integer ID."""
+    return UpdateResult.query.get(sid)
+
+
+def accept_rule_change(history_id):
+    try:
+        history = RuleUpdateHistory.query.filter_by(id=history_id).first()
+        history.message = "accepted"
+        history.success = True
+        db.session.commit()
+
+        # rule_id = history.rule_id
+        # rule = RuleStatus.query.filter_by(rule_id=rule_id).first()
+        # rule.update_available = False
+
+        return True
+    except Exception as e:
+        print(e)
+        return False
+    
+def get_all_pending_changes():
+    return RuleUpdateHistory.query.filter(
+        RuleUpdateHistory.message != "accepted",
+        RuleUpdateHistory.message != "rejected",
+        RuleUpdateHistory.analyzed_by_user_id == current_user.id
+    ).all()

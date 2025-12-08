@@ -221,7 +221,7 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
 
 
 
-def parse_rule_by_format(rule_content: str, user: User, format_name: str):
+def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_repo=None):
     """
     Parse et importe une seule règle selon son format.
     Retourne tuple : (success: bool, message: str, rule_obj: RuleModel | None)
@@ -248,7 +248,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str):
     info = {
         "license": getattr(user, "license", None) or "Unknown",
         "author": getattr(user, "first_name", "Unknown"),
-        "repo_url": None,
+        "repo_url": url_repo or None,
         "source": current_user.first_name + current_user.last_name or "Unknown",
     }
 

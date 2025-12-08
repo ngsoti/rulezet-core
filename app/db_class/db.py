@@ -499,6 +499,14 @@ class RuleUpdateHistory(db.Model):
 
     analyzed_by = db.relationship("User", backref=db.backref("rule_updates", lazy='dynamic', cascade='all, delete-orphan'))
 
+    def get_rule_format(self):
+        """
+        Returns the format of the rule with rule_id
+        """
+        rule = Rule.query.get(self.rule_id)
+        if rule:
+            return rule.format
+        return None
     def to_dict(self):
         return {
             "id": self.id,
@@ -523,6 +531,8 @@ class RuleUpdateHistory(db.Model):
             "old_content": self.old_content,
             "analyzed_by_user_id": self.analyzed_by_user_id,
             "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
+            "analyzed_by_user_name": self.analyzed_by.first_name,
+            "rule_format": self.get_rule_format()
         }
 
 #############

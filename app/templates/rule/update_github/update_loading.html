@@ -18,12 +18,6 @@
 
     <!-- Finished update -->
     <div v-if="is_finished" class="container col-md-11 justify-content-center my-5">
-        <!-- <template v-if="result_data.info.github_metadata && result_data.info.github_metadata.mode == by_url">
-            URL
-        </template>
-        <template v-else>
-            rule
-        </template> -->
         <!-- Accordion for repos -->
         <div v-if="result_data.info && result_data.info.github_metadata && result_data.info.github_metadata.length">
             <div class="card p-3">
@@ -103,8 +97,8 @@
                         <td>Total Not Found</td>
                         <td><b>[[result_data.not_found]]</b></td>
                     </tr>
-                    <tr v-if="result_data.updated">
-                        <td>Updated</td>
+                    <tr v-if="result_data.updated" style="background-color: #f2e7c3;">
+                        <td>Updated found</td>
                         <td>
                             <span class="badge bg-primary ms-1">
                                 [[result_data.updated]]
@@ -137,7 +131,7 @@
                     aria-controls="github" aria-selected="true" style="color: var(--text-color);">
                     Rule Status
                     <span v-if="rules && rules.length" class="badge bg-primary ms-1">
-                        [[ total_rules ]]
+                        [[ result_data.updated ]]
                     </span>
                 </a>
             </li>
@@ -166,7 +160,17 @@
                                         <th>Valid Syntax</th>
                                         <th>Error</th>
                                         <th>Message</th>
-                                        <th>History</th>
+                                        <th>
+                                            Action
+                                            <!-- Accepted all the pending change detected -->
+                                            <template v-if="rules.some(rule => rule.update_available)">
+                                                <button type="button" class="btn btn-sm btn-success float-end"
+                                                    @click="acceptAll()" title="Accept all changes">
+                                                    <i class="fas fa-check text-white"></i>All
+                                                </button>
+                                            </template>
+
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -197,13 +201,33 @@
                                         <td v-else>-</td>
                                         <td v-if="rule.message !== undefined">[[ rule.message ]]</td>
                                         <td v-else>-</td>
-                                        <td class="text-center" @click.stop>
-                                            <span v-if="!rule.history_id"><i
-                                                    class="fas fa-ban text-secondary"></i></span>
-                                            <a v-else class="btn btn-sm btn-outline-primary"
-                                                :href="'/rule/update_github/choose_changes?id=' + rule.history_id">
-                                                <i class="fas fa-code-branch me-1"></i> Compare
-                                            </a>
+                                        <td @click.stop>
+                                            <template v-if="rule.update_available === false">
+                                                <span><i class="fas fa-ban text-secondary"></i></span>
+                                            </template>
+                                            <template v-else>
+                                                <div class="d-flex gap-2 justify-content-center">
+                                                    <a class="btn btn-primary text-center" style="width: 40px;"
+                                                        :href="'/rule/update_github/choose_changes?id=' + rule.history_id"
+                                                        title="Compare the change">
+                                                        <i class="fas fa-code-branch"></i>
+                                                    </a>
+
+
+                                                    <button class="btn btn-success text-center" style="width: 40px;"
+                                                        @click="decisionRule(rule.history_id , 'accepted')"
+                                                        title="Accept the change">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+
+                                                    <button class="btn btn-danger text-center" style="width: 40px;"
+                                                        @click="decisionRule(rule.history_id , 'rejected')"
+                                                        title="Refuse the change">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+
+                                                </div>
+                                            </template>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -272,19 +296,31 @@
                                             </td>
                                             <td>
                                                 <span v-if="nr.message && nr.message.length">[[ nr.message ]]</span>
-                                                <i v-else class="fas fa-ban text-secondary"></i>
+                                                <span v-else class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>Ready to be added
+                                                </span>
+
                                             </td>
                                             <td class="text-center">
-                                                <button v-if="nr.rule_syntax_valid === false" @click.stop
-                                                    class="btn btn-sm btn-danger me-1 " title="Fix the rule"
-                                                    @click="fixRule(nr.id)">
-                                                    <i class="fas fa-wrench text-white"></i>
-                                                </button>
-                                                <button v-else-if="nr.rule_syntax_valid === true" @click.stop
-                                                    class="btn btn-sm btn-success " title="Add the rule"
-                                                    @click="addRule(nr.id)">
-                                                    <i class="fas fa-plus text-white"></i>
-                                                </button>
+                                                <template v-if="nr.rule_syntax_valid === false">
+                                                    <button @click.stop class="btn btn-sm btn-danger me-1 "
+                                                        title="Fix the rule" @click="fixRule(nr.id)">
+                                                        <i class="fas fa-wrench text-white"></i>
+                                                    </button>
+                                                </template>
+                                                <template v-else-if="nr.rule_syntax_valid === true">
+                                                    <template v-if="is_loading === true">
+                                                        <span class="spinner-border spinner-border-sm"
+                                                            aria-hidden="true"></span>
+                                                    </template>
+                                                    <template v-else>
+                                                        <button @click.stop class="btn btn-sm btn-success "
+                                                            title="Add the rule" @click="addRule(nr.id)">
+                                                            <i class="fas fa-plus text-white"></i>
+                                                        </button>
+                                                    </template>
+                                                </template>
+
                                             </td>
                                         </tr>
                                         <tr v-if="nr.showContent" :class="{
@@ -337,7 +373,7 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, onMounted, computed } = Vue;
-    import { message_list, display_toast } from '/static/js/toaster.js';
+    import { message_list, display_toast, create_message } from '/static/js/toaster.js';
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -370,6 +406,40 @@
 
             /**
              * 
+             *  #####################
+             *  #   Accepted all    #
+             *  #####################
+             * 
+             * */
+
+            async function acceptAll() {
+                const res = await fetch('/rule/accept_all_update/{{sid}}')
+                const data = await res.json()
+
+
+                create_message(data.message, data.toast_class)
+                getRules(1)
+                getNewRules(1)
+                pollScan();
+            }
+
+            async function decisionRule(rule_id, decision) {
+                const params = new URLSearchParams({
+                    rule_id,
+                    decision,
+                    sid: '{{sid}}'
+                })
+                const res = await fetch('/rule/update_github_rule/decision_rule?' + params.toString())
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+                getRules(1)
+                getNewRules(1)
+                pollScan();
+            }
+
+
+            /**
+             * 
              *  #################
              *  #   New Rules   #
              *  #################
@@ -380,8 +450,21 @@
                 window.location.href = `/rule/fix_new_rule/${ruleId}?sid={{sid}}`;
             }
 
-            function addRule(ruleId) {
-                window.location.href = `/rule/add_new_rule/${ruleId}?sid={{sid}}`;
+            const is_loading = ref(false)
+
+            async function addRule(ruleId) {
+                is_loading.value = true
+                const params = new URLSearchParams({
+                    new_rule_id: ruleId,
+                    sid: '{{sid}}'
+                })
+                const res = await fetch(`/rule/add_new_rule?` + params.toString());
+                const data = await res.json()
+                is_loading.value = false
+                create_message(data.message, data.toast_class)
+                getRules(1)
+                getNewRules(1)
+                pollScan();
             }
 
 
@@ -521,7 +604,11 @@
                 visiblePagesRules,
                 getRules,
                 fixRule,
-                addRule
+                addRule,
+
+                acceptAll,
+                decisionRule,
+                is_loading
             };
         }
     }).mount('#main-container');
