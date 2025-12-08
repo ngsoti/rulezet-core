@@ -3,7 +3,6 @@
 
 {% block content %}
 <div class="container mt-4" v-cloak>
-
     <h2 class="fw-bold mb-1 text-center text-primary">
         <i class="fas fa-shield-alt me-2"></i> {{ rule.title }}
     </h2>
@@ -46,8 +45,8 @@
                             <h5>
                                 <i class="fas fa-shield-alt me-2 text-primary mb-0 text-truncate"></i> <span
                                     class="mb-2"
-                                    style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">{{
-                                    rule.title }}</span>
+                                    style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">
+                                    {{rule.title }}</span>
                             </h5>
                         </div>
                         <div class="col-3 text-end">
@@ -317,6 +316,7 @@
                                                 <li><strong>All rules</strong> that come from the same source:
                                                     <code>{{ rule.source }}</code>
                                                 </li>
+
                                             </ul>
                                         </div>
                                         <div class="modal-footer">
@@ -590,31 +590,28 @@
         <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
             <div class="card card-body shadow-sm" id="main-container">
                 {% if current_user.is_authenticated %}
-                <form action="{{ url_for('rule.propose_edit', rule_id=rule.id) }}" method="post">
+                <form id="proposalForm" action="{{ url_for('rule.propose_edit', rule_id=rule.id) }}" method="post">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-                    <!-- Rule Content -->
                     <div class="form-group mb-4">
                         <label for="rule_content" class="fw-bold">Rule Content</label><span style="color:red"> *</span>
-                        <textarea id="rule_content" name="rule_content" class="form-control" rows="15"
-                            placeholder="Enter the modified rule content here" required>{{ rule.to_string}}
-                        </textarea>
+                        <div id="editor" rows="15"></div>
+                        <input type="hidden" name="rule_content" id="rule_content_hidden">
                     </div>
 
-                    <!-- Optional message -->
                     <div class="form-group mb-4">
                         <label for="message" class="fw-bold">Message or Justification</label>
                         <input id="message" type="text" name="message" class="form-control"
                             placeholder="Explain the changes you made or provide any additional context">
                     </div>
 
-                    <!-- Submit button -->
                     <div class="d-flex justify-content-end">
                         <button type="submit" class="btn btn-warning">
                             <i class="fas fa-paper-plane"></i> Submit Proposal
                         </button>
                     </div>
                 </form>
+
                 {% else %}
                 <div class="card shadow-lg  mb-4">
                     <div class="card-body text-center">
@@ -624,6 +621,7 @@
                 </div>
                 {% endif %}
             </div>
+
         </div>
         <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
             <div class="card card-body shadow-sm" id="main-container">
@@ -688,10 +686,13 @@
 {% block script %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
-<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script> -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/base16/dracula.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
 
 <script type="module">
     const { createApp, ref, onMounted, nextTick } = Vue;
@@ -701,6 +702,8 @@
     function highlightJSON() {
         document.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
     }
+
+
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -734,6 +737,26 @@
 
                 create_message(data.message, data.toast_class);
             }
+
+            /**
+             *          ####################
+             *          #   fetch user     #
+             *          ####################
+             * */
+            const rule_format = ref({ normal: "", json: "", misp: "" })
+
+
+            async function get_rule_in_each_format(rule_id) {
+                const params = new URLSearchParams({ rule_id })
+                const res = await fetch(`/rule/get_rule_each_format?` + params.toString())
+
+                if (res.ok) {
+                    const data = await res.json()
+                    rule_format.value = data.formats
+                }
+            }
+            get_rule_in_each_format(rule_id)
+
 
             const current_user_is_admin = ref()
             const current_user_is_connected = ref(false)
@@ -1023,48 +1046,47 @@
              *          ###############
              * */
 
-            const editor = ref(null);
+            onMounted(async () => {
+                await fetchCurrentRule();
+                highlightJSON();
+                await nextTick();
 
-            onMounted(() => {
                 document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-                    tab.addEventListener("shown.bs.tab", (e) => {
+                    tab.addEventListener("shown.bs.tab", async (e) => {
                         const target = e.target.getAttribute("href");
+
                         if (target === "#chap2-pane") {
+                            const editorDiv = document.getElementById("editor");
+                            if (!editorDiv) return;
+
                             if (editor.value == null) {
-                                editor.value = CodeMirror.fromTextArea(
-                                    document.getElementById("rule_content"),
-                                    {
-                                        theme: "dracula",
-                                        lineWrapping: true,
-                                        tabSize: 2,
-                                        indentUnit: 2
-                                    }
-                                );
+                                editor.value = CodeMirror(editorDiv, {
+                                    value: currentRule.value?.to_string || "",
+                                    mode: "javascript",
+                                    theme: "dracula",
+                                    lineNumbers: true,
+                                    autoCloseBrackets: true,
+                                    lineWrapping: true
+                                });
+                                editor.value.focus();
 
-                                editor.value.setSize(null, "600px");
+
                             }
-
                         }
                     });
                 });
-            });
-
-            document.addEventListener("DOMContentLoaded", () => {
-                const hash = window.location.hash;
-
-                if (hash) {
-                    const tabLink = document.querySelector(`[href="${hash}"]`);
-                    if (tabLink) {
-                        const tab = new bootstrap.Tab(tabLink);
-                        tab.show();
+                const form = document.getElementById('proposalForm');
+                form.addEventListener('submit', (e) => {
+                    if (editor.value) {
+                        const hiddenField = document.getElementById('rule_content_hidden');
+                        hiddenField.value = editor.value.getValue();
                     }
-                }
+                });
+
             });
 
-            onMounted(() => {
-                fetchCurrentRule();
-                highlightJSON();
-            });
+
+
 
             /**
              * 
@@ -1116,6 +1138,7 @@
             function getCVENumber(cve) {
                 return cve.replace(/^[A-Za-z_:-]+/, "").replace(/^-/, "");
             }
+
 
 
             return {

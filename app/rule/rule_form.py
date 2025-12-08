@@ -2,9 +2,9 @@ import re
 from flask import url_for
 from flask_login import current_user
 from flask_wtf import FlaskForm
-from wtforms import  BooleanField, IntegerField, SelectMultipleField, ValidationError, SelectField
+from wtforms import  BooleanField, ValidationError, SelectField
 from wtforms.fields import StringField, SubmitField, TextAreaField
-from wtforms.validators import  InputRequired, DataRequired, NumberRange
+from wtforms.validators import  InputRequired, DataRequired
 
 
 from app.utils.utils import detect_cve

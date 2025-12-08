@@ -4,6 +4,7 @@ from flask_wtf import CSRFProtect
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_session import Session
+from sqlalchemy.orm import sessionmaker
 from config import config as Config
 import os
 
@@ -13,11 +14,11 @@ csrf = CSRFProtect()
 migrate = Migrate()
 login_manager = LoginManager()
 sess = Session()
-
+ThreadLocalSession = None
 
 def create_app():
     app = Flask(__name__)
-
+    global ThreadLocalSession
     
     config_name = os.environ.get("FLASKENV")
 
@@ -32,6 +33,10 @@ def create_app():
     login_manager.init_app(app)
     app.config["SESSION_SQLALCHEMY"] = db
     sess.init_app(app)
+
+
+    with app.app_context():
+        ThreadLocalSession = sessionmaker(bind=db.engine)
 
     
 

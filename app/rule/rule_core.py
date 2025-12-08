@@ -1,15 +1,10 @@
 
-import re
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import uuid
 import datetime
 from typing import List
-
-from jsonschema import  ValidationError, validate
-import yaml
-import yara
-
+from sqlalchemy.exc import SQLAlchemyError
 from flask import jsonify
 from flask_login import current_user
 from sqlalchemy import case, or_
@@ -18,7 +13,6 @@ from sqlalchemy.orm import joinedload
 from .. import db
 from ..db_class.db import *
 
-from app.import_github_project.untils_import import build_externals_dict
 from ..account import account_core as AccountModel
 
 ###################
@@ -99,6 +93,7 @@ def rule_exists(Metadata: dict) -> tuple[bool, int]:
     - If no original_uuid is provided: check by title.
     - If original_uuid is provided: check by original_uuid.
     """
+
     original_uuid = str(Metadata.get("original_uuid") or "").strip()
     if original_uuid.lower() == "none":
         original_uuid = ""
@@ -110,6 +105,9 @@ def rule_exists(Metadata: dict) -> tuple[bool, int]:
 
     if not existing_rules:
         return False, None
+
+    if not isinstance(existing_rules, list):
+        existing_rules = [existing_rules]
 
     for r in existing_rules:
         # Case 1 : without original_uuid → compare title only
@@ -155,39 +153,6 @@ def edit_rule_core(form_dict, id) -> tuple[bool,Rule]:
     db.session.commit()
     return True , rule
 
-def compile_yara(external_vars, form_dict) -> tuple[bool, dict]:
-    """Try to compile a YARA rule with external variables. Return updated form_dict if success."""
-    external_vars_temp = external_vars.copy()
-    externals = build_externals_dict(external_vars_temp)
-    rule_str = form_dict["to_string"]
-    while True:
-        try:
-            yara.compile(source=rule_str, externals=externals)
-            form_dict["to_string"] = rule_str
-            return True, form_dict , 'no error'
-        except yara.SyntaxError as e:
-
-            error_msg = str(e)
-            match = re.search(r'undefined identifier "(.*?)"', error_msg)
-            if match:
-                # try to parse it with the new content
-                missing_var = match.group(1)
-                external_vars_temp.append({"type": "string", "name": missing_var})
-                externals = build_externals_dict(external_vars_temp)
-            else:
-                return False , form_dict["to_string"] , error_msg
-
-def load_json_schema_sync(schema_file):
-    """
-    Load a JSON schema synchronously from a file.
-    """
-    try:
-        with open(schema_file, 'r', encoding='utf-8') as f:
-            content = f.read()
-            schema = json.loads(content)
-        return schema
-    except Exception:
-        return None
 
 # Read
 
@@ -378,9 +343,12 @@ def get_all_editor_from_rules_list(rules):
     """
     return list({rule.user_id for rule in rules if rule.user_id})
 
-def get_rule_by_title(title) -> str:
+def get_rules_by_title(title) -> str:
     """Return the rule from the title"""
     return Rule.query.filter_by(title=title).all()
+def get_rule_by_title(title) -> str:
+    """Return the rule from the title"""
+    return Rule.query.filter_by(title=title).first()
 
 def get_rule_by_source(source_) -> str:
     """Return all the rule from the source"""
@@ -570,6 +538,81 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
 
     db.session.add(new_invalid_rule)
     db.session.commit()
+
+def save_invalid_rule_from_new_rule(new_rule_obj: 'NewRule', user: 'User') -> Tuple[Optional['InvalidRuleModel'], Optional[str]]:
+    """
+    Creates or retrieves an InvalidRuleModel object from NewRule data, using global db session.
+
+    This function handles data persistence, checking for existing invalid rules,
+    and database exception management.
+
+    :param new_rule_obj: The instance of the temporary rule (NewRule) to process.
+    :param user: The user triggering the action (User object).
+    :return: A tuple (InvalidRuleModel object, None) on success, 
+             or (None, error_message) on DB or unexpected failure.
+    """
+    
+    # --- 1. Data Preparation ---
+    
+    user_id = user.id
+    
+    # Use data from the NewRule object
+    file_name = new_rule_obj.name_rule
+    error_message = new_rule_obj.message or "Syntax error during update process."
+    raw_content = new_rule_obj.rule_content
+    # Use 'format' attribute from NewRule (assuming it was added in the migration)
+    rule_type = getattr(new_rule_obj, 'format', 'Unknown') or "Unknown"
+    
+    # Context fields (using getattr for safe access if NewRule lacks these)
+    repo_url = getattr(new_rule_obj, 'source', 'Update Process')
+    license_name = getattr(new_rule_obj, 'license', 'Unknown')
+    
+    try:
+        # --- 2. Check for Existing Invalid Rule (Prevent Duplicates) ---
+        
+        existing = InvalidRuleModel.query.filter_by(
+            file_name=file_name,
+            error_message=error_message,
+            raw_content=raw_content,
+            rule_type=rule_type,
+            user_id=user_id
+        ).first()
+        
+        if existing:
+            # The invalid rule already exists in the correction table
+            return existing, None
+
+        # --- 3. Create and Save New Invalid Rule ---
+        
+        new_invalid_rule = InvalidRuleModel(
+            user_id=user_id,
+            file_name=file_name,
+            error_message=error_message,
+            raw_content=raw_content,
+            rule_type=rule_type,
+            url=repo_url,
+            license=license_name,
+            created_at=datetime.datetime.now(tz=datetime.timezone.utc)
+        )
+        
+        db.session.add(new_invalid_rule)
+        
+        # Optional: Delete the temporary NewRule entry
+        # db.session.delete(new_rule_obj) 
+        
+        db.session.commit()
+        
+        return new_invalid_rule, None
+    
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        # Return the original database error message
+        return None, f"Database error during correction save: {e.orig}"
+        
+    except Exception as e:
+        # Handle any other non-DB exceptions
+        db.session.rollback()
+        return None, f"Unexpected error during save: {e}"
 
 # Read
 
@@ -1291,13 +1334,17 @@ def get_history_rule_(page, rule_id) -> list:
         RuleUpdateHistory.message == "accepted" 
     ).paginate(page=page, per_page=30, max_per_page=30)
 
-def get_old_rule_choice(page) -> list:
+def get_old_rule_choice(page , search=None) -> list:
     """Get all the old choice to make"""    
-    return RuleUpdateHistory.query.filter(
+    query = RuleUpdateHistory.query.filter(
         RuleUpdateHistory.message != "accepted",
         RuleUpdateHistory.message != "rejected",
         RuleUpdateHistory.analyzed_by_user_id == current_user.id
-    ).paginate(page=page, per_page=30, max_per_page=30)
+    )
+    if search:
+        query = query.filter(RuleUpdateHistory.rule_title.ilike(f"%{search}%"))
+    return query.paginate(page=page, per_page=20, max_per_page=20)
+
 
 def get_update_pending():
     """Get all the schedules with pending updates for the current user"""
@@ -1524,8 +1571,41 @@ def replace_rule_format(old_format_name: str, new_format_name: str) -> int:
 def get_importer_result(sid: str):
     return ImporterResult.query.filter_by(uuid=sid).first()
 
+def get_updater_result(sid: str):
+    return UpdateResult.query.filter_by(uuid=sid).first()
+
+def get_updater_result_new_rule_page(sid: str, page: int, per_page: int = 30):
+    """
+    Retrieve paginated NewRule entries linked to the UpdateResult with UUID = sid
+    """
+    update_result = UpdateResult.query.filter_by(uuid=sid).first()
+    if not update_result:
+        return None
+
+    return NewRule.query.filter_by(update_result_id=update_result.id).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+def get_updater_result_rule_page(sid: str, page: int, per_page: int = 30):
+    """
+    Retrieve paginated RuleStatus entries linked to the UpdateResult with UUID = sid,
+    prioritizing rules that have an update available.
+    """
+    update_result = UpdateResult.query.filter_by(uuid=sid).first()
+    if not update_result:
+        return None
+
+    # Prioritize rules with update_available=True, then by date ascending
+    return RuleStatus.query.filter_by(update_result_id=update_result.id)\
+        .order_by(RuleStatus.update_available.desc(), RuleStatus.date.asc())\
+        .paginate(page=page, per_page=per_page, error_out=False)
+
+
 def get_importer_list_page(page: int = 1):
     return ImporterResult.query.paginate(page=page, per_page=20, max_per_page=20)
+
+def get_updater_list_page(page: int = 1):
+    return UpdateResult.query.paginate(page=page, per_page=20, max_per_page=20)
 #####################
 #   Dump all rules  #
 #####################
@@ -1630,7 +1710,6 @@ def get_all_rules_in_json_dump(data: Dict[str, Any]) -> dict:
     # --- Apply format filter
     if filters["format_name"] is not None:
         query = query.filter(Rule.format.in_(filters["format_name"]))
-    print(filters)
     # --- Apply date filters
     if filters["created_after"]:
         query = query.filter(Rule.creation_date >= filters["created_after"])
@@ -1735,3 +1814,81 @@ def search_rules_by_cve_patterns(cve_patterns: list[str]) -> dict:
         "rules": rules_by_pattern
     }
 
+def get_new_rule(new_rule_id):
+    return NewRule.query.get(new_rule_id)
+
+
+
+
+def get_rule_update_list(sid):
+    update_result = UpdateResult.query.filter_by(uuid=sid).first()
+    if not update_result:
+        return None , 0
+    # filter by update result update_available == true and the number of rules
+    rule_udpate_list = RuleStatus.query.filter_by(update_result_id=update_result.id, update_available=True).all()
+    return rule_udpate_list, len(rule_udpate_list)
+
+def accept_all_update(rule_udpate_list):
+    # for each rule take the history_id associated
+   try:
+       for rule in rule_udpate_list:
+           rule.update_available = False
+           rule.message = "Updated successfully"
+
+           history_id = rule.history_id
+           history = RuleUpdateHistory.query.filter_by(id=history_id).first()
+           history.message = "accepted"
+           history.success = True
+           db.session.commit()
+       return True
+   except Exception as e:
+       print(e)
+       return False
+   
+
+def get_rule_update_from_updater_by_rule_id_and_change_statue(rule_id, updater_id):
+    rule = RuleStatus.query.filter_by(
+        rule_id=str(rule_id),
+        update_result_id=updater_id
+    ).first()
+
+    if rule:
+        rule.update_available = False
+        rule.message = "Updated successfully"
+        db.session.commit()   
+        return True
+
+    return False
+
+def get_format_name(id):
+    rule = RuleStatus.query.filter_by(rule_id=id).first()
+    reel_rule = get_rule(rule.rule_id)
+    return reel_rule.format or "no format"
+
+def get_updater_result_by_id(sid: int):
+    """Retrieve UpdateResult by its integer ID."""
+    return UpdateResult.query.get(sid)
+
+
+def accept_rule_change(history_id):
+    try:
+        history = RuleUpdateHistory.query.filter_by(id=history_id).first()
+        history.message = "accepted"
+        history.success = True
+        db.session.commit()
+
+        # rule_id = history.rule_id
+        # rule = RuleStatus.query.filter_by(rule_id=rule_id).first()
+        # rule.update_available = False
+
+        return True
+    except Exception as e:
+        print(e)
+        return False
+    
+def get_all_pending_changes():
+    return RuleUpdateHistory.query.filter(
+        RuleUpdateHistory.message != "accepted",
+        RuleUpdateHistory.message != "rejected",
+        RuleUpdateHistory.analyzed_by_user_id == current_user.id
+    ).all()

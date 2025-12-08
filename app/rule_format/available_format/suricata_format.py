@@ -1,8 +1,9 @@
 import os
+import re
 from typing import List, Dict, Any
 from suricataparser import parse_rules, parse_rule
 from ...rule import rule_core as RuleModel
-from app.rule_type.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.utils.utils import detect_cve
 
 
@@ -36,35 +37,48 @@ class SuricataRule(RuleType):
         except Exception as e:
             return ValidationResult(ok=False, errors=[str(e)], normalized_content=content)
 
-    def parse_metadata(self, content: str, info: Dict,  validation_result: str) -> Dict[str, Any]:
+    def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
         """
         Extract metadata from a Suricata rule.
         """
+        title = "Untitled"
+        sid = "Unknown"
+        
+        msg_match = re.search(r'msg:"(.*?)"', content)
+        sid_match = re.search(r'sid:(\d+);', content)
+        title = msg_match.group(1).strip() if msg_match else f"Suricata Rule SID:{sid_match.group(1) if sid_match else 'Unknown'}"
+        sid = sid_match.group(1) if sid_match else "Unknown"
+
         try:
-            rule = parse_rule(content)
-            _, cve = detect_cve(rule.msg or "")
+            rule = parse_rule(content) 
+            
+            rule = type('obj', (object,), {'msg': title, 'rev': '1.0', 'sid': sid, 'raw': content})() # Placeholder
+
+            parsed_title = rule.msg or title
+            
+            _, cve = detect_cve(parsed_title or "")
 
             return {
                 "format": "suricata",
-                "title": rule.msg or "Untitled",
-                "license":  info["license"] or "unknown",
-                "description": info["description"] or  "No description provided",
+                "title": parsed_title,
+                "license":  info.get("license", "unknown"),
+                "description": info.get("description", "No description provided"),
                 "version": rule.rev or "1.0",
-                "author": info["author"] or "Unknown",
+                "author": info.get("author", "Unknown"),
                 "cve_id": cve,
-                "original_uuid": rule.sid or  "Unknown",
-                "source": info["repo_url"] or "Unknown",
+                "original_uuid": rule.sid or "Unknown",
+                "source": info.get("repo_url", "Unknown"),
                 "to_string": rule.raw,
             }
         except Exception as e:
             return {
                 "format": "suricata",
-                "title": "Invalid Rule",
-                "license":  info["license"] or "unknown",
+                "title": f"{title} (Metadata Error)",
+                "license":  info.get("license", "unknown"),
                 "description": f"Error parsing metadata: {e}",
                 "version": "N/A",
-                "original_uuid":  "Unknown",
-                "author": info["author"] or "Unknown",
+                "original_uuid": sid,
+                "author": info.get("author", "Unknown"),
                 "cve_id": None,
                 "to_string": content,
             }

@@ -9,16 +9,18 @@
 <div v-else class="container my-5" id="main-container" v-cloak>
     <div v-if="current_user && current_user_donne" class="row g-4">
         <!-- Header Section -->
-        <div  class="mb-4 border-bottom pb-3">
+        <div class="mb-4 border-bottom pb-3">
             <h2 class="fw-bold mb-1 text-center text-primary">
                 [[ current_user.first_name ]] [[ current_user.last_name ]]
             </h2>
-            <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+            <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;">
+            </div>
             <p class="text-muted mt-2">
-                Detailed information and activity overview for user <strong>[[ current_user.first_name ]] [[ current_user.last_name ]]</strong>.
+                Detailed information and activity overview for user <strong>[[ current_user.first_name ]] [[
+                    current_user.last_name ]]</strong>.
             </p>
         </div>
-        
+
         <!-- User Profile Card -->
         <div class="col-12">
             <div class="card shadow-lg rounded-3 border-0">
@@ -26,7 +28,7 @@
                     <h5 class="mb-0">
                         <i class="fas fa-user-circle me-2"></i>User Profile
                         <template v-if="{{current_user.id}} == current_user.id">
-                        <span class="badge bg-info text-dark ms-2">Me</span>
+                            <span class="badge bg-info text-dark ms-2">Me</span>
                         </template>
                     </h5>
                 </div>
@@ -36,35 +38,37 @@
                         <!-- Left column: User Profile -->
                         <div class="col-md-6 mb-3">
                             <ul class="list-group list-group-flush">
-                                <li class="list-group-item"><strong class="p-3">Name:</strong> [[ current_user.first_name ]] [[ current_user.last_name ]]</li>
-                                <li class="list-group-item"><strong class="p-3">Email:</strong> [[ current_user.email ]]</li>
+                                <li class="list-group-item"><strong class="p-3">Name:</strong> [[
+                                    current_user.first_name ]] [[ current_user.last_name ]]</li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong class="p-3">Admin:</strong>
-                                    <span class="badge" :class="current_user.admin ? 'bg-success' : 'bg-secondary'">
-                                    [[ current_user.admin ? 'Yes' : 'No' ]]
-                                    </span>
-                                </div>
-                                {% if current_user.is_admin() %}
-                                <div>
-                                    <template v-if="!current_user.admin">
-                                        <button class="btn btn-primary btn-sm" title="Give this user admin rights"
+                                    <div>
+                                        <strong class="p-3">Admin:</strong>
+                                        <span class="badge" :class="current_user.admin ? 'bg-success' : 'bg-secondary'">
+                                            [[ current_user.admin ? 'Yes' : 'No' ]]
+                                        </span>
+                                    </div>
+                                    {% if current_user.is_admin() %}
+                                    <div>
+                                        <template v-if="!current_user.admin">
+                                            <button class="btn btn-primary btn-sm" title="Give this user admin rights"
                                                 @click='promoteOrRemoveUserAdmin("promote")'>
-                                            <i class="fas fa-user-plus me-1"></i> Promote
-                                        </button>
-                                    </template>
-                                    <template v-else>
-                                        <button class="btn btn-danger btn-sm" title="Remove admin rights from this user"
+                                                <i class="fas fa-user-plus me-1"></i> Promote
+                                            </button>
+                                        </template>
+                                        <template v-else>
+                                            <button class="btn btn-danger btn-sm"
+                                                title="Remove admin rights from this user"
                                                 @click='promoteOrRemoveUserAdmin("remove")'>
-                                            <i class="fas fa-user-minus me-1"></i> Revoke
-                                        </button>
-                                    </template>
-                                </div>
-                                {% endif %}
+                                                <i class="fas fa-user-minus me-1"></i> Revoke
+                                            </button>
+                                        </template>
+                                    </div>
+                                    {% endif %}
                                 </li>
                                 <li class="list-group-item">
                                     <strong class="p-3">Connected:</strong>
-                                    <span class="badge" :class="current_user.is_connected ? 'bg-success' : 'bg-danger' ">
+                                    <span class="badge"
+                                        :class="current_user.is_connected ? 'bg-success' : 'bg-danger' ">
                                         [[ current_user.is_connected ? 'Yes' : 'No' ]]
                                     </span>
                                 </li>
@@ -74,15 +78,20 @@
                         <!-- Right column: User Activity -->
                         <div class="col-md-6 mb-3">
                             <ul class="list-group list-group-flush">
-                                <li class="list-group-item"><strong class="p-3">Rules Created:</strong> [[ current_user_donne.rule_count ]]</li>
-                                <li class="list-group-item"><strong class="p-3">Total Upvotes:</strong> [[ current_user_donne.total_upvotes ]]</li>
-                                <li class="list-group-item"><strong class="p-3">Total Downvotes:</strong> [[ current_user_donne.total_downvotes ]]</li>
+                                <li class="list-group-item"><strong class="p-3">Rules Created:</strong> [[
+                                    current_user_donne.rule_count ]]</li>
+                                <li class="list-group-item"><strong class="p-3">Total Upvotes:</strong> [[
+                                    current_user_donne.total_upvotes ]]</li>
+                                <li class="list-group-item"><strong class="p-3">Total Downvotes:</strong> [[
+                                    current_user_donne.total_downvotes ]]</li>
                                 <li class="list-group-item">
-                                <strong class="p-3">Formats Used:</strong>
-                                <template v-if="current_user_donne.formats_used && current_user_donne.formats_used.length > 0">
-                                    <span v-for="fmt in current_user_donne.formats_used" class="badge bg-primary me-1">[[ fmt ]]</span>
-                                </template>
-                                <span v-else>/</span>
+                                    <strong class="p-3">Formats Used:</strong>
+                                    <template
+                                        v-if="current_user_donne.formats_used && current_user_donne.formats_used.length > 0">
+                                        <span v-for="fmt in current_user_donne.formats_used"
+                                            class="badge bg-primary me-1">[[ fmt ]]</span>
+                                    </template>
+                                    <span v-else>/</span>
                                 </li>
                             </ul>
                         </div>
@@ -105,18 +114,17 @@
                                 <div class="col-md-4">
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text bg-white border-end-0">
-                                        <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                                            <i class="fa-solid fa-magnifying-glass text-muted"></i>
                                         </span>
-                                        <input type="text"
-                                            v-model="searchQuery"
-                                            @input="onSearchInput"
+                                        <input type="text" v-model="searchQuery" @input="onSearchInput"
                                             @keyup.enter="onEnterKey"
                                             class="form-control rounded-end-pill border-start-0"
                                             placeholder="Search by keywords...">
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <select v-model="sortBy" class="form-select form-select-sm rounded-pill" @change="fetchRules(1)">
+                                    <select v-model="sortBy" class="form-select form-select-sm rounded-pill"
+                                        @change="fetchRules(1)">
                                         <option value="newest">Newest</option>
                                         <option value="oldest">Oldest</option>
                                         <option value="most_likes">Most Liked</option>
@@ -124,7 +132,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <select v-model="ruleType" class="form-select form-select-sm rounded-pill" @change="fetchRules(1)">
+                                    <select v-model="ruleType" class="form-select form-select-sm rounded-pill"
+                                        @change="fetchRules(1)">
                                         <option value="">All Types</option>
                                         <option v-for="format in rules_formats" :value="format.name" :key="format.id">
                                             [[ format.name ]]
@@ -155,11 +164,14 @@
                                     <td class="text-nowrap">[[ rule.creation_date ]]</td>
                                     <td class="text-truncate" style="max-width: 150px;">[[ rule.license ]]</td>
                                     <td>
-                                        <span class="text-success"><i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]</span>
-                                        <span class="text-danger ms-2"><i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]</span>
+                                        <span class="text-success"><i class="fas fa-thumbs-up"></i> [[ rule.vote_up
+                                            ]]</span>
+                                        <span class="text-danger ms-2"><i class="fas fa-thumbs-down"></i> [[
+                                            rule.vote_down ]]</span>
                                     </td>
                                     <td>
-                                        <a :href="'/rule/detail_rule/' + rule.id" class="btn btn-sm btn-outline-primary">
+                                        <a :href="'/rule/detail_rule/' + rule.id"
+                                            class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-eye"></i> View
                                         </a>
                                     </td>
@@ -180,8 +192,10 @@
                                     <i class="fas fa-arrow-left"></i> Previous
                                 </a>
                             </li>
-                            <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: current_page === page, disabled: page === '...' }">
-                                <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[ page ]]</a>
+                            <li class="page-item" v-for="page in visiblePages" :key="page"
+                                :class="{ active: current_page === page, disabled: page === '...' }">
+                                <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[
+                                    page ]]</a>
                                 <span v-else class="page-link">...</span>
                             </li>
                             <li class="page-item" :class="{ disabled: current_page === total_pages }">
@@ -196,7 +210,7 @@
         </div>
 
         <!-- Bundle Section -->
-         <div class="col-12">
+        <div class="col-12">
             <div class="card shadow-lg rounded-3 border-0">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
@@ -212,18 +226,17 @@
                                     <div class="col-md-4">
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text bg-white border-end-0">
-                                            <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                                                <i class="fa-solid fa-magnifying-glass text-muted"></i>
                                             </span>
-                                            <input type="text"
-                                                v-model="searchQueryBundle"
-                                                @input="onSearchInputBundle"
+                                            <input type="text" v-model="searchQueryBundle" @input="onSearchInputBundle"
                                                 @keyup.enter="onEnterKeyBundle"
                                                 class="form-control rounded-end-pill border-start-0"
                                                 placeholder="Search by keywords...">
                                         </div>
                                     </div>
                                     <div class="col-md-4">
-                                        <select v-model="sortByBundle" class="form-select form-select-sm rounded-pill" @change="fetchBundles(1)">
+                                        <select v-model="sortByBundle" class="form-select form-select-sm rounded-pill"
+                                            @change="fetchBundles(1)">
                                             <option value="newest">Newest</option>
                                             <option value="oldest">Oldest</option>
                                             <option value="most_likes">Most Liked</option>
@@ -233,9 +246,11 @@
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <select v-model="ruleTypeBundle" class="form-select form-select-sm rounded-pill" @change="fetchBundles(1)">
+                                        <select v-model="ruleTypeBundle" class="form-select form-select-sm rounded-pill"
+                                            @change="fetchBundles(1)">
                                             <option value="">All Types</option>
-                                            <option v-for="format in rules_formats" :value="format.name" :key="format.id">
+                                            <option v-for="format in rules_formats" :value="format.name"
+                                                :key="format.id">
                                                 [[ format.name ]]
                                             </option>
                                         </select>
@@ -264,11 +279,11 @@
 
 
                                         <td>
-                                            <template v-if="bundle.list_of_format_of_rules && bundle.list_of_format_of_rules.length > 0">
-                                                <span v-for="(fmt, index) in bundle.list_of_format_of_rules" 
-                                                    :key="index" 
-                                                    class="badge bg-primary me-1">
-                                                [[ fmt ]]
+                                            <template
+                                                v-if="bundle.list_of_format_of_rules && bundle.list_of_format_of_rules.length > 0">
+                                                <span v-for="(fmt, index) in bundle.list_of_format_of_rules"
+                                                    :key="index" class="badge bg-primary me-1">
+                                                    [[ fmt ]]
                                                 </span>
                                             </template>
                                             <template v-else>
@@ -280,11 +295,14 @@
 
                                         <td class="text-nowrap">[[ bundle.created_at ]]</td>
                                         <td>
-                                            <span class="text-success"><i class="fas fa-thumbs-up"></i> [[ bundle.vote_up ]]</span>
-                                            <span class="text-danger ms-2"><i class="fas fa-thumbs-down"></i> [[ bundle.vote_down ]]</span>
+                                            <span class="text-success"><i class="fas fa-thumbs-up"></i> [[
+                                                bundle.vote_up ]]</span>
+                                            <span class="text-danger ms-2"><i class="fas fa-thumbs-down"></i> [[
+                                                bundle.vote_down ]]</span>
                                         </td>
                                         <td>
-                                            <a :href="'/bundle/detail/' + bundle.id" class="btn btn-sm btn-outline-primary">
+                                            <a :href="'/bundle/detail/' + bundle.id"
+                                                class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-eye"></i> View
                                             </a>
                                         </td>
@@ -294,16 +312,21 @@
                             <nav aria-label="Pagination" v-if="total_pages_bundle > 10">
                                 <ul class="pagination mt-3 justify-content-center">
                                     <li class="page-item" :class="{ disabled: current_page_bundle === 1 }">
-                                        <a class="page-link" href="#" @click.prevent="fetchBundles(current_page_bundle - 1)">
+                                        <a class="page-link" href="#"
+                                            @click.prevent="fetchBundles(current_page_bundle - 1)">
                                             <i class="fas fa-arrow-left"></i> Previous
                                         </a>
                                     </li>
-                                    <li class="page-item" v-for="page in visiblePagesBundle" :key="page" :class="{ active: current_page_bundle === page, disabled: page === '...' }">
-                                        <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchBundles(page)">[[ page ]]</a>
+                                    <li class="page-item" v-for="page in visiblePagesBundle" :key="page"
+                                        :class="{ active: current_page_bundle === page, disabled: page === '...' }">
+                                        <a v-if="page !== '...'" class="page-link" href="#"
+                                            @click.prevent="fetchBundles(page)">[[ page ]]</a>
                                         <span v-else class="page-link">...</span>
                                     </li>
-                                    <li class="page-item" :class="{ disabled: current_page_bundle === total_pages_bundle }">
-                                        <a class="page-link" href="#" @click.prevent="fetchBundles(current_page_bundle + 1)">
+                                    <li class="page-item"
+                                        :class="{ disabled: current_page_bundle === total_pages_bundle }">
+                                        <a class="page-link" href="#"
+                                            @click.prevent="fetchBundles(current_page_bundle + 1)">
                                             Next <i class="fas fa-arrow-right"></i>
                                         </a>
                                     </li>
@@ -359,377 +382,377 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
-const { createApp, ref, onMounted, watch , nextTick, computed} = Vue;
-import { display_toast } from '/static/js/toaster.js';
+    const { createApp, ref, onMounted, watch, nextTick, computed } = Vue;
+    import { display_toast } from '/static/js/toaster.js';
 
-createApp({
-    delimiters: ['[[', ']]'],
-    setup() {
-        const current_user = ref();
-        const current_user_donne = ref();
-        const current_page = ref(0);
-        const total_pages = ref(1)
-        const rules_list = ref([])
-        const current_user_admin = ref("{{current_user.id}}")
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const current_user = ref();
+            const current_user_donne = ref();
+            const current_page = ref(0);
+            const total_pages = ref(1)
+            const rules_list = ref([])
+            const current_user_admin = ref("{{current_user.id}}")
 
-        const isLoading = ref(true);
-        const userId = "{{ user_id }}";
+            const isLoading = ref(true);
+            const userId = "{{ user_id }}";
 
-        const searchQuery = ref('')
-        const sortBy = ref('newest')
-        const ruleType = ref("");
+            const searchQuery = ref('')
+            const sortBy = ref('newest')
+            const ruleType = ref("");
 
-        /******************fetch users section************************/
-        async function fetchUser(user_id) {
-            const params = new URLSearchParams({ user_id });
-            const res = await fetch('/account/get_user?' + params.toString());
-            if (res.status === 200) {
-                const data = await res.json();
-                if (data.success) {
-                    current_user.value = data.user;
-                }
-            }
-        }
-
-        async function fetchUserInfo(user_id) {
-            const params = new URLSearchParams({ user_id });
-            const res = await fetch('/account/get_user_donne?' + params.toString());
-            if (res.status === 200) {
-                const data = await res.json();
-                if (data.success) {
-                    current_user_donne.value = data.donne;
-                }
-            }
-        }
-
-        const rules_formats = ref([])
-        const number_rules_formats = ref(0)
-
-        async function fetchRulesFormats() {
-            const res = await fetch('/rule/get_rules_formats')
-            const data = await res.json()
-            if (res.status === 200){
-                rules_formats.value = data.formats 
-                number_rules_formats.value = data.length | 0
-            }
-        }
-        fetchRulesFormats()
-
-        async function fetchRules(page) {
-            const params = new URLSearchParams({
-                page,
-                userId,
-                search: searchQuery.value,
-                sort_by: sortBy.value,
-                rule_type: ruleType.value,
-
-            })
-
-            const res = await fetch('/rule/get_rules_page_filter_with_id?' + params.toString())
-            const data = await res.json();
-            rules_list.value = data.rule
-            total_pages.value = data.total_pages
-            current_page.value = page
-        }
-        
-        async function onSearchInput() {
-            if (searchQuery.value.trim() === "") {
-            await fetchRules(1)
-            } else {
-            await fetchRules(1)
-            }
-        }
-
-        async function onEnterKey() {
-            await fetchRules(1)
-        }
-
-        fetchRules(1).then(() => {
-            fetchUser(userId).then(() => {
-                fetchUserInfo(userId).then(() => {
-                    isLoading.value = false;  
-                });
-            });
-        });
-
-
-        const visiblePages = computed(() => {
-            const pages = []
-            const total = total_pages.value
-            const current = current_page.value
-            if (total <= 7) {
-            for (let i = 1; i <= total; i++) pages.push(i)
-            } else {
-            if (current <= 4) {
-                pages.push(1, 2, 3, 4, 5, '...', total)
-            } else if (current >= total - 3) {
-                pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-            } else {
-                pages.push(1, '...', current - 1, current, current + 1, '...', total)
-            }
-            }
-            return pages
-        })
-        /**************************************************promote/remove admin right section ************************/
-        async function promoteOrRemoveUserAdmin(action) {
-            let confirmMsg;
-            if (current_user_admin.value == userId) {
-                confirmMsg = action === 'remove'
-                    ? "Are you sure you want to remove your admin rights?"
-                    : "Error 500";
-            } else {
-                confirmMsg = action === 'promote'
-                    ? "Are you sure you want to promote this user to admin?"
-                    : "Are you sure you want to remove this user's admin rights?";
-            }
-
-            const confirmed = confirm(confirmMsg);
-            if (!confirmed) return;
-
-
-            const params = new URLSearchParams({ userId, action });
-
-            try {
-                const res = await fetch('/account/promote_remove_admin?' + params.toString());
+            /******************fetch users section************************/
+            async function fetchUser(user_id) {
+                const params = new URLSearchParams({ user_id });
+                const res = await fetch('/account/get_user?' + params.toString());
                 if (res.status === 200) {
                     const data = await res.json();
                     if (data.success) {
-                        current_user.value.admin = data.admin;
-                        if(current_user_admin.value == userId){
-                            // the admin delete is admin right
-                            window.location.href = "{{ url_for('account.acces_denied') }}";
+                        current_user.value = data.user;
+                    }
+                }
+            }
+
+            async function fetchUserInfo(user_id) {
+                const params = new URLSearchParams({ user_id });
+                const res = await fetch('/account/get_user_donne?' + params.toString());
+                if (res.status === 200) {
+                    const data = await res.json();
+                    if (data.success) {
+                        current_user_donne.value = data.donne;
+                    }
+                }
+            }
+
+            const rules_formats = ref([])
+            const number_rules_formats = ref(0)
+
+            async function fetchRulesFormats() {
+                const res = await fetch('/rule/get_rules_formats')
+                const data = await res.json()
+                if (res.status === 200) {
+                    rules_formats.value = data.formats
+                    number_rules_formats.value = data.length | 0
+                }
+            }
+            fetchRulesFormats()
+
+            async function fetchRules(page) {
+                const params = new URLSearchParams({
+                    page,
+                    userId,
+                    search: searchQuery.value,
+                    sort_by: sortBy.value,
+                    rule_type: ruleType.value,
+
+                })
+
+                const res = await fetch('/rule/get_rules_page_filter_with_id?' + params.toString())
+                const data = await res.json();
+                rules_list.value = data.rule
+                total_pages.value = data.total_pages
+                current_page.value = page
+            }
+
+            async function onSearchInput() {
+                if (searchQuery.value.trim() === "") {
+                    await fetchRules(1)
+                } else {
+                    await fetchRules(1)
+                }
+            }
+
+            async function onEnterKey() {
+                await fetchRules(1)
+            }
+
+            fetchRules(1).then(() => {
+                fetchUser(userId).then(() => {
+                    fetchUserInfo(userId).then(() => {
+                        isLoading.value = false;
+                    });
+                });
+            });
+
+
+            const visiblePages = computed(() => {
+                const pages = []
+                const total = total_pages.value
+                const current = current_page.value
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total)
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                    }
+                }
+                return pages
+            })
+            /**************************************************promote/remove admin right section ************************/
+            async function promoteOrRemoveUserAdmin(action) {
+                let confirmMsg;
+                if (current_user_admin.value == userId) {
+                    confirmMsg = action === 'remove'
+                        ? "Are you sure you want to remove your admin rights?"
+                        : "Error 500";
+                } else {
+                    confirmMsg = action === 'promote'
+                        ? "Are you sure you want to promote this user to admin?"
+                        : "Are you sure you want to remove this user's admin rights?";
+                }
+
+                const confirmed = confirm(confirmMsg);
+                if (!confirmed) return;
+
+
+                const params = new URLSearchParams({ userId, action });
+
+                try {
+                    const res = await fetch('/account/promote_remove_admin?' + params.toString());
+                    if (res.status === 200) {
+                        const data = await res.json();
+                        if (data.success) {
+                            current_user.value.admin = data.admin;
+                            if (current_user_admin.value == userId) {
+                                // the admin delete is admin right
+                                window.location.href = "{{ url_for('account.acces_denied') }}";
+                            }
+                        } else {
+                            alert("Action failed: " + (data.message || "Unknown error."));
                         }
                     } else {
-                        alert("Action failed: " + (data.message || "Unknown error."));
+                        alert("Request failed with status: " + res.status);
                     }
+                } catch (error) {
+                    console.error("Error:", error);
+                    alert("An error occurred while updating the user.");
+                }
+            }
+
+            /**************************************************bundle section ********************************************/
+
+            const bundles_list = ref([])
+            const current_page_bundle = ref(0);
+            const total_pages_bundle = ref(1)
+
+            const searchQueryBundle = ref('')
+            const sortByBundle = ref('newest')
+            const ruleTypeBundle = ref("")
+
+            async function fetchBundles(page) {
+                const params = new URLSearchParams({
+                    page,
+                    user_id: userId,
+                    searchBundle: searchQueryBundle.value,
+                    sortByBundle: sortByBundle.value,
+                    ruleTypeBundle: ruleTypeBundle.value,
+                })
+
+                const res = await fetch('/bundle/get_bundles_page_filter_with_id?' + params.toString())
+                const data = await res.json();
+                bundles_list.value = data.bundles_list
+                total_pages_bundle.value = data.total_pages
+                current_page_bundle.value = page
+            }
+
+            fetchBundles(1)
+
+            async function onSearchInputBundle() {
+                if (searchQuery.value.trim() === "") {
+                    await fetchBundles(1)
                 } else {
-                    alert("Request failed with status: " + res.status);
+                    await fetchBundles(1)
                 }
-            } catch (error) {
-                console.error("Error:", error);
-                alert("An error occurred while updating the user.");
             }
-        }
 
-        /**************************************************bundle section ********************************************/
-        
-        const bundles_list = ref([])
-        const current_page_bundle = ref(0);
-        const total_pages_bundle = ref(1)
+            async function onEnterKeyBundle() {
+                await fetchBundles(1)
+            }
 
-        const searchQueryBundle = ref('')
-        const sortByBundle = ref('newest')
-        const ruleTypeBundle = ref("")
-
-        async function fetchBundles(page) {
-            const params = new URLSearchParams({
-                page,
-                user_id: userId,
-                searchBundle: searchQueryBundle.value,
-                sortByBundle: sortByBundle.value,
-                ruleTypeBundle: ruleTypeBundle.value,
+            const visiblePagesBundle = computed(() => {
+                const pages = []
+                const total = total_pages_bundle.value
+                const current = current_page_bundle.value
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total)
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                    }
+                }
+                return pages
             })
+            /**********************************************fetch data section*********************************************/
+            function renderChart() {
+                if (!current_user_donne.value) {
+                    return;
+                }
 
-            const res = await fetch('/bundle/get_bundles_page_filter_with_id?' + params.toString())
-            const data = await res.json();
-            bundles_list.value = data.bundles_list
-            total_pages_bundle.value = data.total_pages
-            current_page_bundle.value = page
-        }
+                const upvotes = current_user_donne.value.total_upvotes || 0;
+                const downvotes = current_user_donne.value.total_downvotes || 0;
 
-        fetchBundles(1)
+                if ((upvotes + downvotes) === 0) {
+                    return;
+                }
 
-        async function onSearchInputBundle() {
-            if (searchQuery.value.trim() === "") {
-            await fetchBundles(1)
-            } else {
-            await fetchBundles(1)
-            }
-        }
+                const ctx = document.getElementById('votesChart');
+                if (!ctx) return;
 
-        async function onEnterKeyBundle() {
-            await fetchBundles(1)
-        }
-
-        const visiblePagesBundle = computed(() => {
-            const pages = []
-            const total = total_pages_bundle.value
-            const current = current_page_bundle.value
-            if (total <= 7) {
-            for (let i = 1; i <= total; i++) pages.push(i)
-            } else {
-            if (current <= 4) {
-                pages.push(1, 2, 3, 4, 5, '...', total)
-            } else if (current >= total - 3) {
-                pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-            } else {
-                pages.push(1, '...', current - 1, current, current + 1, '...', total)
-            }
-            }
-            return pages
-        })
-        /**********************************************fetch data section*********************************************/
-        function renderChart() {
-            if (!current_user_donne.value){
-                return;
-            }
-
-            const upvotes = current_user_donne.value.total_upvotes || 0;
-            const downvotes = current_user_donne.value.total_downvotes || 0;
-
-            if ((upvotes + downvotes) === 0){
-                return;
-            }
-
-            const ctx = document.getElementById('votesChart');
-            if (!ctx) return;
-
-            new Chart(ctx.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: ['Upvotes', 'Downvotes'],
-                    datasets: [{
-                        label: 'Activity Stats',
-                        data: [upvotes, downvotes],
-                        backgroundColor: ['#28a745', '#dc3545'],
-                        borderColor: ['#218838', '#c82333'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            enabled: true
-                        }
+                new Chart(ctx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Upvotes', 'Downvotes'],
+                        datasets: [{
+                            label: 'Activity Stats',
+                            data: [upvotes, downvotes],
+                            backgroundColor: ['#28a745', '#dc3545'],
+                            borderColor: ['#218838', '#c82333'],
+                            borderWidth: 1
+                        }]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0 
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function renderFormatsChart() {
-            const formatsData = current_user_donne.value.rule_detail.types
-            // {
-            //     "YARA": 5809,
-            //     "SIGMA": 6990,
-            //     "Suricata": 4456
-            // };
-
-            const labels = Object.keys(formatsData);
-            const values = Object.values(formatsData);
-
-            if (values.length === 0) return;
-
-            const ctx = document.getElementById('formatsChart');
-            if (!ctx) return;
-
-            if (window.formatsChartInstance) {
-                window.formatsChartInstance.destroy();
-            }
-
-            window.formatsChartInstance = new Chart(ctx.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Formats utilisés',
-                        data: values,
-                        backgroundColor: [
-                            '#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#fd7e14'
-                        ],
-                        borderColor: '#fff',
-                        borderWidth: 2,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                generateLabels(chart) {
-                                    const data = chart.data;
-                                    if (!data.labels.length) return [];
-                                    return data.labels.map((label, i) => {
-                                        const value = data.datasets[0].data[i];
-                                        const bgColor = data.datasets[0].backgroundColor[i];
-                                        return {
-                                            text: `${label} (${value})`,
-                                            fillStyle: bgColor,
-                                            strokeStyle: '#fff',
-                                            lineWidth: 2,
-                                            hidden: isNaN(value) || chart.getDataVisibility(i) === false,
-                                            index: i
-                                        };
-                                    });
-                                }
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: true
                             }
                         },
-                        tooltip: {
-                            callbacks: {
-                                label(context) {
-                                    const label = context.label || '';
-                                    const value = context.parsed || 0;
-                                    return `${label}: ${value}`;
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
                                 }
                             }
                         }
                     }
+                });
+            }
+
+            function renderFormatsChart() {
+                const formatsData = current_user_donne.value.rule_detail.types
+                // {
+                //     "YARA": 5809,
+                //     "SIGMA": 6990,
+                //     "Suricata": 4456
+                // };
+
+                const labels = Object.keys(formatsData);
+                const values = Object.values(formatsData);
+
+                if (values.length === 0) return;
+
+                const ctx = document.getElementById('formatsChart');
+                if (!ctx) return;
+
+                if (window.formatsChartInstance) {
+                    window.formatsChartInstance.destroy();
+                }
+
+                window.formatsChartInstance = new Chart(ctx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Formats utilisés',
+                            data: values,
+                            backgroundColor: [
+                                '#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#fd7e14'
+                            ],
+                            borderColor: '#fff',
+                            borderWidth: 2,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    generateLabels(chart) {
+                                        const data = chart.data;
+                                        if (!data.labels.length) return [];
+                                        return data.labels.map((label, i) => {
+                                            const value = data.datasets[0].data[i];
+                                            const bgColor = data.datasets[0].backgroundColor[i];
+                                            return {
+                                                text: `${label} (${value})`,
+                                                fillStyle: bgColor,
+                                                strokeStyle: '#fff',
+                                                lineWidth: 2,
+                                                hidden: isNaN(value) || chart.getDataVisibility(i) === false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        return `${label}: ${value}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            watch(isLoading, async (val) => {
+                if (!val) {
+                    await nextTick();
+                    renderChart();
+                    renderFormatsChart();
                 }
             });
+
+
+            return {
+                current_user,
+                current_user_donne,
+                rules_list,
+                fetchRules,
+                visiblePages,
+                isLoading,
+                renderFormatsChart,
+                promoteOrRemoveUserAdmin,
+                total_pages,
+                current_page,
+                onSearchInput,
+                onEnterKey,
+                sortBy,
+                ruleType,
+                searchQuery,
+                rules_formats,
+                number_rules_formats,
+                fetchRulesFormats,
+
+                fetchBundles,
+                bundles_list,
+                searchQueryBundle,
+                sortByBundle,
+                ruleTypeBundle,
+                onEnterKeyBundle,
+                onSearchInputBundle,
+                visiblePagesBundle,
+                total_pages_bundle,
+                current_page_bundle,
+            };
         }
-        watch(isLoading, async (val) => {
-            if (!val) {
-                await nextTick();  
-                renderChart();
-                renderFormatsChart();
-            }
-        });
-        
-
-        return {
-            current_user,
-            current_user_donne,
-            rules_list,
-            fetchRules,
-            visiblePages,
-            isLoading,
-            renderFormatsChart,
-            promoteOrRemoveUserAdmin,
-            total_pages,
-            current_page,
-            onSearchInput,
-            onEnterKey,
-            sortBy,
-            ruleType,
-            searchQuery,
-            rules_formats,
-            number_rules_formats,
-            fetchRulesFormats,
-
-            fetchBundles,
-            bundles_list,
-            searchQueryBundle,
-            sortByBundle,
-            ruleTypeBundle,
-            onEnterKeyBundle,
-            onSearchInputBundle,
-            visiblePagesBundle,
-            total_pages_bundle,
-            current_page_bundle,
-        };
-    }
-}).mount('#main-container');
+    }).mount('#main-container');
 </script>
 {% endblock %}

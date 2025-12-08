@@ -4,479 +4,486 @@
    <nav class="container navbar navbar-expand-lg custom-navbar shadow-sm py-3 px-9 rounded-bottom">
       <div class="container-fluid d-flex justify-content-between align-items-center">
          <a href="/" class="navbar-brand d-flex align-items-center">
-               <img src="{{ url_for('static', filename='image/logo_rulezet_bg.png') }}" height="90" alt="RULEZET Logo" class="me-3">
+            <img src="{{ url_for('static', filename='image/logo_rulezet_bg.png') }}" height="90" alt="RULEZET Logo"
+               class="me-3">
          </a>
 
          <!-- Navigation Menu -->
          <ul class="navbar-nav ms-auto d-flex align-items-center">
-               <li class="nav-item mx-2">
-                  <a href="/" class="nav-link text-dark fw-semibold">
-                     <i class="fa-solid fa-house fa-fw me-1"></i> Home
-                  </a>
-               </li>
-               <li class="nav-item dropdown mx-2">
-                  <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" id="bundleDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                     <i class="fa-solid fa-box fa-fw me-1"></i> Bundle
-                  </a>
-                  <ul class="dropdown-menu" aria-labelledby="bundleDropdown">
-                     <li>
-                           <a href="/bundle/create" class="dropdown-item">
-                              <i class="fa-solid fa-calendar-plus fa-fw me-2"></i> Create Bundle
-                           </a>
-                     </li>
-                     <li>
-                           <a href="/bundle/list" class="dropdown-item">
-                              <i class="fa-solid fa-clipboard-list fa-fw me-2"></i> View Bundles
-                           </a>
-                     </li>
-                  </ul>
-               </li>
-               <!-- Dropdown for Rules and Rule Proposal -->
-               <li class="nav-item mx-2">
-                  <div class="dropdown">
-                     <a class="nav-link dropdown-toggle text-dark fw-semibold" type="button" id="rulesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                           <i class="fa-solid fa-shield-halved fa-fw me-1"></i> Security Rules
-                     </a>
-                     <ul class="dropdown-menu" aria-labelledby="rulesDropdown">
-                           <li>
-                              <a class="dropdown-item" href="/rule/rules_list">
-                                 <i class="fa-solid fa-list fa-fw me-2"></i> Rules List
-                              </a>
-                           </li>
-                           {% if current_user.is_authenticated %}
-                              <li>
-                                 <a class="dropdown-item position-relative" href="/rule/rule_propose_edit">
-                                       <i class="fa-solid fa-lightbulb fa-fw me-2"></i> Rule Proposal
-                                       <template v-if="changes_to_validate">
-                                          <span 
-                                             v-if="changes_to_validate > 0" 
-                                             class="position-absolute ms-1   badge rounded-pill bg-danger">
-                                             [[ changes_to_validate ]]
-                                             <span class="visually-hidden">unread messages</span>
-                                          </span>
-                                       </template>
-                                 </a>
-                              </li>
-                              <li>
-                                 <a class="dropdown-item" href="/rule/bad_rules_summary">
-                                       <i class="fa-solid fa-tags fa-fw me-2"></i> Bad Rules
-                                 </a>
-                              </li>
-                              <li>
-                                 <a class="dropdown-item" href="/rule/create_rule">
-                                       <i class="fas fa-hammer fa-fw me-2"></i> Add Rule
-                                 </a>
-                              </li>
-                              {% if not current_user.is_admin() %}
-                                 <li>
-                                       <a href="/admin/request" class="dropdown-item position-relative">
-                                          <i class="fa-solid fa-envelope fa-fw me-2"></i>
-                                          Ownership Requests
-
-                                          
-                                          <template v-if="requests_to_validate">
-                                             <span 
-                                                   v-if="requests_to_validate > 0" 
-                                                   class="position-absolute ms-1   badge rounded-pill bg-danger">
-                                                   [[ requests_to_validate ]]
-                                                   <span class="visually-hidden">unread messages</span>
-                                             </span>
-                                          </template>
-                                       </a>
-                                 </li>
-                              {% endif %}
-                           {% endif %}
-                           
-                     </ul>
-                  </div>
-
-               </li>
-               {% if current_user.is_authenticated %}
-               <li class="nav-item mx-2">
-                  <div class="dropdown">
-                     <a class="nav-link dropdown-toggle text-dark fw-semibold" type="button" id="githubDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                           <i class="fa-brands fa-github fa-fw me-1"></i> Github Detection
-                     </a>
-                     <ul class="dropdown-menu" aria-labelledby="githubDropdown">
-                           <li>
-                              <a class="dropdown-item" href="/rule/list_github_url">
-                                 <i class="fa-solid fa-list fa-fw me-2"></i> Github List
-                              </a>
-                           </li>
-                           <li>
-                              <a class="dropdown-item" href="/rule/history_github_importer">
-                                 <i class="fa-solid fa-bars-progress fa-fw me-2"></i> Manage Github
-                              </a>
-                           </li>
-                           <li>
-                              <a class="dropdown-item" href="/rule/create_rule?tab=github">
-                                 <i class="fa-solid fa-file-import fa-fw me-2"></i> Import Rules
-                              </a>
-                           </li>
-                           <li class="position-relative d-flex align-items-center">
-                              <a class="dropdown-item pe-2" href="/rule/update_github/update_rules_from_github">
-                                 <i class="fa-solid fa-rotate fa-fw me-2"></i> Update Rules
-                              </a>
-                              <template v-if="update_to_validate && update_to_validate > 0">
-                                 <span class="position-absolute ms-1 badge rounded-pill bg-danger">
-                                       [[ update_to_validate ]]
-                                 </span>
-                              </template>
-                           </li>
-                     </ul>
-                  </div>
-               </li>
-               {% endif %}
-
-               {% if current_user.is_authenticated %}
-                  {% if current_user.is_admin() %}
-                     <!-- Admin section-->
-                     <li class="nav-item dropdown mx-2 position-relative">
-                           <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                              <i class="fa-solid fa-lock fa-fw me-1"></i> Admin Section
-                           </a>
-
-                           <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
-                              <li>
-                                 <a href="/account/all_users" class="dropdown-item">
-                                       <i class="fa-solid fa-users fa-fw me-2"></i> Users List
-                                 </a>
-                              </li>
-                              <li>
-                                 <a href="/rule/rules_reported" class="dropdown-item">
-                                       <i class="fa-solid fa-triangle-exclamation fa-fw me-2"></i> Reported Rule
-                                 </a>
-                              </li>
-                              <li>
-                                 <a href="/admin/request" class="dropdown-item position-relative">
-                                       <i class="fa-solid fa-envelope fa-fw me-2"></i>
-                                       Ownership Requests
-                                       <!-- Badge spécifique à cette entrée -->
-                                       <template v-if="requests_to_validate">
-                                       <span 
-                                          v-if="requests_to_validate > 0" 
-                                          class="position-absolute ms-1 badge rounded-pill bg-danger">
-                                          [[ requests_to_validate ]]
-                                          <span class="visually-hidden">unread messages</span>
-                                       </span>
-                                       </template>
-                                 </a>
-                              </li>
-                              <li>
-                                 <a class="dropdown-item" href="/rule/manage_format_rule">
-                                       <i class="fa-solid fa-file-code fa-fw me-2"></i> Manage Format
-                                 </a>
-                              </li>
-                           </ul>
-                     </li>
-
-                  {% endif %}
-               {% endif %}
-
-               <!-- Profile Dropdown -->
-            <li class="nav-item dropdown mx-2 position-relative d-flex align-items-center">
-                  {% if current_user.is_authenticated %}
-                     <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                           <i class="fa-solid fa-user fa-fw me-1"></i> {{ current_user.get_first_name() }}
-                     </a>
-                  {% else %}
-                     <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                           <i class="fa-solid fa-user fa-fw me-1"></i> My Profile
-                     </a>
-                  {% endif %}
-
-                  <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
-                     {% if current_user.is_authenticated %}
-                     <li>
-                           <a href="/account/" class="dropdown-item">
-                              <i class="fa-solid fa-user fa-fw me-2 "></i> Profile
-                           </a>
-                     </li>
-                     <li>
-                           <a class="dropdown-item" href="/rule/owner_rules">
-                              <i class="fa-solid fa-user-shield fa-fw me-2"></i> My Rules
-                           </a>
-                     </li>
-                     <li>
-                           <a href="/account/favorite" class="dropdown-item">
-                              <i class="fa-solid fa-star fa-fw me-2 "></i> Favorite
-                           </a>
-                     </li>
-                     <li>
-                           <a href="/account/logout" class="dropdown-item">
-                              <i class="fa-solid fa-right-from-bracket fa-fw me-2 "></i> Logout
-                           </a>
-                     </li>
-                     {% else %}
-                     <li>
-                           <a href="/account/register" class="dropdown-item">
-                              <i class="fa-solid fa-user-plus fa-fw me-2 "></i> Register
-                           </a>
-                     </li>
-                     <li>
-                           <a href="/account/profil" class="dropdown-item">
-                              <i class="fa-solid fa-right-to-bracket fa-fw me-2 "></i> Login
-                           </a>
-                     </li>
-                     {% endif %}
-                  </ul>
-               </li>
-               <!-- Notification -->
-               <li class="nav-item dropdown mx-2 position-relative d-flex align-items-center">
-                  <a  class="nav-link text-dark fw-semibold position-relative" href="#"  id="notificationsDropdown"   role="button"  data-bs-toggle="dropdown"  aria-expanded="false">
-                     <i class="fa-solid fa-bell fa-lg"></i>
-
-                     <!-- Badge total -->
-                     <template v-if="total_notifications > 0">
-                           <span 
-                              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                              [[ total_notifications ]]
-                              <span class="visually-hidden">unread notifications</span>
-                           </span>
-                     </template>
-                  </a>
-
-                  <!-- Dropdown Menu -->
-                  <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded p-2" aria-labelledby="notificationsDropdown" style="min-width: 260px;">
-                     <li class="dropdown-header fw-bold text-center">
-                           Notifications
-                     </li>
-                     <li><hr class="dropdown-divider"></li>
-
-                     <template v-if="total_notifications === 0">
-                           <li class="text-center text-muted small py-2">
-                              Everything is up to date!
-                           </li>
-                     </template>
-
-                     <template v-else>
-                           <li v-if="requests_to_validate > 0">
-                              <a href="/admin/request" class="dropdown-item d-flex justify-content-between align-items-center">
-                                 <span><i class="fa-solid fa-envelope me-2 text-primary"></i> Ownership Requests</span>
-                                 <span class="badge bg-danger rounded-pill">[[ requests_to_validate ]]</span>
-                              </a>
-                           </li>
-
-                           <li v-if="changes_to_validate > 0">
-                              <a href="/rule/rule_propose_edit" class="dropdown-item d-flex justify-content-between align-items-center">
-                                 <span><i class="fa-solid fa-lightbulb me-2 text-warning"></i> Rule Changes</span>
-                                 <span class="badge bg-danger rounded-pill">[[ changes_to_validate ]]</span>
-                              </a>
-                           </li>
-
-                           <li v-if="repport_to_validate > 0">
-                              <a href="/rule/rules_reported" class="dropdown-item d-flex justify-content-between align-items-center">
-                                 <span><i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i> Reported Rules</span>
-                                 <span class="badge bg-danger rounded-pill">[[ repport_to_validate ]]</span>
-                              </a>
-                           </li>
-
-                           <li v-if="update_to_validate > 0">
-                              <a href="/rule/update_github/update_rules_from_github" class="dropdown-item d-flex justify-content-between align-items-center">
-                                 <span><i class="fa-solid fa-rotate me-2 text-success"></i> Rule Updates</span>
-                                 <span class="badge bg-danger rounded-pill">[[ update_to_validate ]]</span>
-                              </a>
-                           </li>
-                     </template>
-                  </ul>
-               </li>
-               <!-- Search (offcanvas toggle) -->
-                  <li class="nav-item mx-2 d-flex align-items-center">
-                     <a class="nav-link text-dark fw-semibold" data-bs-toggle="offcanvas" href="#offcanvasSearch" role="button" aria-controls="offcanvasSearch">
-                        <i class="fa-solid fa-magnifying-glass fa-fw me-1"></i> Search
+            <li class="nav-item mx-2">
+               <a href="/" class="nav-link text-dark fw-semibold">
+                  <i class="fa-solid fa-house fa-fw me-1"></i> Home
+               </a>
+            </li>
+            <li class="nav-item dropdown mx-2">
+               <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" id="bundleDropdown" role="button"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="fa-solid fa-box fa-fw me-1"></i> Bundle
+               </a>
+               <ul class="dropdown-menu" aria-labelledby="bundleDropdown">
+                  <li>
+                     <a href="/bundle/create" class="dropdown-item">
+                        <i class="fa-solid fa-calendar-plus fa-fw me-2"></i> Create Bundle
                      </a>
                   </li>
+                  <li>
+                     <a href="/bundle/list" class="dropdown-item">
+                        <i class="fa-solid fa-clipboard-list fa-fw me-2"></i> View Bundles
+                     </a>
+                  </li>
+               </ul>
+            </li>
+            <!-- Dropdown for Rules and Rule Proposal -->
+            <li class="nav-item mx-2">
+               <div class="dropdown">
+                  <a class="nav-link dropdown-toggle text-dark fw-semibold" type="button" id="rulesDropdown"
+                     data-bs-toggle="dropdown" aria-expanded="false">
+                     <i class="fa-solid fa-shield-halved fa-fw me-1"></i> Security Rules
+                  </a>
+                  <ul class="dropdown-menu" aria-labelledby="rulesDropdown">
+                     <li>
+                        <a class="dropdown-item" href="/rule/rules_list">
+                           <i class="fa-solid fa-list fa-fw me-2"></i> Rules List
+                        </a>
+                     </li>
+                     {% if current_user.is_authenticated %}
+                     <li>
+                        <a class="dropdown-item position-relative" href="/rule/rule_propose_edit">
+                           <i class="fa-solid fa-lightbulb fa-fw me-2"></i> Rule Proposal
+                           <template v-if="changes_to_validate">
+                              <span v-if="changes_to_validate > 0"
+                                 class="position-absolute ms-1   badge rounded-pill bg-danger">
+                                 [[ changes_to_validate ]]
+                                 <span class="visually-hidden">unread messages</span>
+                              </span>
+                           </template>
+                        </a>
+                     </li>
+                     <li>
+                        <a class="dropdown-item" href="/rule/bad_rules_summary">
+                           <i class="fa-solid fa-tags fa-fw me-2"></i> Bad Rules
+                        </a>
+                     </li>
+                     <li>
+                        <a class="dropdown-item" href="/rule/create_rule">
+                           <i class="fas fa-hammer fa-fw me-2"></i> Add Rule
+                        </a>
+                     </li>
+                     {% if not current_user.is_admin() %}
+                     <li>
+                        <a href="/admin/request" class="dropdown-item position-relative">
+                           <i class="fa-solid fa-envelope fa-fw me-2"></i>
+                           Ownership Requests
+
+
+                           <template v-if="requests_to_validate">
+                              <span v-if="requests_to_validate > 0"
+                                 class="position-absolute ms-1   badge rounded-pill bg-danger">
+                                 [[ requests_to_validate ]]
+                                 <span class="visually-hidden">unread messages</span>
+                              </span>
+                           </template>
+                        </a>
+                     </li>
+                     {% endif %}
+                     {% endif %}
+
+                  </ul>
+               </div>
+
+            </li>
+            {% if current_user.is_authenticated %}
+            <li class="nav-item mx-2">
+               <div class="dropdown">
+                  <a class="nav-link dropdown-toggle text-dark fw-semibold" type="button" id="githubDropdown"
+                     data-bs-toggle="dropdown" aria-expanded="false">
+                     <i class="fa-brands fa-github fa-fw me-1"></i> Github Detection
+                  </a>
+                  <ul class="dropdown-menu" aria-labelledby="githubDropdown">
+                     <li>
+                        <a class="dropdown-item" href="/rule/list_github_url">
+                           <i class="fa-solid fa-list fa-fw me-2"></i> Github List
+                        </a>
+                     </li>
+                     <li>
+                        <a class="dropdown-item" href="/rule/history_github_importer">
+                           <i class="fa-solid fa-bars-progress fa-fw me-2"></i> Manage Github
+                        </a>
+                     </li>
+                     <li>
+                        <a class="dropdown-item" href="/rule/create_rule?tab=github">
+                           <i class="fa-solid fa-file-import fa-fw me-2"></i> Import Rules
+                        </a>
+                     </li>
+                     <li class="position-relative d-flex align-items-center">
+                        <a class="dropdown-item pe-2" href="/rule/update_github/update_rules_from_github">
+                           <i class="fa-solid fa-rotate fa-fw me-2"></i> Update Rules
+                        </a>
+                        <template v-if="update_to_validate && update_to_validate > 0">
+                           <span class="position-absolute ms-1 badge rounded-pill bg-danger">
+                              [[ update_to_validate ]]
+                           </span>
+                        </template>
+                     </li>
+                  </ul>
+               </div>
+            </li>
+            {% endif %}
+
+            {% if current_user.is_authenticated %}
+            {% if current_user.is_admin() %}
+            <!-- Admin section-->
+            <li class="nav-item dropdown mx-2 position-relative">
+               <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="fa-solid fa-lock fa-fw me-1"></i> Admin Section
+               </a>
+
+               <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
+                  <li>
+                     <a href="/account/all_users" class="dropdown-item">
+                        <i class="fa-solid fa-users fa-fw me-2"></i> Users List
+                     </a>
+                  </li>
+                  <li>
+                     <a href="/rule/rules_reported" class="dropdown-item">
+                        <i class="fa-solid fa-triangle-exclamation fa-fw me-2"></i> Reported Rule
+                     </a>
+                  </li>
+                  <li>
+                     <a href="/admin/request" class="dropdown-item position-relative">
+                        <i class="fa-solid fa-envelope fa-fw me-2"></i>
+                        Ownership Requests
+                        <!-- Badge spécifique à cette entrée -->
+                        <template v-if="requests_to_validate">
+                           <span v-if="requests_to_validate > 0"
+                              class="position-absolute ms-1 badge rounded-pill bg-danger">
+                              [[ requests_to_validate ]]
+                              <span class="visually-hidden">unread messages</span>
+                           </span>
+                        </template>
+                     </a>
+                  </li>
+                  <li>
+                     <a class="dropdown-item" href="/rule/manage_format_rule">
+                        <i class="fa-solid fa-file-code fa-fw me-2"></i> Manage Format
+                     </a>
+                  </li>
+               </ul>
+            </li>
+
+            {% endif %}
+            {% endif %}
+
+            <!-- Profile Dropdown -->
+            <li class="nav-item dropdown mx-2 position-relative d-flex align-items-center">
+               {% if current_user.is_authenticated %}
+               <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="fa-solid fa-user fa-fw me-1"></i> {{ current_user.get_first_name() }}
+               </a>
+               {% else %}
+               <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="fa-solid fa-user fa-fw me-1"></i> My Profile
+               </a>
+               {% endif %}
+
+               <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded">
+                  {% if current_user.is_authenticated %}
+                  <li>
+                     <a href="/account/" class="dropdown-item">
+                        <i class="fa-solid fa-user fa-fw me-2 "></i> Profile
+                     </a>
+                  </li>
+                  <li>
+                     <a class="dropdown-item" href="/rule/owner_rules">
+                        <i class="fa-solid fa-user-shield fa-fw me-2"></i> My Rules
+                     </a>
+                  </li>
+                  <li>
+                     <a href="/account/favorite" class="dropdown-item">
+                        <i class="fa-solid fa-star fa-fw me-2 "></i> Favorite
+                     </a>
+                  </li>
+                  <li>
+                     <a href="/account/logout" class="dropdown-item">
+                        <i class="fa-solid fa-right-from-bracket fa-fw me-2 "></i> Logout
+                     </a>
+                  </li>
+                  {% else %}
+                  <li>
+                     <a href="/account/register" class="dropdown-item">
+                        <i class="fa-solid fa-user-plus fa-fw me-2 "></i> Register
+                     </a>
+                  </li>
+                  <li>
+                     <a href="/account/profil" class="dropdown-item">
+                        <i class="fa-solid fa-right-to-bracket fa-fw me-2 "></i> Login
+                     </a>
+                  </li>
+                  {% endif %}
+               </ul>
+            </li>
+            <!-- Notification -->
+            <li class="nav-item dropdown mx-2 position-relative d-flex align-items-center">
+               <a class="nav-link text-dark fw-semibold position-relative" href="#" id="notificationsDropdown"
+                  role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="fa-solid fa-bell fa-lg"></i>
+
+                  <!-- Badge total -->
+                  <template v-if="total_notifications > 0">
+                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        [[ total_notifications ]]
+                        <span class="visually-hidden">unread notifications</span>
+                     </span>
+                  </template>
+               </a>
+
+               <!-- Dropdown Menu -->
+               <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded p-2" aria-labelledby="notificationsDropdown"
+                  style="min-width: 260px;">
+                  <li class="dropdown-header fw-bold text-center">
+                     Notifications
+                  </li>
+                  <li>
+                     <hr class="dropdown-divider">
+                  </li>
+
+                  <template v-if="total_notifications === 0">
+                     <li class="text-center text-muted small py-2">
+                        Everything is up to date!
+                     </li>
+                  </template>
+
+                  <template v-else>
+                     <li v-if="requests_to_validate > 0">
+                        <a href="/admin/request"
+                           class="dropdown-item d-flex justify-content-between align-items-center">
+                           <span><i class="fa-solid fa-envelope me-2 text-primary"></i> Ownership Requests</span>
+                           <span class="badge bg-danger rounded-pill">[[ requests_to_validate ]]</span>
+                        </a>
+                     </li>
+
+                     <li v-if="changes_to_validate > 0">
+                        <a href="/rule/rule_propose_edit"
+                           class="dropdown-item d-flex justify-content-between align-items-center">
+                           <span><i class="fa-solid fa-lightbulb me-2 text-warning"></i> Rule Changes</span>
+                           <span class="badge bg-danger rounded-pill">[[ changes_to_validate ]]</span>
+                        </a>
+                     </li>
+
+                     <li v-if="repport_to_validate > 0">
+                        <a href="/rule/rules_reported"
+                           class="dropdown-item d-flex justify-content-between align-items-center">
+                           <span><i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i> Reported Rules</span>
+                           <span class="badge bg-danger rounded-pill">[[ repport_to_validate ]]</span>
+                        </a>
+                     </li>
+
+                     <li v-if="update_to_validate > 0">
+                        <a href="/rule/update_github/update_rules_from_github"
+                           class="dropdown-item d-flex justify-content-between align-items-center">
+                           <span><i class="fa-solid fa-rotate me-2 text-success"></i> Rule Updates</span>
+                           <span class="badge bg-danger rounded-pill">[[ update_to_validate ]]</span>
+                        </a>
+                     </li>
+                  </template>
+               </ul>
+            </li>
+            <!-- Search (offcanvas toggle) -->
+            <li class="nav-item mx-2 d-flex align-items-center">
+               <a class="nav-link text-dark fw-semibold" data-bs-toggle="offcanvas" href="#offcanvasSearch"
+                  role="button" aria-controls="offcanvasSearch">
+                  <i class="fa-solid fa-magnifying-glass fa-fw me-1"></i> Search
+               </a>
+            </li>
          </ul>
    </nav>
    <!-- Offcanvas Search -->
-      <div class="offcanvas offcanvas-end shadow-lg offcanvas-wide" tabindex="-1" id="offcanvasSearch" aria-labelledby="offcanvasSearchLabel">
-         <div class="offcanvas-header border-bottom">
-            <h5 id="offcanvasSearchLabel" class="fw-bold text-secondary">
-               <i class="fa-solid fa-magnifying-glass me-2"></i> Search Security Rules
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-         </div>
-      
-         <div class="offcanvas-body p-4">
-            <!-- Search Filters -->
-            <div class="row g-3 mb-4">
-               <div class="col-md-6">
-                  <div class="input-group input-group-sm">
-                     <span class="input-group-text border-end-0" style="background-color: var(--bg-color);">
-                        <i class="fa-solid fa-magnifying-glass text-muted"></i>
-                     </span>
-                     <input type="text"
-                           v-model="searchQuery"
-                           @input="onSearchInput"
-                           @keyup.enter="onEnterKey"
-                           class="form-control rounded-end-pill border-start-0"
-                           placeholder="Search by keywords...">
-                  </div>
-               </div>
-               <div class="col-md-3">
-                  <select v-model="sortBy" class="form-select form-select-sm rounded-pill" @change="fetchRules()">
-                     <option value="newest">Newest</option>
-                     <option value="oldest">Oldest</option>
-                     <option value="most_likes">Most Liked</option>
-                     <option value="least_likes">Least Liked</option>
-                  </select>
-               </div>
-               <div class="col-md-3">
-                  <select v-model="ruleType" class="form-select form-select-sm rounded-pill" @change="fetchRules()">
-                     <option value="">All Types</option>
-                     <option v-for="format in rules_formats" :value="format.name" :key="format.id">
-                        [[ format.name ]]
-                     </option>
-                  </select>
+   <div class="offcanvas offcanvas-end shadow-lg offcanvas-wide" tabindex="-1" id="offcanvasSearch"
+      aria-labelledby="offcanvasSearchLabel">
+      <div class="offcanvas-header border-bottom">
+         <h5 id="offcanvasSearchLabel" class="fw-bold text-secondary">
+            <i class="fa-solid fa-magnifying-glass me-2"></i> Search Security Rules
+         </h5>
+         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+
+      <div class="offcanvas-body p-4">
+         <!-- Search Filters -->
+         <div class="row g-3 mb-4">
+            <div class="col-md-6">
+               <div class="input-group input-group-sm">
+                  <span class="input-group-text border-end-0" style="background-color: var(--bg-color);">
+                     <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                  </span>
+                  <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey"
+                     class="form-control rounded-end-pill border-start-0" placeholder="Search by keywords...">
                </div>
             </div>
+            <div class="col-md-3">
+               <select v-model="sortBy" class="form-select form-select-sm rounded-pill" @change="fetchRules()">
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="most_likes">Most Liked</option>
+                  <option value="least_likes">Least Liked</option>
+               </select>
+            </div>
+            <div class="col-md-3">
+               <select v-model="ruleType" class="form-select form-select-sm rounded-pill" @change="fetchRules()">
+                  <option value="">All Types</option>
+                  <option v-for="format in rules_formats" :value="format.name" :key="format.id">
+                     [[ format.name ]]
+                  </option>
+               </select>
+            </div>
+         </div>
 
-            <!-- Rules List -->
-            <div v-if="rules_list && rules_list.rule && rules_list.rule.length > 0" class="list-group">
-               <a v-for="rule in rules_list.rule" 
-                  :key="rule.id" 
-                  :href="`/rule/detail_rule/${rule.id}`" 
-                  class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-2 rounded shadow-sm">
+         <!-- Rules List -->
+         <div v-if="rules_list && rules_list.rule && rules_list.rule.length > 0" class="list-group">
+            <a v-for="rule in rules_list.rule" :key="rule.id" :href="`/rule/detail_rule/${rule.id}`"
+               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-2 rounded shadow-sm">
                <div>
                   <h6 class="mb-1 fw-bold text-primary">[[ rule.title ]]</h6>
                   <small class="text-muted">[[ rule.description ]]</small>
                </div>
                <span class="badge bg-secondary rounded-pill">[[ rule.type ]]</span>
-               </a>
-            </div>
+            </a>
+         </div>
 
-            <div v-else class="text-center text-muted py-3">
-               No rules found. Try another search or filter.
-            </div>
+         <div v-else class="text-center text-muted py-3">
+            No rules found. Try another search or filter.
          </div>
       </div>
    </div>
+</div>
 
 
-   
+
 </div>
 <script type="module">
-const { createApp, ref, onMounted, computed } = Vue
-createApp({
-   delimiters: ['[[', ']]'],
-   setup() {
+   const { createApp, ref, onMounted, computed } = Vue
+   createApp({
+      delimiters: ['[[', ']]'],
+      setup() {
 
-      /**
-       *    ###################
-       *    #  Notification   #
-       *    ###################
-       * */
+         /**
+          *    ###################
+          *    #  Notification   #
+          *    ###################
+          * */
 
-      const requests_to_validate = ref(0)
-      const changes_to_validate = ref(0)
-      const repport_to_validate = ref(0)
-      const update_to_validate = ref(0)
-      const total_notifications = computed(() =>
+         const requests_to_validate = ref(0)
+         const changes_to_validate = ref(0)
+         const repport_to_validate = ref(0)
+         const update_to_validate = ref(0)
+         const total_notifications = computed(() =>
             Number(requests_to_validate.value || 0) +
             Number(changes_to_validate.value || 0) +
             Number(repport_to_validate.value || 0) +
             Number(update_to_validate.value || 0)
-      )
-      async function getNbRequestAdmin() {
+         )
+         async function getNbRequestAdmin() {
             const res = await fetch('/request_to_check')
             const data = await res.json()
             requests_to_validate.value = data.count || 0
-      }
+         }
 
-      async function getNbChanges() {
+         async function getNbChanges() {
             const res = await fetch('/rule/change_to_check')
             const data = await res.json()
             changes_to_validate.value = data.count || 0
-      }
+         }
 
-      async function getNbRepport() {
+         async function getNbRepport() {
             const res = await fetch('/rule/repport_to_check')
             const data = await res.json()
             repport_to_validate.value = data.count || 0
-      }
+         }
 
-      async function getNbUpdate() {
+         async function getNbUpdate() {
             const res = await fetch('/rule/update_to_check')
             const data = await res.json()
             update_to_validate.value = data.count || 0
-      }
+         }
 
-      /**
-       *    ############
-       *    #  Search  #
-       *    ############
-       * */
+         /**
+          *    ############
+          *    #  Search  #
+          *    ############
+          * */
 
 
-      const searchQuery = ref('')
-      const sortBy = ref('newest')
-      const ruleType = ref('')
+         const searchQuery = ref('')
+         const sortBy = ref('newest')
+         const ruleType = ref('')
 
-      const rules_formats = ref([])
+         const rules_formats = ref([])
 
-      async function fetchRulesFormats() {
+         async function fetchRulesFormats() {
             const res = await fetch('/rule/get_rules_formats')
             const data = await res.json()
-            if (res.status === 200){
-               rules_formats.value = data.formats 
+            if (res.status === 200) {
+               rules_formats.value = data.formats
             }
-      }
-
-      const rules_list = ref([])
-
-      async function fetchRules() {
-         const params = new URLSearchParams({
-            page:1,
-            search: searchQuery.value,
-            sort_by: sortBy.value,
-            rule_type: ruleType.value
-         })
-
-         const res = await fetch('/rule/get_rules_page_filter?' + params.toString())
-         if (res.status === 200){
-            const data = await res.json()
-            rules_list.value = data 
          }
-         
-      }
-      
 
-      async function onSearchInput() {
-        if (searchQuery.value.trim() === "") {
-          await fetchRules()
-        } else {
-          await fetchRules()
-        }
-      }
+         const rules_list = ref([])
 
-      async function onEnterKey() {
-        await fetchRules()
-      }
+         async function fetchRules() {
+            const params = new URLSearchParams({
+               page: 1,
+               search: searchQuery.value,
+               sort_by: sortBy.value,
+               rule_type: ruleType.value
+            })
 
-      /**
-       *    ################
-       *    #   Fetch all  #
-       *    ################
-       * */
+            const res = await fetch('/rule/get_rules_page_filter?' + params.toString())
+            if (res.status === 200) {
+               const data = await res.json()
+               rules_list.value = data
+            }
 
-      onMounted(() => {
+         }
+
+
+         async function onSearchInput() {
+            if (searchQuery.value.trim() === "") {
+               await fetchRules()
+            } else {
+               await fetchRules()
+            }
+         }
+
+         async function onEnterKey() {
+            await fetchRules()
+         }
+
+         /**
+          *    ################
+          *    #   Fetch all  #
+          *    ################
+          * */
+
+         onMounted(() => {
             getNbRequestAdmin()
             getNbChanges()
             getNbRepport()
             getNbUpdate()
             fetchRulesFormats(),
-            fetchRules()
-      })
+               fetchRules()
+         })
 
 
-      return {
-            requests_to_validate, 
-            changes_to_validate, 
-            repport_to_validate, 
+         return {
+            requests_to_validate,
+            changes_to_validate,
+            repport_to_validate,
             update_to_validate,
-            total_notifications, 
-            
-            
+            total_notifications,
+
+
             searchQuery,
             sortBy,
             ruleType,
@@ -486,9 +493,7 @@ createApp({
             fetchRules,
             onSearchInput,
             onEnterKey
-      }},
-}).mount('#app')
+         }
+      },
+   }).mount('#app')
 </script>
-
-
-

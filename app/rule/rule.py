@@ -6,13 +6,13 @@ from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm
 from ..utils.utils import  bump_version, form_to_dict, generate_side_by_side_diff_html
 
 from app.account.account_core import add_favorite, remove_favorite
-from app.import_github_project.update_github_project import Check_for_rule_updates
 from app.misp.misp_core import content_convert_to_misp_object
-from app.rule_type.main_format import  parse_rule_by_format, process_and_import_fixed_rule, verify_syntax_rule_by_format
-from app.import_github_project.untils_import import clone_or_access_repo, fill_all_void_field, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
+from app.rule_format.main_format import  parse_rule_by_format, process_and_import_fixed_rule, verify_syntax_rule_by_format
+from app.rule_format.utils_format.utils_import_update import clone_or_access_repo, fill_all_void_field, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
 
 from . import rule_core as RuleModel
-from . import session_class as SessionModel
+from ..rule_from_github.import_rule import session_class as SessionModel
+from ..rule_from_github.update_rule import update_class as UpdateModel
 from ..account import account_core as AccountModel
 
 from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for
@@ -229,7 +229,6 @@ def edit_rule(rule_id) -> render_template:
             
             # try to compile or verify the syntax of the rule (in the format choose)
             valide , error = verify_syntax_rule_by_format(rule_dict)
-
             if not valide:
                 return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
             
@@ -540,7 +539,7 @@ def comment_rule() -> jsonify:
     comments = RuleModel.get_comment_page(page , rule_id)
     total_comments = RuleModel.get_total_comments_count()
     if comments:
-        comments_list = [c.to_json for c in comments]
+        comments_list = [c.to_json() for c in comments]
         return {"comments_list": comments_list, "total_comments": total_comments}
     return {"message": "No Comments"}, 404
 
@@ -711,7 +710,7 @@ def propose_edit(rule_id) -> redirect:
 
     rule = RuleModel.get_rule(rule_id)
 
-    if rule.to_string.strip() == proposed_content.strip():
+    if rule.to_string == proposed_content:
         flash("Proposed content is the same as the current content.", "warning")
         return redirect(url_for('rule.detail_rule', rule_id=rule_id) + "#chap2-pane")
     
@@ -942,13 +941,34 @@ def choose_changes() -> render_template:
     history_id = request.args.get('id', 1, type=int)
     return render_template("rule/update_github/updates_choose_changes.html" , history_id=history_id)
 
+# accept_all_changes
+@rule_blueprint.route("/accept_all_changes", methods=['GET'])
+@login_required
+def accept_all_changes() -> jsonify:
+    """Accept all pending changes"""
+    rep = RuleModel.get_all_pending_changes()
+    if rep:
+        for rule_change in rep:
+            if rule_change.analyzed_by_user_id != current_user.id and not current_user.is_admin():
+                return jsonify({"success": False, "message": "Access denied", "toast_class": "danger-subtle"}), 403
+
+            success = RuleModel.accept_rule_change(rule_change.id)
+            if not success:
+                return jsonify({"success": False, "message": "Failled to accept changes", "toast_class": "danger-subtle"}), 500
+
+
+
+        return jsonify({"success": True, "message": "All changes accepted!", "toast_class": "success-subtle"}), 200
+    return jsonify({"success": False, "message": "No pending changes", "toast_class": "danger-subtle"}), 404
+
+
 @rule_blueprint.route("/update_github_rule", methods=['GET'])
 @login_required
 def update_github_rule() -> render_template:
     """Update a rule from github"""
     history_id = request.args.get('rule_id')
     decision = request.args.get('decision')
-
+    
 
     history = RuleModel.get_history_rule_by_id(history_id)
     rule_ = RuleModel.get_rule(history.rule_id)
@@ -974,7 +994,68 @@ def update_github_rule() -> render_template:
         return render_template("access_denied.html")
 
 
+# decision_rule
+@rule_blueprint.route("/update_github_rule/decision_rule", methods=['GET'])
+@login_required
+def decision_rule() -> jsonify:
+    """Update a rule from github"""
+    history_id = request.args.get('rule_id')
+    decision = request.args.get('decision')
+    sid = request.args.get('sid')
 
+    updater = RuleModel.get_updater_result(sid)
+    if not updater:
+        return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
+
+    history = RuleModel.get_history_rule_by_id(history_id)
+    if not history:
+        return {"message": "History Not found", 'toast_class': "danger-subtle"}, 404
+    rule_ = RuleModel.get_rule(history.rule_id)
+    if not rule_:
+        return {"message": "Rule Not found", 'toast_class': "danger-subtle"}, 404
+
+    if current_user.is_admin() or rule_.user_id == current_user.id:
+
+        # get the rule associated to the rule statue bi rule_id and change the update = false
+        rule_update = RuleModel.get_rule_update_from_updater_by_rule_id_and_change_statue(rule_.id, updater.id)
+        if not rule_update:
+            return {"message": "Rule update not found", 'toast_class': "danger-subtle"}, 404
+
+
+
+        if decision == 'accepted':
+            rule = RuleModel.get_rule(history.rule_id)
+            if rule:
+                rule.to_string = history.new_content
+                history.message = "accepted"
+                
+                return jsonify({
+                    "message": "Rule content modified !",
+                    "success": True,
+                    "toast_class": "success-subtle"
+                }), 200
+
+            return jsonify({
+                "message": "Error , no rule found !",
+                "success": False,
+                "toast_class": "danger-subtle"
+            }), 500
+        if decision == 'rejected':
+            rule = RuleModel.get_rule(history.rule_id)
+            if rule:
+                history.message = "rejected"
+
+        return jsonify({
+            "message": "Rule content rejected !",
+            "success": True,
+            "toast_class": "success-subtle"
+        })
+    else:
+        return jsonify({
+            "message": "Access denied !",
+            "success": False,
+            "toast_class": "danger-subtle"
+        })
 
 @rule_blueprint.route("/update_github/update_rules_from_github", methods=['GET'])
 @login_required
@@ -1319,17 +1400,21 @@ def get_rules_page_history_():
     }), 200
 
 
-@rule_blueprint.route("/get_old_rule_choice", methods=['GET'])
-def get_old_rule_choice()-> render_template:
+@rule_blueprint.route("/get_rule_changes", methods=['GET'])
+def get_rule_changes()-> render_template:
     """Get the history of the rule"""
     page = request.args.get('page', type=int)
-    rules = RuleModel.get_old_rule_choice(page)
+    search = request.args.get('search', type=str)
+    rules = RuleModel.get_old_rule_choice(page, search)
     if rules:
         return {"success": True,
                 "rule": [rule.to_json() for rule in rules],
-                "total_pages": rules.pages
+                "total_pages": rules.pages,
+                "total_rules": rules.total
             }, 200
     return {"message": "No Rule"}, 404
+
+
 
 
 ####################
@@ -1477,7 +1562,7 @@ def parse_rule() -> dict:
         flash(" Content is required", "danger")
         return redirect(url_for("rule.rule", tab="parse"))
     
-    success , message, object_ = parse_rule_by_format(rule_content, current_user, format)
+    success , message, object_ = parse_rule_by_format(rule_content, current_user, format, None)
 
 
     if success == False:
@@ -1509,7 +1594,6 @@ def import_rules_from_github():
             return {"message": "Please enter a valid URL to import rules.", "toast_class": "danger-subtle"}, 400
 
         repo_dir, _ = clone_or_access_repo(repo_url) 
-
 
         if not repo_dir:
             return {"message": "Failed to clone or access the repository.", "toast_class": "danger-subtle"}, 400
@@ -1583,117 +1667,245 @@ def history_github_importer_list():
             "total_pages": github_importer_list.pages}, 200
 
 
+# @rule_blueprint.route("/import_get_session_running", methods=['GET'])
+# @login_required
+# def import_get_session_running():
+#     return [{"uuid": s.uuid, "info": s.info} for s in SessionModel.sessions]
+
 @rule_blueprint.route("/import_get_session_running", methods=['GET'])
 @login_required
 def import_get_session_running():
-    return [{"uuid": s.uuid, "info": s.info} for s in SessionModel.sessions]
+    import_sessions = [
+        {"uuid": s.uuid, "info": s.info} 
+        for s in SessionModel.sessions
+    ]
+
+    update_sessions = [
+        {"uuid": s.uuid, "info": s.info} 
+        for s in UpdateModel.sessions
+    ]
+
+    return {
+        "import_sessions": import_sessions,
+        "update_sessions": update_sessions
+    }
+
+
+#############
+#   Update  #
+#############
+
+@rule_blueprint.route("/history_github_updater/list", methods=['GET'])
+@login_required
+def history_github_updater_list():
+    page = request.args.get('page', 1, type=int)
+    github_updater_list = RuleModel.get_updater_list_page(page)
+
+    return {"history": [g.to_json_list() for g in github_updater_list], 
+            "total_history": github_updater_list.total, 
+            "total_pages": github_updater_list.pages}, 200
+
+@rule_blueprint.route("/update_loading/<sid>", methods=['GET'])
+@login_required
+def update_loading(sid):
+    for s in UpdateModel.sessions:
+        if s.uuid == sid:
+            return render_template("rule/update_github/update_loading.html", sid=sid)
+    r = RuleModel.get_updater_result(sid)
+    if r:
+        return render_template("rule/update_github/update_loading.html", sid=sid)
+    return render_template("404.html"), 404
+
+@rule_blueprint.route("/update_loading_status/<sid>", methods=['GET'])
+@login_required
+def update_loading_status(sid):
+    is_finished = request.args.get('is_finished', 'false', type=str)
+    if not is_finished == 'true':
+        for s in UpdateModel.sessions:
+            if s.uuid == sid:
+                return jsonify(s.status())
+        
+    r = RuleModel.get_updater_result(sid)
+
+    if r:
+        loc = r.to_json_list()
+        loc["complete"] = loc["total"]
+        loc["remaining"] = 0
+        return loc
+    return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
+
+
+@rule_blueprint.route("/update_loading_status/<sid>/get_news_rules", methods=['GET'])
+@login_required
+def get_news_rules(sid):
+    page = request.args.get('page', 1, type=int)  
+
+
+    # Retrieve paginated results
+    paginated = RuleModel.get_updater_result_new_rule_page(sid, page=page)
+
+    if not paginated :
+        return {"message": "Session not found", "toast_class": "danger-subtle"}, 404
+    rules = paginated.items
+
+    if len(rules) > 0:
+        rules_list = [rule.to_json() for rule in rules]
+
+        return {
+            "rules": rules_list,
+            "total_pages": paginated.pages,
+            "total_rules": paginated.total,
+        }, 200
+    return{
+        "rules": []
+
+    }, 200
+
+
+@rule_blueprint.route("/update_loading_status/<sid>/get_rules", methods=['GET'])
+@login_required
+def get_rules(sid):
+    page = request.args.get('page', 1, type=int)  
+
+
+    # Retrieve paginated results
+    paginated = RuleModel.get_updater_result_rule_page(sid, page=page)
+    if not paginated :
+        return {"message": "Session not found", "toast_class": "danger-subtle"}, 404
+
+    rules = paginated.items
+
+    if rules:
+        rules_list = [rule.to_json() for rule in rules]
+
+        return {
+            "rules": rules_list,
+            "total_pages": paginated.pages,
+            "total_rules": paginated.total,
+        }, 200
+
+# accetped all change associate to a sid 
+@rule_blueprint.route("/accept_all_update/<sid>", methods=['GET'])
+@login_required
+def accept_all_update(sid):
+    # found the session associate to the sid
+    updater = RuleModel.get_updater_result(sid)
+    if not updater:
+        return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
+    # get all the rule with an update available with only correct syntaxe associatio to this uuid into the table rule_status
+    rule_udpate_list , number = RuleModel.get_rule_update_list(sid)
+
+    if not rule_udpate_list:
+        return {"message": "No rule with update available", 'toast_class': "danger-subtle"}, 404
+    if number == 0:
+        return {"message": "No rule with update available", 'toast_class': "danger-subtle"}, 200
+    success = RuleModel.accept_all_update(rule_udpate_list)
+    if success:
+        updater.updated = 0
+        return {"message": "All rules updated successfully", 'toast_class': "success-subtle"}, 200
+    else:
+        return {"message": "Error while updating rules", 'toast_class': "danger-subtle"}, 500
+    # get for each rule update the history_id and get the history associated and change the RuleUpdateHistory.message and RuleUpdateHistory.success
+    
+
+
+@rule_blueprint.route("/update_get_info_session/<sid>", methods=['GET'])
+@login_required
+def update_get_info_session(sid):
+    for s in UpdateModel.sessions:
+        if s.uuid == sid:
+            return jsonify(s.info)
+        
+    r = RuleModel.get_updater_result(sid)
+    if r:
+        return json.loads(r.info)
+    return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
 
 
 @rule_blueprint.route("/check_updates_by_url", methods=["POST"])
 @login_required
-def check_updates():
+def check_updates_by_url():
+    """
+    Check for updates across multiple GitHub URLs (repositories).
+    Each repo is cloned/pulled, and rules inside are checked in parallel.
+    """
+    # try:
+       
+
+    # except Exception as e:
+    #     return {"message": f"Error while checking updates: {str(e)}", "toast_class": "danger-subtle"}, 500
     data = request.get_json()
     urls = data.get("url", None)
 
     if not urls or not isinstance(urls, list):
         return {
-            "message": "No URL list provided or invalid format.",
+            "message": "Invalid or missing URL list.",
             "nb_update": 0,
             "results": [],
             "success": False,
-            "toast_class": "danger"
+            "toast_class": "danger-subtle"
         }, 400
 
-    results = []
+    valid_urls = [u.get("url") for u in urls if u.get("url") and valider_repo_github(u.get("url"))]
+    if not valid_urls:
+        return {"message": "No valid GitHub URLs provided.", "toast_class": "danger-subtle"}, 400
 
-    for item in urls:
-        url = item.get("url")  
-        if not url:
-            continue  
+    info = {
+        "mode": "by_url", 
+        "count": len(valid_urls), 
+        "initiated_by": current_user.first_name, 
+        "repo_url": valid_urls[0], 
+        "license": None, 
+        "author": current_user.last_name, 
+        "descriprtion": None
+    }
 
-        rule_items = RuleModel.get_all_rule_by_url_github(url)
-        repo_dir, exists = clone_or_access_repo(url)
-
-        if not exists:
-            continue
-
-        git_pull_repo(repo_dir)
-
-        for rule in rule_items:
-            rule_id = rule.id
-            title = rule.title
-
-            message_dict, success, new_rule_content = Check_for_rule_updates(rule_id, repo_dir)
-            rule = RuleModel.get_rule(rule_id)
-
-            if success and new_rule_content:
-                result = {
-                    "id": rule_id,
-                    "title": title,
-                    "success": success,
-                    "message": message_dict.get("message", "No message"),
-                    "new_content": new_rule_content,
-                    "old_content": rule.to_string if rule else "Error loading the rule"
-                }
-
-                history_id = RuleModel.create_rule_history(result)
-                result["history_id"] = history_id if history_id else None
-                results.append(result)
+    update_session = UpdateModel.Update_class(valid_urls, current_user, info, mode="by_url")
+    update_session.start()
+    UpdateModel.sessions.append(update_session)
 
     return {
-        "message": "Search completed successfully. All selected rules have been processed without issues.",
-        "nb_update": len(results),
-        "results": results,
-        "success": True,
-        "toast_class": "success"
-    }, 200
+        "message": "Update check started successfully. Processing repositories...",
+        "session_uuid": update_session.uuid,
+        "toast_class": "success-subtle"
+    }, 201
 
-    
+
 @rule_blueprint.route("/check_updates_by_rule", methods=["POST"])
 @login_required
 def check_updates_by_rule():
-    data = request.get_json()
-    rule_items = data.get("rules", [])  # list of id
-    results = []
+    """
+    Check for updates on specific selected rules (by rule IDs).
+    Rules are matched with their GitHub source and updated if needed.
+    """
+    try:
+        data = request.get_json()
+        rule_ids = data.get("rules", [])
 
+        if not rule_ids or not isinstance(rule_ids, list):
+            return {
+                "message": "No rule IDs provided or invalid format.",
+                "nb_update": 0,
+                "results": [],
+                "success": False,
+                "toast_class": "danger-subtle"
+            }, 400
 
-    sources = RuleModel.get_sources_from_ids(rule_items)
+        info = {"mode": "by_rule", "count": len(rule_ids), "initiated_by": current_user.first_name}
 
-    for source in sources:
-        repo_dir, exists = clone_or_access_repo(source)
-        if exists:
-            git_pull_repo(repo_dir)
+        update_session = UpdateModel.Update_class(rule_ids, current_user, info, mode="by_rule")
+        update_session.start()
+        UpdateModel.sessions.append(update_session)
 
-    for rule_id in rule_items:
-        rule = RuleModel.get_rule(rule_id)
-        if not rule:
-            continue
-        title = rule.title
-        repo_dir, exists = clone_or_access_repo(rule.source)
-        message_dict, success, new_rule_content = Check_for_rule_updates(rule_id, repo_dir)
-        rule = RuleModel.get_rule(rule_id)
+        return {
+            "message": "Rule update verification started successfully.",
+            "session_uuid": update_session.uuid,
+            "toast_class": "success-subtle"
+        }, 201
 
-        if success and new_rule_content:
-            result = {
-                "id": rule_id,
-                "title": title,
-                "success": success,
-                "message": message_dict.get("message", "No message"),
-                "new_content": new_rule_content,
-                "old_content": rule.to_string if rule else "Error loading the rule"
-            }
+    except Exception as e:
+        return {"message": f"Error while checking rule updates: {str(e)}", "toast_class": "danger-subtle"}, 500
 
-            history_id = RuleModel.create_rule_history(result)
-            result["history_id"] = history_id if history_id else None
-            results.append(result)
-
-    return {
-        "message": "Search completed successfully. All selected rules have been processed without issues.",
-        "nb_update": len(results),
-        "results": results,
-        "success": True,
-        "toast_class": "success"
-    }, 200
 
 #########################
 #   Github url section  #
@@ -1779,3 +1991,75 @@ def get_rules_with_github_url():
         "total_rule": total,
         "total_pages": pagination.pages
     }), 200
+
+@rule_blueprint.route('/fix_new_rule/<int:new_rule_id>', methods=['GET'])
+@login_required
+def fix_new_rule(new_rule_id: int):
+    """
+    Moves an invalid rule from the temporary NewRule table to InvalidRuleModel 
+    for manual correction by the user, relying entirely on the RuleModel service layer.
+    """
+    
+    temp_rule = RuleModel.get_new_rule(new_rule_id) 
+
+    if not temp_rule:
+        flash(f"Temporary rule ID {new_rule_id} not found.", "danger")
+        return redirect(url_for('rule.rules_summary')) 
+
+    if temp_rule.rule_syntax_valid:
+        flash("This rule is already marked as valid. Use 'Add Rule' instead.", "info")
+        return redirect(request.referrer or url_for('rule.rules_summary'))
+
+    result_obj, error_message = RuleModel.save_invalid_rule_from_new_rule(
+        new_rule_obj=temp_rule, 
+        user=current_user
+    )
+
+    if error_message:
+        flash(f"Error saving rule for correction: {error_message}", "danger")
+        return redirect(url_for('rule.rules_summary'))
+
+    flash(f"Rule '{temp_rule.name_rule}' moved to manual correction.", "warning")
+    
+    return redirect(url_for('rule.edit_bad_rule', rule_id=result_obj.id))
+
+
+
+@rule_blueprint.route('/add_new_rule', methods=['GET'])
+@login_required
+def add_new_rule():
+    """
+    Retrieves the valid rule content and imports it using the full parsing logic.
+    """
+    new_rule_id = request.args.get('new_rule_id', type=int, default=None)
+    if not new_rule_id:
+        return jsonify({"success": False, "message": "No new rule ID provided.", "toast_class": "danger-subtle"}), 400
+
+    temp_rule = RuleModel.get_new_rule(new_rule_id) 
+    
+    if not temp_rule:
+        return jsonify({"success": False, "message": f"Temporary rule ID {new_rule_id} not found.", "toast_class": "danger-subtle"}), 404
+
+    if not temp_rule.rule_syntax_valid:
+        return jsonify({"success": False, "message": f"Temporary rule ID {new_rule_id} is not valid.", "toast_class": "danger-subtle"}), 404
+
+    content = temp_rule.rule_content
+    
+    format = temp_rule.format or "no format"
+
+    # get the url 
+    updater = RuleModel.get_updater_result_by_id(temp_rule.update_result_id)
+    if not updater:
+        return jsonify({"success": False, "message": "Updater not found", "toast_class": "danger-subtle"}), 404
+
+    
+
+    success, message, imported_object = parse_rule_by_format(content, current_user, format, updater.repo_sources[0])
+    
+    if success:
+        return jsonify({"success": True, "message": message, "toast_class": "success-subtle"}), 200
+    elif imported_object:
+        # duplicate case
+        return jsonify({"success": False, "message": message, "toast_class": "warning-subtle"}), 200
+    else:
+        return jsonify({"success": False, "message": message, "toast_class": "danger-subtle"}), 500

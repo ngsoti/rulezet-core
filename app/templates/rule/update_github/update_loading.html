@@ -1,0 +1,616 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div v-if="info_session">
+    <h2 class="fw-bold mb-1 text-center text-primary">Update Status</h2>
+    <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+
+    <!-- Progress bar -->
+    <div v-if="!is_finished" class="mx-5">
+        <p class="text-muted mt-2">Updating rules. Please wait...</p>
+        <div class="progress mb-2">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                :style="'width:'+progress+'%;'" :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+            </div>
+        </div>
+        <span v-if="status_site" id="status">[[status_site]]</span>
+    </div>
+
+    <!-- Finished update -->
+    <div v-if="is_finished" class="container col-md-11 justify-content-center my-5">
+        <!-- Accordion for repos -->
+        <div v-if="result_data.info && result_data.info.github_metadata && result_data.info.github_metadata.length">
+            <div class="card p-3">
+                <h3 class="fw-bold mb-3">Repository Metadata</h3>
+                <div class="accordion" id="repoAccordion">
+                    <div v-for="(repo, index) in result_data.info.github_metadata" :key="repo.url"
+                        class="accordion-item">
+                        <h2 class="accordion-header" :id="'heading'+index">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                :data-bs-target="'#collapse'+index" aria-expanded="false"
+                                :aria-controls="'collapse'+index">
+                                [[ repo.name || repo.url ]]
+                            </button>
+                        </h2>
+                        <div :id="'collapse'+index" class="accordion-collapse collapse"
+                            :aria-labelledby="'heading'+index" data-bs-parent="#repoAccordion">
+                            <div class="accordion-body">
+                                <table class="table table-striped">
+                                    <tr v-if="repo.author">
+                                        <td>Author</td>
+                                        <td><b>[[ repo.author ]]</b></td>
+                                    </tr>
+                                    <tr v-if="repo.description">
+                                        <td>Description</td>
+                                        <td><b>[[ repo.description ]]</b></td>
+                                    </tr>
+                                    <tr v-if="repo.license_name">
+                                        <td>License</td>
+                                        <td><b>[[ repo.license_name ]]</b></td>
+                                    </tr>
+                                    <tr v-if="repo.created_at">
+                                        <td>Creation Date</td>
+                                        <td><b>[[ repo.created_at ]]</b></td>
+                                    </tr>
+                                    <tr v-if="repo.language">
+                                        <td>Language</td>
+                                        <td><b><span class="badge bg-primary">[[ repo.language ]]</span></b></td>
+                                    </tr>
+                                    <tr v-if="repo.watchers">
+                                        <td>Watchers</td>
+                                        <td><b>[[ repo.watchers ]]</b></td>
+                                    </tr>
+                                    <tr v-if="repo.stars">
+                                        <td>Stars</td>
+                                        <td><b>[[ repo.stars ]]</b></td>
+                                    </tr>
+                                    <tr v-if="repo.open_issues">
+                                        <td>Open Issues</td>
+                                        <td><b>[[ repo.open_issues ]]</b></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Repo URL</td>
+                                        <td><a :href="repo.url" target="_blank">[[ repo.url ]]</a></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Update summary -->
+        <div v-if="result_data" class="card shadow border-0 mb-4 p-4 bg-light rounded">
+            <h3 class="fw-bold mb-3">Update Summary</h3>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <tr v-if="result_data.total">
+                        <td>Total Rules</td>
+                        <td><b>[[result_data.total]]</b></td>
+                    </tr>
+                    <tr v-if="result_data.found">
+                        <td>Total Found</td>
+                        <td><b>[[result_data.found]]</b></td>
+                    </tr>
+                    <tr v-if="result_data.not_found">
+                        <td>Total Not Found</td>
+                        <td><b>[[result_data.not_found]]</b></td>
+                    </tr>
+                    <tr v-if="result_data.updated" style="background-color: #f2e7c3;">
+                        <td>Updated found</td>
+                        <td>
+                            <span class="badge bg-primary ms-1">
+                                [[result_data.updated]]
+                            </span>
+                        </td>
+                    </tr>
+                    <tr v-else>
+                        <td>Updated</td>
+                        <td>
+                            <span class="badge bg-success ms-1">
+                                No update found
+                            </span>
+                        </td>
+                    </tr>
+                    <tr v-if="result_data.skipped">
+                        <td>Skipped</td>
+                        <td><b>[[result_data.skipped]]</b></td>
+                    </tr>
+                    <tr v-if="result_data.query_date">
+                        <td>Query Date</td>
+                        <td><b>[[result_data.query_date]]</b></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist">
+            <li class="nav-item flex-fill text-center">
+                <a class="nav-link active" id="github-tab" data-bs-toggle="tab" href="#github-pane" role="tab"
+                    aria-controls="github" aria-selected="true" style="color: var(--text-color);">
+                    Rule Status
+                    <span v-if="rules && rules.length" class="badge bg-primary ms-1">
+                        [[ result_data.updated ]]
+                    </span>
+                </a>
+            </li>
+            <li class="nav-item flex-fill text-center">
+                <a class="nav-link" id="rule-tab" data-bs-toggle="tab" href="#rule-pane" role="tab"
+                    aria-controls="rule-pane" aria-selected="false" style="color: var(--text-color);">
+                    New Rules
+                    <span v-if="new_rules && new_rules.length" class="badge bg-success ms-1">[[ total_new_rules
+                        ]]</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="exampleTabsContent">
+            <div class="tab-pane fade show active" id="github-pane" role="tabpanel" aria-labelledby="github-tab">
+                <div class="card p-3">
+                    <div v-if="rules && rules.length">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Format</th>
+                                        <th>Name</th>
+                                        <th>Found</th>
+                                        <th>Update Available</th>
+                                        <th>Valid Syntax</th>
+                                        <th>Error</th>
+                                        <th>Message</th>
+                                        <th>
+                                            Action
+                                            <!-- Accepted all the pending change detected -->
+                                            <template v-if="rules.some(rule => rule.update_available)">
+                                                <button type="button" class="btn btn-sm btn-success float-end"
+                                                    @click="acceptAll()" title="Accept all changes">
+                                                    <i class="fas fa-check text-white"></i>All
+                                                </button>
+                                            </template>
+
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="rule in rules" :key="rule.id"
+                                        :class="{'table-warning': rule.update_available, 'cursor-pointer': true}"
+                                        @click="gotoRuleDetail(rule.rule_id)">
+                                        <td><span class="badge bg-primary">[[rule.format]]</span></td>
+                                        <td>[[ rule.name_rule ]]</td>
+                                        <td class="text-center" v-if="rule.found !== undefined">
+                                            <i v-if="rule.found" class="fas fa-check text-success"></i>
+                                            <i v-else class="fas fa-times text-danger"></i>
+                                        </td>
+                                        <td class="text-center" v-else>-</td>
+                                        <td class="text-center" v-if="rule.update_available !== undefined">
+                                            <i v-if="rule.update_available" class="fas fa-check text-success"></i>
+                                            <i v-else class="fas fa-times text-danger"></i>
+                                        </td>
+                                        <td class="text-center" v-else>-</td>
+                                        <td class="text-center" v-if="rule.rule_syntax_valid !== undefined">
+                                            <i v-if="rule.rule_syntax_valid" class="fas fa-check text-success"></i>
+                                            <i v-else class="fas fa-times text-danger"></i>
+                                        </td>
+                                        <td class="text-center" v-else>-</td>
+                                        <td class="text-center" v-if="rule.error !== undefined">
+                                            <i v-if="rule.error" class="fas fa-times text-danger"></i>
+                                            <i v-else class="fas fa-check text-success"></i>
+                                        </td>
+                                        <td v-else>-</td>
+                                        <td v-if="rule.message !== undefined">[[ rule.message ]]</td>
+                                        <td v-else>-</td>
+                                        <td @click.stop>
+                                            <template v-if="rule.update_available === false">
+                                                <span><i class="fas fa-ban text-secondary"></i></span>
+                                            </template>
+                                            <template v-else>
+                                                <div class="d-flex gap-2 justify-content-center">
+                                                    <a class="btn btn-primary text-center" style="width: 40px;"
+                                                        :href="'/rule/update_github/choose_changes?id=' + rule.history_id"
+                                                        title="Compare the change">
+                                                        <i class="fas fa-code-branch"></i>
+                                                    </a>
+
+
+                                                    <button class="btn btn-success text-center" style="width: 40px;"
+                                                        @click="decisionRule(rule.history_id , 'accepted')"
+                                                        title="Accept the change">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+
+                                                    <button class="btn btn-danger text-center" style="width: 40px;"
+                                                        @click="decisionRule(rule.history_id , 'rejected')"
+                                                        title="Refuse the change">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+
+                                                </div>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <nav v-if="total_pages_rules > 1" aria-label="GitHub pagination">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item" :class="{ disabled: current_page_rules === 1 }">
+                                    <button class="page-link" @click="getRules(current_page_rules - 1)"
+                                        :disabled="current_page_rules === 1">Previous</button>
+                                </li>
+
+                                <li v-for="page in visiblePagesRules" :key="page" class="page-item"
+                                    :class="{ active: page === current_page_rules, disabled: page === '...' }">
+                                    <button class="page-link" v-if="page !== '...'" @click="getRules(page)">[[ page
+                                        ]]</button>
+                                    <span class="page-link" v-else>...</span>
+                                </li>
+
+                                <li class="page-item" :class="{ disabled: current_page_rules === total_pages_rules }">
+                                    <button class="page-link" @click="getNewRules(current_page_rules + 1)"
+                                        :disabled="current_page_rules === total_pages_rules">Next</button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                    <div v-else class="card shadow border-0 mb-4 p-3 text-center text-muted">
+                        <h5 class="fw-bold">No Update available</h5>
+                        <p class="mb-0">There are currently no new update for rules to display.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="rule-pane" role="tabpanel" aria-labelledby="rule-tab">
+                <div class="card p-3">
+                    <div v-if="new_rules && new_rules.length" class="card shadow border-0 mb-4 p-3">
+                        <h3 class="fw-bold mb-3">New Rules</h3>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Syntax Valid</th>
+                                        <th>Error</th>
+                                        <th>Message</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template v-for="nr in new_rules" :key="nr.id">
+                                        <tr :class="{
+                                                'bg-success bg-opacity-25': nr.rule_syntax_valid === true,
+                                                'bg-danger bg-opacity-25': nr.rule_syntax_valid === false,
+                                                'cursor-pointer': true
+                                            }" @click="nr.showContent = !nr.showContent">
+                                            <td>[[ nr.name_rule ]]</td>
+                                            <td class="text-center">
+                                                <i v-if="nr.rule_syntax_valid === true"
+                                                    class="fas fa-check text-success"></i>
+                                                <i v-else-if="nr.rule_syntax_valid === false"
+                                                    class="fas fa-times text-danger"></i>
+                                                <i v-else class="fas fa-circle text-secondary"></i>
+                                            </td>
+                                            <td class="text-center">
+                                                <i v-if="nr.error === true" class="fas fa-times text-danger"></i>
+                                                <i v-else class="fas fa-ban text-secondary"></i>
+                                            </td>
+                                            <td>
+                                                <span v-if="nr.message && nr.message.length">[[ nr.message ]]</span>
+                                                <span v-else class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>Ready to be added
+                                                </span>
+
+                                            </td>
+                                            <td class="text-center">
+                                                <template v-if="nr.rule_syntax_valid === false">
+                                                    <button @click.stop class="btn btn-sm btn-danger me-1 "
+                                                        title="Fix the rule" @click="fixRule(nr.id)">
+                                                        <i class="fas fa-wrench text-white"></i>
+                                                    </button>
+                                                </template>
+                                                <template v-else-if="nr.rule_syntax_valid === true">
+                                                    <template v-if="is_loading === true">
+                                                        <span class="spinner-border spinner-border-sm"
+                                                            aria-hidden="true"></span>
+                                                    </template>
+                                                    <template v-else>
+                                                        <button @click.stop class="btn btn-sm btn-success "
+                                                            title="Add the rule" @click="addRule(nr.id)">
+                                                            <i class="fas fa-plus text-white"></i>
+                                                        </button>
+                                                    </template>
+                                                </template>
+
+                                            </td>
+                                        </tr>
+                                        <tr v-if="nr.showContent" :class="{
+                                            'bg-success bg-opacity-10': nr.rule_syntax_valid === true,
+                                            'bg-danger bg-opacity-10': nr.rule_syntax_valid === false
+                                        }">
+                                            <td colspan="5">
+                                                <pre class="mb-0 p-2"
+                                                    style="white-space: pre-wrap;">[[ nr.rule_content ]]</pre>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <nav v-if="total_pages_new_rules > 1" aria-label="GitHub pagination">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item" :class="{ disabled: current_page_new_rules === 1 }">
+                                    <button class="page-link" @click="getNewRules(current_page_new_rules - 1)"
+                                        :disabled="current_page_new_rules === 1">Previous</button>
+                                </li>
+
+                                <li v-for="page in visiblePagesNewRules" :key="page" class="page-item"
+                                    :class="{ active: page === current_page_new_rules, disabled: page === '...' }">
+                                    <button class="page-link" v-if="page !== '...'" @click="getNewRules(page)">[[ page
+                                        ]]</button>
+                                    <span class="page-link" v-else>...</span>
+                                </li>
+
+                                <li class="page-item"
+                                    :class="{ disabled: current_page_new_rules === total_pages_new_rules }">
+                                    <button class="page-link" @click="getNewRules(current_page_new_rules + 1)"
+                                        :disabled="current_page_new_rules === total_pages_new_rules">Next</button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                    <div v-else class="text-center text-muted">
+                        <h5 class="fw-bold">No new rules available</h5>
+                        <p class="mb-0">There are currently no new rules to display.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, onMounted, computed } = Vue;
+    import { message_list, display_toast, create_message } from '/static/js/toaster.js';
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const progress = ref(0)
+            const status_site = ref("")
+            const info_session = ref({})
+            const result_data = ref({})
+            const is_finished = ref(false)
+
+            async function fetchInfoSession() {
+                const res = await fetch('/rule/update_get_info_session/{{sid}}')
+                if (res.status === 200) {
+                    const data = await res.json()
+                    info_session.value = data
+                } else {
+                    display_toast(res)
+                }
+            }
+
+            function goto(url) {
+                const params = new URLSearchParams({ url })
+                window.location.href = `/rule/github_detail?` + params.toString()
+            }
+
+            function gotoRuleDetail(rule_id) {
+                if (!rule_id) return;
+                window.location.href = `/rule/detail_rule/${rule_id}`;
+            }
+
+            /**
+             * 
+             *  #####################
+             *  #   Accepted all    #
+             *  #####################
+             * 
+             * */
+
+            async function acceptAll() {
+                const res = await fetch('/rule/accept_all_update/{{sid}}')
+                const data = await res.json()
+
+
+                create_message(data.message, data.toast_class)
+                getRules(1)
+                getNewRules(1)
+                pollScan();
+            }
+
+            async function decisionRule(rule_id, decision) {
+                const params = new URLSearchParams({
+                    rule_id,
+                    decision,
+                    sid: '{{sid}}'
+                })
+                const res = await fetch('/rule/update_github_rule/decision_rule?' + params.toString())
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+                getRules(1)
+                getNewRules(1)
+                pollScan();
+            }
+
+
+            /**
+             * 
+             *  #################
+             *  #   New Rules   #
+             *  #################
+             * 
+             * */
+
+            function fixRule(ruleId) {
+                window.location.href = `/rule/fix_new_rule/${ruleId}?sid={{sid}}`;
+            }
+
+            const is_loading = ref(false)
+
+            async function addRule(ruleId) {
+                is_loading.value = true
+                const params = new URLSearchParams({
+                    new_rule_id: ruleId,
+                    sid: '{{sid}}'
+                })
+                const res = await fetch(`/rule/add_new_rule?` + params.toString());
+                const data = await res.json()
+                is_loading.value = false
+                create_message(data.message, data.toast_class)
+                getRules(1)
+                getNewRules(1)
+                pollScan();
+            }
+
+
+            const new_rules = ref([])
+            const current_page_new_rules = ref(1)
+            const total_pages_new_rules = ref(1)
+            const total_new_rules = ref(0)
+
+            async function getNewRules(page) {
+                const params = new URLSearchParams({
+                    page
+                })
+                const res = await fetch('/rule/update_loading_status/{{sid}}/get_news_rules?' + params.toString())
+                if (res.status === 200) {
+                    const data = await res.json()
+                    new_rules.value = data.rules || []
+                    total_pages_new_rules.value = data.total_pages || 1
+                    total_new_rules.value = data.total_rules || 0
+                    current_page_new_rules.value = page
+                } else {
+                    display_toast(res)
+                }
+            }
+            const visiblePagesNewRules = computed(() => {
+                const pages = []
+                const total = total_pages_new_rules.value
+                const current = current_page_new_rules.value
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total)
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                    }
+                }
+                return pages
+            })
+
+            /**
+            * 
+            *  ####################
+            *  #   Statue Rules   #
+            *  ####################
+            * 
+            * */
+
+
+            const rules = ref([])
+            const current_page_rules = ref(1)
+            const total_pages_rules = ref(1)
+            const total_rules = ref(0)
+
+            async function getRules(page) {
+                const params = new URLSearchParams({
+                    page
+                })
+                const res = await fetch('/rule/update_loading_status/{{sid}}/get_rules?' + params.toString())
+                if (res.status === 200) {
+                    const data = await res.json()
+                    rules.value = data.rules || []
+                    total_pages_rules.value = data.total_pages || 1
+                    total_rules.value = data.total_rules || 0
+                    current_page_rules.value = page
+                } else {
+                    display_toast(res)
+                }
+            }
+            const visiblePagesRules = computed(() => {
+                const pages = []
+                const total = total_pages_rules.value
+                const current = current_page_rules.value
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total)
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                    }
+                }
+                return pages
+            })
+
+            function pollScan() {
+                $.getJSON('/rule/update_loading_status/{{sid}}', async function (data) {
+                    if (data) {
+                        result_data.value = data
+                        progress.value = Math.round((data['complete'] / data['total']) * 100)
+                        status_site.value = 'Processed ' + data['complete'] + ' of ' + data['total'] + ' files'
+                        if (data['remaining'] > 0) {
+                            setTimeout(pollScan, 5000);
+                        } else {
+                            is_finished.value = true
+                            status_site.value = 'Found ' + data['complete'] + ' files.'
+                            const res = await fetch('/rule/update_loading_status/{{sid}}?is_finished=true')
+                            const loc = await res.json()
+                            result_data.value = loc
+
+                            getNewRules(1)
+                            getRules(1)
+                        }
+                    }
+                });
+            }
+
+            onMounted(() => {
+                fetchInfoSession()
+                pollScan();
+            });
+
+            return {
+                message_list,
+                status_site,
+                progress,
+                info_session,
+                result_data,
+                is_finished,
+                goto,
+                gotoRuleDetail,
+
+                new_rules,
+                current_page_new_rules,
+                total_new_rules,
+                total_pages_new_rules,
+                visiblePagesNewRules,
+                getNewRules,
+
+                rules,
+                current_page_rules,
+                total_rules,
+                total_pages_rules,
+                visiblePagesRules,
+                getRules,
+                fixRule,
+                addRule,
+
+                acceptAll,
+                decisionRule,
+                is_loading
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

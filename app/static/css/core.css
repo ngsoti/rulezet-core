@@ -9,6 +9,12 @@
     display: none;
   }
 
+  /*---------------Size_Website---------------*/
+  .container {
+    max-width: 85% !important;  
+  }
+
+
 
   :root {
   --bg-color: #ffffff;
@@ -779,4 +785,23 @@ footer{
   font-weight: 600;
   color: #000;
   border-bottom: 2px solid #0d6efd;
+}
+
+
+.simple-diff-view .d2h-file-header {
+    display: none !important;
+}
+
+.simple-diff-view .d2h-file-wrapper {
+    border-top: none; 
+}
+
+
+.simple-diff-view .d2h-file-diff {
+    margin-top: 0;
+}
+
+.d2h-file-diff .d2h-del.d2h-change{
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
 }
