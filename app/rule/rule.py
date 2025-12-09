@@ -2098,7 +2098,6 @@ def fix_new_rule(new_rule_id: int):
     return redirect(url_for('rule.edit_bad_rule', rule_id=result_obj.id))
 
 
-
 @rule_blueprint.route('/add_new_rule', methods=['GET'])
 @login_required
 def add_new_rule():
@@ -2118,7 +2117,6 @@ def add_new_rule():
         return jsonify({"success": False, "message": f"Temporary rule ID {new_rule_id} is not valid.", "toast_class": "danger-subtle"}), 404
 
     content = temp_rule.rule_content
-    
     format = temp_rule.format or "no format"
 
     # get the url 
@@ -2126,12 +2124,25 @@ def add_new_rule():
     if not updater:
         return jsonify({"success": False, "message": "Updater not found", "toast_class": "danger-subtle"}), 404
 
-   
-    s = RuleModel.change_message_new_rule(new_rule_id, "imported")
+    try:
+        updater_info = json.loads(updater.info)
+        repo_url = updater_info.get('repo_url')
+        
+        source_info = repo_url
+        
+    except (json.JSONDecodeError, AttributeError):
+        source_info = "Unknown Source from Updater" 
+        
 
+
+
+    s = RuleModel.change_message_new_rule(new_rule_id, "imported")
+    
     if not s:
         return jsonify({"success": False, "message": "Error while updating rule", "toast_class": "danger-subtle"}), 500
-    success, message, imported_object = parse_rule_by_format(content, current_user, format, updater.repo_sources[0])
+        
+    # On passe le 'source_info' corrigé
+    success, message, imported_object = parse_rule_by_format(content, current_user, format, source_info) 
     
     if success:
         return jsonify({"success": True, "message": message, "toast_class": "success-subtle"}), 200
