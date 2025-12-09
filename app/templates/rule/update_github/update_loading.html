@@ -213,12 +213,13 @@
                                                         <i class="fas fa-code-branch"></i>
                                                     </a>
 
-
-                                                    <button class="btn btn-success text-center" style="width: 40px;"
-                                                        @click="decisionRule(rule.history_id , 'accepted')"
-                                                        title="Accept the change">
-                                                        <i class="fas fa-check"></i>
-                                                    </button>
+                                                    <template v-if="rule.rule_syntax_valid != false">
+                                                        <button class="btn btn-success text-center" style="width: 40px;"
+                                                            @click="decisionRule(rule.history_id , 'accepted')"
+                                                            title="Accept the change">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                    </template>
 
                                                     <button class="btn btn-danger text-center" style="width: 40px;"
                                                         @click="decisionRule(rule.history_id , 'rejected')"

@@ -406,8 +406,14 @@ def get_current_rule() -> jsonify:
 def detail_rule(rule_id)-> render_template:
     """Get the detail of the current rule"""
     rule = RuleModel.get_rule(rule_id)
+    if not rule:
+        return render_template("404.html")
     rule_misp = content_convert_to_misp_object(rule_id)
+    if not rule_misp:
+        rule_misp = "No misp format for this rule"
     rule_to_json = json.dumps(rule.to_dict(), indent=4)
+    if not rule_to_json:
+        rule_to_json = "No json format for this rule"
     if rule:
         return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp=rule_misp, rule_to_json=rule_to_json)
     return render_template("404.html")
@@ -941,7 +947,9 @@ def choose_changes() -> render_template:
     history_id = request.args.get('id', 1, type=int)
     return render_template("rule/update_github/updates_choose_changes.html" , history_id=history_id)
 
-# accept_all_changes
+#################################################
+# Accept_all_changes in update pannel 3 section #
+#################################################
 @rule_blueprint.route("/accept_all_changes", methods=['GET'])
 @login_required
 def accept_all_changes() -> jsonify:
@@ -955,13 +963,67 @@ def accept_all_changes() -> jsonify:
             success = RuleModel.accept_rule_change(rule_change.id)
             if not success:
                 return jsonify({"success": False, "message": "Failled to accept changes", "toast_class": "danger-subtle"}), 500
+            
+            # change in all the updater the statue of the concerned rule
+
+            s = RuleModel.update_all_updater_status(rule_change.id, "accepted")
+            if not s:
+                return jsonify({"success": False, "message": "Failled to update updater status", "toast_class": "danger-subtle"}), 500
 
 
 
         return jsonify({"success": True, "message": "All changes accepted!", "toast_class": "success-subtle"}), 200
     return jsonify({"success": False, "message": "No pending changes", "toast_class": "danger-subtle"}), 404
 
+###############################################
+# Changes_decision in update pannel 3 section #
+###############################################
+@rule_blueprint.route("/changes_decision", methods=['GET'])
+@login_required
+def changes_decision() -> jsonify:
+    """Update a rule from github"""
+    history_id = request.args.get('history_id')
+    decision = request.args.get('decision')
+    
 
+    history = RuleModel.get_history_rule_by_id(history_id)
+    rule_ = RuleModel.get_rule(history.rule_id)
+
+    if current_user.is_admin() or rule_.user_id == current_user.id:
+        # change all the RuleStatue from Update with this same rule_id
+        succ = RuleModel.update_all_updater_status(history_id, history.message)
+        if not succ:
+            return jsonify({"success": False, "message": "Failled to update updater status", "toast_class": "danger-subtle"}), 500
+        if decision == 'accepted':
+            rule = RuleModel.get_rule(history.rule_id)
+
+            # verify if the rule has a good syntaxe
+            if not rule:
+                return jsonify({"success": False, "message": "Rule not found", "toast_class": "danger-subtle"}), 404
+            
+            if rule:
+                # is the rule with a good syntaxe ?
+                valide = RuleModel.verify_rule_syntaxe(rule , history.new_content)
+                if not valide.ok:
+                    history.message = "rejected"
+                    return jsonify({"success": True, "message": "Rule content rejected because Invalide syntax !", "toast_class": "warning-subtle"}), 200
+                else:
+                    rule.to_string = history.new_content
+                    history.message = "accepted"
+                    return jsonify({"success": True, "message": "Rule content modified !", "toast_class": "success-subtle"}), 200
+
+            return jsonify({"success": False, "message": "Rule not found", "toast_class": "danger-subtle"}), 404
+        if decision == 'rejected':
+            rule = RuleModel.get_rule(history.rule_id)
+            if rule:
+                history.message = "rejected"
+        return jsonify({"success": True, "message": "No change for the rule !", "toast_class": "success-subtle"}), 200
+    else:
+       return jsonify({"success": False, "message": "Access denied", "toast_class": "danger-subtle"}), 403
+
+##################################
+#   CHoose changes in diff page  #
+##################################
 @rule_blueprint.route("/update_github_rule", methods=['GET'])
 @login_required
 def update_github_rule() -> render_template:
@@ -993,8 +1055,9 @@ def update_github_rule() -> render_template:
     else:
         return render_template("access_denied.html")
 
-
-# decision_rule
+#########################################
+#    Choose change in updater UUID page #
+#########################################
 @rule_blueprint.route("/update_github_rule/decision_rule", methods=['GET'])
 @login_required
 def decision_rule() -> jsonify:
@@ -1002,7 +1065,7 @@ def decision_rule() -> jsonify:
     history_id = request.args.get('rule_id')
     decision = request.args.get('decision')
     sid = request.args.get('sid')
-
+    
     updater = RuleModel.get_updater_result(sid)
     if not updater:
         return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
@@ -1015,20 +1078,27 @@ def decision_rule() -> jsonify:
         return {"message": "Rule Not found", 'toast_class': "danger-subtle"}, 404
 
     if current_user.is_admin() or rule_.user_id == current_user.id:
+        if decision == 'accepted':
+            mess= "Updated successfully"
+        elif decision == 'rejected':
+            mess= "Rejected successfully"
+        else:
+            return {"message": "Decision not found", 'toast_class': "danger-subtle"}, 404
+        # get the rule associated to the rule statue by rule_id and change the update = false
+        success_ , message_ = RuleModel.get_rule_update_from_updater_by_rule_id_and_change_statue(rule_.id, updater.id, mess, updater)
 
-        # get the rule associated to the rule statue bi rule_id and change the update = false
-        rule_update = RuleModel.get_rule_update_from_updater_by_rule_id_and_change_statue(rule_.id, updater.id)
-        if not rule_update:
-            return {"message": "Rule update not found", 'toast_class': "danger-subtle"}, 404
+        if not success_:
+            return {"message": message_, 'toast_class': "danger-subtle"}, 500
 
-
+        if message_ == 'Rejected':
+            decision = 'rejected'
 
         if decision == 'accepted':
             rule = RuleModel.get_rule(history.rule_id)
             if rule:
                 rule.to_string = history.new_content
                 history.message = "accepted"
-                
+        
                 return jsonify({
                     "message": "Rule content modified !",
                     "success": True,
@@ -1783,6 +1853,10 @@ def get_rules(sid):
             "total_pages": paginated.pages,
             "total_rules": paginated.total,
         }, 200
+    return{
+        "rules": []
+
+    }, 200
 
 # accetped all change associate to a sid 
 @rule_blueprint.route("/accept_all_update/<sid>", methods=['GET'])
@@ -2052,8 +2126,11 @@ def add_new_rule():
     if not updater:
         return jsonify({"success": False, "message": "Updater not found", "toast_class": "danger-subtle"}), 404
 
-    
+   
+    s = RuleModel.change_message_new_rule(new_rule_id, "imported")
 
+    if not s:
+        return jsonify({"success": False, "message": "Error while updating rule", "toast_class": "danger-subtle"}), 500
     success, message, imported_object = parse_rule_by_format(content, current_user, format, updater.repo_sources[0])
     
     if success:

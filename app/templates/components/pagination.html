@@ -6,10 +6,8 @@
       </button>
     </li>
 
-    <li class="page-item"
-        v-for="page in visiblePages"
-        :key="page"
-        :class="{ active: page === current_page, disabled: page === '...' }">
+    <li class="page-item" v-for="page in visiblePages"
+      :class="{ active: page === current_page, disabled: page === '...' }">
       <button class="page-link" v-if="page !== '...'" @click="fetchRules(page)">
         [[ page ]]
       </button>

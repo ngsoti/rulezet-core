@@ -1,183 +1,88 @@
+{% extends 'base.html' %}
 {% import 'macros/form_macros.html' as f %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>RULEZET</title>
-    <link rel="icon" href="{{ url_for('static',filename='image/Rulezet.png') }}">
 
-    <!-- Scripts -->
-    <script src="{{ url_for('static',filename='js/popper.min.js') }}"></script>
-    <script src="{{ url_for('static',filename='bootstrap-5.3.0/js/bootstrap.min.js') }}"></script>
-    <script src="{{ url_for('static',filename='js/jquery.min.js') }}"></script>
+{% block content %}
 
-    <!-- CSS -->
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='bootstrap-5.3.0/css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-</head>
-<body>
-    <main>
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 50vh;">
+    <div class="col-md-5">
+
         {% include 'macros/_flashes.html' %}
 
-        <form action="" method="post" class="form-signin">
-            {{ form.hidden_tag() }}
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
 
-            <div class="header-title">
-                <img src="{{ url_for('static',filename='image/logo_rulezet_bg.png') }}" alt="Logo" />
+                <h3 class="text-center">Login</h3>
+
+                <form action="" method="post">
+                    {{ form.hidden_tag() }}
+
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            {{ form.email.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.email(class_="form-control", id="email", placeholder="Enter your email") }}
+
+                        {% if form.email.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.email.errors[0] | safe }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Password -->
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            {{ form.password.label }} <span class="text-danger">*</span>
+                        </label>
+
+                        <div class="input-group">
+                            {{ form.password(class_="form-control", id="password", placeholder="Enter your password") }}
+                            <span class="input-group-text" style="cursor:pointer;" onclick="togglePassword()">
+                                <i id="togglePasswordIcon" class="fa fa-eye"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <script>
+                        function togglePassword() {
+                            const passwordInput = document.getElementById("password");
+                            const icon = document.getElementById("togglePasswordIcon");
+                            const isPassword = passwordInput.type === "password";
+
+                            passwordInput.type = isPassword ? "text" : "password";
+                            icon.classList.toggle("fa-eye");
+                            icon.classList.toggle("fa-eye-slash");
+                        }
+                    </script>
+
+                    <!-- Remember me -->
+                    <div class="form-check mb-3">
+                        {{ form.remember_me(class_="form-check-input", id="remember_me") }}
+                        <label class="form-check-label" for="remember_me">
+                            {{ form.remember_me.label.text }}
+                        </label>
+                    </div>
+
+                    <!-- Submit -->
+                    {{ form.submit(class='btn btn-primary w-100 mb-3') }}
+
+                    <!-- Register link -->
+                    <div class="text-center">
+                        <a href="/account/register" class="text-decoration-none">
+                            <i class="fa fa-user-plus"></i> Create an account
+                        </a>
+                    </div>
+                </form>
+
             </div>
-
-            <div class="mb-3">
-                <label for="email">{{ form.email.label }}</label> <span style="color:red">*</span>
-                {{ form.email(class_="form-control", id="email", placeholder="Enter your email") }}
-                {% if form.email.errors %}
-                    <div style="color: red;">{{ form.email.errors[0] | safe }}</div>
-                {% endif %}
-            </div>
-
-            <div class="mb-3 position-relative">
-                <label for="password">{{ form.password.label }}</label> <span style="color:red">*</span>
-                <div class="position-relative">
-                    {{ form.password(class_="form-control pe-5", id="password", placeholder="Enter your password") }}
-                    <i class="fa fa-eye position-absolute top-50 end-0 translate-middle-y me-3"
-                        style="cursor: pointer;" id="togglePasswordIcon" onclick="togglePassword()"></i>
-                </div>
-            </div>
-
-            <script>
-                function togglePassword() {
-                    const passwordInput = document.getElementById("password");
-                    const icon = document.getElementById("togglePasswordIcon");
-
-                    const isPassword = passwordInput.type === "password";
-                    passwordInput.type = isPassword ? "text" : "password";
-
-                    icon.classList.toggle("fa-eye");
-                    icon.classList.toggle("fa-eye-slash");
-                }
-            </script>
-
-            <div class="checkbox mb-3">
-                <label>{{ form.remember_me.label }} {{ form.remember_me }}</label>
-            </div>
-
-            {{ form.submit(class='btn btn-primary') }}
-
-            <a href="/account/register" style="margin-left: 10px;">
-                <i></i> Register
-            </a>
-        </form>
-
-        <div class="footer-text">
-            <p>© 2025 RULEZET. All rights reserved.</p>
         </div>
-    </main>
-</body>
 
-<style>
-        body {
-            background-color: #e4e4e4;
-            color: #000000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-        }
+        <p class="text-center text-muted mt-3 small">
+            © 2025 RULEZET. All rights reserved.
+        </p>
 
-        main {
-            width: 100%;
-        }
+    </div>
+</div>
 
-        .form-signin {
-            width: 100%;
-            max-width: 400px;
-            padding: 30px;
-            margin: auto;
-            background-color: #c5c5c5;
-            border-radius: 12px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
-        }
-
-        .form-signin img {
-            max-height: 80px;
-            margin-bottom: 10px;
-        }
-
-        .form-signin .form-control {
-            background-color: #080000;
-            border: 1px solid #444;
-            color: #fff;
-            margin-bottom: 15px;
-            border-radius: 10px;
-        }
-
-        .form-signin .form-control:focus {
-            background-color: #2c2c2c;
-            border-color: #2196f3;
-            box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
-            color: #fff;
-        }
-
-        .form-signin label {
-            color: #080808;
-        }
-
-        .form-signin .checkbox label {
-            color: #020202;
-        }
-
-        .form-signin button.btn-primary {
-            background-color: #1976d2;
-            border: none;
-        }
-
-        .form-signin button.btn-primary:hover {
-            background-color: #1565c0;
-        }
-
-        .form-signin .btn-outline-primary {
-            border: 1px solid #1976d2;
-            color: #1976d2;
-        }
-
-        .form-signin .btn-outline-primary:hover {
-            background-color: #1976d2;
-            color: #fff;
-        }
-
-        .header-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2196f3;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .footer-text {
-            font-size: 14px;
-            text-align: center;
-            color: #888;
-            margin-top: 20px;
-        }
-
-        .fa-eye,
-        .fa-eye-slash {
-            color: #999;
-        }
-
-        a {
-            color: #1d8eeb;
-        }
-
-        a:hover {
-            color: #42a5f5;
-            text-decoration: underline;
-        }
-
-        .placeholder{
-            color: white;
-        }
-    </style>
-</html>
+{% endblock %}

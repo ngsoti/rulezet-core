@@ -308,14 +308,12 @@
 
 
                                         <button class="btn btn-success text-center" style="width: 40px;"
-                                            @click="decisionRule(rule.history_id , 'accepted')"
-                                            title="Accept the change">
+                                            @click="decisionRule(result.id , 'accepted')" title="Accept the change">
                                             <i class="fas fa-check"></i>
                                         </button>
 
                                         <button class="btn btn-danger text-center" style="width: 40px;"
-                                            @click="decisionRule(rule.history_id , 'rejected')"
-                                            title="Refuse the change">
+                                            @click="decisionRule(result.id , 'rejected')" title="Refuse the change">
                                             <i class="fas fa-times"></i>
                                         </button>
 
@@ -373,26 +371,11 @@
                     history_id,
                     decision,
                 })
-                const res = await fetch('/rule/update_github_rule/changes_decision?' + params.toString())
+                const res = await fetch('/rule/changes_decision?' + params.toString())
                 const data = await res.json()
                 create_message(data.message, data.toast_class)
                 fetchOldRules(1)
             }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
             // ##########################

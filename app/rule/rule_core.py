@@ -10,6 +10,9 @@ from flask_login import current_user
 from sqlalchemy import case, or_
 from sqlalchemy.orm import joinedload
 
+from app.rule_format.abstract_rule_type import rule_type_abstract
+from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult, load_all_rule_formats
+
 from .. import db
 from ..db_class.db import *
 
@@ -1582,9 +1585,13 @@ def get_updater_result_new_rule_page(sid: str, page: int, per_page: int = 30):
     if not update_result:
         return None
 
-    return NewRule.query.filter_by(update_result_id=update_result.id).paginate(
-        page=page, per_page=per_page, error_out=False
+    return (
+        NewRule.query
+        .filter_by(update_result_id=update_result.id)
+        .filter(NewRule.message != "imported")    
+        .paginate(page=page, per_page=per_page, error_out=False)
     )
+
 
 def get_updater_result_rule_page(sid: str, page: int, per_page: int = 30):
     """
@@ -1830,35 +1837,56 @@ def get_rule_update_list(sid):
 
 def accept_all_update(rule_udpate_list):
     # for each rule take the history_id associated
-   try:
-       for rule in rule_udpate_list:
-           rule.update_available = False
-           rule.message = "Updated successfully"
+    try:
+        for rule in rule_udpate_list:
+            rule.update_available = False
+            if rule.rule_syntax_valid == True:
+                rule.message = "Updated successfully"
+            else:
+                rule.message = "Rejected successfully because Invalide syntax"
 
-           history_id = rule.history_id
-           history = RuleUpdateHistory.query.filter_by(id=history_id).first()
-           history.message = "accepted"
-           history.success = True
-           db.session.commit()
-       return True
-   except Exception as e:
-       print(e)
-       return False
+
+            history_id = rule.history_id
+            history = RuleUpdateHistory.query.filter_by(id=history_id).first()
+
+            if not history:
+                return False
+            if rule.rule_syntax_valid == True:
+                history.message = "accepted"
+            else:
+                history.message = "rejected"
+            history.success = True
+            db.session.commit()
+        return True
+    except Exception as e:
+        print(e)
+        return False
    
 
-def get_rule_update_from_updater_by_rule_id_and_change_statue(rule_id, updater_id):
+def get_rule_update_from_updater_by_rule_id_and_change_statue(rule_id, updater_id , decision, updater):
     rule = RuleStatus.query.filter_by(
         rule_id=str(rule_id),
         update_result_id=updater_id
     ).first()
 
-    if rule:
-        rule.update_available = False
-        rule.message = "Updated successfully"
-        db.session.commit()   
-        return True
+    message = decision
 
-    return False
+    if rule and rule.rule_syntax_valid == True:
+        rule.update_available = False
+        rule.message = decision
+        db.session.commit()   
+    else:
+        rule.update_available = False
+        rule.message = 'Rejected successfully because Invalide syntax'
+        message = 'Rejected'
+        db.session.commit()
+    
+    if updater:
+        updater.updated -= 1 if updater.updated > 0 else 0
+        db.session.commit()
+        return True , message
+    else:
+        return False , message
 
 def get_format_name(id):
     rule = RuleStatus.query.filter_by(rule_id=id).first()
@@ -1892,3 +1920,104 @@ def get_all_pending_changes():
         RuleUpdateHistory.message != "rejected",
         RuleUpdateHistory.analyzed_by_user_id == current_user.id
     ).all()
+
+
+def change_message_new_rule(id, new_message):
+    if not new_message:
+        return False    
+    new_rule = get_new_rule(id)
+
+    if not new_rule:
+        return False
+
+    new_rule.message = new_message
+    db.session.commit()
+    return True
+
+
+def update_all_updater_status(history_id, message):
+   # Found in all the UpdateResult all the Rulestatue with rule_id == history.rule_id
+   # Reject all the change for the other sectio for this rule
+   # Change the message of the history
+   # change the number of update available from updater -1
+
+    history = RuleUpdateHistory.query.filter_by(id=history_id).first()
+    if not history:
+        return False
+    
+    rules = RuleStatus.query.filter_by(rule_id=str(history.rule_id)).all()
+
+    for rule in rules:
+        rule.update_available = False
+        if rule.rule_syntax_valid == True:
+            rule.message = "Updated successfully"
+        else:
+            rule.message = "Rejected successfully because Invalide syntax"
+
+        # Get the updater associated to this rule
+        updater = UpdateResult.query.filter_by(id=rule.update_result_id).first()
+        if not updater:
+            return False
+        if updater.updated == 0:
+            updater.updated = 0
+        else:
+            updater.updated = updater.updated - 1
+
+        if rule.rule_syntax_valid == True:
+            history.message = "accepted"
+        else:
+            history.message = "rejected"
+        history.success = True
+        db.session.commit()
+
+    # history.message = message
+    # history.success = False
+    # db.session.commit()
+    return True
+
+
+def verify_rule_syntaxe(rule: Any , new_content) -> Optional[ValidationResult]:
+    """
+    Found the good class to verify the rule syntax.
+
+    Args:
+        rule: The database rule object containing 'format' and 'to_string' (rule content).
+
+    Returns:
+        A ValidationResult object if the format class is found and validation is run, 
+        or None if no matching rule format class is found.
+    """
+    if not hasattr(rule, 'format') or not hasattr(rule, 'to_string'):
+        # Handle cases where the input object isn't a valid rule structure
+        return None
+
+    rule_format = rule.format.lower()
+    load_all_rule_formats() # Ensure all available rule format classes are loaded
+
+    # Get all subclasses of the RuleType abstract class
+    # We iterate over classes that inherit from the abstract RuleType to find a match
+    rule_classes = RuleType.__subclasses__()
+    
+    matching_class: Optional[RuleType] = None
+    
+    # --- 1. Find the correct concrete RuleType implementation ---
+    for RuleClass in rule_classes:
+        # Instantiate the class to check its 'format' property
+        try:
+            instance = RuleClass()
+            if instance.format.lower() == rule_format:
+                matching_class = instance
+                break
+        except Exception:
+            # Skip classes that cannot be instantiated (e.g., if they are still abstract or incomplete)
+            continue
+
+    # --- 2. Validate the rule content ---
+    if matching_class:
+        # Call the validate method on the instance, passing the rule content
+        return matching_class.validate(new_content)
+    
+    # If no matching class was found
+    return None
+
+    

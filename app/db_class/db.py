@@ -840,6 +840,8 @@ class RuleStatus(db.Model):
     name_rule = db.Column(db.String, nullable=False)
     rule_id = db.Column(db.String, nullable=True)
 
+    # delete !
+
     message = db.Column(db.Text, nullable=True)
 
     found = db.Column(db.Boolean, default=False)

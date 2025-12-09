@@ -32,5 +32,4 @@ rule/output_rules/*
 flask_session
 node_modules
 app/rule/output_rules
-backup/dumps
 /backup/dumps
