@@ -64,8 +64,7 @@
                                     <tr v-for="(url, index) in github_url" :key="index" @click="toggleUrl(url)"
                                         style="cursor: pointer;">
                                         <td class="text-center">
-                                            <input type="checkbox" :checked="selected_urls.includes(url)"
-                                                @change.stop="toggleUrl(url)">
+                                            <input type="checkbox" :checked="selected_urls.includes(url)">
                                         </td>
                                         <td>[[ url.url ]]</td>
                                         <td>[[ url.rule_count ]]</td>
@@ -164,8 +163,7 @@
                                     <tr v-for="rule in rule_with_github_url" :key="rule.id" style="cursor: pointer;"
                                         @click="toggleRule(rule)" :title="rule.to_string">
                                         <td class="text-center">
-                                            <input type="checkbox" :checked="selected_rules.includes(rule)"
-                                                @change.stop="toggleRule(rule)">
+                                            <input type="checkbox" :checked="selected_rules.includes(rule)">
                                         </td>
                                         <td>
                                             <span class="text-decoration-none text-primary fw-semibold">

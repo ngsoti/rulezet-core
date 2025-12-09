@@ -4,23 +4,24 @@
 <div v-if="info_session">
     <h2 class="fw-bold mb-1 text-center text-primary">[[info_session.repo_url]]</h2>
     <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
-    
+
 
     <div v-if="!is_finished">
         <p class="text-muted mt-2">
-            Importing rules 
+            Importing rules
             This may take a while, please wait...
         </p>
-        
+
         <div class="progress">
-            <div class="progress-bar progress-bar-striped active" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" :style="'width:'+progress + '%;'">
+            <div class="progress-bar progress-bar-striped active" id="progress" role="progressbar" aria-valuemin="0"
+                aria-valuemax="100" :style="'width:'+progress + '%;'">
             </div>
-        </div> 
+        </div>
         <span v-if="status_site" id="status">[[status_site]]</span>
     </div>
     <!-- [[info_session]] -->
 
-    <div v-if="is_finished" class="container col-md-10 justify-content-center my-5" >
+    <div v-if="is_finished" class="container col-md-10 justify-content-center my-5">
         <p class="text-muted mt-2">
             Import completed successfully.
             You can now view the imported rules and their details below.
@@ -28,17 +29,17 @@
                 <a :href="info_session.repo_url" target="_blank">
                     [[info_session.repo_url]]
                 </a>
-            </span>. 
+            </span>.
         </p>
 
         <div v-if="result_data.info" class="card shadow border-0">
             <div class="card-body p-4 bg-light rounded">
                 <h3 class="fw-bold mb-3">Github information</h3>
-                
+
                 <table class="table">
                     <tr v-if="result_data.info.author">
                         <td style="color:#494950">Author</td>
-                        <td><b>[[ result_data.info.author ]]</b></td>        
+                        <td><b>[[ result_data.info.author ]]</b></td>
                     </tr>
                     <tr v-if="result_data.info.description">
                         <td style="color:#494950">Description</td>
@@ -46,15 +47,15 @@
                     </tr>
                     <tr v-if="result_data.info.license">
                         <td style="color:#494950">License</td>
-                        <td><b>[[ result_data.info.license ]]</b></td>     
+                        <td><b>[[ result_data.info.license ]]</b></td>
                     </tr>
                     <tr v-if="result_data.info.created_at">
                         <td style="color:#494950">Creation Date</td>
-                        <td><b>[[ result_data.info.created_at ]]</b></td>        
+                        <td><b>[[ result_data.info.created_at ]]</b></td>
                     </tr>
                     <tr v-if="result_data.info.language">
                         <td style="color:#494950">Language</td>
-                        <td><b><span class="badge bg-primary">[[ result_data.info.language ]]</span></b></td>        
+                        <td><b><span class="badge bg-primary">[[ result_data.info.language ]]</span></b></td>
                     </tr>
                     <tr v-if="result_data.info.watchers">
                         <td style="color:#494950">Watchers</td>
@@ -120,9 +121,20 @@
                     </table>
                 </div>
                 <div class="text-center">
-                    <button class="btn btn-primary" type="button" @click="goto(info_session.repo_url)">
-                        View rules
-                    </button>
+
+                    <!-- Go back Button -->
+                    <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
+                        <a href="javascript:history.back()" style="width: auto;"
+                            class="btn btn-secondary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back
+                        </a>
+                        <button
+                            class="btn btn-primary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill"
+                            type="button" @click="goto(info_session.repo_url)">
+                            View rules
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -139,7 +151,7 @@
 {% block script %}
 <script type="module">
 
-const { createApp, ref, onMounted } = Vue;
+    const { createApp, ref, onMounted } = Vue;
     import { message_list, display_toast } from '/static/js/toaster.js';
 
     createApp({
@@ -155,7 +167,7 @@ const { createApp, ref, onMounted } = Vue;
             async function fetchInfoSession() {
 
                 const res = await fetch('/rule/import_get_info_session/{{sid}}')
-                
+
                 if (await res.status === 200) {
                     const data = await res.json()
                     info_session.value = data
@@ -164,19 +176,19 @@ const { createApp, ref, onMounted } = Vue;
                 }
             }
 
-            function goto(url){
+            function goto(url) {
                 const params = new URLSearchParams({ url })
-                window.location.href = `/rule/github_detail?`+ params.toString()
+                window.location.href = `/rule/github_detail?` + params.toString()
             }
-            
-            
+
+
 
 
             function pollScan() {
                 // Loop function to update the list of identified domains
-                $.getJSON('/rule/import_loading_status/{{sid}}', async function(data) {
+                $.getJSON('/rule/import_loading_status/{{sid}}', async function (data) {
                     result_data.value = data
-                    progress.value = Math.round((data['complete']/data['total'])*100)
+                    progress.value = Math.round((data['complete'] / data['total']) * 100)
                     status_site.value = 'Processed ' + data['complete'] + ' of ' + data['total'] + ' files'
                     if (data['remaining'] > 0) {
                         setTimeout(pollScan, 5000);
@@ -189,7 +201,7 @@ const { createApp, ref, onMounted } = Vue;
                     }
                 });
             }
-            
+
 
             onMounted(() => {
                 fetchInfoSession()

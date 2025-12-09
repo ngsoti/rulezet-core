@@ -566,8 +566,22 @@ def save_invalid_rule_from_new_rule(new_rule_obj: 'NewRule', user: 'User') -> Tu
     # Use 'format' attribute from NewRule (assuming it was added in the migration)
     rule_type = getattr(new_rule_obj, 'format', 'Unknown') or "Unknown"
     
-    # Context fields (using getattr for safe access if NewRule lacks these)
-    repo_url = getattr(new_rule_obj, 'source', 'Update Process')
+    # Found the updater associated to this rule
+
+    updater = get_updater_result_by_id(new_rule_obj.update_result_id) 
+  
+
+    try:
+        updater_info = json.loads(updater.info)
+        repo_url = updater_info.get('repo_url')
+        
+        source_info = repo_url
+        
+    except (json.JSONDecodeError, AttributeError):
+        source_info = "Unknown Source from Updater" 
+
+
+    repo_url = source_info or 'Update Process'
     license_name = getattr(new_rule_obj, 'license', 'Unknown')
     
     try:
