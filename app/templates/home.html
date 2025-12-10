@@ -18,97 +18,84 @@
   <div class="row">
     <template v-if="rules_list.length > 0">
       <div class="col-md-6 mb-3" v-for="(rule, index) in rules_list" :key="rule.uuid">
-        <div class="card card-body" > 
+        <div class="card card-rule-home"> 
           <!-- Card Header -->
-          <div class="card-header  d-flex justify-content-between align-items-start flex-wrap" >
-            <h5 class="mb-0 d-flex align-items-center" style="max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="[[ rule.title ]]">
-              <a :href="`/rule/detail_rule/${rule.id}`" title="view more about this rule" >
+          <div class="card-header d-flex justify-content-between align-items-start" >
+            <h4 class="mb-0 d-flex align-items-center" style="max-width: 75%;" :title="[[ rule.title ]]">
+              <a :href="`/rule/detail_rule/${rule.id}`" title="view more about this rule" style="white-space: pre-wrap; word-wrap: break-word;">
                 <i class="fas fa-shield-alt me-2 text-primary"></i>
-                <span class="title" style=" overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <span class="title" style="white-space: pre-wrap; word-wrap: break-word;">
                   [[ rule.title ]]
+                </span>
               </a>
-              </span>
-            </h5> 
-            <div class="d-flex ms-auto">
-              <template v-if="parseInt('{{ current_user.id }}') === rule.user_id || current_user_is_admin">
-                <a :href="`rule/edit_rule/${rule.id}`" class="btn btn-secondary btn-sm me-2" title="Edit the rule">
-                  <i class="fas fa-pen"></i>
-                </a>
-                <button type="button" class="btn btn-danger btn-sm me-2" title="Delete the rule" data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+rule.id">
-                    <i class="fa-solid fa-trash fa-fw"></i>
-                </button>
-                <div class="modal fade" :id="'delete_rule_modal_'+rule.id" tabindex="-1" aria-labelledby="delete_rule_modal" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h1 class="modal-title fs-5"  id="delete_rule_modal">
-                                    Delete [[rule.title ]] ?
-                                </h1>
-                                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button class="btn btn-danger" @click="deleteRule(rule.id, index)">
-                                    <i class="fa-solid fa-trash"></i> Confirm
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-              </template>
-              <a @click="favorite(rule.id)"
-                  class="btn btn-success btn-sm me-2"
-                  :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
-                <i class="fa-solid fa-star" :class="rule.is_favorited ? 'text-warning' : 'text-white'"></i>
-              </a>
-            </div>            
-          </div>
-          <div class="p-1 m-1">
-              <span v-if="rule.cve_id && rule.cve_id !== 'None'" class="d-inline-flex flex-wrap align-items-center">
-                <a v-for="(cve, index) in parsedCVE(rule.cve_id)" 
-                  :key="index" 
-                  :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()" 
-                  target="_blank"
-                  :class="['badge', 'me-1', 'mb-1', getCVEColor(cve)]" 
-                  data-bs-toggle="tooltip" 
-                  :title="'Detected vulnerability ID: ' + cve"
-                  style="text-decoration: none;">
-                    <i :class="getCVEIcon(cve)" class="me-1"></i>
-                    [[ getCVEPrefix(cve) ]]
-                    <span class="text-light fw-semibold">[[ getCVENumber(cve) ]]</span>
-                </a>
-              </span>
+            </h4> 
+
+            <div class=" ms-auto" aria-label="Basic outlined example" style="margin-bottom: -8px;">
+              <button @click="favorite(rule.id)"
+                  class="btn btn-secondary btn-sm"
+                  :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'"
+                  style="border-radius: 15px 0 0 15px; background-color: rgba(108, 117, 125, 0.5); border-color: rgba(108, 117, 125, 0);">
+                <i class="fa-regular fa-star fa-fw" :class="rule.is_favorited ? 'text-warning' : 'text-white'"></i>
+              </button>
+              <button class="btn btn-secondary btn-sm "
+                  role="button"
+                  id="dropdownMenuLink"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  title="More actions"
+                  style="border-radius: 0 15px 15px 0; background-color: rgba(108, 117, 125, 0.5); border-color: rgba(108, 117, 125, 0);">
+                <i class="fas fa-ellipsis-v fa-fw"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+                <template v-if="parseInt('{{ current_user.id }}') === rule.user_id || current_user_is_admin">
+                  <li>
+                    <a class="dropdown-item" :href="`rule/edit_rule/${rule.id}`">
+                      <i class="fas fa-pen "></i>
+                      Edit
+                    </a>
+                  </li>
+                </template>
+                <li><a class="dropdown-item" :href="`/rule/report/${rule.id}`"><i class="fas fa-flag me-2"></i> Report rule</a></li>
+              </ul>
             </div>
+          </div>
+          
           <!-- Card Body -->
           <div class="card-body">
-            <p><strong>Description:</strong> [[ rule.description ]]</p>
-            <p><strong>Author:</strong> [[ rule.author ]]</p>
-            <p><strong>Created:</strong> [[ rule.creation_date ]]</p>
-            <p><strong>Modified:</strong> [[ rule.last_modif ]]</p>
+            <p>[[ rule.description ]]</p>
 
-            <!-- Action Buttons -->
-            <div class="mb-2">
-              <a :href="`rule/detail_rule/${rule.id}`" class="btn btn-primary btn-sm" title="View more details"><i class="fas fa-eye btn-sm me-2"></i>View more</a>
-              <button @click="vote('up', rule.id)" class="btn btn-success btn-sm mx-2" title="Like this rule">
-                <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
-              </button>
-              <button @click="vote('down', rule.id)" class="btn btn-danger btn-sm" title="Dislike this rule">
-                <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
-              </button>
+            <div class="mt-3" >
+              <div class="btn-group float-end" role="group" aria-label="Basic outlined example" style="margin-bottom: -8px;">
+                <button @click="vote('up', rule.id)" class="btn btn-outline-primary btn-sm">
+                  <i class="fas fa-thumbs-up"></i> [[ rule.vote_up ]]
+                </button>
+                <button @click="vote('down', rule.id)" class="btn btn-outline-danger btn-sm">
+                  <i class="fas fa-thumbs-down"></i> [[ rule.vote_down ]]
+                </button>
+              </div>
 
-               <!-- Dropdown Menu -->
-              <a class="btn btn-secondary btn-sm  dropdown-toggle m-2"
-                    href="#"
-                    role="button"
-                    id="dropdownMenuLink"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                    title="More actions">
-                  <i class="fas fa-ellipsis-v"></i>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
-                  <li><a class="dropdown-item" :href="`/rule/report/${rule.id}`">Report rule</a></li>
-                </ul>
+              <div class="d-flex" style="margin-top: -8px;margin-bottom: -8px;">
+                <div><span class="badge text-bg-primary me-2">[[rule.format.toUpperCase()]]</span></div>
+                <div><span v-if="rule.cve_id && rule.cve_id !== 'None'" class="d-inline-flex flex-wrap align-items-center">
+                  <a v-for="(cve, index) in parsedCVE(rule.cve_id)" 
+                    :key="index" 
+                    :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()" 
+                    target="_blank"
+                    :class="['badge', 'me-1', 'mb-1', getCVEColor(cve)]" 
+                    data-bs-toggle="tooltip" 
+                    :title="'Detected vulnerability ID: ' + cve"
+                    style="text-decoration: none;">
+                      [[ getCVEPrefix(cve) ]]
+                      <span class="text-light fw-semibold">[[ getCVENumber(cve) ]]</span>
+                  </a>
+                </span></div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="d-flex justify-content-between">
+              <span title="Creator of the rule"><i class="fas fa-user me-2 text-secondary"></i>[[ rule.author ]]</span>
+              <small :title="rule.last_modif"><i>Changed [[ (dayjs.utc(rule.last_modif).fromNow()) ]]</i></small>
             </div>
           </div>
         </div>
@@ -287,6 +274,7 @@
         message_list,
         rules_list,
         current_user_is_admin,
+        dayjs,
         deleteRule,
         vote,
         checkIfUserIsConnected,
