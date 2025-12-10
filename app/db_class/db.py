@@ -518,6 +518,8 @@ class RuleUpdateHistory(db.Model):
             "old_content": self.old_content,
             "analyzed_by_user_id": self.analyzed_by_user_id,
             "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
+            "analyzed_by_user_name": self.analyzed_by.first_name,
+            "rule_format": self.get_rule_format()
         }
     
     def to_json(self):

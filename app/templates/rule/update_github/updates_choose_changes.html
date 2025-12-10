@@ -3,96 +3,92 @@
 {% block content %}
 <!-- Interface to verify if there is an update in a GitHub project -->
 <div class="container mt-5" id="main-container">
-    <div v-if="owner_rule" class="card shadow-lg border-0">
-        <div class="card-body">
-            <h2 class="card-title text-primary mb-3">
-                <i class="fas fa-history me-2"></i> Rule Update History
+    <div v-if="owner_rule" class="mb-4">
+        <div class="mb-4 border-bottom pb-3">
+            <h2 class="mb-3 text-center text-primary fw-bold">
+                [[ owner_rule.rule_title ]] Update
+                <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;">
+                </div>
             </h2>
-            <p class="text-muted mb-4">
-                This page shows the details of a rule update fetched from GitHub.
+            <p class="text-muted mt-2 text-center">
+                Use the tabs below to check for updates to your rules from GitHub sources. You can search by GitHub URLs
+                or
+                by individual rules to ensure you have the latest versions.
             </p>
+        </div>
+        <div class="card shadow-lg border-0">
 
-            <ul class="list-group mb-4">
-                <li class="list-group-item"><strong>Rule Title:</strong> [[ owner_rule.rule_title ]]</li>
-                <li class="list-group-item"><strong>Analyzed By User ID:</strong> [[ owner_rule.analyzed_by_user_id ]]
-                </li>
-                <li class="list-group-item"><strong>Analyzed At:</strong> [[ owner_rule.analyzed_at ]]</li>
-                <li class="list-group-item text-success" v-if="owner_rule.success">
-                    <i class="fas fa-check-circle me-2"></i> Update found
-                </li>
-                <li class="list-group-item text-danger" v-else>
-                    <i class="fas fa-times-circle me-2"></i> Update Failed
-                </li>
-                <li class="list-group-item"><strong>Statue:</strong>
-                    <span :class="['badge ms-1', owner_rule.message === 'rejected' ? 'bg-danger' : 'bg-success']">
-                        [[ owner_rule.message ]]
+
+
+
+            <div class="card-body">
+                <ul class="list-group mb-4">
+                    <li class="list-group-item"><strong>Analyzed By: </strong>
+                        <a :href="`/account/detail_user/${owner_rule.analyzed_by_user_id}`" class="stretched-link"></a>
+                        <span class="badge text-bg-secondary ">[[
+                            owner_rule.analyzed_by_user_name ]]
+                        </span></a>
+
+                    </li>
+                    <li class="list-group-item"><strong>Format:</strong> <span class="badge text-bg-primary ">[[
+                            owner_rule.rule_format ]] </span></li>
+                    <li class="list-group-item"><strong>Analyzed At:</strong> [[ owner_rule.analyzed_at ]]</li>
+                    <li class="list-group-item text-success" v-if="owner_rule.success">
+                        <i class="fas fa-check-circle me-2"></i> Update found
+                    </li>
+                    <li class="list-group-item text-danger" v-else>
+                        <i class="fas fa-times-circle me-2"></i> Update Failed
+                    </li>
+                    <li class="list-group-item"><strong>Statue:</strong>
+                        <span :class="['badge ms-1', owner_rule.message === 'rejected' ? 'bg-danger' : 'bg-success']">
+                            [[ owner_rule.message ]]
+                        </span>
+                    </li>
+                </ul>
+
+                <div class="row mt-4">
+                    <div class="row mt-4">
+                        <div id="myDiffElement"></div>
+                    </div>
+                </div>
+            </div>
+            <template v-if="owner_rule.message != 'rejected'">
+                <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
+                    <!-- Accept Button -->
+                    <a :href="`/rule/update_github_rule?rule_id=${rule_id}&decision=accepted`"
+                        class="btn btn-success btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
+                        <i class="fas fa-check me-2"></i> Accept
+                    </a>
+
+                    <!-- Reject Button -->
+                    <a :href="`/rule/update_github_rule?rule_id=${rule_id}&decision=rejected`"
+                        class="btn btn-danger btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
+                        <i class="fas fa-times me-2"></i> Reject
+                    </a>
+                </div>
+            </template>
+            <template v-else>
+                <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
+                    <span>
+                        This update has been
+                        <span class="badge bg-danger">[[ owner_rule.message ]]</span>
                     </span>
-                </li>
-            </ul>
-
-            <div class="row mt-4">
-                <div class="col-md-6 mb-3">
-                    <h5><i class="fas fa-code me-2"></i> Old Rule Content (deleted lines in red)</h5>
-                    <div class="bg-light p-3 rounded border"
-                        style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
-                        <div v-for="(line2, i) in getOldContentLines(owner_rule.old_content)" :key="i">
-                            <span v-if="line2.trim() !== ''"
-                                :class="{'text-danger': isLineDeleted(line2, owner_rule.new_content)}" class="d-block">
-                                [[ line2 ]]
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <h5><i class="fas fa-code-branch me-2"></i> New Rule Content (added lines in green)</h5>
-                    <div class="bg-light p-3 rounded border"
-                        style="white-space: pre; font-family: monospace; overflow-x: auto; overflow-y: hidden; font-size: 0.9rem;">
-                        <div v-for="(line2, i) in getProposedContentLines(owner_rule.new_content)" :key="i">
-                            <span v-if="line2.trim() !== ''"
-                                :class="{'text-success': isLineNew(line2, owner_rule.old_content)}" class="d-block">
-                                [[ line2 ]]
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <template v-if="owner_rule.message != 'rejected'">
+            </template>
+            <!-- Go back Button -->
             <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
-                <!-- Accept Button -->
-                <a :href="`/rule/update_github_rule?rule_id=${rule_id}&decision=accepted`"
-                    class="btn btn-success btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
-                    <i class="fas fa-check me-2"></i> Accept
-                </a>
-
-                <!-- Reject Button -->
-                <a :href="`/rule/update_github_rule?rule_id=${rule_id}&decision=rejected`"
-                    class="btn btn-danger btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
-                    <i class="fas fa-times me-2"></i> Reject
+                <a href="javascript:history.back()" style="width: auto;"
+                    class="btn btn-secondary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Back
                 </a>
             </div>
-        </template>
-        <template v-else>
-            <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
-                <span>
-                    This update has been
-                    <span class="badge bg-danger">[[ owner_rule.message ]]</span>
-                </span>
-        </template>
-        <!-- Go back Button -->
-        <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
-            <a href="javascript:history.back()" style="width: auto;"
-                class="btn btn-secondary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
-                <i class="fas fa-arrow-left me-2"></i>
-                Back
-            </a>
+
+
+
+
         </div>
-
-
-
-
     </div>
+
 
     <div v-else class="text-center text-muted mt-5">
         <i class="fas fa-spinner fa-spin fa-2x"></i>
@@ -103,8 +99,9 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref } = Vue
+    const { createApp, ref, nextTick } = Vue
     import { message_list } from '/static/js/toaster.js'
+    import { renderDiff } from "/static/js/diff_macro.js";
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -119,55 +116,26 @@
                 if (res.status === 200) {
                     const data = await res.json()
                     owner_rule.value = data.history_rule
+
+                    if (owner_rule.value) {
+                        await nextTick(() => {
+                            renderDiff(
+                                owner_rule.value.old_content,
+                                owner_rule.value.new_content,
+                                "myDiffElement",
+                                "twoText"
+                            );
+                        });
+                    }
                 } else {
                     message_list(["Failed to load rule history."], "error")
                 }
             }
             fetchRules()
 
-            /**         
-             *          #############################
-             *          #   color lines for changes  #
-             *          #############################
-             * */
-
-            function getOldContentLines(content) {
-                return content.split('\n');
-            }
-
-            function getProposedContentLines(content) {
-                return content.split('\n');
-            }
-
-            function isLineNew(line, oldContent) {
-                const normalizedLine = line.trim();
-                const normalizedOldContent = oldContent.split('\n').map(l => l.trim());
-
-                return !normalizedOldContent.includes(normalizedLine);
-            }
-
-            function isLineDeleted(line, proposedContent) {
-                const normalizedLine = line.trim();
-                const normalizedProposedContent = proposedContent.split('\n').map(l => l.trim());
-
-                return !normalizedProposedContent.includes(normalizedLine);
-            }
-
-            function isLineIdentical(line, content) {
-                const normalizedLine = line.trim();
-                const normalizedContent = content.split('\n').map(l => l.trim());
-
-                return normalizedContent.includes(normalizedLine);
-            }
-
             return {
                 owner_rule,
                 rule_id,
-                getOldContentLines,
-                getProposedContentLines,
-                isLineNew,
-                isLineDeleted,
-                isLineIdentical
             }
         }
     }).mount('#main-container')

@@ -1361,11 +1361,17 @@ def get_history_rule_(page, rule_id) -> list:
 
 def get_old_rule_choice(page , search=None) -> list:
     """Get all the old choice to make"""    
-    query = RuleUpdateHistory.query.filter(
-        RuleUpdateHistory.message != "accepted",
-        RuleUpdateHistory.message != "rejected",
-        RuleUpdateHistory.analyzed_by_user_id == current_user.id
-    )
+    if current_user.is_admin():
+        query = RuleUpdateHistory.query.filter(
+            RuleUpdateHistory.message != "accepted",
+            RuleUpdateHistory.message != "rejected"
+        )
+    else:
+        query = RuleUpdateHistory.query.filter(
+            RuleUpdateHistory.message != "accepted",
+            RuleUpdateHistory.message != "rejected",
+            RuleUpdateHistory.analyzed_by_user_id == current_user.id
+        )
     if search:
         query = query.filter(RuleUpdateHistory.rule_title.ilike(f"%{search}%"))
     return query.paginate(page=page, per_page=20, max_per_page=20)

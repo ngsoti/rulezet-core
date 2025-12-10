@@ -180,7 +180,9 @@
                {% if current_user.is_authenticated %}
                <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button"
                   data-bs-toggle="dropdown" aria-expanded="false">
-                  <i class="fa-solid fa-user fa-fw me-1"></i> {{ current_user.get_first_name() }}
+                  <i class="fa-solid fa-user fa-fw me-1"></i><span class="badge text-bg-secondary"> {{
+                     current_user.get_first_name() }}
+                  </span>
                </a>
                {% else %}
                <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button"

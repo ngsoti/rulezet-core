@@ -716,8 +716,12 @@ def propose_edit(rule_id) -> redirect:
 
     rule = RuleModel.get_rule(rule_id)
 
-    if rule.to_string == proposed_content:
-        flash("Proposed content is the same as the current content.", "warning")
+    # ignore the formatting
+    current_normalized = "".join(rule.to_string.split())
+    proposed_normalized = "".join(proposed_content.split())
+    
+    if current_normalized == proposed_normalized:
+        flash("Proposed content is the same as the current content (ignoring formatting).", "warning")
         return redirect(url_for('rule.detail_rule', rule_id=rule_id) + "#chap2-pane")
     
     rule_dict = rule.to_json()
