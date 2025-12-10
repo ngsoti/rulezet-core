@@ -427,7 +427,15 @@ def get_concerned_rules_admin(source , user_id_to_send):
 
 def get_rules_by_ids(rule_ids) -> list:
     """Get all the rules with id"""
-    return Rule.query.filter(Rule.id.in_(rule_ids)).all()
+    rule_list = []
+    print(rule_ids)
+    for rule_id in rule_ids:
+        rule = get_rule(rule_id)
+        if rule:
+            rule_list.append(rule)
+        
+    return rule_list
+            
 
 def is_valid_github_url(url: str) -> bool:
     """Check if a URL is a valid GitHub URL."""
@@ -1454,8 +1462,15 @@ def get_all_url_github_page(page: int = 1, search: str = None):
 
     query = Rule.query.filter(Rule.source.isnot(None))
 
-    if search:
-        query = query.filter(Rule.source.ilike(f"%{search}%"))
+    if current_user.is_admin():
+        if search:
+            query = query.filter(Rule.source.ilike(f"%{search}%"))
+
+    else:
+        query = query.filter(Rule.user_id == current_user.id)
+
+        if search:
+            query = query.filter(Rule.source.ilike(f"%{search}%"))
 
     query = query.filter(Rule.source.op('~')(github_pattern))
 
@@ -1514,16 +1529,16 @@ def get_all_rule_by_url_github_page(page: int = 1, search: str = None, url: str 
     
     return pagination, total_count
 
-def get_all_rule_by_url_github(url: str = None):
+def get_all_rule_by_url_github(url: str = None , current_user_: User = None):
     """Get list of Rules whose source contains a specific GitHub project URL."""
     query = Rule.query.filter(Rule.source.isnot(None))
 
-    if current_user.is_admin():
+    if current_user_.is_admin():
         if url:
             query = query.filter(Rule.source.ilike(f"%{url}%"))
 
     else:
-        query = query.filter(Rule.user_id == current_user.id)
+        query = query.filter(Rule.user_id == current_user_.id)
 
         if url:
             query = query.filter(Rule.source.ilike(f"%{url}%"))
@@ -1626,7 +1641,10 @@ def get_importer_list_page(page: int = 1):
     return ImporterResult.query.paginate(page=page, per_page=20, max_per_page=20)
 
 def get_updater_list_page(page: int = 1):
-    return UpdateResult.query.paginate(page=page, per_page=20, max_per_page=20)
+    if current_user.is_admin():
+        return UpdateResult.query.paginate(page=page, per_page=20, max_per_page=20)
+    else :
+        return UpdateResult.query.filter_by(user_id=str(current_user.id)).paginate(page=page, per_page=20, max_per_page=20)
 #####################
 #   Dump all rules  #
 #####################

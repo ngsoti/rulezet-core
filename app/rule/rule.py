@@ -1737,22 +1737,26 @@ def history_github_importer_list():
             "total_pages": github_importer_list.pages}, 200
 
 
-# @rule_blueprint.route("/import_get_session_running", methods=['GET'])
-# @login_required
-# def import_get_session_running():
-#     return [{"uuid": s.uuid, "info": s.info} for s in SessionModel.sessions]
+
 
 @rule_blueprint.route("/import_get_session_running", methods=['GET'])
 @login_required
 def import_get_session_running():
+    """Return the running sessions by uuid and info (admin or user case )"""
+    
+    is_admin = current_user.is_admin()
+    current_user_id = current_user.id
+
     import_sessions = [
         {"uuid": s.uuid, "info": s.info} 
         for s in SessionModel.sessions
+        if is_admin or s.current_user.id == current_user_id
     ]
 
     update_sessions = [
         {"uuid": s.uuid, "info": s.info} 
         for s in UpdateModel.sessions
+        if is_admin or s.current_user.id == current_user_id
     ]
 
     return {
@@ -1952,33 +1956,36 @@ def check_updates_by_rule():
     Check for updates on specific selected rules (by rule IDs).
     Rules are matched with their GitHub source and updated if needed.
     """
-    try:
-        data = request.get_json()
-        rule_ids = data.get("rules", [])
+    # try:
+        
 
-        if not rule_ids or not isinstance(rule_ids, list):
-            return {
-                "message": "No rule IDs provided or invalid format.",
-                "nb_update": 0,
-                "results": [],
-                "success": False,
-                "toast_class": "danger-subtle"
-            }, 400
+    # except Exception as e:
+    #     return {"message": f"Error while checking rule updates: {str(e)}", "toast_class": "danger-subtle"}, 500
 
-        info = {"mode": "by_rule", "count": len(rule_ids), "initiated_by": current_user.first_name}
 
-        update_session = UpdateModel.Update_class(rule_ids, current_user, info, mode="by_rule")
-        update_session.start()
-        UpdateModel.sessions.append(update_session)
+    data = request.get_json()
+    rule_ids = data.get("rules", [])
 
+    if not rule_ids or not isinstance(rule_ids, list):
         return {
-            "message": "Rule update verification started successfully.",
-            "session_uuid": update_session.uuid,
-            "toast_class": "success-subtle"
-        }, 201
+            "message": "No rule IDs provided or invalid format.",
+            "nb_update": 0,
+            "results": [],
+            "success": False,
+            "toast_class": "danger-subtle"
+        }, 400
 
-    except Exception as e:
-        return {"message": f"Error while checking rule updates: {str(e)}", "toast_class": "danger-subtle"}, 500
+    info = {"mode": "by_rule", "count": len(rule_ids), "initiated_by": current_user.first_name}
+
+    update_session = UpdateModel.Update_class(rule_ids, current_user, info, mode="by_rule")
+    update_session.start()
+    UpdateModel.sessions.append(update_session)
+
+    return {
+        "message": "Rule update verification started successfully.",
+        "session_uuid": update_session.uuid,
+        "toast_class": "success-subtle"
+    }, 201
 
 
 #########################
