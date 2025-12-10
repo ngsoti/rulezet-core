@@ -1953,11 +1953,17 @@ def accept_rule_change(history_id):
         return False
     
 def get_all_pending_changes():
-    return RuleUpdateHistory.query.filter(
-        RuleUpdateHistory.message != "accepted",
-        RuleUpdateHistory.message != "rejected",
-        RuleUpdateHistory.analyzed_by_user_id == current_user.id
-    ).all()
+    if current_user.is_admin():
+        return RuleUpdateHistory.query.filter(
+            RuleUpdateHistory.message != "accepted",
+            RuleUpdateHistory.message != "rejected"
+        ).all()
+    else:
+        return RuleUpdateHistory.query.filter(
+            RuleUpdateHistory.message != "accepted",
+            RuleUpdateHistory.message != "rejected",
+            RuleUpdateHistory.analyzed_by_user_id == current_user.id
+        ).all()
 
 
 def change_message_new_rule(id, new_message):
