@@ -169,8 +169,7 @@
                                                       <strong>{{ form.description.label(class_="col-form-label")
                                                             }}</strong>
                                                       {{ form.description(class_="form-control", rows=4,
-                                                      placeholder="Enter the description of the rule (context,
-                                                      explain...)...",
+                                                      placeholder="Enter the description of the rule...",
                                                       title="Description for the context, the syntax... to help the
                                                       community to found it") }}
                                                       {% if form.description.errors %}
@@ -188,8 +187,7 @@
                                                       <strong>{{ form.original_uuid.label(class_="col-form-label")
                                                             }}</strong>
                                                       {{ form.original_uuid(class_="form-control", rows=4,
-                                                      placeholder="Enter the original uuid if the rule has already
-                                                      one...",
+                                                      placeholder="Enter the uuid if the rule has already one...",
                                                       title="UUID to the rule. (one will be generate after the creation
                                                       of the rule)") }}
                                                       {% if form.original_uuid.errors %}

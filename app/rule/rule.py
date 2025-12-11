@@ -1042,6 +1042,19 @@ def update_github_rule() -> render_template:
     if current_user.is_admin() or rule_.user_id == current_user.id:
         if decision == 'accepted':
             rule = RuleModel.get_rule(history.rule_id)
+            # verify if the rule has a good syntaxe
+            if not rule:
+                flash('Rule not found', 'danger')
+                return redirect(request.referrer or '/')
+
+            # is the rule with a good syntaxe ?
+            valide = RuleModel.verify_rule_syntaxe(rule , history.new_content)
+            if not valide.ok:
+                history.message = "rejected"
+                flash('Rule content rejected because Invalide syntax !', 'warning')
+                return redirect(f"/rule/detail_rule/{rule.id}")
+
+
             if rule:
                 rule.to_string = history.new_content
                 history.message = "accepted"

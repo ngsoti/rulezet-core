@@ -42,12 +42,16 @@
                 <div class="card-header text-white">
                     <div class="row align-items-center">
                         <div class="col-9">
-                            <h5>
-                                <i class="fas fa-shield-alt me-2 text-primary mb-0 text-truncate"></i> <span
-                                    class="mb-2"
-                                    style="max-width: 75%; word-break: break-word; color: rgb(10, 88, 202)">
-                                    {{rule.title }}</span>
-                            </h5>
+                            <h4 class="mb-0 d-flex align-items-center title-rule text-truncate" style="max-width: 75%;"
+                                :title="{{rule.title}}">
+                                <a :href="`/rule/detail_rule/`+{{rule.id}}" title="view more about this rule"
+                                    style="white-space: pre-wrap; word-wrap: break-word; ">
+                                    <i class="fas fa-shield-alt me-2 text-primary"></i>
+                                    <span class="title" style="white-space: pre-wrap; word-wrap: break-word;">
+                                        {{rule.title }}
+                                    </span>
+                                </a>
+                            </h4>
                         </div>
                         <div class="col-3 text-end">
                             {% if current_user.is_authenticated %}
@@ -93,7 +97,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="p-1 m-1">
+                <div class=" m-1">
+                    {% if current_user.id == rule.user_id or current_user.is_admin() %}
+                    <span class="text-success m-2" title="You are the owner of this rule">
+                        <i class="fa-solid fa-flag"></i>
+                    </span>
+                    {% endif %}
                     <span v-if="currentRule.cve_id && currentRule.cve_id !== 'None'"
                         class="d-inline-flex flex-wrap align-items-center">
                         <a v-for="(cve, index) in parsedCVE(currentRule.cve_id)" :key="index"
@@ -107,7 +116,7 @@
                     </span>
                 </div>
 
-                <div class="card-body">
+                <div class="card-body p-0 m-3 mt-0">
                     <div class="mb-4">
                         <p class="mb-2 d-flex align-items-start flex-wrap">
                             <i class="fas fa-align-left me-2 text-secondary mt-1"></i>

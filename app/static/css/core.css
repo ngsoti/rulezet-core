@@ -21,9 +21,13 @@
   border-radius: 10px;
 }
 
+.title-rule:hover {
+  color: var(--rule-name-color) !important;
+  cursor: pointer;
+  text-decoration: underline;
+}
 
-
-  :root {
+:root {
   --bg-color: #fbfbfb;
   --text-color: #1e1e1e;
   --subtle-text-color: #6c757d;
