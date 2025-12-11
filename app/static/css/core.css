@@ -56,6 +56,15 @@ body.dark-mode {
   --navbar-text-color: #f1f1f1;
   --rule-name-color: rgb(10, 88, 202);
 }
+
+.custom-inner-card {
+  background-color: rgb(230, 228, 228);
+  color: var(--color-text);
+  border: 1px solid rgba(0,0,0,0.15);
+  padding: 5px;
+  border-radius: 8px;
+}
+
 /**
   *
   *****************

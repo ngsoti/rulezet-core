@@ -99,7 +99,7 @@ class EditRuleForm(FlaskForm):
     version = StringField('Version', validators=[InputRequired()])
     to_string = TextAreaField('Content rule', validators=[InputRequired()])
     cve_id = StringField('Vulnerability id')
-    submit = SubmitField('Register')
+    submit = SubmitField('Save')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

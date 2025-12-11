@@ -2,23 +2,33 @@
 {% import 'macros/form_macros.html' as f %}
 
 {% block content %}
-<div class="container mt-4">
-    <h3 class="text-center mb-4">Edit a Rule</h3>
+<div class="container mt-4 mb-4">
+    <div class="mb-4 border-bottom pb-3">
+        <h2 class="fw-bold mb-1 text-primary text-center">
+            Edit {{ rule.title }}
+            <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+        </h2>
+        <p class="text-muted mt-2">
+            Stay updated with the latest rules added to our repository. Browse through recent contributions and find new
+            detection rules to enhance your security measures.
+        </p>
+    </div>
+
     <form action="" method="post">
         {{ form.hidden_tag() }}
-        
+
         <div class="modal-body">
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="form-group">
                         {{ form.title.label(class_="col-form-label") }}
                         {{ form.title(class_="form-control",
-                                    placeholder="Enter the rule title...",
-                                    title="This is the title of your rule (e.g. SQL Injection Detection)") }}
+                        placeholder="Enter the rule title...",
+                        title="This is the title of your rule (e.g. SQL Injection Detection)") }}
                         {% if form.title.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.title.errors[0] | safe }}
-                            </div>
+                        <div class="invalid-feedback d-block">
+                            {{ form.title.errors[0] | safe }}
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -26,12 +36,12 @@
                     <div class="form-group">
                         {{ form.format.label(class_="col-form-label") }}
                         {{ form.format(class_="form-select",
-                                    placeholder="Choose a rule format...",
-                                    title="Format of the rule") }}
+                        placeholder="Choose a rule format...",
+                        title="Format of the rule") }}
                         {% if form.format.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.format.errors[0] | safe }}
-                            </div>
+                        <div class="invalid-feedback d-block">
+                            {{ form.format.errors[0] | safe }}
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -41,12 +51,12 @@
                 <div class="form-group">
                     {{ form.license.label(class_="col-form-label") }}
                     {{ form.license(class_="form-control", id="license-select",
-                                    placeholder="Choose a license...",
-                                    title="License for the visibility of the rule") }}
+                    placeholder="Choose a license...",
+                    title="License for the visibility of the rule") }}
                     {% if form.license.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.license.errors[0] | safe }}
-                        </div>
+                    <div class="invalid-feedback d-block">
+                        {{ form.license.errors[0] | safe }}
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -55,12 +65,12 @@
                 <div class="form-group">
                     {{ form.source.label(class_="col-form-label") }}
                     {{ form.source(class_="form-control",
-                                    placeholder="Enter the rule source...",
-                                    title="Source to find the rule in the net") }}
+                    placeholder="Enter the rule source...",
+                    title="Source to find the rule in the net") }}
                     {% if form.source.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.source.errors[0] | safe }}
-                        </div>
+                    <div class="invalid-feedback d-block">
+                        {{ form.source.errors[0] | safe }}
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -69,12 +79,12 @@
                     <div class="form-group">
                         {{ form.version.label(class_="col-form-label") }}
                         {{ form.version(class_="form-control",
-                                    placeholder="Enter the rule version (1.0 or 1)...",
-                                    title="Source to find the rule in the net") }}
+                        placeholder="Enter the rule version (1.0 or 1)...",
+                        title="Source to find the rule in the net") }}
                         {% if form.version.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.version.errors[0] | safe }}
-                            </div>
+                        <div class="invalid-feedback d-block">
+                            {{ form.version.errors[0] | safe }}
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -95,13 +105,8 @@
                                 <option value="MSRC_CVE">MSRC</option>
                             </select>
 
-                            <input
-                                type="text"
-                                id="cve-id-input"
-                                class="form-control"
-                                placeholder="Enter vulnerability number (e.g., 2024-1234)"
-                                autocomplete="off"
-                            >
+                            <input type="text" id="cve-id-input" class="form-control"
+                                placeholder="Enter vulnerability number (e.g., 2024-1234)" autocomplete="off">
 
                             <button type="button" class="btn btn-dark" id="add-cve-btn">
                                 <i class="fas fa-plus"></i>
@@ -111,9 +116,9 @@
                         {{ form.cve_id(class_="form-control d-none") }}
 
                         {% if form.cve_id.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.cve_id.errors[0] | safe }}
-                            </div>
+                        <div class="invalid-feedback d-block">
+                            {{ form.cve_id.errors[0] | safe }}
+                        </div>
                         {% endif %}
 
                         <div id="cve-badge-container" class="d-flex flex-wrap gap-2 mb-2 p-3"></div>
@@ -121,18 +126,18 @@
                     </div>
                 </div>
             </div>
-            
+
 
             <div class="mb-3">
                 <div class="form-group">
                     {{ form.description.label(class_="col-form-label") }}
                     {{ form.description(class_="form-control", rows=4,
-                                    placeholder="Enter the description of the rule (context, explain...)...",
-                                    title="Description for the context, the syntax... to help the community to found it") }}
+                    placeholder="Enter the description of the rule (context, explain...)...",
+                    title="Description for the context, the syntax... to help the community to found it") }}
                     {% if form.description.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.description.errors[0] | safe }}
-                        </div>
+                    <div class="invalid-feedback d-block">
+                        {{ form.description.errors[0] | safe }}
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -142,8 +147,8 @@
                     <div class="form-group">
                         {{ form.original_uuid.label(class_="col-form-label") }}
                         {{ form.original_uuid(class_="form-control", rows=4,
-                                    placeholder="Enter the original uuid if the rule has already one...",
-                                    title="UUID to the rule. (one will be generate after the creation of the rule)") }}
+                        placeholder="Enter the original uuid if the rule has already one...",
+                        title="UUID to the rule. (one will be generate after the creation of the rule)") }}
                         {% if form.original_uuid.errors %}
                         <div class="invalid-feedback d-block">
                             {{ form.original_uuid.errors[0] | safe }}
@@ -155,25 +160,25 @@
 
             <div class="mb-3">
                 {% if error %}
-                        <div class="alert alert-danger d-flex align-items-center" role="alert">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <div>
-                                {{ error }}
-                            </div>
-                        </div>
-                        {% endif %}
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <div>
+                        {{ error }}
+                    </div>
+                </div>
+                {% endif %}
                 <div class="form-group">
                     {{ form.to_string.label(class_="col-form-label") }}
-            
-                    <input type="hidden" name="to_string" id="code-input" value="{{ form.to_string.data | e }}">  
-            
+
+                    <input type="hidden" name="to_string" id="code-input" value="{{ form.to_string.data | e }}">
+
 
                     <textarea id="editor">{{ form.to_string.data | e }}</textarea>
-            
+
                     {% if form.to_string.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.to_string.errors[0] | safe }}
-                        </div>
+                    <div class="invalid-feedback d-block">
+                        {{ form.to_string.errors[0] | safe }}
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -292,31 +297,38 @@
 
 
 
-    $(document).ready(function() {
-    $('#license-select').select2({
-        placeholder: "Search for a license",
-        allowClear: true
-    });
+    $(document).ready(function () {
+        $('#license-select').select2({
+            placeholder: "Search for a license",
+            allowClear: true
+        });
 
-    const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-        lineNumbers: true,
-        mode: "yaml",  
-        theme: "monokai",
-        matchBrackets: true,
-        autoRefresh: true
-    });
+        const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+            lineNumbers: true,
+            mode: "yaml",
+            theme: "monokai",
+            matchBrackets: true,
+            autoRefresh: true,
+            lineWrapping: true,
+            autoCloseBrackets: true,
+            autoCloseTags: true,
+            autoMatchParens: true,
+        });
+
+        // set the height of the editor
+        editor.setSize("100%", "100%");
 
 
-    editor.on("change", function(cm) {
-        document.getElementById("code-input").value = cm.getValue();
-    });
+        editor.on("change", function (cm) {
+            document.getElementById("code-input").value = cm.getValue();
+        });
 
-    $("form").on("submit", function(event) {
-        if ($("#code-input").val() === "") {
-            event.preventDefault();
-            alert("Please fill in the content for the rule.");
-        }
+        $("form").on("submit", function (event) {
+            if ($("#code-input").val() === "") {
+                event.preventDefault();
+                alert("Please fill in the content for the rule.");
+            }
+        });
     });
-});
 </script>
 {% endblock %}
