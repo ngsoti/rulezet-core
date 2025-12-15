@@ -43,7 +43,7 @@
                     <div class="row align-items-center">
                         <div class="col-9">
                             <h4 class="mb-0 d-flex align-items-center title-rule text-truncate" style="max-width: 75%;"
-                                :title="{{rule.title}}">
+                                title="{{rule.title}}">
                                 <a :href="`/rule/detail_rule/`+{{rule.id}}" title="view more about this rule"
                                     style="white-space: pre-wrap; word-wrap: break-word; ">
                                     <i class="fas fa-shield-alt me-2 text-primary"></i>
@@ -121,26 +121,6 @@
                         <p class="mb-2 d-flex align-items-start flex-wrap">
                             <i class="fas fa-align-left me-2 text-secondary mt-1"></i>
                             <strong class="me-2">Description:</strong>
-
-                            <!-- Badges CVE inline -->
-                            <!-- <span
-                                v-if="currentRule.cve_id && currentRule.cve_id !== 'None'"
-                                class="d-inline-flex flex-wrap align-items-center"
-                            >
-                                <a
-                                    v-for="(cve, index) in parsedCVE(currentRule.cve_id)"
-                                    :key="index"
-                                    :class="['badge', 'me-1', 'mb-1', getCVEColor(cve)]"
-                                    data-bs-toggle="tooltip"
-                                    :title="'Detected vulnerability ID: ' + cve"
-                                    :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()"
-                                    target="_blank"
-                                >
-                                    <i :class="getCVEIcon(cve)" class="me-1"></i>
-                                    [[ getCVEPrefix(cve) ]]
-                                    <span class="text-light fw-semibold">[[ getCVENumber(cve) ]]</span>
-                                </a>
-                            </span> -->
                         </p>
 
                         <p class="text-muted" style="white-space: pre-line;">[[ currentRule.description ]]</p>
@@ -251,14 +231,14 @@
                     <!-- Tab Content -->
                     <div class="tab-content" id="ruleTabsContent">
                         <div class="tab-pane fade show active" id="normal" role="tabpanel">
-                            <pre class="custom-pre mb-2"><code class="javascript" >{{rule.to_string}}</code></pre>
+                            <pre class="custom-pre mb-2"><code class="javascript" >{{rule.to_string | e}}</code></pre>
 
                         </div>
                         <div class="tab-pane fade" id="json" role="tabpanel">
-                            <pre class="custom-pre mb-2"><code class="json">{{rule_to_json}}</code></pre>
+                            <pre class="custom-pre mb-2"><code class="json">{{rule_to_json | e}}</code></pre>
                         </div>
                         <div class="tab-pane fade" id="misp" role="tabpanel">
-                            <pre class="custom-pre mb-2"><code class="json">{{rule_misp}}</code></pre>
+                            <pre class="custom-pre mb-2"><code class="json">{{rule_misp | e}}</code></pre>
                         </div>
                     </div>
 

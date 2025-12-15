@@ -1,4 +1,8 @@
 import json
+import zipfile
+import os
+import tempfile
+from flask import request
 from math import ceil
 from urllib.parse import urlparse
 from datetime import datetime,  timezone
@@ -1696,6 +1700,65 @@ def import_rules_from_github():
     except Exception as e:
         return {"message": f"An error occurred during import: {str(e)}", "toast_class": "danger-subtle"}, 400
     
+@rule_blueprint.route("/import_rules_from_zip", methods=["POST"])
+@login_required
+def import_rules_from_zip():
+    """
+    Import and process all YARA rules inside an uploaded ZIP file.
+    The ZIP is extracted into a temp folder, and processed the same way
+    as GitHub repositories were.
+    """
+
+    try:
+
+        if 'zipfile' not in request.files:
+            return {"message": "No ZIP file provided.", "toast_class": "danger-subtle"}, 400
+
+        zip_file = request.files['zipfile']
+        selected_license = request.form.get('license')
+
+        if not zip_file:
+            return {"message": "No ZIP file provided.", "toast_class": "danger-subtle"}, 400
+
+      
+        filename = zip_file.filename
+       
+
+        temp_dir = tempfile.mkdtemp(prefix="rules_zip_")
+
+        with zipfile.ZipFile(zip_file) as z:
+            z.extractall(temp_dir)
+
+        repo_dir = temp_dir  
+        if filename:
+            source = filename + " by " + current_user.first_name + " " + current_user.last_name  
+        else:
+            source = " File uploaded by " + current_user.first_name + " " + current_user.last_name
+
+        info = {
+            "origin": "zip_upload",
+            "name": os.path.basename(temp_dir),
+            "license": selected_license or "Unknown",
+            "url": "zip_upload",
+            "repo_url": source
+        }
+
+        session_th = SessionModel.Session_class(repo_dir, current_user, info)
+        session_th.start()
+        SessionModel.sessions.append(session_th)
+
+        return {
+            "message": "ZIP uploaded and processing started!",
+            "toast_class": "success-subtle",
+            "session_uuid": session_th.uuid
+        }, 201
+
+    except Exception as e:
+        return {
+            "message": f"Error while importing ZIP: {str(e)}",
+            "toast_class": "danger-subtle"
+        }, 400
+
 
 @rule_blueprint.route("/import_loading/<sid>", methods=['GET'])
 @login_required
@@ -2175,3 +2238,5 @@ def add_new_rule():
         return jsonify({"success": False, "message": message, "toast_class": "warning-subtle"}), 200
     else:
         return jsonify({"success": False, "message": message, "toast_class": "danger-subtle"}), 500
+    
+

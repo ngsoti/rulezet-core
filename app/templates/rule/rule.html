@@ -30,11 +30,17 @@
                               GitHub URL
                         </a>
                   </li>
+                  <li class="nav-item flex-fill text-center">
+                        <a class="nav-link" id="chap4-tab" data-bs-toggle="tab" href="#chap4-pane" role="tab"
+                              aria-controls="chap4-pane" aria-selected="false" style="color: var(--text-color);">
+                              From File
+                        </a>
+                  </li>
             </ul>
 
             <div class="tab-content" id="exampleTabsContent">
                   <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
-                        <div class="card card-body shadow-sm" id="main-container">
+                        <div class="card card-body shadow-sm">
                               <form action="" method="post" id="form">
                                     {{ form.hidden_tag() }}
 
@@ -235,7 +241,7 @@
                         </div>
                   </div>
                   <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
-                        <div class="card card-body shadow-sm" id="main-container">
+                        <div class="card card-body shadow-sm">
                               <form method="POST" action="{{ url_for('rule.parse_rule') }}" class="d-flex flex-column"
                                     id="github-form" novalidate>
 
@@ -355,6 +361,96 @@
                               </div>
                               {% endif %}
                         </div>
+                  </div>
+                  <div class="tab-pane fade" id="chap4-pane" role="tabpanel" aria-labelledby="chap4-tab">
+                        <!-- <div class="card card-body shadow-sm">
+                              <form action="/rule/import_rules_from_zip" method="post" enctype="multipart/form-data">
+                                    <div id="flash-messages" class="mt-2">
+                                          {% for category, message in get_flashed_messages(with_categories=True) %}
+                                          <div class="alert alert-{{ category }} alert-dismissible fade show"
+                                                role="alert">
+                                                {{ message }}
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert"
+                                                      aria-label="Close"></button>
+                                          </div>
+                                          {% endfor %}
+                                    </div>
+
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                    <input type="file" name="zipfile" accept=".zip">
+                                    <button type="submit">Upload a zip file</button>
+                              </form>
+
+                        </div> -->
+                        <div class="card p-4 shadow-sm mb-3">
+                              <h5 class="mb-2 d-flex align-items-center">
+                                    <strong>
+                                          <label for="zipfile" class="form-label m-0">
+                                                Import rules from ZIP file
+                                          </label>
+                                          <span style="color:red">*</span>
+                                    </strong>
+                                    <i class="fas fa-info-circle ms-2 text-primary" data-bs-toggle="collapse"
+                                          data-bs-target="#zipInfo" role="button" aria-expanded="false"
+                                          aria-controls="zipInfo" style="cursor:pointer;" title="More info"></i>
+                              </h5>
+
+                              <div class="collapse" id="zipInfo">
+                                    <div class="alert alert-info mt-2">
+                                          Upload a ZIP archive containing a folder of YARA, Sigma, Zeek or Suricata
+                                          rules.
+                                          The system will automatically parse and classify them.
+                                    </div>
+                              </div>
+
+                              {% if current_user.is_admin() %}
+                              <div>
+
+                                    <!-- Input ZIP -->
+                                    <div class="mb-3">
+                                          <input type="file" name="zipfile" id="zipfile" class="form-control w-100"
+                                                accept=".zip" @change="fileZip = $event.target.files[0]">
+                                    </div>
+
+                                    <div id="zipfile-error" style="color:brown;"></div>
+
+                                    <!-- License -->
+                                    <div class="mb-3">
+                                          <strong><label for="license-select-zip" class="form-label">
+                                                      License
+                                                </label></strong>
+
+                                          <select id="license-select-zip" name="license" class="form-control"
+                                                v-model="selectedLicenseZip">
+                                                <option disabled value="">No license</option>
+                                                <option v-for="item in license" :key="item" :value="item">
+                                                      [[ item ]]
+                                                </option>
+                                          </select>
+                                    </div>
+
+                                    <button v-if="!is_loading_zip" type="submit" class="btn btn-primary"
+                                          @click="import_zip()">
+                                          <i class="fas fa-file-archive"></i> Send ZIP
+                                    </button>
+
+                                    <button v-else class="btn btn-primary" type="button" disabled>
+                                          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                          <span role="status">Uploading...</span>
+                                    </button>
+
+                              </div>
+
+                              {% else %}
+                              <div>
+                                    <strong>You need to be an admin to import rules from ZIP.</strong>
+                                    <div class="mt-2">
+                                          <a href="/account/login" class="btn btn-primary">Login</a>
+                                    </div>
+                              </div>
+                              {% endif %}
+                        </div>
+
                   </div>
             </div>
       </div>
@@ -604,6 +700,42 @@
                         is_loading.value = false
                   }
 
+                  const fileZip = ref(null)
+                  const selectedLicenseZip = ref("")
+                  const is_loading_zip = ref(false)
+
+
+                  async function import_zip() {
+                        is_loading_zip.value = true;
+                        $("#zipfile-error").text("");
+
+                        if (!fileZip.value) {
+                              $("#zipfile-error").text("You must select a ZIP file.");
+                              is_loading_zip.value = false;
+                              return;
+                        }
+
+                        let formData = new FormData();
+                        formData.append("zipfile", fileZip.value);
+                        formData.append("license", selectedLicenseZip.value);
+
+                        const res = await fetch('/rule/import_rules_from_zip', {
+                              method: "POST",
+                              headers: { "X-CSRFToken": $("#csrf_token").val() },
+                              body: formData
+                        });
+
+                        if (res.status === 201) {
+                              let loc = await res.json();
+                              window.location.href = "/rule/import_loading/" + loc["session_uuid"];
+                        } else {
+                              display_toast(res, true);
+                        }
+
+                        is_loading_zip.value = false;
+                  }
+
+
 
                   onMounted(() => {
                         fetchRules();
@@ -622,7 +754,11 @@
                         showParsingModal,
                         fetchRulesFormats,
                         import_git_url,
-                        ruleType
+                        ruleType,
+                        fileZip,
+                        selectedLicenseZip,
+                        is_loading_zip,
+                        import_zip
                   };
             }
       }).mount('#main-container');
