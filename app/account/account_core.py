@@ -5,7 +5,7 @@ from sqlalchemy import or_
 
 
 from .. import db
-from ..db_class.db import Bundle, RequestOwnerRule, Rule, RuleFavoriteUser, User
+from ..db_class.db import Bundle, BundleVote, Gamification, RequestOwnerRule, Rule, RuleEditProposal, RuleFavoriteUser, RuleUpdateHistory, RuleVote, User
 from ..utils.utils import generate_api_key
 from ..rule import rule_core as RuleModel
 import uuid
@@ -403,10 +403,306 @@ def get_total_requests_to_check_admin() -> int:
     return RequestOwnerRule.query.filter_by(status="pending").count()
 
 
+###################
+#   Gamification  #
+###################
+
+def get_or_create_gamification_profile(user_id: int) -> Gamification:
+    """Retrieves the Gamification profile for a user, or creates one if it doesn't exist."""
+    user = get_user(user_id)
+    if not user:
+        return None
+    
+    profile = Gamification.query.filter_by(user_id=user_id).first()
+    if not profile:
+        profile = Gamification(user_id=user_id, uuid=str(uuid.uuid4()))
+        db.session.add(profile)
+        db.session.commit()
+    return profile
+
+def update_rules_suggestion_gamification(gamification_id: int, user_id: int) -> None:
+    try:
+        if not gamification_id:
+            return False
+        if not user_id:
+            return False
+        gamification = get_gamification_by_id(gamification_id)
+        if not gamification:
+            return
+        
+        # found in RuleUpdateHistory table all the update accepted. Onlythe ruleHistorye from the user
+        rules_history = RuleEditProposal.query.filter_by(user_id=user_id).all()
+        if rules_history: # just update one time the value because in the good way we have the good value
+            suggestions_submitted = 0
+            suggestions_accepted = 0
+            suggestions_rejected = 0
+            for rule_history in rules_history:
+                if rule_history.status == "accepted":
+                    suggestions_accepted = suggestions_accepted + 1
+                elif rule_history.status == "rejected":
+                    suggestions_rejected = suggestions_rejected + 1
+                else:
+                    suggestions_submitted = suggestions_submitted + 1
+
+            gamification.suggestions_submitted = suggestions_submitted
+            gamification.suggestions_accepted = suggestions_accepted
+            gamification.suggestions_rejected = suggestions_rejected
+
+        db.session.commit()
+        return True
+    except Exception as e:
+        print(e)
+        return False
+
+def get_gamification_by_id(gamification_id: int) -> Gamification:
+    return Gamification.query.get(gamification_id)
+
+
+#-----------
+#   Like
+#-----------
+
+def update_like_gamification(gamification_id, action) -> None:
+    """Increment the like section"""
+    try:
+        if not gamification_id:
+            return
+        gamification = get_gamification_by_id(gamification_id)
+        if action == "add_one_to_like":
+            gamification.rules_liked = gamification.rules_liked + 1
+        elif action == "remove_one_to_like":
+            gamification.rules_liked = gamification.rules_liked - 1
+        elif action == "add_one_to_dislike":
+            gamification.rules_disliked = gamification.rules_disliked + 1
+        elif action == "remove_one_to_dislike":
+            gamification.rules_disliked = gamification.rules_disliked - 1
+        db.session.commit()
+        
+        return True
+    except Exception as e:
+        print(e)
+        return False
+
+
+#-----------
+#   Suggest
+#-----------
+
+def update_propose_edit_gamification(gamification_id, action) -> None:
+    """Increment the suggestion section"""
+    try:
+        if not gamification_id:
+            return
+        gamification = get_gamification_by_id(gamification_id)
+
+        if action == "add_one_to_suggested":
+            gamification.suggestions_submitted = gamification.suggestions_submitted + 1
+        elif action == "add_one_to_accepted":
+            gamification.suggestions_accepted = gamification.suggestions_accepted + 1
+        elif action == "add_one_to_rejected":
+            gamification.suggestions_rejected = gamification.suggestions_rejected + 1
+           
+        
+        db.session.commit()
+        
+        return True
+    except Exception as e:
+        print(e)
+        return False
+    
+#--------------
+# Rules owned
+#--------------
+def update_rules_owned_gamification(gamification_id , user_id) -> None:
+   """Update the value for the rules owned section"""
+   try:
+        if not gamification_id:
+            return False
+        if not user_id:
+            return False
+        
+        # get the total number of rules for the user
+        total_rules = RuleModel.get_count_rules_by_user_id(user_id)
+
+        gamification = get_gamification_by_id(gamification_id)
+        if not gamification:
+            return False
+
+        gamification.rules_owned = total_rules
+
+
+        db.session.commit()
+
+        # update the total points of rules_popular_score 
+        # get the total number of like and dislike (rule/bundle)for the user
+        dict = get_user_votes_summary(user_id)
+        if not dict:
+            
+            return False
+        total_like = dict['total_upvotes']
+        total_dislike = dict['total_downvotes']
+
+        # calcule of the popular score
+        popular_score = total_like  - total_dislike 
+        
+        if popular_score < 0:
+            popular_score = 0
+        gamification.rules_popular_score = popular_score
+       
+        db.session.commit()
+
+       
+        
+        return True
+   except Exception as e:
+        print(e)
+        return False
+   
 
 
 
+def get_global_leaderboard_paginated(page: int, per_page: int) -> dict:
+    """
+    Retrieves the global leaderboard data, paginated, sorted by total_points.
+    """
+    
+    # Jointure et tri par total_points (descendant)
+    query = Gamification.query.join(User).order_by(Gamification.total_points.desc())
+    
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    leaderboard_data = []
+    for stats in pagination.items:
+        leaderboard_data.append({
+            "user_id": stats.user_id,
+            "first_name": stats.user.first_name, 
+            "last_name": stats.user.last_name,
+            "total_points": stats.total_points,
+            "suggestions_accepted": stats.suggestions_accepted,
+            "rules_owned": stats.rules_owned,
+            "rules_popular_score": stats.rules_popular_score,
+        })
+        
+    return {
+        "leaderboard": leaderboard_data,
+        "total_pages": pagination.pages,
+        "current_page": pagination.page,
+        "total_items": pagination.total
+    }
 
+def get_category_leaderboard(sort_by: str, per_page: int) -> list:
+    """
+    Retrieves top N users based on a specific gamification metric.
+    """
 
+    if sort_by not in ['suggestions_accepted', 'rules_popular_score']:
+        return []
 
+    sort_column = getattr(Gamification, sort_by)
+    
+    query = Gamification.query.join(User).order_by(sort_column.desc()).limit(per_page)
+    
+    leaderboard_data = []
+    for stats in query.all():
+        leaderboard_data.append({
+            "user_id": stats.user_id,
+            "first_name": stats.user.first_name,
+            "last_name": stats.user.last_name,
+            "suggestions_accepted": stats.suggestions_accepted,
+            "rules_popular_score": stats.rules_popular_score,
+        })
+        
+    return leaderboard_data
 
+def get_user_contributions_data(user_id: int) -> dict:
+    """
+    Retrieves a single user's stats, excluding badges.
+    """
+    stats = Gamification.query.filter_by(user_id=user_id).first()
+    
+    if not stats:
+        return {"user_stats": None}
+
+    return {
+        "user_stats": stats.to_json(),
+    }
+
+def refreshData(action):
+    """Recup all the user or just the user's stats"""
+    if action == "global":
+        # update data for the global leaderboard
+        error = 0
+        for user in User.query.all():
+            data = get_or_create_gamification_profile(user.id)
+            if not data:
+                error = error + 1
+        if error > 0:
+            return False
+        else:
+            return True
+
+    else:
+        # update data for the my contributions
+        data = get_or_create_gamification_profile(current_user.id)
+        if not data:
+            return False
+        return True
+    
+def update_liked_gamification(gamification_id , user_id) -> bool:
+    """See in RuleVote and in BundleVote all the like and dislike create by the user"""
+    try:
+        if not gamification_id:
+            return False
+        if not user_id:
+            return False
+        
+       # like and dislike for the user
+        dict = get_user_votes_summary(user_id)
+        if not dict:
+            return False
+        total_like = dict['total_upvotes']
+        total_dislike = dict['total_downvotes']
+
+        # calcule of the popular score
+        popular_score = total_like  - total_dislike 
+        
+        if popular_score < 0:
+            popular_score = 0
+        gamification = get_gamification_by_id(gamification_id)
+        if not gamification:
+            return False
+        gamification.rules_popular_score = popular_score
+        db.session.commit()
+
+        return True
+    except Exception as e:
+        print(e)
+        return False
+    
+def update_gamification_profiles():
+    """Update the gamification profiles for all users"""
+    users = User.query.all()
+    for user in users:
+        # update the user with the reel value like If someone has already like or propose an edit
+        user_gamification = get_or_create_gamification_profile(user.id)
+        if user_gamification:
+            # found all the like oand dislike of an user in 
+            s = update_rules_owned_gamification(user_gamification.id, user.id)
+            if not s:
+                print("update_rules_owned_gamification failed")
+                pass
+            # found RuleSuggestion
+            s_ = update_rules_suggestion_gamification(user_gamification.id, user.id)
+            if not s_:
+                print("update_rules_suggestion_gamification failed")
+                pass    
+            s__ = update_liked_gamification(user_gamification.id, user.id)
+            if not s__:
+                print("update_rules_popular_score_gamification failed")
+                pass
+            
+        else:
+            print("user not found")
+            return False
+
+    return True

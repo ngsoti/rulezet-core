@@ -57,6 +57,14 @@ def rule() -> render_template:
 
         new_rule = RuleModel.add_rule_core(rule_dict , current_user)
         if new_rule:
+
+            # update the gameifcation section
+            profil_game_user = AccountModel.get_or_create_gamification_profile(current_user.id)
+            if profil_game_user == None:
+                return jsonify({"message": "Error to update the gameifcation section"}), 500
+            
+            _ = AccountModel.update_rules_owned_gamification(profil_game_user.id, current_user.id)
+
             flash('Rule added !', 'success')
             return redirect(url_for('rule.detail_rule', rule_id=new_rule.id))
         else:
@@ -161,7 +169,20 @@ def delete_rule() -> jsonify:
     user_id = RuleModel.get_rule_user_id(rule_id)
 
     if current_user.id == user_id or current_user.is_admin():
-        RuleModel.delete_rule_core(rule_id)
+        success = RuleModel.delete_rule_core(rule_id)
+        if not success:
+            return jsonify({"success": False, "message": "Failed to delete the rule!",
+                            "toast_class" : "danger"}), 400
+        
+        # update the gameifcation section
+
+        profil_game_user = AccountModel.get_or_create_gamification_profile(user_id)
+        if profil_game_user == None:
+            return jsonify({"message": "Error to update the gameifcation section"}), 500
+        
+        _ = AccountModel.update_rules_owned_gamification(profil_game_user.id, user_id)
+
+
         return {"success": True, "message": "Rule deleted!" , "toast_class" : "success"}, 200
     
     return render_template("access_denied.html")
@@ -180,31 +201,62 @@ def vote_rule() -> jsonify:
     rule = RuleModel.get_rule(rule_id)
     if rule:
         alreadyVote , already_vote_type= RuleModel.has_already_vote(rule_id, current_user.id)
+        # update the gameifcation section
+        profil_game_user = AccountModel.get_or_create_gamification_profile(current_user.id)
+        if profil_game_user == None:
+            return jsonify({"message": "Error to update the gameifcation section"}), 500
+        
         if vote_type == 'up':  
             if alreadyVote == False:
                 RuleModel.increment_up(rule_id)
                 RuleModel.has_voted('up',rule_id, current_user.id)
+
+                _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_like")
+
             elif already_vote_type == 'up':
                 RuleModel.remove_one_to_increment_up(rule_id)
                 RuleModel.remove_has_voted('up',rule_id, current_user.id)
+
+                _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_like")
             elif already_vote_type == 'down':
                 RuleModel.increment_up(rule_id) # +1 to up
                 RuleModel.remove_one_to_decrement_up(rule_id) # -1 to down
                 RuleModel.remove_has_voted('down',rule_id, current_user.id)
                 RuleModel.has_voted('up',rule_id, current_user.id)
 
+                _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_like")
+                _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_dislike")
+
         elif vote_type == 'down':
             if alreadyVote == False:
                 RuleModel.decrement_up(rule_id)
                 RuleModel.has_voted('down',rule_id, current_user.id)
+
+                _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_dislike")
             elif already_vote_type == 'down':
                 RuleModel.remove_one_to_decrement_up(rule_id)
                 RuleModel.remove_has_voted('down',rule_id, current_user.id)
+
+                _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_dislike")
             elif already_vote_type == 'up':
                 RuleModel.decrement_up(rule_id) # +1 to down
                 RuleModel.remove_one_to_increment_up(rule_id) # -1 to up
                 RuleModel.remove_has_voted('up',rule_id , current_user.id)
                 RuleModel.has_voted('down',rule_id, current_user.id)
+
+                _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_dislike")
+                _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_like")
+        else:
+            return jsonify({"message": "Invalid vote type"}), 400
+       
+         # update the gamefication section
+
+        profil_game_user_ = AccountModel.get_or_create_gamification_profile(rule.user_id)
+        if profil_game_user_ == None:
+            return jsonify({"message": "Error to update the gameifcation section"}), 500
+        
+        _ = AccountModel.update_rules_owned_gamification(profil_game_user_.id, rule.user_id)
+
         return jsonify({
             'vote_up': rule.vote_up,
             'vote_down': rule.vote_down
@@ -376,11 +428,16 @@ def delete_selected_rules() -> jsonify:
             success = RuleModel.delete_rule_core(rule_id)
             if not success:
                 errorDEL += 1
+            profil_game_user_ = AccountModel.get_or_create_gamification_profile(user_id)
+            if profil_game_user_:   
+                _ = AccountModel.update_rules_owned_gamification(profil_game_user_.id,user_id)
         else:
             return render_template("access_denied.html") 
     if errorDEL >= 1:
         return jsonify({"success": False, "message": "Failed to delete the rules!",
                         "toast_class" : "danger"}), 400
+    
+
     else:
         return jsonify({"success": True, 
                         "message": f"{len(data['ids'])} Rule(s) deleted!",
@@ -737,6 +794,14 @@ def propose_edit(rule_id) -> redirect:
 
     success = RuleModel.propose_edit_core(rule_id, proposed_content, message)
     if success:
+        # add to gamification 
+        gamification = AccountModel.get_or_create_gamification_profile(current_user.id)
+        if gamification == None:
+            flash("Request sended but fail to update gamification.", "error")
+            return redirect(url_for('rule.detail_rule', rule_id=rule_id)) 
+        
+        _ = AccountModel.update_propose_edit_gamification(gamification.id , "add_one_to_suggested")
+
         flash("Request sended.", "success")
     else:
         flash("Request sended but fail.", "error")
@@ -781,10 +846,28 @@ def validate_proposal() -> jsonify:
                         "success": False,
                         "toast_class" : "danger"
                         }),500
+                
+                # update gamification
+                gamification = AccountModel.get_or_create_gamification_profile(rule_proposal.user_id)
+                if gamification == None:
+                    return jsonify({"message": "Error during the update of the gamification." ,
+                        "success": False,
+                        "toast_class" : "danger"
+                        }),500
+                _ = AccountModel.update_propose_edit_gamification(gamification.id , "add_one_to_accepted")
 
             elif decision == "rejected":
                 RuleModel.set_status(rule_proposal_id,"rejected")
                 message = "Proposal rejected."
+
+                # update gamification
+                gamification = AccountModel.get_or_create_gamification_profile(rule_proposal.user_id)
+                if gamification == None:
+                    return jsonify({"message": "Error during the update of the gamification." ,
+                        "success": False,
+                        "toast_class" : "danger"
+                        }),500
+                _ = AccountModel.update_propose_edit_gamification(gamification.id , "add_one_to_rejected")
             else:
                 return jsonify({"message": "Invalid decision",
                                 "success": False,
@@ -1695,6 +1778,7 @@ def import_rules_from_github():
         session_th = SessionModel.Session_class(repo_dir, current_user, info)
         session_th.start()
         SessionModel.sessions.append(session_th)
+
         
         return {"message": "Go !", "toast_class": "success-subtle", "session_uuid": session_th.uuid}, 201
     except Exception as e:
@@ -1785,6 +1869,13 @@ def import_loading_status(sid):
         loc = r.to_json()
         loc["complete"] = loc["total"]
         loc["remaining"] = 0
+        
+        
+        # update the gamification section 
+        profil_game_user_ = AccountModel.get_or_create_gamification_profile(r.user_id)
+        if profil_game_user_:   
+            _ = AccountModel.update_rules_owned_gamification(profil_game_user_.id, r.user_id)
+
         return loc
     return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
 
@@ -2232,6 +2323,12 @@ def add_new_rule():
     success, message, imported_object = parse_rule_by_format(content, current_user, format, source_info) 
     
     if success:
+        # update gamafication section
+        profil_game_user_ = AccountModel.get_or_create_gamification_profile(imported_object.user_id)
+        if profil_game_user_ :
+     
+            _ = AccountModel.update_rules_owned_gamification(profil_game_user_.id, imported_object.user_id)
+
         return jsonify({"success": True, "message": message, "toast_class": "success-subtle"}), 200
     elif imported_object:
         # duplicate case
@@ -2240,3 +2337,9 @@ def add_new_rule():
         return jsonify({"success": False, "message": message, "toast_class": "danger-subtle"}), 500
     
 
+# get_popular_rules
+
+@rule_blueprint.route('/get_popular_rules', methods=['GET'])
+def get_popular_rules():
+    popular_rules = RuleModel.get_popular_rules()
+    return jsonify({"success": True, "rules": [rule.to_json() for rule in popular_rules]}), 200

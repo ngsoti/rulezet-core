@@ -825,3 +825,115 @@ footer{
     background-color: #f8d7da !important;
     color: #721c24 !important;
 }
+ .card-header {
+        background-color: var(--card-header-bg-color) !important;
+        color: var(--text-color) !important;
+    }
+
+    .table-striped>tbody>tr:nth-of-type(odd)>* {
+        background-color: var(--light-bg-color);
+    }
+
+    .table-hover>tbody>tr:hover>* {
+        background-color: var(--border-color);
+    }
+
+    .bg-brown {
+        background-color: #cd7f32 !important;
+        color: white !important;
+    }
+
+    .table-active-user {
+        background-color: rgba(13, 110, 253, 0.2) !important;
+        font-weight: bold;
+        transition: background-color 0.3s;
+    }
+
+    /* Podium specific styles */
+    .podium-container {
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        height: 200px;
+        margin-bottom: 30px;
+    }
+
+    .podium-step {
+        text-align: center;
+        width: 120px;
+        position: relative;
+        margin: 0 5px;
+        border-radius: 5px 5px 0 0;
+        transition: all 0.3s;
+        box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .podium-step-2 {
+        height: 120px;
+        background-color: silver;
+    }
+
+    .podium-step-1 {
+        height: 180px;
+        background-color: gold;
+    }
+
+    .podium-step-3 {
+        height: 80px;
+        background-color: #cd7f32;
+        /* Bronze */
+    }
+
+    .podium-rank {
+        position: absolute;
+        top: -30px;
+        width: 100%;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+
+    .podium-name {
+        color: var(--text-color);
+        padding: 5px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        word-wrap: break-word;
+    }
+
+    .podium-points {
+        color: green;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+      /* *** NOUVEAU STYLE POUR LES BADGES ***
+    */
+
+    /* Style de base pour un look "Badge" plus premium */
+    .badge-custom {
+        display: inline-flex;
+        /* Permet d'aligner l'icône et le texte */
+        align-items: center;
+        font-size: 0.9em;
+        font-weight: 700;
+        padding: 0.5rem 0.75rem;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    /* Effet au survol pour les rendre interactifs */
+    .badge-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Couleur personnalisée pour le Bronze (n'existe pas dans Bootstrap) */
+    .bg-bronze {
+        background-color: #cd7f32 !important;
+        color: white !important;
+        border: 1px solid #a36629;
+    }
+
+    /* Ajout d'une couleur plus subtile pour la rangée active */
+    .table-active-user {
+        background-color: var(--bs-primary-bg-subtle) !important;
+        border-left: 5px solid var(--bs-primary);
+    }

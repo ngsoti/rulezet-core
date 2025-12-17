@@ -5,6 +5,7 @@ from app.bundle.bundle_form import AddNewBundleForm, EditBundleForm
 from app.utils.utils import form_to_dict
 from . import bundle_core as BundleModel
 from ..rule import rule_core as RuleModel
+from ..account import account_core as AccountModel
 
 import io
 import zipfile
@@ -356,31 +357,50 @@ def evaluate():
 
     already_vote, already_vote_type = BundleModel.has_already_vote(bundle_id, current_user.id)
 
+     # update the gameifcation section
+    profil_game_user = AccountModel.get_or_create_gamification_profile(current_user.id)
+    if not profil_game_user:
+        return jsonify({"message": "Error to update the gamification section"}), 500
+
     if vote_type == 'up':
         if not already_vote:
             BundleModel.increment_up(bundle_id)
             BundleModel.has_voted('up', bundle_id, current_user.id)
+
+            _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_like")
         elif already_vote_type == 'up':
             BundleModel.remove_one_to_increment_up(bundle_id)
             BundleModel.remove_has_voted('up', bundle_id, current_user.id)
+
+            _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_like")
         elif already_vote_type == 'down':
             BundleModel.increment_up(bundle_id)
             BundleModel.remove_one_to_decrement_up(bundle_id)
             BundleModel.remove_has_voted('down', bundle_id, current_user.id)
             BundleModel.has_voted('up', bundle_id, current_user.id)
 
+            _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_like")
+            _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_dislike")
+
     elif vote_type == 'down':
         if not already_vote:
             BundleModel.decrement_up(bundle_id)
             BundleModel.has_voted('down', bundle_id, current_user.id)
+
+            _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_dislike")
         elif already_vote_type == 'down':
             BundleModel.remove_one_to_decrement_up(bundle_id)
             BundleModel.remove_has_voted('down', bundle_id, current_user.id)
+
+            _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_dislike")
         elif already_vote_type == 'up':
             BundleModel.decrement_up(bundle_id)
             BundleModel.remove_one_to_increment_up(bundle_id)
             BundleModel.remove_has_voted('up', bundle_id, current_user.id)
             BundleModel.has_voted('down', bundle_id, current_user.id)
+
+            _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_dislike")
+            _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_like")
 
     return jsonify({
         "vote_up": bundle.vote_up,

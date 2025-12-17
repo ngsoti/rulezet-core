@@ -159,6 +159,15 @@ def edit_rule_core(form_dict, id) -> tuple[bool,Rule]:
 
 # Read
 
+def get_count_rules_by_user_id(user_id) -> int:
+    """Get the count of rules for a specific user"""
+    return Rule.query.filter(Rule.user_id == user_id).count(
+)
+
+
+
+    
+
 def get_rule_history_count(rule_id) -> int:
     """Get the count of reports for a specific rule"""
     return  RuleUpdateHistory.query.filter(
@@ -2065,3 +2074,6 @@ def verify_rule_syntaxe(rule: Any , new_content) -> Optional[ValidationResult]:
     return None
 
     
+def get_popular_rules():
+    """ Get the ten most popular rules thankt to the like and dislike """
+    return Rule.query.order_by(Rule.vote_up.desc(), Rule.vote_down.desc()).limit(10).all()

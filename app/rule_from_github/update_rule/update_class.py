@@ -598,6 +598,11 @@ def Check_for_rule_updates(rule_id: int, repo_dir: str):
     if not rule:
         return {"message": f"No rule found with ID {rule_id}", "success": False}, False, None
 
+    # verify if there is  alredy a history for this rule from a previous update (just the manuel submit not the github one)
+    # if there is a history made by a pull request, we don't want to update it again
+    #
+
+
     rule_format = (rule.format or "").lower()
     rule_class: Optional[RuleType] = None
 

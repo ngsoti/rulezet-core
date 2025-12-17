@@ -1,0 +1,813 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="main-container" class="container mt-4" v-cloak>
+
+    <h2 class="fw-bold mb-1 text-center ">
+        <i class="fas fa-trophy me-2"></i> Contributor Leaderboard
+    </h2>
+    <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+    <p class="lead mt-2 text-center" style="color: var(--subtle-text-color);">
+        Track your progress, earn badges, and climb the ranks by improving the rule base!
+    </p>
+
+    <div class="card bg-light mb-5 shadow-sm">
+        <div class="card-body">
+            <h4 class="card-title text-primary"> How to Earn Points</h4>
+            <p class="card-text">
+                This leaderboard is based on the **Total Points** you earn by contributing to the rule base. Points are
+                awarded for:
+            </p>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check-circle text-success me-2"></i> <strong>Suggestion Accepted:</strong>
+                            Submitting a
+                            high-quality rule suggestion that is approved by moderators. (Major points)</li>
+                        <li><i class="fas fa-cloud-upload-alt text-info me-2"></i> <strong>Rule
+                                Ownership/Import:</strong> Importing
+                            new rules into the system. (Major points)</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-star text-primary me-2"></i> <strong>Popular Score:</strong> Points gained
+                            when rules
+                            you own receive positive feedback (likes/upvotes) from the community.</li>
+                        <li><i class="fas fa-fire-alt text-warning me-2"></i> <strong>Daily Activity:</strong>
+                            Maintaining a
+                            consecutive daily contribution streak. (Bonus points)</li>
+                    </ul>
+                </div>
+            </div>
+            <hr>
+            <p class="mb-0 small text-muted">
+                Visit the My Contributions tab to track your personal statistics, level progress, and earned badges!
+            </p>
+        </div>
+    </div>
+    <ul class="nav nav-underline justify-content-center w-100 mb-1" id="exampleTabs" role="tablist">
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab"
+                aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
+                Top Contributors
+            </a>
+        </li>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab"
+                aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
+                My Contributions
+            </a>
+        </li>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab"
+                aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
+                Top rules
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="exampleTabsContent">
+        <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
+            <div class="card shadow border-0 p-4">
+                <div class="row">
+                    <div class="col-12 mb-5">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Last updated: [[ currentDate ]]</small>
+                            <button class="btn btn-sm btn-primary" @click="refreshData('global')">
+                                <template v-if="is_running === true">
+                                    <span class="spinner-border spinner-border-sm" role="status"
+                                        aria-hidden="true"></span>
+                                    <span class="visually-hidden">Loading...</span>
+                                </template>
+                                <span v-else><i class="fas fa-sync"></i></span>
+
+                            </button>
+                        </div>
+                        <template v-if="is_running === false">
+                            <div class="text-center mb-4">
+                                <h3 class="fw-bolder mb-1  text-primary" style="color: var(--text-color) !important;">
+                                    <i class="fas fa-crown me-2 text-warning"></i>
+                                    TOP 3 GLOBAL CHAMPIONS
+                                    <i class="fas fa-crown ms-2 text-warning"></i>
+                                </h3>
+                                <small class="text-muted d-block">The ultimate contributors this season.</small>
+                            </div>
+                            <div class="podium-container">
+                                <div v-if="topContributors.length > 1" class="podium-step podium-step-2">
+                                    <div class="podium-rank">🥈</div>
+                                    <div class="podium-name">[[ topContributors[1].first_name ]]</div>
+                                    <div class="podium-points">[[ topContributors[1].total_points.toLocaleString() ]]
+                                        Pts
+                                    </div>
+                                </div>
+                                <div v-if="topContributors.length > 0" class="podium-step podium-step-1">
+                                    <div class="podium-rank">🥇</div>
+                                    <div class="podium-name">[[ topContributors[0].first_name ]]</div>
+                                    <div class="podium-points">[[ topContributors[0].total_points.toLocaleString() ]]
+                                        Pts
+                                    </div>
+                                </div>
+                                <div v-if="topContributors.length > 2" class="podium-step podium-step-3">
+                                    <div class="podium-rank">🥉</div>
+                                    <div class="podium-name">[[ topContributors[2].first_name ]]</div>
+                                    <div class="podium-points">[[ topContributors[2].total_points.toLocaleString() ]]
+                                        Pts
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card shadow">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0"><i class="fas fa-globe-americas me-2"></i> Global Ranking (Total
+                                        Points)
+                                    </h5>
+
+                                    <div class="d-flex align-items-center">
+                                        <label for="perPageSelect" class="form-label mb-0 me-2"
+                                            style="font-size: 0.9rem;">Per
+                                            Page:</label>
+                                        <select id="perPageSelect" v-model.number="perPage"
+                                            @change="fetchGlobalLeaderboard" class="form-select form-select-sm"
+                                            style="width: 80px;">
+                                            <option value="10">10</option>
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover mb-0"
+                                            style="color: var(--text-color);">
+                                            <thead>
+                                                <tr>
+                                                    <th title="Global position based on Total Points.">Rank <i
+                                                            class="fas fa-question-circle text-info ms-1"></i></th>
+                                                    <th
+                                                        title="Contributor's name. Click the row to view their profile.">
+                                                        User
+                                                    </th>
+                                                    <th title="Total points earned from all contributions.">Total Points
+                                                        <i class="fas fa-question-circle text-info ms-1"></i>
+                                                    </th>
+                                                    <th title="Number of suggestions accepted by moderators.">Accepted
+                                                        Suggestions <i
+                                                            class="fas fa-question-circle text-info ms-1"></i>
+                                                    </th>
+                                                    <th title="Number of rules imported or currently owned.">Rules Owned
+                                                        <i class="fas fa-question-circle text-info ms-1"></i>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody v-if="topContributors.length">
+                                                <tr v-for="(contributor, index) in topContributors"
+                                                    :key="contributor.user_id" @click="goToProfile(contributor.user_id)"
+                                                    style="cursor: pointer;"
+                                                    :class="{ 'table-active-user': contributor.user_id == currentUserId }"
+                                                    :title="contributor.user_id == currentUserId ? 'This is your current ranking position.' : 'View profile'">
+                                                    <td>
+                                                        <span v-if="index === 0" class="text-warning fw-bold fs-5"><i
+                                                                class="fas fa-medal me-1"></i> 1</span>
+                                                        <span v-else-if="index === 1"
+                                                            class="text-secondary fw-bold fs-5"><i
+                                                                class="fas fa-medal me-1"></i> 2</span>
+                                                        <span v-else-if="index === 2" class="text-info fw-bold fs-5"><i
+                                                                class="fas fa-medal me-1"></i> 3</span>
+                                                        <span v-else>#[[ index + 1 ]]</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="text-decoration-none text-primary fw-medium"
+                                                            style="color: var(--text-color)">
+                                                            [[ contributor.first_name ]] [[ contributor.last_name ]]
+                                                            <span v-if="contributor.user_id == currentUserId"
+                                                                class="badge bg-primary ms-1">You</span>
+                                                        </span>
+                                                    </td>
+                                                    <td><strong class="text-success">[[
+                                                            contributor.total_points.toLocaleString() ]]</strong></td>
+                                                    <td>[[ contributor.suggestions_accepted ]]</td>
+                                                    <td>[[ contributor.rules_owned ]]</td>
+                                                </tr>
+                                                <template v-if="userStats.global_rank > perPage">
+                                                    <tr>
+                                                        <td colspan="5" class="text-center p-2 text-muted fst-italic">
+                                                            ...
+                                                            The
+                                                            list continues ...</td>
+                                                    </tr>
+                                                    <tr @click="goToProfile(currentUserId)" style="cursor: pointer;"
+                                                        class="table-active-user" title="Your Global Rank">
+                                                        <td>#[[ userStats.global_rank ]]</td>
+                                                        <td>
+                                                            <span class="text-decoration-none text-primary fw-medium"
+                                                                style="color: var(--text-color) !important;">
+                                                                You
+                                                            </span>
+                                                        </td>
+                                                        <td><strong class="text-success">[[
+                                                                userStats.total_points.toLocaleString() ]]</strong></td>
+                                                        <td>[[ userStats.suggestions_accepted ]]</td>
+                                                        <td>[[ userStats.rules_owned ]]</td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                            <tbody v-else>
+                                                <tr>
+                                                    <td colspan="5" class="text-center p-4"
+                                                        style="color: var(--subtle-text-color);">
+                                                        <i class="fas fa-spinner fa-spin me-2"></i> Loading or no
+                                                        contributors
+                                                        found.
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <template v-else>
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-3">Updating leaderboard...</p>
+                            </div>
+                        </template>
+
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="card shadow h-100">
+                            <div class="card-header bg-success">
+                                <h5 class="mb-0"><i class="fas fa-check-double me-2"></i> Quality Masters (Accepted
+                                    Suggestions)
+                                    <i class="fas fa-question-circle text-dark ms-1"
+                                        title="Ranking by the total number of suggestions accepted by moderators. This reflects quality and attention to detail."></i>
+                                </h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover mb-0"
+                                        style="color: var(--text-color);">
+                                        <thead>
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>User</th>
+                                                <th title="Total number of accepted suggestions.">Count <i
+                                                        class="fas fa-question-circle text-info ms-1"></i></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody v-if="topSuggestions.length">
+                                            <tr v-for="(contributor, index) in topSuggestions"
+                                                :key="contributor.user_id" @click="goToProfile(contributor.user_id)"
+                                                style="cursor: pointer;"
+                                                :class="{ 'table-active-user': contributor.user_id == currentUserId }"
+                                                :title="contributor.user_id == currentUserId ? 'This is your rank in this category.' : 'View profile'">
+                                                <td>[[ index + 1 ]]</td>
+                                                <td>
+                                                    <span class="text-decoration-none text-primary"
+                                                        style="color: var(--text-color) !important;">
+                                                        [[ contributor.first_name ]] [[ contributor.last_name ]].
+                                                        <span v-if="contributor.user_id == currentUserId"
+                                                            class="badge bg-primary ms-1">You</span>
+                                                    </span>
+                                                </td>
+                                                <td>[[ contributor.suggestions_accepted ]]</td>
+                                            </tr>
+                                        </tbody>
+                                        <tbody v-else>
+                                            <tr>
+                                                <td colspan="3" class="text-center"
+                                                    style="color: var(--subtle-text-color);">Loading...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="card shadow h-100">
+                            <div class="card-header bg-info">
+                                <h5 class="mb-0"><i class="fas fa-star me-2"></i> Popularity Leaders (Popular Score)
+                                    <i class="fas fa-question-circle text-dark ms-1"
+                                        title="Ranking by the 'Popular Score' of rules owned by the contributor (based on upvotes/downvotes)."></i>
+                                </h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover mb-0"
+                                        style="color: var(--text-color);">
+                                        <thead>
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>User</th>
+                                                <th title="Combined popularity score of all rules owned.">Score <i
+                                                        class="fas fa-question-circle text-info ms-1"></i></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody v-if="topPopularity.length">
+                                            <tr v-for="(contributor, index) in topPopularity" :key="contributor.user_id"
+                                                @click="goToProfile(contributor.user_id)" style="cursor: pointer;"
+                                                :class="{ 'table-active-user': contributor.user_id == currentUserId }"
+                                                :title="contributor.user_id == currentUserId ? 'This is your rank in this category.' : 'View profile'">
+                                                <td>[[ index + 1 ]]</td>
+                                                <td>
+                                                    <span class="text-decoration-none text-primary"
+                                                        style="color:var(--text-color)">
+                                                        [[ contributor.first_name ]] [[ contributor.last_name ]].
+                                                        <span v-if="contributor.user_id == currentUserId"
+                                                            class="badge bg-primary ms-1">You</span>
+                                                    </span>
+                                                </td>
+                                                <td>[[ contributor.rules_popular_score.toLocaleString() ]]</td>
+                                            </tr>
+                                        </tbody>
+                                        <tbody v-else>
+                                            <tr>
+                                                <td colspan="3" class="text-center"
+                                                    style="color: var(--subtle-text-color);">Loading...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
+            <div class="card shadow border-0 p-4">
+                <div v-if="userStats.total_points !== undefined" class="row">
+                    <div class="col-lg-5 mb-4">
+                        <div class="card shadow h-100">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i> My Core Stats (Level [[
+                                    userStats.current_level ]])
+                                    <i class="fas fa-question-circle text-dark ms-1"
+                                        title="Your current contribution level. Earn points to reach the next one!"></i>
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="h3 fw-bold text-success mb-3 text-center">
+                                    [[ userStats.total_points.toLocaleString() ]] Total Points
+                                </p>
+                                <hr>
+                                <ul class="list-unstyled fw-medium">
+                                    <li class="d-flex justify-content-between mb-2"
+                                        title="Your overall ranking among all contributors.">
+                                        <span><i class="fas fa-globe-americas me-2"></i> Global Rank</span>
+                                        <span class="badge bg-primary" style="font-size: large;"># [[
+                                            userStats.global_rank ||
+                                            'N/A' ]]</span>
+                                    </li>
+                                    <li class="d-flex justify-content-between mb-2"
+                                        title="Number of suggestions you submitted that were approved by moderators.">
+                                        <span><i class="fas fa-check-circle text-success me-2"></i> Accepted
+                                            Suggestions</span>
+                                        <span class="badge bg-success">[[ userStats.suggestions_accepted ]]</span>
+                                    </li>
+                                    <li class="d-flex justify-content-between mb-2"
+                                        title="Number of rules you are currently designated as the owner/maintainer of.">
+                                        <span><i class="fas fa-cloud-upload-alt text-info me-2"></i> Rules
+                                            Imported</span>
+                                        <span class="badge bg-info">[[ userStats.rules_owned ]]</span>
+                                    </li>
+                                    <li class="d-flex justify-content-between mb-2"
+                                        title="Streak count of consecutive days where you made at least one contribution.">
+                                        <span><i class="fas fa-fire-alt text-warning me-2"></i> Consecutive Days
+                                            Active</span>
+                                        <span class="badge bg-warning text-dark">[[ userStats.consecutive_days_active
+                                            ]]</span>
+                                    </li>
+                                    <li class="d-flex justify-content-between mb-2"
+                                        title="Total number of rules you have upvoted/liked.">
+                                        <span><i class="fas fa-heart text-danger me-2"></i> Rules Liked (Voted)</span>
+                                        <span class="badge bg-danger">[[ userStats.rules_liked ]]</span>
+                                    </li>
+                                    <li class="d-flex justify-content-between mb-2"
+                                        title="The accumulated 'Popular Score' of all rules you own.">
+                                        <span><i class="fas fa-star text-primary me-2"></i> Rules Popular Score</span>
+                                        <span class="badge bg-primary">[[ userStats.rules_popular_score.toLocaleString()
+                                            ]]</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="card-footer text-center">
+                                <div class="progress" role="progressbar" aria-label="Level Progress"
+                                    :aria-valuenow="progressPercentage" aria-valuemin="0" aria-valuemax="100"
+                                    style="height: 20px;">
+                                    <div class="progress-bar bg-success" :style="{ width: progressPercentage + '%' }">
+                                        Level [[ userStats.current_level ]] Progress
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-2 d-block">Next level (L[[ nextLevelThreshold.level ]]): [[
+                                    nextLevelThreshold.points.toLocaleString() ]] points</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-7 mb-4">
+                        <div class="card shadow h-100">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0"><i class="fas fa-award me-2"></i> My Earned Badges ([[
+                                    computedBadges.length ]])
+                                    <i class="fas fa-question-circle text-dark ms-1"
+                                        title="Badges are automatically awarded based on your points and contribution metrics."></i>
+                                </h5>
+                            </div>
+                            <div class="card-body d-flex flex-wrap align-content-start">
+                                <div v-if="computedBadges.length > 0">
+                                    <span class="badge rounded-pill me-2 mb-2 p-2 badge-custom"
+                                        :class="getBadgeClass(badge.name)" v-for="badge in computedBadges"
+                                        :key="badge.name" :title="badge.description">
+                                        <i :class="getBadgeIcon(badge.name) + ' me-1'"></i>
+                                        [[ badge.name ]]
+                                    </span>
+                                </div>
+                                <p v-else class="text-muted m-auto">You haven't earned any badges yet. Start
+                                    contributing!
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else class="text-center p-5" style="color: var(--subtle-text-color);">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i> Loading user stats...
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
+            <div class="card shadow border-0 p-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold ">
+                            <i class="fa-solid fa-fire me-2"></i> Popular Security Rules
+                        </h5>
+                        <span class="badge rounded-pill bg-light text-dark border">
+                            [[ popularRules.length ]] Rules Found
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0" style="color: var(--text-color);">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" class="ps-4">Rule Title</th>
+                                    <th scope="col">Author</th>
+                                    <th scope="col" class="text-center">Format</th>
+                                    <th scope="col">Creation Date</th>
+                                    <th scope="col" class="text-end pe-4">Like / Dislike</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="rule in popularRules" :key="rule.id" @click="goToRule(rule.id)"
+                                    style="cursor: pointer;">
+
+                                    <td class="ps-4">
+                                        <div class="fw-bold text-dark text-primary-hover">[[ rule.title ]]</div>
+                                        <small class="text-muted d-block text-truncate" style="max-width: 300px;">
+                                            [[ rule.description ]]
+                                        </small>
+                                    </td>
+
+                                    <td>
+                                        <span class="text-secondary">
+                                            <i class="fa-regular fa-user me-1 small"></i> [[ rule.author ]]
+                                        </span>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <span class="badge bg-primary">
+                                            [[ rule.format.toUpperCase() ]]
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <small class="text-muted">[[ rule.creation_date ]]</small>
+                                    </td>
+
+                                    <td class="text-end pe-4">
+                                        <div class="d-flex justify-content-end align-items-center">
+                                            <span class="badge bg-light text-success border me-2">
+                                                <i class="fas fa-thumbs-up me-1"></i> [[ rule.vote_up ]]
+                                            </span>
+                                            <span class="badge bg-light text-danger border">
+                                                <i class="fas fa-thumbs-down me-1"></i> [[ rule.vote_down ]]
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr v-if="popularRules.length === 0">
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="fa-solid fa-folder-open fa-2x mb-3 d-block"></i>
+                                        No popular rules found at the moment.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, computed, onMounted } = Vue
+    import { display_toast, message_list, create_message } from '/static/js/toaster.js'
+
+    // --- CONSTANTS ---
+    const LEVEL_THRESHOLDS = {
+        1: 0, 2: 500, 3: 15000, 4: 30000, 5: 50000, 10: 150000, 20: 300000, 100: 1500000
+    }
+
+    const BADGE_POINTS = {
+        'Bronze Contributor': 1000,
+        'Silver Contributor': 10000,
+        'Gold Contributor': 50000,
+        'Curator Rookie': { metric: 'suggestions_accepted', min: 5 },
+        'Quality Master': { metric: 'suggestions_accepted', min: 25 },
+    }
+
+    const getBadgeClass = (badgeName) => {
+        if (badgeName.includes('Master')) return 'bg-danger text-white border border-light'
+        if (badgeName.includes('Gold')) return 'bg-warning text-dark border border-dark' // Mieux que 'bg-primary'
+        if (badgeName.includes('Silver')) return 'bg-secondary text-white border border-light'
+        if (badgeName.includes('Bronze')) return 'bg-bronze text-white border border-dark'
+        if (badgeName.includes('Curator')) return 'bg-info text-white'
+        if (badgeName.includes('Quality')) return 'bg-success text-white'
+        return 'bg-dark text-white'
+    }
+
+    const getBadgeIcon = (badgeName) => {
+        if (badgeName.includes('Contributor')) return 'fas fa-star' // Étoile pour les badges de points
+        if (badgeName.includes('Master')) return 'fas fa-brain' // Cerveau pour la maîtrise
+        if (badgeName.includes('Curator')) return 'fas fa-glasses' // Lunettes pour le curateur
+        if (badgeName.includes('Quality')) return 'fas fa-cogs' // Engrenages pour la qualité
+        return 'fas fa-certificate' // Icône par défaut
+    }
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            // --- STATE MANAGEMENT (REACTIVE DATA) ---
+            const topContributors = ref([])
+            const topSuggestions = ref([])
+            const topPopularity = ref([])
+            const perPage = ref(10)
+
+            // NOTE: current_user.id must be exposed by the backend via Jinja/Flask context
+            const currentUserId = " {{ current_user.id|default('null') }} "
+
+            const userStats = ref({
+                total_points: undefined,
+                current_level: 1,
+                suggestions_accepted: 0,
+                rules_owned: 0,
+                rules_popular_score: 0,
+                rules_liked: 0,
+                consecutive_days_active: 0,
+                global_rank: null, // Expected from updated my_contributions endpoint
+            })
+
+            //////////////////////////////
+            //  Fetch populars rules    //
+            //////////////////////////////
+
+            const popularRules = ref([])
+            async function fetchPopularRules() {
+                const res = await fetch('/rule/get_popular_rules')
+                const data = await res.json()
+                if (res.ok) {
+                    popularRules.value = data.rules
+                }
+            }
+            fetchPopularRules()
+
+            function goToRule(ruleId) {
+                window.location.href = '/rule/detail_rule/' + ruleId
+            }
+
+
+            // have Date object (only day years monther hour)
+            const currentDate = ref(new Date())
+            const is_running = ref(false)
+
+            async function refreshData(action) {
+                is_running.value = true
+                const params = new URLSearchParams()
+                params.append('action', action)
+
+                const url = '/account/refresh?' + params.toString()
+                const res = await fetch(url)
+                currentDate.value = new Date()
+                if (res.ok) {
+                    if (action == 'global') {
+                        await fetchGlobalLeaderboard()
+                    } else {
+                        await fetchMyContributions()
+                    }
+                }
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+                is_running.value = false
+
+            }
+
+
+            // --- METHODS (API CALLS & NAVIGATION) ---
+            const goToProfile = (userId) => {
+                window.location.href = `/account/detail_user/${userId}`; // Adjusted for standard profile routing
+            };
+
+            const fetchLeaderboard = async (endpoint, sortKey = null, perPageCount = null) => {
+                const params = new URLSearchParams()
+                if (sortKey) {
+                    params.append('sort_by', sortKey)
+                }
+                if (perPageCount) {
+                    params.append('per_page', perPageCount)
+                }
+
+                try {
+                    const url = endpoint + '?' + params.toString()
+                    const res = await fetch(url)
+
+                    if (!res.ok) {
+                        throw new Error(`Failed to fetch leaderboard: ${res.statusText}`)
+                    }
+                    const data = await res.json()
+                    return data.leaderboard || data
+
+                } catch (error) {
+                    console.error("API Fetch Error:", error)
+                    display_toast('Error fetching leaderboard data.', 'danger')
+                    return []
+                }
+            }
+
+            const fetchGlobalLeaderboard = async () => {
+                const globalData = await fetchLeaderboard('/account/leaderboard/global', null, perPage.value)
+                if (globalData.leaderboard) {
+                    topContributors.value = globalData.leaderboard
+                } else {
+                    topContributors.value = globalData
+                }
+            }
+
+            const fetchCategoryLeaderboards = async () => {
+                topSuggestions.value = await fetchLeaderboard('/account/leaderboard/category', 'suggestions_accepted')
+                topPopularity.value = await fetchLeaderboard('/account/leaderboard/category', 'rules_popular_score')
+            }
+
+            const fetchMyContributions = async () => {
+                try {
+                    const res = await fetch('/account/my_contributions')
+
+                    if (!res.ok) {
+                        console.error('Failed to fetch user contributions:', res.statusText)
+                        return
+                    }
+
+                    const data = await res.json()
+
+                    // User stats now includes global_rank from the backend
+                    userStats.value = data.user_stats
+
+                } catch (error) {
+                    console.error("API Fetch Error (My Stats):", error)
+                    display_toast('Error fetching your contribution data.', 'danger')
+                }
+            }
+
+
+            // --- COMPUTED PROPERTIES ---
+
+            const computedBadges = computed(() => {
+                if (userStats.value.total_points === undefined) return []
+
+                const badges = []
+                const stats = userStats.value
+
+                for (const [badgeName, threshold] of Object.entries(BADGE_POINTS)) {
+                    if (typeof threshold === 'number') {
+                        // Badge based on total points
+                        if (stats.total_points >= threshold) {
+                            badges.push({
+                                name: badgeName,
+                                description: `Awarded for reaching ${threshold.toLocaleString()} total points.`
+                            })
+                        }
+                    } else if (typeof threshold === 'object' && threshold.metric) {
+                        // Badge based on another metric
+                        const value = stats[threshold.metric] || 0
+                        if (value >= threshold.min) {
+                            badges.push({
+                                name: badgeName,
+                                description: `Awarded for having ${threshold.min} or more accepted suggestions.`
+                            })
+                        }
+                    }
+                }
+
+                // Example badge based on level 
+                if (stats.current_level >= 5) {
+                    badges.push({
+                        name: 'Veteran Contributor',
+                        description: 'Achieved level 5 or higher.'
+                    })
+                }
+
+                return badges.sort((a, b) => a.name.localeCompare(b.name))
+            })
+
+            const nextLevelThreshold = computed(() => {
+                const currentLevel = userStats.value.current_level
+                const sortedLevels = Object.keys(LEVEL_THRESHOLDS).map(Number).sort((a, b) => a - b)
+
+                const nextLevelIndex = sortedLevels.findIndex(lvl => lvl > currentLevel)
+
+                if (nextLevelIndex !== -1) {
+                    const nextLevel = sortedLevels[nextLevelIndex]
+                    return {
+                        level: nextLevel,
+                        points: LEVEL_THRESHOLDS[nextLevel]
+                    }
+                }
+
+                return { level: currentLevel, points: userStats.value.total_points || 0 }
+            })
+
+            const progressPercentage = computed(() => {
+                const currentPoints = userStats.value.total_points
+                const currentLevel = userStats.value.current_level
+
+                if (currentPoints === undefined) return 0
+
+                const previousLevelPoints = LEVEL_THRESHOLDS[currentLevel] || 0
+                const nextLevelPoints = nextLevelThreshold.value.points
+
+                if (nextLevelPoints === currentPoints && nextLevelThreshold.value.level === currentLevel) {
+                    return 100
+                }
+
+                const levelSpan = nextLevelPoints - previousLevelPoints
+                const pointsInLevel = currentPoints - previousLevelPoints
+
+                if (levelSpan <= 0) return 0
+
+                return Math.min(100, (pointsInLevel / levelSpan) * 100).toFixed(2)
+            })
+
+            // --- LIFECYCLE HOOK ---
+            onMounted(async () => {
+                await fetchMyContributions()
+
+                // Fetch leaderboards
+                await fetchGlobalLeaderboard()
+                await fetchCategoryLeaderboards()
+            })
+
+            // --- EXPOSURE TO TEMPLATE ---
+            return {
+                message_list,
+                // Data
+                topContributors,
+                topSuggestions,
+                topPopularity,
+                userStats,
+                perPage,
+                currentUserId, // Exposed for conditional styling
+                // Methods
+                getBadgeClass,
+                goToProfile,
+                fetchGlobalLeaderboard, // Exposed to update on perPage change
+                // Computed
+                computedBadges,
+                nextLevelThreshold,
+                progressPercentage,
+                refreshData,
+                currentDate,
+                getBadgeIcon,
+                is_running,
+                popularRules,
+                goToRule
+            }
+        }
+    }).mount('#main-container')
+</script>
+
+{% endblock %}

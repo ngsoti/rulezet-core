@@ -227,3 +227,90 @@ def remove_rule_favorite() -> jsonify:
     return jsonify({"success": False, "message": "Access denied"}), 403
 
 
+#####################
+#    contributor    #
+#####################
+@account_blueprint.route("/contributor")
+@login_required
+def contributor() -> str: 
+    """Contributor page"""
+    return render_template("account/contributor.html")
+
+
+@account_blueprint.route('/leaderboard/global', methods=['GET'])
+def get_global_leaderboard():
+    """Recup the global leaderboard"""
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+   
+    pagination_data = AccountModel.get_global_leaderboard_paginated(
+        page=page, 
+        per_page=per_page
+    )
+   
+        
+    return jsonify(pagination_data)
+
+
+@account_blueprint.route('/leaderboard/category', methods=['GET'])
+def get_category_leaderboard():
+    """Recup the category leaderboard"""
+    
+    sort_by = request.args.get('sort_by', 'suggestions_accepted', type=str)
+    per_page = request.args.get('per_page', 5, type=int)
+    
+    if sort_by not in ['suggestions_accepted', 'rules_popular_score']:
+        return jsonify({"error": "Invalid sort_by parameter"}), 400
+
+   
+    leaderboard_data = AccountModel.get_category_leaderboard(
+        sort_by=sort_by,
+        per_page=per_page
+    )
+    
+    
+    return jsonify({
+        "leaderboard": leaderboard_data
+    })
+
+
+@account_blueprint.route('/my_contributions', methods=['GET'])
+@login_required
+def get_my_contributions():
+    """Recup the my contributions"""
+    
+    user_id = current_user.id
+    
+   
+    data = AccountModel.get_user_contributions_data(user_id=user_id)
+    
+    if not data or not data.get('user_stats'):
+        # create the user_stats if it doesn't exist
+        success = AccountModel.get_or_create_gamification_profile(user_id=user_id)
+        if not success:
+            return jsonify({"error": "Failed to create user_stats"}), 500
+        data = AccountModel.get_user_contributions_data(user_id=user_id)
+    
+  
+    return jsonify(data)
+
+#refresh
+@account_blueprint.route('/refresh', methods=['GET'])
+@login_required
+def refresh():
+    """Recup the my contributions"""
+    action = request.args.get('action')
+
+    success = AccountModel.refreshData(action)
+    if not success:
+        return jsonify({"message": "Failed to refresh data", "success": False , "toast_class" : "danger-subtle"}), 500
+    
+    # update the user with the reel value like If someone has already like or propose an edit 
+    success_ = AccountModel.update_gamification_profiles()
+    if not success_:
+        return jsonify({"message": "Error to update the gameifcation section", "success": False , "toast_class" : "danger-subtle"}), 500
+
+
+    return jsonify({"message": "Data refreshed", "success": True , "toast_class" : "success-subtle"}), 200
