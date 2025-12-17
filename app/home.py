@@ -328,3 +328,7 @@ def update_request_status() -> jsonify:
         return jsonify({"success": False}), 500
 
 
+# about us page
+@home_blueprint.route("/about")
+def about() -> render_template:
+    return render_template("/about_us.html")

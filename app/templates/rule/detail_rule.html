@@ -94,15 +94,15 @@
                                 </i>
                             </a>
                             {% endif %}
+                            {% if current_user.id == rule.user_id or current_user.is_admin() %}
+                            <span class="text-success m-2" title="You are the owner of this rule">
+                                <i class="fa-solid fa-flag"></i>
+                            </span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
                 <div class=" m-1">
-                    {% if current_user.id == rule.user_id or current_user.is_admin() %}
-                    <span class="text-success m-2" title="You are the owner of this rule">
-                        <i class="fa-solid fa-flag"></i>
-                    </span>
-                    {% endif %}
                     <span v-if="currentRule.cve_id && currentRule.cve_id !== 'None'"
                         class="d-inline-flex flex-wrap align-items-center">
                         <a v-for="(cve, index) in parsedCVE(currentRule.cve_id)" :key="index"
@@ -357,8 +357,9 @@
                     <h5 class="mb-0"><i class="fa-solid fa-users-gear me-2 "></i>Contributors to Rule
                 </div>
 
-                <div v-if="contributor_list.length === 0" class="alert alert-info">
-                    <i class="fa fa-info-circle me-1"></i> No contributors found for this rule.
+                <div v-if="contributor_list.length === 0" class="p-2">
+                    <p><i class="fa fa-info-circle me-1"></i> No contributors found for this rule.</p>
+
                 </div>
 
                 <div v-else class="row row-cols-1 row-cols-md-2 g-3">
@@ -389,9 +390,10 @@
                     <h5 class="mb-0"><i class="fa-solid fa-clipboard-list me-2 "></i> Part of Bundle
                 </div>
 
-                <div v-if="bundleListRule.length === 0" class="alert alert-info d-flex align-items-center">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <div>No bundle is associated with this rule.</div>
+
+                <div v-if="bundleListRule.length === 0" class="p-2">
+                    <p><i class="fa fa-info-circle me-1"></i> No bundles found for this rule.</p>
+
                 </div>
 
                 <div v-else class="row row-cols-1 row-cols-md-2 g-4">

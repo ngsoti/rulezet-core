@@ -138,40 +138,62 @@
         </div>
         <footer class="bg-dark text-white py-4 mt-auto border-top border-secondary shadow-lg">
             <div class="container">
-                <div class="row align-items-center justify-content-between">
+                <div class="row align-items-center">
 
-                    <!-- Logo / Version -->
                     <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
-                        <small class="fw-bold text-uppercase">
-                            <span class="text-primary">Rulezet</span> <span class="badge bg-secondary ms-1">v1.1</span>
-                        </small>
+                        <div class="d-flex align-items-center justify-content-center justify-content-md-start">
+                            <small class="fw-bold text-uppercase tracking-wider">
+                                <span class="text-primary">Rulezet</span>
+                                <span class="badge bg-secondary ms-1">v1.1</span>
+                            </small>
+                        </div>
                     </div>
 
+                    <div class="col-md-4 text-center mb-3 mb-md-0">
+                        <ul class="list-inline mb-0">
+                            <li class="list-inline-item px-2">
+                                <a href="/about"
+                                    class="text-decoration-none text-light opacity-75 hover-opacity-100 small fw-semibold">
+                                    <i class="fa-solid fa-circle-info me-1"></i> About Us
+                                </a>
+                            </li>
+                            <li class="list-inline-item px-2">
+                                <a href="https://github.com/ngsoti/rulezet-core/issues/new" target="_blank"
+                                    class="text-decoration-none text-light opacity-75 hover-opacity-100 small fw-semibold">
+                                    <i class="fa-solid fa-envelope me-1"></i> Contact
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
 
-                    <!-- Theme toggle -->
-                    <div class="col-md-4 text-center text-md-end mb-3 mb-md-0">
-                        <button id="toggle-theme" class="btn btn-outline-light rounded-circle" title="Toggle theme">
-                            <i id="theme-icon" class="fas fa-sun"></i>
-                        </button>
+                    <div class="col-md-4 text-center text-md-end">
+                        <div class="d-flex align-items-center justify-content-center justify-content-md-end gap-2">
+                            <a href="https://github.com/ngsoti/rulezet-core.git" target="_blank"
+                                class="btn btn-outline-light rounded-circle btn-sm d-flex align-items-center justify-content-center"
+                                style="width: 32px; height: 32px;" title="GitHub Source">
+                                <i class="fa-brands fa-github"></i>
+                            </a>
+                            <button id="toggle-theme"
+                                class="btn btn-outline-light rounded-circle btn-sm d-flex align-items-center justify-content-center"
+                                style="width: 32px; height: 32px;" title="Toggle theme">
+                                <i id="theme-icon" class="fas fa-sun"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Divider -->
-                <hr class="border-secondary my-3">
+                <hr class="border-secondary my-3 opacity-25">
 
-                <!-- Footer bottom -->
-                <div class="row justify-content-center">
-                    <div class="col-auto d-flex align-items-center gap-3">
-                        <small class="text-muted mb-0">&copy; 2025 <strong>RULEZET</strong>. All rights
-                            reserved.</small>
-                        <a href="https://github.com/ngsoti/rulezet-core.git" target="_blank"
-                            class="btn btn-outline-light d-flex align-items-center btn-sm px-3">
-                            <i class="fa-brands fa-github"></i>
-                        </a>
+                <div class="row">
+                    <div class="col-12 text-center">
+                        <small class="text-muted mb-0">
+                            &copy; 2025 <span class="text-light fw-bold">RULEZET</span>. Built for security researchers.
+                        </small>
                     </div>
                 </div>
             </div>
         </footer>
+
 
     </div>
 

@@ -259,7 +259,9 @@ def vote_rule() -> jsonify:
 
         return jsonify({
             'vote_up': rule.vote_up,
-            'vote_down': rule.vote_down
+            'vote_down': rule.vote_down,
+            'message': 'Vote updated successfully',
+            'toast_class': 'success-subtle'
         }), 200
     return jsonify({"message": "Rule not found"}), 404
 
@@ -2343,3 +2345,18 @@ def add_new_rule():
 def get_popular_rules():
     popular_rules = RuleModel.get_popular_rules()
     return jsonify({"success": True, "rules": [rule.to_json() for rule in popular_rules]}), 200
+
+
+# get_total_rules
+
+@rule_blueprint.route('/get_total_rules', methods=['GET'])
+def get_total_rules():
+    total_rules = RuleModel.get_total_rules()
+    return jsonify({"success": True, "total_rules": total_rules}), 200
+
+# get_total_formats
+
+@rule_blueprint.route('/get_total_formats', methods=['GET'])
+def get_total_formats():
+    total_formats = RuleModel.get_total_formats()
+    return jsonify({"success": True, "total_formats": total_formats}), 200

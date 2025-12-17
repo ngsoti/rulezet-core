@@ -706,3 +706,7 @@ def update_gamification_profiles():
             return False
 
     return True
+
+
+def get_total_users():
+    return User.query.count()

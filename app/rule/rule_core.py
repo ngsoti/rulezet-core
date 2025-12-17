@@ -382,7 +382,7 @@ def get_rule_user_id(rule_id: int) -> int:
         return rule.user_id  
     return None  
 
-def get_last_rules_from_db(limit=10) -> Rule:
+def get_last_rules_from_db(limit=12) -> Rule:
     """Get last 10 rules"""
     return Rule.query.order_by(
         case(
@@ -2077,3 +2077,9 @@ def verify_rule_syntaxe(rule: Any , new_content) -> Optional[ValidationResult]:
 def get_popular_rules():
     """ Get the ten most popular rules thankt to the like and dislike """
     return Rule.query.order_by(Rule.vote_up.desc(), Rule.vote_down.desc()).limit(10).all()
+
+def get_total_rules():
+    return Rule.query.count()
+
+def get_total_formats():
+    return Rule.query.distinct(Rule.format).count()

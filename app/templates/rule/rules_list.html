@@ -260,7 +260,7 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, computed } = Vue
+    const { createApp, ref, computed, onMounted } = Vue
     import { display_toast, message_list, create_message } from '/static/js/toaster.js'
 
 
@@ -302,6 +302,17 @@
             const sortBy = ref('newest')
             const ruleType = ref("");
             const current_user_is_connected = ref(false)
+
+            onMounted(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const typeFromUrl = urlParams.get('type');
+
+                if (typeFromUrl) {
+                    ruleType.value = typeFromUrl;
+                }
+
+                fetchRules(1);
+            });
 
             /**
                  *          ####################

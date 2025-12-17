@@ -1,0 +1,528 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5" id="container">
+    <div class="row">
+        <div class="col-lg-2 mb-4">
+            <div class="sticky-top" style="top: 2rem;">
+                <h5 class="fw-bold mb-3 text-uppercase small tracking-wide text-dark">
+                    <i class="fa-solid fa-list-ul me-2 text-primary"></i> On this page
+                </h5>
+                <nav id="about-nav" class="nav flex-column nav-pills small border-start ps-3">
+                    <a class="nav-link py-2 text-secondary" href="#overview">Project Overview</a>
+                    <a class="nav-link py-2 text-secondary" href="#stats">Live Statistics</a>
+                    <a class="nav-link py-2 text-secondary" href="#workflow">The Rulezet Workflow</a>
+                    <a class="nav-link py-2 text-secondary" href="#capabilities">User Capabilities</a>
+                    <a class="nav-link py-2 text-secondary" href="#formats">Detection Formats</a>
+                    <a class="nav-link py-2 text-secondary" href="#governance">Governance & Security</a>
+                    <a class="nav-link py-2 text-secondary" href="#roadmap">Project Origins & Vision</a>
+                </nav>
+            </div>
+        </div>
+
+        <div class="col-lg-10">
+            <section id="overview" class="mb-5">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-primary bg-opacity-10 p-3 rounded-4 me-3">
+                        <i class="fa-solid fa-rocket fa-2x text-primary"></i>
+                    </div>
+                    <div>
+                        <h1 class="h2 fw-bold text-dark mb-0">Project Overview</h1>
+                        <p class="text-muted mb-0">Bridging the gap between raw signatures and actionable intelligence.
+                        </p>
+                    </div>
+                </div>
+                <p class="text-secondary leading-relaxed">
+                    Rulezet is an advanced Open Source platform built for <strong>Detection Engineers</strong> and
+                    <strong>SOC Analysts</strong>.
+                    In a world where security signatures are siloed across thousands of Git repositories, Rulezet acts
+                    as a
+                    centralized broker that imports, normalizes, and validates rules automatically.
+                </p>
+            </section>
+
+            <section id="stats" class="mb-5 pt-3">
+                <h3 class="fw-bold h5 mb-4 border-start border-primary border-4 ps-3">Platform at a Glance</h3>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded-4 text-center  shadow-sm hover-up">
+                            <div class="h4 fw-bold text-primary mb-0">[[ totalRules ]]</div>
+                            <div class="x-small text-uppercase text-muted fw-bold">Rules</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded-4 text-center  shadow-sm hover-up">
+                            <div class="h4 fw-bold text-success mb-0">[[ contributors ]]</div>
+                            <div class="x-small text-uppercase text-muted fw-bold">Members</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded-4 text-center  shadow-sm hover-up">
+                            <div class="h4 fw-bold text-info mb-0">[[ formatsCount ]]</div>
+                            <div class="x-small text-uppercase text-muted fw-bold">Formats</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <section id="workflow" class="mb-5 pt-3">
+                <h3 class="fw-bold h5 mb-4 border-start border-primary border-4 ps-3">The Rule Lifecycle</h3>
+                <div class="row g-0 ps-3 border-start border-2 ms-2">
+
+                    <div class="col-12 mb-4 position-relative">
+                        <span
+                            class="position-absolute top-0 start-0 translate-middle bg-primary border border-light rounded-circle p-1"
+                            style="margin-left: -11px;"></span>
+                        <h6 class="fw-bold text-primary">01. Multi-Source Ingestion</h6>
+                        <p class="small text-muted mb-1">
+                            Rules can enter the ecosystem through three primary channels:
+                        </p>
+                        <ul class="small text-muted">
+                            <li><strong>Manual Creation:</strong> Use our built-in editor to write rules from scratch.
+                            </li>
+                            <li><strong>Admin Imports:</strong> Administrators can bulk-import rules via file uploads or
+                                by parsing raw strings.</li>
+                            <li><strong>GitHub Integration:</strong> Automated synchronization with remote repositories
+                                (Admin only).</li>
+                        </ul>
+                    </div>
+
+                    <div class="col-12 mb-4 position-relative">
+                        <span
+                            class="position-absolute top-0 start-0 translate-middle bg-primary border border-light rounded-circle p-1"
+                            style="margin-left: -11px;"></span>
+                        <h6 class="fw-bold text-primary">02. Integrity & Syntax Verification</h6>
+                        <p class="small text-muted">
+                            Every rule undergoes a rigorous <strong>compilation check</strong>. Our backend validates
+                            the syntax (YARA, SIGMA, etc.) to ensure that only 100% functional and "compilable" rules
+                            are added to the database, preventing broken deployments in your security stack.
+                        </p>
+                    </div>
+
+
+                    <div class="col-12 position-relative">
+                        <span
+                            class="position-absolute top-0 start-0 translate-middle bg-primary border border-light rounded-circle p-1"
+                            style="margin-left: -11px;"></span>
+                        <h6 class="fw-bold text-primary">03. Persistence & Evolution</h6>
+                        <p class="small text-muted">
+                            Once added to Rulezet, the rule enters a managed state:
+                        </p>
+                        <ul class="small text-muted">
+                            <li><strong>Pull Requests:</strong> Propose modifications to improve detection logic.</li>
+                            <li><strong>Auto-Updates:</strong> Rules linked to GitHub are automatically updated when the
+                                source changes.</li>
+                            <li><strong>Historical Tracking:</strong> We maintain a full version history for every rule,
+                                allowing you to audit changes over time.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="capabilities" class="mb-5 pt-3">
+                <h3 class="fw-bold h5 mb-4 border-start border-primary border-4 ps-3">User Roles & Ecosystem Interaction
+                </h3>
+
+                <p class="text-secondary mb-4">
+                    Rulezet is designed as a collaborative ecosystem where every participant contributes to the
+                    collective defense. Whether you are a casual visitor, a professional threat hunter, or a repository
+                    maintainer, the platform scales its features to meet your specific needs in the detection
+                    engineering lifecycle.
+                </p>
+
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 bg-light p-4 shadow-sm hover-up">
+                            <h6 class="fw-bold text-dark"><i class="fa-solid fa-users me-2 text-primary"></i> Community
+                                Contributors</h6>
+                            <p class="x-small text-muted italic mb-3">"Public engagement and feedback loop."</p>
+                            <ul class="small text-muted ps-3">
+                                <li class="mb-2"><strong>Interactive Feedback:</strong> Any registered user can
+                                    <strong>Like</strong>, <strong>Comment</strong>, or <strong>Upvote</strong> rules to
+                                    signal quality to the rest of the community.
+                                </li>
+                                <li class="mb-2"><strong>Reporting:</strong> Flag "Bad Rules" or report false positives
+                                    to help refine the accuracy of the database.</li>
+                                <li><strong>Propose Changes:</strong> Submit Pull Requests (PRs) to suggest logic
+                                    improvements or update metadata for existing signatures.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div
+                            class="card h-100 border-0 bg-white border-top border-primary border-4 p-4 shadow-sm hover-up">
+                            <h6 class="fw-bold text-dark"><i class="fa-solid fa-microchip me-2 text-primary"></i>
+                                Analysts & Owners</h6>
+                            <p class="x-small text-muted italic mb-3">"Ownership and automated analysis."</p>
+                            <ul class="small text-muted ps-3">
+                                <li class="mb-2"><strong>Rule Ownership:</strong> Become a <strong>Rule Owner</strong>
+                                    or recognized <strong>Contributor</strong>. Owners gain full editing privileges and
+                                    can manage the versioning of their own detection logic.</li>
+                                <li class="mb-2"><strong>API Integration:</strong> Access our robust <strong>REST
+                                        API</strong> to automate rule analysis, fetch raw signatures for CI/CD
+                                    pipelines, or integrate Rulezet directly into your SIEM/EDR.</li>
+                                <li><strong>Bundle Management:</strong> Create and maintain private collections of rules
+                                    tailored for specific deployment environments.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 bg-dark text-white p-4 shadow-sm hover-up">
+                            <h6 class="fw-bold text-info"><i class="fa-solid fa-user-shield me-2"></i> Platform
+                                Administrators</h6>
+                            <p class="x-small text-light opacity-50 italic mb-3">"System integrity and quality control."
+                            </p>
+                            <ul class="small text-light opacity-75 ps-3">
+                                <li class="mb-2"><strong>Repository Sync:</strong> Only Admins can link and synchronize
+                                    external <strong>GitHub Repositories</strong> to maintain the core library.</li>
+                                <li class="mb-2"><strong>Quality Gatekeeping:</strong> Admins review high-impact changes
+                                    and community proposals to ensure the integrity of the detection database.</li>
+                                <li><strong>User Moderation:</strong> Manage permissions, review audit logs, and ensure
+                                    that the platform remains a safe, high-fidelity resource for the industry.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="mt-4 p-3 bg-primary bg-opacity-10 rounded-4">
+                    <p class="small text-primary mb-0">
+                        <i class="fa-solid fa-circle-info me-2"></i>
+                        <strong>Note on Detection Engineering:</strong> While Rulezet encourages open collaboration, the
+                        move from "Contributor" to "Owner" is based on your activity and the quality of your
+                        submissions. This ensures that the most critical detection rules are managed by experts with
+                        proven track records.
+                    </p>
+                </div>
+            </section>
+            <section id="formats" class="mb-5 pt-3">
+                <h3 class="fw-bold h5 mb-4 border-start border-primary border-4 ps-3">Supported Formats</h3>
+                <div class="row g-3">
+                    <div class="col-md-4 col-sm-6" v-for="format in formatsList" :key="format.id"
+                        @click="goToFormat(format.name)">
+                        <div class="p-3 border rounded-4  shadow-sm h-100 hover-up position-relative">
+                            <div class="d-flex align-items-center mb-2">
+                                <div :class="['bg-' + getFormatColor(format.id) + ' bg-opacity-10 rounded-3 p-2 me-3']">
+                                    <i
+                                        :class="[getFormatIcon(format.name), 'fa-lg', 'text-' + getFormatColor(format.id)]"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark">[[ format.name.toUpperCase() ]]</h6>
+                                    <span class="badge bg-light text-dark border x-small">
+                                        [[ format.number_of_rule_with_this_format ]] Rules
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="mt-2 d-flex justify-content-between align-items-center">
+                                <small class="text-muted x-small">
+                                    Added: [[ format.creation_date ? format.creation_date.split(' ')[0] : 'N/A' ]]
+                                </small>
+
+                                <span v-if="format.can_be_execute"
+                                    class="badge rounded-pill bg-success-subtle text-success x-small">
+                                    <i class="fa-solid fa-play me-1"></i> Executable
+                                </span>
+                                <span v-else class="badge rounded-pill bg-light text-muted border x-small">
+                                    <i class="fa-solid fa-eye me-1"></i> Static
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section id="governance" class="mb-5 pt-3">
+                <h3 class="fw-bold h5 mb-4 border-start border-primary border-4 ps-3">Governance, Transparency &
+                    Licensing</h3>
+
+                <div class="card border-0 shadow-sm bg-light rounded-4 overflow-hidden">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="text-start mx-auto" style="max-width: 850px;">
+
+                            <div class="d-flex mb-4">
+                                <div class="me-3 mt-1">
+                                    <i class="fa-solid fa-earth-americas text-primary fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Public Rule Ecosystem</h6>
+                                    <p class="small text-muted mb-0">
+                                        By default, all detection rules indexed in Rulezet are <strong>public</strong>.
+                                        We believe in open security intelligence; however, please be mindful not to
+                                        upload sensitive or proprietary logic not intended for community exposure.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="d-flex mb-4">
+                                <div class="me-3 mt-1">
+                                    <i class="fa-solid fa-certificate text-warning fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Rule Licensing & Legal Compliance</h6>
+                                    <p class="small text-muted mb-0">
+                                        Every rule remains subject to its original <strong>License</strong> (e.g., MIT,
+                                        Apache 2.0). When imported from GitHub, licensing terms are preserved. Users are
+                                        responsible for ensuring compliance when integrating these rules into commercial
+                                        environments.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="d-flex mb-4">
+                                <div class="me-3 mt-1">
+                                    <i class="fa-solid fa-lock text-success fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Private Bundles</h6>
+                                    <p class="small text-muted mb-0">
+                                        While individual rules are public, your <strong>Bundles</strong> (curated
+                                        collections) can be set to <strong>Private</strong>. This allows you to manage
+                                        specific intelligence sets for internal infrastructure without exposing your
+                                        defense strategy.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="d-flex mb-4">
+                                <div class="me-3 mt-1">
+                                    <i class="fa-solid fa-triangle-exclamation text-danger fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">False Positive Management</h6>
+                                    <p class="small text-muted mb-0">
+                                        Automated syntax validation ensures a rule is functional but does not guarantee
+                                        100% detection accuracy. Since logic may trigger <strong>false
+                                            positives</strong>, we strongly recommend using our <strong>Evaluation
+                                            System</strong> (Likes/Comments) to vet rule quality.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="d-flex mb-4">
+                                <div class="me-3 mt-1">
+                                    <i class="fa-solid fa-flag text-dark fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Report & Refine</h6>
+                                    <p class="small text-muted mb-0">
+                                        Users can <strong>Report</strong> any rule that is broken, outdated, or
+                                        malicious. Reports are routed directly to the Admin team, allowing the community
+                                        to help maintain a high-fidelity database.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        <hr class="my-4 opacity-25">
+
+                        <div class="d-flex justify-content-center flex-wrap gap-4">
+                            <div class="small fw-bold text-dark"><i
+                                    class="fa-solid fa-user-check me-1 text-success"></i> RBAC Controlled</div>
+                            <div class="small fw-bold text-dark"><i
+                                    class="fa-solid fa-clock-rotate-left me-1 text-info"></i> Version History</div>
+                            <div class="small fw-bold text-dark"><i class="fa-solid fa-gavel me-1 text-warning"></i>
+                                License Tracking</div>
+                            <div class="small fw-bold text-dark"><i class="fa-solid fa-bug-slash me-1 text-danger"></i>
+                                Community Vetted</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="roadmap" class="mb-5 pt-3">
+                <h3 class="fw-bold h5 mb-4 border-start border-primary border-4 ps-3">Project Origins & Vision</h3>
+
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm bg-white rounded-4 h-100">
+                            <div class="card-body p-4">
+                                <h6 class="fw-bold text-dark mb-3">
+                                    <i class="fa-solid fa-building-columns me-2 text-primary"></i>
+                                    The CRCL Initiative
+                                </h6>
+                                <p class="small text-secondary">
+                                    Rulezet is an initiative led by the <strong>The Computer Incident Response Center
+                                        Luxembourg (CIRCL)</strong>, part of the <strong>LHC </strong>.
+                                    Our mission is to bridge the gap between academic research and operational
+                                    cybersecurity by providing high-performance tools for the global defense community.
+                                </p>
+                                <p class="small text-secondary">
+                                    By centralizing detection logic, we aim to reduce the complexity of threat hunting
+                                    and empower SOC teams with validated, community-vetted intelligence.
+                                </p>
+                                <div class="d-flex gap-2 mt-3">
+                                    <!-- redirect t https://github.com/ngsoti-->
+
+                                    <a href="https://github.com/ngsoti" target="_blank"
+                                        class="badge bg-primary-subtle text-primary border border-primary-subtle">NGSOTI
+                                        project</a>
+                                    <a href="https://circl.lu/" target="_blank" class="badge bg-dark text-white">CRCL
+                                        Project</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-dark text-white rounded-4 h-100">
+                            <div class="card-body p-4 d-flex flex-column justify-content-center">
+                                <h6 class="mb-3 text-light"><i class="fa-solid fa-code-merge me-2 text-white"></i> Open
+                                    Source</h6>
+                                <p class="x-small opacity-75 text-light">
+                                    This project is fully transparent and maintained on GitHub. We operate under the
+                                    <strong>MIT License</strong>, allowing for wide collaboration and integration.
+                                </p>
+                                <hr class="border-secondary opacity-25">
+                                <div class="d-grid gap-2">
+                                    <a href="https://github.com/ngsoti/rulezet-core" target="_blank"
+                                        class="btn btn-outline-light btn-sm rounded-pill">
+                                        <i class="fa-brands fa-github me-2"></i> Source Code
+                                    </a>
+                                    <a href="https://github.com/ngsoti/rulezet-core/blob/main/README.md" target="_blank"
+                                        class="btn btn-link text-info text-decoration-none x-small p-0">
+                                        View more details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 pt-4 border-top">
+                    <div class="d-flex align-items-center bg-light p-3 rounded-4 border-start border-primary border-3"
+                        style="max-width: 500px;">
+                        <div class="me-3">
+                            <div class="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                                style="width: 45px; height: 45px;">
+                                <i class="fa-solid fa-user-graduate text-primary"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="x-small text-muted mb-0">
+                                This project started as an internship initiative and has
+                                since evolved into the core engine of the Rulezet ecosystem.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, onMounted, computed } = Vue;
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            /**
+             * 
+             * Fetch total rules, contributors, formats
+             * 
+             * */
+
+            const totalRules = ref(0);
+            async function fetchRules() {
+                const res = await fetch('/rule/get_total_rules');
+                const data = await res.json()
+                totalRules.value = data.total_rules;
+            }
+
+            const contributors = ref(0);
+            async function fetchContributors() {
+                const res = await fetch('/account/get_total_users');
+                const data = await res.json()
+                contributors.value = data.total_users;
+            }
+
+            const formatsCount = ref(0);
+
+            onMounted(() => {
+                fetchRules();
+                fetchContributors();
+                fetchFormats();
+            });
+
+            /**
+             * 
+             *  Fetch formats
+             * 
+             * */
+
+
+            const formatsList = ref([]);
+            const getFormatColor = (id) => {
+                const colors = ['primary', 'success', 'info', 'warning', 'danger', 'secondary', 'dark'];
+                return colors[id % colors.length]; // Random-like selection based on ID
+            };
+
+            // Function to pick an icon based on Name
+            const getFormatIcon = (name) => {
+                const n = name.toLowerCase();
+                if (n.includes('yara')) return 'fa-solid fa-vial';
+                if (n.includes('sigma')) return 'fa-solid fa-magnifying-glass-chart';
+                if (n.includes('snort') || n.includes('suricata')) return 'fa-solid fa-shield-halved';
+                if (n.includes('crs') || n.includes('waf')) return 'fa-solid fa-gears';
+                return 'fa-solid fa-file-code'; // Default icon
+            };
+
+            async function fetchFormats() {
+                const res = await fetch('/rule/get_rules_formats');
+                const data = await res.json();
+                formatsList.value = data.formats;
+                formatsCount.value = data.formats.length;
+            }
+
+            function goToFormat(name) {
+                // Redirect to the rules list page with the format as a URL parameter
+                window.location.href = `/rule/rules_list?type=${encodeURIComponent(name.toLowerCase())}`;
+            }
+
+
+            return { totalRules, contributors, formatsCount, formatsList, getFormatColor, getFormatIcon, goToFormat };
+        }
+    }).mount('#container');
+</script>
+
+<style>
+    html {
+        scroll-behavior: smooth;
+    }
+
+    .x-small {
+        font-size: 0.65rem;
+    }
+
+    .leading-relaxed {
+        line-height: 1.7;
+    }
+
+    #about-nav .nav-link:hover {
+        background-color: #f8f9fa;
+        color: var(--bs-primary) !important;
+    }
+
+    /* Professional Sidebar Active State */
+    #about-nav .nav-link.active {
+        color: var(--bs-primary) !important;
+        font-weight: bold;
+        background-color: transparent;
+    }
+
+    .hover-up {
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .hover-up:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}

@@ -314,3 +314,12 @@ def refresh():
 
 
     return jsonify({"message": "Data refreshed", "success": True , "toast_class" : "success-subtle"}), 200
+
+# get_total_users
+@account_blueprint.route('/get_total_users', methods=['GET'])
+def get_total_users():
+    total_users = AccountModel.get_total_users()
+    if not total_users:
+        return jsonify({"message": "Failed to get total users", "success": False , "toast_class" : "danger-subtle"}), 500
+
+    return jsonify({"total_users": total_users, "success": True , "toast_class" : "success-subtle"}), 200
