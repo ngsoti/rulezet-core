@@ -108,8 +108,8 @@
                                 <div class="col-md-6">
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fas fa-file-code me-2 text-secondary w-20px"></i>
-                                        <small class="text-muted me-2">Format:</small>
-                                        <span class="badge text-bg-primary"> {{ rule.format }} </span>
+                                        <small class="text-muted me-2">Original UUID:</small>
+                                        <small class="text-break fw-mono"> {{ rule.original_uuid }} </small>
                                     </div>
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fas fa-key me-2 text-secondary w-20px"></i>
@@ -130,15 +130,28 @@
                                     </div>
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fas fa-link me-2 text-secondary w-20px"></i>
-                                        <small class="text-muted me-2">Source:</small>
-                                        <small class="text-truncate">
-                                            {% if rule.source.startswith('http') %}
-                                            <a href="{{ rule.source }}" target="_blank"
-                                                class="text-primary text-decoration-none">External Link</a>
-                                            {% else %}
-                                            {{ rule.source }}
-                                            {% endif %}
-                                        </small>
+                                        <template
+                                            v-if="currentRule.source === None || currentRule.source === 'Unknown' || currentRule.source === '' || currentRule.source === null">
+                                            <small class="text-muted me-2">Source:</small>
+                                            <small class="text-muted">Unknown</small>
+                                            </small>
+                                        </template>
+                                        <template v-else>
+                                            <small class="text-muted me-2">Source:</small>
+                                            <small class="text-truncate">
+                                                <template
+                                                    v-if="currentRule.source && currentRule.source.startsWith('http')">
+                                                    <a :href="currentRule.source" target="_blank"
+                                                        class="text-primary text-decoration-none">
+                                                        [[ currentRule.source ]]
+                                                    </a>
+                                                </template>
+
+                                                <template v-else>
+                                                    [[ currentRule.source ]]
+                                                </template>
+                                            </small>
+                                        </template>
                                     </div>
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-user-edit me-2 text-secondary w-20px"></i>
@@ -151,16 +164,6 @@
                                 </div>
                             </div>
                         </div>
-
-
-
-
-
-
-
-
-
-
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3">
@@ -174,7 +177,7 @@
                                 </button>
                             </div>
 
-                            <div class="border rounded-3 overflow-hidden shadow-sm bg-white">
+                            <div class="border rounded-3 overflow-hidden shadow-sm ">
                                 <ul class="nav nav-tabs nav-fill bg-light border-bottom" id="ruleTabs" role="tablist">
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link active small fw-bold py-2 border-0" id="normal-tab"
@@ -196,15 +199,15 @@
                                 <div class="tab-content" id="ruleTabsContent">
                                     <div class="tab-pane fade show active" id="normal" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 400px; overflow-y: auto; background-color: var(--bg-color);"><code class="javascript">[[ currentRule.to_string ]]</code></pre>
+                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);"><code class="javascript">[[ currentRule.to_string ]]</code></pre>
                                     </div>
                                     <div class="tab-pane fade" id="json" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 400px; overflow-y: auto; background-color: var(--bg-color);;"><code class="json">{{rule_to_json}}</code></pre>
+                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);;"><code class="json">{{rule_to_json}}</code></pre>
                                     </div>
                                     <div class="tab-pane fade" id="misp" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 400px; overflow-y: auto; background-color: var(--bg-color);;"><code class="json">{{rule_misp}}</code></pre>
+                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);;"><code class="json">{{rule_misp}}</code></pre>
                                     </div>
                                 </div>
                             </div>
@@ -221,10 +224,9 @@
                         </div>
 
                         <!-- Actions Card -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto mb-3">
 
-                        <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
-
-                            <div class="btn-group shadow-sm border rounded-pill overflow-hidden bg-white">
+                            <div class="btn-group shadow-sm border rounded-pill overflow-hidden ">
                                 <button @click="vote('up', currentRule.id); animateClick($event)"
                                     class="btn btn-sm px-3 border-0 border-end border-light shadow-none btn-animate home-btn">
                                     <i class="fas fa-thumbs-up text-primary me-1"></i> [[ currentRule.vote_up ]]
@@ -269,7 +271,7 @@
                             <div class="d-flex gap-2 align-items-center">
                                 <button
                                     @click="favorite(currentRule.id); $event.currentTarget.classList.add('star-animate')"
-                                    class="btn btn-sm rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center transition-all home-btn border bg-white"
+                                    class="btn btn-sm rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center transition-all home-btn border"
                                     style="width: 32px; height: 32px;">
                                     <i class="fa-star"
                                         :class="currentRule.is_favorited ? 'fas text-warning' : 'far'"></i>
@@ -277,7 +279,7 @@
 
                                 <div class="dropup">
                                     <button
-                                        class="btn btn-sm rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center home-btn border bg-white"
+                                        class="btn btn-sm rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center home-btn border"
                                         style="width: 32px; height: 32px;" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-v text-muted"></i>
                                     </button>
@@ -305,6 +307,58 @@
                                     </ul>
                                 </div>
                             </div>
+                        </div>
+                        <!-- Contributors Card -->
+                        <div class="mb-4 mt-3">
+                            <template v-if="contributor_list.length > 0">
+                                <div
+                                    class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden border position-relative">
+
+                                    <div class="contributor-watermark">
+                                        <i class="fa-solid fa-users-gear"></i>
+                                    </div>
+
+                                    <div class="card-body p-4 position-relative" style="z-index: 1;">
+                                        <div class="d-flex justify-content-between align-items-center mb-4">
+                                            <h6
+                                                class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3">
+                                                Rule Contributors
+                                            </h6>
+                                            <a :href="'/rule/detail_rule/' + currentRule.id + '#chap2-pane'"
+                                                @click="switchTab('chap2-tab')"
+                                                class="btn btn-xs btn-outline-primary rounded-pill px-3 shadow-sm ">
+                                                <i class="fas fa-plus me-1"></i> Become a contributor
+                                            </a>
+                                        </div>
+
+                                        <div class="d-flex flex-wrap gap-4 justify-content-start">
+                                            <div v-for="contributor in contributor_list" :key="contributor.id">
+                                                <a :href="`/account/detail_user/${contributor.user_id}`"
+                                                    class="text-decoration-none contributor-link"
+                                                    :title="contributor.user_name">
+
+                                                    <div class="d-flex flex-column align-items-center">
+                                                        <div class="avatar-circle d-flex align-items-center justify-content-center text-white fw-bold rounded-circle shadow-sm mb-2"
+                                                            :style="{ 
+                                        width: '48px', 
+                                        height: '48px', 
+                                        fontSize: '1.2rem', 
+                                        backgroundColor: getRandomColor(contributor.user_name || 'System')
+                                    }">
+                                                            [[ (contributor.user_name || '?')[0].toUpperCase() ]]
+                                                        </div>
+
+                                                        <span class="small fw-bold text-dark text-center text-truncate"
+                                                            style="max-width: 85px; font-size: 0.75rem;">
+                                                            [[ contributor.user_name || 'Unknown' ]]
+                                                        </span>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -396,38 +450,7 @@
 
 
 
-            <!-- Contributors Card -->
-            <div class="card shadow-lg  mb-4">
-                <div class="card-header bg-light position-relative">
-                    <h5 class="mb-0"><i class="fa-solid fa-users-gear me-2 "></i>Contributors to Rule
-                </div>
 
-                <div v-if="contributor_list.length === 0" class="p-2">
-                    <p><i class="fa fa-info-circle me-1"></i> No contributors found for this rule.</p>
-
-                </div>
-
-                <div v-else class="row row-cols-1 row-cols-md-2 g-3">
-                    <div class="col" v-for="contributor in contributor_list" :key="contributor.id">
-                        <div class="card shadow-sm border-0">
-                            <div class="card-body d-flex align-items-center">
-                                <i class="fa-solid fa-user-circle fa-2x me-3 text-secondary"></i>
-                                <div>
-                                    <h6 class="card-title mb-1">
-                                        <a :href="`/account/detail_user/${contributor.user_id}`"
-                                            style="text-decoration-line: underline;" title="View more about this user">
-                                            [[ contributor.user_name ]]
-                                        </a>
-                                        <span class="badge bg-success ms-2">
-                                            <i class="fa-solid fa-check"></i> Contributor
-                                        </span>
-                                    </h6>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Bundles Card -->
             <div class="card shadow-sm mb-4 ">
@@ -950,6 +973,14 @@
 
                 create_message(data.message, data.toast_class);
             }
+            // À ajouter dans les méthodes de ton script Vue
+            const switchTab = (tabId) => {
+                const tabTrigger = document.getElementById(tabId);
+                if (tabTrigger) {
+                    const tab = new bootstrap.Tab(tabTrigger);
+                    tab.show();
+                }
+            };
 
 
             async function deleteRule() {
@@ -1192,7 +1223,19 @@
             }
 
 
+            function getRandomColor(name) {
+                if (!name) return '#6c757d';
 
+
+                let hash = 0;
+                for (let i = 0; i < name.length; i++) {
+                    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                }
+
+
+                const h = Math.abs(hash % 360);
+                return `hsl(${h}, 60%, 50%)`;
+            }
             return {
                 getCVEColor,
                 getCVEIcon,
@@ -1233,7 +1276,9 @@
                 init,
                 detail_page_1_is_loading,
                 animateClick,
-                highlightJSON
+                highlightJSON,
+                getRandomColor,
+                switchTab
             };
         }
     }).mount('#main-container');

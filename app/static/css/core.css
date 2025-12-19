@@ -1345,9 +1345,166 @@ body.modal-open .custom-rule-link {
 }
 
 
+.avatar-circle {
+    transition: all 0.3s ease;
+    border: 2px solid white;
+}
+
+.contributor-link:hover .avatar-circle {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15) !important;
+}
+
+.contributor-link:hover span {
+    color: #000 !important;
+    text-decoration: underline;
+}
 
 
 
+
+
+
+
+    
+        /* DESIGN SYSTEM */
+    :root {
+        --indigo-solid: #4f46e5;
+        --indigo-soft: #eef2ff;
+        --pink-solid: #db2777;
+        --pink-soft: #fdf2f8;
+        --slate-200: #e2e8f0;
+    }
+
+    .bg-indigo-solid { background-color: var(--indigo-solid) !important; color: white !important; }
+    .bg-pink-solid { background-color: var(--pink-solid) !important; color: white !important; }
+    .bg-indigo-subtle { background-color: var(--indigo-soft) !important; }
+    body.dark-mode .bg-indigo-subtle { background-color: #414040 !important; }
+    body.dark-mode .d2h-code-side-linenumber{
+      background-color: var(--bg-color) !important;
+    }
+
+    .d2h-code-side-linenumber  {
+      background-color: #f8fafc !important;
+    }
+
+    body.dark-mode .d2h-code-line-ctn{
+      color: white !important;
+    }
+
+    body.dark-mode .d2h-info{
+      background-color: var(--bg-color) !important;
+    }
+    .text-indigo { color: var(--indigo-solid) !important; }
+    .text-pink { color: var(--pink-solid) !important; }
+    .btn-indigo-solid { background-color: var(--indigo-solid); color: white; border: none; }
+    .btn-indigo-solid:hover { background-color: #4338ca; color: white; }
+
+    body.dark-mode .btn-indigo-solid:hover { background-color: #292929; color: white; }
+
+    .btn-indigo-solid:disabled { background-color: #9ca3af; }
+
+    /* TIMELINE */
+    .modern-timeline { position: relative; padding-left: 20px; }
+    .modern-timeline::before {
+        content: ''; position: absolute; left: 5px; top: 0; bottom: 0;
+        width: 1px; background: var(--slate-200);
+    }
+    .timeline-block { position: relative; }
+    .timeline-marker {
+        position: absolute; left: -20px; top: 22px;
+        width: 10px; height: 10px; border-radius: 50%;
+        border: 2px solid white; z-index: 2;
+    }
+
+    .timeline-card { cursor: default; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .border-indigo { border-color: var(--indigo-solid) !important; }
+
+    /* UTILS */
+    .btn-xs { padding: 0.3rem 0.6rem; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+    .x-small { font-size: 0.72rem; letter-spacing: 0.3px; }
+    .italic { font-style: italic; }
+    .transition-all { transition: all 0.3s ease; }
+    .shadow-inner { box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06); }
+
+    /* DIFF OVERRIDE */
+    .diff-modern-ui { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    .d2h-file-header { display: none !important; }
+    .d2h-code-line-ctn { color: var(--bs-body-color) !important; padding-left: 10px !important; }
+    .d2h-info { background-color: #f8fafc !important; border: none !important; }
+    
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+
+    .pulse-icon { animation: pulse 2s infinite; }
+    @keyframes pulse {
+        0% { transform: scale(0.95); opacity: 0.5; }
+        70% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(0.95); opacity: 0.5; }
+    }
+
+    /* Small Pulse animation for the "Live" indicator */
+      .pulse-small {
+          animation: blink-animation 1.5s steps(5, start) infinite;
+          -webkit-animation: blink-animation 1.5s steps(5, start) infinite;
+      }
+
+    
+
+      .timeline-card.bg-indigo-subtle {
+          border-left: 4px solid var(--indigo-solid) !important;
+      }
+
+
+
+
+
+
+
+.contributor-watermark {
+    position: absolute;
+    right: 25px;
+    bottom: -10px;
+    font-size: 8rem;
+    color: rgba(13, 110, 253, 0.05); /* Bleu très pâle */
+    transform: rotate(-10deg);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* On s'assure que la card ressorte bien sur le fond de page */
+.card.bg-white.border {
+    border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* Tes styles existants pour les avatars */
+.avatar-circle {
+    transition: all 0.3s ease;
+    border: 2px solid white;
+    z-index: 2;
+}
+
+.contributor-link:hover .avatar-circle {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(13, 110, 253, 0.2) !important;
+}
+
+.contributor-link:hover span {
+    color: var(--bs-primary) !important;
+    text-decoration: underline;
+}
+
+
+
+
+
+
+
+
+
+
+                    
 
 /* NOEL*/
 
@@ -1437,6 +1594,7 @@ body.modal-open .custom-rule-link {
     animation-duration: 1.8s;
     animation-delay: 1s;
 }
+
 
 
 /* --- LES ANIMATIONS (KEYFRAMES) --- */

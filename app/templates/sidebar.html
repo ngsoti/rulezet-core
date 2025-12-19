@@ -178,14 +178,17 @@
                      <span v-if="total_notifications > 0"
                         class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-white rounded-circle pulse-alert"></span>
                   </a>
+
                   <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-2 mt-3" style="min-width: 280px;">
                      <li class="dropdown-header fw-bold text-dark px-3 py-2">Quick Actions</li>
                      <li>
                         <hr class="dropdown-divider">
                      </li>
+
                      <template v-if="total_notifications === 0">
                         <li class="text-center text-muted small py-3">All caught up!</li>
                      </template>
+
                      <template v-else>
                         <li v-if="requests_to_validate > 0">
                            <a href="/admin/request"
@@ -207,6 +210,13 @@
                               <span class="small"><i
                                     class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>Reports</span>
                               <span class="badge bg-danger rounded-pill">[[ repport_to_validate ]]</span>
+                           </a>
+                        </li>
+                        <li v-if="update_to_validate > 0">
+                           <a href="/rule/update_github/update_rules_from_github"
+                              class="dropdown-item rounded d-flex justify-content-between align-items-center py-2">
+                              <span class="small"><i class="fa-solid fa-rotate me-2 text-info"></i>Updates</span>
+                              <span class="badge bg-danger rounded-pill">[[ update_to_validate ]]</span>
                            </a>
                         </li>
                      </template>

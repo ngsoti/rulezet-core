@@ -1,61 +1,190 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4" id="main-container">
-    <div v-if="rules_list_history">
-        <template v-if="rules_list_history.length > 0">
-            <h2 class="mb-4"><i class="fas fa-history"></i> Rule Change History</h2>
+<div class="container-fluid mt-4 pb-5" id="main-container">
+    <div v-if="rules_list_history" v-cloak class="row g-4">
 
-            <div class="accordion" id="historyAccordion">
-                <div v-for="(entry, index) in rules_list_history" :key="index" class="accordion-item mb-3 shadow-sm">
-                    <h2 class="accordion-header" :id="'heading-' + index">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                            :data-bs-target="'#collapse-' + index" aria-expanded="false"
-                            :aria-controls="'collapse-' + index" @click="loadDiff(entry)">
-                            [[ entry.rule_title ]] — [[ entry.analyzed_at ]]
-                            <span class="badge bg-success ms-2" v-if="entry.success">Success</span>
-                            <span class="badge bg-danger ms-2" v-else>Failure</span>
+        <div class="col-md-4 col-xl-3">
+            <div class="card border-0 shadow-sm sticky-top"
+                style="top: 20px; max-height: 92vh; display: flex; flex-direction: column; z-index: 1000;">
+
+                <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+                    <h5 class="fw-bold mb-3 text-indigo">Audit Dashboard</h5>
+
+                    <div class="input-group input-group-sm mb-3 shadow-sm">
+                        <input type="text" v-model="searchQuery" class="form-control border-start-0"
+                            placeholder="Search logs...">
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-center mb-2" style=" background-color: var(bg-color);">
+                        <button @click="toggleSort" class="btn btn-xs border shadow-sm flex-grow-1 text-start py-2"
+                            style="background-color: var(--bg-color); color: var(--text-color);">
+                            <i class="fas" :class="isDescending ? 'fa-sort-amount-down' : 'fa-sort-amount-up'"></i>
+                            [[ isDescending ? ' Newest' : ' Oldest' ]]
                         </button>
-                    </h2>
 
-                    <div :id="'collapse-' + index" class="accordion-collapse collapse"
-                        :aria-labelledby="'heading-' + index" data-bs-parent="#historyAccordion">
-                        <div class="accordion-body">
-                            <p><strong>Message:</strong> [[ entry.message ]]</p>
+                        <div class="d-flex align-items-center border rounded shadow-sm px-2 "
+                            style="background-color: var(--bg-color) !important;">
+                            <select v-model="per_page"
+                                class="form-select form-select-sm border-0 bg-transparent py-1 shadow-none"
+                                style="width: 60px; font-size: 0.75rem; background-color: var(--bg-color) !important;"
+                                @change="fetchRules(1)">
+                                <option value="3">3</option>
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                            </select>
+                        </div>
+                    </div>
 
-                            <div class="row mt-4">
-                                <div class="col-12">
-                                    <!-- Conteneur du diff -->
-                                    <div id="myDiffElement"></div>
+                    <div class="text-end mb-3">
+                        <span class="x-small text-muted fw-bold">[[ filteredHistory.length ]] results</span>
+                    </div>
+
+                    <div
+                        class="comparison-slots p-3 rounded-3 bg-indigo bg-opacity-10 border border-indigo border-opacity-25 mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-indigo-solid me-2 shadow-sm">A</span>
+                            <div class="x-small text-truncate text-dark">[[ slotA ? 'Ver.' + slotA.id : '---' ]]</div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-pink-solid me-2 shadow-sm">B</span>
+                            <div class="x-small text-truncate text-dark">[[ slotB ? 'Ver.' + slotB.id : '---' ]]</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body overflow-auto custom-scrollbar px-4 pt-2">
+                    <div class="modern-timeline">
+                        <div v-for="(entry, index) in filteredHistory" :key="entry.id" class="timeline-block">
+                            <div class="timeline-marker"
+                                :style="{ backgroundColor: getRandomColor(entry.user_name || 'System') }"></div>
+
+                            <div class="timeline-card p-3 mb-3 border rounded shadow-sm transition-all position-relative"
+                                :class="{'border-indigo bg-indigo-subtle shadow': isItemInSlot(entry.id)}">
+
+                                <div v-if="entry.id === latestId"
+                                    class="position-absolute top-0 start-50 translate-middle-y" style="z-index: 5;">
+                                    <span class="badge rounded-pill bg-success shadow-sm border border-2 border-white"
+                                        style="font-size: 0.55rem;">
+                                        <i class="fas fa-circle text-white me-1 pulse-small"></i> Current rule version
+                                    </span>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-start mb-2 mt-1">
+                                    <span class="fw-bold small">#[[ entry.id ]]</span>
+                                    <span class="badge"
+                                        :class="entry.success ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'"
+                                        style="font-size: 0.6rem;">
+                                        [[ entry.success ? 'SUCCESS' : 'FAIL' ]]
+                                    </span>
+                                </div>
+
+                                <p class="mb-1 small fw-bold text-dark text-truncate">[[ entry.message ]]</p>
+                                <div class="x-small text-muted mb-3 italic">[[ entry.analyzed_at ]]</div>
+
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="btn-group w-100 shadow-sm">
+                                        <button class="btn btn-xs btn-white border"
+                                            :class="{'bg-indigo-solid text-white': isSelected(entry.id, 'old')}"
+                                            @click="selectSlot(entry, 'old')">Old</button>
+                                        <button class="btn btn-xs btn-white border"
+                                            :class="{'bg-pink-solid text-white': isSelected(entry.id, 'new')}"
+                                            @click="selectSlot(entry, 'new')">
+                                            [[ (entry.id === latestId) ? 'Current' : 'New' ]]
+                                        </button>
+                                    </div>
+                                    <button class="btn btn-xs btn-outline-indigo w-100 py-1"
+                                        style="color: var(--text-color);" @click="viewSolo(entry)">
+                                        <i class="fas fa-eye me-1"></i> Quick View (New Content)
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <div class="card-footer border-0 p-3 bg-transparent text-center">
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-white border" :disabled="current_page === 1"
+                            @click="fetchRules(current_page - 1)"><i class="fas fa-chevron-left"></i></button>
+                        <span class="btn btn-sm btn-white border disabled fw-bold">[[ current_page ]]</span>
+                        <button class="btn btn-sm btn-white border" :disabled="current_page === total_pages"
+                            @click="fetchRules(current_page + 1)"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+
+
+                    <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
+                        <a href="javascript:history.back()" style="width: auto;"
+                            class="btn btn-secondary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back
+                        </a>
+                    </div>
+                </div>
             </div>
 
-            <nav>
-                <ul class="pagination justify-content-center">
-                    <li class="page-item" :class="{ disabled: current_page === 1 }">
-                        <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">Previous</a>
-                    </li>
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#">Page [[ current_page ]] of [[ total_pages ]]</a>
-                    </li>
-                    <li class="page-item" :class="{ disabled: current_page === total_pages }">
-                        <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">Next</a>
-                    </li>
-                </ul>
-            </nav>
+        </div>
 
-        </template>
-        <template v-else>
-            <div class="text-center my-5">
-                <i class="fas fa-folder-open fa-4x text-secondary mb-3"></i>
-                <h4 class="text-muted">No history found for this rule</h4>
-                <p class="text-muted">It seems there are no accepted updates for this rule yet.</p>
+        <div class="col-md-8 col-xl-9">
+            <div class="card border-0 shadow-sm min-vh-100 overflow-hidden">
+                <div class="card-header border-bottom py-3 px-4 sticky-top shadow-sm"
+                    style="top:0; z-index: 100; background-color: white;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-box me-3 bg-indigo-solid text-white rounded-3 shadow-sm p-2">
+                                <i class="fas" :class="viewMode === 'diff' ? 'fa-code-branch' : 'fa-file-code'"></i>
+                            </div>
+                            <div>
+                                <h4 class="h5 fw-bold mb-0">[[ viewMode === 'diff' ? 'Code Comparison' : 'Version View'
+                                    ]]</h4>
+                                <span class="x-small text-muted">[[ viewMode === 'diff' ? 'Analyzing differences' :
+                                    'Inspecting single version' ]]</span>
+                            </div>
+                        </div>
+                        <div class="btn-group shadow-sm">
+                            <button class="btn btn-sm btn-light border px-3" @click="resetView">
+                                <i class="fas fa-sync-alt me-1"></i> Reset
+                            </button>
+                            <button class="btn btn-sm btn-indigo-solid px-4" @click="compare"
+                                :disabled="!slotA || !slotB">
+                                <i class="fas fa-bolt me-1"></i> Generate Diff
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-0 position-relative">
+                    <div v-if="!contentLoaded"
+                        class="d-flex flex-column align-items-center justify-content-center my-5 py-5 text-center">
+                        <i class="fas fa-layer-group fa-4x text-indigo opacity-25 mb-4"></i>
+                        <h4 class="fw-light text-secondary">Dashboard Ready</h4>
+                        <p class="text-muted small px-5">Select two versions to <b>Compare</b> or click <b>Quick
+                                View</b> to see a single version.</p>
+                    </div>
+
+                    <div v-if="contentLoaded && viewMode === 'diff'"
+                        class="d-flex border-bottom bg-light bg-opacity-50">
+                        <div class="flex-grow-1 p-2 text-center border-end x-small fw-bold text-indigo">SOURCE A: #[[
+                            slotA.id ]]</div>
+                        <div class="flex-grow-1 p-2 text-center x-small fw-bold text-pink">SOURCE B: #[[ slotB.id ]]
+                        </div>
+                    </div>
+
+                    <div class="position-relative">
+                        <div v-if="noChangeDetected && viewMode === 'diff'"
+                            class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                            style="z-index: 10; background: rgba(255,255,255,0.7); backdrop-filter: blur(1px);">
+                            <div
+                                class="badge bg-success shadow-lg p-3 rounded-pill border border-2 border-white animate__animated animate__fadeInDown">
+                                <i class="fas fa-check-circle me-2"></i> Identical content: No changes found
+                            </div>
+                        </div>
+
+                        <div id="diff-container" class="diff-modern-ui custom-scrollbar"></div>
+                    </div>
+                </div>
             </div>
-        </template>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -65,57 +194,107 @@
     const { createApp, ref, computed, nextTick } = Vue;
     import { renderDiff } from "/static/js/diff_macro.js";
 
-
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
-            const rule_id = "{{ rule_id }}";
             const rules_list_history = ref([]);
             const current_page = ref(1);
             const total_pages = ref(1);
+            const per_page = ref(3);
+            const searchQuery = ref("");
+            const isDescending = ref(true);
 
-            const proposal = ref(null);
+            const slotA = ref(null);
+            const slotB = ref(null);
+
+            const contentLoaded = ref(false); // Remplace diffGenerated pour inclure le mode solo
+            const viewMode = ref('diff'); // 'diff' ou 'solo'
+            const noChangeDetected = ref(false);
 
             async function fetchRules(page) {
-                const params = new URLSearchParams({ page, rule_id });
+                const params = new URLSearchParams({ page, rule_id: "{{ rule_id }}", per_page: per_page.value });
                 const res = await fetch('/rule/get_rules_page_history_?' + params.toString());
-
                 if (res.status === 200) {
                     const data = await res.json();
-                    rules_list_history.value = data.rule.map(entry => ({
-                        ...entry,
-                        show_diff: true
-                    }));
+                    rules_list_history.value = data.rule;
                     total_pages.value = data.total_pages;
                     current_page.value = page;
                 }
             }
 
-            fetchRules(1);
+            const latestId = computed(() => {
+                if (rules_list_history.value.length === 0) return null;
+                return Math.max(...rules_list_history.value.map(e => e.id));
+            });
 
+            const filteredHistory = computed(() => {
+                let items = rules_list_history.value.filter(item => {
+                    const search = searchQuery.value.toLowerCase();
+                    return item.message?.toLowerCase().includes(search) || item.user_name?.toLowerCase().includes(search);
+                });
+                return items.sort((a, b) => isDescending.value ? b.id - a.id : a.id - b.id);
+            });
 
-            async function loadDiff(entry) {
-                proposal.value = entry;
-
-                if (proposal.value) {
-                    await nextTick(() => {
-                        renderDiff(
-                            proposal.value.old_content,
-                            proposal.value.new_content,
-                            "myDiffElement",
-                            "twoText"
-                        );
-                    });
-                }
+            function selectSlot(entry, type) {
+                const content = type === 'old' ? entry.old_content : entry.new_content;
+                const selection = { id: entry.id, type: type, content: content };
+                if (!slotA.value) slotA.value = selection; else slotB.value = selection;
             }
 
+            // FONCTION POUR VOIR UN SEUL CONTENU
+            async function viewSolo(entry) {
+                viewMode.value = 'solo';
+                contentLoaded.value = true;
+                noChangeDetected.value = false;
+                const container = document.getElementById('diff-container');
+                container.innerHTML = `<div class="p-5 text-center"><div class="spinner-border text-indigo"></div></div>`;
+
+                await nextTick();
+                container.innerHTML = "";
+                renderDiff(entry.new_content, entry.new_content, 'diff-container', "twoText");
+            }
+
+            async function compare() {
+                if (!slotA.value || !slotB.value) return;
+                viewMode.value = 'diff';
+                contentLoaded.value = true;
+                noChangeDetected.value = (slotA.value.content === slotB.value.content);
+
+                const container = document.getElementById('diff-container');
+                container.innerHTML = `<div class="p-5 text-center"><div class="spinner-border text-indigo"></div></div>`;
+
+                await nextTick();
+                container.innerHTML = "";
+                renderDiff(slotA.value.content, slotB.value.content, 'diff-container', "twoText");
+            }
+
+            function resetView() {
+                slotA.value = null; slotB.value = null;
+                contentLoaded.value = false; noChangeDetected.value = false;
+                const container = document.getElementById('diff-container');
+                if (container) container.innerHTML = "";
+            }
+
+            function isSelected(id, type) {
+                return (slotA.value?.id === id && slotA.value?.type === type) || (slotB.value?.id === id && slotB.value?.type === type);
+            }
+
+            function isItemInSlot(id) { return slotA.value?.id === id || slotB.value?.id === id; }
+            function toggleSort() { isDescending.value = !isDescending.value; }
+            function getRandomColor(name) {
+                let hash = 0;
+                for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                return `hsl(${Math.abs(hash % 360)}, 65%, 50%)`;
+            }
+
+            fetchRules(1);
+
             return {
-                rules_list_history,
-                current_page,
-                total_pages,
-                fetchRules,
-                loadDiff,
-                proposal
+                rules_list_history, current_page, total_pages, per_page,
+                searchQuery, isDescending, filteredHistory, latestId,
+                slotA, slotB, contentLoaded, viewMode, noChangeDetected,
+                fetchRules, toggleSort, selectSlot, isSelected, isItemInSlot, resetView, compare, viewSolo, getRandomColor,
+
             }
         }
     }).mount('#main-container');

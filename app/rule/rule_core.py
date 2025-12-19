@@ -1360,13 +1360,13 @@ def get_history_rule_by_id(history_id):
     return RuleUpdateHistory.query.get(history_id)
 
 
-def get_history_rule_(page, rule_id) -> list:
+def get_history_rule_(page, rule_id, per_page) -> list:
     """Get all the accepted edit history of a rule by its ID, paginated."""
     return RuleUpdateHistory.query.filter(
         RuleUpdateHistory.rule_id == rule_id,
         RuleUpdateHistory.success == True ,
         RuleUpdateHistory.message == "accepted" 
-    ).paginate(page=page, per_page=30, max_per_page=30)
+    ).paginate(page=page, per_page=per_page, max_per_page=per_page)
 
 def get_old_rule_choice(page , search=None) -> list:
     """Get all the old choice to make"""    

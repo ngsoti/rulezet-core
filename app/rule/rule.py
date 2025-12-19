@@ -837,7 +837,7 @@ def validate_proposal() -> jsonify:
                     "title": rule.title,
                     "success": True,
                     "message": "accepted",
-                    "new_content": rule.to_string if rule else "Error to charge the rule",
+                    "new_content": rule_proposal.proposed_content,
                     "old_content": rule_proposal.old_content
                 }
 
@@ -1535,8 +1535,9 @@ def get_rules_page_history_():
     """Get the history of the rule with HTML diff for each version"""
     page = request.args.get('page', type=int)
     rule_id = request.args.get('rule_id', type=int)
+    per_page = request.args.get('per_page',5 ,type=int)
 
-    rules = RuleModel.get_history_rule_(page, rule_id)
+    rules = RuleModel.get_history_rule_(page, rule_id, per_page)
 
     if not rules.items:
         return jsonify({

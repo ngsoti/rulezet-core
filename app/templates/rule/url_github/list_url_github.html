@@ -20,7 +20,7 @@
       <span class="input-group-text bg-white border-end-0">
         <i class="fa-solid fa-magnifying-glass text-muted"></i>
       </span>
-      <input v-model="searchQuery" @keyup.enter="fetchUrlGithub(1)" class="form-control border-start-0 rounded-end"
+      <input v-model="searchQuery" @keyup.enter="onEnterKey" class="form-control border-start-0 rounded-end"
         placeholder="Search for GitHub URLs..." @input="onSearchInput">
     </div>
   </div>
@@ -153,7 +153,17 @@
       })
 
       async function onSearchInput() {
-        await fetchUrlGithub(1)
+        if (searchQuery.value.trim() === "") {
+          await fetchUrlGithub(1)
+        }
+      }
+
+      async function onEnterKey() {
+        // if the key pressed is enter launch the request
+        if (event.key === 'Enter') {
+          await fetchUrlGithub(1)
+        }
+
       }
 
       function goto(url) {
@@ -172,7 +182,8 @@
         fetchUrlGithub,
         onSearchInput,
         goto,
-        loading
+        loading,
+        onEnterKey
       }
     }
   }).mount('#main-container')

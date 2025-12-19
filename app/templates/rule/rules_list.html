@@ -40,7 +40,8 @@
                             <i class="fa-solid fa-magnifying-glass text-muted"></i>
                         </span>
                         <input type="text" v-model="searchQuery" @keyup.enter="onEnterKey"
-                            class="form-control rounded-end-pill border-start-0" placeholder="Search by keywords...">
+                            class="form-control rounded-end-pill border-start-0" placeholder="Search by keywords..."
+                            @input="onSearchInput">
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -387,8 +388,6 @@
 
             async function onSearchInput() {
                 if (searchQuery.value.trim() === "") {
-                    await fetchRules(1)
-                } else {
                     await fetchRules(1)
                 }
             }
