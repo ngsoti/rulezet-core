@@ -170,7 +170,11 @@ Copyright (C) 2024-2025 Theo Geffe
 
 ## Funding
 
-Rulezet is co-funded by [CIRCL](https://www.circl.lu/) and by the European Union under [FETTA](https://www.circl.lu/pub/press/20240131/) (Federated European Team for Threat Analysis) project.
+Co-funded by the European Union and CIRCL. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the European Cybersecurity Competence Centre. Neither the European Union nor the granting authority can be held responsible for them.
+
+This repository is part of the NGSOTI project. Project: 101127921 NGSOTI DIGITAL‑ECCC‑2022‑CYBER‑03
+
+<img width="387" height="68" alt="image" src="https://github.com/user-attachments/assets/deec637c-9a57-4fd5-8ba2-25b8cba1ec92" />
 
 ![EU logo](https://www.vulnerability-lookup.org/images/eu-funded.jpg)
 
