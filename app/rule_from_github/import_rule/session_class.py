@@ -14,8 +14,6 @@ from ...rule import rule_core as RuleModel
 from flask import current_app
 from flask_login import current_user
 
-
-
 sessions = list()
 
 class Session_class:
@@ -36,44 +34,44 @@ class Session_class:
         self.count_per_format = {}
 
     def start(self):
-        """Start all worker"""
-        cp = 0
+        job_index = 0
+        load_all_rule_formats()
+        rule_subclasses = RuleType.__subclasses__()
+        rule_instances = [RuleClass() for RuleClass in rule_subclasses]
+
         if os.path.exists(self.repo_dir):
             for root, dirs, files in os.walk(self.repo_dir):
-                dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+                dirs[:] = [d for d in dirs if not d.startswith(('.', '_'))]
                 for file in files:
-                    if not file.startswith('.') or not file.startswith('_'):
-                        load_all_rule_formats()
-                        subclasses = RuleType.__subclasses__()
-                        for RuleClass in subclasses:
-                            rule_instance = RuleClass()
-
+                    if file.startswith(('.', '_')):
+                        continue
+                    
+                    filepath = os.path.join(root, file)
+                    for rule_instance in rule_instances:
+                        if rule_instance.get_rule_files(file):
                             format_name = rule_instance.format
-                            if not format_name in self.count_per_format:
-                                self.count_per_format[format_name] = {"bad_rule": 0, "skipped": 0, "imported": 0}
+                            if format_name not in self.count_per_format:
+                                self.count_per_format[format_name] = {
+                                    "bad_rule": 0, 
+                                    "skipped": 0, 
+                                    "imported": 0
+                                }
 
+                            job_index += 1
+                            self.jobs.put((job_index, file, filepath, rule_instance))
+                            break
 
-                            is_file = rule_instance.get_rule_files(file)
+        self.total = job_index
+        app_obj = current_app._get_current_object()
+        user_obj = current_user._get_current_object()
 
-                            if not is_file:
-                                continue
-
-                            if is_file:
-                                cp += 1
-                                self.jobs.put((cp, file, os.path.join(root, file), rule_instance))
-                                break
-
-        self.total = cp
-
-        #need the index and the url in each queue item.
         for _ in range(self.thread_count):
-            worker = Thread(target=self.process, args=[current_app._get_current_object(), current_user._get_current_object()])
+            worker = Thread(target=self.process, args=[app_obj, user_obj])
             worker.daemon = True
             worker.start()
             self.threads.append(worker)
 
     def status(self):
-        """Status of the current queue"""
         if self.jobs.empty():
             self.stop()
 
@@ -102,77 +100,63 @@ class Session_class:
         }
 
     def stop(self):
-        """Stop the current queue and worker"""
         self.jobs.queue.clear()
-
         for worker in self.threads:
             worker.join(3.5)
         self.threads.clear()
         self.save_info()
-        sessions.remove(self)
-        success = delete_existing_repo_folder("app/rule_from_github/Rules_Github")
-        del self
+        if self in sessions:
+            sessions.remove(self)
+        delete_existing_repo_folder("app/rule_from_github/Rules_Github")
 
     def process(self, loc_app, user: User):
-        """Threaded function for queue processing."""
         while not self.jobs.empty():
-            work = self.jobs.get()
+            try:
+                work = self.jobs.get(timeout=1)
+                filepath = work[2]
+                rule_instance = work[3]
 
-            rule_instance = work[3]
+                extracted_rules = rule_instance.extract_rules_from_file(filepath)
+                
+                for raw_text in extracted_rules:
+                    clean_text = raw_text.strip()
+                    if not clean_text or clean_text.startswith('#'):
+                        continue
 
-            rules = rule_instance.extract_rules_from_file(work[2])
-            for rule_text in rules:    
-                # enrich info with filepath
-                enriched_info = {**self.info, "filepath": work[2]}
-                # Validate
-                validation_result  = rule_instance.validate(rule_text)
-                # Parse metadata
-                metadata = rule_instance.parse_metadata(rule_text , enriched_info , validation_result)
+                    enriched_info = {**self.info, "filepath": filepath}
+                    validation = rule_instance.validate(clean_text)
+                    metadata = rule_instance.parse_metadata(clean_text, enriched_info, validation)
 
-                result_dict = {
-                    "validation": {
-                        "ok": validation_result.ok,
-                        "errors": validation_result.errors,
-                        "warnings": validation_result.warnings
-                    },
-                    "rule": metadata,
-                    "raw_rule": rule_text,
-                    "file": work[2]
-                }
-                # Attempt to create rule if validation is OK
-                if validation_result.ok:
                     with loc_app.app_context():
-                        user = db.session.merge(user)
-                        success = RuleModel.add_rule_core(result_dict["rule"], user)
-                    # success = True
-                    if success:
-                        self.imported += 1
-                        self.count_per_format[rule_instance.format]["imported"] += 1
-                    else:
-                        self.skipped += 1
-                        self.count_per_format[rule_instance.format]["skipped"] += 1
-                else:
-                    
-                    with loc_app.app_context():
-                        user = db.session.merge(user)
-                        RuleModel.save_invalid_rule(
-                            form_dict=metadata,
-                            to_string=rule_text,
-                            rule_type=rule_instance.format,
-                            error=validation_result.errors,
-                            user=user
-                        )
-
-                        self.bad_rules += 1
-                        self.count_per_format[rule_instance.format]["bad_rule"] += 1
-
-                    # break
-            self.jobs.task_done()
+                        local_user = db.session.merge(user)
+                        
+                        if validation.ok:
+                            success = RuleModel.add_rule_core(metadata, local_user)
+                            if success:
+                                self.imported += 1
+                                self.count_per_format[rule_instance.format]["imported"] += 1
+                            else:
+                                self.skipped += 1
+                                self.count_per_format[rule_instance.format]["skipped"] += 1
+                        else:
+                            RuleModel.save_invalid_rule(
+                                form_dict=metadata,
+                                to_string=clean_text,
+                                rule_type=rule_instance.format,
+                                error=validation.errors,
+                                user=local_user
+                            )
+                            self.bad_rules += 1
+                            self.count_per_format[rule_instance.format]["bad_rule"] += 1
+                
+                self.jobs.task_done()
+            except Exception:
+                if not self.jobs.empty():
+                    self.jobs.task_done()
         return True
     
     def save_info(self):
-        """Save info in the db"""
-        s = ImporterResult(
+        result_entry = ImporterResult(
             uuid=str(self.uuid),
             info=json.dumps(self.info),
             bad_rules=self.bad_rules,
@@ -183,6 +167,6 @@ class Session_class:
             query_date=self.query_date,
             user_id=self.current_user.id
         )
-        db.session.add(s)
+        db.session.add(result_entry)
         db.session.commit()
-        return
+        return result_entry

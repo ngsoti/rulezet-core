@@ -64,9 +64,13 @@ body.dark-mode {
 .card-rule-home {
   background-color: var(--bg-color);
   border: #80808024 solid 1px;
-  box-shadow: rgba(0, 0, 0, 0.05) 0px 2px 5px 1px, rgba(0, 0, 0, 0.05) 0px 2px 10px 0px;
+  /* Ombre de base plus douce */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Transition fluide */
 }
+
+
 
 .custom-inner-card {
   background: var(--bg-color);
@@ -81,7 +85,7 @@ body.dark-mode {
   background: var(--bg-color);
   color: #06182b;
   border: 1px solid #dee2e6;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  
 }
 
 /* Dynamic & Utility Card Variants */
@@ -684,13 +688,33 @@ main {
 .topnav {
   transition: all 0.3s ease-in-out;
 }
-
+/* --- Style de base du logo --- */
 .navbar-brand img {
-  transition: transform 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
 }
 
+
+
+
+[data-bs-theme="dark"] .navbar-brand img, 
+.dark-mode .navbar-brand img {
+    filter: invert(1) brightness(1.2) drop-shadow(0 2px 4px rgba(255, 255, 255, 0.1));
+}
+
+@media (prefers-color-scheme: dark) {
+    body:not(.light-mode) .navbar-brand img {
+        filter: invert(1) brightness(0,1);
+    }
+}
+
+
 .navbar-brand:hover img {
-  transform: scale(1.05);
+    transform: scale(1.08) rotate(-1deg);
+}
+
+[data-bs-theme="dark"] .navbar-brand:hover img {
+    filter: invert(1) brightness(1.2) drop-shadow(0 8px 15px rgba(255, 255, 255, 0.2));
 }
 
 .nav-underline .nav-link {
@@ -913,7 +937,7 @@ span#project-version {
       .search-result-item {
         background: var(--bg-color);
          border-radius: 12px;
-         border: 1px solid transparent;
+         border: 1px solid #80808024;
          transition: all 0.2s ease;
       }
 
@@ -994,11 +1018,23 @@ span#project-version {
      background: var(--bg-color);
       border-color: #dee2e6;
    }
+
   .dropdown-menu {
       background: var(--bg-color);
       border: 1px solid #e9ecef;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
    }
+   .dropdown-menu .dropdown-item {
+      color: #495057;
+      transition: all 0.2s ease;
+   }
+
+   .dropdown-menu .dropdown-item:hover {
+      color: #0d6efd;
+      transition: all 0.2s ease;
+      background-color: lightgray;
+   }
+
 
    .avatar-circle {
       width: 32px;
@@ -1202,3 +1238,246 @@ span#project-version {
     font-size: 0.95rem;
     font-weight: 400;
 }
+
+
+
+/* Style de la carte Premium */
+.card-security-premium {
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05); /* Ombre légère de base */
+}
+
+.card-security-premium:hover {
+    transform: translateY(-12px); /* Soulèvement plus marqué */
+    
+    /* Ombre profonde multi-couches */
+    box-shadow: 
+        0 22px 50px rgba(0, 0, 0, 0.15), /* Ombre portée principale très diffuse */
+        0 10px 20px rgba(0, 0, 0, 0.08) !important; /* Ombre de contact pour la base */
+    
+    border-color: rgba(13, 110, 253, 0.2) !important; /* Optionnel : léger rappel de ta couleur primaire */
+}
+
+
+/* Liseré bleu en haut */
+.premium-accent-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: #0d6efd ;/*linear-gradient(90deg, #0d6efd, #6610f2);*/
+}
+
+/* Filigrane bouclier */
+.card-watermark {
+    position: absolute;
+    right: -15px;
+    bottom: 50px;
+    font-size: 9rem;
+    color: rgba(13, 110, 253, 0.03); /* Couleur bleue très très pâle */
+    transform: rotate(-15deg);
+    pointer-events: none;
+    z-index: 0;
+}
+.card-watermark-list{
+   position: absolute;
+    right: 18px;
+    bottom: 50px;
+    font-size: 9rem;
+    color: rgba(13, 110, 253, 0.03); /* Couleur bleue très très pâle */
+    transform: rotate(-15deg);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.card-watermark-detail{
+   position: absolute;
+    right: 45px;
+    top: 10px;
+    font-size: 18rem;
+    color: rgba(13, 110, 253, 0.03); 
+    transform: rotate(-15deg);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Petit cercle pour l'initiale de l'auteur */
+.avatar-circle-xs {
+    width: 22px;
+    height: 22px;
+    background: #f1f4f9;
+    color: #0d6efd;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+/* Gestion des profondeurs */
+.z-index-1 { z-index: 1; }
+.z-index-2 { z-index: 2; }
+
+
+.card_detail{
+  /* enorme ombre*/
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;  
+}
+
+
+
+
+
+
+
+/* Désactive l'animation de survol quand un modal est ouvert */
+body.modal-open .card-security-premium {
+    transform: none !important;
+    transition: none !important;
+    box-shadow: none !important; /* Optionnel : retire l'ombre portée si elle gêne */
+}
+
+/* On s'assure que le lien ne change pas de couleur non plus */
+body.modal-open .custom-rule-link {
+    pointer-events: none;
+}
+
+
+
+
+
+
+/* NOEL*/
+
+
+/* Le conteneur qui tient la guirlande en haut */
+.christmas-lights-container {
+    position: fixed;
+    top: -15px; /* On remonte un peu pour cacher le "fil" */
+    left: 0;
+    width: 100%;
+    z-index: 10000; /* Au-dessus de tout */
+    pointer-events: none; /* IMPORTANT : laisse passer les clics */
+    overflow: hidden;
+    height: 50px;
+}
+
+/* La liste des ampoules */
+.christmas-lights {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    display: flex;
+    justify-content: space-evenly; /* Répartit les ampoules */
+    width: 120%; /* Un peu plus large que l'écran pour l'arrondi */
+    margin-left: -10%; /* Centre le débordement */
+    /* Petit effet d'arc de cercle pour faire plus réaliste */
+    border-radius: 50% / 100%; 
+    border-top: 2px solid #222; /* Le fil électrique */
+    height: 30px;
+}
+
+/* Le style de base d'une ampoule */
+.christmas-lights li {
+    position: relative;
+    top: 5px;
+    width: 12px;
+    height: 20px;
+    border-radius: 50%;
+    background: #555; /* État éteint de base */
+    /* L'animation générique */
+    animation-fill-mode: both;
+    animation-iteration-count: infinite;
+}
+
+/* Le petit culot de l'ampoule */
+.christmas-lights li::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 5px;
+    background: #333;
+    border-radius: 2px;
+}
+
+/* --- LES COULEURS ET LES TEMPOS --- */
+
+/* Motif 1 : Rouge, clignote lentement */
+.christmas-lights li:nth-child(4n+1) {
+    background: #ff0000;
+    animation-name: flash-1;
+    animation-duration: 2s;
+}
+
+/* Motif 2 : Vert, clignote rapidement */
+.christmas-lights li:nth-child(4n+2) {
+    background: #00ff00;
+    animation-name: flash-2;
+    animation-duration: 1.2s;
+    animation-delay: 0.3s;
+}
+
+/* Motif 3 : Or, clignote moyennement */
+.christmas-lights li:nth-child(4n+3) {
+    background: #ffd700;
+    animation-name: flash-3;
+    animation-duration: 2.5s;
+    animation-delay: 0.6s;
+}
+
+/* Motif 4 : Bleu, clignote vite et décalé */
+.christmas-lights li:nth-child(4n+4) {
+    background: #005eff;
+    animation-name: flash-1; /* Réutilise l'anim 1 mais décalée */
+    animation-duration: 1.8s;
+    animation-delay: 1s;
+}
+
+
+/* --- LES ANIMATIONS (KEYFRAMES) --- */
+
+/* Flash doux (allumé -> un peu moins allumé) */
+@keyframes flash-1 {
+    0%, 100% { 
+        opacity: 1; 
+        box-shadow: 0 0 15px currentColor; 
+        transform: scale(1.1);
+    }
+    50% { 
+        opacity: 0.4; 
+        box-shadow: none;
+        transform: scale(1);
+    }
+}
+
+/* Flash plus marqué (presque éteint -> très allumé) */
+@keyframes flash-2 {
+    0%, 100% { 
+        opacity: 0.3; 
+        box-shadow: none;
+    }
+    50% { 
+        opacity: 1; 
+        box-shadow: 0 0 20px currentColor;
+    }
+}
+
+/* Flash scintillant plus complexe */
+@keyframes flash-3 {
+    0%, 100% { opacity: 0.5; box-shadow: none; }
+    30% { opacity: 1; box-shadow: 0 0 25px currentColor; }
+    40% { opacity: 0.7; box-shadow: 0 0 5px currentColor; }
+    70% { opacity: 1; box-shadow: 0 0 20px currentColor; }
+}
+
+/* Astuce : currentColor permet d'utiliser la couleur de fond (background) 
+   définie dans les nth-child pour l'ombre portée (le glow) */
+.christmas-lights li:nth-child(4n+1) { color: #ff0000; }
+.christmas-lights li:nth-child(4n+2) { color: #00ff00; }
+.christmas-lights li:nth-child(4n+3) { color: #ffd700; }
+.christmas-lights li:nth-child(4n+4) { color: #005eff; }

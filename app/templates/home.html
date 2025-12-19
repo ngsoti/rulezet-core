@@ -28,33 +28,57 @@
             </div>
         </div>
 
+
         <div class="row g-4">
             <template v-if="rules_list.length > 0">
                 <div class="col-xl-4 col-md-6" v-for="(rule, index) in rules_list" :key="rule.uuid">
-                    <div class="card h-100 shadow-sm  transition-hover"
-                        style="cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-radius: 10px; overflow: hidden; border: 5px solid #80808024;">
-                        <div class="position-absolute top-0 end-0 mt-2 me-2 shadow-sm">
+                    <div class="card h-100 shadow-sm transition-hover border-0 card-security-premium"
+                        style="cursor: pointer; position: relative; overflow: hidden; border-radius: 12px;">
+
+                        <div class=" premium-accent-line"></div>
+
+                        <div class="card-watermark">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+
+                        <div class="position-absolute top-0 end-0 mt-3 me-3 shadow-sm z-index-2">
                             <span class="badge rounded-pill bg-dark pt-1">[[ rule.format.toUpperCase() ]]</span>
                         </div>
 
-                        <div class="card-body d-flex flex-column p-4">
+                        <div class="card-body d-flex flex-column p-4 z-index-1">
                             <div class="mb-3 pe-5">
                                 <h5 class="fw-bold mb-1">
                                     <a :href="`/rule/detail_rule/${rule.id}`"
-                                        class="fw-bold h5 mb-4 border-start border-primary border-4 ps-3 custom-rule-link">
+                                        class="fw-bold h5 mb-4 border-start border-primary border-4 ps-3 custom-rule-link"
+                                        title="See more about this rule">
                                         [[ rule.title ]]
                                     </a>
                                 </h5>
                                 <div class="d-flex align-items-center gap-2 mt-2">
-                                    <small class="text-muted"><i class="fas fa-user-circle me-1"></i> [[ rule.author
-                                        ]]</small>
-                                    <span class="text-muted">|</span>
-                                    <small class="text-muted">[[ dayjs.utc(rule.last_modif).fromNow() ]]</small>
+                                    <div class="avatar-circle-xs" title="Author of the rule">
+                                        <template v-if="rule.author === 'Unknown'">
+                                            [[ rule.editor[0].toUpperCase() ]]
+                                        </template>
+                                        <template v-else>
+                                            [[ rule.author[0].toUpperCase() ]]
+                                        </template>
+                                    </div>
+                                    <small class="text-muted fw-medium" title="Author of the rule"> <template
+                                            v-if="rule.author === 'Unknown'">
+                                            [[ rule.editor ]]
+                                        </template>
+                                        <template v-else>
+                                            [[ rule.author ]]
+                                        </template>
+                                    </small>
+                                    <span class="text-muted opacity-50">|</span>
+                                    <small class="text-muted" title="Last modification of the rule">[[
+                                        dayjs.utc(rule.last_modif).fromNow() ]]</small>
                                 </div>
                             </div>
 
                             <div class="flex-grow-1">
-                                <p class="text-muted small">
+                                <p class="text-muted small lh-base" title="Description of the rule">
                                     <template v-if="!rule.show_full">
                                         [[ rule.description.substring(0, 140) ]]
                                         <span v-if="rule.description.length > 140">...</span>
@@ -75,21 +99,25 @@
                                     <a v-for="cve in parsedCVE(rule.cve_id)"
                                         :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()"
                                         target="_blank" :class="['badge', 'text-decoration-none', getCVEColor(cve)]"
-                                        style="font-size: 0.75rem; font-weight: 500;">
+                                        style="font-size: 0.75rem; font-weight: 500; border-radius: 6px;"
+                                        title="See more about this cve">
                                         [[ cve ]]
                                     </a>
                                 </div>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
+                            <div
+                                class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto bg-transparent">
                                 <div class="btn-group shadow-sm border rounded-pill overflow-hidden">
                                     <button @click="vote('up', rule.id); animateClick($event)"
-                                        class="btn  btn-sm px-3 border-0 border-end border-light shadow-none btn-animate home-btn">
+                                        class="btn btn-sm px-3 border-0 border-end border-light shadow-none btn-animate home-btn"
+                                        title="Like this rule">
                                         <i class="fas fa-thumbs-up text-primary me-1"></i> [[ rule.vote_up ]]
                                     </button>
 
                                     <button @click="vote('down', rule.id); animateClick($event)"
-                                        class="btn  btn-sm px-3 border-0 shadow-none btn-animate home-btn">
+                                        class="btn btn-sm px-3 border-0 shadow-none btn-animate home-btn"
+                                        title="Dislike this rule">
                                         <i class="fas fa-thumbs-down text-danger me-1"></i> [[ rule.vote_down ]]
                                     </button>
                                 </div>
@@ -98,6 +126,7 @@
                                     <button
                                         @click="favorite(rule.id); $event.currentTarget.classList.add('star-animate')"
                                         @animationend="$event.currentTarget.classList.remove('star-animate')"
+                                        :title="rule.is_favorited ? 'Unfavorite this rule' : 'Favorite this rule'"
                                         class="btn btn-sm rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center transition-all home-btn"
                                         style="width: 32px; height: 32px;">
                                         <i class="fa-star" :class="rule.is_favorited ? 'fas text-warning' : 'far'"></i>

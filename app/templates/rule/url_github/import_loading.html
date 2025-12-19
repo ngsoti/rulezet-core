@@ -22,122 +22,133 @@
     <!-- [[info_session]] -->
 
     <div v-if="is_finished" class="container col-md-10 justify-content-center my-5">
-        <p class="text-muted mt-2">
-            Import completed successfully.
-            You can now view the imported rules and their details below.
-            <span class="text-primary">
-                <a :href="info_session.repo_url" target="_blank">
-                    [[info_session.repo_url]]
-                </a>
-            </span>.
-        </p>
+        <template v-if="data_is_loading">
+            <p class="text-muted mt-2">
+                Import completed successfully.
+                You can now view the imported rules and their details below.
+                <span class="text-primary">
+                    <a :href="info_session.repo_url" target="_blank">
+                        [[info_session.repo_url]]
+                    </a>
+                </span>.
+            </p>
 
-        <div v-if="result_data.info" class="card shadow border-0">
-            <div class="card-body p-4 bg-light rounded">
-                <h3 class="fw-bold mb-3">Github information</h3>
+            <div v-if="result_data.info" class="card shadow border-0">
+                <div class="card-body p-4 bg-light rounded">
+                    <h3 class="fw-bold mb-3">Github information</h3>
 
-                <table class="table">
-                    <tr v-if="result_data.info.author">
-                        <td style="color:#494950">Author</td>
-                        <td><b>[[ result_data.info.author ]]</b></td>
-                    </tr>
-                    <tr v-if="result_data.info.description">
-                        <td style="color:#494950">Description</td>
-                        <td><b>[[ result_data.info.description ]]</b></td>
-                    </tr>
-                    <tr v-if="result_data.info.license">
-                        <td style="color:#494950">License</td>
-                        <td><b>[[ result_data.info.license ]]</b></td>
-                    </tr>
-                    <tr v-if="result_data.info.created_at">
-                        <td style="color:#494950">Creation Date</td>
-                        <td><b>[[ result_data.info.created_at ]]</b></td>
-                    </tr>
-                    <tr v-if="result_data.info.language">
-                        <td style="color:#494950">Language</td>
-                        <td><b><span class="badge bg-primary">[[ result_data.info.language ]]</span></b></td>
-                    </tr>
-                    <tr v-if="result_data.info.watchers">
-                        <td style="color:#494950">Watchers</td>
-                        <td><b>[[ result_data.info.watchers ]]</b></td>
-                    </tr>
-                    <tr v-if="result_data.info.stars">
-                        <td style="color:#494950">Stars</td>
-                        <td><b>[[ result_data.info.stars ]]</b></td>
-                    </tr>
-                    <tr v-if="result_data.info.open_issues">
-                        <td style="color:#494950">Open Issues</td>
-                        <td><b>[[ result_data.info.open_issues ]]</b></td>
-                    </tr>
-                </table>
-            </div>
-
-            <div class="card-body p-4 bg-light rounded">
-                <h3 class="fw-bold mb-3">Import summary</h3>
-                <div class="table-responsive">
                     <table class="table">
-                        <tr>
-                            <td style="color:#494950">Total Files</td>
-                            <td><b>[[result_data.total]]</b></td>
+                        <tr v-if="result_data.info.author">
+                            <td style="color:#494950">Author</td>
+                            <td><b>[[ result_data.info.author ]]</b></td>
                         </tr>
-                        <tr>
-                            <td style="color:#494950">Total Rules</td>
-                            <td><b>[[result_data.imported + result_data.bad_rules + result_data.skipped]]</b></td>
+                        <tr v-if="result_data.info.description">
+                            <td style="color:#494950">Description</td>
+                            <td><b>[[ result_data.info.description ]]</b></td>
                         </tr>
-                        <tr>
-                            <td style="color:#494950">Imported</td>
-                            <td><b>[[result_data.imported]]</b></td>
+                        <tr v-if="result_data.info.license">
+                            <td style="color:#494950">License</td>
+                            <td><b>[[ result_data.info.license ]]</b></td>
                         </tr>
-                        <tr>
-                            <td style="color:#494950">Bad Rules</td>
-                            <td><b>[[result_data.bad_rules]]</b></td>
+                        <tr v-if="result_data.info.created_at">
+                            <td style="color:#494950">Creation Date</td>
+                            <td><b>[[ result_data.info.created_at ]]</b></td>
                         </tr>
-                        <tr>
-                            <td style="color:#494950">Skipped</td>
-                            <td><b>[[result_data.skipped]]</b></td>
+                        <tr v-if="result_data.info.language">
+                            <td style="color:#494950">Language</td>
+                            <td><b><span class="badge bg-primary">[[ result_data.info.language ]]</span></b></td>
                         </tr>
-                        <tr>
-                            <td style="color:#494950">Query Date</td>
-                            <td><b>[[result_data.query_date]]</b></td>
+                        <tr v-if="result_data.info.watchers">
+                            <td style="color:#494950">Watchers</td>
+                            <td><b>[[ result_data.info.watchers ]]</b></td>
                         </tr>
-                        <template v-for="format, key in result_data.count_per_format">
-                            <tr>
-                                <td class="text-end"><b>[[key]]</b></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td></td>
-                                <td>Bad rules: [[format.bad_rule]]</td>
-                            </tr>
-                            <tr>
-                                <td></td>
-                                <td>Imported: [[format.imported]]</td>
-                            </tr>
-                            <tr>
-                                <td></td>
-                                <td>Skipped: [[format.skipped]]</td>
-                            </tr>
-                        </template>
+                        <tr v-if="result_data.info.stars">
+                            <td style="color:#494950">Stars</td>
+                            <td><b>[[ result_data.info.stars ]]</b></td>
+                        </tr>
+                        <tr v-if="result_data.info.open_issues">
+                            <td style="color:#494950">Open Issues</td>
+                            <td><b>[[ result_data.info.open_issues ]]</b></td>
+                        </tr>
                     </table>
                 </div>
-                <div class="text-center">
 
-                    <!-- Go back Button -->
-                    <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
-                        <a href="javascript:history.back()" style="width: auto;"
-                            class="btn btn-secondary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
-                            <i class="fas fa-arrow-left me-2"></i>
-                            Back
-                        </a>
-                        <button
-                            class="btn btn-primary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill"
-                            type="button" @click="goto(info_session.repo_url)">
-                            View rules
-                        </button>
+                <div class="card-body p-4 bg-light rounded">
+                    <h3 class="fw-bold mb-3">Import summary</h3>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <tr>
+                                <td style="color:#494950">Total Files</td>
+                                <td><b>[[result_data.total]]</b></td>
+                            </tr>
+                            <tr>
+                                <td style="color:#494950">Total Rules</td>
+                                <td><b>[[result_data.imported + result_data.bad_rules + result_data.skipped]]</b></td>
+                            </tr>
+                            <tr>
+                                <td style="color:#494950">Imported</td>
+                                <td><b>[[result_data.imported]]</b></td>
+                            </tr>
+                            <tr>
+                                <td style="color:#494950">Bad Rules</td>
+                                <td><b>[[result_data.bad_rules]]</b></td>
+                            </tr>
+                            <tr>
+                                <td style="color:#494950">Skipped</td>
+                                <td><b>[[result_data.skipped]]</b></td>
+                            </tr>
+                            <tr>
+                                <td style="color:#494950">Query Date</td>
+                                <td><b>[[result_data.query_date]]</b></td>
+                            </tr>
+                            <template v-for="format, key in result_data.count_per_format">
+                                <tr>
+                                    <td class="text-end"><b>[[key]]</b></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>Bad rules: [[format.bad_rule]]</td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>Imported: [[format.imported]]</td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>Skipped: [[format.skipped]]</td>
+                                </tr>
+                            </template>
+                        </table>
+                    </div>
+                    <div class="text-center">
+
+                        <!-- Go back Button -->
+                        <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
+                            <a href="javascript:history.back()" style="width: auto;"
+                                class="btn btn-secondary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Back
+                            </a>
+                            <button
+                                class="btn btn-primary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill"
+                                type="button" @click="goto(info_session.repo_url)">
+                                View rules
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </template>
+        <template v-else>
+            <!-- loading the data -->
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </template>
+
     </div>
 
 
@@ -157,6 +168,11 @@
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
+
+            const data_is_loading = ref(false)
+
+
+
             const progress = ref(0)
             const status_site = ref("")
 
@@ -165,15 +181,17 @@
             const is_finished = ref(false)
 
             async function fetchInfoSession() {
-
+                data_is_loading.value = false
                 const res = await fetch('/rule/import_get_info_session/{{sid}}')
 
                 if (await res.status === 200) {
                     const data = await res.json()
                     info_session.value = data
+
                 } else {
                     display_toast(res)
                 }
+                data_is_loading.value = true
             }
 
             function goto(url) {
@@ -216,7 +234,8 @@
                 info_session,
                 result_data,
                 is_finished,
-                goto
+                goto,
+                data_is_loading
             };
         }
     }).mount('#main-container');

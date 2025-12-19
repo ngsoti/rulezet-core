@@ -295,7 +295,7 @@ def edit_rule(rule_id) -> render_template:
 
 
             # create an history for the rule
-            if rule.to_string != form_dict['to_string']:
+            if rule.to_string.strip() != form_dict['to_string'].strip():
                 result = {
                     "id": rule_id,
                     "title": rule.title,

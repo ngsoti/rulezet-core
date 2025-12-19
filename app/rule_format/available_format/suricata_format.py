@@ -21,15 +21,14 @@ class SuricataRule(RuleType):
 
     def validate(self, content: str, **kwargs) -> ValidationResult:
         """
-        Validate a Suricata rule using suricataparser.
-        Returns a ValidationResult with errors if the rule is invalid.
+        Validate Suricata rules.
         """
         try:
+            # On tente de parser toutes les règles présentes dans le contenu
             rules = parse_rules(content)
             if not rules:
                 return ValidationResult(ok=False, errors=["No valid Suricata rules found."], normalized_content=content)
 
-            # If suricataparser successfully parsed it, we consider it valid
             return ValidationResult(
                 ok=True,
                 normalized_content="\n".join([rule.raw for rule in rules])
@@ -39,112 +38,113 @@ class SuricataRule(RuleType):
 
     def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
         """
-        Extract metadata from a Suricata rule.
+        Extract metadata from a Suricata rule string.
         """
-        title = "Untitled"
-        sid = "Unknown"
+        # Valeurs par défaut via Regex au cas où le parser strict échoue
+        msg_match = re.search(r'msg\s*:\s*"(.*?)"', content)
+        sid_match = re.search(r'sid\s*:\s*(\d+)', content)
+        rev_match = re.search(r'rev\s*:\s*(\d+)', content)
         
-        msg_match = re.search(r'msg:"(.*?)"', content)
-        sid_match = re.search(r'sid:(\d+);', content)
-        title = msg_match.group(1).strip() if msg_match else f"Suricata Rule SID:{sid_match.group(1) if sid_match else 'Unknown'}"
-        sid = sid_match.group(1) if sid_match else "Unknown"
+        fallback_title = msg_match.group(1).strip() if msg_match else "Untitled Suricata Rule"
+        fallback_sid = sid_match.group(1) if sid_match else "Unknown"
+        fallback_rev = rev_match.group(1) if rev_match else "1"
 
         try:
-            rule = parse_rule(content) 
-            
-            rule = type('obj', (object,), {'msg': title, 'rev': '1.0', 'sid': sid, 'raw': content})() # Placeholder
+            # On nettoie pour ne garder que la règle (on enlève les commentaires potentiels au début)
+            clean_content = content
+            for line in content.splitlines():
+                if line.strip() and not line.strip().startswith('#'):
+                    clean_content = line
+                    break
 
-            parsed_title = rule.msg or title
+            rule = parse_rule(clean_content)
+            parsed_title = rule.msg or fallback_title
             
-            _, cve = detect_cve(parsed_title or "")
+            _, cve = detect_cve(parsed_title)
 
             return {
                 "format": "suricata",
                 "title": parsed_title,
-                "license":  info.get("license", "unknown"),
+                "license": info.get("license", "unknown"),
                 "description": info.get("description", "No description provided"),
-                "version": rule.rev or "1.0",
+                "version": str(rule.rev) if rule.rev else fallback_rev,
                 "author": info.get("author", "Unknown"),
                 "cve_id": cve,
-                "original_uuid": rule.sid or "Unknown",
+                "original_uuid": str(rule.sid) if rule.sid else fallback_sid,
                 "source": info.get("repo_url", "Unknown"),
-                "to_string": rule.raw,
+                "to_string": content,
             }
         except Exception as e:
+            # Fallback en cas d'erreur de parsing (ex: règle mal formée)
+            _, cve = detect_cve(fallback_title)
             return {
                 "format": "suricata",
-                "title": f"{title} (Metadata Error)",
-                "license":  info.get("license", "unknown"),
-                "description": f"Error parsing metadata: {e}",
-                "version": "N/A",
-                "original_uuid": sid,
+                "title": f"{fallback_title} (Partial Parse)",
+                "license": info.get("license", "unknown"),
+                "description": f"Metadata parsing issue: {str(e)}",
+                "version": fallback_rev,
+                "original_uuid": fallback_sid,
                 "author": info.get("author", "Unknown"),
-                "cve_id": None,
+                "cve_id": cve,
                 "to_string": content,
             }
 
     def get_rule_files(self, file: str) -> bool:
-        """
-        Retrieve all Suricata rule files (.rule / .rules) from a local repository.
-        Hidden and underscore-prefixed files or directories are ignored.
-        """
-        if file.endswith(('.rule', '.rules')):
-            return True
-        return False
+        return file.endswith(('.rule', '.rules'))
 
     def extract_rules_from_file(self, filepath: str) -> List[str]:
         """
-        Extract raw Suricata rules from a file.
-        Each rule is returned as a string.
+        Extract raw Suricata rules from a file, skipping empty lines.
         """
         rules = []
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 content = f.read()
+                # parse_rules gère nativement les fichiers avec plusieurs règles
                 parsed_rules = parse_rules(content)
-
                 for rule in parsed_rules:
-                    rules.append(rule.raw)
-        except Exception:
+                    if rule.raw:
+                        rules.append(rule.raw.strip())
+            print(f"Extracted {len(rules)} rules from {filepath}")
+        except Exception as e:
+            print(f"Error reading file: {e}")
             return []
         return rules
 
     def get_rule_files_update(self, repo_dir: str) -> List[str]:
-        """
-        Retrieve all Suricata rule files (.rule / .rules) from a local repository.
-        Hidden and underscore-prefixed files or directories are ignored.
-        """
         rule_files = []
         if not os.path.exists(repo_dir):
             return rule_files
 
         for root, dirs, files in os.walk(repo_dir):
+            # Ignorer les dossiers cachés
             dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
             for file in files:
-                if file.startswith('.') or file.startswith('_'):
-                    continue
-                if file.endswith(('.rule', '.rules')):
-                    rule_files.append(os.path.join(root, file))
+                if not file.startswith('.') and not file.startswith('_'):
+                    if self.get_rule_files(file):
+                        rule_files.append(os.path.join(root, file))
         return rule_files
+
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """
-        Search for a Suricata rule inside a locally cloned GitHub repo.
+        Search for a Suricata rule by its original SID inside the repo.
         """
-        rule = RuleModel.get_rule(rule_id)
-        if not rule:
+        rule_db = RuleModel.get_rule(rule_id)
+        if not rule_db:
             return "No rule found in the database.", False
 
         rule_files = self.get_rule_files_update(repo_dir)
 
         for filepath in rule_files:
-            rules = self.extract_rules_from_file(filepath)
-            for r in rules:
-                try:
-                    parsed_rules = parse_rules(r)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    parsed_rules = parse_rules(content)
                     for parsed_rule in parsed_rules:
-                        if str(parsed_rule.sid) == str(rule.original_uuid):
-                            return r, True
-                except Exception:
-                    continue
+                        # Comparaison des SIDs
+                        if str(parsed_rule.sid) == str(rule_db.original_uuid):
+                            return parsed_rule.raw, True
+            except Exception:
+                continue
 
-        return f"Suricata rule with SID '{rule.original_uuid}' not found inside repo.", False
+        return f"Suricata rule with SID '{rule_db.original_uuid}' not found.", False
