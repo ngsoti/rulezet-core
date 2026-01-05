@@ -7,14 +7,9 @@
         <h2 class="fw-bold text-primary d-inline-flex align-items-center gap-2">
             All Bundles
             <!-- Help Button -->
-            <button class="btn " 
-                    type="button" 
-                    data-bs-toggle="collapse" 
-                    data-bs-target="#bundleHelpCollapse" 
-                    aria-expanded="false" 
-                    aria-controls="bundleHelpCollapse"
-                    title="What is a Bundle?">
-            <i class="fas fa-question-circle"></i>
+            <button class="btn " type="button" data-bs-toggle="collapse" data-bs-target="#bundleHelpCollapse"
+                aria-expanded="false" aria-controls="bundleHelpCollapse" title="What is a Bundle?">
+                <i class="fas fa-question-circle"></i>
             </button>
         </h2>
         <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
@@ -22,18 +17,19 @@
         <!-- Help Collapse -->
         <div class="collapse mt-3 text-start mx-auto" id="bundleHelpCollapse" style="max-width: 600px;">
             <div class="card card-body bg-light border-0 shadow-sm">
-            <h5 class="mb-3">
-                <i class="fas fa-box-open text-primary me-2"></i> What is a Rule Bundle?
-            </h5>
-            <p>
-                A <strong>bundle</strong> is a custom collection of rules grouped together. It allows you to organize, share, and manage rules based on a specific topic, use case, or detection strategy.
-            </p>
-            <p>
-                You can create your own bundles or explore those shared by other users.
-            </p>
-            <p class="mb-0">
-                Click on a bundle to view its details, edit its content, or add it to your favorites.
-            </p>
+                <h5 class="mb-3">
+                    <i class="fas fa-box-open text-primary me-2"></i> What is a Rule Bundle?
+                </h5>
+                <p>
+                    A <strong>bundle</strong> is a custom collection of rules grouped together. It allows you to
+                    organize, share, and manage rules based on a specific topic, use case, or detection strategy.
+                </p>
+                <p>
+                    You can create your own bundles or explore those shared by other users.
+                </p>
+                <p class="mb-0">
+                    Click on a bundle to view its details, edit its content, or add it to your favorites.
+                </p>
             </div>
         </div>
 
@@ -46,29 +42,20 @@
     <div class="mb-4 d-flex flex-column flex-md-row align-items-md-center gap-3">
         <!-- Search input -->
         <div class="input-group flex-grow-1">
-            <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass"></i></span>
-            <input
-                type="text"
-                class="form-control"
-                placeholder="Search bundles..."
-                v-model="searchQuery"
-                @input="fetchAllBundles(1)"
-            >
+            <span class="input-group-text" style="background-color: var(--bg-color); color: var(--text-color)"><i
+                    class="fa-solid fa-magnifying-glass"></i></span>
+            <input type="text" class="form-control" placeholder="Search bundles..." v-model="searchQuery"
+                @input="fetchAllBundles(1)">
         </div>
         {% if current_user.is_authenticated %}
-            <!-- Own bundles toggle -->
-            <div class="form-check form-switch ms-md-2">
-                <input
-                    class="form-check-input"
-                    type="checkbox"
-                    id="ownBundlesToggle"
-                    v-model="showOwnBundles"
-                    @change="fetchAllBundles(1)"
-                >
-                <label class="form-check-label fw-semibold" for="ownBundlesToggle">
-                    Own bundles
-                </label>
-            </div>
+        <!-- Own bundles toggle -->
+        <div class="form-check form-switch ms-md-2">
+            <input class="form-check-input" type="checkbox" id="ownBundlesToggle" v-model="showOwnBundles"
+                @change="fetchAllBundles(1)">
+            <label class="form-check-label fw-semibold" for="ownBundlesToggle">
+                Own bundles
+            </label>
+        </div>
         {% endif %}
     </div>
 
@@ -80,18 +67,17 @@
         <i class="fa-solid fa-circle-info me-2"></i> No bundles found.
     </div>
 
-    <div  v-for="(bundle, index) in bundle_list"   :key="bundle.id">
+    <div v-for="(bundle, index) in bundle_list" :key="bundle.id">
         <template v-if="bundle.access || parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
             <div class="card-body">
                 <div class="list-group">
 
-                    <div class="list-group-item list-group-item-action mb-2 rounded shadow-sm d-flex justify-content-between align-items-center"
-                        @click="goToBundleDetail(bundle.id)"
-                        style="cursor: pointer;">
+                    <div class="list-group-item list-group-item-action mb-2 rounded shadow-sm d-flex justify-content-between align-items-center bundle-card"
+                        @click="goToBundleDetail(bundle.id)" style="cursor: pointer;">
 
 
                         <div class="d-flex flex-column">
-                            <div class="d-flex align-items-center"> 
+                            <div class="d-flex align-items-center">
                                 <strong>
                                     <i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>[[ bundle.name ]]
                                 </strong>
@@ -99,9 +85,9 @@
                                     <i class="fa-solid fa-lock fa-fw"></i> Private
                                 </div>
                                 <div v-else class="badge bg-success ms-2" title="Public Bundle">
-                                    <i class="fa-solid fa-globe fa-fw"></i> Public  
+                                    <i class="fa-solid fa-globe fa-fw"></i> Public
                                 </div>
-                            </div>  
+                            </div>
 
 
                             <div class="small text-muted mt-1 d-flex align-items-center flex-wrap">
@@ -122,22 +108,17 @@
 
                         <div class="d-flex align-items-center ms-2">
                             {% if current_user.is_authenticated %}
-                                <template v-if="parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
-                                    <a :href="`/bundle/edit/${bundle.id}`" 
-                                    class="btn btn-secondary btn-sm me-2" 
-                                    title="Edit Bundle"
+                            <template v-if="parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
+                                <a :href="`/bundle/edit/${bundle.id}`" class="btn btn-secondary btn-sm me-2"
+                                    title="Edit Bundle" @click.stop>
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <button type="button" class="btn btn-danger btn-sm me-2" title="Delete the bundle"
+                                    data-bs-toggle="modal" :data-bs-target="'#delete_bundle_modal_'+bundle.id"
                                     @click.stop>
-                                        <i class="fas fa-pen"></i>
-                                    </a>
-                                    <button type="button" 
-                                            class="btn btn-danger btn-sm me-2" 
-                                            title="Delete the bundle" 
-                                            data-bs-toggle="modal" 
-                                            :data-bs-target="'#delete_bundle_modal_'+bundle.id"
-                                            @click.stop>
-                                        <i class="fa-solid fa-trash fa-fw"></i>
-                                    </button>                                  
-                                </template>
+                                    <i class="fa-solid fa-trash fa-fw"></i>
+                                </button>
+                            </template>
                             {% endif %}
                         </div>
                     </div>
@@ -145,7 +126,8 @@
                 </div>
             </div>
         </template>
-        <div class="modal fade" :id="'delete_bundle_modal_'+bundle.id" tabindex="-1" aria-labelledby="delete_bundle_modal" aria-hidden="true">
+        <div class="modal fade" :id="'delete_bundle_modal_'+bundle.id" tabindex="-1"
+            aria-labelledby="delete_bundle_modal" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -177,7 +159,8 @@
                             <i class="fa-solid fa-angle-left"></i>
                         </button>
                     </li>
-                    <li class="page-item" v-for="page in bundle_total_page" :class="{ active: page === bundle_current_page }" :key="page">
+                    <li class="page-item" v-for="page in bundle_total_page"
+                        :class="{ active: page === bundle_current_page }" :key="page">
                         <button class="page-link" @click="fetchAllBundles(page)">[[ page ]]</button>
                     </li>
                     <li class="page-item" :class="{ disabled: bundle_current_page === bundle_total_page }">
@@ -200,9 +183,9 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, onMounted , computed} = Vue;
+    const { createApp, ref, onMounted, computed } = Vue;
     import { message_list, display_toast } from '/static/js/toaster.js';
-    
+
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
@@ -219,9 +202,9 @@
              *          #   Fetch all bundles  #
              *          ########################
              */
-            const bundle_list = ref([])            
-            const bundle_current_page = ref(1)       
-            const bundle_total_page = ref(0) 
+            const bundle_list = ref([])
+            const bundle_current_page = ref(1)
+            const bundle_total_page = ref(0)
             const bundle_total = ref(1)
 
             async function fetchAllBundles(page) {
@@ -292,15 +275,15 @@
                 const total = bundle_total_page.value
                 const current = bundle_current_page.value
                 if (total <= 7) {
-                for (let i = 1; i <= total; i++) pages.push(i)
+                    for (let i = 1; i <= total; i++) pages.push(i)
                 } else {
-                if (current <= 4) {
-                    pages.push(1, 2, 3, 4, 5, '...', total)
-                } else if (current >= total - 3) {
-                    pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-                } else {
-                    pages.push(1, '...', current - 1, current, current + 1, '...', total)
-                }
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total)
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                    }
                 }
                 return pages
             })

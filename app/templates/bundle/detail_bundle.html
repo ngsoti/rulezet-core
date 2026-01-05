@@ -100,18 +100,19 @@
 
         <template v-else>
           <ul class="list-group list-group-flush mt-3">
-            <li v-for="(item, index) in rules" :key="item.rule.cve_id" class="list-group-item">
+            <li v-for="(item, index) in rules" :key="item.rule.cve_id" class="list-group-item bundle-card"
+              @click="goTo(item.rule.id)" style="cursor: pointer;">
 
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div>
                   <span class="badge bg-secondary me-2">[[ item.rule.format ]]</span>
-                  <a :href="`/rule/detail_rule/${item.rule.id}`" title="View more about this rule">
+                  <a :href="`/rule/detail_rule/${item.rule.id}`" title="View more about this rule" @click.stop>
                     <h5 class="d-inline fw-bold text-primary mb-0 me-2">[[ item.rule.title ]]</h3>
                   </a>
                   <a v-for="(cve, index) in parsedCVE(item.rule.cve_id)" :key="index"
                     :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()" target="_blank"
                     :class="['badge', 'me-1', 'mb-1', getCVEColor(cve)]" data-bs-toggle="tooltip"
-                    :title="'Detected vulnerability ID: ' + cve" style="text-decoration: none;">
+                    :title="'Detected vulnerability ID: ' + cve" style="text-decoration: none;" @click.stop>
 
                     <i :class="getCVEIcon(cve)" class="me-1"></i>
                     [[ getCVEPrefix(cve) ]]
@@ -124,14 +125,15 @@
                 {% if current_user.is_authenticated %}
                 <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
                   <div>
-                    <button type="button" class="btn btn-sm " title="Edit the description" data-bs-toggle="modal"
+                    <button type="button" class="btn btn-sm " style="color: var(--text-color)"
+                      title="Edit the description" data-bs-toggle="modal"
                       :data-bs-target="'#description_bundle_modal_'+item.rule.id"
-                      @click="item.new_description = item.association.description">
+                      @click="item.new_description = item.association.description" @click.stop>
                       <i class="fa-solid fa-pen fa-fw"></i>
                     </button>
 
                     <div class="modal fade" :id="'description_bundle_modal_'+item.rule.id" tabindex="-1"
-                      aria-labelledby="description_bundle_modal" aria-hidden="true">
+                      aria-labelledby="description_bundle_modal" aria-hidden="true" @click.stop>
                       <div class="modal-dialog modal-lg">
                         <div class="modal-content">
                           <div class="modal-header">
@@ -142,12 +144,14 @@
                             <div class="mb-3">
                               <label for="bundleNewDescription" class="form-label fw-bold">New description</label>
                               <textarea id="bundleNewDescription" v-model="item.new_description" class="form-control"
-                                rows="3" placeholder="Enter the new description here..."></textarea>
+                                @click.stop rows="3" placeholder="Enter the new description here..."></textarea>
                             </div>
                           </div>
                           <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button class="btn btn-success" @click="saveNewDescription(item.association.id , item)">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                              @click.stop>Close</button>
+                            <button class="btn btn-success" @click="saveNewDescription(item.association.id , item)"
+                              @click.stop>
                               <i class="fa-solid fa-check"></i> Save
                             </button>
                           </div>
@@ -418,6 +422,10 @@
         return cve.replace(/^[A-Za-z_:-]+/, "").replace(/^-/, "");
       }
 
+      function goTo(rule_id) {
+        window.location.href = `/rule/detail_rule/${rule_id}`;
+      }
+
       return {
         bundle,
         rules,
@@ -435,7 +443,8 @@
         getCVEColor,
         getCVEIcon,
         getCVEPrefix,
-        getCVENumber
+        getCVENumber,
+        goTo
       };
     }
   }).mount('#main-container');

@@ -1,48 +1,5 @@
 <div id="app">
-   <div class="christmas-lights-container">
-      <ul class="christmas-lights">
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-         <li></li>
-      </ul>
-   </div>
+
    <nav class="navbar navbar-expand-lg  sticky-top main-navbar shadow-sm py-2">
       <div class=" container-fluid px-4">
 
@@ -179,14 +136,16 @@
                         class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-white rounded-circle pulse-alert"></span>
                   </a>
 
-                  <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-2 mt-3" style="min-width: 280px;">
+                  <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-2 mt-3"
+                     style="min-width: 280px; color: var(--color-text)">
                      <li class="dropdown-header fw-bold text-dark px-3 py-2">Quick Actions</li>
                      <li>
                         <hr class="dropdown-divider">
                      </li>
 
                      <template v-if="total_notifications === 0">
-                        <li class="text-center text-muted small py-3">All caught up!</li>
+                        <li class="text-center text-muted small py-3">All caught up!
+                        </li>
                      </template>
 
                      <template v-else>
@@ -270,8 +229,8 @@
                <i class="fa-solid fa-magnifying-glass text-primary fs-5"></i>
             </div>
             <div>
-               <h5 id="offcanvasSearchLabel" class="fw-bold mb-0 text-dark">Search Rules</h5>
-               <small class="text-muted">Find specific security detections</small>
+               <h5 id="offcanvasSearchLabel" class="fw-bold mb-0 ">Search Rules</h5>
+               <p class="text-muted">Find specific security detections</p>
             </div>
          </div>
          <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -331,7 +290,7 @@
                <a v-for="rule in rules_list.rule" :key="rule.id" :href="`/rule/detail_rule/${rule.id}`"
                   class="search-result-item d-flex align-items-center p-3 mb-2 text-decoration-none shadow-sm">
                   <div class="flex-shrink-0 me-3">
-                     <div class="icon-box bg-light rounded-3 d-flex align-items-center justify-content-center"
+                     <div class="icon-box  rounded-3 d-flex align-items-center justify-content-center"
                         style="width: 45px; height: 45px;">
                         <i class="fa-solid fa-file-code text-primary"></i>
                      </div>

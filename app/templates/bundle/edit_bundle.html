@@ -5,20 +5,22 @@
         Edit Bundle
         <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
     </h2>
-    <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist" >
+    <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist">
         <li class="nav-item flex-fill text-center">
-            <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab" aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
-                    Bundle Settings
+            <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab"
+                aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
+                Bundle Settings
             </a>
         </li>
         <li class="nav-item flex-fill text-center">
-            <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab" aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
-                    Manage Rules
+            <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab"
+                aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
+                Manage Rules
             </a>
         </li>
     </ul>
-     <div class="tab-content" id="exampleTabsContent">
-        <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab" >
+    <div class="tab-content" id="exampleTabsContent">
+        <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
             <div class="card card-body shadow-sm" id="main-container">
                 <div class="row justify-content-center">
                     <div>
@@ -28,14 +30,14 @@
                                 <label for="name" class="form-label">Bundle Name</label>
                                 {{ form.name(class="form-control", id="name") }}
                                 {% for error in form.name.errors %}
-                                    <div class="text-danger small">{{ error }}</div>
+                                <div class="text-danger small">{{ error }}</div>
                                 {% endfor %}
                             </div>
                             <div class="mb-3">
                                 <label for="description" class="form-label">Description</label>
                                 {{ form.description(class="form-control", id="description", rows="5") }}
                                 {% for error in form.description.errors %}
-                                    <div class="text-danger small">{{ error }}</div>
+                                <div class="text-danger small">{{ error }}</div>
                                 {% endfor %}
                             </div>
                             <div class="form-check form-switch mb-4">
@@ -44,7 +46,7 @@
                                     Make Bundle Public
                                 </label>
                                 {% for error in form.public.errors %}
-                                    <div class="text-danger small">{{ error }}</div>
+                                <div class="text-danger small">{{ error }}</div>
                                 {% endfor %}
                             </div>
                             <div class="text-end">
@@ -55,14 +57,16 @@
                 </div>
             </div>
         </div>
-        <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab" >
+        <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
             <div class="card card-body shadow-sm" id="main-container">
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
-                        <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control form-control-sm rounded-pill" placeholder="Search by keywords...">
+                        <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey"
+                            class="form-control form-control-sm rounded-pill" placeholder="Search by keywords...">
                     </div>
                     <div class="col-md-4">
-                        <select v-model="sortBy" class="form-select form-select-sm rounded-pill" @change="fetchRules(1)">
+                        <select v-model="sortBy" class="form-select form-select-sm rounded-pill"
+                            @change="fetchRules(1)">
                             <option value="newest">Newest</option>
                             <option value="oldest">Oldest</option>
                             <option value="most_likes">Most Liked</option>
@@ -70,7 +74,8 @@
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <select v-model="ruleType" class="form-select form-select-sm rounded-pill" @change="fetchRules(1)">
+                        <select v-model="ruleType" class="form-select form-select-sm rounded-pill"
+                            @change="fetchRules(1)">
                             <option value="">All Types</option>
                             <option v-for="format in rules_formats" :value="format.name" :key="format.id">
                                 [[ format.name ]]
@@ -78,14 +83,12 @@
                         </select>
                     </div>
                 </div>
-                
-                <div class="list-group" 
-                    v-for="(rule , index) in filteredRules" 
-                    :key="rule.id">
-                    
-                    <div class="list-group-item list-group-item-action mb-2 rounded shadow-sm" 
+
+                <div class="list-group" v-for="(rule , index) in filteredRules" :key="rule.id">
+
+                    <div class="list-group-item list-group-item-action mb-2 rounded shadow-sm bundle-card"
                         @click="toggleRule(rule.id)" style="cursor: pointer;">
-                        
+
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <strong>[[ rule.title ]]</strong>
@@ -93,12 +96,9 @@
                                     [[ rule.author ]] | [[ rule.creation_date ]] | [[ rule.format.toUpperCase() ]]
                                 </div>
                             </div>
-                            <button type="button"
-                                    class="btn btn-success btn-sm"
-                                    title="Add to Folder"
-                                    data-bs-toggle="modal"
-                                    :data-bs-target="'#add_rule_bundle_modal_' + rule.id"
-                                    @click.stop>
+                            <button type="button" class="btn btn-success btn-sm" title="Add to Folder"
+                                data-bs-toggle="modal" :data-bs-target="'#add_rule_bundle_modal_' + rule.id"
+                                @click.stop>
                                 <i class="fa fa-plus"></i>
                             </button>
                         </div>
@@ -108,29 +108,30 @@
                     </div>
 
                     <!-- Modal Bootstrap -->
-                    <div class="modal fade"
-                        :id="'add_rule_bundle_modal_' + rule.id"
-                        tabindex="-1"
-                        aria-labelledby="add_rule_bundle_modal"
-                        aria-hidden="true"
-                        @click.stop> 
+                    <div class="modal fade" :id="'add_rule_bundle_modal_' + rule.id" tabindex="-1"
+                        aria-labelledby="add_rule_bundle_modal" aria-hidden="true" @click.stop>
                         <div class="modal-dialog modal-lg">
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h1 class="modal-title fs-5 text-dark">
                                         Add "[[ rule.title ]]" to this bundle?
                                     </h1>
-                                    <button class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click.stop></button>
+                                    <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                                        @click.stop></button>
                                 </div>
 
                                 <div class="modal-body">
-                                    <label for="description" class="form-label">Why do you want to add this rule to the bundle?</label>
-                                    <textarea class="form-control" v-model="description" rows="3" placeholder="Enter a reason..."></textarea>
+                                    <label for="description" class="form-label">Why do you want to add this rule to the
+                                        bundle?</label>
+                                    <textarea class="form-control" v-model="description" rows="3"
+                                        placeholder="Enter a reason..."></textarea>
                                 </div>
 
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @click.stop>Close</button>
-                                    <button class="btn btn-danger" :disabled="!description.trim()" @click.stop="addToBundle(rule.id, index)">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                                        @click.stop>Close</button>
+                                    <button class="btn btn-danger" :disabled="!description.trim()"
+                                        @click.stop="addToBundle(rule.id, index)">
                                         <i class="fa fa-check"></i> Confirm
                                     </button>
                                 </div>
@@ -154,29 +155,33 @@
                     </div>
                     <div class="card-body p-0">
                         <div v-if="added_rules_list.length > 0" class="list-group list-group-flush">
-                            <div v-for="(rule, index) in added_rules_list" :key="rule.id" class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center cursor-pointer" @click="toggleCollapse(index)">
+                            <div v-for="(rule, index) in added_rules_list" :key="rule.id"
+                                class="list-group-item bundle-card">
+                                <div class="d-flex justify-content-between align-items-center cursor-pointer "
+                                    @click="toggleCollapse(index)">
                                     <div>
                                         <h6 class="mb-1">
-                                        <i class="fas fa-shield-alt me-2 text-secondary"></i>
-                                        [[ rule.title || 'Untitled Rule' ]]
+                                            <i class="fas fa-shield-alt me-2 text-secondary"></i>
+                                            [[ rule.title || 'Untitled Rule' ]]
                                         </h6>
                                         <p class="mb-1 text-muted" style="font-size: 0.9rem;">[[ rule.description ]]</p>
                                         <small class="text-muted">
-                                        <i class="fas fa-user me-1"></i>[[ rule.author ]] 
-                                        <i class="fas fa-calendar-alt ms-2 me-1"></i>[[ rule.creation_date ]]
+                                            <i class="fas fa-user me-1"></i>[[ rule.author ]]
+                                            <i class="fas fa-calendar-alt ms-2 me-1"></i>[[ rule.creation_date ]]
                                         </small>
                                     </div>
                                     <div class="d-flex align-items-center ms-3">
-                                        <button class="btn btn-sm btn-danger" title="Remove from this bundle" @click.stop="deleteRuleFromBundle(rule.id )">
-                                        <i class="fas fa-minus"></i> 
+                                        <button class="btn btn-sm btn-danger" title="Remove from this bundle"
+                                            @click.stop="deleteRuleFromBundle(rule.id )">
+                                            <i class="fas fa-minus"></i>
                                         </button>
                                         <i class="fas fa-chevron-down ms-3 text-muted"></i>
                                     </div>
                                 </div>
 
                                 <div v-show="collapseStates[index]" class="mt-3">
-                                    <pre class="bg-light border rounded p-3" style="white-space: pre-wrap; font-size: 0.85rem;">
+                                    <pre class="bg-light border rounded p-3"
+                                        style="white-space: pre-wrap; font-size: 0.85rem;">
                                         [[ rule.to_string ]]
                                     </pre>
                                 </div>
@@ -189,22 +194,24 @@
 
                     <div class="card-footer d-flex justify-content-between align-items-center">
                         <button class="btn btn-outline-primary btn-sm" :disabled="added_current_page <= 1"
-                                @click="fetchRulesBundle(added_current_page - 1)">
-                        <i class="fas fa-chevron-left"></i> Previous
+                            @click="fetchRulesBundle(added_current_page - 1)">
+                            <i class="fas fa-chevron-left"></i> Previous
                         </button>
                         <span class="text-muted small">Page [[ added_current_page ]] of [[ added_total_page ]]</span>
-                        <button class="btn btn-outline-primary btn-sm" :disabled="added_current_page >= added_total_page"
-                                @click="fetchRulesBundle(added_current_page + 1)">
-                        Next <i class="fas fa-chevron-right"></i>
+                        <button class="btn btn-outline-primary btn-sm"
+                            :disabled="added_current_page >= added_total_page"
+                            @click="fetchRulesBundle(added_current_page + 1)">
+                            Next <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
                 </div>
             </div>
-            
+
         </div>
     </div>
     <div class="text-center my-4">
-        <a :href="`/bundle/detail/` + bundle_id" class="btn btn-primary btn-sm mt-4" title="View more about this Bundle">
+        <a :href="`/bundle/detail/` + bundle_id" class="btn btn-primary btn-sm mt-4"
+            title="View more about this Bundle">
             <i class="fas fa-arrow-right me-1"></i> View bundle details
         </a>
     </div>
@@ -217,7 +224,7 @@
 
 <script type="module">
     const bundle_id = document.getElementById('bundle-info').dataset.bundleId;
-    const { createApp, ref, onMounted, computed, watch} = Vue;
+    const { createApp, ref, onMounted, computed, watch } = Vue;
     import { message_list, display_toast, create_message } from '/static/js/toaster.js';
     createApp({
         delimiters: ['[[', ']]'],
@@ -234,8 +241,8 @@
             async function fetchRulesFormats() {
                 const res = await fetch('/rule/get_rules_formats')
                 const data = await res.json()
-                if (res.status === 200){
-                    rules_formats.value = data.formats 
+                if (res.status === 200) {
+                    rules_formats.value = data.formats
                     number_rules_formats.value = data.length | 0
                 }
             }
@@ -247,7 +254,7 @@
              *          ########################
              */
 
-            
+
             const searchQuery = ref('')
             const authorFilter = ref('')
             const sortBy = ref('newest')
@@ -272,18 +279,18 @@
              */
 
             const rules_list = ref([])
-            const total_rules = ref(0)  
+            const total_rules = ref(0)
             const current_page = ref(1)
             const total_pages = ref(1)
             const total_rules_liste = ref(0)
 
             async function fetchRules(page) {
                 const params = new URLSearchParams({
-                page,
-                search: searchQuery.value,
-                author: authorFilter.value,
-                sort_by: sortBy.value,
-                rule_type: ruleType.value
+                    page,
+                    search: searchQuery.value,
+                    author: authorFilter.value,
+                    sort_by: sortBy.value,
+                    rule_type: ruleType.value
                 })
 
                 const res = await fetch('/rule/get_rules_page_filter?' + params.toString())
@@ -295,7 +302,7 @@
                 current_page.value = page
             }
             fetchRules(1)
-                
+
             /**
              *          ######################
              *          #    bundle Action   #
@@ -303,7 +310,7 @@
              */
 
             const added_rules_list = ref([])
-            const added_total_page = ref(0)  
+            const added_total_page = ref(0)
             const added_current_page = ref(1)
             const rule_total = ref(0)
 
@@ -315,7 +322,7 @@
                 const alreadyExists = added_rules_list.value.some(rule => rule.id === id);
                 if (alreadyExists) {
                     create_message("This rule is already in the bundle.", "warning-subtle");
-                    return; 
+                    return;
                 }
 
                 const params = new URLSearchParams({
@@ -324,7 +331,7 @@
                     description: description.value.trim()
                 });
 
-                
+
 
                 const res = await fetch('/bundle/add_rule_bundle?' + params.toString());
                 const data = await res.json();
@@ -346,21 +353,21 @@
 
 
 
-            async function deleteRuleFromBundle(rule_id , index) {
+            async function deleteRuleFromBundle(rule_id, index) {
                 const params = new URLSearchParams({
                     rule_id,
                     bundle_id
                 })
-                const res = await fetch('/bundle/remove?'+ params.toString())
-                if(await res.status == 200){
+                const res = await fetch('/bundle/remove?' + params.toString())
+                if (await res.status == 200) {
                     fetchRulesBundle(1);
                     fetchRules(1)
-                } 
+                }
                 display_toast(res)
-                
+
             }
 
-            
+
 
             /**
              *          ###############################
@@ -377,7 +384,7 @@
 
                 const res = await fetch('/bundle/get_rules_page_from_bundle?' + params.toString())
                 const data = await res.json()
-                if(await res.status == 200){
+                if (await res.status == 200) {
                     added_rules_list.value = data.rules_list;
                     added_total_page.value = data.total_pages;
                     added_current_page.value = page;
@@ -386,7 +393,7 @@
             }
 
             fetchRulesBundle(1)
-            
+
             /**
              *          ##############
              *          #   Pages    #
@@ -423,11 +430,11 @@
             const collapseStates = ref([]);
 
             watch(added_rules_list, (newList) => {
-            collapseStates.value = newList.map(() => false);
+                collapseStates.value = newList.map(() => false);
             });
 
             function toggleCollapse(index) {
-            collapseStates.value[index] = !collapseStates.value[index];
+                collapseStates.value[index] = !collapseStates.value[index];
             }
 
             const filteredRules = computed(() => {
@@ -438,7 +445,7 @@
             });
 
 
-            return{
+            return {
                 collapseStates,
                 toggleCollapse,
                 message_list,

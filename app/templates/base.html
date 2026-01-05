@@ -35,8 +35,6 @@
     <!-- Color for json -->
     <!-- Highlight.js CSS -->
 
-    <!-- Change this line for another JSON color -->
-
 
     <!-- Scripts -->
     <!-- CodeMirror JavaScript -->
@@ -103,7 +101,8 @@
             <main class="col ps-md-4 pt-2">
                 {% include 'macros/_flashes.html' %}
                 <div aria-live="polite" aria-atomic="true" class="">
-                    <div class="toast-container start-50 translate-middle-x top-0 p-3" style="position: fixed;">
+                    <div class="toast-container start-50 translate-middle-x top-0 p-3"
+                        style="position: fixed; color: var(--bg-color);">
                         <template v-if="message_list">
                             <template v-for="message in message_list" v-key="message.id">
                                 <div :id="`liveToast-${message.id}`" :class="`toast bg-${message.toast_class}`"
