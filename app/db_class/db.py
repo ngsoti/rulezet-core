@@ -508,7 +508,16 @@ class RuleUpdateHistory(db.Model):
         if rule:
             return rule.format
         return None
+    def get_rule_source(self):
+        """
+        Returns the source of the rule with rule_id
+        """
+        rule = Rule.query.get(self.rule_id)
+        if rule:
+            return rule.source
+        return None
     def to_dict(self):
+        
         return {
             "id": self.id,
             "rule_id": self.rule_id,
@@ -520,7 +529,8 @@ class RuleUpdateHistory(db.Model):
             "analyzed_by_user_id": self.analyzed_by_user_id,
             "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
             "analyzed_by_user_name": self.analyzed_by.first_name,
-            "rule_format": self.get_rule_format()
+            "rule_format": self.get_rule_format(),
+            "rule_source": self.get_rule_source()
         }
     
     def to_json(self):
@@ -580,7 +590,49 @@ class Bundle(db.Model):
             "list_of_format_of_rules": list(set([assoc.rule.format for assoc in self.rules_assoc])),
             "number_of_rules": len(self.rules_assoc.all())
         }
-    
+
+class Tag(db.Model):
+    __tablename__ = "tag"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+    is_active = db.Column(db.Boolean, default=False)
+    visibility = db.Column(db.String(255), nullable=True)
+    external_id = db.Column(db.String, nullable=True)
+
+    color = db.Column(db.String(50), nullable=True) # Hex color code, e.g., #FF5733
+    icon = db.Column(db.String(50), nullable=True) # fontawesome icon name
+
+    # Relationships
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    is_approved_by_admin = db.Column(db.Boolean, default=False)
+    user = db.relationship('User', backref=db.backref('tags', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_json(self):
+
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "name": self.name,
+            "description": self.description,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
+            "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M'),
+            "is_active": self.is_active,
+            "visibility": self.visibility,
+            "color": self.color,
+            "icon": self.icon,
+            "created_by_user_id": self.created_by,
+            "created_by_user_name": self.user.first_name if self.user else None,
+            "is_approved_by_admin": self.is_approved_by_admin,
+            "external_id": self.external_id
+        }
+
 class BundleVote(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -599,6 +651,7 @@ class BundleVote(db.Model):
             "vote_type": self.vote_type,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M')
         }
+
 
 class BundleRuleAssociation(db.Model):
     # Table to associate rule and a bundle 

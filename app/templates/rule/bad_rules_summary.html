@@ -2,14 +2,14 @@
 
 {% block content %}
 {% with messages = get_flashed_messages(with_categories=True) %}
-  {% if messages %}
-    {% for category, message in messages %}
-      <div class="alert alert-{{ category }} alert-dismissible fade show mt-3" role="alert">
-        <i class="fas fa-info-circle me-2"></i>{{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-    {% endfor %}
-  {% endif %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }} alert-dismissible fade show mt-3" role="alert">
+  <i class="fas fa-info-circle me-2"></i>{{ message }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
 {% endwith %}
 
 <div id="container" class="container mt-5">
@@ -22,45 +22,32 @@
       The following rules are invalid because they did not pass syntax parsing validation.
     </p>
   </div>
-  
+
 
   <div class="card border-0 shadow  p-4  mb-4">
     <div class="row g-3 align-items-center mb-3 flex-wrap">
       <div class="col flex-grow-1">
-        <input
-          id="searchInput"
-          type="text"
-          v-model="searchQuery"
-          @input="onSearchInput"
-          @keyup.enter="onEnterKey"
-          class="form-control shadow-sm"
-          placeholder="Title, description..."
-        >
+        <input id="searchInput" type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey"
+          class="form-control shadow-sm" placeholder="Title, description...">
       </div>
 
       <div class="col-auto">
-        <button 
-          class="btn btn-sm btn-primary d-flex align-items-center shadow-sm"
-          @click="fetchRules(1)"
-        >
+        <button class="btn btn-sm btn-primary d-flex align-items-center shadow-sm" @click="fetchRules(1)">
           <i class="fas fa-filter me-2"></i> Apply
         </button>
       </div>
 
       <div class="col-auto">
-        <button 
-          class="btn btn-sm btn-danger d-flex align-items-center"
-          title="Delete All bad Rules"
-          data-bs-toggle="modal"
-          data-bs-target="#confirmDeleteAllModal"
-        >
+        <button class="btn btn-sm btn-danger d-flex align-items-center" title="Delete All bad Rules"
+          data-bs-toggle="modal" data-bs-target="#confirmDeleteAllModal">
           <i class="fas fa-trash me-2"></i> Delete All
         </button>
       </div>
 
     </div>
 
-    <div class="modal fade" id="confirmDeleteAllModal" tabindex="-1" aria-labelledby="confirmDeleteAllModalLabel" aria-hidden="true">
+    <div class="modal fade" id="confirmDeleteAllModal" tabindex="-1" aria-labelledby="confirmDeleteAllModalLabel"
+      aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content p-3">
           <div class="modal-header border-0">
@@ -70,7 +57,8 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body text-center">
-            <p class="mb-3">Are you sure you want to permanently delete <strong> [[ total_rules ]] bads rules</strong>?</p>
+            <p class="mb-3">Are you sure you want to permanently delete <strong> [[ total_rules ]] bads rules</strong>?
+            </p>
             <div v-if="isDeleting" class="d-flex justify-content-center align-items-center">
               <div class="spinner-border text-danger me-2" role="status">
                 <span class="visually-hidden">Deleting...</span>
@@ -92,9 +80,9 @@
 
   <div v-if="rules_list.length > 0">
     <div class="mb-3">
-      <i class="fas fa-exclamation-triangle me-2"></i> [[ total_rules ]]  bads rules
+      <i class="fas fa-exclamation-triangle me-2"></i> [[ total_rules ]] bads rules
     </div>
-    
+
     <div class="row row-cols-1 row-cols-md-2 g-4">
       <div class="col" v-for="(rule, index) in rules_list" :key="rule.id">
         <div class="card h-100 shadow-sm border-start border-4 border-danger">
@@ -155,7 +143,7 @@
 {% block script %}
 <script type="module">
   const { createApp, ref, computed } = Vue
-  import { message_list, create_message , display_toast } from '/static/js/toaster.js'
+  import { message_list, create_message, display_toast } from '/static/js/toaster.js'
 
   createApp({
     delimiters: ['[[', ']]'],

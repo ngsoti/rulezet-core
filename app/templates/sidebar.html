@@ -114,6 +114,11 @@
                      </li>
                      <li><a class="dropdown-item py-2" href="/rule/manage_format_rule"><i
                               class="fa-solid fa-file-code fa-fw me-2 text-muted"></i>Manage Format</a></li>
+                     <li>
+                        <!-- tags-->
+                        <a href="/tags/list" class="dropdown-item py-2"><i
+                              class="fa-solid fa-tags fa-fw me-2 text-muted"></i>Manage Tags</a>
+                     </li>
                   </ul>
                </li>
                {% endif %}
@@ -426,14 +431,16 @@
 
          async function onSearchInput() {
             if (searchQuery.value.trim() === "") {
-               await fetchRules()
-            } else {
-               await fetchRules()
+               await fetchRules(1)
             }
          }
 
          async function onEnterKey() {
-            await fetchRules()
+            // if the key pressed is enter launch the request
+            if (event.key === 'Enter') {
+               await fetchRules(1)
+            }
+
          }
 
          function parsedCVE(cveField) {

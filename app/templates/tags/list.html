@@ -1,0 +1,915 @@
+{% extends 'base.html' %}
+{% import 'macros/form_macros.html' as f %}
+
+{% block content %}
+<div class="container mt-4">
+    <template v-if="!detail_page_1_is_loading">
+        <div class="d-flex justify-content-center align-items-center" style="height: 200px;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </template>
+    <template v-else>
+        <div class="mb-4 border-bottom pb-3">
+            <h2 class="fw-bold text-primary text-center">
+                Tags Collection
+                <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;">
+                </div>
+            </h2>
+            <p class="text-muted mt-2">
+                Manage the tags used to categorize and label rules within the system.
+                Use the filters below to find specific tags or take bulk actions on your selections.
+            </p>
+        </div>
+        <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist">
+            <li class="nav-item flex-fill text-center">
+                <a class="nav-link active" id="list-tab" data-bs-toggle="tab" href="#list-pane" role="tab"
+                    aria-controls="list-pane" aria-selected="true" style="color: var(--text-color);">
+                    List available Tags
+                </a>
+            </li>
+            <li class="nav-item flex-fill text-center">
+                <a class="nav-link" id="add-tab" data-bs-toggle="tab" href="#add-pane" role="tab"
+                    aria-controls="add-pane" aria-selected="false" style="color: var(--text-color);">
+                    Add New Tags
+                </a>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="exampleTabsContent">
+            <div class="tab-pane fade show active" id="list-pane" role="tabpanel" aria-labelledby="list-tab">
+                <div class="card card-body shadow-sm">
+                    <!-- 1) List of all the tags available (only the one in the db)-->
+
+                    <!-- update all the tags from the Taxonomies -->
+
+                    <!-- SEARCH AND TOTAL TAGS -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text  border-end-0">
+                                    <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                                </span>
+                                <input type="text" v-model="searchQuery" @keyup.enter="onEnterKey"
+                                    class="form-control rounded-end-pill border-start-0"
+                                    placeholder="Search by keywords..." @input="onSearchInput">
+                            </div>
+                        </div>
+                        <!-- sort_order asc or desc-->
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" v-model="sort_order" @change="fetchTags(1)">
+                                <option value="asc">Last added</option>
+                                <option value="desc">First added</option>
+                            </select>
+                        </div>
+                        <!-- public or private -->
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" v-model="visibility" @change="fetchTags(1)">
+                                <option value="all">All</option>
+                                <option value="public">Public</option>
+                                <option value="private">Private</option>
+                            </select>
+                        </div>
+                        <!-- active or inactive -->
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" v-model="is_active" @change="fetchTags(1)">
+                                <option value="all">All</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 text-center">
+                        <span class="badge rounded-pill bg-light text-dark px-3 py-2 shadow-lg">
+                            <i class="fa-solid fa-tags me-2 text-primary"></i>
+                            <strong>[[ total_tags ]]</strong> tags found
+                        </span>
+                    </div>
+
+                    <!-- PAGINATION -->
+                    <template v-if="total_pages > 1">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center mt-3">
+                                <li class="page-item" :class="{ disabled: current_page === 1 }">
+                                    <button class="page-link" @click="current_page > 1 && fetchTags(current_page - 1)">
+                                        <i class="fa-solid fa-angle-left"></i>
+                                    </button>
+                                </li>
+
+                                <li class="page-item" v-for="page in visiblePages"
+                                    :class="{ active: page === current_page, disabled: page === '...' }">
+                                    <button class="page-link" v-if="page !== '...'" @click="fetchTags(page)">
+                                        [[ page ]]
+                                    </button>
+                                    <span class="page-link" v-else>...</span>
+                                </li>
+
+                                <li class="page-item" :class="{ disabled: current_page === total_pages }">
+                                    <button class="page-link"
+                                        @click="current_page < total_pages && fetchTags(current_page + 1)">
+                                        <i class="fa-solid fa-angle-right"></i>
+                                    </button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </template>
+                    <!-- TABLE -->
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead style="color: var(--text-color)">
+                                <tr>
+                                    <th>Tag</th>
+                                    <th>Description</th>
+                                    <th class="align-middle">
+                                        <span class="d-inline-flex align-items-center gap-1">
+                                            Visibility
+                                            <i class="fa-solid fa-info-circle text-muted" data-bs-toggle="tooltip"
+                                                title="In public, everyone can see this tag. Otherwise only the admin and the creator can see it">
+                                            </i>
+                                        </span>
+                                    </th>
+
+                                    <th class="align-middle">
+                                        <span class="d-inline-flex align-items-center gap-1">
+                                            Status
+                                            <i class="fa-solid fa-info-circle text-muted" data-bs-toggle="tooltip"
+                                                title="Active tags can be used. Inactive tags are disabled but not deleted">
+                                            </i>
+                                        </span>
+                                    </th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <tr v-for="tag in tags" :key="tag.uuid">
+                                    <td>
+                                        <span class="tag-split shadow-lg ">
+                                            <span class="tag-left">
+                                                <i v-if="tag.icon" :class="`fa ${tag.icon}`"></i>
+                                                <i v-else class="fa fa-tag"></i>
+                                            </span>
+                                            <span class="tag-right" :style="{ backgroundColor: tag.color }"
+                                                :title="tag.name">
+                                                <span style="color: black;">
+                                                    [[ tag.name ]]
+                                                </span>
+
+                                            </span>
+                                        </span>
+                                    </td>
+
+
+                                    <!-- DESCRIPTION -->
+                                    <td>
+                                        <!-- truncate the description  and add ... -->
+                                        [[ tag.description.length > 50 ? tag.description.slice(0, 50) + '...' :
+                                        tag.description || 'No description' ]]
+                                    </td>
+
+                                    <!-- VISIBILITY -->
+                                    <td>
+                                        <button class="btn btn-sm"
+                                            :class="tag.visibility === 'public' ? 'btn-primary' : 'btn-danger'"
+                                            @click="toggleVisibility(tag.uuid)" title="Toggle Visibility">
+                                            [[ tag.visibility.charAt(0).toUpperCase() + tag.visibility.slice(1) ]]
+                                        </button>
+                                    </td>
+
+                                    <!-- STATUS -->
+                                    <td>
+                                        <button class="btn btn-sm" :class="tag.is_active ? 'btn-success' : 'btn-danger'"
+                                            @click="toggleStatus(tag.uuid)" title="Toggle Status">
+                                            [[ tag.is_active ? 'Active' : 'Inactive' ]]
+                                        </button>
+
+                                    </td>
+
+                                    <!-- ACTIONS -->
+                                    <td>
+                                        <div class="d-inline-flex align-items-center">
+                                            <!-- EDIT -->
+                                            <button class="btn btn-sm rounded-circle" data-bs-toggle="modal"
+                                                :data-bs-target="'#edit_tag_modal_'+tag.id" title="Edit tag"
+                                                style="color: var(--text-color)">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+
+                                            <!-- VIEW -->
+                                            <button class="btn btn-sm rounded-circle" data-bs-toggle="modal"
+                                                :data-bs-target="'#detail_tag_modal_'+tag.id" title="View details"
+                                                style="color: var(--text-color)">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+
+                                            <!-- DELETE -->
+                                            <button class="btn btn-sm  rounded-circle text-danger"
+                                                data-bs-toggle="modal" :data-bs-target="'#delete_tag_modal_'+tag.id"
+                                                title="Delete tag">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                        <!-- EDIT MODAL -->
+                                        <div class="modal fade" :id="'edit_tag_modal_'+tag.id" tabindex="-1">
+                                            <div class="modal-dialog modal-dialog-centered modal-lg">
+                                                <div class="modal-content border-0 shadow-lg rounded-4">
+
+                                                    <!-- HEADER -->
+                                                    <div class="modal-header border-0">
+                                                        <div class="d-flex align-items-center gap-3">
+                                                            <span
+                                                                class="rounded-circle d-flex align-items-center justify-content-center"
+                                                                :style="{ backgroundColor: tag.color || '#dee2e6', width: '42px', height: '42px' }">
+                                                                <i :class="`fa ${tag.icon || 'fa-tag'}`"></i>
+                                                            </span>
+                                                            <h5 class="modal-title fw-bold mb-0">
+                                                                Edit Tag
+                                                            </h5>
+                                                        </div>
+
+                                                        <button type="button" class="btn-close"
+                                                            data-bs-dismiss="modal"></button>
+                                                    </div>
+
+                                                    <!-- BODY -->
+                                                    <div class="modal-body">
+                                                        <div class="row g-3">
+
+                                                            <!-- NAME -->
+                                                            <div class="col-md-6">
+                                                                <label class="form-label fw-semibold">Name</label>
+                                                                <input type="text" class="form-control"
+                                                                    v-model="tag.name">
+                                                            </div>
+
+                                                            <!-- EXTERNAL ID -->
+                                                            <div class="col-md-6">
+                                                                <label class="form-label fw-semibold">External
+                                                                    UUID</label>
+                                                                <input type="text" class="form-control"
+                                                                    v-model="tag.external_id" placeholder="Optional">
+                                                            </div>
+
+                                                            <!-- DESCRIPTION -->
+                                                            <div class="col-12">
+                                                                <label
+                                                                    class="form-label fw-semibold">Description</label>
+                                                                <textarea class="form-control" rows="4"
+                                                                    v-model="tag.description"
+                                                                    placeholder="Tag description"></textarea>
+                                                            </div>
+
+                                                            <!-- COLOR -->
+                                                            <div class="col-md-6">
+                                                                <label class="form-label fw-semibold">Color</label>
+                                                                <input type="color"
+                                                                    class="form-control form-control-color w-100"
+                                                                    v-model="tag.color">
+                                                            </div>
+
+                                                            <!-- ICON -->
+                                                            <div class="col-md-6">
+                                                                <label class="form-label fw-semibold">Icon
+                                                                    (FontAwesome)</label>
+                                                                <input type="text" class="form-control"
+                                                                    v-model="tag.icon"
+                                                                    placeholder="fa-tag, fa-shield, fa-lock...">
+                                                            </div>
+
+                                                            <!-- READ ONLY META -->
+                                                            <div class="col-12">
+                                                                <div class="border rounded-3 p-3 bg-light">
+                                                                    <small class="text-muted d-block">
+                                                                        UUID: [[ tag.uuid ]]
+                                                                    </small>
+                                                                    <small class="text-muted d-block">
+                                                                        Created by: [[ tag.created_by_user_name ||
+                                                                        'Unknown' ]]
+                                                                    </small>
+                                                                    <small class="text-muted d-block">
+                                                                        Created at: [[ tag.created_at ]]
+                                                                    </small>
+                                                                </div>
+                                                            </div>
+
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- FOOTER -->
+                                                    <div class="modal-footer border-0">
+                                                        <button class="btn btn-light rounded-pill px-4"
+                                                            data-bs-dismiss="modal">
+                                                            Cancel
+                                                        </button>
+
+                                                        <button class="btn btn-primary rounded-pill px-4"
+                                                            @click="updateTag(tag)">
+                                                            Save changes
+                                                        </button>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- DETAIL MODAL -->
+                                        <div class="modal fade" :id="'detail_tag_modal_'+tag.id" tabindex="-1">
+                                            <div class="modal-dialog modal-dialog-centered modal-lg">
+                                                <div class="modal-content border-0 shadow-lg rounded-4">
+
+                                                    <!-- HEADER -->
+                                                    <div class="modal-header border-0">
+                                                        <div class="d-flex align-items-center gap-3">
+                                                            <span
+                                                                class="rounded-circle d-flex align-items-center justify-content-center "
+                                                                :style="{ backgroundColor: tag.color, width: '48px', height: '48px' }">
+                                                                <i :class="`fa ${tag.icon || 'fa-tag'}`"
+                                                                    class="text-dark"></i>
+                                                            </span>
+                                                            <div>
+                                                                <h5 class="mb-0 fw-bold">[[ tag.name ]]</h5>
+                                                                <small class="text-muted">UUID: [[ tag.uuid ]]</small>
+                                                            </div>
+                                                        </div>
+
+                                                        <button type="button" class="btn-close"
+                                                            data-bs-dismiss="modal"></button>
+                                                    </div>
+
+                                                    <!-- BODY -->
+                                                    <div class="modal-body pt-0">
+                                                        <p class="text-muted mb-4">
+                                                            [[ tag.description || 'No description' ]]
+                                                        </p>
+
+                                                        <div class="row g-3">
+
+                                                            <div class="col-md-6">
+                                                                <div class="border rounded-3 p-3">
+                                                                    <small class="text-muted">Visibility</small>
+                                                                    <div class="fw-semibold">
+                                                                        [[ tag.visibility ]]
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="col-md-6">
+                                                                <div class="border rounded-3 p-3">
+                                                                    <small class="text-muted">Status</small>
+                                                                    <div class="fw-semibold"
+                                                                        :class="tag.is_active ? 'text-success' : 'text-danger'">
+                                                                        [[ tag.is_active ? 'Active' : 'Inactive' ]]
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="col-md-6">
+                                                                <div class="border rounded-3 p-3">
+                                                                    <small class="text-muted">Created by</small>
+                                                                    <div class="fw-semibold">
+                                                                        <a :href="`/account/detail_user/${tag.created_by_user_id}`"
+                                                                            class="text-decoration-none">
+                                                                            [[ tag.created_by_user_name || 'Unknown' ]]
+                                                                        </a>
+
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="col-md-6">
+                                                                <div class="border rounded-3 p-3">
+                                                                    <small class="text-muted">Created at</small>
+                                                                    <div class="fw-semibold">
+                                                                        [[ new Date(tag.created_at).toLocaleString() ]]
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- FOOTER -->
+                                                    <div class="modal-footer border-0">
+                                                        <button class="btn btn-light rounded-pill px-4"
+                                                            data-bs-dismiss="modal">
+                                                            Close
+                                                        </button>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- REMOVE MODAL -->
+                                        <div class="modal fade" :id="'delete_tag_modal_'+tag.id" tabindex="-1"
+                                            aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content border-0 shadow-lg"
+                                                    style="border-radius: 15px;">
+                                                    <div class="modal-header border-0 pb-0">
+                                                        <h5 class="modal-title fw-bold">Confirm Deletion</h5>
+                                                        <button type="button" class="btn-close"
+                                                            data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body py-4 text-center">
+                                                        <div class="text-danger mb-3"><i
+                                                                class="fas fa-exclamation-triangle fa-3x"></i>
+                                                        </div>
+                                                        <p class="mb-0">Are you sure you want to delete <br><strong>[[
+                                                                tag.name
+                                                                ]]</strong> ?
+                                                        </p>
+                                                        <p>
+                                                            This action cannot be undone and the tag will be permanently
+                                                            removed from the
+                                                            system.
+                                                            You can desactivate it instead if you want to keep it for
+                                                            future reference.
+                                                        </p>
+                                                    </div>
+                                                    <div class="modal-footer border-0 pt-0">
+                                                        <button type="button" class="btn btn-light rounded-pill px-4"
+                                                            data-bs-dismiss="modal">Cancel</button>
+                                                        <button class="btn btn-danger rounded-pill px-4"
+                                                            @click="removeTag(tag.id, index)" data-bs-dismiss="modal">
+                                                            Confirm Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="total_tags === 0">
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        No tags found
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- PAGINATION -->
+                        <template v-if="total_pages > 1">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination justify-content-center mt-3">
+                                    <li class="page-item" :class="{ disabled: current_page === 1 }">
+                                        <button class="page-link"
+                                            @click="current_page > 1 && fetchTags(current_page - 1)">
+                                            <i class="fa-solid fa-angle-left"></i>
+                                        </button>
+                                    </li>
+
+                                    <li class="page-item" v-for="page in visiblePages"
+                                        :class="{ active: page === current_page, disabled: page === '...' }">
+                                        <button class="page-link" v-if="page !== '...'" @click="fetchTags(page)">
+                                            [[ page ]]
+                                        </button>
+                                        <span class="page-link" v-else>...</span>
+                                    </li>
+
+                                    <li class="page-item" :class="{ disabled: current_page === total_pages }">
+                                        <button class="page-link"
+                                            @click="current_page < total_pages && fetchTags(current_page + 1)">
+                                            <i class="fa-solid fa-angle-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </template>
+
+
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="add-pane" role="tabpanel" aria-labelledby="add-tab">
+                <div class="card card-body shadow-sm">
+                    <!-- 2) Add new tags from all the Taxonomy repos -->
+                    <!-- update the tags from the Taxonomies -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text  border-end-0">
+                                    <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                                </span>
+                                <input type="text" v-model="searchQueryMisp" @keyup.enter="onEnterKeyMisp"
+                                    class="form-control rounded-end-pill border-start-0"
+                                    placeholder="Search by keywords..." @input="onSearchInputMisp">
+                            </div>
+                        </div>
+                        <div class="mb-3 mt-3 text-center">
+                            <span class="badge rounded-pill bg-light text-dark px-3 py-2 shadow-lg">
+                                <i class="fa-solid fa-tags me-2 text-primary"></i>
+                                <strong>[[ total_tags_misp ]]</strong> tags found
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- TABLE -->
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Tag</th>
+                                    <th>Description</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <tr v-for="tag in tags_misp" :key="tag.uuid">
+                                    <!-- TAG BADGE -->
+                                    <td>
+                                        <span class="tag-split shadow-lg ">
+                                            <span class="tag-left">
+                                                <i v-if="tag.icon" :class="`fa fa-${tag.icon}`"></i>
+                                                <i v-else class="fa fa-tag"></i>
+                                            </span>
+                                            <span class="tag-right" style=" background-color: rgb(13, 110, 253) "
+                                                :title="tag.name">
+                                                [[ tag.namespace ]]
+                                            </span>
+                                        </span>
+                                    </td>
+
+
+                                    <!-- DESCRIPTION -->
+                                    <td>
+                                        [[ tag.description || 'No description' ]]
+                                    </td>
+
+                                    <!-- ACTIONS -->
+                                    <td>
+                                        <!-- add -->
+                                        <template v-if="loadingByUuid[tag.uuid]">
+                                            <button class="btn btn-sm btn-success" disabled>
+                                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                Adding...
+                                            </button>
+                                        </template>
+                                        <template v-else>
+                                            <button class="btn btn-sm btn-success" :disabled="loadingByUuid[tag.uuid]"
+                                                @click="addTag(tag.uuid)">
+
+                                                <i class="fa-solid fa-plus"></i> Add
+                                            </button>
+                                        </template>
+
+                                    </td>
+                                </tr>
+                                <tr v-if="total_tags_misp === 0">
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        No tags found
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- PAGINATION -->
+                        <template v-if="total_pages_misp > 1">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination justify-content-center mt-3">
+                                    <li class="page-item" :class="{ disabled: current_page_misp === 1 }">
+                                        <button class="page-link"
+                                            @click="current_page_misp > 1 && fetchTagsMisp(current_page_misp - 1)">
+                                            <i class="fa-solid fa-angle-left"></i>
+                                        </button>
+                                    </li>
+
+                                    <li class="page-item" v-for="page in visiblePagesMisp"
+                                        :class="{ active: page === current_page_misp, disabled: page === '...' }">
+                                        <button class="page-link" v-if="page !== '...'" @click="fetchTagsMisp(page)">
+                                            [[ page ]]
+                                        </button>
+                                        <span class="page-link" v-else>...</span>
+                                    </li>
+
+                                    <li class="page-item" :class="{ disabled: current_page_misp === total_pages_misp }">
+                                        <button class="page-link"
+                                            @click="current_page_misp < total_pages_misp && fetchTagsMisp(current_page_misp + 1)">
+                                            <i class="fa-solid fa-angle-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, onMounted, watch, nextTick, computed } = Vue;
+    import { message_list, create_message, display_toast } from '/static/js/toaster.js';
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            /**
+             *  ------------------
+             *  | Initialization |
+             *  ------------------
+             * */
+            const detail_page_1_is_loading = ref(false);
+
+            async function init() {
+                detail_page_1_is_loading.value = false
+
+                await Promise.all([
+                    fetchTags(1),
+                    fetchTagsMisp(1),
+                ])
+                detail_page_1_is_loading.value = true
+
+                await nextTick();
+
+            }
+
+            onMounted(() => {
+                init()
+            })
+
+
+
+            /**
+             *  -----------------------
+             *  | LIST AVAILABLE TAGS |
+             *  -----------------------
+             * */
+
+            // -------------------------------
+            // | tab 1 - list available tags |
+            // -------------------------------
+            const tags = ref([]);
+            const total_tags = ref(0)
+            const total_pages = ref(1)
+            const current_page = ref(1)
+
+            // filter 
+            const searchQuery = ref('');
+            const sort_order = ref('asc');
+            const visibility = ref('all');
+            const is_active = ref('all');
+
+
+            async function fetchTags(page) {
+                const params = new URLSearchParams({
+                    page,
+                    search: searchQuery.value,
+                    sort_order: sort_order.value,
+                    visibility: visibility.value,
+                    is_active: is_active.value,
+
+                })
+                const res = await fetch('/tags/get_tags?' + params.toString())
+                const data = await res.json()
+                if (res.status === 200) {
+                    tags.value = data.tags
+                    total_tags.value = data.total_tags
+                    total_pages.value = data.total_pages
+                    current_page.value = page
+                }
+            }
+            async function onSearchInput() {
+                if (searchQuery.value.trim() === "") {
+                    await fetchTags(1)
+                }
+            }
+            async function onEnterKey() {
+                if (event.key === 'Enter') {
+                    await fetchTags(1)
+                }
+
+            }
+            const visiblePages = computed(() => {
+                const pages = []
+                const total = total_pages.value
+                const current = current_page.value
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total)
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                    }
+                }
+                return pages
+            })
+
+            /**
+             *  ----------------------
+             *  | ACTION TAGS        |
+             *  ----------------------
+             * */
+            async function removeTag(tag_id, index) {
+                try {
+                    const params = new URLSearchParams({ tag_id })
+                    const res = await fetch('/tags/remove_tag?' + params.toString())
+                    const data = await res.json()
+
+                    if (res.status === 200) {
+                        await fetchTags(1)
+                    }
+
+                    create_message(data.message, data.toast_class)
+                }
+                catch (err) {
+                    create_message("Error while removing tag", "danger-subtle")
+                }
+            }
+
+            async function toggleVisibility(tag_uuid) {
+                try {
+                    const params = new URLSearchParams({ tag_uuid })
+                    const res = await fetch('/tags/toggle_visibility?' + params.toString())
+                    const data = await res.json()
+
+                    if (res.status === 200) {
+                        await fetchTags(1)
+                    }
+
+                    create_message(data.message, data.toast_class)
+                }
+                catch (err) {
+                    create_message("Error while toggling visibility", "danger-subtle")
+                }
+            }
+
+            async function toggleStatus(tag_uuid) {
+                try {
+                    const params = new URLSearchParams({ tag_uuid })
+                    const res = await fetch('/tags/toggle_status?' + params.toString())
+                    const data = await res.json()
+
+                    if (res.status === 200) {
+                        await fetchTags(1)
+                    }
+
+                    create_message(data.message, data.toast_class)
+                }
+                catch (err) {
+                    create_message("Error while toggling status", "danger-subtle")
+                }
+            }
+
+            const csrf_token = '{{ csrf_token() }}';
+
+            async function updateTag(tag) {
+                const res = await fetch(`/tags/edit_tag/${tag.id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf_token },
+                    body: JSON.stringify({
+                        name: tag.name,
+                        description: tag.description,
+                        color: tag.color,
+                        icon: tag.icon,
+                        external_id: tag.external_id
+                    })
+                })
+
+                const data = await res.json()
+
+                if (res.status === 200) {
+
+                    // close the modal
+                    const modal = document.getElementById('edit_tag_modal_' + tag.id)
+                    const modalInstance = bootstrap.Modal.getInstance(modal)
+                    modalInstance.hide()
+                }
+                await fetchTags(1)
+                create_message(data.message, data.toast_class)
+            }
+
+
+            // ------------------------ 
+            // | tab 2 - add new tags |
+            // ------------------------
+
+            const tags_misp = ref([]);
+            const total_tags_misp = ref(0)
+            const total_pages_misp = ref(1)
+            const current_page_misp = ref(1)
+
+            // filter 
+            const searchQueryMisp = ref('');
+
+            async function fetchTagsMisp(page) {
+                const params = new URLSearchParams({
+                    page,
+                    search: searchQueryMisp.value
+                })
+                const res = await fetch('/tags/get_tags_misp?' + params.toString())
+                const data = await res.json()
+                if (res.status === 200) {
+                    tags_misp.value = data.tags
+                    total_tags_misp.value = data.total_tags
+                    total_pages_misp.value = data.total_pages
+                    current_page_misp.value = page
+                }
+            }
+            async function onSearchInputMisp() {
+                if (searchQueryMisp.value.trim() === "") {
+                    await fetchTagsMisp(1)
+                }
+            }
+            async function onEnterKeyMisp() {
+                if (event.key === 'Enter') {
+                    await fetchTagsMisp(1)
+                }
+
+            }
+            const visiblePagesMisp = computed(() => {
+                const pages = []
+                const total = total_pages_misp.value
+                const current = current_page_misp.value
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total)
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                    }
+                }
+                return pages
+            })
+
+            // action
+            const loadingByUuid = ref({})
+
+
+            async function addTag(uuid) {
+
+                loadingByUuid.value[uuid] = true
+
+                try {
+                    const params = new URLSearchParams({ uuid })
+                    const res = await fetch('/tags/add_tags_misp?' + params.toString())
+                    const data = await res.json()
+
+                    if (res.status === 200) {
+                        await fetchTags(1)
+                        await fetchTagsMisp(1)
+                    }
+
+                    create_message(data.message, data.toast_class)
+                }
+                catch (err) {
+                    create_message("Error while adding tag", "danger-subtle")
+                }
+                finally {
+                    loadingByUuid.value[uuid] = false
+                }
+            }
+
+
+            return {
+
+                message_list,
+                detail_page_1_is_loading,
+
+                // tab 1
+                fetchTags,
+                tags,
+                total_tags,
+                current_page,
+                total_pages,
+                searchQuery,
+                sort_order,
+                visibility,
+                is_active,
+
+                onEnterKey,
+                onSearchInput,
+                visiblePages,
+
+                removeTag,
+                toggleVisibility,
+                toggleStatus,
+                updateTag,
+                // tab 2
+                fetchTagsMisp,
+                tags_misp,
+                total_tags_misp,
+                current_page_misp,
+                total_pages_misp,
+                searchQueryMisp,
+                onEnterKeyMisp,
+                onSearchInputMisp,
+                visiblePagesMisp,
+                addTag,
+                loadingByUuid,
+
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

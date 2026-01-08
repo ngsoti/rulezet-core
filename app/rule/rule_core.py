@@ -9,7 +9,7 @@ from flask import jsonify
 from flask_login import current_user
 from sqlalchemy import case, or_
 from sqlalchemy.orm import joinedload
-
+            
 from app.rule_format.abstract_rule_type import rule_type_abstract
 from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult, load_all_rule_formats
 

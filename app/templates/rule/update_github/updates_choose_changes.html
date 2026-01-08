@@ -19,7 +19,7 @@
         <div class="card shadow-lg border-0">
 
 
-
+            <!-- info on the rule and the github of the rule source-->
 
             <div class="card-body">
                 <ul class="list-group mb-4">
@@ -43,6 +43,11 @@
                         <span :class="['badge ms-1', owner_rule.message === 'rejected' ? 'bg-danger' : 'bg-success']">
                             [[ owner_rule.message ]]
                         </span>
+                    </li>
+                    <li class="list-group-item" title="Update found from GitHub"><strong>Rule
+                            Source:</strong>
+                        <a :href="owner_rule.rule_source" target="_blank" class="stretched-link"></a>
+                        [[ owner_rule.rule_source ]]
                     </li>
                 </ul>
 

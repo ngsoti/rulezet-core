@@ -54,12 +54,14 @@ def create_app():
     from .account.account import account_blueprint
     from .rule.rule import rule_blueprint  
     from .bundle.bundle import bundle_blueprint
+    from .tags.tags import tags_blueprint
 
 
     app.register_blueprint(home_blueprint, url_prefix="/")
     app.register_blueprint(account_blueprint, url_prefix="/account")
     app.register_blueprint(rule_blueprint, url_prefix="/rule")
     app.register_blueprint(bundle_blueprint, url_prefix="/bundle")
+    app.register_blueprint(tags_blueprint, url_prefix="/tags")
 
     from app.api.api import api_blueprint
 
