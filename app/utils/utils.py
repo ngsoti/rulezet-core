@@ -220,3 +220,9 @@ def bump_version(version: str) -> str:
 
     return version
 
+def get_version():
+    print("version")
+    version_file = os.path.join(os.getcwd(), "version")
+    with open(version_file, "r") as f:
+        print(f.readline().strip())
+        return f.readline().strip()

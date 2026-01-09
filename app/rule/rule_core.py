@@ -1,5 +1,6 @@
 
 import json
+import math
 from typing import Any, Dict, List, Optional, Tuple
 import uuid
 import datetime
@@ -280,45 +281,131 @@ def get_rule(id) -> int:
     return Rule.query.get(id)
 
 
-def get_similar_rule(rule_id) -> list:
-    """Return up to 3 similar rules based on cve_id, title, format, and author."""
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+
+def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
+    """
+    Return similar rules using TF-IDF + cosine similarity
+    """
+
     rule = Rule.query.get(rule_id)
-    if not rule:
+    print(rule_id)
+    if not rule or not rule.to_string:
+        print("Rule not found or no content")
         return []
 
-    filters = [Rule.id != rule.id]  # Exclude the current rule
+    candidates = Rule.query.filter(
+        Rule.id != rule.id,
+        Rule.format == rule.format,
+        Rule.to_string.isnot(None)
+    ).all()
 
-    similarity_criteria = []
+    if not candidates:
+        return []
+    corpus = [rule.to_string] + [r.to_string for r in candidates]
 
-    if rule.cve_id:
-        similarity_criteria.append(Rule.cve_id.ilike(f'%{rule.cve_id}%'))
-    if rule.title:
-        similarity_criteria.append(Rule.title.ilike(f'%{rule.title}%'))
-    # if rule.format:
-    #     similarity_criteria.append(Rule.format == rule.format)
-    if rule.author:
-        similarity_criteria.append(Rule.author.ilike(f'%{rule.author}%'))
+    # 4️Vectorisation TF-IDF
+    vectorizer = TfidfVectorizer(
+        analyzer="word",
+        ngram_range=(1, 3),
+        max_df=0.95,
+        min_df=1
+    )
 
-    # if no similarity criteria are provided, fallback to the last 3 rules
-    if not similarity_criteria:
-        fallback_rules = Rule.query.filter(Rule.id != rule.id).order_by(Rule.creation_date.desc()).limit(3).all()
-        return [r.to_json() for r in fallback_rules]
+    tfidf_matrix = vectorizer.fit_transform(corpus)
 
-    # else, filter based on the provided criteria
-    similar_rules = Rule.query.filter(
-        *filters,
-        or_(*similarity_criteria)
-    ).order_by(Rule.creation_date.desc()).limit(3).all()
+    # 5️Cosine similarity
+    similarity_scores = cosine_similarity(
+        tfidf_matrix[0:1],
+        tfidf_matrix[1:]
+    )[0]
 
-    # complete the list with the last 3 rules if less than 3 similar rules found
-    if len(similar_rules) < 3:
-        additional_rules = Rule.query.filter(
-            Rule.id != rule.id,
-            ~Rule.id.in_([r.id for r in similar_rules])
-        ).order_by(Rule.creation_date.desc()).limit(3 - len(similar_rules)).all()
-        similar_rules += additional_rules
+    results = []
+    for candidate, score in zip(candidates, similarity_scores):
+        if score >= min_score:
+            results.append({
+                **candidate.to_json(),
+                "similarity": round(float(score), 3)
+            })
 
-    return [r.to_json() for r in similar_rules]
+    results.sort(key=lambda x: x["similarity"], reverse=True)
+
+    if limit == 0:
+        return results
+
+    return results[:limit]
+
+
+
+
+def get_similar_rules_paginated(rule_id, page=1, per_page=10, min_score=0.15, search=None, sort_by="highest_match", pourcent=111):
+        base_rule = Rule.query.get(rule_id)
+        if not base_rule or not base_rule.to_string:
+            return [], 0, 1
+
+        # 1. Database Level Filtering
+        query = Rule.query.filter(
+            Rule.id != base_rule.id,
+            Rule.format == base_rule.format,
+            Rule.to_string.isnot(None)
+        )
+
+        if search:
+            search_query = f"%{search}%"
+            query = query.filter(or_(
+                Rule.title.ilike(search_query),
+                Rule.description.ilike(search_query),
+                Rule.to_string.ilike(search_query)
+            ))
+
+        candidates = query.all()
+        if not candidates:
+            return [], 0, 1
+
+        # 2. Similarity Calculation
+        corpus = [base_rule.to_string] + [c.to_string for c in candidates]
+        vectorizer = TfidfVectorizer(analyzer="word", ngram_range=(1, 3), max_df=0.95, min_df=1)
+        
+        tfidf_matrix = vectorizer.fit_transform(corpus)
+        similarity_scores = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])[0]
+
+        # 3. Processing Results
+        scored_results = []
+        for candidate, score in zip(candidates, similarity_scores):
+            if score >= min_score:
+                data = candidate.to_json()
+                data["similarity"] = round(float(score), 4)
+                scored_results.append(data)
+
+        # 4. Sorting
+        if sort_by == "highest_match":
+            scored_results.sort(key=lambda x: x["similarity"], reverse=True)
+        else:
+            scored_results.sort(key=lambda x: x["similarity"], reverse=False)
+        # 4.1 Pourcentage
+        try:
+            pourcent = int(pourcent)
+        except (TypeError, ValueError):
+            pourcent = 111
+        if 0 <= pourcent <= 100:
+            threshold = pourcent / 100
+            scored_results = [
+                r for r in scored_results
+                if r["similarity"] >= threshold
+            ]
+
+        # 5. Manual Pagination
+        total_count = len(scored_results)
+        total_pages = max(1, math.ceil(total_count / per_page))
+        page = max(1, min(page, total_pages))
+        
+        start = (page - 1) * per_page
+        end = start + per_page
+        return scored_results[start:end], total_count, total_pages
+
+
 
 def get_rule_type_count(user_id):
     """Return JSON of the different rule types and total"""

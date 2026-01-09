@@ -97,17 +97,32 @@ def get_rules_page() -> jsonify:
     return {"message": "No Rule"}
 
 
-@rule_blueprint.route("/get_similar_rule", methods=['GET'])
+@rule_blueprint.route("/get_similar_rule", methods=["GET"])
 def get_similar_rules() -> jsonify:
-    """Get all the rules on a page"""
-    rule_id = request.args.get('rule_id',  type=int)
-    rules_list_similar = RuleModel.get_similar_rule(rule_id)
-    if rules_list_similar:
-        return {"similar_rules": rules_list_similar}
-    
-    return {"message": "No Rule",
+    """
+    Return similar rules with similarity index
+    """
+
+    rule_id = request.args.get("rule_id", type=int)
+
+    if not rule_id:
+        return jsonify({
+            "message": "Missing rule_id",
             "similar_rules": []
-        }
+        }), 400
+
+    similar_rules = RuleModel.get_similar_rule(rule_id)
+
+    if not similar_rules:
+        return jsonify({
+            "message": "No similar rules found",
+            "similar_rules": []
+        }), 200
+
+    return jsonify({
+        "message": "Success",
+        "similar_rules": similar_rules
+    }), 200
 
 
 @rule_blueprint.route("/get_rules_page_filter_with_id", methods=['GET'])
@@ -2361,3 +2376,55 @@ def get_total_rules():
 def get_total_formats():
     total_formats = RuleModel.get_total_formats()
     return jsonify({"success": True, "total_formats": total_formats}), 200
+
+
+
+@rule_blueprint.route('/similar_rules_detail/<int:rule_id>', methods=['GET'])
+@login_required
+def similar_rules_detail(rule_id):
+    if not rule_id:
+        flash("No rule ID provided.", "danger")
+        return redirect(url_for('rule.rules_summary'))
+    
+    rule = RuleModel.get_rule(rule_id)
+    if not rule:
+        flash("Rule not found.", "danger")
+        return redirect(url_for('rule.rules_summary'))
+
+    return render_template("/rule/compare_rules/similar_rule.html", rule=rule)
+
+
+@rule_blueprint.route('/get_similar_rule_page', methods=['GET'])
+@login_required
+def get_similar_rule_page():
+    rule_id = request.args.get("rule_id", type=int)
+    limit = request.args.get("limit", type=int, default=10)
+    page = request.args.get("page", type=int, default=1)
+    search = request.args.get("search", type=str, default=None)
+    sort_by = request.args.get("sort_by", type=str, default="highest_match")
+    pourcent = request.args.get("pourcent", type=int, default=111)
+
+    if not rule_id:
+        return jsonify({
+            "message": "Missing rule_id",
+            "similar_rules": []
+        }), 400
+
+    paginated_items, total_count, total_pages = RuleModel.get_similar_rules_paginated(
+        rule_id=rule_id,
+        page=page,
+        per_page=limit,
+        search=search,
+        sort_by=sort_by,
+        pourcent=pourcent
+    )
+
+    return jsonify({
+        "similar_rules": paginated_items,  
+        "total_count": total_count,
+        "total_pages": total_pages,
+        "current_page": page,
+        "per_page": limit,
+        "success": True,
+        "toast_class": "success-subtle"
+    }), 200

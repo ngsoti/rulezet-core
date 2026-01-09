@@ -1,0 +1,539 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="main-container" class="container py-4" v-cloak>
+    <template v-if="!detail_page_1_is_loading">
+        <!--Spin-->
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </template>
+    <template v-else>
+        <h2 class="fw-bold mb-1 text-center text-primary">
+            <i class="fas fa-shield-alt me-2"></i> Similar Rule
+        </h2>
+        <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;">
+        </div>
+        <p class="text-muted mt-2">
+            Here you can find all the details about the rule "<strong>{{ rule.title }}</strong>".
+            Propose edits, view related rules, and engage with the community through comments.
+        </p>
+
+        <!-- Card detail -->
+        <div class="card h-100 shadow-sm transition-hover border-0 card-security-premium mb-4">
+            <div class="premium-accent-line"></div>
+
+            <div class="card-watermark-list">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+
+            <div class="position-absolute top-0 end-0 mt-3 me-3 d-flex gap-2 z-index-2">
+                <span v-if="parseInt('{{current_user.id}}') == rule.user_id || current_user_is_admin"
+                    class="badge bg-success shadow-sm pt-1" title="You are the owner">
+                    <i class="fa-solid fa-crown me-1"></i> OWNER
+                </span>
+                <span class="badge rounded-pill bg-dark pt-1 shadow-sm">[[ rule.format.toUpperCase() ]]</span>
+            </div>
+
+            <div class="card-body d-flex flex-column p-4 z-index-1">
+                <div class="mb-3 pe-5">
+                    <h5 class="fw-bold mb-1">
+                        <a :href="`/rule/detail_rule/${rule.id}`"
+                            class="fw-bold h5  border-start border-primary border-4 ps-3 custom-rule-link text-decoration-none d-block">
+                            [[ rule.title ]]
+                        </a>
+                    </h5>
+                    <div class="d-flex align-items-center gap-2 mt-2">
+                        <div class="avatar-circle-xs" title="Author of the rule">
+                            <template v-if="rule.author === 'Unknown'">
+                                [[ rule.editor[0].toUpperCase() ]]
+                            </template>
+                            <template v-else>
+                                [[ rule.author[0].toUpperCase() ]]
+                            </template>
+                        </div>
+                        <small class="text-muted fw-medium" title="Author of the rule"> <template
+                                v-if="rule.author === 'Unknown'">
+                                [[ rule.editor ]]
+                            </template>
+                            <template v-else>
+                                [[ rule.author ]]
+                            </template>
+                        </small>
+                        <span class="text-muted opacity-50">|</span>
+                        <small class="text-muted"> [[ dayjs.utc(rule.last_modif).fromNow() ]]</small>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-muted small lh-base mb-2">
+                        <i class="fas fa-quote-left me-2 opacity-50 text-primary"></i>
+                        [[ rule.description ]]
+                    </p>
+                </div>
+
+                <div v-if="rule.cve_id && rule.cve_id !== 'None'">
+                    <div class="d-flex flex-wrap gap-1">
+                        <a v-for="(cve, index) in parsedCVE(rule.cve_id)" :key="index"
+                            :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()" target="_blank"
+                            :class="['badge', 'text-decoration-none', getCVEColor(cve), 'p-2']"
+                            style="font-size: 0.7rem; border-radius: 6px;">
+                            <i :class="getCVEIcon(cve)" class="me-1"></i>
+                            [[ getCVEPrefix(cve) ]]<span class="fw-bold">[[ getCVENumber(cve) ]]</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-4 pt-3  small text-muted">
+                    <div class="col-5">
+                        <div class="mb-1"><i class="fas fa-link me-2"></i><strong>Source:</strong> [[ rule.source ]]
+                        </div>
+                        <div class="mb-1"><i class="fas fa-balance-scale me-2"></i><strong>License:</strong> [[
+                            rule.license ]]</div>
+                    </div>
+                    <div class="col-5">
+                        <div class="mb-1"><i class="fas fa-code-branch me-2"></i><strong>Version:</strong> <span
+                                class="badge text-bg-light border px-1">[[ rule.version ]]</span></div>
+                        <div class="mb-1">
+                            <a :href="`/account/detail_user/${rule.user_id}`" class="text-decoration-none text-muted">
+                                <i class="fas fa-user-edit me-2"></i><strong>Editor:</strong> <span
+                                    class="text-primary">[[ rule.editor ]]</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-2 text-end">
+                        <div class="h3 mb-0 fw-bold text-primary">[[ total_count ]]</div>
+                        <div class="x-small text-muted text-uppercase fw-bold">Similar Matches</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Filter -->
+        <div class="row mb-3 g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text  border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" v-model="searchQuery" @keyup.enter="onEnterKey"
+                        class="form-control rounded-end-pill border-start-0" placeholder="Search by keywords..."
+                        @input="onSearchInput">
+                </div>
+            </div>
+            <div class="col-md-6 d-flex justify-content-md-end gap-2">
+                <select v-model="pourcent" class="form-select form-select-sm shadow-sm" style="width: 90px"
+                    @change="fetchRules(1)">
+
+                    <option value="111">All %</option>
+                    <option value="100">100%</option>
+                    <option value="90">90%</option>
+                    <option value="80">80%</option>
+                    <option value="70">70%</option>
+                    <option value="60">60%</option>
+                    <option value="50">50%</option>
+                    <option value="40">40%</option>
+                    <option value="30">30%</option>
+                    <option value="20">20%</option>
+                    <option value="10">10%</option>
+                </select>
+                <select v-model="per_page" class="form-select form-select-sm w-auto shadow-sm" @change="fetchRules(1)">
+                    <option :value="10">10 Rows</option>
+                    <option :value="18">18 Rows</option>
+                    <option :value="48">48 Rows</option>
+                </select>
+                <button @click="toggleSort" class="btn btn-sm  border shadow-sm px-3" style="color: var(--text-color)">
+                    <i class="fas"
+                        :class="sortBy === 'highest_match' ? 'fa-sort-amount-down' : 'fa-sort-amount-up'"></i>
+                    [[ sortBy === 'highest_match' ? 'Most Similar' : 'Least Similar' ]]
+                </button>
+            </div>
+        </div>
+        <template v-if="!is_loading">
+            <!-- Pagination-->
+            <template v-if="rules_list.length > 0">
+                <!-- center-->
+                <div class="d-flex justify-content-center">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination">
+                            <li class="page-item" :class="{ disabled: current_page === 1 }">
+                                <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
+                                    <i class="fas fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="page-item" v-for="page in visiblePages" :key="page"
+                                :class="{ active: current_page === page, disabled: page === '...' }">
+                                <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[
+                                    page ]]</a>
+                                <span v-else class="page-link">...</span>
+                            </li>
+                            <li class="page-item" :class="{ disabled: current_page === total_pages }">
+                                <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
+                                    Next <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+
+            </template>
+            <!-- List -->
+            <div class="discovery-stack">
+                <div v-for="item in rules_list" :key="item.id"
+                    class="card mb-3 shadow-sm border rounded overflow-hidden on-hover-zoom">
+                    <div class="candidate-header  p-3 d-flex align-items-center pointer transition-all"
+                        :class="{'border-start border-primary border-4': selectedId === item.id}"
+                        @click="toggleCompare(item)">
+
+                        <div class="similarity-score me-4 text-center">
+                            <div class="h5 mb-0 fw-bold" :class="getScoreColor(item.similarity)">
+                                [[ (item.similarity * 100).toFixed(0) ]]%
+                            </div>
+                            <div class="x-small text-uppercase text-muted fw-bold">Match</div>
+                        </div>
+
+                        <div class="flex-grow-1 min-width-0 d-flex flex-column">
+                            <div class="d-flex flex-column gap-1 mb-1">
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="mb-0 fw-bold text-dark text-truncate">
+                                        [[ item.title ]]
+                                    </h6>
+                                    <span class="badge rounded-pill bg-dark pt-1 shadow-sm">
+                                        [[ item.format.toUpperCase() ]]
+                                    </span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <div class="avatar-circle-xs" title="Author of the rule">
+                                        <template v-if="item.author === 'Unknown'">
+                                            [[ item.editor[0].toUpperCase() ]]
+                                        </template>
+                                        <template v-else>
+                                            [[ item.author[0].toUpperCase() ]]
+                                        </template>
+                                    </div>
+
+                                    <small class="text-muted fw-medium" title="Author of the rule">
+                                        <template v-if="item.author === 'Unknown'">
+                                            [[ item.editor ]]
+                                        </template>
+                                        <template v-else>
+                                            [[ item.author ]]
+                                        </template>
+                                    </small>
+
+                                    <span class="text-muted opacity-50">|</span>
+
+                                    <small class="text-muted">
+                                        [[ dayjs.utc(item.last_modif).fromNow() ]]
+                                    </small>
+
+
+                                </div>
+
+                            </div>
+                        </div>
+
+
+                        <div class="ms-4 text-end d-none d-lg-block" style="min-width: 150px;">
+                            <div class="x-small text-muted mb-1"><i class="far fa-clock me-1"></i>[[ item.last_modif ]]
+                            </div>
+                            <div class="x-small text-muted fw-bold">UUID: [[ item.uuid ]]</div>
+                        </div>
+
+                        <div class="ms-3">
+                            <i class="fas" :class="selectedId === item.id ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                        </div>
+                    </div>
+
+                    <div v-if="selectedId === item.id"
+                        class="candidate-workspace border-top shadow-sm rounded-bottom overflow-hidden">
+                        <!-- Header -->
+                        <div class="workspace-header px-3 py-2 d-flex justify-content-between align-items-center">
+                            <div class="meta small ">
+                                <span class="me-3">
+                                    <i class="fas fa-certificate me-1"></i>
+                                    <strong>License:</strong> [[ item.license || 'No License' ]]
+                                </span>
+                                <span>
+                                    <i class="fas fa-code-branch me-1"></i>
+                                    <strong>Version:</strong> [[ item.version || '—' ]]
+                                </span>
+                            </div>
+
+                            <div class="actions d-flex gap-2">
+                                <a :href="`/rule/similar_rules_detail/${item.id}`" class="btn btn-sm btn-primary"
+                                    title="View more similar rules for this rule">
+                                    <i class="fas fa-plus"></i>
+                                </a>
+
+                                <a :href="`/rule/detail_rule/${item.id}`" class="btn btn-sm btn-primary"
+                                    title="View rule details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Diff content -->
+                        <div class="diff-wrapper  border-top" style="background-color: var(--bg-color);">
+                            <div id="diff-container" class="diff-content p-3"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <!-- Pagination-->
+            <template v-if="rules_list.length > 0">
+                <!-- center-->
+                <div class="d-flex justify-content-center">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination">
+                            <li class="page-item" :class="{ disabled: current_page === 1 }">
+                                <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
+                                    <i class="fas fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="page-item" v-for="page in visiblePages" :key="page"
+                                :class="{ active: current_page === page, disabled: page === '...' }">
+                                <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchRules(page)">[[
+                                    page ]]</a>
+                                <span v-else class="page-link">...</span>
+                            </li>
+                            <li class="page-item" :class="{ disabled: current_page === total_pages }">
+                                <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
+                                    Next <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+
+            </template>
+        </template>
+        <template v-else>
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </template>
+    </template>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, nextTick, computed, watch, onMounted } = Vue;
+    import { renderDiff } from "/static/js/diff_macro.js";
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            /**
+             *  -------------------
+             *  | Init function   |
+             *  -------------------
+             * */
+            const detail_page_1_is_loading = ref(false);
+
+            async function init() {
+                detail_page_1_is_loading.value = false
+
+                await Promise.all([
+                    fetchRule(),
+                    fetchRules(1),
+                ])
+                detail_page_1_is_loading.value = true
+
+                await nextTick();
+            }
+
+            onMounted(() => {
+                init()
+            })
+
+
+            /**
+            *  -------------------
+            *  | cve badge color |
+            *  -------------------
+            * */
+
+            function parsedCVE(cveField) {
+                try {
+                    return JSON.parse(cveField);
+                } catch (e) {
+                    return cveField.replace(/[{}]/g, "").split(",").map(s => s.trim());
+                }
+            }
+
+            function getCVEColor(cve) {
+                if (cve.startsWith("CVE")) return "bg-danger";
+                if (cve.startsWith("GHSA")) return "bg-warning text-dark";
+                if (cve.startsWith("PYSEC")) return "bg-info text-dark";
+                if (cve.startsWith("GSD")) return "bg-secondary";
+                if (cve.startsWith("GCVE")) return "bg-primary";
+                if (cve.startsWith("RHSA")) return "bg-danger-subtle text-dark";
+                if (cve.startsWith("CERTFR")) return "bg-success";
+                if (cve.startsWith("cisco-sa")) return "bg-dark";
+                if (cve.startsWith("wid-sec-w")) return "bg-secondary";
+                if (cve.startsWith("msrc_CVE")) return "bg-purple";
+                return "bg-dark";
+            }
+
+            function getCVEIcon(cve) {
+                if (cve.startsWith("CVE")) return "fas fa-shield-alt";
+                if (cve.startsWith("GHSA")) return "fas fa-bug";
+                if (cve.startsWith("PYSEC")) return "fas fa-code";
+                if (cve.startsWith("GSD")) return "fas fa-database";
+                if (cve.startsWith("GCVE")) return "fas fa-globe";
+                if (cve.startsWith("RHSA")) return "fas fa-lock";
+                if (cve.startsWith("CERTFR")) return "fas fa-flag";
+                if (cve.startsWith("cisco-sa")) return "fas fa-network-wired";
+                if (cve.startsWith("wid-sec-w")) return "fas fa-exclamation-circle";
+                if (cve.startsWith("msrc_CVE")) return "fas fa-shield-virus";
+                return "fas fa-exclamation-triangle";
+            }
+
+            function getCVEPrefix(cve) {
+                return cve.split("-")[0].toUpperCase();
+            }
+            function getCVENumber(cve) {
+                return cve.replace(/^[A-Za-z_:-]+/, "").replace(/^-/, "");
+            }
+
+            /**
+            *  ----------------
+            *  | current rule |
+            *  ----------------
+            * */
+            const rule = ref([])
+
+            async function fetchRule() {
+                const res = await fetch("/rule/get_rule?rule_id={{ rule.id }}");
+                const data = await res.json();
+                if (data.success) {
+                    rule.value = data.rule;
+                }
+            }
+
+            /**
+            *  ----------------
+            *  | similar rules |
+            *  ----------------
+            * */
+
+            const rules_list = ref([]);
+            const current_page = ref(1);
+            const total_pages = ref(1);
+            const total_count = ref(0);
+
+            const per_page = ref(18);
+            const searchQuery = ref("");
+            const sortBy = ref("highest_match");
+            const is_loading = ref(false);
+            const pourcent = ref(111);
+
+            async function fetchRules(page) {
+                is_loading.value = true
+                const url = `/rule/get_similar_rule_page?rule_id={{ rule.id }}&page=${page}&limit=${per_page.value}&search=${searchQuery.value}&sort_by=${sortBy.value}&pourcent=${pourcent.value}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                rules_list.value = data.similar_rules;
+                total_pages.value = data.total_pages;
+                total_count.value = data.total_count;
+                current_page.value = page;
+                is_loading.value = false
+            }
+
+
+            const selectedItem = ref(null);
+            const selectedId = ref(null);
+            const compareMode = ref('diff');
+            const baseContent = `{{ rule.to_string | safe }}`;
+            let timeout = null;
+
+            async function onSearchInput() {
+                if (searchQuery.value.trim() === "") {
+                    await fetchRules(1)
+                }
+            }
+
+            async function onEnterKey() {
+                // if the key pressed is enter launch the request
+                if (event.key === 'Enter') {
+                    await fetchRules(1)
+                }
+
+            }
+
+            const visiblePages = computed(() => {
+                const pages = []
+                const total = total_pages.value
+                const current = current_page.value
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total)
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                    }
+                }
+                return pages
+            })
+
+            async function toggleCompare(item) {
+                if (selectedId.value === item.id) {
+                    selectedId.value = null;
+                    selectedItem.value = null;
+                } else {
+                    selectedId.value = item.id;
+                    selectedItem.value = item;
+                    await renderContent();
+                }
+            }
+
+            async function setMode(mode) {
+                compareMode.value = mode;
+                await renderContent();
+            }
+
+            async function renderContent() {
+                await nextTick();
+                const container = document.getElementById('diff-container');
+                if (!container) return;
+
+                container.innerHTML = "";
+                const contentB = selectedItem.value.to_string;
+                const contentA = compareMode.value === 'diff' ? baseContent : contentB;
+
+                renderDiff(contentA, contentB, 'diff-container', "twoText");
+            }
+
+            function toggleSort() {
+                sortBy.value = sortBy.value === 'highest_match' ? 'lowest_match' : 'highest_match';
+                fetchRules(1);
+            }
+
+            function getScoreColor(score) {
+                if (score > 0.8) return 'get-high';
+                if (score > 0.5) return 'get-mid';
+                return 'get-low';
+            }
+
+            fetchRules(1);
+
+            return {
+                detail_page_1_is_loading,
+                rules_list, current_page, total_pages, total_count, per_page, searchQuery, rule, is_loading, pourcent,
+                onSearchInput, onEnterKey, visiblePages,
+                sortBy, selectedId, compareMode, dayjs, getCVEColor, getCVEIcon, getCVEPrefix, getCVENumber, parsedCVE,
+                fetchRules, toggleCompare, toggleSort, getScoreColor, setMode
+            }
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}
