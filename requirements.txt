@@ -28,3 +28,4 @@ nova-hunting
 pymisp
 flask_mail
 diff2html
+scikit-learn

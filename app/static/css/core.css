@@ -14,11 +14,20 @@
   --code-bg-color: #f8f9fa;
   --border-color: #dee2e6;
   --card-header-bg-color: rgb(207, 226, 255);
-
+  --bg-color-high-similarity: rgb(240, 145, 154);
   --rule-name-color: rgb(10, 88, 202);
 
   --navbar-bg-color: #ffffff;
   --navbar-text-color: #000000;
+
+  --bg-diff-add-highlight: #97f295;
+  --bg-diff-add: #dfd;
+
+  --bg-diff-remove-highlight: #ffb6ba;
+  --bg-diff-remove: #e9aeae;
+
+  --page-selected-color: rgba(13,110,253,1);
+
 }
 
 body.dark-mode {
@@ -33,6 +42,15 @@ body.dark-mode {
   --navbar-bg-color: #1c1c1c;
   --navbar-text-color: #f1f1f1;
   --rule-name-color: rgb(10, 88, 202);
+  --bg-color-high-similarity: rgb(150, 41, 52);
+
+  --bg-diff-add-highlight: #54a652;
+  --bg-diff-add: #4b6c4b;;
+
+  --bg-diff-remove-highlight: #8a3b3f;
+  --bg-diff-remove: #a1585c;
+
+  --page-selected-color: rgba(13,110,253,1);
 }
 
 /**
@@ -52,6 +70,20 @@ body.dark-mode {
   a {
     text-decoration: none;
   }
+
+ .on-hover-zoom {
+    /* transition pour tout ce qu'on veut animer */
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    /* arrondis et bordures si nécessaire */
+    border-radius: 0.5rem;
+}
+
+/* hover effect */
+.on-hover-zoom:hover {
+    transform: translateY(-5px) scale(1.05); /* monte et légèrement agrandi */
+    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15); /* ombre plus visible */
+    cursor: pointer;
+}
 
 
 /**
@@ -646,15 +678,21 @@ textarea::placeholder {
 }
 
 .pagination .page-item.active .page-link {
-  background-color: var(--text-color);
+  background-color: var(--page-selected-color);
   color: var(--bg-color);
-  border-color: var(--text-color);
+  
 }
 
+.pagination .page-link:hover {
+  background-color: rgba(13,110,253,1);
+  color: var(--bg-color);
+}
 .pagination .page-item.disabled .page-link {
   opacity: 0.5;
   pointer-events: none;
 }
+
+
 
 /**
   ************************
@@ -1536,5 +1574,294 @@ body.modal-open .custom-rule-link {
 
 .tag-left i {
   font-size: 0.9rem;
+}
+
+.similar-rule-card {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.similar-rule-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 16px 30px rgba(0,0,0,0.15);
+}
+
+/* Background icon */
+.similar-rule-card .icon-bg {
+    position: absolute;
+    top: 45%;
+    left: 75%;
+    font-size: 120px;
+    color: rgba(0, 123, 255, 0.05);
+    transform: translate(-50%, -50%) rotate(-15deg);
+    pointer-events: none;
+}
+
+/* High similarity indicator */
+.similar-rule-card .high-similarity i {
+    color: #dc3545;
+    font-size: 1.2em;
+}
+
+
+
+
+
+    .get-high { color: #10b981; }
+    .get-mid { color: #f59e0b; }
+    .get-low { color: #ef4444; }
+
+/**
+  *
+  *  Highlighting diff
+  *
+  **/
+
+/* precise diff */
+body.dark-mode .d2h-code-line ins, .d2h-code-side-line ins{
+    background-color: var(--bg-diff-add-highlight);
+}
+
+body.dark-mode .d2h-code-line del, .d2h-code-side-line del{
+    background-color: var(--bg-diff-remove-highlight);
+}
+
+/* line number */
+.d2h-code-side-line{
+  color: var(--text-color);
+}
+
+/* background ligne color diff */
+
+body.dark-mode .d2h-ins{
+    background-color: var(--bg-diff-add);
+    border-color: var(--bg-color);
+}
+
+body.dark-mode .d2h-del{
+    background-color: var(--bg-diff-remove);
+    border-color: var(--bg-color);
+}
+
+/* empty ligne color */
+
+body.dark-mode .d2h-code-side-emptyplaceholder{
+    background-color: var(--bg-color);
+    border-color: var(--bg-color);
+}
+body.dark-mode .d2h-code-emptyplaceholder{
+    background-color: var(--bg-color);
+    border-color: var(--bg-color);
+}
+
+/* border color */
+
+body.dark-mode .d2h-code-side-linenumber{
+  background-color: var(--bg-color);
+}
+
+body.dark-mode .d2h-code-line-ctn hljs plaintext{
+    border-color: var(--bg-color);
+}
+
+body.dark-mode .d2h-file-wrapper{
+    border-color: var(--bg-color);
+    color: var(--bg-color);
+}
+
+body.dark-mode .d2h-emptyplaceholder{
+    background-color: var(--bg-color);
+}
+
+
+.d2h-code-side-linenumber{
+  padding: 0 .25rem;
+  position: relative;
+  border: solid var(--bg-color);
+}
+
+
+
+/**
+  *
+  * Choose change section
+  *
+  **/
+
+
+.card-choose-change {
+  background-color: var(--bg-color);
+  border-color: var(--bg-color);
+  color: var(--text-color);
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border-radius: 0.5rem;
+}
+
+.d2h-code-side-line{
+  /* color: var(--bg-color); */
+  padding: 0;
+}
+
+
+
+/* Diff wrapper avec scroll si grand contenu */
+.diff-wrapper {
+    max-height: 450px;
+    overflow-x: auto;
+    overflow-y: auto;
+    
+}
+
+/* Beautify badges */
+.card-choose-change .badge {
+    font-size: 0.9rem;
+    padding: 0.45em 0.8em;
+    text-transform: uppercase;
+}
+
+
+
+
+
+
+
+/* Main container and typography */
+    .comments-container {
+        max-width: 850px;
+        margin: auto;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .username-link {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-color);
+        text-decoration: none;
+    }
+
+    .timestamp {
+        font-size: 0.75rem;
+        color: var(--text-color);
+        opacity: 0.7;
+    }
+
+    .comment-content {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        color: var(--text-color);
+        white-space: pre-wrap;
+    }
+
+    /* Modern YouTube-style Input Area */
+    .comment-input-line {
+        border: none;
+        border-bottom: 1px solid #e0e0e0;
+        border-radius: 0;
+        padding: 8px 0;
+        transition: all 0.3s ease;
+        background: transparent;
+        resize: none;
+        min-height: 40px;
+        color: var(--text-color);
+    }
+
+    .comment-input-line:focus {
+        box-shadow: none;
+        border-bottom: 2px solid #0d6efd;
+        background: transparent;
+        outline: none;
+    }
+
+    /* Fixed Comment Card - No more "ugly grey shadow" on hover */
+    .comment-card {
+        border-left: 4px solid #0d6efd !important; /* Fixed Blue accent line */
+        transition: all 0.25s ease-in-out;
+        background-color: var(--card-bg-color, #fff); /* Ensure a solid background */
+        position: relative;
+    }
+
+    /* Improved Hover State: We thicken the border instead of moving the card */
+    .group-comment:hover .comment-card {
+        border-left-width: 8px !important; /* Thickens inward, so the card stays in place */
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+        /* background-color: var(--border-color);  */
+    }
+
+    /* Contextual Actions (Shown on Hover) */
+    .comment-actions {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .group-comment:hover .comment-actions {
+        opacity: 1;
+    }
+
+    .btn-action {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: #606060;
+        transition: all 0.2s;
+        border: none;
+        background: transparent;
+    }
+
+    .btn-action:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        color: #000;
+    }
+
+    /* Dark Mode support for Action Buttons */
+    body.dark-mode .btn-action:hover {
+        /* background-color: rgba(255, 255, 255, 0.1); */
+        color: #fff;
+    }
+
+    /* Load More Button Styling */
+    .btn-outline-primary.rounded-pill {
+        border-width: 2px;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-outline-primary.rounded-pill:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2);
+    }
+
+    /* Fix for the group-comment parent to prevent double backgrounds */
+    .group-comment {
+        background: transparent !important;
+        padding: 0;
+        margin-bottom: 1rem;
+    }
+
+
+
+
+    .hover-shadow:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+    border-color: #0d6efd !important;
+}
+
+
+
+
+/* Boutons d'action rapides */
+.hover-primary:hover { color: #0d6efd !important; }
+.hover-danger:hover { color: #dc3545 !important; }
+
+
+/* Animation de l'icône chevron quand on clique */
+[data-bs-toggle="collapse"][aria-expanded="true"] .fa-chevron-down {
+    transform: rotate(180deg);
+    transition: transform 0.3s ease;
 }
 

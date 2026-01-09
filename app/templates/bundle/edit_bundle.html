@@ -164,7 +164,18 @@
                                             <i class="fas fa-shield-alt me-2 text-secondary"></i>
                                             [[ rule.title || 'Untitled Rule' ]]
                                         </h6>
-                                        <p class="mb-1 text-muted" style="font-size: 0.9rem;">[[ rule.description ]]</p>
+                                        <!--truncate description-->
+                                        <template v-if="rule.description && rule.description.length > 140">
+                                            <p class="mb-1 text-muted" style="font-size: 0.9rem;">[[
+                                                rule.description.substring(0, 140) ]]...</p>
+                                        </template>
+                                        <template v-else>
+                                            <p class="mb-1 text-muted" style="font-size: 0.9rem;">[[
+                                                rule.description ]]</p>
+                                        </template>
+
+
+
                                         <small class="text-muted">
                                             <i class="fas fa-user me-1"></i>[[ rule.author ]]
                                             <i class="fas fa-calendar-alt ms-2 me-1"></i>[[ rule.creation_date ]]

@@ -142,7 +142,7 @@
                         <div class="d-flex align-items-center justify-content-center justify-content-md-start">
                             <small class="fw-bold text-uppercase tracking-wider">
                                 <span class="text-primary">Rulezet</span>
-                                <span class="badge bg-secondary ms-1">v1.1</span>
+                                <span class="badge bg-secondary ms-1"> v1.2.0</span>
                             </small>
                         </div>
                     </div>
@@ -201,7 +201,18 @@
         const { createApp, ref } = Vue
         createApp({
             delimiters: ['[[', ']]'],
-            setup() { },
+            setup() {
+                const version = ref("")
+                async function fetchVersion() {
+                    const res = await fetch('/version')
+                    if (res.status === 200) {
+                        const data = await res.json()
+                        version.value = data.version
+                    }
+                }
+                fetchVersion()
+                return { version }
+            },
         }).mount('#main-container')
     </script>
     {% endblock %}

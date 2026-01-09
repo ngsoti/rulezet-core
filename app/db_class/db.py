@@ -242,7 +242,8 @@ class Comment(db.Model):
             "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M'),
             "likes": self.likes,
             "user_name": self.user_name,
-            "dislikes": self.dislikes
+            "dislikes": self.dislikes,
+            "is_admin": self.user.is_admin()
         }
 
 
@@ -689,6 +690,11 @@ class JSONEncodedList(TypeDecorator):
         if value is None:
             return []
         return json.loads(value)
+
+############################
+#  AutoUpdate  old version #
+############################
+
 
 class AutoUpdateSchedule(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -38,7 +38,7 @@
     <div class="tab-content" id="exampleTabsContent">
         <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
             <template v-if="detail_page_1_is_loading">
-                <div class="card h-100 shadow-sm border-0 card-security-premium-detail mb-4 card_detail border-top"
+                <div class="card h-100  border-0 card-security-premium-detail mb-4 card_detail border-top shadow-lg"
                     style="border-radius: 12px;">
 
 
@@ -68,12 +68,12 @@
 
                     <div class="card-body d-flex flex-column p-4 z-index-1">
                         <div class="mb-4 pe-5">
-                            <h5 class="fw-bold mb-1">
+                            <h3 class="fw-bold mb-1">
                                 <a :href="`/rule/detail_rule/${currentRule.id}`"
                                     class="fw-bold h5 border-start border-primary border-4 ps-3 custom-rule-link text-decoration-none d-block">
                                     [[ currentRule.title ]]
                                 </a>
-                            </h5>
+                            </h3>
                             <div class="d-flex align-items-center gap-2 mt-2">
                                 <div class="avatar-circle-xs" title="Author of the rule">
                                     <template v-if="currentRule.author === 'Unknown'">
@@ -164,11 +164,20 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- Rule Content Card -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3">
-                                    Rule Content
-                                </h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h4 class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3">
+                                        Rule Content
+                                    </h4>
+                                    <!-- badge to see the version [[currentRule.version]]-->
+                                    <span class="badge bg-light text-primary rounded-pill border px-3"
+                                        title="Version of the rule">
+                                        v [[ currentRule.version ]]
+                                    </span>
+                                </div>
+
                                 <button id="copyBtn"
                                     class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm transition-all"
                                     onclick="copyToClipboard()" title="Copy content">
@@ -309,7 +318,7 @@
                             </div>
                         </div>
                         <!-- Contributors Card -->
-                        <div class="mb-4 mt-3">
+                        <div class="mb-2 mt-3">
                             <template v-if="contributor_list.length > 0">
                                 <div
                                     class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden border position-relative">
@@ -320,10 +329,10 @@
 
                                     <div class="card-body p-4 position-relative" style="z-index: 1;">
                                         <div class="d-flex justify-content-between align-items-center mb-4">
-                                            <h6
+                                            <h4
                                                 class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3">
                                                 Rule Contributors
-                                            </h6>
+                                            </h4>
                                             <a :href="'/rule/detail_rule/' + currentRule.id + '#chap2-pane'"
                                                 @click="switchTab('chap2-tab')"
                                                 class="btn btn-xs btn-outline-primary rounded-pill px-3 shadow-sm ">
@@ -360,6 +369,266 @@
                                 </div>
                             </template>
                         </div>
+                        <!-- Similar Rules Section -->
+                        <div class="mb-2 mt-3 similar-rules-section mt-4 shadow-sm">
+                            <template v-if="similar_rules_list.length > 0">
+                                <div
+                                    class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden border position-relative p-4">
+
+                                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                                        <!-- Title -->
+                                        <h4
+                                            class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3 mb-3">
+                                            Similar Rules
+                                        </h4>
+
+                                        <!-- Redirect button to compare section -->
+                                        <a :href="'/rule/similar_rules_detail/' + currentRule.id"
+                                            class="btn btn-sm btn-outline-primary mb-3"
+                                            title="Compare this rule with more rule">
+                                            <i class="fas fa-exchange-alt me-1"></i> More Rules
+                                        </a>
+
+                                    </div>
+
+                                    <!-- Explanation with collapsible details -->
+                                    <div class="mb-4">
+                                        <div
+                                            class="alert alert-info p-3 shadow-sm d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>Similarity Score:</strong>
+                                                Each rule is compared to the current rule using <strong>TF-IDF and
+                                                    cosine
+                                                    similarity</strong>.
+                                                A higher score (closer to 1) indicates stronger similarity.
+                                                Scores above 90% may indicate a <strong>duplicate rule</strong>.
+                                            </div>
+                                            <!-- Toggle button -->
+                                            <button class="btn btn-sm btn-outline-primary ms-3" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#similarityDetails"
+                                                aria-expanded="false" aria-controls="similarityDetails">
+                                                <i class="fas fa-info"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Collapsible content -->
+                                        <div class="collapse mt-2" id="similarityDetails">
+                                            <div class="card card-body p-3 small bg-light shadow-sm">
+                                                <p class="mb-1">
+                                                    The similarity is calculated using the <strong>TF-IDF (Term
+                                                        Frequency -
+                                                        Inverse Document Frequency)</strong> vectorization of each
+                                                    rule's
+                                                    text, followed by computing the <strong>cosine similarity</strong>
+                                                    between vectors.
+                                                </p>
+                                                <p class="mb-1">
+                                                    This method compares the textual content of the rules, giving higher
+                                                    weight to distinctive terms and lower weight to common terms.
+                                                    It is robust to small changes in wording.
+                                                </p>
+                                                <p class="mb-0">
+                                                    Learn more on the official scikit-learn documentation:
+                                                    <a href="https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html"
+                                                        target="_blank" class="link-primary">TF-IDF Vectorizer</a> &amp;
+                                                    <a href="https://scikit-learn.org/stable/modules/metrics.html#cosine-similarity"
+                                                        target="_blank" class="link-primary">Cosine Similarity</a>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+                                    <!-- Rules List -->
+                                    <div v-if="similar_rules_list.length === 0" class="text-muted py-4 text-center">
+                                        No similar rules found.
+                                    </div>
+
+                                    <div v-else class="d-flex flex-column gap-3">
+                                        <div v-for="rule in similar_rules_list" :key="rule.id"
+                                            class="similar-rule-card position-relative p-3 rounded shadow-sm "
+                                            @click="goToRuleDetail(rule.id)"
+                                            :style="{ backgroundColor: similarityColorBg(rule.similarity) }">
+
+                                            <!-- Background icon -->
+                                            <i class="fas fa-shield-alt icon-bg"></i>
+
+                                            <!-- Header -->
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="fw-bold text-truncate mb-0">
+                                                    [[ rule.title ]]
+                                                    <span v-if="rule.similarity >= 0.9" class="high-similarity"
+                                                        title="High similarity / possible duplicate">
+                                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                                    </span>
+                                                </h6>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge rounded-pill bg-dark pt-1 shadow-sm">[[
+                                                        rule.format.toUpperCase() ]]</span>
+
+                                                    <button
+                                                        @click="favoriteSimilar(rule.id); $event.currentTarget.classList.add('star-animate')"
+                                                        class="btn btn-sm rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center transition-all home-btn border"
+                                                        style="width: 32px; height: 32px;" @click.stop>
+                                                        <i class="fa-solid fa-star"
+                                                            :class="rule.is_favorited ? 'text-warning' : 'text-muted'"></i>
+                                                    </button>
+                                                </div>
+
+                                            </div>
+
+                                            <!-- Metadata -->
+                                            <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+                                                <div class="d-flex align-items-center gap-2 ">
+                                                    <div class="avatar-circle-xs" title="Author of the rule">
+                                                        <template v-if="rule.author === 'Unknown'">
+                                                            [[ rule.editor[0].toUpperCase() ]]
+                                                        </template>
+                                                        <template v-else>
+                                                            [[ rule.author[0].toUpperCase() ]]
+                                                        </template>
+                                                    </div>
+                                                    <small class="text-muted fw-medium" title="Author of the rule">
+                                                        <template v-if="rule.author === 'Unknown'">
+                                                            [[ rule.editor ]]
+                                                        </template>
+                                                        <template v-else>
+                                                            [[ rule.author ]]
+                                                        </template>
+                                                    </small>
+                                                    <span class="text-muted opacity-50">|</span>
+                                                    <small class="text-muted"> [[
+                                                        dayjs.utc(rule.last_modif).fromNow() ]]</small>
+                                                </div>
+                                            </div>
+
+                                            <!-- Description -->
+                                            <p class="text-muted mb-2">
+                                                [[ rule.description ]]
+                                            </p>
+
+                                            <!-- Similarity bar -->
+                                            <div>
+                                                <div class="progress mb-1" style="height: 10px; border-radius: 5px;">
+                                                    <div class="progress-bar" role="progressbar"
+                                                        :style="{ width: (rule.similarity*100)+'%', backgroundColor: similarityColor(rule.similarity) }"
+                                                        :aria-valuenow="rule.similarity*100" aria-valuemin="0"
+                                                        aria-valuemax="100">
+                                                    </div>
+                                                </div>
+                                                <template v-if="rule.similarity >= 0.9">
+                                                    <div class="alert alert-danger p-2 mb-0 small fw-medium">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        High similarity detected! This rule may be a duplicate.
+                                                        <strong>
+                                                            Similarity: [[
+                                                            (rule.similarity*100).toFixed(0)
+                                                            ]]%</strong>
+                                                    </div>
+                                                </template>
+                                                <template v-else>
+                                                    <small class="text-muted">Similarity: [[
+                                                        (rule.similarity*100).toFixed(0)
+                                                        ]]%</small>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <!-- Related bundles -->
+                        <div
+                            class="mt-3 card border-0 shadow-sm  rounded-4 overflow-hidden border position-relative mb-4">
+                            <template v-if="bundleListRule.length > 0">
+                                <div class="contributor-watermark"
+                                    style="position: absolute; top: -10px; right: 10px; font-size: 4rem; opacity: 0.03; pointer-events: none;">
+                                    <i class="fas fa-boxes-stacked"></i>
+                                </div>
+                                <div class="contributor-watermark">
+                                    <i class="fa-solid fa-boxes-stacked"></i>
+                                </div>
+                                <div class="card-body p-4 position-relative" style="z-index: 1;">
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <h4 class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3">
+                                            Related Bundles
+                                        </h4>
+                                        <span class="badge bg-light text-primary rounded-pill border px-3">
+                                            [[ bundleListRule.length ]] Total
+                                        </span>
+                                    </div>
+
+                                    <template v-if="bundleListRule.length === 0">
+                                        <div class="card border-dashed text-center py-4 rounded-3">
+                                            <i class="fa-solid fa-folder-open text-muted mb-2 d-block fa-2x"></i>
+                                            <p class="text-muted small mb-0">No bundles found for this rule.</p>
+                                        </div>
+                                    </template>
+
+                                    <div v-else class="row g-3">
+                                        <div class="col-md-6" v-for="bundle in bundleListRule" :key="bundle.id">
+                                            <a :href="`/bundle/detail/${bundle.id}`"
+                                                class="text-decoration-none h-100 d-block">
+                                                <div
+                                                    class="card h-100 border shadow-none hover-shadow transition-all rounded-3 overflow-hidden">
+                                                    <div class="card-body p-3">
+                                                        <div class="d-flex align-items-start gap-3">
+                                                            <div class="avatar-circle-sm bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center rounded-circle shadow-sm"
+                                                                style="min-width: 42px; height: 42px;">
+                                                                <i class="fas fa-layer-group"></i>
+                                                            </div>
+
+                                                            <div class="flex-grow-1 min-w-0">
+                                                                <div
+                                                                    class="d-flex justify-content-between align-items-start">
+                                                                    <h6 class="fw-bold text-dark mb-1 text-truncate">
+                                                                        [[ bundle.name ]]
+                                                                    </h6>
+                                                                    <span class="badge bg-dark rounded-pill"
+                                                                        style="font-size: 0.65rem;">
+                                                                        [[ bundle.number_of_rules ]] Rules
+                                                                    </span>
+                                                                </div>
+
+                                                                <p class="text-muted small mb-2 text-truncate-2"
+                                                                    style="font-size: 0.8rem; line-height: 1.2; height: 2.4em;">
+                                                                    [[ bundle.description || 'No description provided.'
+                                                                    ]]
+                                                                </p>
+
+                                                                <div
+                                                                    class="d-flex align-items-center justify-content-between mt-auto">
+                                                                    <div class="d-flex align-items-center gap-2">
+                                                                        <div class="avatar-circle-xs"
+                                                                            style="width: 20px; height: 20px; font-size: 0.6rem;">
+                                                                            [[ (bundle.author || 'A')[0].toUpperCase()
+                                                                            ]]
+                                                                        </div>
+                                                                        <small class="text-muted"
+                                                                            style="font-size: 0.7rem;">[[ bundle.author
+                                                                            ]]</small>
+                                                                    </div>
+                                                                    <div class="d-flex gap-1">
+                                                                        <span
+                                                                            v-for="format in bundle.list_of_format_of_rules"
+                                                                            :key="format"
+                                                                            class="badge bg-outline-secondary border text-uppercase"
+                                                                            style="font-size: 0.6rem; color: #6c757d;">
+                                                                            [[ format ]]
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
                     </div>
                 </div>
                 <div class="modal fade" :id="'delete_rule_modal_'+currentRule.id" tabindex="-1" aria-hidden="true"
@@ -433,6 +702,163 @@
                         </div>
                     </div>
                 </div>
+                <!-- Comment Section -->
+                <div class="comments-container mt-5">
+                    <div class="d-flex align-items-center mb-4">
+                        <h5 class="fw-bold mb-0">[[ comments_list.length ]] Comments</h5>
+                    </div>
+
+                    <div class="d-flex mb-5">
+                        {% if current_user.is_authenticated %}
+                        <div class="flex-shrink-0 me-3">
+                            <img src="https://ui-avatars.com/api/?name={{ current_user.username }}&background=0d6efd&color=fff"
+                                class="rounded-circle shadow-sm" width="40" height="40" alt="Avatar">
+                        </div>
+                        <div class="flex-grow-1">
+                            <form @submit.prevent="submitComment">
+                                <input type="hidden" name="csrf_token" :value="csrf_token" />
+                                <div class="mb-2">
+                                    <textarea class="form-control comment-input-line" id="commentContent"
+                                        v-model="newCommentContent" placeholder="Add a comment..." rows="1"
+                                        @input="autoResize($event)" required></textarea>
+                                </div>
+                                <div v-if="newCommentContent.trim()"
+                                    class="d-flex justify-content-end gap-2 animate__animated animate__fadeIn">
+                                    <button type="button" class="btn btn-sm fw-bold px-3 text-secondary"
+                                        @click="newCommentContent = ''">Cancel</button>
+                                    <button type="submit"
+                                        class="btn btn-primary btn-sm rounded-pill px-4 fw-bold">Comment</button>
+                                </div>
+                            </form>
+                        </div>
+                        {% else %}
+                        <div class="alert bg-light border-0 w-100 rounded-4 p-4 text-center">
+                            <p class="mb-2 text-muted">Join the conversation</p>
+                            <a href="{{ url_for('account.login') }}"
+                                class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">Login to reply</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden border mb-4">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h4 class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3">
+                                    Community Discussion
+                                </h4>
+                                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold shadow-sm"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseComments"
+                                    aria-expanded="false" aria-controls="collapseComments">
+                                    <i class="fas fa-comments me-1"></i>
+                                    [[ comments_list.length ]] [[ comments_list.length > 1 ? 'Comments' : 'Comment' ]]
+                                    <i class="fas fa-chevron-down ms-2 small"></i>
+                                </button>
+                            </div>
+
+                            <div class="collapse mt-4 show" id="collapseComments">
+                                <div v-if="comments_list && comments_list.length > 0">
+                                    <div v-for="(comment, index) in comments_list" :key="comment.id"
+                                        class="mb-3 group-comment">
+                                        <div
+                                            class="card border shadow-none comment-card p-3 rounded-3 hover-shadow-light transition-all">
+                                            <div class="d-flex">
+                                                <div class="flex-shrink-0 me-3">
+                                                    <div class="position-relative">
+                                                        <img :src="'https://ui-avatars.com/api/?name=' + comment.user_name + '&background=0d6efd&color=fff&bold=true'"
+                                                            class="rounded-circle shadow-sm border border-2 border-white"
+                                                            width="45" height="45">
+                                                        <span
+                                                            class="position-absolute bottom-0 end-0 p-1 bg-success border border-light rounded-circle"
+                                                            title="Online"></span>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex-grow-1 min-w-0">
+                                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                                        <div>
+                                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                                <span class="fw-bold text-dark">@[[ comment.user_name
+                                                                    ]]</span>
+
+                                                                <span v-if="comment.is_admin" title="Administrator">
+                                                                    <i class="fas fa-star text-warning"
+                                                                        style="font-size: 0.8rem;"></i>
+                                                                </span>
+
+                                                                <span
+                                                                    v-else-if="parseInt('{{current_user.id}}') == comment.user_id"
+                                                                    class="badge bg-light text-primary border px-2"
+                                                                    style="font-size: 0.6rem;">
+                                                                    YOU
+                                                                </span>
+                                                            </div>
+
+                                                            <span class="text-muted" style="font-size: 0.75rem;">
+                                                                <i class="far fa-clock me-1"></i>
+                                                                [[ dayjs.utc(comment.created_at).fromNow() ]]
+                                                            </span>
+                                                        </div>
+
+                                                        <div class="d-flex gap-1">
+                                                            <template
+                                                                v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
+                                                                <button
+                                                                    class="btn btn-link btn-sm text-muted p-1 hover-primary"
+                                                                    title="Edit" data-bs-toggle="collapse"
+                                                                    :data-bs-target="'#editForm' + comment.id">
+                                                                    <i class="fas fa-pencil-alt"
+                                                                        style="font-size: 0.8rem;"></i>
+                                                                </button>
+                                                                <button @click="deleteComment(comment.id)"
+                                                                    class="btn btn-link btn-sm text-muted p-1 hover-danger"
+                                                                    title="Delete">
+                                                                    <i class="fas fa-trash"
+                                                                        style="font-size: 0.8rem;"></i>
+                                                                </button>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="comment-content my-2 text-secondary"
+                                                        style="font-size: 0.9rem; line-height: 1.5;">
+                                                        [[ comment.content ]]
+                                                    </div>
+
+                                                    <div class="collapse mt-3" :id="'editForm' + comment.id">
+                                                        <form @submit.prevent="editComment(comment.id)"
+                                                            class="bg-light p-3 rounded-3 border">
+                                                            <label class="small fw-bold text-primary mb-2">Edit your
+                                                                comment</label>
+                                                            <textarea class="form-control border-0 shadow-none mb-3"
+                                                                style="background: transparent; resize: none;"
+                                                                v-model="comment.editContent" rows="3"
+                                                                required></textarea>
+                                                            <div class="d-flex justify-content-end gap-2">
+                                                                <button type="button"
+                                                                    class="btn btn-xs btn-light border rounded-pill px-3"
+                                                                    data-bs-toggle="collapse"
+                                                                    :data-bs-target="'#editForm' + comment.id">Cancel</button>
+                                                                <button type="submit"
+                                                                    class="btn btn-xs btn-primary rounded-pill px-3">Update</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div v-else class="text-center py-5 bg-light rounded-4 border border-dashed">
+                                    <div class="mb-3">
+                                        <i class="fas fa-comments fa-3x text-opacity-25 text-primary"></i>
+                                    </div>
+                                    <h5 class="text-dark fw-bold">No comments yet</h5>
+                                    <p class="text-muted small">Be the first to share your thoughts on this rule!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </template>
 
             <template v-else>
@@ -445,207 +871,6 @@
 
 
 
-
-
-
-
-
-
-
-            <!-- Bundles Card -->
-            <div class="card shadow-sm mb-4 ">
-                <div class="card-header bg-light position-relative">
-                    <h5 class="mb-0"><i class="fa-solid fa-clipboard-list me-2 "></i> Part of Bundle
-                </div>
-
-
-                <div v-if="bundleListRule.length === 0" class="p-2">
-                    <p><i class="fa fa-info-circle me-1"></i> No bundles found for this rule.</p>
-
-                </div>
-
-                <div v-else class="row row-cols-1 row-cols-md-2 g-4">
-                    <div class="col" v-for="bundle in bundleListRule" :key="bundle.id">
-                        <div class="card border-0 shadow-sm h-100">
-                            <div class="card-body d-flex align-items-start gap-3">
-                                <div class="icon-wrapper bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center"
-                                    style="width: 40px; height: 40px;">
-                                    <i class="fas fa-boxes-stacked fa-lg"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="card-title mb-0">
-                                        <a :href="`/bundle/detail/${bundle.id}`" class="text-decoration-none text-dark"
-                                            title="View more about this bundle">
-                                            [[ bundle.name ]]
-                                        </a>
-                                    </h6>
-                                    <small class="text-muted">[[ bundle.description ]]</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Similar Rules Card -->
-            <div class="card shadow-lg  mb-4 ">
-                <div class="card-header bg-light position-relative">
-                    <h5 class="mb-0">
-                        <i class="fas fa-shield-alt me-2"></i>Related Rules
-                    </h5>
-                </div>
-
-                <div v-if="similar_rules_list.length === 0" class="text-muted p-3">
-                    No similar rules found.
-                </div>
-
-                <div v-else class="card-body">
-                    <div class="row">
-                        <div class="col-md-4" v-for="rule in similar_rules_list" :key="rule.id">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-header">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="text-truncate mb-0 text-primary">
-                                            <i class="fas fa-shield-alt me-2"></i> [[ rule.title ]]
-                                        </h6>
-                                        <a @click="favoriteSimilar(rule.id)" class="btn btn-success btn-sm me-2"
-                                            :title="rule.is_favorited ? 'Remove from Favorites' : 'Add to Favorites'">
-                                            <i class="fa-solid fa-star"
-                                                :class="rule.is_favorited ? 'text-warning' : 'text-white'">
-                                            </i>
-                                        </a>
-                                    </div>
-
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <span class="small mb-2">[[ rule.description ]]</span>
-                                    <span><strong>Author:</strong> [[ rule.author ]]</span>
-                                    <span><strong>Format:</strong> <span class="badge text-bg-primary "> [[
-                                            rule.format
-                                            ]] </span></span>
-                                    <hr>
-                                    <div class=" text-center">
-                                        <a :href="rule.id" title="View more about this rule"
-                                            class="btn btn-sm btn-primary">
-                                            View more
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Comments Section -->
-            <div class="card shadow-lg  mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">
-                        <i class="fas fa-comments"></i> Comments
-                        <span class="badge bg-secondary ms-2">[[ comments_list.length ]]</span>
-                        <template v-if="comments_list.length > 0">
-                            <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#commentsCollapse" aria-expanded="true"
-                                aria-controls="commentsCollapse">
-                                <i class="fas fa-eye"></i> Show/Hide Comments
-                            </button>
-                        </template>
-                    </h5>
-                </div>
-
-                <div class="card-body">
-
-                    {% if current_user.is_authenticated %}
-                    <form @submit.prevent="submitComment">
-                        <input type="hidden" name="csrf_token" :value="csrf_token" />
-
-                        <div class="mb-3">
-                            <label for="commentContent" class="form-label">Leave a comment:</label>
-                            <textarea class="form-control" id="commentContent" v-model="newCommentContent" rows="3"
-                                placeholder="Your comment here..." required>
-                            </textarea>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-paper-plane"></i> Post Comment
-                        </button>
-                    </form>
-
-                    {% else %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-sign-in-alt"></i> Please <a href="{{ url_for('account.login') }}">log
-                            in</a> to
-                        post a comment.
-                    </div>
-                    {% endif %}
-
-                    <hr>
-
-                    <!-- Existing comments section, collapsible -->
-                    <template v-if="comments_list && comments_list.length > 0">
-                        <div class="collapse show" id="commentsCollapse" v-for="(comment, index) in comments_list"
-                            :key="comment.id">
-                            <div class="mb-4">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <strong><i class="fas fa-user-circle"></i> [[ comment.user_name ]]</strong>
-                                        <small class=" ms-2">
-                                            <i class="far fa-clock"></i> [[ comment.created_at ]]
-                                        </small>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    <p class="mb-1" style="padding: 25px;">[[ comment.content ]]</p>
-                                </div>
-                                <div class="mt-2">
-                                    <div class="d-flex justify-content-between">
-                                        <div class="d-flex gap-3">
-                                            <template
-                                                v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
-                                                <!-- Edit Button -->
-                                                <button class="btn btn-warning btn-sm" type="button"
-                                                    data-bs-toggle="collapse" :data-bs-target="'#editForm' + comment.id"
-                                                    aria-expanded="false" :aria-controls="'editForm' + comment.id">
-                                                    <i class="fas fa-pen"></i>
-                                                </button>
-
-                                                <!-- Delete Button -->
-                                                <button @click="deleteComment(comment.id)"
-                                                    class="btn btn-danger btn-sm">
-                                                    <i class="fas fa-trash-alt"></i>
-                                                </button>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Collapse Zone Below (Edit Form) -->
-                                <template
-                                    v-if="parseInt('{{current_user.id}}') == comment.user_id || current_user_is_admin">
-                                    <div class="collapse mt-2 w-100" :id="'editForm' + comment.id">
-                                        <form @submit.prevent="editComment(comment.id)">
-                                            <input type="hidden" name="csrf_token" :value="csrf_token" />
-                                            <div class="input-group">
-                                                <input type="text" class="form-control" v-model="comment.editContent"
-                                                    required />
-
-                                                <button type="submit" class="btn btn-warning">
-                                                    <i class="fas fa-edit"></i> Save
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </template>
-                                <hr>
-                            </div>
-                        </div>
-                    </template>
-
-                    <template v-else>
-                        <p><i class="fas fa-info-circle"></i> No comments yet. Be the first to comment!</p>
-                    </template>
-                </div>
-            </div>
             <div id="rule_id" data-rule-id="{{ rule.id }}"></div>
         </div>
         <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
@@ -1149,6 +1374,7 @@
                     });
                 });
                 const form = document.getElementById('proposalForm');
+                if (!form) return;
                 form.addEventListener('submit', (e) => {
                     if (editor.value) {
                         const hiddenField = document.getElementById('rule_content_hidden');
@@ -1236,7 +1462,34 @@
                 const h = Math.abs(hash % 360);
                 return `hsl(${h}, 60%, 50%)`;
             }
+
+
+            function similarityColor(score) {
+                if (score >= 0.8) return '#198754'; // green
+                if (score >= 0.5) return '#ffc107';
+                return '#dc3545'; // rouge
+            }
+            function similarityColorBg(score) {
+                // if (score >= 0.8) return 'var(--bg-color-high-similarity)'; // red
+                // return 'var(--bg-color)'; // rouge
+                return 'var(--bg-color)';
+            }
+            //rgb(240, 145, 154)
+
+
+            function goToRuleDetail(ruleId) {
+                window.location.href = `/rule/detail_rule/${ruleId}`;
+            }
+
+            function autoResize(event) {
+                const element = event.target;
+                element.style.height = "auto";
+                element.style.height = element.scrollHeight + "px";
+            }
+
             return {
+                similarityColorBg,
+                similarityColor,
                 getCVEColor,
                 getCVEIcon,
                 getCVEPrefix,
@@ -1278,7 +1531,9 @@
                 animateClick,
                 highlightJSON,
                 getRandomColor,
-                switchTab
+                switchTab,
+                goToRuleDetail,
+                autoResize
             };
         }
     }).mount('#main-container');

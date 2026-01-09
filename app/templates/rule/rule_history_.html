@@ -238,10 +238,29 @@
             function selectSlot(entry, type) {
                 const content = type === 'old' ? entry.old_content : entry.new_content;
                 const selection = { id: entry.id, type: type, content: content };
-                if (!slotA.value) slotA.value = selection; else slotB.value = selection;
+
+                // 1. Vérification de la désélection (Toggle) avec sécurité
+                if (slotA.value && slotA.value.id === entry.id && slotA.value.type === type) {
+                    slotA.value = null;
+                    return;
+                }
+
+                if (slotB.value && slotB.value.id === entry.id && slotB.value.type === type) {
+                    slotB.value = null;
+                    return;
+                }
+
+                // 2. Attribution aux slots vides
+                if (slotA.value === null) {
+                    slotA.value = selection;
+                } else if (slotB.value === null) {
+                    slotB.value = selection;
+                } else {
+                    // Si les deux sont pleins, on remplace le deuxième
+                    slotB.value = selection;
+                }
             }
 
-            // FONCTION POUR VOIR UN SEUL CONTENU
             async function viewSolo(entry) {
                 viewMode.value = 'solo';
                 contentLoaded.value = true;

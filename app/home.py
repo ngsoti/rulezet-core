@@ -5,6 +5,8 @@ from flask_login import current_user, login_required
 from flask import get_flashed_messages
 from flask_login import login_required, current_user
 
+from app.utils.utils import get_version
+
 from .rule import rule_core as RuleModel
 from .account import account_core as AccountModel
 
@@ -332,3 +334,9 @@ def update_request_status() -> jsonify:
 @home_blueprint.route("/about")
 def about() -> render_template:
     return render_template("/about_us.html")
+
+# version
+@home_blueprint.route("/version")
+def version() -> jsonify:
+    version = get_version()
+    return jsonify({"version": version }), 200

@@ -451,7 +451,6 @@ def update_rules_suggestion_gamification(gamification_id: int, user_id: int) -> 
         db.session.commit()
         return True
     except Exception as e:
-        print(e)
         return False
 
 def get_gamification_by_id(gamification_id: int) -> Gamification:
@@ -480,7 +479,6 @@ def update_like_gamification(gamification_id, action) -> None:
         
         return True
     except Exception as e:
-        print(e)
         return False
 
 
@@ -507,7 +505,6 @@ def update_propose_edit_gamification(gamification_id, action) -> None:
         
         return True
     except Exception as e:
-        print(e)
         return False
     
 #--------------
@@ -555,7 +552,6 @@ def update_rules_owned_gamification(gamification_id , user_id) -> None:
         
         return True
    except Exception as e:
-        print(e)
         return False
    
 
@@ -676,7 +672,6 @@ def update_liked_gamification(gamification_id , user_id) -> bool:
 
         return True
     except Exception as e:
-        print(e)
         return False
     
 def update_gamification_profiles():
@@ -689,20 +684,16 @@ def update_gamification_profiles():
             # found all the like oand dislike of an user in 
             s = update_rules_owned_gamification(user_gamification.id, user.id)
             if not s:
-                print("update_rules_owned_gamification failed")
                 pass
             # found RuleSuggestion
             s_ = update_rules_suggestion_gamification(user_gamification.id, user.id)
             if not s_:
-                print("update_rules_suggestion_gamification failed")
                 pass    
             s__ = update_liked_gamification(user_gamification.id, user.id)
             if not s__:
-                print("update_rules_popular_score_gamification failed")
                 pass
             
         else:
-            print("user not found")
             return False
 
     return True
