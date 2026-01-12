@@ -1,0 +1,6 @@
+[submodule "app/modules/app/modules/taxonomy"]
+	path = app/modules/app/modules/taxonomy
+	url = https://github.com/MISP/misp-taxonomies.git
+[submodule "app/modules/misp-taxonomies"]
+	path = app/modules/misp-taxonomies
+	url = https://github.com/MISP/misp-taxonomies.git
