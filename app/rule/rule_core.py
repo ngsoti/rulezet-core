@@ -10,6 +10,8 @@ from flask import jsonify
 from flask_login import current_user
 from sqlalchemy import case, or_
 from sqlalchemy.orm import joinedload
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
             
 from app.rule_format.abstract_rule_type import rule_type_abstract
 from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult, load_all_rule_formats
@@ -281,8 +283,7 @@ def get_rule(id) -> int:
     return Rule.query.get(id)
 
 
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+
 
 
 def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
@@ -291,9 +292,7 @@ def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
     """
 
     rule = Rule.query.get(rule_id)
-    print(rule_id)
     if not rule or not rule.to_string:
-        print("Rule not found or no content")
         return []
 
     candidates = Rule.query.filter(
@@ -524,7 +523,6 @@ def get_concerned_rules_admin(source , user_id_to_send):
 def get_rules_by_ids(rule_ids) -> list:
     """Get all the rules with id"""
     rule_list = []
-    print(rule_ids)
     for rule_id in rule_ids:
         rule = get_rule(rule_id)
         if rule:
@@ -1993,7 +1991,6 @@ def accept_all_update(rule_udpate_list):
             db.session.commit()
         return True
     except Exception as e:
-        print(e)
         return False
    
 
@@ -2045,7 +2042,6 @@ def accept_rule_change(history_id):
 
         return True
     except Exception as e:
-        print(e)
         return False
     
 def get_all_pending_changes():

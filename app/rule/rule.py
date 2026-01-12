@@ -634,7 +634,6 @@ def add_comment() -> jsonify:
     new_content = request.args.get('new_content', '', type=str)
     rule_id = request.args.get('rule_id', 1, type=int)
     success, message = RuleModel.add_comment_core(rule_id, new_content, current_user)
-    flash(message, "success" if success else "danger")
     new_comment = RuleModel.get_latest_comment_for_user_and_rule(current_user.id, rule_id)
     return {
         "comment": {

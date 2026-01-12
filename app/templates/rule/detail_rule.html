@@ -763,9 +763,9 @@
                                             <div class="d-flex">
                                                 <div class="flex-shrink-0 me-3">
                                                     <div class="position-relative">
-                                                        <img :src="'https://ui-avatars.com/api/?name=' + comment.user_name + '&background=0d6efd&color=fff&bold=true'"
+                                                        <img :src="'https://ui-avatars.com/api/?name=' + comment.user_name + '&background=random&color=fff&bold=true'"
                                                             class="rounded-circle shadow-sm border border-2 border-white"
-                                                            width="45" height="45">
+                                                            width="45" height="45" :alt="comment.user_name">
                                                         <span
                                                             class="position-absolute bottom-0 end-0 p-1 bg-success border border-light rounded-circle"
                                                             title="Online"></span>
@@ -1486,8 +1486,17 @@
                 element.style.height = "auto";
                 element.style.height = element.scrollHeight + "px";
             }
+            function getRandomColor(seed) {
+                const colors = ['0d6efd', '6610f2', '6f42c1', 'd63384', 'dc3545', 'fd7e14', 'ffc107', '198754', '20c997', '0dcaf0'];
+                let hash = 0;
+                for (let i = 0; i < seed.length; i++) {
+                    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                return colors[Math.abs(hash) % colors.length];
+            }
 
             return {
+                getRandomColor,
                 similarityColorBg,
                 similarityColor,
                 getCVEColor,

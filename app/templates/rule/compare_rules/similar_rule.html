@@ -152,7 +152,7 @@
         </div>
         <template v-if="!is_loading">
             <!-- Pagination-->
-            <template v-if="rules_list.length > 0">
+            <template v-if="total_pages > 1">
                 <!-- center-->
                 <div class="d-flex justify-content-center">
                     <nav aria-label="Page navigation">
@@ -179,111 +179,127 @@
 
             </template>
             <!-- List -->
-            <div class="discovery-stack">
-                <div v-for="item in rules_list" :key="item.id"
-                    class="card mb-3 shadow-sm border rounded overflow-hidden on-hover-zoom">
-                    <div class="candidate-header  p-3 d-flex align-items-center pointer transition-all"
-                        :class="{'border-start border-primary border-4': selectedId === item.id}"
-                        @click="toggleCompare(item)">
+            <template v-if="rules_list.length > 0">
+                <div class="discovery-stack">
+                    <div v-for="item in rules_list" :key="item.id"
+                        class="card mb-3 shadow-sm border rounded overflow-hidden on-hover-zoom">
+                        <div class="candidate-header  p-3 d-flex align-items-center pointer transition-all"
+                            :class="{'border-start border-primary border-4': selectedId === item.id}"
+                            @click="toggleCompare(item)">
 
-                        <div class="similarity-score me-4 text-center">
-                            <div class="h5 mb-0 fw-bold" :class="getScoreColor(item.similarity)">
-                                [[ (item.similarity * 100).toFixed(0) ]]%
-                            </div>
-                            <div class="x-small text-uppercase text-muted fw-bold">Match</div>
-                        </div>
-
-                        <div class="flex-grow-1 min-width-0 d-flex flex-column">
-                            <div class="d-flex flex-column gap-1 mb-1">
-                                <div class="d-flex align-items-center gap-2">
-                                    <h6 class="mb-0 fw-bold text-dark text-truncate">
-                                        [[ item.title ]]
-                                    </h6>
-                                    <span class="badge rounded-pill bg-dark pt-1 shadow-sm">
-                                        [[ item.format.toUpperCase() ]]
-                                    </span>
+                            <div class="similarity-score me-4 text-center">
+                                <div class="h5 mb-0 fw-bold" :class="getScoreColor(item.similarity)">
+                                    [[ (item.similarity * 100).toFixed(0) ]]%
                                 </div>
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <div class="avatar-circle-xs" title="Author of the rule">
-                                        <template v-if="item.author === 'Unknown'">
-                                            [[ item.editor[0].toUpperCase() ]]
-                                        </template>
-                                        <template v-else>
-                                            [[ item.author[0].toUpperCase() ]]
-                                        </template>
+                                <div class="x-small text-uppercase text-muted fw-bold">Match</div>
+                            </div>
+
+                            <div class="flex-grow-1 min-width-0 d-flex flex-column">
+                                <div class="d-flex flex-column gap-1 mb-1">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <h6 class="mb-0 fw-bold text-dark text-truncate">
+                                            [[ item.title ]]
+                                        </h6>
+                                        <span class="badge rounded-pill bg-dark pt-1 shadow-sm">
+                                            [[ item.format.toUpperCase() ]]
+                                        </span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <div class="avatar-circle-xs" title="Author of the rule">
+                                            <template v-if="item.author === 'Unknown'">
+                                                [[ item.editor[0].toUpperCase() ]]
+                                            </template>
+                                            <template v-else>
+                                                [[ item.author[0].toUpperCase() ]]
+                                            </template>
+                                        </div>
+
+                                        <small class="text-muted fw-medium" title="Author of the rule">
+                                            <template v-if="item.author === 'Unknown'">
+                                                [[ item.editor ]]
+                                            </template>
+                                            <template v-else>
+                                                [[ item.author ]]
+                                            </template>
+                                        </small>
+
+                                        <span class="text-muted opacity-50">|</span>
+
+                                        <small class="text-muted">
+                                            [[ dayjs.utc(item.last_modif).fromNow() ]]
+                                        </small>
+
+
                                     </div>
 
-                                    <small class="text-muted fw-medium" title="Author of the rule">
-                                        <template v-if="item.author === 'Unknown'">
-                                            [[ item.editor ]]
-                                        </template>
-                                        <template v-else>
-                                            [[ item.author ]]
-                                        </template>
-                                    </small>
-
-                                    <span class="text-muted opacity-50">|</span>
-
-                                    <small class="text-muted">
-                                        [[ dayjs.utc(item.last_modif).fromNow() ]]
-                                    </small>
+                                </div>
+                            </div>
 
 
+                            <div class="ms-4 text-end d-none d-lg-block" style="min-width: 150px;">
+                                <div class="x-small text-muted mb-1"><i class="far fa-clock me-1"></i>[[ item.last_modif
+                                    ]]
+                                </div>
+                                <div class="x-small text-muted fw-bold">UUID: [[ item.uuid ]]</div>
+                            </div>
+
+                            <div class="ms-3">
+                                <i class="fas"
+                                    :class="selectedId === item.id ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                            </div>
+                        </div>
+
+                        <div v-if="selectedId === item.id"
+                            class="candidate-workspace border-top shadow-sm rounded-bottom overflow-hidden">
+                            <!-- Header -->
+                            <div class="workspace-header px-3 py-2 d-flex justify-content-between align-items-center">
+                                <div class="meta small ">
+                                    <span class="me-3">
+                                        <i class="fas fa-certificate me-1"></i>
+                                        <strong>License:</strong> [[ item.license || 'No License' ]]
+                                    </span>
+                                    <span>
+                                        <i class="fas fa-code-branch me-1"></i>
+                                        <strong>Version:</strong> [[ item.version || '—' ]]
+                                    </span>
                                 </div>
 
+                                <div class="actions d-flex gap-2">
+                                    <a :href="`/rule/similar_rules_detail/${item.id}`" class="btn btn-sm btn-primary"
+                                        title="View more similar rules for this rule">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+
+                                    <a :href="`/rule/detail_rule/${item.id}`" class="btn btn-sm btn-primary"
+                                        title="View rule details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Diff content -->
+                            <div class="diff-wrapper  border-top" style="background-color: var(--bg-color);">
+                                <div id="diff-container" class="diff-content p-3"></div>
                             </div>
                         </div>
 
-
-                        <div class="ms-4 text-end d-none d-lg-block" style="min-width: 150px;">
-                            <div class="x-small text-muted mb-1"><i class="far fa-clock me-1"></i>[[ item.last_modif ]]
-                            </div>
-                            <div class="x-small text-muted fw-bold">UUID: [[ item.uuid ]]</div>
-                        </div>
-
-                        <div class="ms-3">
-                            <i class="fas" :class="selectedId === item.id ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-                        </div>
                     </div>
-
-                    <div v-if="selectedId === item.id"
-                        class="candidate-workspace border-top shadow-sm rounded-bottom overflow-hidden">
-                        <!-- Header -->
-                        <div class="workspace-header px-3 py-2 d-flex justify-content-between align-items-center">
-                            <div class="meta small ">
-                                <span class="me-3">
-                                    <i class="fas fa-certificate me-1"></i>
-                                    <strong>License:</strong> [[ item.license || 'No License' ]]
-                                </span>
-                                <span>
-                                    <i class="fas fa-code-branch me-1"></i>
-                                    <strong>Version:</strong> [[ item.version || '—' ]]
-                                </span>
-                            </div>
-
-                            <div class="actions d-flex gap-2">
-                                <a :href="`/rule/similar_rules_detail/${item.id}`" class="btn btn-sm btn-primary"
-                                    title="View more similar rules for this rule">
-                                    <i class="fas fa-plus"></i>
-                                </a>
-
-                                <a :href="`/rule/detail_rule/${item.id}`" class="btn btn-sm btn-primary"
-                                    title="View rule details">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                            </div>
-                        </div>
-
-                        <!-- Diff content -->
-                        <div class="diff-wrapper  border-top" style="background-color: var(--bg-color);">
-                            <div id="diff-container" class="diff-content p-3"></div>
-                        </div>
-                    </div>
-
                 </div>
-            </div>
+            </template>
+            <template v-else>
+                <div class="col-12 text-center py-5">
+                    <!-- no results-->
+                    <div class="py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-search fa-2x text-muted"></i>
+                        </div>
+                        <h3 class="fw-bold">No similar rules found</h3>
+                        <p class="text-muted">No similar rules were found for the rule you selected.</p>
+                    </div>
+                </div>
+            </template>
             <!-- Pagination-->
-            <template v-if="rules_list.length > 0">
+            <template v-if="total_pages > 1">
                 <!-- center-->
                 <div class="d-flex justify-content-center">
                     <nav aria-label="Page navigation">

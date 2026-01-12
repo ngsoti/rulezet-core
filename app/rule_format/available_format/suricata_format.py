@@ -105,9 +105,7 @@ class SuricataRule(RuleType):
                 for rule in parsed_rules:
                     if rule.raw:
                         rules.append(rule.raw.strip())
-            print(f"Extracted {len(rules)} rules from {filepath}")
         except Exception as e:
-            print(f"Error reading file: {e}")
             return []
         return rules
 
