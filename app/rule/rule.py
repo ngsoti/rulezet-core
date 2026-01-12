@@ -315,9 +315,10 @@ def edit_rule(rule_id) -> render_template:
                     "id": rule_id,
                     "title": rule.title,
                     "success": True,
+                    "manual_submit": True,
                     "message": "simple edit",
                     "new_content": form_dict['to_string'],
-                    "old_content": rule.to_string 
+                    "old_content": rule.to_string
                 }
                 history_id = RuleModel.create_rule_history(result)
                 history = RuleModel.get_history_rule_by_id(history_id)

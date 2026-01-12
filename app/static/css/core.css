@@ -1865,3 +1865,16 @@ body.dark-mode .d2h-emptyplaceholder{
     transition: transform 0.3s ease;
 }
 
+
+
+@keyframes fadePulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+}
+
+
+.col-12.text-center.py-5:hover {
+    transform: translateY(-2px);
+    transition: transform 0.3s ease;
+}

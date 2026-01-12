@@ -8,6 +8,8 @@ from uuid import uuid4
 
 from flask import current_app
 from flask_login import current_user
+
+from app.utils.utils import update_or_clone_repo
 from ... import db
 
 from ...db_class.db import Rule, RuleStatus, UpdateResult, User, NewRule
@@ -77,7 +79,7 @@ class Update_class:
         if self.mode == "by_url":
             cp = 0
             repo_dir, exists = clone_or_access_repo(self.repo_sources)
-            # Store the local path of the cloned repo
+            
             self.local_repo_path = repo_dir
 
             # found all the rule in the repo currently in Rulezet
@@ -93,9 +95,14 @@ class Update_class:
             ]
 
             total_rule_to_update = len(rules_listes_github)
+            print(len(rules_listes_github))
             self.total = total_rule_to_update
 
-            git_pull_repo(repo_dir)
+            success = git_pull_repo(repo_dir)
+
+            if not success:
+                print("Error pulling repo")
+                return
 
 
             
@@ -347,6 +354,7 @@ class Update_class:
                                     # --- create history if needed ---
                                     history_id = None
                                     if success and new_rule_content:
+
                                         history_id = RuleModel.create_rule_history({
                                             "id": existing_rule.id,
                                             "title": existing_rule.title,
@@ -627,10 +635,17 @@ def Check_for_rule_updates(rule_id: int, repo_dir: str):
     validation = rule_class.validate(found_rule)
 
     if rule.to_string != validation.normalized_content:
+
         # There is a change
         if validation.ok:
+            # verify if there is already a history for this rule which was made by a pull request (if so, we don't want to update it again)
+            # if there is a history made by a pull request, we don't want to update it again
+            already_update_by_user = RuleModel.was_last_history_manuel(rule.id)
+            if already_update_by_user:
+                return {"message": "Already updated by user", "success": True, "new_content": None}, True, None
+
             # Change is valid, return success
-             return (
+            return (
                 {
                     "message": "Update found for this rule.",
                     "success": True,

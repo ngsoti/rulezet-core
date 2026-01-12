@@ -93,6 +93,8 @@ def add_rule_core(form_dict, user) -> bool:
     except Exception as e:
         return False
 
+
+
 def rule_exists(Metadata: dict) -> tuple[bool, int]:
     """
     Check if a rule already exists.
@@ -1398,6 +1400,12 @@ def create_rule_history(data: dict) -> bool:
         new_content = data.get("new_content", "")
         old_content = data.get("old_content", "")
 
+       
+        if not data.get("manual_submit"):
+            _submit_content = False
+        else:
+            _submit_content = data.get("manual_submit")
+
         rule = get_rule(rule_id)
         if rule:
             if current_user:
@@ -1412,7 +1420,7 @@ def create_rule_history(data: dict) -> bool:
             message=message,
             new_content=new_content,
             old_content=old_content,
-            analyzed_by_user_id=user_id
+            analyzed_by_user_id=user_id,
         ).first()
 
         if existing_entry:
@@ -1427,7 +1435,8 @@ def create_rule_history(data: dict) -> bool:
             new_content=new_content,
             old_content=old_content,
             analyzed_by_user_id=user_id,
-            analyzed_at=datetime.datetime.now(tz=datetime.timezone.utc)
+            analyzed_at=datetime.datetime.now(tz=datetime.timezone.utc),
+            manuel_submit=_submit_content
         )
 
         db.session.add(history_entry)
@@ -1437,7 +1446,20 @@ def create_rule_history(data: dict) -> bool:
 
     except Exception as e:
         db.session.rollback()
+        print(e)
         return None
+
+def was_last_history_manuel(rule_id):
+    """
+    Retourne True si le dernier history a manuel_submit == True,
+    False sinon ou s'il n'y a aucun history.
+    """
+    history_rule = RuleUpdateHistory.query.filter_by(rule_id=rule_id)\
+                                          .order_by(RuleUpdateHistory.id.desc())\
+                                          .first()
+    if history_rule and history_rule.manuel_submit:
+        return True
+    return False
 
 
 def get_history_rule_by_id(history_id):

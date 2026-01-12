@@ -498,6 +498,8 @@ class RuleUpdateHistory(db.Model):
     old_content = db.Column(db.Text, nullable=True)
     analyzed_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     analyzed_at = db.Column(db.DateTime, index=True)
+    manuel_submit = db.Column(db.Boolean, default=False, nullable=True)
+    
 
     analyzed_by = db.relationship("User", backref=db.backref("rule_updates", lazy='dynamic', cascade='all, delete-orphan'))
 
@@ -531,7 +533,8 @@ class RuleUpdateHistory(db.Model):
             "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
             "analyzed_by_user_name": self.analyzed_by.first_name,
             "rule_format": self.get_rule_format(),
-            "rule_source": self.get_rule_source()
+            "rule_source": self.get_rule_source(),
+            "manuel_submit": self.manuel_submit if self.manuel_submit else False
         }
     
     def to_json(self):
@@ -546,7 +549,8 @@ class RuleUpdateHistory(db.Model):
             "analyzed_by_user_id": self.analyzed_by_user_id,
             "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
             "analyzed_by_user_name": self.analyzed_by.first_name,
-            "rule_format": self.get_rule_format()
+            "rule_format": self.get_rule_format(),
+            "manuel_submit": self.manuel_submit if self.manuel_submit else False
         }
 
 #############
