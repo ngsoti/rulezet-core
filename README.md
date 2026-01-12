@@ -107,9 +107,9 @@ Currently, the supported rule formats are:
 
 ## UI Previews
 
-| Homepage                                                                                   | Rule Detail                                                                                         | Rule Management                                                                                    |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| ![Home](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_readme.png) | ![Detail](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_detail_readme.png) | ![Readme](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_invalid_rule.png) |
+| Homepage                                                                                 | Rule Detail                                                                                         | Rule Management                                                                                    |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| ![Home](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_home.png) | ![Detail](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_detail_readme.png) | ![Readme](https://raw.githubusercontent.com/ngsoti/rulezet-core/main/doc/rulezet_invalid_rule.png) |
 
 ## API Access
 
