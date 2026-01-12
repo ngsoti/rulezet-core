@@ -371,170 +371,183 @@
                         </div>
                         <!-- Similar Rules Section -->
                         <div class="mb-2 mt-3 similar-rules-section mt-4 shadow-sm">
-                            <template v-if="similar_rules_list.length > 0">
-                                <div
-                                    class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden border position-relative p-4">
-
-                                    <div class="mb-3 d-flex justify-content-between align-items-center">
-                                        <!-- Title -->
-                                        <h4
-                                            class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3 mb-3">
-                                            Similar Rules
-                                        </h4>
-
-                                        <!-- Redirect button to compare section -->
-                                        <a :href="'/rule/similar_rules_detail/' + currentRule.id"
-                                            class="btn btn-sm btn-outline-primary mb-3"
-                                            title="Compare this rule with more rule">
-                                            <i class="fas fa-exchange-alt me-1"></i> More Rules
-                                        </a>
-
-                                    </div>
-
-                                    <!-- Explanation with collapsible details -->
-                                    <div class="mb-4">
-                                        <div
-                                            class="alert alert-info p-3 shadow-sm d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <strong>Similarity Score:</strong>
-                                                Each rule is compared to the current rule using <strong>TF-IDF and
-                                                    cosine
-                                                    similarity</strong>.
-                                                A higher score (closer to 1) indicates stronger similarity.
-                                                Scores above 90% may indicate a <strong>duplicate rule</strong>.
-                                            </div>
-                                            <!-- Toggle button -->
-                                            <button class="btn btn-sm btn-outline-primary ms-3" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#similarityDetails"
-                                                aria-expanded="false" aria-controls="similarityDetails">
-                                                <i class="fas fa-info"></i>
-                                            </button>
-                                        </div>
-
-                                        <!-- Collapsible content -->
-                                        <div class="collapse mt-2" id="similarityDetails">
-                                            <div class="card card-body p-3 small bg-light shadow-sm">
-                                                <p class="mb-1">
-                                                    The similarity is calculated using the <strong>TF-IDF (Term
-                                                        Frequency -
-                                                        Inverse Document Frequency)</strong> vectorization of each
-                                                    rule's
-                                                    text, followed by computing the <strong>cosine similarity</strong>
-                                                    between vectors.
-                                                </p>
-                                                <p class="mb-1">
-                                                    This method compares the textual content of the rules, giving higher
-                                                    weight to distinctive terms and lower weight to common terms.
-                                                    It is robust to small changes in wording.
-                                                </p>
-                                                <p class="mb-0">
-                                                    Learn more on the official scikit-learn documentation:
-                                                    <a href="https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html"
-                                                        target="_blank" class="link-primary">TF-IDF Vectorizer</a> &amp;
-                                                    <a href="https://scikit-learn.org/stable/modules/metrics.html#cosine-similarity"
-                                                        target="_blank" class="link-primary">Cosine Similarity</a>
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-
-                                    <!-- Rules List -->
-                                    <div v-if="similar_rules_list.length === 0" class="text-muted py-4 text-center">
-                                        No similar rules found.
-                                    </div>
-
-                                    <div v-else class="d-flex flex-column gap-3">
-                                        <div v-for="rule in similar_rules_list" :key="rule.id"
-                                            class="similar-rule-card position-relative p-3 rounded shadow-sm "
-                                            @click="goToRuleDetail(rule.id)"
-                                            :style="{ backgroundColor: similarityColorBg(rule.similarity) }">
-
-                                            <!-- Background icon -->
-                                            <i class="fas fa-shield-alt icon-bg"></i>
-
-                                            <!-- Header -->
-                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <h6 class="fw-bold text-truncate mb-0">
-                                                    [[ rule.title ]]
-                                                    <span v-if="rule.similarity >= 0.9" class="high-similarity"
-                                                        title="High similarity / possible duplicate">
-                                                        <i class="fas fa-exclamation-circle me-1"></i>
-                                                    </span>
-                                                </h6>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span class="badge rounded-pill bg-dark pt-1 shadow-sm">[[
-                                                        rule.format.toUpperCase() ]]</span>
-
-                                                    <button
-                                                        @click="favoriteSimilar(rule.id); $event.currentTarget.classList.add('star-animate')"
-                                                        class="btn btn-sm rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center transition-all home-btn border"
-                                                        style="width: 32px; height: 32px;" @click.stop>
-                                                        <i class="fa-solid fa-star"
-                                                            :class="rule.is_favorited ? 'text-warning' : 'text-muted'"></i>
-                                                    </button>
-                                                </div>
-
-                                            </div>
-
-                                            <!-- Metadata -->
-                                            <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
-                                                <div class="d-flex align-items-center gap-2 ">
-                                                    <div class="avatar-circle-xs" title="Author of the rule">
-                                                        <template v-if="rule.author === 'Unknown'">
-                                                            [[ rule.editor[0].toUpperCase() ]]
-                                                        </template>
-                                                        <template v-else>
-                                                            [[ rule.author[0].toUpperCase() ]]
-                                                        </template>
-                                                    </div>
-                                                    <small class="text-muted fw-medium" title="Author of the rule">
-                                                        <template v-if="rule.author === 'Unknown'">
-                                                            [[ rule.editor ]]
-                                                        </template>
-                                                        <template v-else>
-                                                            [[ rule.author ]]
-                                                        </template>
-                                                    </small>
-                                                    <span class="text-muted opacity-50">|</span>
-                                                    <small class="text-muted"> [[
-                                                        dayjs.utc(rule.last_modif).fromNow() ]]</small>
-                                                </div>
-                                            </div>
-
-                                            <!-- Description -->
-                                            <p class="text-muted mb-2">
-                                                [[ rule.description ]]
-                                            </p>
-
-                                            <!-- Similarity bar -->
-                                            <div>
-                                                <div class="progress mb-1" style="height: 10px; border-radius: 5px;">
-                                                    <div class="progress-bar" role="progressbar"
-                                                        :style="{ width: (rule.similarity*100)+'%', backgroundColor: similarityColor(rule.similarity) }"
-                                                        :aria-valuenow="rule.similarity*100" aria-valuemin="0"
-                                                        aria-valuemax="100">
-                                                    </div>
-                                                </div>
-                                                <template v-if="rule.similarity >= 0.9">
-                                                    <div class="alert alert-danger p-2 mb-0 small fw-medium">
-                                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                                        High similarity detected! This rule may be a duplicate.
-                                                        <strong>
-                                                            Similarity: [[
-                                                            (rule.similarity*100).toFixed(0)
-                                                            ]]%</strong>
-                                                    </div>
-                                                </template>
-                                                <template v-else>
-                                                    <small class="text-muted">Similarity: [[
-                                                        (rule.similarity*100).toFixed(0)
-                                                        ]]%</small>
-                                                </template>
-                                            </div>
-                                        </div>
+                            <template v-if="detail_sinilar_is_loading.value">
+                                <div class="col-12 text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
                                     </div>
                                 </div>
+                            </template>
+                            <template v-else>
+                                <template v-if="similar_rules_list.length > 0">
+                                    <div
+                                        class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden border position-relative p-4">
+
+                                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                                            <!-- Title -->
+                                            <h4
+                                                class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3 mb-3">
+                                                Similar Rules
+                                            </h4>
+
+                                            <!-- Redirect button to compare section -->
+                                            <a :href="'/rule/similar_rules_detail/' + currentRule.id"
+                                                class="btn btn-sm btn-outline-primary mb-3"
+                                                title="Compare this rule with more rule">
+                                                <i class="fas fa-exchange-alt me-1"></i> More Rules
+                                            </a>
+
+                                        </div>
+
+                                        <!-- Explanation with collapsible details -->
+                                        <div class="mb-4">
+                                            <div
+                                                class="alert alert-info p-3 shadow-sm d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong>Similarity Score:</strong>
+                                                    Each rule is compared to the current rule using <strong>TF-IDF and
+                                                        cosine
+                                                        similarity</strong>.
+                                                    A higher score (closer to 1) indicates stronger similarity.
+                                                    Scores above 90% may indicate a <strong>duplicate rule</strong>.
+                                                </div>
+                                                <!-- Toggle button -->
+                                                <button class="btn btn-sm btn-outline-primary ms-3" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#similarityDetails"
+                                                    aria-expanded="false" aria-controls="similarityDetails">
+                                                    <i class="fas fa-info"></i>
+                                                </button>
+                                            </div>
+
+                                            <!-- Collapsible content -->
+                                            <div class="collapse mt-2" id="similarityDetails">
+                                                <div class="card card-body p-3 small bg-light shadow-sm">
+                                                    <p class="mb-1">
+                                                        The similarity is calculated using the <strong>TF-IDF (Term
+                                                            Frequency -
+                                                            Inverse Document Frequency)</strong> vectorization of each
+                                                        rule's
+                                                        text, followed by computing the <strong>cosine
+                                                            similarity</strong>
+                                                        between vectors.
+                                                    </p>
+                                                    <p class="mb-1">
+                                                        This method compares the textual content of the rules, giving
+                                                        higher
+                                                        weight to distinctive terms and lower weight to common terms.
+                                                        It is robust to small changes in wording.
+                                                    </p>
+                                                    <p class="mb-0">
+                                                        Learn more on the official scikit-learn documentation:
+                                                        <a href="https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html"
+                                                            target="_blank" class="link-primary">TF-IDF Vectorizer</a>
+                                                        &amp;
+                                                        <a href="https://scikit-learn.org/stable/modules/metrics.html#cosine-similarity"
+                                                            target="_blank" class="link-primary">Cosine Similarity</a>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        <!-- Rules List -->
+                                        <div v-if="similar_rules_list.length === 0" class="text-muted py-4 text-center">
+                                            No similar rules found.
+                                        </div>
+
+                                        <div v-else class="d-flex flex-column gap-3">
+                                            <div v-for="rule in similar_rules_list" :key="rule.id"
+                                                class="similar-rule-card position-relative p-3 rounded shadow-sm "
+                                                @click="goToRuleDetail(rule.id)"
+                                                :style="{ backgroundColor: similarityColorBg(rule.similarity) }">
+
+                                                <!-- Background icon -->
+                                                <i class="fas fa-shield-alt icon-bg"></i>
+
+                                                <!-- Header -->
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <h6 class="fw-bold text-truncate mb-0">
+                                                        [[ rule.title ]]
+                                                        <span v-if="rule.similarity >= 0.9" class="high-similarity"
+                                                            title="High similarity / possible duplicate">
+                                                            <i class="fas fa-exclamation-circle me-1"></i>
+                                                        </span>
+                                                    </h6>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge rounded-pill bg-dark pt-1 shadow-sm">[[
+                                                            rule.format.toUpperCase() ]]</span>
+
+                                                        <button
+                                                            @click="favoriteSimilar(rule.id); $event.currentTarget.classList.add('star-animate')"
+                                                            class="btn btn-sm rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center transition-all home-btn border"
+                                                            style="width: 32px; height: 32px;" @click.stop>
+                                                            <i class="fa-solid fa-star"
+                                                                :class="rule.is_favorited ? 'text-warning' : 'text-muted'"></i>
+                                                        </button>
+                                                    </div>
+
+                                                </div>
+
+                                                <!-- Metadata -->
+                                                <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+                                                    <div class="d-flex align-items-center gap-2 ">
+                                                        <div class="avatar-circle-xs" title="Author of the rule">
+                                                            <template v-if="rule.author === 'Unknown'">
+                                                                [[ rule.editor[0].toUpperCase() ]]
+                                                            </template>
+                                                            <template v-else>
+                                                                [[ rule.author[0].toUpperCase() ]]
+                                                            </template>
+                                                        </div>
+                                                        <small class="text-muted fw-medium" title="Author of the rule">
+                                                            <template v-if="rule.author === 'Unknown'">
+                                                                [[ rule.editor ]]
+                                                            </template>
+                                                            <template v-else>
+                                                                [[ rule.author ]]
+                                                            </template>
+                                                        </small>
+                                                        <span class="text-muted opacity-50">|</span>
+                                                        <small class="text-muted"> [[
+                                                            dayjs.utc(rule.last_modif).fromNow() ]]</small>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Description -->
+                                                <p class="text-muted mb-2">
+                                                    [[ rule.description ]]
+                                                </p>
+
+                                                <!-- Similarity bar -->
+                                                <div>
+                                                    <div class="progress mb-1"
+                                                        style="height: 10px; border-radius: 5px;">
+                                                        <div class="progress-bar" role="progressbar"
+                                                            :style="{ width: (rule.similarity*100)+'%', backgroundColor: similarityColor(rule.similarity) }"
+                                                            :aria-valuenow="rule.similarity*100" aria-valuemin="0"
+                                                            aria-valuemax="100">
+                                                        </div>
+                                                    </div>
+                                                    <template v-if="rule.similarity >= 0.9">
+                                                        <div class="alert alert-danger p-2 mb-0 small fw-medium">
+                                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                                            High similarity detected! This rule may be a duplicate.
+                                                            <strong>
+                                                                Similarity: [[
+                                                                (rule.similarity*100).toFixed(0)
+                                                                ]]%</strong>
+                                                        </div>
+                                                    </template>
+                                                    <template v-else>
+                                                        <small class="text-muted">Similarity: [[
+                                                            (rule.similarity*100).toFixed(0)
+                                                            ]]%</small>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
                             </template>
                         </div>
                         <!-- Related bundles -->
@@ -1008,6 +1021,7 @@
 
             const csrf_token = '{{ csrf_token() }}';
             const detail_page_1_is_loading = ref(false);
+            const detail_sinilar_is_loading = ref(false);
 
             async function init() {
                 detail_page_1_is_loading.value = false
@@ -1022,15 +1036,21 @@
                     fetchComments(1),
                     fetchPullRequest(1),
                     fetchContributor(),
-                    fetch_similar_rules_list(),
                     highlightJSON(),
                 ])
+
                 detail_page_1_is_loading.value = true
 
                 await nextTick();
-
                 // 3. Maintenant que le DOM est prêt, on lance la coloration
                 highlightJSON();
+                detail_sinilar_is_loading.value = false
+
+                await Promise.all([
+                    fetch_similar_rules_list()
+                ])
+                detail_sinilar_is_loading.value = true
+
 
             }
 
@@ -1542,7 +1562,8 @@
                 getRandomColor,
                 switchTab,
                 goToRuleDetail,
-                autoResize
+                autoResize,
+                detail_sinilar_is_loading
             };
         }
     }).mount('#main-container');
