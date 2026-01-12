@@ -853,7 +853,8 @@ def validate_proposal() -> jsonify:
                     "success": True,
                     "message": "accepted",
                     "new_content": rule_proposal.proposed_content,
-                    "old_content": rule_proposal.old_content
+                    "old_content": rule_proposal.old_content,
+                    "manual_submit": True,
                 }
 
             
