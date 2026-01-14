@@ -2250,5 +2250,12 @@ def get_total_formats():
     return Rule.query.distinct(Rule.format).count()
 
 
-def delete_all_rule_by_url(url):
-    return Rule.query.filter_by(source=url).delete()
+def delete_all_rule_by_url(url, batch_size=100):
+    while True:
+        rules = Rule.query.filter_by(source=url).limit(batch_size).all()
+        if not rules:
+            break
+        for rule in rules:
+            db.session.delete(rule)
+        db.session.commit()
+    return True

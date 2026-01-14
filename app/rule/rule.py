@@ -2204,6 +2204,7 @@ def get_url_github():
     for rule in pagination_urls.items:
         url = rule.source
         github_data.append({
+            "id": rule.id,
             "url": url,
             "rule_count": counts_map.get(url, 0)
         })
