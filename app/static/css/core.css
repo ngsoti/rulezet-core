@@ -1878,3 +1878,33 @@ body.dark-mode .d2h-emptyplaceholder{
     transform: translateY(-2px);
     transition: transform 0.3s ease;
 }
+
+
+
+.bundle-title-wrapper {
+  max-width: 65vw;
+}
+
+.bundle-title {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1.4rem;
+}
+
+.bundle-icon {
+  font-size: 1.3rem;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .bundle-title-wrapper {
+    max-width: 45vw;
+  }
+
+  .bundle-title {
+    font-size: 1.1rem;
+  }
+}
+

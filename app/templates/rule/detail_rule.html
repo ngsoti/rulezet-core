@@ -421,12 +421,16 @@
                                                     class="alert alert-info p-3 shadow-sm d-flex justify-content-between align-items-center">
                                                     <div>
                                                         <strong>Similarity Score:</strong>
-                                                        Each rule is compared to the current rule using <strong>TF-IDF
-                                                            and
-                                                            cosine
-                                                            similarity</strong>.
-                                                        A higher score (closer to 1) indicates stronger similarity.
-                                                        Scores above 90% may indicate a <strong>duplicate rule</strong>.
+                                                        Each rule is indexed and compared using a <strong>FAISS-powered
+                                                            vector engine</strong> (utilizing <strong>TF-IDF and Cosine
+                                                            Similarity</strong>).
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            • A higher score (closer to 1.0) indicates stronger
+                                                            similarity.<br>
+                                                            • Scores <strong>above 0.90</strong> typically indicate a
+                                                            <strong>duplicate rule</strong>.
+                                                        </small>
                                                     </div>
                                                     <!-- Toggle button -->
                                                     <button class="btn btn-sm btn-outline-primary ms-3" type="button"
@@ -620,7 +624,7 @@
                                                                 <div
                                                                     class="d-flex justify-content-between align-items-start">
                                                                     <h6 class="fw-bold text-dark mb-1 text-truncate">
-                                                                        [[ bundle.name ]]
+                                                                        [[ bundle.name.slice(0, 10) ]]
                                                                     </h6>
                                                                     <span class="badge bg-dark rounded-pill"
                                                                         style="font-size: 0.65rem;">
@@ -630,8 +634,7 @@
 
                                                                 <p class="text-muted small mb-2 text-truncate-2"
                                                                     style="font-size: 0.8rem; line-height: 1.2; height: 2.4em;">
-                                                                    [[ bundle.description || 'No description provided.'
-                                                                    ]]
+                                                                    [[ bundle.description.slice(0, 10) ]]
                                                                 </p>
 
                                                                 <div

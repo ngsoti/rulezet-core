@@ -17,52 +17,98 @@
     <!-- Carte principale du bundle -->
     <div class="card bg-white shadow-sm border-0 mb-4">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <div class="d-flex align-items-center">
-            <h2 class="fw-bold mb-0 text-primary d-flex align-items-center">
-              <i class="fas fa-box-open me-2 text-secondary" style="font-size: 1.4rem;"></i>
-              [[ bundle.name ]]
-            </h2>
 
-            <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
-              <button class="btn btn-outline-secondary btn-sm ms-3"
+        <!-- HEADER -->
+        <div class="d-flex justify-content-between align-items-start mb-3 gap-3 flex-wrap">
+
+          <!-- LEFT : TITLE + ACCESS -->
+          <div class="d-flex align-items-center flex-wrap gap-2">
+
+            <!-- TITLE -->
+            <div class="d-flex align-items-center gap-2 bundle-title-wrapper">
+              <i class="fas fa-box-open text-secondary bundle-icon"></i>
+
+              <h2 class="bundle-title fw-bold mb-0 text-primary" :title="bundle.name">
+                [[ bundle.name ]]
+              </h2>
+
+              <!-- VIEW FULL TITLE -->
+              <button class="btn btn-link btn-sm p-0 text-muted" data-bs-toggle="modal"
+                :data-bs-target="'#bundleTitleModal_'+bundle.id" title="View full name">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+
+            <!-- ACCESS -->
+            <template v-if="parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
+              <button class="btn btn-outline-secondary btn-sm"
                 :class="bundle.access ? 'btn-outline-success' : 'btn-outline-danger'" @click="edit_access(bundle.id)"
                 :title="bundle.access ? 'Make Private' : 'Make Public'">
                 <i :class="bundle.access ? 'fas fa-lock-open' : 'fas fa-lock'"></i>
                 <span class="ms-1">[[ bundle.access ? 'Public' : 'Private' ]]</span>
               </button>
             </template>
+
             <template v-else>
-              <span class="badge ms-2" :class="bundle.access ? 'bg-success' : 'bg-danger'">
+              <span class="badge" :class="bundle.access ? 'bg-success' : 'bg-danger'">
                 <i :class="bundle.access ? 'fas fa-lock-open' : 'fas fa-lock'"></i>
                 <span class="ms-1">[[ bundle.access ? 'Public' : 'Private' ]]</span>
               </span>
             </template>
+
           </div>
 
-          <div class="d-flex align-items-center">
-            <button class="btn btn-success btn-sm ms-2" title="Download all rules as ZIP" @click="DownloadBundle()">
-              <i class="fas fa-download me-1"></i>
+          <!-- RIGHT : ACTIONS -->
+          <div class="d-flex align-items-center gap-2">
+
+            <button class="btn btn-success btn-sm" title="Download all rules as ZIP" @click="DownloadBundle">
+              <i class="fas fa-download"></i>
             </button>
+
             {% if current_user.is_authenticated %}
-            <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
-              <a :href="`/bundle/edit/${bundle_id}`" class="btn btn-secondary btn-sm ms-2" title="Edit Bundle">
+            <template v-if="parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
+
+              <a :href="`/bundle/edit/${bundle_id}`" class="btn btn-secondary btn-sm" title="Edit Bundle">
                 <i class="fas fa-pen"></i>
               </a>
-              <button type="button" class="btn btn-danger btn-sm ms-2" title="Delete the bundle" data-bs-toggle="modal"
+
+              <button class="btn btn-danger btn-sm" title="Delete bundle" data-bs-toggle="modal"
                 :data-bs-target="'#delete_bundle_modal_'+bundle.id">
-                <i class="fa-solid fa-trash fa-fw"></i>
+                <i class="fa-solid fa-trash"></i>
               </button>
+
             </template>
             {% endif %}
           </div>
+
         </div>
 
-        <p class="fst-italic text-secondary">
-          Created on [[ bundle.created_at ]] and updated on [[ bundle.updated_at ]].
+        <!-- META -->
+        <p class="fst-italic text-secondary mb-0">
+          Created on [[ bundle.created_at ]] · Updated on [[ bundle.updated_at ]]
         </p>
+
       </div>
     </div>
+
+    <!-- MODAL : FULL TITLE -->
+    <div class="modal fade" :id="'bundleTitleModal_'+bundle.id" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+          <div class="modal-header">
+            <h5 class="modal-title">Bundle name</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="modal-body">
+            <strong>[[ bundle.name ]]</strong>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
 
     <!-- Carte Description -->
     <div class="card bg-white shadow-sm border-0 mb-4">

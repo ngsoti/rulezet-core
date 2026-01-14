@@ -55,9 +55,8 @@ def rule() -> render_template:
         if valide == False:
                 return render_template("rule/rule.html",error=error, form=form, rule=rule)
 
-        new_rule = RuleModel.add_rule_core(rule_dict , current_user)
+        new_rule , message = RuleModel.add_rule_core(rule_dict , current_user)
         if new_rule:
-
             # update the gameifcation section
             profil_game_user = AccountModel.get_or_create_gamification_profile(current_user.id)
             if profil_game_user == None:
@@ -68,7 +67,8 @@ def rule() -> render_template:
             flash('Rule added !', 'success')
             return redirect(url_for('rule.detail_rule', rule_id=new_rule.id))
         else:
-            flash('Error during the creation of the rule !', 'danger')
+            print("Error during the creation of the rule !")
+            flash(message, 'error')
             return render_template("rule/rule.html", form=form, tab="manuel" )
     return render_template("rule/rule.html", form=form )
 
@@ -2429,3 +2429,19 @@ def get_similar_rule_page():
         "success": True,
         "toast_class": "success-subtle"
     }), 200
+
+
+
+# delete_all_rule
+
+@rule_blueprint.route('/delete_all_rule', methods=['GET'])
+@login_required
+def delete_all_rule():
+    if current_user.is_admin == False:
+        return jsonify({"success": False, "message": "Access denied", "toast_class": "danger-subtle"}), 403
+    url = request.args.get("url", type=str)
+    if not url:
+        return jsonify({"success": False, "message": "No url provided", "toast_class": "danger-subtle"}), 400
+
+    success  = RuleModel.delete_all_rule_by_url(url)
+    return jsonify({"success": True, "message": "All rules deleted", "toast_class": "success-subtle"}), 200

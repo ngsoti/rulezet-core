@@ -34,7 +34,7 @@ class Update_class:
 
     def __init__(self, repo_sources, user: User, info: dict, mode: str = "by_rule") -> None:
         self.uuid = str(uuid4())
-        self.thread_count = 4
+        self.thread_count = 10
         self.jobs = Queue()
         self.threads = []
         self.stopped = False

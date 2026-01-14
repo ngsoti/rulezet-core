@@ -42,21 +42,29 @@ def add_rule_core(form_dict, user) -> bool:
         new_to_string = form_dict.get("to_string", "").strip()
         new_original_uuid = str(form_dict.get("original_uuid") or "").strip()  # Normalize to string
 
-        existing_rules = get_rule_by_title(title)
-
+        #existing_rules = get_rule_by_title(title)
+        # verify if the rule already exists only if the to_string (as content) is the same
+        existing_rules = get_rule_by_content(new_to_string)
         if existing_rules:
             for r in existing_rules:
-                # Normalize stored UUID for comparison
+               # if exact same content
+               if r.to_string == new_to_string:
+                   return False , "Rule already exists"
+
+
+        # if existing_rules:
+        #     for r in existing_rules:
+        #         # Normalize stored UUID for comparison
                 
-                existing_original_uuid = str(r.original_uuid or "").strip()
+        #         existing_original_uuid = str(r.original_uuid or "").strip()
 
-                # Case 1: Same content and same original UUID → update case, skip
-                if r.to_string == new_to_string and existing_original_uuid == new_original_uuid:
-                    return False
+        #         # Case 1: Same content and same original UUID → update case, skip
+        #         if r.to_string == new_to_string and existing_original_uuid == new_original_uuid:
+        #             return False
 
-                # Case 2: Same content but different original UUID → allow as new rule
-                if r.to_string == new_to_string and existing_original_uuid != new_original_uuid:
-                    break  # continue to insertion
+        #         # Case 2: Same content but different original UUID → allow as new rule
+        #         if r.to_string == new_to_string and existing_original_uuid != new_original_uuid:
+        #             break  # continue to insertion
 
         # Identify user
         if current_user and current_user.is_authenticated:
@@ -88,12 +96,14 @@ def add_rule_core(form_dict, user) -> bool:
 
         db.session.add(new_rule)
         db.session.commit()
-        return new_rule
+        return new_rule , "rule created" 
 
     except Exception as e:
-        return False
+        
+        return False, e
 
-
+def get_rule_by_content(content):
+    return Rule.query.filter(Rule.to_string == content).all()
 
 def rule_exists(Metadata: dict) -> tuple[bool, int]:
     """
@@ -288,123 +298,173 @@ def get_rule(id) -> int:
 
 
 
+import numpy as np
+import faiss
+from sklearn.feature_extraction.text import TfidfVectorizer
+# Importe ton modèle Rule et db selon ta structure
+# from app import db 
+
+# Variables globales pour le cache en mémoire
+_INDEX = None
+_ID_MAP = []
+_VECTORIZER = None
+
+def get_index():
+    """
+    Initialise ou récupère l'index FAISS et le Vectorizer.
+    Se charge une seule fois en mémoire pour une vitesse maximale.
+    """
+    global _INDEX, _ID_MAP, _VECTORIZER
+    
+    if _INDEX is None:
+        # On récupère toutes les règles ayant du contenu
+        from .rule_core import Rule  # Ajuste l'import selon ton projet
+        rules = Rule.query.filter(Rule.to_string.isnot(None)).all()
+        
+        if not rules:
+            return None, None, None
+
+        texts = [r.to_string for r in rules]
+        
+        # 1. Vectorisation (limitée pour la performance)
+        _VECTORIZER = TfidfVectorizer(
+            analyzer="word",
+            ngram_range=(1, 2), # (1, 2) est un bon compromis vitesse/précision
+            max_features=10000, 
+            stop_words='english' # Optionnel : à adapter selon la langue
+        )
+        
+        tfidf_matrix = _VECTORIZER.fit_transform(texts).toarray().astype('float32')
+
+        # 2. Normalisation pour que le produit scalaire (Inner Product) soit égal à la similarité cosinus
+        faiss.normalize_L2(tfidf_matrix)
+        
+        # 3. Création de l'index FAISS (IndexFlatIP = Inner Product)
+        d = tfidf_matrix.shape[1]
+        _INDEX = faiss.IndexFlatIP(d)
+        _INDEX.add(tfidf_matrix)
+        
+        # 4. On garde la correspondance des IDs en mémoire
+        _ID_MAP = [r.id for r in rules]
+        
+    return _INDEX, _ID_MAP, _VECTORIZER
+
+def refresh_similarity_index():
+    """Appelle cette fonction pour forcer la mise à jour de l'index (ex: après un ajout)"""
+    global _INDEX
+    _INDEX = None
+    return get_index()
+
 def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
     """
-    Return similar rules using TF-IDF + cosine similarity
+    Version ultra-optimisée utilisant FAISS et le cache mémoire.
     """
+    index, id_map, vectorizer = get_index()
+    
+    if index is None:
+        return []
 
+    # Récupération de la règle cible
+    from .rule_core import Rule
     rule = Rule.query.get(rule_id)
     if not rule or not rule.to_string:
         return []
 
-    candidates = Rule.query.filter(
-        Rule.id != rule.id,
-        Rule.format == rule.format,
-        Rule.to_string.isnot(None)
-    ).all()
+    # 1. Transformer la règle cible en vecteur
+    target_vec = vectorizer.transform([rule.to_string]).toarray().astype('float32')
+    faiss.normalize_L2(target_vec)
 
-    if not candidates:
-        return []
-    corpus = [rule.to_string] + [r.to_string for r in candidates]
-
-    # 4️Vectorisation TF-IDF
-    vectorizer = TfidfVectorizer(
-        analyzer="word",
-        ngram_range=(1, 3),
-        max_df=0.95,
-        min_df=1
-    )
-
-    tfidf_matrix = vectorizer.fit_transform(corpus)
-
-    # 5️Cosine similarity
-    similarity_scores = cosine_similarity(
-        tfidf_matrix[0:1],
-        tfidf_matrix[1:]
-    )[0]
+    # 2. Recherche des plus proches voisins (on demande limit+1 pour exclure la règle elle-même)
+    # k est le nombre de résultats souhaités
+    k = limit + 1 if limit > 0 else len(id_map)
+    scores, indices = index.search(target_vec, k)
 
     results = []
-    for candidate, score in zip(candidates, similarity_scores):
-        if score >= min_score:
-            results.append({
-                **candidate.to_json(),
-                "similarity": round(float(score), 3)
-            })
+    for score, idx in zip(scores[0], indices[0]):
+        # idx == -1 signifie que FAISS n'a pas trouvé assez de voisins
+        if idx == -1:
+            continue
+            
+        candidate_id = id_map[idx]
+        
+        # On ignore la règle elle-même et on vérifie le score minimum
+        if candidate_id != rule_id and score >= min_score:
+            candidate = Rule.query.get(candidate_id)
+            if candidate:
+                results.append({
+                    **candidate.to_json(),
+                    "similarity": round(float(score), 3)
+                })
 
-    results.sort(key=lambda x: x["similarity"], reverse=True)
-
-    if limit == 0:
-        return results
-
-    return results[:limit]
-
+    # Si limit était à 0 (tous les résultats), on a déjà tout dans results
+    return results[:limit] if limit > 0 else results
 
 
 
 def get_similar_rules_paginated(rule_id, page=1, per_page=10, min_score=0.15, search=None, sort_by="highest_match", pourcent=111):
-        base_rule = Rule.query.get(rule_id)
-        if not base_rule or not base_rule.to_string:
-            return [], 0, 1
+    index, id_map, vectorizer = get_index()
+    
+    base_rule = Rule.query.get(rule_id)
+    if not base_rule or not base_rule.to_string or index is None:
+        return [], 0, 1
 
-        # 1. Database Level Filtering
-        query = Rule.query.filter(
-            Rule.id != base_rule.id,
-            Rule.format == base_rule.format,
-            Rule.to_string.isnot(None)
-        )
+    # 1. Calcul des scores FAISS (reste ultra rapide)
+    target_vec = vectorizer.transform([base_rule.to_string]).toarray().astype('float32')
+    faiss.normalize_L2(target_vec)
+    all_scores, all_indices = index.search(target_vec, len(id_map))
+    
+    # On crée le dictionnaire de scores
+    score_dict = {id_map[idx]: float(score) for score, idx in zip(all_scores[0], all_indices[0]) if idx != -1}
 
-        if search:
-            search_query = f"%{search}%"
-            query = query.filter(or_(
-                Rule.title.ilike(search_query),
-                Rule.description.ilike(search_query),
-                Rule.to_string.ilike(search_query)
-            ))
+    # 2. Database Filtering : On ne filtre QUE par format et search (pas par ID !)
+    query = Rule.query.filter(
+        Rule.id != base_rule.id,
+        Rule.format == base_rule.format,
+        Rule.to_string.isnot(None)
+    )
 
-        candidates = query.all()
-        if not candidates:
-            return [], 0, 1
+    if search:
+        search_query = f"%{search}%"
+        query = query.filter(or_(
+            Rule.title.ilike(search_query),
+            Rule.description.ilike(search_query),
+            Rule.to_string.ilike(search_query)
+        ))
 
-        # 2. Similarity Calculation
-        corpus = [base_rule.to_string] + [c.to_string for c in candidates]
-        vectorizer = TfidfVectorizer(analyzer="word", ngram_range=(1, 3), max_df=0.95, min_df=1)
+    # On récupère les candidats filtrés par la DB
+    # On utilise .with_entities pour ne charger que les colonnes nécessaires au début si besoin
+    candidates = query.all()
+
+    # 3. Croisement Python (Score + Seuil)
+    try:
+        pourcent_val = int(pourcent)
+        threshold = pourcent_val / 100 if 0 <= pourcent_val <= 100 else min_score
+    except:
+        threshold = min_score
+
+    scored_results = []
+    for candidate in candidates:
+        # On récupère le score pré-calculé par FAISS pour cet ID
+        score = score_dict.get(candidate.id, 0)
         
-        tfidf_matrix = vectorizer.fit_transform(corpus)
-        similarity_scores = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])[0]
+        if score >= threshold:
+            data = candidate.to_json()
+            data["similarity"] = round(score, 4)
+            scored_results.append(data)
 
-        # 3. Processing Results
-        scored_results = []
-        for candidate, score in zip(candidates, similarity_scores):
-            if score >= min_score:
-                data = candidate.to_json()
-                data["similarity"] = round(float(score), 4)
-                scored_results.append(data)
+    # 4. Sorting
+    reverse_sort = (sort_by == "highest_match")
+    scored_results.sort(key=lambda x: x["similarity"], reverse=reverse_sort)
 
-        # 4. Sorting
-        if sort_by == "highest_match":
-            scored_results.sort(key=lambda x: x["similarity"], reverse=True)
-        else:
-            scored_results.sort(key=lambda x: x["similarity"], reverse=False)
-        # 4.1 Pourcentage
-        try:
-            pourcent = int(pourcent)
-        except (TypeError, ValueError):
-            pourcent = 111
-        if 0 <= pourcent <= 100:
-            threshold = pourcent / 100
-            scored_results = [
-                r for r in scored_results
-                if r["similarity"] >= threshold
-            ]
-
-        # 5. Manual Pagination
-        total_count = len(scored_results)
-        total_pages = max(1, math.ceil(total_count / per_page))
-        page = max(1, min(page, total_pages))
-        
-        start = (page - 1) * per_page
-        end = start + per_page
-        return scored_results[start:end], total_count, total_pages
+    # 5. Pagination
+    total_count = len(scored_results)
+    total_pages = max(1, math.ceil(total_count / per_page))
+    page = max(1, min(page, total_pages))
+    
+    start = (page - 1) * per_page
+    end = start + per_page
+    
+    return scored_results[start:end], total_count, total_pages
 
 
 
@@ -1584,15 +1644,15 @@ def get_all_url_github_page(page: int = 1, search: str = None):
 
     query = Rule.query.filter(Rule.source.isnot(None))
 
-    if current_user.is_admin():
-        if search:
-            query = query.filter(Rule.source.ilike(f"%{search}%"))
+    # if current_user.is_admin():
+    #     if search:
+    #         query = query.filter(Rule.source.ilike(f"%{search}%"))
 
-    else:
-        query = query.filter(Rule.user_id == current_user.id)
+    # else:
+    #     query = query.filter(Rule.user_id == current_user.id)
 
-        if search:
-            query = query.filter(Rule.source.ilike(f"%{search}%"))
+    if search:
+        query = query.filter(Rule.source.ilike(f"%{search}%"))
 
     query = query.filter(Rule.source.op('~')(github_pattern))
 
@@ -2188,3 +2248,7 @@ def get_total_rules():
 
 def get_total_formats():
     return Rule.query.distinct(Rule.format).count()
+
+
+def delete_all_rule_by_url(url):
+    return Rule.query.filter_by(source=url).delete()
