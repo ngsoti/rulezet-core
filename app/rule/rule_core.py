@@ -1636,6 +1636,15 @@ def get_all_format() -> list[dict]:
     formats = FormatRule.query.all()
     return [fmt.to_json() for fmt in formats]
 
+def get_rule_count_for_urls(urls: list[str]):
+        """Return a dict {url: count} for a list of URLs"""
+        if not urls:
+            return {}
+        counts = db.session.query(
+            Rule.source,
+            func.count(Rule.id).label("rule_count")
+        ).filter(Rule.source.in_(urls)).group_by(Rule.source).all()
+        return {c.source: c.rule_count for c in counts}
 
 def get_all_url_github_page(page: int = 1, search: str = None):
     """Get paginated unique GitHub project URLs from Rule.source and return pagination + total count."""

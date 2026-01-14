@@ -2192,21 +2192,24 @@ def list_github_url() :
 @rule_blueprint.route("/get_url_github", methods=['GET'])
 def get_url_github():
     """List all GitHub URLs and show how many Rules exist for each one."""
+    
     search = request.args.get("search", default=None, type=str)
     page = request.args.get("page", default=1, type=int)
 
-    pagination_urls, total_urls = RuleModel.get_all_url_github_page(page, search)
-    pagination_counts, _ = RuleModel.get_rule_count_by_github_page(page, search)
 
-    counts_map = {item.url: item.rule_count for item in pagination_counts.items}
+    pagination_urls, total_urls = RuleModel.get_all_url_github_page(page, search)
+    urls_in_page = [rule.source for rule in pagination_urls.items]
+
+
+    counts_map = RuleModel.get_rule_count_for_urls(urls_in_page)
+
 
     github_data = []
     for rule in pagination_urls.items:
-        url = rule.source
         github_data.append({
             "id": rule.id,
-            "url": url,
-            "rule_count": counts_map.get(url, 0)
+            "url": rule.source,
+            "rule_count": counts_map.get(rule.source, 0)
         })
 
     return jsonify({
