@@ -41,6 +41,7 @@ class Session_class:
 
         if os.path.exists(self.repo_dir):
             for root, dirs, files in os.walk(self.repo_dir):
+                # Skip hidden directories
                 dirs[:] = [d for d in dirs if not d.startswith(('.', '_'))]
                 for file in files:
                     if file.startswith(('.', '_')):
@@ -58,6 +59,7 @@ class Session_class:
                                 }
 
                             job_index += 1
+                            # We pass the filepath into the queue
                             self.jobs.put((job_index, file, filepath, rule_instance))
                             break
 
@@ -90,15 +92,6 @@ class Session_class:
             "skipped": self.skipped,
         }
 
-    def status_for_test(self):
-        return {
-            'id': self.uuid,
-            'total': 10,
-            'complete': 5,
-            'remaining': 5,
-            "nb_errors": 0
-        }
-
     def stop(self):
         self.jobs.queue.clear()
         for worker in self.threads:
@@ -113,8 +106,10 @@ class Session_class:
         while not self.jobs.empty():
             try:
                 work = self.jobs.get(timeout=1)
-                filepath = work[2]
+                filepath = work[2] # Absolute path to the file
                 rule_instance = work[3]
+
+
 
                 extracted_rules = rule_instance.extract_rules_from_file(filepath)
                 
@@ -123,14 +118,19 @@ class Session_class:
                     if not clean_text or clean_text.startswith('#'):
                         continue
 
-                    enriched_info = {**self.info, "filepath": filepath}
+                    # ENRICHMENT: Adding the filepath to the info dictionary
+                    # This allows the metadata parser to see the 'github_path'
+                    enriched_info = {**self.info, "github_path": filepath}
+                    
                     validation = rule_instance.validate(clean_text)
                     metadata = rule_instance.parse_metadata(clean_text, enriched_info, validation)
-
+                    # add to metadata the enriched info (github_path)
+                    metadata["github_path"] = os.path.relpath(filepath, self.repo_dir)
                     with loc_app.app_context():
                         local_user = db.session.merge(user)
                         
                         if validation.ok:
+                            # metadata now contains 'github_path' for RuleModel.add_rule_core
                             success = RuleModel.add_rule_core(metadata, local_user)
                             if success:
                                 self.imported += 1

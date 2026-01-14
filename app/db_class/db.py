@@ -102,7 +102,7 @@ class Rule(db.Model):
     to_string = db.Column(db.String)
     cve_id = db.Column(db.String , nullable=True)
 
-    #taxonomie_misp = db.Column(db) 
+    github_path = db.Column(db.String , nullable=True)
 
     #edit
     def get_rule_user_first_name_by_id(self):
@@ -136,7 +136,8 @@ class Rule(db.Model):
             "to_string": self.to_string,
             "is_favorited": is_favorited,
             "cve_id": self.cve_id,
-            "editor": self.get_rule_user_first_name_by_id()
+            "editor": self.get_rule_user_first_name_by_id(),
+            "github_path": self.github_path if self.github_path else None
         }
     
     def to_dict(self):
@@ -162,7 +163,9 @@ class Rule(db.Model):
             "version": self.version,
             "to_string": self.to_string,
             "is_favorited": is_favorited,
-            "cve_id": self.cve_id
+            "cve_id": self.cve_id,
+            "editor": self.get_rule_user_first_name_by_id(),
+            "github_path": self.github_path if self.github_path else None
         }  # Format the datetime to a string
 
 

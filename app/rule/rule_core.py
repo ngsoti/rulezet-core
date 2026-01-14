@@ -92,6 +92,7 @@ def add_rule_core(form_dict, user) -> bool:
             vote_down=0,
             to_string=new_to_string,
             cve_id=form_dict.get("cve_id") or None,
+            github_path=form_dict.get("github_path") or None
         )
 
         db.session.add(new_rule)
