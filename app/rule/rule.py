@@ -2438,7 +2438,7 @@ def get_similar_rule_page():
 @rule_blueprint.route('/delete_all_rule', methods=['GET'])
 @login_required
 def delete_all_rule():
-    if current_user.is_admin == False:
+    if current_user.is_admin() == False:
         return jsonify({"success": False, "message": "Access denied", "toast_class": "danger-subtle"}), 403
     url = request.args.get("url", type=str)
     if not url:
