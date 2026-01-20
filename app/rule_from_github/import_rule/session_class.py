@@ -125,13 +125,13 @@ class Session_class:
                     validation = rule_instance.validate(clean_text)
                     metadata = rule_instance.parse_metadata(clean_text, enriched_info, validation)
                     # add to metadata the enriched info (github_path)
-                    metadata["github_path"] = os.path.relpath(filepath, self.repo_dir)
+                    metadata["github_path"] = filepath # os.path.relpath(filepath, self.repo_dir)
                     with loc_app.app_context():
                         local_user = db.session.merge(user)
                         
                         if validation.ok:
                             # metadata now contains 'github_path' for RuleModel.add_rule_core
-                            success = RuleModel.add_rule_core(metadata, local_user)
+                            success, msg = RuleModel.add_rule_core(metadata, local_user)
                             if success:
                                 self.imported += 1
                                 self.count_per_format[rule_instance.format]["imported"] += 1

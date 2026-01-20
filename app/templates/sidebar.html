@@ -183,6 +183,17 @@
                               <span class="badge bg-danger rounded-pill">[[ update_to_validate ]]</span>
                            </a>
                         </li>
+                        <!-- update_import-->
+                        <li v-if="update_import_to_validate > 0">
+                           <a href="/rule/history_github_importer"
+                              class="dropdown-item rounded d-flex justify-content-between align-items-center py-2">
+                              <span class="small">
+                                 <!-- Update or import in progress of github repo-->
+                                 <i class="fa-solid fa-bars-progress me-2 text-dark"></i>Updates/Imports in progress
+                              </span>
+                              <span class="badge bg-danger rounded-pill">[[ update_import_to_validate ]]</span>
+                           </a>
+                        </li>
                      </template>
                   </ul>
                </div>
@@ -290,22 +301,29 @@
                   [[ rules_list.rule.length ]] results found
                </span>
             </div>
-
-            <div v-if="rules_list && rules_list.rule && rules_list.rule.length > 0" class="results-list">
-               <a v-for="rule in rules_list.rule" :key="rule.id" :href="`/rule/detail_rule/${rule.id}`"
-                  class="search-result-item d-flex align-items-center p-3 mb-2 text-decoration-none shadow-sm">
-                  <div class="flex-shrink-0 me-3">
-                     <div class="icon-box  rounded-3 d-flex align-items-center justify-content-center"
-                        style="width: 45px; height: 45px;">
-                        <i class="fa-solid fa-file-code text-primary"></i>
-                     </div>
+            <template v-if="isLoading">
+               <div class="text-center">
+                  <div class="spinner-border text-primary" role="status">
+                     <span class="visually-hidden">Loading...</span>
                   </div>
-                  <div class="flex-grow-1 min-width-0">
-                     <h6 class="mb-0 fw-bold text-dark text-truncate">[[ rule.title ]]</h6>
-                     <p class="mb-0 text-muted small text-truncate">[[ rule.description ]]</p>
-                     <div>
-                        <p class="mb-0 text-muted small text-truncate badge bg-primary-subtle">[[ rule.format ]]</p>
-                        <!-- <div v-if="rule.cve_id && rule.cve_id !== 'None'" class="d-flex flex-wrap gap-1">
+               </div>
+            </template>
+            <template v-else>
+               <div v-if="rules_list && rules_list.rule && rules_list.rule.length > 0" class="results-list">
+                  <a v-for="rule in rules_list.rule" :key="rule.id" :href="`/rule/detail_rule/${rule.id}`"
+                     class="search-result-item d-flex align-items-center p-3 mb-2 text-decoration-none shadow-sm">
+                     <div class="flex-shrink-0 me-3">
+                        <div class="icon-box  rounded-3 d-flex align-items-center justify-content-center"
+                           style="width: 45px; height: 45px;">
+                           <i class="fa-solid fa-file-code text-primary"></i>
+                        </div>
+                     </div>
+                     <div class="flex-grow-1 min-width-0">
+                        <h6 class="mb-0 fw-bold text-dark text-truncate">[[ rule.title ]]</h6>
+                        <p class="mb-0 text-muted small text-truncate">[[ rule.description ]]</p>
+                        <div>
+                           <p class="mb-0 text-muted small text-truncate badge bg-primary-subtle">[[ rule.format ]]</p>
+                           <!-- <div v-if="rule.cve_id && rule.cve_id !== 'None'" class="d-flex flex-wrap gap-1">
                            <a v-for="cve in parsedCVE(rule.cve_id)"
                               :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()" target="_blank"
                               :class="['badge', 'text-decoration-none', getCVEColor(cve)]"
@@ -313,23 +331,24 @@
                               [[ cve ]]
                            </a>
                         </div> -->
+                        </div>
+
                      </div>
-
-                  </div>
-                  <div class="ms-2">
-                     <span class="badge bg-primary  rounded-pill" style="font-size: 0.65rem;">[[ rule.type
-                        ]]</span>
-                  </div>
-               </a>
-            </div>
-
-            <div v-else class="text-center py-5">
-               <div class="mb-3 opacity-25">
-                  <i class="fa-solid fa-database fa-3x"></i>
+                     <div class="ms-2">
+                        <span class="badge bg-primary  rounded-pill" style="font-size: 0.65rem;">[[ rule.type
+                           ]]</span>
+                     </div>
+                  </a>
                </div>
-               <h6 class="text-muted fw-bold">No rules match your search</h6>
-               <p class="text-muted small">Try adjusting your keywords or filters.</p>
-            </div>
+
+               <div v-else class="text-center py-5">
+                  <div class="mb-3 opacity-25">
+                     <i class="fa-solid fa-database fa-3x"></i>
+                  </div>
+                  <h6 class="text-muted fw-bold">No rules match your search</h6>
+                  <p class="text-muted small">Try adjusting your keywords or filters.</p>
+               </div>
+            </template>
          </div>
       </div>
    </div>
@@ -348,6 +367,7 @@
           * */
 
          const requests_to_validate = ref(0)
+         const update_import_to_validate = ref(0)
          const changes_to_validate = ref(0)
          const repport_to_validate = ref(0)
          const update_to_validate = ref(0)
@@ -355,7 +375,8 @@
             Number(requests_to_validate.value || 0) +
             Number(changes_to_validate.value || 0) +
             Number(repport_to_validate.value || 0) +
-            Number(update_to_validate.value || 0)
+            Number(update_to_validate.value || 0) +
+            Number(update_import_to_validate.value || 0)
          )
          async function getNbRequestAdmin() {
             const res = await fetch('/request_to_check')
@@ -381,11 +402,19 @@
             update_to_validate.value = data.count || 0
          }
 
+         async function getNbUpdateImport() {
+            const res = await fetch('/rule/import_get_session_running')
+            const data = await res.json()
+
+            update_import_to_validate.value = data.import_sessions.length + data.update_sessions.length || 0
+         }
+
          /**
           *    ############
           *    #  Search  #
           *    ############
           * */
+         const isLoading = ref(false)
 
 
          const searchQuery = ref('')
@@ -405,6 +434,7 @@
          const rules_list = ref([])
 
          async function fetchRules() {
+            isLoading.value = true
             const params = new URLSearchParams({
                page: 1,
                search: searchQuery.value,
@@ -417,6 +447,7 @@
                const data = await res.json()
                rules_list.value = data || []
             }
+            isLoading.value = false
 
          }
          function giveFocus() {
@@ -473,7 +504,7 @@
             getNbChanges()
             getNbRepport()
             getNbUpdate()
-
+            getNbUpdateImport()
          })
 
          //fetchRulesFormats(),
@@ -485,6 +516,7 @@
             changes_to_validate,
             repport_to_validate,
             update_to_validate,
+            update_import_to_validate,
             total_notifications,
 
 
@@ -498,10 +530,12 @@
             onSearchInput,
             onEnterKey,
             fetchRulesFormats,
+            getNbUpdateImport,
 
             parsedCVE,
             getCVEColor,
-            giveFocus
+            giveFocus,
+            isLoading
          }
       },
    }).mount('#app')

@@ -106,7 +106,7 @@ class YaraRule(RuleType):
                 "description": description,
                 "source": info.get("repo_url") or meta.get("source") or "Unknown",
                 "version": meta.get("version", "1.0"),
-                "original_uuid": meta.get("id") or "Unknown",
+                "original_uuid": meta.get("id") or meta.get("uuid")  or "Unknown",
                 "author": meta.get("author") or info.get("author", "Unknown"),
                 # Utiliser le contenu normalisé après validation
                 "to_string": source_content, 

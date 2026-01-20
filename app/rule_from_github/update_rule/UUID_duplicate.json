@@ -1,0 +1,363 @@
+[
+    {
+        "repo_name": "Neo23x0/signature-base",
+        "repo_url": "https://github.com/Neo23x0/signature-base",
+        "uuid list": [
+            {
+                "uuid": "b6ed6939-db0c-5a47-8839-3337d1bc1f6c",
+                "rule_name": "Codoso_CustomTCP_2",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_codoso.yar"
+            },
+            {
+                "uuid": "fdc79b87-eb9e-5751-9474-ff653b073165",
+                "rule_name": "APT_MAL_Sandworm_Exaramel_Strings_Typo",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_sandworm_centreon.yar"
+            },
+            {
+                "uuid": "b1ca04e5-bac7-5247-b2d4-82c3515c92fc",
+                "rule_name": "FVEY_ShadowBroker_user_tool_yellowspirit",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_fvey_shadowbroker_dec16.yar"
+            },
+            {
+                "uuid": "470e5d37-8a5a-500f-b9b9-245b8dc2c4d7",
+                "rule_name": "hkdoor_backdoor_dll",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_hkdoor.yar"
+            },
+            {
+                "uuid": "f6c04e27-bbab-5012-a4f9-71d49d252b83",
+                "rule_name": "Rombertik_CarbonGrabber_Panel",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/crime_rombertik_carbongrabber.yar"
+            },
+            {
+                "uuid": "92f53e6a-8f49-5ffa-8c16-3ec3e6f2bdcd",
+                "rule_name": "StoneDrill_main_sub",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_stonedrill.yar"
+            },
+            {
+                "uuid": "abd120e7-23f8-530e-b21e-c50a2b571332",
+                "rule_name": "EquationGroup_ys_ratload",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_eqgrp_apr17.yar"
+            },
+            {
+                "uuid": "9ec19323-85d5-5edf-99eb-b452c09b870a",
+                "rule_name": "EquationGroup_gr",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_eqgrp_apr17.yar"
+            },
+            {
+                "uuid": "3c06fc74-2e75-5348-bb62-30c724de1414",
+                "rule_name": "EquationGroup_Toolset_Apr17_SetCallbackPorts",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_eqgrp_apr17.yar"
+            },
+            {
+                "uuid": "07051edc-91a8-59d6-87bf-dba98ef28588",
+                "rule_name": "Impacket_Tools_sniffer",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_impacket_tools.yar"
+            },
+            {
+                "uuid": "c6ae85b6-0670-558c-9ce5-64bd5822f35b",
+                "rule_name": "EquationGroup_Toolset_Apr17_DiBa_Target_2000",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_eqgrp_apr17.yar"
+            },
+            {
+                "uuid": "02075631-49cc-5b97-ad8e-92d734a26d34",
+                "rule_name": "Hacktools_CN_Panda_445TOOL",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-hacktools.yar"
+            },
+            {
+                "uuid": "cd34cb47-c5e0-5094-a501-6a8a00d94018",
+                "rule_name": "CN_Honker_Webshell_portRecall_jsp2",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/cn_pentestset_webshells.yar"
+            },
+            {
+                "uuid": "e5dd6bc9-9383-5d48-92df-709996373655",
+                "rule_name": "APT30_Sample_10",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_apt30_backspace.yar"
+            },
+            {
+                "uuid": "db083c04-9e5c-5cfd-b4d4-eecf28191b6b",
+                "rule_name": "EditKeyLogReadMe",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-hacktools.yar"
+            },
+            {
+                "uuid": "08b79c7d-c383-5891-af0f-31a92f1ed07d",
+                "rule_name": "Invoke_WMIExec_Gen_1",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_invoke_thehash.yar"
+            },
+            {
+                "uuid": "6a2db0a0-386f-5ea6-b0bc-e28ed2fd53d5",
+                "rule_name": "EquationGroup__ftshell_ftshell_v3_10_3_0",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_eqgrp_apr17.yar"
+            },
+            {
+                "uuid": "40066023-ede9-5669-8b4d-a26a693d8818",
+                "rule_name": "EquationGroup_Toolset_Apr17_Eternalromance_2",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_eqgrp_apr17.yar"
+            },
+            {
+                "uuid": "4a13c809-48f7-54f7-9ce3-10d6d48104fb",
+                "rule_name": "CN_Honker_Webshell_ASPX_aspx",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/cn_pentestset_webshells.yar"
+            },
+            {
+                "uuid": "e150dd69-c611-53de-9c7d-de28d3a208dc",
+                "rule_name": "APT_APT41_POISONPLUG_2",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_apt41.yar"
+            },
+            {
+                "uuid": "ce88027c-ae08-59f3-948d-6f3d58515468",
+                "rule_name": "webshell_c99_c99shell_c99_w4cking_Shell_xxx",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "f5965aa8-0f78-56fd-8e3e-6dc013942cb3",
+                "rule_name": "PassSniffer_zip_Folder_readme",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-hacktools.yar"
+            },
+            {
+                "uuid": "5fe78cc6-8be3-595f-a082-e361259938e5",
+                "rule_name": "CN_Honker_Webshell_PHP_php10",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/cn_pentestset_webshells.yar"
+            },
+            {
+                "uuid": "06879d75-18a3-5d49-a963-fa4bee379387",
+                "rule_name": "FourElementSword_ElevateDLL_2",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_four_element_sword.yar"
+            },
+            {
+                "uuid": "4125bb40-3f5c-53f5-b906-54fa77b119f5",
+                "rule_name": "CN_Honker_Webshell_ASP_asp404",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/cn_pentestset_webshells.yar"
+            },
+            {
+                "uuid": "ff72f94b-1c0a-5615-b35f-35f69c920292",
+                "rule_name": "CN_Honker_Webshell_jspshell2",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/cn_pentestset_webshells.yar"
+            },
+            {
+                "uuid": "393e738a-b4c2-5630-a55f-c3caee4ff75e",
+                "rule_name": "WebShell_php_webshells_pws",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "d701d591-4283-5645-8768-a5ab7df0f37a",
+                "rule_name": "Enigma_Protected_Malware",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_enigma_protector.yar"
+            },
+            {
+                "uuid": "f3b0ef47-a92c-5c5d-a9e2-09579fcb438e",
+                "rule_name": "HKTL_NET_GUID_DInvoke_PoC",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_github_net_redteam_tools_guids.yar"
+            },
+            {
+                "uuid": "92e98381-9142-58af-82ce-4df9eb0a0039",
+                "rule_name": "whosthere_alt",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_passthehashtoolkit.yar"
+            },
+            {
+                "uuid": "bda89055-27f5-50b7-86a3-2c75a5f3eadc",
+                "rule_name": "HYTop2006_rar_Folder_2006Z",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "bced11a2-fac4-58e5-a4a8-1c6d5fe418f9",
+                "rule_name": "EQGRP_BBALL_M50FW08_2201",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_eqgrp.yar"
+            },
+            {
+                "uuid": "15e8ddac-af17-5509-b552-b4364af57c90",
+                "rule_name": "iam_iam",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_passthehashtoolkit.yar"
+            },
+            {
+                "uuid": "2e8ccce9-d8ba-573d-b532-76d8e2ed5442",
+                "rule_name": "WaterBug_wipbot_2013_core_PDF",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_waterbug.yar"
+            },
+            {
+                "uuid": "9f403965-5fb1-55b2-bef6-65c18e08e58f",
+                "rule_name": "EQGRP_sploit_py",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_eqgrp.yar"
+            },
+            {
+                "uuid": "41a0560a-b22e-5028-8ad1-710c5758cb1d",
+                "rule_name": "webshell_phpspy_2005_full_phpspy_2005_lite_PHPSPY",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "41730336-0dce-5ed9-95b0-c911a4e3cb48",
+                "rule_name": "rst_sql_php_php",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "eaf243cb-fa26-5f34-a724-60a08acff636",
+                "rule_name": "ak74shell_php_php",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "da691516-d6c9-5c4b-85c3-f1cd7fc96ae7",
+                "rule_name": "csh_php_php",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "ee1fd555-f1bc-59a5-998c-f6098de8623e",
+                "rule_name": "_w_php_php_c99madshell_v2_1_php_php_wacking_php_php_SpecialShell_99_php_php",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "44b53124-c8b6-545b-819f-77fd65e5d61b",
+                "rule_name": "_r577_php_php_SnIpEr_SA_Shell_php_r57_php_php_r57_Shell_php_php_spy_php_php_s_php_php",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "1f1070e8-e82c-5cae-a64a-cd5028adae97",
+                "rule_name": "r57shell_php_php",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "1575591b-3245-5c3d-b2a4-6def89e77032",
+                "rule_name": "WebShell__PH_Vayv_PHVayv_PH_Vayv_klasvayv_asp_php",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "08dff4db-3b1c-5702-a8c9-efaedf83c4ff",
+                "rule_name": "PHP_sh",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "2ead3cc9-f517-5916-93c9-1393362aa45d",
+                "rule_name": "Office_OLE_DDE",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_dde_in_office_docs.yar"
+            },
+            {
+                "uuid": "2e8319de-fe54-5083-968c-4707d127f072",
+                "rule_name": "Dos_ch",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_cn_hacktools.yar"
+            },
+            {
+                "uuid": "0904cefb-6e0f-5e5f-9986-cf83d409ce46",
+                "rule_name": "WEBSHELL_ASP_Generic_Eval_On_Input",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_webshells.yar"
+            },
+            {
+                "uuid": "7ecf3d5c-be91-579e-905b-5f2ad03a0e42",
+                "rule_name": "elmaliseker_asp",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "963effd9-f31d-5238-9419-b5dd11822e56",
+                "rule_name": "HYTop_DevPack_2005Red",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/thor-webshells.yar"
+            },
+            {
+                "uuid": "8813b7a2-0d44-5f26-80ab-0f493c09a027",
+                "rule_name": "Dos_iis7",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_cn_hacktools.yar"
+            },
+            {
+                "uuid": "c269e032-b6ce-5faa-b3ce-a5304f3e9dab",
+                "rule_name": "Ysoserial_Payload_C3P0",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_ysoserial_payloads.yar"
+            },
+            {
+                "uuid": "4eace653-003e-5cae-9db8-f26502f35fc4",
+                "rule_name": "Gazer_certificate_subject",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_turla_gazer.yar"
+            },
+            {
+                "uuid": "e01a7235-5c69-5676-ac5d-c4e4632f31b2",
+                "rule_name": "Txt_aspxtag",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_cn_webshells.yar"
+            },
+            {
+                "uuid": "b6c59cf1-52e4-5c9e-b3c3-d973d52736e3",
+                "rule_name": "rtf_cve2017_11882_ole",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/exploit_cve_2017_11882.yar"
+            },
+            {
+                "uuid": "4cccc0df-a225-5500-be55-f4ae346e066e",
+                "rule_name": "Oilrig_IntelSecurityManager",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_oilrig.yar"
+            },
+            {
+                "uuid": "53eb6caf-3578-5df7-a1d8-9e4038b6f57e",
+                "rule_name": "Txt_jspcmd",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/gen_cn_webshells.yar"
+            },
+            {
+                "uuid": "3ec2d44c-4c08-514d-a839-acef3f53f7dc",
+                "rule_name": "APT_MAL_Win_BlueLight_B",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_apt37_bluelight.yar"
+            },
+            {
+                "uuid": "82b0f28a-94b6-52ab-8fd6-cdc05823ac34",
+                "rule_name": "TA17_293A_Query_XML_Code_MAL_DOC_PT_2",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/apt_ta17_293A.yar"
+            },
+            {
+                "uuid": "8600c86f-0da1-5ddb-bae5-69358cf53e7c",
+                "rule_name": "CN_Honker_Injection_transit",
+                "db_source_path": "https://github.com/Neo23x0/signature-base",
+                "github_found_paths": "app/rule_from_github/Rules_Github/Neo23x0/signature-base/yara/cn_pentestset_tools.yar"
+            }
+        ]
+    }   
+]
+

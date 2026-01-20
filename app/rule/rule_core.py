@@ -28,7 +28,7 @@ from ..account import account_core as AccountModel
 # CRUD
 
 # Create
-def add_rule_core(form_dict, user) -> bool:
+def add_rule_core(form_dict, user) -> bool :
     """
     Add a rule safely with error handling.
 
@@ -42,30 +42,13 @@ def add_rule_core(form_dict, user) -> bool:
         new_to_string = form_dict.get("to_string", "").strip()
         new_original_uuid = str(form_dict.get("original_uuid") or "").strip()  # Normalize to string
 
-        #existing_rules = get_rule_by_title(title)
-        # verify if the rule already exists only if the to_string (as content) is the same
-        existing_rules = get_rule_by_content(new_to_string)
-        if existing_rules:
-            for r in existing_rules:
-               # if exact same content
-               if r.to_string == new_to_string:
-                   return False , "Rule already exists"
+        existing_rule = get_rule_by_content(new_to_string)
+        # Check if the rule already exists with the original_uuid (if a rule is different but with the same uuid we don't want to import it)
+        
+        if existing_rule != None:
+            return False, "Rule already exists (content matches)"
 
-
-        # if existing_rules:
-        #     for r in existing_rules:
-        #         # Normalize stored UUID for comparison
-                
-        #         existing_original_uuid = str(r.original_uuid or "").strip()
-
-        #         # Case 1: Same content and same original UUID → update case, skip
-        #         if r.to_string == new_to_string and existing_original_uuid == new_original_uuid:
-        #             return False
-
-        #         # Case 2: Same content but different original UUID → allow as new rule
-        #         if r.to_string == new_to_string and existing_original_uuid != new_original_uuid:
-        #             break  # continue to insertion
-
+            
         # Identify user
         if current_user and current_user.is_authenticated:
             user_id = current_user.id
@@ -75,6 +58,7 @@ def add_rule_core(form_dict, user) -> bool:
         if form_dict.get("cve_id") == "None":
             form_dict["cve_id"] = None
         # Create the new rule
+
         new_rule = Rule(
             format=form_dict["format"],
             title=title,
@@ -100,11 +84,30 @@ def add_rule_core(form_dict, user) -> bool:
         return new_rule , "rule created" 
 
     except Exception as e:
-        
         return False, e
 
 def get_rule_by_content(content):
-    return Rule.query.filter(Rule.to_string == content).all()
+    if not content:
+        return None
+        
+    # 1. Normalisation en Python : supprime TOUT (espaces, \n, \r, \t)
+    # et met tout en minuscule pour éviter les doublons de casse
+    clean_content = "".join(content.split()).lower()
+
+    # 2. Comparaison SQL avec gestion des Tabulations (\t)
+    query = Rule.query.filter(
+        func.lower(
+            func.replace(
+                func.replace(
+                    func.replace(
+                        func.replace(Rule.to_string, ' ', ''), 
+                    '\n', ''), 
+                '\r', ''),
+            '\t', '') # Ajout du remplacement des tabulations
+        ) == clean_content
+    )
+    
+    return query.first()
 
 def rule_exists(Metadata: dict) -> tuple[bool, int]:
     """
@@ -114,30 +117,21 @@ def rule_exists(Metadata: dict) -> tuple[bool, int]:
     """
 
     original_uuid = str(Metadata.get("original_uuid") or "").strip()
-    if original_uuid.lower() == "none":
+    if original_uuid.lower() == "none" or original_uuid.lower() == "null" or original_uuid.lower() == "unknown":
         original_uuid = ""
+    else:
+        # get the rule by original_uuid
+        existing_rule = Rule.query.filter_by(original_uuid=original_uuid).first()
+        if existing_rule != None:
+            return True, existing_rule.id
+    
 
-    title = Metadata.get("title", "").strip()
     to_string = Metadata.get("to_string", "").strip()
 
-    existing_rules = get_rule_by_title(title)
-
-    if not existing_rules:
-        return False, None
-
-    if not isinstance(existing_rules, list):
-        existing_rules = [existing_rules]
-
-    for r in existing_rules:
-        # Case 1 : without original_uuid → compare title only
-        if not original_uuid:
-            if r.title.strip() == title:
-                return True, r.id
-
-        # Case 2 : with original_uuid → compare both original_uuid and title
-        else:
-            if str(r.original_uuid or "").strip() == original_uuid:
-                return True, r.id
+    existing_rule_by_content = get_rule_by_content(to_string)
+        
+    if existing_rule_by_content != None:
+        return True, existing_rule_by_content.id
 
     return False, None
 
@@ -358,7 +352,8 @@ def refresh_similarity_index():
 
 def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
     """
-    Version ultra-optimisée utilisant FAISS et le cache mémoire.
+    Version ultra-optimisée utilisant FAISS et le cache mémoire,
+    filtrée par format identique.
     """
     index, id_map, vectorizer = get_index()
     
@@ -366,7 +361,7 @@ def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
         return []
 
     # Récupération de la règle cible
-    from .rule_core import Rule
+    # from .rule_core import Rule
     rule = Rule.query.get(rule_id)
     if not rule or not rule.to_string:
         return []
@@ -375,30 +370,34 @@ def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
     target_vec = vectorizer.transform([rule.to_string]).toarray().astype('float32')
     faiss.normalize_L2(target_vec)
 
-    # 2. Recherche des plus proches voisins (on demande limit+1 pour exclure la règle elle-même)
-    # k est le nombre de résultats souhaités
-    k = limit + 1 if limit > 0 else len(id_map)
+    # 2. Recherche des plus proches voisins
+    # On augmente k car le filtrage par format va éliminer certains candidats
+    k = min(len(id_map), limit * 5 + 1 if limit > 0 else len(id_map))
     scores, indices = index.search(target_vec, k)
 
     results = []
     for score, idx in zip(scores[0], indices[0]):
-        # idx == -1 signifie que FAISS n'a pas trouvé assez de voisins
         if idx == -1:
             continue
             
         candidate_id = id_map[idx]
         
-        # On ignore la règle elle-même et on vérifie le score minimum
+        # On ignore la règle elle-même et on vérifie le score minimumses
         if candidate_id != rule_id and score >= min_score:
             candidate = Rule.query.get(candidate_id)
-            if candidate:
+            
+            # FILTRE : On n'ajoute que si le format est identique
+            if candidate and candidate.format == rule.format:
                 results.append({
                     **candidate.to_json(),
                     "similarity": round(float(score), 3)
                 })
+                
+                # Si on a atteint la limite, on s'arrête pour optimiser
+                if limit > 0 and len(results) >= limit:
+                    break
 
-    # Si limit était à 0 (tous les résultats), on a déjà tout dans results
-    return results[:limit] if limit > 0 else results
+    return results
 
 
 
@@ -507,9 +506,73 @@ def get_all_editor_from_rules_list(rules):
 def get_rules_by_title(title) -> str:
     """Return the rule from the title"""
     return Rule.query.filter_by(title=title).all()
-def get_rule_by_title(title) -> str:
+
+def get_rule_by_title(title) -> Rule | None:
     """Return the rule from the title"""
     return Rule.query.filter_by(title=title).first()
+
+def get_rule_from_a_github(title, filepath_in_the_repo, repo_source, original_uuid) -> tuple[Rule | None, str]:
+    """
+    Retrieve a rule by title, repository source, and filepath in the repo.
+    """
+
+
+
+    # 1️⃣ Try to find the rule by original_uuid
+    if original_uuid and original_uuid != "None" and original_uuid != "none" and original_uuid != "null" and original_uuid != "Unknown":
+      
+        rule = Rule.query.filter_by(original_uuid=original_uuid).first()
+        if rule:
+            return rule, "Rule found in Rulezet with this original_uuid"
+       
+
+    # 2️⃣ Try to find rule(s) by title and source
+   
+    query = Rule.query.filter(
+        Rule.title == title,
+        Rule.source == repo_source
+    )
+
+    count_title = query.count()
+   
+
+    if count_title == 0:
+        
+        return None, "[new rule]"
+
+    if count_title == 1:
+        # we verify if the filepath in the repo is the same as the one in the DB
+        rule = query.first()
+       
+        if rule.github_path != filepath_in_the_repo:
+            
+            return None, "[new rule]"
+
+        return rule, "Rule found in Rulezet with this title"
+
+    # 3️⃣ Multiple rules found → filter by github_path
+
+
+    
+
+    query_path = query.filter(Rule.github_path == filepath_in_the_repo)
+    count_path = query_path.count()
+
+   
+
+    if count_path == 1:
+        rule = query_path.first()
+       
+        return rule, "Rule found in Rulezet with this title and this github_path"
+
+    if count_path > 1:
+       
+        return None, "Impossible to find the real rule multiple rules found with this title and this github_path)"
+        
+
+    # add like new rule 
+    return None, "[new rule]"
+
 
 def get_rule_by_source(source_) -> str:
     """Return all the rule from the source"""
@@ -678,6 +741,8 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
     if form_dict.get("license") is None:
         form_dict["license"] = "Unknown"
 
+    if form_dict.get("github_path") is None:
+        form_dict["github_path"] = "None"
 
     file_name = str(form_dict["title"]) 
     error_message = str(error)
@@ -701,13 +766,14 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
         rule_type=rule_type,
         user_id= user_id,
         url=repo_url,
-        license=license
+        license=license,
+        github_path=form_dict["github_path"]
     )
 
     db.session.add(new_invalid_rule)
     db.session.commit()
 
-def save_invalid_rule_from_new_rule(new_rule_obj: 'NewRule', user: 'User') -> Tuple[Optional['InvalidRuleModel'], Optional[str]]:
+def save_invalid_rule_from_new_rule(new_rule_obj: 'NewRule', user: 'User', github_path: str) -> Tuple[Optional['InvalidRuleModel'], Optional[str]]:
     """
     Creates or retrieves an InvalidRuleModel object from NewRule data, using global db session.
 
@@ -2269,3 +2335,121 @@ def delete_all_rule_by_url(url, batch_size=100):
             db.session.delete(rule)
         db.session.commit()
     return True
+
+
+import requests
+import time
+import os
+
+def get_filtered_history_ids():
+    # Configuration du Token GitHub (à définir dans ton environnement ou en dur pour test)
+    # os.environ['GITHUB_TOKEN'] = "ton_token_ici"
+    github_token = os.getenv('GITHUB_TOKEN')
+    
+    uuid_updater = "335338e8-9a08-41e7-a1c5-e05096298911"
+    updater = UpdateResult.query.filter_by(uuid=uuid_updater).first()
+    
+    if not updater:
+        print("updater not found")
+        return []
+
+    # 1. Récupérer les RuleStatus avec mise à jour disponible
+    rule_statuses = RuleStatus.query.filter_by(
+        update_result_id=updater.id, 
+        update_available=True
+    ).all()
+    
+    if not rule_statuses:
+        print("Aucun status de règle trouvé avec update_available=True")
+        return []
+
+    # 2. Récupérer les entrées d'historique correspondantes
+    history_ids = [rs.history_id for rs in rule_statuses if rs.history_id]
+    history_entries = RuleUpdateHistory.query.filter(RuleUpdateHistory.id.in_(history_ids)).all()
+    
+    if not history_entries:
+        print("history entries not found")
+        return []
+
+    # 3. Construire la liste des résultats uniques par UUID
+    unique_uuids = set()
+    final_json_list = []
+
+    # Configuration API GitHub
+    search_url = "https://api.github.com/search/code"
+    headers = {"Accept": "application/vnd.github+json"}
+    if github_token:
+        headers["Authorization"] = f"token {github_token}"
+
+    for his in history_entries:
+        rule = Rule.query.filter_by(id=his.rule_id).first()
+        if not rule or rule.original_uuid in unique_uuids:
+            continue
+        
+        unique_uuids.add(rule.original_uuid)
+        
+        # Initialisation de l'objet de base
+        rule_data = {
+            "uuid": rule.original_uuid,
+            "rule_name": rule.title,
+            "db_source_path": rule.source, # Le chemin actuel en base
+            "github_found_paths": rule.github_path,       # Les chemins trouvés sur GitHub
+        }
+
+        # 4. Recherche sur GitHub pour trouver les doublons ou le chemin exact
+        if rule.original_uuid:
+            query = f"{rule.original_uuid} repo:Neo23x0/signature-base"
+            try:
+                response = requests.get(search_url, headers=headers, params={'q': query})
+                
+                if response.status_code == 200:
+                    items = response.json().get('items', [])
+                    # On récupère tous les chemins de fichiers où cet UUID apparaît
+                    rule_data["github_found_paths"] = [item['path'] for item in items]
+                elif response.status_code == 403:
+                    print("Rate limit GitHub atteint, pause nécessaire...")
+                
+                # Petit délai pour ne pas brusquer l'API
+                time.sleep(1) 
+            except Exception as e:
+                print(f"Erreur recherche GitHub pour {rule.original_uuid}: {e}")
+
+        final_json_list.append(rule_data)
+
+    return final_json_list
+
+# Exemple d'exécution
+# results = get_filtered_history_ids()
+# import json
+# print(json.dumps(results, indent=4))
+
+
+
+    
+
+def delete_importer_history(id):
+    try:
+        success = ImporterResult.query.filter_by(uuid=id).delete()
+        db.session.commit()
+
+        if success:
+            return True, "Importer history deleted"
+        else:
+            return False, "Importer history not found"
+
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Importer history not deleted: {e}"
+def delete_updater_history(id):
+    try:
+        success = UpdateResult.query.filter_by(uuid=id).delete()
+        db.session.commit()
+
+        if success:
+            return True, "Updater history deleted"
+        else:
+            return False, "Updater history not found"
+
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Updater history not deleted: {e}"

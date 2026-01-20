@@ -353,6 +353,8 @@ class InvalidRuleModel(db.Model):
     url = db.Column(db.Text, nullable=False)
     license = db.Column(db.Text)
 
+    github_path = db.Column(db.String , nullable=True)
+
     user = db.relationship('User', backref=db.backref('user', lazy='dynamic', cascade='all, delete-orphan'))
 
     def to_json(self):
@@ -365,7 +367,8 @@ class InvalidRuleModel(db.Model):
             'rule_type': self.rule_type,
             "user_id": self.user_id,
             "url": self.url,
-            "license": self.license
+            "license": self.license,
+            "github_path": self.github_path if self.github_path else None
         }
     
 
@@ -899,6 +902,7 @@ class NewRule(db.Model):
     rule_syntax_valid = db.Column(db.Boolean, default=True)
     error = db.Column(db.Boolean, default=False)
     accept = db.Column(db.Boolean, default=False)
+    github_path = db.Column(db.String, nullable=True)
 
 
     def to_json(self):
@@ -914,6 +918,7 @@ class NewRule(db.Model):
             "rule_syntax_valid": self.rule_syntax_valid,
             "error": self.error,
             "accept": self.accept,
+            "github_path": self.github_path
         }
 
 

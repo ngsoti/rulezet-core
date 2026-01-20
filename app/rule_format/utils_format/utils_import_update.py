@@ -31,8 +31,9 @@ def clone_or_access_repo(repo_url):
     
     existe = os.path.exists(repo_dir)
     if not existe:
-        if not is_github_repo_accessible(repo_url):
-            raise Exception(f"Github repo '{repo_url}' do not existe.")
+        status , msg = is_github_repo_accessible(repo_url)
+        if not status:
+            raise Exception(f"The repo {repo_url} is not accessible : {msg}")
         
         try:
             Repo.clone_from(repo_url, repo_dir)
@@ -52,9 +53,9 @@ def is_github_repo_accessible(repo_url):
         response = requests.get(api_url, timeout=5)
 
         # A status code of 200 indicates the repository is accessible
-        return response.status_code == 200
-    except Exception:
-        return False
+        return response.status_code == 200 , ""
+    except Exception as e:
+        return False , response.text
 
 def delete_existing_repo_folder(local_dir):
     """Delete the existing folder if it exists."""
@@ -159,14 +160,18 @@ def valider_repo_github(repo_url: str) -> bool:
     try:
         parsed = urlparse(repo_url)
         if parsed.scheme not in ("http", "https"):
+            print("Invalid scheme")
             return False
         if parsed.netloc != "github.com":
+            print("Invalid netloc")
             return False
         path_parts = [p for p in parsed.path.split('/') if p]
         if len(path_parts) < 2:
+            print("Invalid path")
             return False
         return True
-    except Exception:
+    except Exception as e:
+        print(e)
         return False
 
 def get_licst_license() -> list:

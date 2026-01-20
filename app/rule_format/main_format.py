@@ -190,6 +190,8 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
 
         validation_result: ValidationResult = rule_instance.validate(raw_content)
         metadata = rule_instance.parse_metadata(raw_content, info, validation_result)
+        print(bad_rule_obj.github_path)
+        metadata["github_path"] = bad_rule_obj.github_path
 
         result_dict = {
             "validation": {
@@ -204,7 +206,7 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
 
 
         if validation_result.ok:
-            success = RuleModel.add_rule_core(result_dict["rule"], current_user)
+            success , msg = RuleModel.add_rule_core(result_dict["rule"], current_user)
             if success:
                 db.session.delete(bad_rule_obj)
                 db.session.commit()
@@ -221,7 +223,7 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
 
 
 
-def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_repo=None):
+def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_repo=None, github_path=None):
     """
     Parse et importe une seule règle selon son format.
     Retourne tuple : (success: bool, message: str, rule_obj: RuleModel | None)
@@ -261,24 +263,29 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
             rule_type=format_name,
             error=validation_result.errors,
             user=user,
+            github_path=github_path
         )
         return False, "Invalid rule", None
 
     exists, rule_id = RuleModel.rule_exists(metadata)
-    if exists:
+    if exists == True:
         rule = RuleModel.get_rule(rule_id)
         return False, "Rule already exists", rule
+    print( "je n'existe pas")
+    if github_path:
+        metadata["github_path"] = github_path
 
-
-    rule = RuleModel.add_rule_core(metadata, user)
+    rule, msg = RuleModel.add_rule_core(metadata, user)
     if rule:
         return True, "Rule created", rule
     else:
+        print("j'ai pas ete cree")
         RuleModel.save_invalid_rule(
             form_dict=metadata,
             to_string=rule_content,
             rule_type=format_name,
             error=["Failed to insert rule into DB"],
             user=user,
+            github_path=github_path
         )
         return False, "Failed to insert rule", None

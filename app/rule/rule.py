@@ -67,7 +67,6 @@ def rule() -> render_template:
             flash('Rule added !', 'success')
             return redirect(url_for('rule.detail_rule', rule_id=new_rule.id))
         else:
-            print("Error during the creation of the rule !")
             flash(message, 'error')
             return render_template("rule/rule.html", form=form, tab="manuel" )
     return render_template("rule/rule.html", form=form )
@@ -1012,7 +1011,16 @@ def get_rule_history_count():
 @login_required
 def get_history_rule():
     history_id = request.args.get('rule_id', type=int)
+
+    if not history_id:
+        return jsonify({"message": "Missing rule_id"}), 400
+
     history_rule = RuleModel.get_history_rule_by_id(history_id)
+
+    if not history_rule:
+        # 404 page
+        # return render_template("404.html")
+        return jsonify({"message": "Rule history not found"}), 404
 
     old_content = history_rule.old_content or ""
     new_content = history_rule.new_content or ""
@@ -1374,7 +1382,6 @@ def edit_bad_rule(rule_id):
     bad_rule = RuleModel.get_invalid_rule_by_id(rule_id)
     if bad_rule:
         if current_user.is_admin() or current_user.id == bad_rule.user_id:
-
             if request.method == 'POST':
                 new_content = request.form.get('raw_content')
                 # success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content )
@@ -1926,7 +1933,19 @@ def history_github_importer_list():
             "total_history": github_importer_list.total, 
             "total_pages": github_importer_list.pages}, 200
 
+@rule_blueprint.route("/history_github_importer/delete", methods=['GET'])
+@login_required
+def history_github_importer_delete():
+    if current_user.is_admin() == False:
+        return {"message": "Access denied", "toast_class": "danger-subtle"}, 403
+    history_github_importer_id = request.args.get('uuid', type=str)
+    if not history_github_importer_id:
+        return {"message": "Missing uuid", "toast_class": "danger-subtle"}, 400
+    success, msg = RuleModel.delete_importer_history(history_github_importer_id)
 
+    if success:
+        return {"message": msg, "toast_class": "success-subtle"}, 200
+    return {"message": msg, "toast_class": "danger-subtle"}, 500
 
 
 @rule_blueprint.route("/import_get_session_running", methods=['GET'])
@@ -2025,6 +2044,19 @@ def get_news_rules(sid):
 
     }, 200
 
+@rule_blueprint.route("/history_github_updater/delete", methods=['GET'])
+@login_required
+def history_github_updater_delete():
+    if current_user.is_admin() == False:
+        return {"message": "Access denied", "toast_class": "danger-subtle"}, 403
+    history_github_updater_id = request.args.get('uuid', type=str)
+    if not history_github_updater_id:
+        return {"message": "Missing uuid", "toast_class": "danger-subtle"}, 400
+    success, msg = RuleModel.delete_updater_history(history_github_updater_id)
+
+    if success:
+        return {"message": msg, "toast_class": "success-subtle"}, 200
+    return {"message": msg, "toast_class": "danger-subtle"}, 500
 
 @rule_blueprint.route("/update_loading_status/<sid>/get_rules", methods=['GET'])
 @login_required
@@ -2287,7 +2319,8 @@ def fix_new_rule(new_rule_id: int):
 
     result_obj, error_message = RuleModel.save_invalid_rule_from_new_rule(
         new_rule_obj=temp_rule, 
-        user=current_user
+        user=current_user,
+        github_path=temp_rule.github_path
     )
 
     if error_message:
@@ -2449,3 +2482,11 @@ def delete_all_rule():
 
     success  = RuleModel.delete_all_rule_by_url(url)
     return jsonify({"success": True, "message": "All rules deleted", "toast_class": "success-subtle"}), 200
+
+@rule_blueprint.route('/test', methods=['GET'])
+@login_required
+def test():
+    results = RuleModel.get_filtered_history_ids()
+    import json
+    return jsonify({"success": True, "message": "All uuid found", "toast_class": "success-subtle"}), 200
+    

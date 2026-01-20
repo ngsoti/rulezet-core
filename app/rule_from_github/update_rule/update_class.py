@@ -34,7 +34,7 @@ class Update_class:
 
     def __init__(self, repo_sources, user: User, info: dict, mode: str = "by_rule") -> None:
         self.uuid = str(uuid4())
-        self.thread_count = 10
+        self.thread_count = 1
         self.jobs = Queue()
         self.threads = []
         self.stopped = False
@@ -309,8 +309,18 @@ class Update_class:
                     rule_instance = work[3]
 
                     rules = rule_instance.extract_rules_from_file(work[2])
+
+
+                    # if there the same rulename in the same file, (if only one of them has no original_uuid or no one), we decided that the rule can be updated so we make this rule like there is no update but with a message 
+                    # if rules:
+                    #     _original_uuid = rules[0].get("original_uuid")  # Get the original_uuid from the first rule in the list
+
+                        
+
                     for rule_text in rules:    
                         # enrich info with filepath
+
+
                         enriched_info = {**self.info, "filepath": work[2]}
                         # Validate
                         validation_result  = rule_instance.validate(rule_text)
@@ -335,9 +345,18 @@ class Update_class:
                             print("No name or title found in rule:", work[2])
                             continue
 
-                        # verify if the rule is correct or not
-                        existing_rule = RuleModel.get_rule_by_title(name)
 
+                        metadata["github_path"] = os.path.relpath(work[2], self.repo_sources)
+
+                        # verify if the rule is correct or not
+                        if metadata.get("original_uuid"):
+                            _original_uuid = metadata.get("original_uuid")  
+                        else:
+                            _original_uuid = None
+
+                        # we have parse a rule and we want to found if it is already in Rulezet
+                        existing_rule , message = RuleModel.get_rule_from_a_github(name , work[2], self.repo_sources, _original_uuid)
+                       
                         if validation_result.ok:
                             # Case 1: Rule is VALID (either an update or a completely new rule)
                             
@@ -348,9 +367,16 @@ class Update_class:
                                 user = db.session.merge(user)
                                 if existing_rule.user_id == user.id or user.is_admin():
 
+                                    # Check for rule updates
+                                    # compare the rules
+                                    # exsisting_rule.to_string and rule_text
 
-                                    message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.id, self.local_repo_path ) 
+                                    # message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.id, self.local_repo_path ) 
 
+                                    message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.to_string, rule_text, existing_rule.id) 
+                                    print(message_dict)
+                                    print(success)
+                                    print(new_rule_content)
                                     # --- create history if needed ---
                                     history_id = None
                                     if success and new_rule_content:
@@ -387,26 +413,30 @@ class Update_class:
                                 self.remove_processed_rule(existing_rule.title)
 
                             else:
-                                # Sub-case 1.2: Rule does NOT EXIST (Log as New Valid Rule)
-
-                                new_rule_obj = NewRule(
-                                    uuid=str(uuid4()),
-                                    update_result_id=None,  # filled later in save_info()
-                                    date=datetime.datetime.now(tz=datetime.timezone.utc),
-                                    name_rule=name,
-                                    rule_content=rule_text,
-                                    message="", # No error message since it's valid
-                                    rule_syntax_valid=True,
-                                    error=False,
-                                    accept=False,
-                                    # Ensure 'format' is set if available
-                                    format=metadata.get("format") 
-                                )
-                                self.new_rules_list.append(new_rule_obj)
-                                
-                                # Safety: Remove rule from the list of rules to process if it somehow matched a title 
-                                self.remove_processed_rule(name)
-
+                                if message == "[new rule]":
+                                    
+                                    # Sub-case 1.2: Rule does NOT EXIST (Log as New Valid Rule)
+                                    print("New rule:", message)
+                                    new_rule_obj = NewRule(
+                                        uuid=str(uuid4()),
+                                        update_result_id=None,  # filled later in save_info()
+                                        date=datetime.datetime.now(tz=datetime.timezone.utc),
+                                        name_rule=name,
+                                        rule_content=rule_text,
+                                        message="", # No error message since it's valid
+                                        rule_syntax_valid=True,
+                                        error=False,
+                                        accept=False,
+                                        # Ensure 'format' is set if available
+                                        format=metadata.get("format"),
+                                        github_path=os.path.relpath(work[2], self.repo_sources) 
+                                    )
+                                    self.new_rules_list.append(new_rule_obj)
+                                    
+                                    # Safety: Remove rule from the list of rules to process if it somehow matched a title 
+                                    self.remove_processed_rule(name)
+                                else:
+                                    print("Error to get the rule:", message)
 
                         else:
                             # Case 2: Rule is INVALID (Log as Update Status OR New Invalid Rule)
@@ -458,26 +488,30 @@ class Update_class:
                             
                             else:
                                 # Case 2.2: Rule does NOT EXIST (Log as New Invalid Rule for Correction)
-                                
-                                # Create the NewRule object for the bad rule
-                                new_rule_obj = NewRule(
-                                    uuid=str(uuid4()),
-                                    update_result_id=None,  # filled later in save_info()
-                                    date=datetime.datetime.now(tz=datetime.timezone.utc),
-                                    name_rule=name,
-                                    rule_content=rule_text,
-                                    # Use the detailed error message
-                                    message=full_error_message,
-                                    rule_syntax_valid=False, # Key change: Syntax is invalid
-                                    error=True,             # Key change: There is an error
-                                    accept=False,
-                                    # Ensure 'format' is set if available
-                                    format=metadata.get("format") 
-                                )
-                                self.new_rules_list.append(new_rule_obj)
-                                
-                                # Remove rule from the list of rules to process (as it was found in the repo but is invalid)
-                                self.remove_processed_rule(name)
+                                if message == "[new rule]":
+                                   
+                                    # Create the NewRule object for the bad rule
+                                    new_rule_obj = NewRule(
+                                        uuid=str(uuid4()),
+                                        update_result_id=None,  # filled later in save_info()
+                                        date=datetime.datetime.now(tz=datetime.timezone.utc),
+                                        name_rule=name,
+                                        rule_content=rule_text,
+                                        # Use the detailed error message
+                                        message=full_error_message,
+                                        rule_syntax_valid=False, # Key change: Syntax is invalid
+                                        error=True,             # Key change: There is an error
+                                        accept=False,
+                                        # Ensure 'format' is set if available
+                                        format=metadata.get("format") ,
+                                        github_path=metadata.get("github_path")
+                                    )
+                                    self.new_rules_list.append(new_rule_obj)
+                                    
+                                    # Remove rule from the list of rules to process (as it was found in the repo but is invalid)
+                                    self.remove_processed_rule(name)
+                                else:
+                                    print("Error to get the rule:", msg)
                 else:
                     # by rule: work = (cp, rule_id, repo_dir, rule_type_instance, rule_title)
                     
@@ -601,7 +635,9 @@ class Update_class:
 
 # ------------------ RULE UPDATE CHECKER ------------------
 
-def Check_for_rule_updates(rule_id: int, repo_dir: str):
+
+
+def Check_for_rule_updates(rule_content, new_rule_content, rule_id):
     rule = RuleModel.get_rule(rule_id)
     if not rule:
         return {"message": f"No rule found with ID {rule_id}", "success": False}, False, None
@@ -623,16 +659,7 @@ def Check_for_rule_updates(rule_id: int, repo_dir: str):
     if not rule_class:
         return {"message": f"No handler for format: {rule.format}", "success": False}, False, None
 
-    try:
-        # NOTE: This finds the rule file in the repo but doesn't do the complex validation/diff yet
-        found_rule, success = rule_class.find_rule_in_repo(repo_dir, rule.id)
-    except Exception as e:
-        return {"message": f"Error scanning repo: {e}", "success": False}, False, None
-
-    if not success:
-        return {"message": f"Rule not found in repo: {rule.title}", "success": False}, False, None
-
-    validation = rule_class.validate(found_rule)
+    validation = rule_class.validate(new_rule_content)
 
     if rule.to_string != validation.normalized_content:
 
@@ -669,4 +696,5 @@ def Check_for_rule_updates(rule_id: int, repo_dir: str):
 
 
     return {"message": "No change detected.", "success": True, "new_content": None}, True, None
+
 
