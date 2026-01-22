@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% import 'macros/form_macros.html' as f %}
 
 {% block content %}
 <div class="container mt-4">
@@ -81,7 +80,7 @@
                         </div>
                     </div>
                     <div class="mb-3 text-center">
-                        <span class="badge rounded-pill bg-light text-dark px-3 py-2 shadow-lg">
+                        <span class="badge rounded-pill bg-light text-dark px-3 py-2 shadow-sm">
                             <i class="fa-solid fa-tags me-2 text-primary"></i>
                             <strong>[[ total_tags ]]</strong> tags found
                         </span>
@@ -145,7 +144,7 @@
                             <tbody>
                                 <tr v-for="tag in tags" :key="tag.uuid">
                                     <td>
-                                        <span class="tag-split shadow-lg on-hover-zoom">
+                                        <span class="tag-split shadow-sm on-hover-zoom">
                                             <span class="tag-left">
                                                 <i v-if="tag.icon" :class="`fa ${tag.icon}`"></i>
                                                 <i v-else class="fa fa-tag"></i>
@@ -213,7 +212,7 @@
                                         <!-- EDIT MODAL -->
                                         <div class="modal fade" :id="'edit_tag_modal_'+tag.id" tabindex="-1">
                                             <div class="modal-dialog modal-dialog-centered modal-lg">
-                                                <div class="modal-content border-0 shadow-lg rounded-4">
+                                                <div class="modal-content border-0 shadow-sm rounded-4">
 
                                                     <!-- HEADER -->
                                                     <div class="modal-header border-0">
@@ -316,7 +315,7 @@
                                         <!-- DETAIL MODAL -->
                                         <div class="modal fade" :id="'detail_tag_modal_'+tag.id" tabindex="-1">
                                             <div class="modal-dialog modal-dialog-centered modal-lg">
-                                                <div class="modal-content border-0 shadow-lg rounded-4">
+                                                <div class="modal-content border-0 shadow-sm rounded-4">
 
                                                     <!-- HEADER -->
                                                     <div class="modal-header border-0">
@@ -404,7 +403,7 @@
                                         <div class="modal fade" :id="'delete_tag_modal_'+tag.id" tabindex="-1"
                                             aria-hidden="true">
                                             <div class="modal-dialog modal-dialog-centered">
-                                                <div class="modal-content border-0 shadow-lg"
+                                                <div class="modal-content border-0 shadow-sm"
                                                     style="border-radius: 15px;">
                                                     <div class="modal-header border-0 pb-0">
                                                         <h5 class="modal-title fw-bold">Confirm Deletion</h5>
@@ -497,7 +496,7 @@
                             </div>
                         </div>
                         <div class="mb-3 mt-3 text-center">
-                            <span class="badge rounded-pill bg-light text-dark px-3 py-2 shadow-lg">
+                            <span class="badge rounded-pill bg-light text-dark px-3 py-2 shadow-sm">
                                 <i class="fa-solid fa-tags me-2 text-primary"></i>
                                 <strong>[[ total_tags_misp ]]</strong> tags found
                             </span>
@@ -519,7 +518,7 @@
                                 <tr v-for="tag in tags_misp" :key="tag.uuid">
                                     <!-- TAG BADGE -->
                                     <td>
-                                        <span class="tag-split shadow-lg ">
+                                        <span class="tag-split shadow-sm">
                                             <span class="tag-left">
                                                 <i v-if="tag.icon" :class="`fa fa-${tag.icon}`"></i>
                                                 <i v-else class="fa fa-tag"></i>

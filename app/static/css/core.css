@@ -1550,9 +1550,7 @@ body.modal-open .custom-rule-link {
   font-size: 0.85rem;
   font-weight: 800;
   margin-bottom: 0.25rem;
-  box-shadow: 
-        0 22px 50px rgba(0, 0, 0, 0.15), /* Ombre portée principale très diffuse */
-        0 10px 20px rgba(0, 0, 0, 0.08) !important; /* Ombre de contact pour la base */
+  box-shadow: 1px 3px 5px #00000029 !important;
 }
 
 

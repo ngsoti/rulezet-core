@@ -51,19 +51,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
-    <script>
-        (function () {
-            let savedTheme = localStorage.getItem('theme');
-            if (!savedTheme) {
-                savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-            document.documentElement.classList.add(savedTheme + '-mode');
-            const style = document.createElement('style');
-            style.innerHTML = `* { transition: none !important; }`;
-            document.head.appendChild(style);
-            window.addEventListener('DOMContentLoaded', () => style.remove());
-        })();
-    </script>
+    
     <script src="{{ url_for('static',filename='js/popper.min.js') }}"></script>
     <script src="{{ url_for('static',filename='bootstrap-5.3.0/js/bootstrap.min.js') }}"></script>
     <script src="{{ url_for('static',filename='js/jquery.min.js') }}"></script>
@@ -75,23 +63,7 @@
     <script src="{{ url_for('static',filename='js/dayjs/dayjs-relativeTime.js') }}"></script>
     <script>dayjs.extend(window.dayjs_plugin_utc)</script>
     <script>dayjs.extend(window.dayjs_plugin_relativeTime)</script>
-    <script src="{{ url_for('static',filename='js/zxcvbn.js') }}"></script>
     <script src="{{ url_for('static',filename='js/blur.js')}}"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const scrollToTopBtn = document.getElementById("scrollToTopBtn");
-            if (!scrollToTopBtn) return;
-
-            window.addEventListener("scroll", () => {
-                scrollToTopBtn.style.display = (window.scrollY > 300) ? "flex" : "none";
-            });
-
-            scrollToTopBtn.addEventListener("click", () => {
-                window.scrollTo({ top: 0, behavior: "smooth" });
-            });
-        });
-    </script>
-
 </head>
 
 <body>
@@ -251,6 +223,32 @@
                 });
             }
         })();
+    </script>
+    <script>
+        (function () {
+            let savedTheme = localStorage.getItem('theme');
+            if (!savedTheme) {
+                savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.classList.add(savedTheme + '-mode');
+            const style = document.createElement('style');
+            style.innerHTML = `* { transition: none !important; }`;
+            document.head.appendChild(style);
+            window.addEventListener('DOMContentLoaded', () => style.remove());
+        })();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const scrollToTopBtn = document.getElementById("scrollToTopBtn");
+            if (!scrollToTopBtn) return;
+
+            window.addEventListener("scroll", () => {
+                scrollToTopBtn.style.display = (window.scrollY > 300) ? "flex" : "none";
+            });
+
+            scrollToTopBtn.addEventListener("click", () => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+        });
     </script>
 </body>
 
