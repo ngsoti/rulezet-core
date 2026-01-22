@@ -27,6 +27,5 @@ msc_pyparser
 nova-hunting
 pymisp
 flask_mail
-diff2html
 scikit-learn
 faiss-cpu
