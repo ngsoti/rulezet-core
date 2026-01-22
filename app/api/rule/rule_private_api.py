@@ -152,11 +152,11 @@ class CreateRule(Resource):
         if not is_valid:
             return {"message": "Invalid rule", "error": error_msg}, 400
 
-        verif = RuleModel.add_rule_core(form_dict, user)
-        if verif:
-            return {"message": "Rule added successfully", "rule": verif.to_dict()}, 200
-
-        return {"message": "Failed to add rule"}, 500
+        verif, msg = RuleModel.add_rule_core(form_dict, user)
+        if isinstance(verif, Rule):
+            return {"message": msg, "rule": verif.to_json()}, 200
+        
+        return {"message": msg}, 400
 
         
          

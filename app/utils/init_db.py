@@ -51,7 +51,7 @@ def create_default_user():
         email="default@default.default",
         password= generate_api_key(),
         admin=False,
-        api_key = generate_api_key() # "aa"
+        api_key = generate_api_key()
     )
     db.session.add(user)
     db.session.commit()
@@ -76,7 +76,7 @@ def create_user_test():
         first_name="theo",
         last_name="theo",
         email="t@t.t",
-        password="t",
+        password="password1@A",
         admin=False,
         api_key = "api_key_user_rule"
     )
@@ -91,7 +91,7 @@ def create_admin_test():
         email="admin@admin.admin",
         password= "admin",
         admin=True,
-        api_key =  "admin_api_key"
+        api_key = "admin_api_key"
     )
     db.session.add(user)
     db.session.commit()

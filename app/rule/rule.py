@@ -489,7 +489,7 @@ def detail_rule(rule_id)-> render_template:
     rule_misp = content_convert_to_misp_object(rule_id)
     if not rule_misp:
         rule_misp = "No misp format for this rule"
-    rule_to_json = json.dumps(rule.to_dict(), indent=4)
+    rule_to_json = json.dumps(rule.to_json(), indent=4)
     if not rule_to_json:
         rule_to_json = "No json format for this rule"
     if rule:
@@ -749,7 +749,7 @@ def get_rules_propose_edit_history_page() -> jsonify:
 
         old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
 
-        d = rule.to_dict()
+        d = rule.to_json()
         d['old_diff_html'] = old_html
         d['new_diff_html'] = new_html
 
@@ -1027,7 +1027,7 @@ def get_history_rule():
 
     old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
 
-    d = history_rule.to_dict()
+    d = history_rule.to_json()
     d['old_diff_html'] = old_html
     d['new_diff_html'] = new_html
 
@@ -1047,7 +1047,7 @@ def get_proposal() -> jsonify:
 
     old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
 
-    d = proposal.to_dict()
+    d = proposal.to_json()
     d['old_diff_html'] = old_html
     d['new_diff_html'] = new_html
 

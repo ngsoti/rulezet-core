@@ -139,35 +139,6 @@ class Rule(db.Model):
             "editor": self.get_rule_user_first_name_by_id(),
             "github_path": self.github_path if self.github_path else None
         }
-    
-    def to_dict(self):
-        is_favorited = False
-        if not current_user.is_anonymous:
-            is_favorited = RuleFavoriteUser.query.filter_by(user_id=current_user.id, rule_id=self.id).first() is not None
-
-        return {
-            "id": self.id,
-            "format": self.format,
-            "title": self.title,
-            "license": self.license,
-            "description": self.description,
-            "uuid": self.uuid,
-            "original_uuid": self.original_uuid,
-            "source": self.source,
-            "author": self.author,
-            "creation_date": self.creation_date.strftime('%Y-%m-%d %H:%M'),
-            "last_modif": self.last_modif.strftime('%Y-%m-%d %H:%M'),
-            "vote_up": self.vote_up,
-            "vote_down": self.vote_down,
-            "user_id": self.user_id,
-            "version": self.version,
-            "to_string": self.to_string,
-            "is_favorited": is_favorited,
-            "cve_id": self.cve_id,
-            "editor": self.get_rule_user_first_name_by_id(),
-            "github_path": self.github_path if self.github_path else None
-        }  # Format the datetime to a string
-
 
 class FormatRule(db.Model):
     """Table for all the formats of the rules"""
@@ -405,21 +376,6 @@ class RuleEditProposal(db.Model):
             'timestamp': self.timestamp.isoformat(),      #2021-07-27#16:01:12.090202        DateTime_in_ISOFormat.isoformat("#", "auto")
             'comments': [comment.to_json() for comment in self.comments.order_by(RuleEditComment.created_at.asc())]  # take all the message which was concerne by this pull request with date order
         }
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'rule_id': self.rule_id,
-            'rule_name': self.get_rule_title(),
-            'user_id': self.user_id,
-            'user_name': self.user.first_name if self.user else None,
-            'proposed_content': self.proposed_content,
-            'old_content': self.old_content,
-            'message': self.message,
-            'status': self.status,
-            'timestamp': self.timestamp.isoformat(),      #2021-07-27#16:01:12.090202        DateTime_in_ISOFormat.isoformat("#", "auto")
-            'comments': [comment.to_json() for comment in self.comments.order_by(RuleEditComment.created_at.asc())]  # take all the message which was concerne by this pull request with date order
-        }
-
 
 
 class RuleEditComment(db.Model):
@@ -526,23 +482,6 @@ class RuleUpdateHistory(db.Model):
         if rule:
             return rule.source
         return None
-    def to_dict(self):
-        
-        return {
-            "id": self.id,
-            "rule_id": self.rule_id,
-            "rule_title": self.rule_title,
-            "success": self.success,
-            "message": self.message,
-            "new_content": self.new_content,
-            "old_content": self.old_content,
-            "analyzed_by_user_id": self.analyzed_by_user_id,
-            "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
-            "analyzed_by_user_name": self.analyzed_by.first_name,
-            "rule_format": self.get_rule_format(),
-            "rule_source": self.get_rule_source(),
-            "manuel_submit": self.manuel_submit if self.manuel_submit else False
-        }
     
     def to_json(self):
         return {
@@ -557,6 +496,7 @@ class RuleUpdateHistory(db.Model):
             "analyzed_at": self.analyzed_at.strftime('%Y-%m-%d %H:%M'),
             "analyzed_by_user_name": self.analyzed_by.first_name,
             "rule_format": self.get_rule_format(),
+            "rule_source": self.get_rule_source(),
             "manuel_submit": self.manuel_submit if self.manuel_submit else False
         }
 
@@ -809,23 +749,10 @@ class UpdateResult(db.Model):
         }
     
     def to_json_list(self):
-          return {
-            "id": self.id,
-            "uuid": self.uuid,
-            "user_id": self.user_id,
-            "mode": self.mode,
-            "info": json.loads(self.info) if self.info else None,
-            "repo_sources": json.loads(self.repo_sources) if self.repo_sources else None,
-            "rule_name_by_rule_mode": self._get_rule_name_by_mode(),
-            "not_found": self.not_found,
-            "found": self.found,
-            "updated": self.updated,
-            "skipped": self.skipped,
-            "total": self.total,
-            "thread_count": self.thread_count,
-            "query_date": self.query_date.strftime('%Y-%m-%d %H:%M') if self.query_date else None,
-            "new_rules": len(self.new_rules) if self.new_rules else 0
-        }
+        json_dict = self.to_json()
+        del json_dict["rules"]
+        json_dict["rule_name_by_rule_mode"] = self._get_rule_name_by_mode()
+        return json_dict        
     
 
 class RuleStatus(db.Model):
@@ -1052,40 +979,6 @@ class Gamification(db.Model):
             self.total_points = new_points
             self.current_level = self.calculate_current_level(new_points)
 
-    # def to_json(self):
-    #     return {
-    #         "id": self.id,
-    #         "uuid": self.uuid,
-    #         "user_id": self.user_id,
-    #         "total_points": self.total_points,
-    #         "current_level": self.current_level,
-    #         "suggestions_submitted": self.suggestions_submitted,
-    #         "suggestions_accepted": self.suggestions_accepted,
-    #         "suggestions_rejected": self.suggestions_rejected,
-    #         "rules_owned": self.rules_owned,
-    #         "rules_popular_score": self.rules_popular_score,
-    #         "rules_liked": self.rules_liked,
-    #         "rules_disliked": self.rules_disliked,
-    #         "last_contribution_date": self.last_contribution_date.strftime('%Y-%m-%d %H:%M') if self.last_contribution_date else None,
-    #         "consecutive_days_active": self.consecutive_days_active,
-    #     }
-
-# --- SQLAlchemy Listener Registration ---
-
-# def receive_before_flush(session, flush_context, instances):
-#     for instance in session.dirty:
-#         if isinstance(instance, Gamification):
-#             has_changed = False
-#             for field in ['suggestions_accepted', 'rules_owned', 'rules_liked', 'rules_popular_score', 'consecutive_days_active']:
-#                 history = attributes.instance_state(instance).get_history(field, passive='loaded')
-#                 if history.has_changes():
-#                     has_changed = True
-#                     break
-            
-#             if has_changed:
-#                 instance.update_scores()
-
-# event.listen(db.session, 'before_flush', receive_before_flush)
 def receive_before_flush(session, flush_context, instances):
     """
     Listener to check and update Gamification scores before a transaction is committed.

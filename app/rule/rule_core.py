@@ -28,7 +28,7 @@ from ..account import account_core as AccountModel
 # CRUD
 
 # Create
-def add_rule_core(form_dict, user) -> bool :
+def add_rule_core(form_dict, user) -> tuple[bool, str] | tuple[Rule, str]:
     """
     Add a rule safely with error handling.
 
@@ -285,7 +285,7 @@ def get_rules_of_user_with_id_page(user_id, page, search, sort_by, rule_type) ->
     # Pagination
     return query.paginate(page=page, per_page=20, max_per_page=20)
 
-def get_rule(id) -> int:
+def get_rule(id) -> Rule:
     """Return the rule from id"""
     return Rule.query.get(id)
 
