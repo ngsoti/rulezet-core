@@ -447,9 +447,6 @@ class RepportRule(db.Model):
             }
     
 
-
-
-
 class RuleUpdateHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
@@ -504,15 +501,27 @@ class RuleUpdateHistory(db.Model):
 #   Bundle  #
 #############
 
+
 class Bundle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(255), nullable=False, unique=True, index=True)
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+    created_by = db.Column(db.String(255), nullable=False, default="user") # user or bot
+
+    # the creator of the bundle
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+
     vote_up = db.Column(db.Integer, nullable=False, default=0)
     vote_down = db.Column(db.Integer, nullable=False, default=0)
+    view_count = db.Column(db.Integer, default=0)
+    download_count = db.Column(db.Integer, default=0)
+    is_verified = db.Column(db.Boolean, default=False) # Badge "officiel"
+
+    # visibility
     access = db.Column(db.Boolean, nullable=False, default=True) # if true all user can see the bundle, if false only the creator can see it
 
 
@@ -540,8 +549,82 @@ class Bundle(db.Model):
             "vote_down": self.vote_down,
             "user_name": self.get_rule_user_first_name_by_id(),
             "list_of_format_of_rules": list(set([assoc.rule.format for assoc in self.rules_assoc])),
-            "number_of_rules": len(self.rules_assoc.all())
+            "number_of_rules": len(self.rules_assoc.all()),
+            "is_verified": self.is_verified,
+            "view_count": self.view_count,
+            "download_count": self.download_count,
+            "uuid": self.uuid,
+            "created_by": self.created_by
         }
+
+
+class BundleNode(db.Model):
+    __tablename__ = 'bundle_node'
+    id = db.Column(db.Integer, primary_key=True)
+    bundle_id = db.Column(db.Integer, db.ForeignKey('bundle.id', ondelete="CASCADE"), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('bundle_node.id', ondelete="CASCADE"), nullable=True)
+    
+    name = db.Column(db.String(255), nullable=False)
+    node_type = db.Column(db.String(50), nullable=False) # 'folder' or 'file'
+    
+    custom_content = db.Column(db.Text, nullable=True)
+    
+    # CHANGED: ondelete="CASCADE" ensures the node is destroyed if the rule is deleted
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id', ondelete="CASCADE"), nullable=True)
+
+    children = db.relationship(
+        "BundleNode", 
+        backref=db.backref('parent', remote_side=[id]), 
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
+    
+    rule = db.relationship("Rule") 
+
+    # def to_tree_json(self):
+    #     """Recursively converts nodes to the JSON tree expected by Vue.js"""
+    #     node_data = {
+    #         "name": self.name,
+    #         "type": self.node_type,
+    #         "children": [child.to_tree_json() for child in self.children]
+    #     }
+        
+    #     if self.rule_id:
+    #         node_data["id"] = f"rule_{self.rule_id}_{self.id}"
+    #         node_data["rule_id"] = self.rule_id
+    #         # Note: with CASCADE, self.rule will never be None here because the node wouldn't exist
+    #         node_data["content"] = self.rule.to_string if self.rule else "Rule not found"
+    #     else:
+    #         node_data["id"] = f"node_{self.id}"
+    #         node_data["content"] = self.custom_content or ""
+            
+    #     return node_data
+    
+    def to_tree_json(self):
+        """Recursively converts nodes to the JSON tree expected by Vue.js"""
+
+        if self.rule_id and self.rule:
+            ext = ".yar" if self.rule.format == 'yara' else ".yaml"
+            current_name = f"{self.rule.title}{ext}"
+            current_content = self.rule.to_string
+            node_id = f"rule_{self.rule_id}_{self.id}"
+        else:
+            current_name = self.name
+            current_content = self.custom_content or ""
+            node_id = f"node_{self.id}"
+
+        node_data = {
+            "id": node_id,
+            "name": current_name,
+            "type": self.node_type,
+            "content": current_content,
+            "children": [child.to_tree_json() for child in self.children]
+        }
+        
+        if self.rule_id:
+            node_data["rule_id"] = self.rule_id
+            
+        return node_data
 
 class Tag(db.Model):
     __tablename__ = "tag"

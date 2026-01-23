@@ -127,9 +127,9 @@ def detail(bundle_id) :
     """Go to detail of a bundle"""    
     bundle = BundleModel.get_bundle_by_id(bundle_id)
     if bundle: 
-        if current_user.is_anonymous():
-            return render_template("access_denied.html"),403
-        elif bundle.access or current_user.is_admin() or current_user.id == bundle.user_id:
+        if bundle.access or current_user.is_admin() or current_user.id == bundle.user_id:
+            # add one to the wiew
+            success = BundleModel.add_view(bundle_id)
             return render_template("bundle/detail_bundle.html", bundle_id=bundle_id)
         else:
             return render_template("access_denied.html"),403
@@ -148,8 +148,52 @@ def get_all_rule() :
     return {"success": False, 
                 "message": "Deleted fail  !", 
                 "toast_class" : "danger"}, 500
+# -----------------------------------------------------------------------------------------------------------------------------
+@bundle_blueprint.route("/save_workspace/<int:bundle_id>", methods=['POST'])
+@login_required
+def save_workspace(bundle_id):
+    data = request.json
+    structure = data.get('structure') # The tree from Vue.js
 
+    if not bundle_id or not structure:
+        return {"success": False, "toast_class": "danger", "message": "Missing bundle_id or structure"}, 500
+    
+    # Check if the bundle exists
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle:
+        return {"success": False, "toast_class": "danger", "message": "Bundle not found"}, 404
+    
+    # Check if the user has permission to save the workspace
+    if current_user.id != bundle.user_id and not current_user.is_admin():
+        return {"success": False, "toast_class": "danger", "message": "You don't have the permission to do that!"}, 401
 
+    s = BundleModel.update_bundle_from_structure(bundle_id, structure)
+    if not s:
+        return {"success": False, "toast_class": "danger", "message": "Error updating rule view count"}, 500
+
+    success = BundleModel.save_workspace(bundle_id, structure)
+
+    if success:
+        return {"success": True, "toast_class": "success", "message": "Workspace saved successfully"}, 200
+    else:
+        return {"success": False, "toast_class": "danger", "message": "Error saving workspace"}, 500
+
+@bundle_blueprint.route("/get_bundle_json/<int:bundle_id>")
+def get_bundle_json(bundle_id):
+    # Fetch only top-level nodes (those without parents)
+    root_nodes = BundleModel.get_only_root_nodes(bundle_id)
+    
+    # If the bundle is new and empty, return a default root
+    if not root_nodes:
+        structure = [{"id": "root", "name": "Main Bundle", "type": "folder", "children": []}]
+    else:
+        structure = [node.to_tree_json() for node in root_nodes]
+
+    return jsonify({
+        "success": True, 
+        "structure": structure
+    }), 200
+# -----------------------------------------------------------------------------------------------------------------------------
 @bundle_blueprint.route("/add_rule_bundle", methods=['GET'])
 @login_required
 def add_rule_bundle() :     
@@ -240,13 +284,21 @@ def get_bundle():
             info = BundleModel.get_full_rule_bundle_info(rule_id)
             if info:
                 rules_info.append(info)
-
+    root_nodes = BundleModel.get_only_root_nodes(bundle_id)
+    
+    # If the bundle is new and empty, return a default root
+    if not root_nodes:
+        structure = [{"id": "root", "name": "Main Bundle", "type": "folder", "children": []}]
+    else:
+        structure = [node.to_tree_json() for node in root_nodes]
     return {
         "bundle": bundle.to_json() if hasattr(bundle, 'to_json') else bundle,
         "rules": rules_info,
         "success": True,
-        "message": "Bundle and associated rules found"
+        "message": "Bundle and associated rules found",
+        "structure": structure
     }, 200
+
 
 @bundle_blueprint.route("/change_description", methods=['GET'])
 @login_required
@@ -499,3 +551,26 @@ def get_bundles_page_filter_with_id():
         }, 200
 
     return {"message": "No Bundle"}, 200
+
+
+
+#############
+#   Update  #
+#############
+
+# Transforme from BundleRuleAssociation to a structure compatible with the UI
+@bundle_blueprint.route("/update_bundle_from_structure", methods=['GET'])
+@login_required
+def update_bundle_from_structure():
+    bundle_id = request.args.get("id", type=int)
+    if not bundle_id:
+        return {"message": "No bundle id provided", "toast_class": "danger-subtle"}, 400
+    if current_user.is_admin():
+        return {"message": "You don't have the permission to do that !", "toast_class": "danger-subtle"}, 401
+   # take all the rule associate to ths bundle and create a structure with BundleNode (create one folder and put all the rule id in there)
+    success, msg = BundleModel.update_bundle_from_rule_id_into_structure(bundle_id)
+
+    if not success:
+        return {"message": msg, "toast_class": "danger-subtle"}, 500
+
+    return {"toast_class": "success-subtle", "message": "Bundle updated successfully"}, 200

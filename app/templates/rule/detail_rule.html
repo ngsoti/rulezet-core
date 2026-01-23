@@ -4,11 +4,24 @@
 {% block content %}
 <div class="container mt-4" v-cloak>
     <h2 class="fw-bold mb-1 text-center text-primary">
-        <i class="fas fa-shield-alt me-2"></i> {{ rule.title }}
+        <template v-if="{{ rule.title|length }} > 40">
+            {{ rule.title[:40] }}...
+        </template>
+        <template v-else>
+            {{ rule.title }}
+        </template>
     </h2>
     <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
     <p class="text-muted mt-2">
-        Here you can find all the details about the rule "<strong>{{ rule.title }}</strong>".
+        Here you can find all the details about the rule "
+        <strong>
+            <template v-if="{{ rule.title|length }} > 40">
+                {{ rule.title[:40] }}...
+            </template>
+            <template v-else>
+                {{ rule.title }}
+            </template>
+        </strong>".
         Propose edits, view related rules, and engage with the community through comments.
     </p>
 

@@ -243,6 +243,7 @@
                 const data = await res.json();
                 const updated = rules_list.value.find(rule => rule.id === ruleId);
                 if (updated) {
+
                     updated.vote_up = data.vote_up;
                     updated.vote_down = data.vote_down;
                 }
@@ -252,7 +253,7 @@
                 const btn = event.currentTarget;
                 btn.classList.add('click-pop');
 
-                // On retire la classe après l'animation (300ms) pour pouvoir la rejouer
+
                 setTimeout(() => {
                     btn.classList.remove('click-pop');
                 }, 300);

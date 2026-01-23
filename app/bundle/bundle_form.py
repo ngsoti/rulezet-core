@@ -1,23 +1,30 @@
 from flask_wtf import FlaskForm
-from wtforms.validators import ValidationError
+from wtforms.validators import InputRequired, Length, ValidationError
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField
-from wtforms.validators import InputRequired
 
 from app.db_class.db import Bundle
 
 class AddNewBundleForm(FlaskForm):
     """Form to create a new bundle."""
-
-    name = StringField('Bundle Name', validators=[InputRequired(message="Bundle name is required")])
-    description = TextAreaField('Description',  validators=[InputRequired(message="Bundle description is required")])
+    
+    name = StringField('Bundle Name', validators=[
+        InputRequired(message="Bundle name is required"),
+        Length(max=255, message="Bundle name must be less than 255 characters")
+    ])
+    
+    description = TextAreaField('Description', validators=[
+        InputRequired(message="Bundle description is required")
+    ])
+    
+    # Matches your 'access' field in the DB
     public = BooleanField('Public', default=True) 
     
     submit = SubmitField('Create Bundle')
 
     def validate_name(self, field):
+        # Checks if a bundle with this name already exists in the database
         if Bundle.query.filter_by(name=field.data).first():
-            raise ValidationError('Bundle already registered.')
-        
+            raise ValidationError('A bundle with this name already exists.')
 
 class EditBundleForm(FlaskForm):
     """Form to edit a bundle."""

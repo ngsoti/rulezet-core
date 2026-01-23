@@ -1228,6 +1228,47 @@ def filter_rules(search=None, author=None, sort_by=None, rule_type=None) -> Rule
         query = query.order_by(Rule.creation_date.desc())
     return query
 
+def get_rules_page_filter_bundle_page(search=None, author=None, sort_by=None, rule_type=None,page=1, bundle_id=None, per_page=10) -> Rule:
+    """Filter the rules"""
+    query = Rule.query
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                Rule.title.ilike(search_lower),
+                Rule.description.ilike(search_lower),
+                Rule.format.ilike(search_lower),
+                Rule.author.ilike(search_lower),
+                Rule.to_string.ilike(search_lower),
+                Rule.uuid.ilike(search_lower)
+            )
+        )
+    if author:
+        query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
+    if rule_type:
+        query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))  
+    if sort_by == "newest":
+        query = query.order_by(Rule.creation_date.desc())
+    elif sort_by == "oldest":
+        query = query.order_by(Rule.creation_date.asc())
+    elif sort_by == "most_likes":
+        query = query.order_by(Rule.vote_up.desc())
+    elif sort_by == "least_likes":
+        query = query.order_by(Rule.vote_down.desc())
+    else:
+        query = query.order_by(Rule.creation_date.desc())
+
+
+   # if bundle id, we want to return all the rules which are not part of the bundle
+    if bundle_id:
+       # get all the rule ids of the bundle
+       # from BundleRuleAssociation
+        bundle_rule_ids = BundleRuleAssociation.query.filter(BundleRuleAssociation.bundle_id == bundle_id).all()
+        bundle_rule_ids = [b.rule_id for b in bundle_rule_ids]
+        query = query.filter(Rule.id.notin_(bundle_rule_ids))
+    query = query.paginate(page=page, per_page=per_page)
+    return query , query.total
+
 def filter_rules_owner(search=None, author=None, sort_by=None, rule_type=None , source=None) -> Rule:
     """Filter the rules"""
     query = Rule.query.filter_by(user_id=current_user.id)

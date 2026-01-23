@@ -1,4 +1,5 @@
 import datetime
+import uuid
 from sqlalchemy import or_
 from flask_login import current_user
 from .. import db
@@ -26,15 +27,35 @@ def create_bundle(form_dict , user) -> Bundle:
     :param user_id: ID of the user who creates the bundle (required).
     :return: The created Bundle instance.
     """
+
+    creator_type = form_dict.get("created_by") or "user"
+    is_public = form_dict.get("public", True)
+    
+    if user.is_admin():
+        verified = True
+    else:
+        verified = form_dict.get("is_verified", False)
+
     new_bundle = Bundle(
-        name=form_dict["name"],
-        description=form_dict["description"],
+        uuid=str(uuid.uuid4()),
+        name=form_dict.get("name"),
+        description=form_dict.get("description"),
         user_id=user.id,
-        access=form_dict["public"],
+        access=is_public,
+        created_by=creator_type,
+        is_verified=verified,
+        view_count=0,
+        download_count=0,
         created_at=datetime.datetime.now(tz=datetime.timezone.utc)
     )
-    db.session.add(new_bundle)
-    db.session.commit()
+
+    try:
+        db.session.add(new_bundle)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+        
     return new_bundle
 
 
@@ -46,7 +67,21 @@ def get_bundle_by_id(bundle_id: int) -> Bundle | None:
     """
     return Bundle.query.get(bundle_id)
 
+def get_bundle_by_uuid(uuid: str) -> Bundle | None:
+    """
+    Retrieve a Bundle by its ID.
+    :param bundle_id: ID of the bundle.
+    :return: Bundle instance or None if not found.
+    """
+    return Bundle.query.filter_by(uuid=uuid).first()
 
+def add_view(bundle_id: int) -> bool:
+    bundle = Bundle.query.get(bundle_id)
+    if bundle:
+        bundle.view_count += 1
+        db.session.commit()
+        return True
+    return False
 def  get_association_by_id(association_id: int) -> Bundle | None:
     """
     Retrieve a Bundle by its ID.
@@ -444,3 +479,174 @@ def remove_has_voted(vote, bundle_id , id) -> bool:
         db.session.commit()
         return True 
     return False 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def save_workspace(bundle_id, structure):
+    """
+    Docstring for save_workspace
+    
+    :param bundle_id: Description
+    :param structure: Description
+    """
+    try:
+        # 1. Clear old structure to rebuild (Simple approach)
+        # Because of cascade delete, deleting the root nodes will clean the rest
+        
+
+        BundleNode.query.filter_by(bundle_id=bundle_id).delete()
+
+        def save_recursive(nodes, parent_id=None):
+            for node in nodes:
+                # If it's the 'root' folder from your Vue state, we might skip it 
+                # or treat it as the top level.
+                new_node = BundleNode(
+                    bundle_id=bundle_id,
+                    parent_id=parent_id,
+                    name=node.get('name', 'unnamed'),
+                    node_type=node.get('type', 'file'),
+                    rule_id=node.get('rule_id'), # Present if added from Rule DB
+                    custom_content=node.get('content') if not node.get('rule_id') else None
+                )
+                db.session.add(new_node)
+                db.session.flush() # Get the new ID for children
+                
+                if node.get('children'):
+                    save_recursive(node['children'], new_node.id)
+
+        save_recursive(structure)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(e)
+        return False
+def get_only_root_nodes(bundle_id):
+    return BundleNode.query.filter_by(bundle_id=bundle_id, parent_id=None).all()
+
+def extract_rule_ids(structure):
+    """Recursively extract all rule_id values from the tree structure."""
+    found_ids = set()
+    for node in structure:
+        rid = node.get('rule_id')
+        if rid:
+            # Handle cases where rule_id might be a string or int
+            found_ids.add(int(rid))
+        
+        # Recursive call for children
+        if 'children' in node and node['children']:
+            found_ids.update(extract_rule_ids(node['children']))
+    return found_ids
+
+def update_bundle_from_structure(bundle_id, structure):
+    """
+    Syncs the BundleRuleAssociation table with the current UI structure.
+    1. Removes rules no longer in the structure.
+    2. Adds new rules found in the structure.
+    3. Increments view_count for rules.
+    """
+    bundle = Bundle.query.get(bundle_id)
+    if not bundle:
+        return False
+
+    # 1. Get all rule_ids currently present in the Vue.js tree
+    new_rule_ids = extract_rule_ids(structure)
+
+    # 2. Get existing associations from the DB
+    # We fetch them to compare which ones need to be deleted
+    existing_assocs = BundleRuleAssociation.query.filter_by(bundle_id=bundle_id).all()
+    existing_rule_ids = {assoc.rule_id for assoc in existing_assocs}
+
+    try:
+        # --- DELETE PHASE ---
+        # Remove associations that are in DB but NOT in the new structure
+        for assoc in existing_assocs:
+            if assoc.rule_id not in new_rule_ids:
+                db.session.delete(assoc)
+
+        # --- ADD & UPDATE PHASE ---
+        for rid in new_rule_ids:
+            rule = Rule.query.get(rid)
+            if not rule:
+                continue
+
+           
+            # If the rule is NEW to the bundle, create the association
+            if rid not in existing_rule_ids:
+                new_assoc = BundleRuleAssociation(
+                    bundle_id=bundle_id,
+                    rule_id=rid,
+                    description=f"Added via Workspace Editor on {datetime.datetime.now().strftime('%Y-%m-%d')}"
+                )
+                db.session.add(new_assoc)
+
+        db.session.commit()
+        return True
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating bundle rules: {e}")
+        return False
+    
+
+def update_bundle_from_rule_id_into_structure(bundle_id):
+    """
+    Update the UI structure to include all rules associated with the bundle.
+    """
+    try:
+
+        bundle = Bundle.query.get(bundle_id)
+        if not bundle:
+            return False, "Bundle not found"
+
+        bundle_rules = BundleRuleAssociation.query.filter_by(bundle_id=bundle_id).all()
+        
+        # create a folder and put in there all the rule to have the same structure in the db BundleNode
+        # and resgister in the db BundleNode
+        # create the folder 
+
+        # delete all the children of the folder to create a clean structure
+        BundleNode.query.filter_by(bundle_id=bundle_id).delete()
+        db.session.commit()
+
+
+        folder = BundleNode(
+            bundle_id=bundle_id,
+            parent_id=None,
+            name=bundle.name,
+            node_type="folder",
+            rule_id=None,
+            custom_content=None
+        )
+        db.session.add(folder)
+        db.session.commit()
+        folder_id = folder.id
+
+        for rule in bundle_rules:
+            rule_node = BundleNode(
+                bundle_id=bundle_id,
+                parent_id=folder_id,
+                name=rule.rule.title,
+                node_type="file",
+                rule_id=rule.rule_id,
+                custom_content=None
+            )
+            db.session.add(rule_node)
+        db.session.commit()
+        return True, "Structure updated successfully" 
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating bundle rules: {e}")
+        return False, "Error updating bundle rules"

@@ -2482,11 +2482,27 @@ def delete_all_rule():
 
     success  = RuleModel.delete_all_rule_by_url(url)
     return jsonify({"success": True, "message": "All rules deleted", "toast_class": "success-subtle"}), 200
-
-@rule_blueprint.route('/test', methods=['GET'])
-@login_required
-def test():
-    results = RuleModel.get_filtered_history_ids()
-    import json
-    return jsonify({"success": True, "message": "All uuid found", "toast_class": "success-subtle"}), 200
     
+
+
+@rule_blueprint.route("/get_rules_page_filter_bundle", methods=['GET'])
+def get_rules_page_filter_bundle() -> jsonify:
+    """Get all the rules with filter"""
+    page = int(request.args.get("page", 1))
+    bundle_id = request.args.get("bundle_id", None)
+    search = request.args.get("search", None)
+    author = request.args.get("author", None)
+    sort_by = request.args.get("sort_by", "newest")
+    rule_type = request.args.get("rule_type", None) 
+
+    if not bundle_id:
+        return jsonify({"success": False, "message": "No bundle id provided", "toast_class": "danger-subtle"}), 400
+
+    rules, total_rules = RuleModel.get_rules_page_filter_bundle_page(search, author, sort_by, rule_type ,page, bundle_id, 10)
+
+    return jsonify({
+        "rule": [r.to_json() for r in rules],
+        "total_rules": total_rules,
+        "total_pages": rules.pages
+    }),200
+

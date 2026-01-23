@@ -27,7 +27,7 @@
   --bg-diff-remove: #e9aeae;
 
   --page-selected-color: rgba(13,110,253,1);
-
+  --selected-color: rgb(207, 226, 255);
 }
 
 body.dark-mode {
@@ -51,6 +51,7 @@ body.dark-mode {
   --bg-diff-remove: #a1585c;
 
   --page-selected-color: rgba(13,110,253,1);
+  --selected-color: rgba(13,110,253,1);
 }
 
 /**
@@ -1906,3 +1907,175 @@ body.dark-mode .d2h-emptyplaceholder{
   }
 }
 
+.text-truncate-custom {
+    display: inline;
+}
+
+.text-break {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+.hover-up {
+    transition: transform 0.2s ease;
+}
+.hover-up:hover {
+    transform: translateY(-3px);
+}
+
+.pulse {
+    animation: fadePulse 1.5s infinite;
+}
+
+@keyframes fadePulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+}
+
+.btn-xs {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+
+
+
+
+.ghost-node {
+        opacity: 0.4;
+        background: #e2e8f0 !important;
+        border: 2px dashed #3182ce !important;
+    }
+
+    .node-row {
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+    }
+
+    .node-row:hover {
+        background-color: rgb(207, 226, 255) !important;
+        border-color: #cbd5e0 !important;
+    }
+
+    .bg-rule-node {
+        background-color: #f0f7ff !important;
+        border-left: 3px solid #0d6efd !important;
+    }
+
+    .node-actions {
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .node-row:hover .node-actions {
+        opacity: 1;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .btn-xs {
+        padding: 0.1rem 0.3rem;
+        font-size: 0.75rem;
+        line-height: 1;
+    }
+
+    .folder-children {
+        min-height: 5px;
+    }
+
+     .hover-bg:hover {
+        background-color: rgba(0, 0, 0, 0.03);
+    }
+
+    .btn-xs {
+        padding: 0.1rem 0.3rem;
+        font-size: 0.7rem;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    textarea:focus {
+        box-shadow: none !important;
+        border-color: #dee2e6 !important;
+    }
+
+
+    .rule-card {
+    border-left: 4px solid transparent !important;
+    transition: all 0.2s ease-in-out;
+}
+.rule-card:hover {
+    border-left: 4px solid var(--bs-primary) !important;
+    transform: translateX(5px);
+    background-color: #fcfdff;
+}
+
+/* Couleurs douces pour les badges */
+.bg-primary-soft {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* Style de l'éditeur de code */
+.bg-dark-code {
+    background-color: #1a1a1a;
+}
+.custom-editor {
+    background-color: #1e1e1e !important;
+    color: #9cdcfe !important; /* Couleur type VS Code */
+    line-height: 1.6;
+}
+
+/* Texte tronqué sur 2 lignes */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;  
+    overflow: hidden;
+}
+
+.text-muted-light {
+    color: #a0a0a0;
+}
+
+.transition-all {
+    transition: all 0.3s ease;
+}
+
+.fa-chevron-right {
+        transition: transform 0.2s ease;
+        font-size: 0.7rem;
+    }
+    .fa-rotate-90 {
+        transform: rotate(90deg);
+    }
+    .hover-bg:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+
+
+/* Affiche le sous-titre uniquement quand aria-expanded est false (menu fermé) */
+    [aria-expanded="false"] .show-on-collapse {
+        display: block !important;
+    }
+
+    /* Cache le badge de droite quand c'est fermé */
+    [aria-expanded="false"] .hide-on-collapse {
+        display: none !important;
+    }
+
+    /* Rotation de l'icône chevron */
+    [aria-expanded="false"] .collapse-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .collapse-icon {
+        transition: transform 0.3s ease;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }

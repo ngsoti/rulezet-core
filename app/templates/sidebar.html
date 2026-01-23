@@ -403,6 +403,7 @@
          }
 
          async function getNbUpdateImport() {
+            if ("{{ current_user.is_anonymous()}}") return
             const res = await fetch('/rule/import_get_session_running')
             const data = await res.json()
 
