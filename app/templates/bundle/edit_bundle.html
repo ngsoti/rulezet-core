@@ -7,7 +7,7 @@
             <template v-if="message_list">
                 <template v-for="message in message_list" v-key="message.id">
                     <div :id="`liveToast-${message.id}`" :class="`toast bg-${message.toast_class}`" role="alert"
-                        aria-live="assertive" data-bs-delay="5000" aria-atomic="true"
+                        aria-live="assertive" data-bs-delay="3000" aria-atomic="true"
                         style="--bs-toast-spacing: 0.5rem;">
                         <div class="d-flex">
                             <div class="toast-body">
@@ -61,11 +61,37 @@
                 <i class="fas fa-cog me-2"></i>Bundle Settings
             </a>
         </li>
+        <!-- <li class="nav-item flex-fill text-center">
+            <a class="nav-link fw-bold px-4" id="settings-tab" data-bs-toggle="tab" href="#tags-pane" role="tab"
+                aria-controls="tags-pane" aria-selected="false" style="color: var(--text-color);">
+                <i class="fas fa-cog me-2"></i>Add Tags
+            </a>
+        </li> -->
     </ul>
 
     <div class="tab-content" id="workspaceTabsContent">
+        <!-- Structure Pane -->
         <div class="tab-pane fade show active" id="structure-pane" role="tabpanel" aria-labelledby="structure-tab">
             <div class="card border-0 shadow-lg p-3 mb-4 " style="border-radius: 12px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <h4 class="fw-bold mb-4 text-dark"><i class="fas fa-info-circle text-primary me-2"></i>Bundle
+                            Structure
+                        </h4>
+                    </div>
+                    <!-- Save Button -->
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-success  shadow-sm fw-bold text-center" @click="saveStructure"
+                            title="Save the changes">
+                            <template v-if="save_loading"> <i class="fas fa-spinner fa-spin me-2"></i> Saving...
+                            </template>
+                            <template v-else>
+                                <i class="fas fa-save me-2"></i> Save Workspace
+                            </template>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="row g-3 px-2 mb-3" style="height: 48vh;">
                     <!-- Bundle Explorer -->
                     <div class="col-md-6 h-100">
@@ -189,6 +215,28 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- Rename file/folder-->
+                            <div class="modal fade" id="rename_modal" tabindex="-1" aria-hidden="true"
+                                style="z-index: 2000;">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+                                        <div class="modal-header border-0 pb-0">
+                                            <h5 class="modal-title fw-bold text-dark">Rename Item</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body py-4 text-center">
+                                            <input type="text" class="form-control rounded-pill shadow-sm"
+                                                v-model="renameText" @keyup.enter="confirmRename">
+                                        </div>
+                                        <div class="modal-footer border-0 pt-0 justify-content-center pb-4">
+                                            <button type="button" class="btn btn-light rounded-pill px-4"
+                                                data-bs-dismiss="modal">Cancel</button>
+                                            <button class="btn btn-primary rounded-pill px-4 shadow"
+                                                @click="confirmRename">Rename</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div class="card-body p-2 overflow-auto bg-light">
                                 <draggable v-model="treeData" group="nested" :item-key="item => item.id" tag="ul"
@@ -214,33 +262,55 @@
                                 <div class="d-flex gap-2">
                                     <input type="text" v-model="searchQuery"
                                         class="form-control form-control-sm shadow-sm" style="width: 150px;"
-                                        placeholder="Search..." @input="fetchRules(1)">
-                                    <select v-model="ruleType" class="form-select form-select-sm shadow-sm"
-                                        style="width: 100px;" @change="fetchRules(1)">
-                                        <option value="">Formats</option>
-                                        <option value="yara">YARA</option>
-                                        <option value="sigma">SIGMA</option>
+                                        @keyup.enter="onEnterKey" placeholder="Search..." @input="onSearchInput">
+
+
+                                    <select class="form-select form-select-sm shadow-sm" v-model="ruleType"
+                                        @change="fetchRules(1)" style="width: 150px;">
+                                        <option value="">All Formats ([[ number_rules_formats ]])</option>
+                                        <option v-for="format in rules_formats" :key="format" :value="format.name">[[
+                                            format.name
+                                            ]]</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="card-body p-0 overflow-auto">
-                                <div v-for="rule in rules_list" :key="rule.id"
-                                    class="p-2 border-bottom d-flex justify-content-between align-items-center hover-bg"
-                                    @click="setPreview(rule)">
-                                    <div class="text-truncate" style="max-width: 80%; cursor: pointer;">
-                                        <span class="fw-bold small text-dark">[[ rule.title ]]</span>
-                                        <span class="badge bg-light text-muted border ms-2" style="font-size: 9px;">[[
-                                            rule.format ]]</span>
+                                <template v-if="is_loading">
+                                    <div v-for="rule in (rules_list.rules || rules_list)" :key="rule.id"
+                                        class="p-2 border-bottom d-flex justify-content-between align-items-center hover-bg"
+                                        @click="setPreview(rule)">
+                                        <div class="text-truncate" style="max-width: 80%; cursor: pointer;">
+                                            <span class="fw-bold small text-dark">[[ rule.title ]]</span>
+                                            <span class="badge bg-light text-muted border ms-2" style="font-size: 9px;">
+                                                [[ rule.format ]]
+                                            </span>
+                                        </div>
+
+                                        <div @click.stop="triggerDisabledMessage">
+                                            <button class="btn btn-xs btn-primary rounded-circle shadow-sm"
+                                                title="Add this rule to the bundle" @click.stop="addRuleToBundle(rule)"
+                                                :disabled="!selectedNode || selectedNode.type !== 'folder'">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <button class="btn btn-xs btn-primary rounded-circle shadow-sm"
-                                        @click.stop="addRuleToBundle(rule)"
-                                        :disabled="!selectedNode || selectedNode.type !== 'folder'">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                                <div v-if="rules_list.length === 0" class="p-4 text-center text-muted small">No rules
-                                    found.</div>
+                                    <div v-if="!selectedNode || selectedNode.type !== 'folder'">
+                                        <div class="p-4 text-center text-muted small " style="color: black">
+                                            Select a folder
+                                            to
+                                            add rules.
+                                        </div>
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div class="p-4 text-center text-muted small">
+                                        <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                                        <p>Loading rules...</p>
+                                    </div>
+                                </template>
                             </div>
+                            <div v-if="rules_list.length === 0" class="p-4 text-center text-muted small">No rules
+                                found.</div>
                             <div
                                 class="card-footer py-1 d-flex justify-content-between align-items-center small font-monospace">
                                 <button class="btn btn-link btn-xs text-decoration-none"
@@ -251,74 +321,66 @@
                                     :disabled="current_page >= total_pages">Next</button>
                             </div>
                         </div>
+
                     </div>
                 </div>
-                <!-- Preview & Editor -->
-                <div class="row px-2 mt-3" style="height: 35vh;">
-                    <div class="col-12 h-100">
-                        <div class="card shadow-sm  h-100 overflow-hidden bg-dark">
-                            <div v-if="!selectedNode && !previewContent"
-                                class="m-auto text-center opacity-50 text-light">
-                                <i class="fas fa-terminal fa-3x mb-2 text-secondary"></i>
-                                <h5 class="text-white">Preview & Editor</h5>
-                                <p class="text-white">Select a file from the explorer or a rule from the database.</p>
-                            </div>
-                            <div v-else class="d-flex flex-column h-100">
-                                <div class="card-header text-white  d-flex justify-content-between align-items-center ">
-                                    <span class="small font-monospace">
-                                        <i v-if="selectedNode"
-                                            :class="selectedNode.type === 'folder' ? 'fas fa-folder text-warning' : 'fas fa-file-code text-info'"
-                                            class="me-2"></i>
-                                        <i v-else class="fas fa-eye text-success me-2"></i>
-                                        [[ selectedNode ? truncateText(selectedNode.name, 90) : 'Preview: ' +
-                                        previewName.substring(0, 80) ]]
-                                    </span>
-                                    <div class="d-flex gap-2 align-items-center">
-                                        <span v-if="!selectedNode || isRule(selectedNode)"
-                                            class="badge bg-secondary">Read-Only</span>
-                                        <span v-else class="badge bg-primary text-uppercase"
-                                            style="font-size: 9px;">Editable</span>
-                                        <button class="btn btn-xs btn-outline-light " @click="clearDisplay"><i
-                                                class="fas fa-times"></i></button>
-                                    </div>
+            </div>
+            <!-- Preview & Editor -->
+            <div class="row px-2 mt-3" style="height: 35vh;">
+                <div class="col-12 h-100">
+                    <div class="card shadow-sm  h-100 overflow-hidden bg-dark">
+                        <div v-if="!selectedNode && !previewContent" class="m-auto text-center opacity-50 text-light">
+                            <i class="fas fa-terminal fa-3x mb-2 text-secondary"></i>
+                            <h5 class="text-white">Preview & Editor</h5>
+                            <p class="text-white">Select a file from the explorer or a rule from the database.</p>
+                        </div>
+                        <div v-else class="d-flex flex-column h-100">
+                            <div class="card-header text-white  d-flex justify-content-between align-items-center ">
+                                <span class="small font-monospace">
+                                    <i v-if="selectedNode"
+                                        :class="selectedNode.type === 'folder' ? 'fas fa-folder text-warning' : 'fas fa-file-code text-info'"
+                                        class="me-2"></i>
+                                    <i v-else class="fas fa-eye text-success me-2"></i>
+                                    [[ selectedNode ? truncateText(selectedNode.name, 90) : 'Preview: ' +
+                                    previewName.substring(0, 80) ]]
+                                </span>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span v-if="!selectedNode || isRule(selectedNode)"
+                                        class="badge bg-secondary">Read-Only</span>
+                                    <span v-else class="badge bg-primary text-uppercase"
+                                        style="font-size: 9px;">Editable</span>
+                                    <button class="btn btn-xs btn-outline-light " @click="clearDisplay"><i
+                                            class="fas fa-times"></i></button>
                                 </div>
-                                <div class="flex-grow-1 overflow-hidden">
-                                    <textarea v-if="selectedNode && selectedNode.type === 'file'"
-                                        v-model="selectedNode.content" :readonly="isRule(selectedNode)" wrap="off"
-                                        class="form-control  h-100 font-monospace p-3 bg-dark text-success custom-textarea-scroll"
-                                        style="resize:none; font-size: 13px; line-height: 1.6; overflow: auto; white-space: pre;"></textarea>
+                            </div>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <textarea v-if="selectedNode && selectedNode.type === 'file'"
+                                    v-model="selectedNode.content" :readonly="isRule(selectedNode)" wrap="off"
+                                    class="form-control  h-100 font-monospace p-3 bg-dark text-success custom-textarea-scroll"
+                                    style="resize:none; font-size: 13px; line-height: 1.6; overflow: auto; white-space: pre;"></textarea>
 
-                                    <textarea v-else-if="previewContent" :value="previewContent" readonly wrap="off"
-                                        class="form-control  h-100 font-monospace p-3 bg-dark text-success custom-textarea-scroll"
-                                        style="resize:none; font-size: 13px; overflow: auto; white-space: pre;"></textarea>
+                                <textarea v-else-if="previewContent" :value="previewContent" readonly wrap="off"
+                                    class="form-control  h-100 font-monospace p-3 bg-dark text-success custom-textarea-scroll"
+                                    style="resize:none; font-size: 13px; overflow: auto; white-space: pre;"></textarea>
 
-                                    <div v-else
-                                        class="p-5 text-center text-muted h-100 d-flex flex-column justify-content-center">
-                                        <i class="fas fa-folder-open fa-2x mb-2 opacity-25 text-light"></i>
-                                        <p class="text-light opacity-50">Folder <strong>[[
-                                                truncateText(selectedNode.name, 50) ]]</strong>
-                                            is selected.<br><small>Click a file to edit or add a rule here.</small></p>
-                                    </div>
+                                <div v-else
+                                    class="p-5 text-center text-muted h-100 d-flex flex-column justify-content-center">
+                                    <i class="fas fa-folder-open fa-2x mb-2 opacity-25 text-light"></i>
+                                    <p class="text-light opacity-50">Folder <strong>[[
+                                            truncateText(selectedNode.name, 50) ]]</strong>
+                                        is selected.<br><small>Click a file to edit or add a rule here.</small></p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Save Button -->
-                <div class="text-end mt-3">
-                    <button class="btn btn-success px-4 shadow-sm fw-bold text-center" @click="saveStructure">
-                        <template v-if="save_loading"> <i class="fas fa-spinner fa-spin me-2"></i> Saving... </template>
-                        <template v-else>
-                            <i class="fas fa-save me-2"></i> Save Workspace
-                        </template>
-                    </button>
-                </div>
             </div>
-        </div>
 
+
+        </div>
+        <!-- Settings Pane -->
         <div class="tab-pane fade" id="settings-pane" role="tabpanel" aria-labelledby="settings-tab">
-            <div class="card border-0 shadow-lg p-5  mx-auto" style="border-radius: 12px; max-width: 800px;">
+            <div class="card border-0 shadow-lg p-3 mb-4 " style="border-radius: 12px;">
                 <h4 class="fw-bold mb-4 text-dark"><i class="fas fa-info-circle text-primary me-2"></i>General Bundle
                     Details</h4>
                 <form method="POST" action="">
@@ -359,14 +421,24 @@
                 </form>
             </div>
         </div>
+        <!-- Add Tags Pane -->
+        <!-- <div class="tab-pane fade" id="tags-pane" role="tabpanel" aria-labelledby="tags-tab">
+            <div class="card border-0 shadow-lg p-3 mb-4 " style="border-radius: 12px;">
+                <h4 class="fw-bold mb-4 text-dark"><i class="fas fa-info-circle text-primary me-2"></i>Manage Tags</h4>
+
+                <p class="text-muted small mb-0">This feature is under construction. Please check back later.</p>
+            </div>
+        </div> -->
     </div>
 
+</div>
+<!-- 
     <div class="d-flex justify-content-center mt-5 mb-5">
         <a :href="'/bundle/detail/' + bundleId"
             class="btn btn-secondary btn-sm d-inline-flex align-items-center shadow-sm px-4 py-2 rounded-pill">
             <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
         </a>
-    </div>
+    </div> -->
 
 </div>
 <!-- Template to fetch folder and file from structure-->
@@ -385,8 +457,8 @@
             <span class="flex-grow-1 small fw-bold text-truncate">[[ node.name ]]</span>
 
             <div class="node-actions btn-group">
-                <button v-if="!isRule(node)" class="btn btn-link btn-xs p-0 px-1" title="Rename"
-                    @click.stop="$emit('rename', node)">
+                <button v-if="!isRule(node)" class="btn btn-link btn-xs p-0 px-1" title="Rename" data-bs-toggle="modal"
+                    data-bs-target="#rename_modal" @click.stop="$emit('rename', node)">
                     <i class="fas fa-edit" :class="selectedId === node.id ? 'text-dark' : 'text-secondary'"></i>
                 </button>
 
@@ -458,16 +530,19 @@
             * #################
             * */
 
+
             onMounted(async () => {
                 const el = document.getElementById('bundle-info');
                 if (el) {
                     bundleId.value = el.dataset.bundleId;
                     await loadBundleData();
                 }
+                fetchFormat();
                 fetchRules(1);
             });
 
             const csrf_token = "{{ csrf_token() }}"
+            const is_loading = ref(false);
             /**
              * #################
              * #  RULES LIST   #
@@ -485,14 +560,27 @@
 
 
             const fetchRules = async (page) => {
+                is_loading.value = false;
                 const params = new URLSearchParams({ page, search: searchQuery.value, rule_type: ruleType.value, bundle_id: bundleId.value });
                 const res = await fetch('/rule/get_rules_page_filter_bundle?' + params.toString());
                 const data = await res.json();
                 rules_list.value = data.rules || data.rule || [];
                 total_pages.value = data.total_pages || 1;
                 current_page.value = page;
-
+                is_loading.value = true;
             };
+
+
+            const rules_formats = ref([]);
+            const number_rules_formats = ref(0);
+            const fetchFormat = async () => {
+                const res = await fetch('/rule/get_rules_formats');
+                const data = await res.json();
+                if (res.status === 200) {
+                    rules_formats.value = data.formats;
+                    number_rules_formats.value = data.length | 0;
+                }
+            }
 
             /**
              * #######################
@@ -562,11 +650,26 @@
 
             // rename a node
 
-            const renameNode = (node) => {
-                const newName = prompt("Rename item:", node.name);
-                if (newName && newName.trim() !== "") node.name = newName.trim();
+            const renameText = ref("");
+            const nodeToRename = ref(null);
 
-                saveStructure();
+            const renameNode = (node) => {
+                nodeToRename.value = node;
+                renameText.value = node.name;
+            };
+
+            const confirmRename = () => {
+                if (nodeToRename.value && renameText.value.trim() !== "") {
+                    nodeToRename.value.name = renameText.value.trim();
+
+                    const modalElement = document.getElementById('rename_modal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                    if (modalInstance) modalInstance.hide();
+
+                    saveStructure();
+                    nodeToRename.value = null;
+                    renameText.value = "";
+                }
             };
 
             // add a folder (from a folder and from the root)
@@ -755,12 +858,35 @@
                 if (text.length <= limit) return text;
                 return text.substring(0, limit);
             };
+            async function onSearchInput() {
+                if (searchQuery.value.trim() === "") {
+                    await fetchRules(1)
+                }
+            }
+
+            async function onEnterKey() {
+                // if the key pressed is enter launch the request
+                if (event.key === 'Enter') {
+                    await fetchRules(1)
+                }
+
+            }
+
+            const triggerDisabledMessage = () => {
+                if (!selectedNode.value || selectedNode.value.type !== 'folder') {
+                    create_message(
+                        "Target folder required: Select a folder in the explorer before adding a rule.",
+                        "warning-subtle"
+                    );
+                }
+            };
 
             return {
                 treeData, selectedNode, previewContent, previewName, rules_list, searchQuery, ruleType, current_page, total_pages, message_list,
                 fetchRules, addRuleToBundle, importFile, addFolder, addFile, selectNode, setPreview, clearDisplay, saveStructure, isRule, renameNode, addFolderText,
                 bundleId, truncateText, prepareAddFolder, save_loading, prepareDelete, confirmDelete, nodeToDelete, prepareDelete, confirmDelete,
-                prepareAddTarget, addFileText, addFileFormat
+                prepareAddTarget, addFileText, addFileFormat, triggerDisabledMessage, renameText, confirmRename, nodeToRename, onEnterKey, onSearchInput, is_loading,
+                rules_formats, number_rules_formats, fetchFormat
             };
         }
     }).mount('#main-vue-app');

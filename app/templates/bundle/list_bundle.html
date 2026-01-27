@@ -1,211 +1,236 @@
 {% extends 'base.html' %}
+
 {% block content %}
-<div class="container my-5" id="main-container">
-    <!-- Header -->
-    <div class="text-center mb-4 position-relative">
-
-        <h2 class="fw-bold text-primary d-inline-flex align-items-center gap-2">
-            All Bundles
-            <!-- Help Button -->
-            <button class="btn " type="button" data-bs-toggle="collapse" data-bs-target="#bundleHelpCollapse"
-                aria-expanded="false" aria-controls="bundleHelpCollapse" title="What is a Bundle?">
-                <i class="fas fa-question-circle"></i>
-            </button>
+<div class="container mt-4" id="main-container" v-cloak>
+    <div class="mb-4 border-bottom pb-3 text-center">
+        <h2 class="fw-bold text-primary">
+            Bundles Explorer
+            <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
         </h2>
-        <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+        <p class="text-muted mt-2">
+            Browse and manage collections of rules. Bundles help you organize detection strategies and share them
+            effectively.
+        </p>
+    </div>
 
-        <!-- Help Collapse -->
-        <div class="collapse mt-3 text-start mx-auto" id="bundleHelpCollapse" style="max-width: 600px;">
-            <div class="card card-body bg-light border-0 shadow-sm">
-                <h5 class="mb-3">
-                    <i class="fas fa-box-open text-primary me-2"></i> What is a Rule Bundle?
-                </h5>
-                <p>
-                    A <strong>bundle</strong> is a custom collection of rules grouped together. It allows you to
-                    organize, share, and manage rules based on a specific topic, use case, or detection strategy.
-                </p>
-                <p>
-                    You can create your own bundles or explore those shared by other users.
-                </p>
-                <p class="mb-0">
-                    Click on a bundle to view its details, edit its content, or add it to your favorites.
-                </p>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text border-end-0 bg-white">
+                            <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                        </span>
+                        <input type="text" v-model="searchQuery" class="form-control rounded-end-pill border-start-0"
+                            @keyup.enter="onEnterKey" placeholder="Search..." @input="onSearchInput">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    {% if current_user.is_authenticated %}
+                    <div class="form-check form-switch ms-md-2">
+                        <input class="form-check-input" type="checkbox" id="ownBundlesToggle" v-model="showOwnBundles"
+                            @change="fetchAllBundles(1)">
+                        <label class="form-check-label small fw-bold text-muted" for="ownBundlesToggle">
+                            MY BUNDLES ONLY
+                        </label>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
-
-        <p class="text-muted mt-4">Browse and manage all available bundles below.</p>
-
     </div>
 
-
-
-    <div class="mb-4 d-flex flex-column flex-md-row align-items-md-center gap-3">
-        <!-- Search input -->
-        <div class="input-group flex-grow-1">
-            <span class="input-group-text" style="background-color: var(--bg-color); color: var(--text-color)"><i
-                    class="fa-solid fa-magnifying-glass"></i></span>
-            <input type="text" class="form-control" placeholder="Search bundles..." v-model="searchQuery"
-                @input="fetchAllBundles(1)">
+    <div v-if="bundle_list.length > 0" class="mb-4 d-flex align-items-center text-muted small fw-bold">
+        <div class="opacity-10 rounded-circle p-2 me-2 d-flex align-items-center justify-content-center bg-primary"
+            style="width: 30px; height: 30px;">
+            <i class="fas fa-boxes-stacked text-white"></i>
         </div>
-        {% if current_user.is_authenticated %}
-        <!-- Own bundles toggle -->
-        <div class="form-check form-switch ms-md-2">
-            <input class="form-check-input" type="checkbox" id="ownBundlesToggle" v-model="showOwnBundles"
-                @change="fetchAllBundles(1)">
-            <label class="form-check-label fw-semibold" for="ownBundlesToggle">
-                Own bundles
-            </label>
-        </div>
-        {% endif %}
+        [[ bundle_total ]] BUNDLES FOUND
     </div>
-
-
-
-    <!-- Bundles list -->
 
     <div v-if="bundle_list.length === 0" class="text-center text-muted py-5">
-        <i class="fa-solid fa-circle-info me-2"></i> No bundles found.
+        <i class="fa-solid fa-circle-info fa-2x mb-2"></i>
+        <p>No bundles matching your criteria found.</p>
     </div>
 
-    <div v-for="(bundle, index) in bundle_list" :key="bundle.id">
-        <template v-if="bundle.access || parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
-            <div class="card-body">
-                <div class="list-group">
+    <div class="card h-100 shadow-sm transition-hover border-0 card-security-premium mb-4"
+        v-for="(bundle, index) in bundle_list" :key="bundle.id" style="cursor: pointer;"
+        @click="goToBundleDetail(bundle.id)">
+        <div class="premium-accent-line"></div>
+        <div class="card-watermark-list">
+            <i class="fa-solid fa-box-archive"></i>
+        </div>
 
-                    <div class="list-group-item list-group-item-action mb-2 rounded shadow-sm d-flex justify-content-between align-items-center bundle-card"
-                        @click="goToBundleDetail(bundle.id)" style="cursor: pointer;">
+        <div class="position-absolute top-0 end-0 mt-3 me-3 d-flex gap-2 z-index-2">
+            <span v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin"
+                class="badge bg-success shadow-sm pt-1">
+                <i class="fa-solid fa-crown me-1"></i> OWNER
+            </span>
+            <span :class="bundle.access ? 'bg-primary' : 'bg-dark'" class="badge rounded-pill pt-1 shadow-sm px-3">
+                <i :class="bundle.access ? 'fa-globe' : 'fa-lock'" class="fa-solid me-1"></i>
+                [[ bundle.access ? 'PUBLIC' : 'PRIVATE' ]]
+            </span>
+        </div>
 
-
-                        <div class="d-flex flex-column">
-                            <div class="d-flex align-items-center">
-                                <strong>
-                                    <i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>[[ bundle.name ]]
-                                </strong>
-                                <div v-if="!bundle.access" class="badge bg-danger ms-2" title="Private Bundle">
-                                    <i class="fa-solid fa-lock fa-fw"></i> Private
-                                </div>
-                                <div v-else class="badge bg-success ms-2" title="Public Bundle">
-                                    <i class="fa-solid fa-globe fa-fw"></i> Public
-                                </div>
-                            </div>
-
-
-                            <div class="small text-muted mt-1 d-flex align-items-center flex-wrap">
-                                <span class="me-3 d-flex align-items-center">
-                                    <i class="fas fa-user me-1"></i> [[ bundle.author ]]
-                                </span>
-                                <span class="d-flex align-items-center">
-                                    <i class="fas fa-calendar-alt me-1"></i> [[ bundle.created_at ]]
-                                </span>
-                            </div>
-
-                            <div class="mt-2 text-dark d-flex align-items-start" style="font-size: 1rem;">
-                                <i class="fas fa-align-left me-2 mt-1 text-secondary"></i>
-                                <span class="fw-medium">[[ bundle.description ]]</span>
-                            </div>
-                        </div>
-
-
-                        <div class="d-flex align-items-center ms-2">
-                            {% if current_user.is_authenticated %}
-                            <template v-if="parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
-                                <a :href="`/bundle/edit/${bundle.id}`" class="btn btn-secondary btn-sm me-2"
-                                    title="Edit Bundle" @click.stop>
-                                    <i class="fas fa-pen"></i>
-                                </a>
-                                <button type="button" class="btn btn-danger btn-sm me-2" title="Delete the bundle"
-                                    data-bs-toggle="modal" :data-bs-target="'#delete_bundle_modal_'+bundle.id"
-                                    @click.stop>
-                                    <i class="fa-solid fa-trash fa-fw"></i>
-                                </button>
-                            </template>
-                            {% endif %}
-                        </div>
-                    </div>
-
+        <div class="card-body d-flex flex-column p-4 z-index-1">
+            <div class="mb-3 pe-5">
+                <h5 class="fw-bold mb-1">
+                    <a @click="goToBundleDetail(bundle.id)"
+                        class="fw-bold h5 border-start border-primary border-4 ps-3 custom-rule-link text-decoration-none d-block"
+                        style="cursor: pointer;">
+                        [[ bundle.name ]]
+                    </a>
+                </h5>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                    <div class="avatar-circle-xs">[[ bundle.author[0].toUpperCase() ]]</div>
+                    <small class="text-muted fw-medium">[[ bundle.author ]]</small>
+                    <span class="text-muted opacity-50">|</span>
+                    <small class="text-muted"><i class="far fa-calendar-alt me-1"></i>[[ bundle.created_at ]]</small>
                 </div>
             </div>
-        </template>
-        <div class="modal fade" :id="'delete_bundle_modal_'+bundle.id" tabindex="-1"
-            aria-labelledby="delete_bundle_modal" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h1 class="modal-title fs-5 text-dark" id="delete_rule_modal">
-                            Delete [[ bundle.name ]] ?
-                        </h1>
-                        <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button class="btn btn-danger" @click="deleteBundle(bundle.id , index)">
-                            <i class="fa-solid fa-trash"></i> Confirm
+
+            <div class="mb-3">
+                <p class="text-muted small lh-base mb-2 text-truncate-custom">
+                    <i class="fas fa-quote-left me-2 opacity-50 text-primary"></i>
+                    [[ bundle.description || 'No description provided.' ]]
+                </p>
+            </div>
+
+            <div class="row g-2 mb-3 pt-2 small text-muted">
+                <div class="col-md-6">
+                    <div class="mb-1 d-flex align-items-center">
+                        <i class="fas fa-fingerprint me-2"></i>
+                        <code class="text-primary me-2">[[ bundle.uuid ]]</code>
+                        <button @click.stop="copyToClipboard(bundle.uuid, $event)"
+                            class="btn btn-link p-0 text-decoration-none">
+                            <i class="fas fa-copy small"></i>
                         </button>
                     </div>
+                    <div class="mb-1"><i class="fas fa-list-check me-2"></i><strong>Rules:</strong>
+                        <span class="badge bg-success shadow-sm pt-1 m-2">
+                            [[bundle.number_of_rules ]] items
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="mb-1"><i class="fas fa-eye me-2"></i><strong>Views:</strong> [[ bundle.view_count ]]
+                    </div>
+                    <div class="mb-1"><i class="fas fa-arrow-up-from-bracket me-2"></i><strong>Downloads:</strong> [[
+                        bundle.download_count ]]</div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-success fw-bold small">
+                        <i class="fas fa-thumbs-up me-1"></i> [[ bundle.vote_up ]]
+                    </span>
+                    <span class="text-danger fw-bold small">
+                        <i class="fas fa-thumbs-down me-1"></i> [[ bundle.vote_down ]]
+                    </span>
+                </div>
+
+                <div class="d-flex gap-2">
+
+
+                    {% if current_user.is_authenticated %}
+                    <template v-if="parseInt('{{current_user.id}}') == bundle.user_id || is_admin">
+                        <div class="dropup" @click.stop>
+                            <button
+                                class="btn btn-sm rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center home-btn"
+                                style="width: 32px; height: 32px; border: 1px solid #eee;" data-bs-toggle="dropdown"
+                                @click.stop>
+                                <i class="fas fa-ellipsis-v text-muted"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mb-2 p-2"
+                                style="border-radius: 12px;">
+                                <li>
+                                    <a class="dropdown-item rounded-2" :href="`/bundle/edit/${bundle.id}`" @click.stop>
+                                        <i class="fas fa-pen me-2 text-primary"></i> Edit Bundle
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <button class="dropdown-item rounded-2 text-danger" data-bs-toggle="modal"
+                                        :data-bs-target="'#delete_bundle_modal_'+bundle.id" @click.stop>
+                                        <i class="fa-solid fa-trash me-2"></i> Delete Bundle
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </template>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
+        <div class="modal fade" :id="'delete_bundle_modal_'+bundle.id" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" @click.stop>
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">Confirm Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body py-4 text-center">
+                        <div class="text-danger mb-3"><i class="fas fa-trash-can fa-3x"></i></div>
+                        <p class="mb-0">Delete bundle <strong>[[ bundle.name ]]</strong>?<br>
+                            <small class="text-muted">This will not delete the individual rules within it.</small>
+                        </p>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 justify-content-center">
+                        <button type="button" class="btn btn-light rounded-pill px-4"
+                            data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-danger rounded-pill px-4" @click="deleteBundle(bundle.id, index)">Confirm
+                            Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-
-    <!-- Pagination -->
     <div class="row mt-4" v-if="bundle_list.length > 0">
         <div class="col text-center">
             <nav>
                 <ul class="pagination justify-content-center">
                     <li class="page-item" :class="{ disabled: bundle_current_page === 1 }">
-                        <button class="page-link" @click="fetchAllBundles(bundle_current_page - 1)">
+                        <button class="page-link shadow-none" @click="fetchAllBundles(bundle_current_page - 1)">
                             <i class="fa-solid fa-angle-left"></i>
                         </button>
                     </li>
-                    <li class="page-item" v-for="page in bundle_total_page"
-                        :class="{ active: page === bundle_current_page }" :key="page">
-                        <button class="page-link" @click="fetchAllBundles(page)">[[ page ]]</button>
+                    <li class="page-item" v-for="page in visiblePages" :key="page"
+                        :class="{ active: page === bundle_current_page, disabled: page === '...' }">
+                        <button class="page-link shadow-none" @click="page !== '...' && fetchAllBundles(page)">[[ page
+                            ]]</button>
                     </li>
                     <li class="page-item" :class="{ disabled: bundle_current_page === bundle_total_page }">
-                        <button class="page-link" @click="fetchAllBundles(bundle_current_page + 1)">
+                        <button class="page-link shadow-none" @click="fetchAllBundles(bundle_current_page + 1)">
                             <i class="fa-solid fa-angle-right"></i>
                         </button>
                     </li>
                 </ul>
             </nav>
         </div>
-        <!-- {% set current_page = 'bundle_current_page' %}
-        {% set total_pages = 'bundle_total_page' %}
-        {% set visible_pages = 'visiblePages' %}
-        {% set fetch_function = 'fetchAllBundles' %}
-
-        {% include "components/pagination.html" %} -->
     </div>
 </div>
 {% endblock %}
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, onMounted, computed } = Vue;
-    import { message_list, display_toast } from '/static/js/toaster.js';
+    const { createApp, ref, computed, onMounted } = Vue;
+    import { message_list, create_message, display_toast } from '/static/js/toaster.js';
 
     createApp({
         delimiters: ['[[', ']]'],
         setup() {
-            /**
-             *          ########################
-             *          #    filter bundles    #
-             *          ########################
-             */
             const searchQuery = ref('');
             const showOwnBundles = ref(false);
-
-            /**
-             *          ########################
-             *          #   Fetch all bundles  #
-             *          ########################
-             */
-            const bundle_list = ref([])
-            const bundle_current_page = ref(1)
-            const bundle_total_page = ref(0)
-            const bundle_total = ref(1)
+            const bundle_list = ref([]);
+            const bundle_current_page = ref(1);
+            const bundle_total_page = ref(0);
+            const bundle_total = ref(0);
+            const is_admin = ref(false);
 
             async function fetchAllBundles(page) {
                 const params = new URLSearchParams({
@@ -223,90 +248,88 @@
                 }
             }
 
-            // First call 
-            fetchAllBundles(1);
-
-            /**
-             *          ########################
-             *          #  action on  bundles  #
-             *          ########################
-             */
             async function deleteBundle(id, index) {
-                const params = new URLSearchParams({ id })
-                const res = await fetch('/bundle/delete?' + params.toString())
+                const params = new URLSearchParams({ id });
+                const res = await fetch('/bundle/delete?' + params.toString());
                 if (res.status === 200) {
                     bundle_list.value.splice(index, 1);
                     bundle_total.value -= 1;
-                    var myModalEl = document.getElementById('delete_bundle_modal_' + id);
-                    var modal = bootstrap.Modal.getInstance(myModalEl);
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('delete_bundle_modal_' + id));
                     modal.hide();
                 }
-                display_toast(res)
+                display_toast(res);
             }
 
-            /**
-             *          ########################
-             *          #   use admin right    #
-             *          ########################
-             * 
-             *  This is very important for the right to make an action or not on a bundle
-             */
-            const is_admin = ref(false)
             async function fetchCurrentUser() {
-                const res = await fetch('/rule/get_current_user')
-                if (res) {
-                    const data = await res.json()
-                    is_admin.value = data.user
+                const res = await fetch('/rule/get_current_user');
+                if (res.ok) {
+                    const data = await res.json();
+                    is_admin.value = data.user;
                 }
             }
-            fetchCurrentUser()
+            function copyToClipboard(text, event) {
 
-            /**
-             *          ########################
-             *          #   go to bundle page  #
-             *          ########################
-             */
-            function goToBundleDetail(bundleId) {
-                window.location.href = `/bundle/detail/${bundleId}`;
+                const btn = event.currentTarget;
+
+                navigator.clipboard.writeText(text).then(() => {
+
+                    const icon = btn.querySelector('i');
+
+                    const originalClass = icon.className;
+                    icon.className = 'fas fa-check text-success';
+
+                    setTimeout(() => {
+                        icon.className = originalClass;
+                    }, 2000);
+                })
+            }
+
+            function goToBundleDetail(id) {
+                window.location.href = `/bundle/detail/${id}`;
             }
 
             const visiblePages = computed(() => {
-                const pages = []
-                const total = bundle_total_page.value
-                const current = bundle_current_page.value
+                const pages = [];
+                const total = bundle_total_page.value;
+                const current = bundle_current_page.value;
                 if (total <= 7) {
-                    for (let i = 1; i <= total; i++) pages.push(i)
+                    for (let i = 1; i <= total; i++) pages.push(i);
                 } else {
                     if (current <= 4) {
-                        pages.push(1, 2, 3, 4, 5, '...', total)
+                        pages.push(1, 2, 3, 4, 5, '...', total);
                     } else if (current >= total - 3) {
-                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
                     } else {
-                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total);
                     }
                 }
-                return pages
-            })
+                return pages;
+            });
+            async function onSearchInput() {
+                if (searchQuery.value.trim() === "") {
+                    await fetchAllBundles(1)
+                }
+            }
+
+            async function onEnterKey() {
+                // if the key pressed is enter launch the request
+                if (event.key === 'Enter') {
+                    await fetchAllBundles(1)
+                }
+
+            }
+
+            onMounted(() => {
+                fetchAllBundles(1);
+                fetchCurrentUser();
+            });
 
             return {
-                // filter
-                searchQuery,
-                // fetch all bundles
-                bundle_list,
-                bundle_current_page,
-                bundle_total_page,
-                bundle_total,
-
-                // action
-                message_list,
-                deleteBundle,
-                fetchAllBundles,
-                is_admin,
-
-                // redirect
-                goToBundleDetail,
-                visiblePages,
-                showOwnBundles
+                searchQuery, showOwnBundles, bundle_list,
+                bundle_current_page, bundle_total_page, bundle_total,
+                is_admin, fetchAllBundles, deleteBundle,
+                goToBundleDetail, copyToClipboard, visiblePages,
+                message_list, onSearchInput, onEnterKey
             }
         }
     }).mount('#main-container');

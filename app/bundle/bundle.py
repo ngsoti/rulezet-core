@@ -67,11 +67,10 @@ def get_all_bundles() :
         own = False 
 
     bundles_list = BundleModel.get_all_bundles_page(page, search, own)
-    total_bundles = BundleModel.get_total_bundles_count()
     if bundles_list:
         return {"bundle_list_": [r.to_json() for r in bundles_list],
                 "total_pages": bundles_list.pages, 
-                "total_bundles": total_bundles} , 200
+                "total_bundles": bundles_list.total} , 200
 
     return {"message": "No Rule"} , 200
 
@@ -507,6 +506,88 @@ def download_bundle():
         mimetype='application/zip'
     ), 200
 
+
+
+EXTENSION_MAP = {
+    'yara': '.yar',
+    'sigma': '.yaml',
+    'suricata': '.rules',
+    'zeek': '.zeek',
+    'wazuh': '.xml',
+    'nse': '.nse',
+    'nova': '.yaml',
+    'crs': '.conf',
+    'no format': '.txt'
+}
+
+def add_node_to_zip(zip_file, node, current_path=""):
+    """
+    Independent recursive function to build the ZIP directory tree.
+    """
+    if node.rule_id and node.rule:
+        rule_format = node.rule.format.lower() if node.rule.format else 'no format'
+        extension = EXTENSION_MAP.get(rule_format, '.txt')
+        
+        clean_title = node.rule.title.replace("/", "_").replace("\\", "_")
+        filename = f"{clean_title}{extension}"
+        content = node.rule.to_string
+    else:
+        filename = node.name
+        content = node.custom_content or ""
+
+    entry_path = f"{current_path}/{filename}".strip("/")
+
+    if node.node_type == 'folder':
+        if not node.children:
+            zip_file.writestr(f"{entry_path}/", "")
+        
+        for child in node.children:
+            add_node_to_zip(zip_file, child, entry_path)
+    else:
+        zip_file.writestr(entry_path, content)
+
+
+@bundle_blueprint.route('/download_structure', methods=['GET'])
+def download_bundle_structure():     
+    bundle_id = request.args.get("bundle_id", type=int)
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+
+    if not bundle:
+        return {
+            "success": False,
+            "message": "Bundle not found",
+            "toast_class": "danger"
+        }, 400
+
+    # Permission check
+    if not bundle.access and (not current_user.is_authenticated or (current_user.id != bundle.user_id and not current_user.is_admin())):
+        return {
+            "success": False,
+            "message": "Unauthorized access",
+            "toast_class": "danger"
+        }, 401
+
+    zip_buffer = io.BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        bundle_metadata = bundle.to_json()
+        zip_file.writestr("bundle_metadata.json", json.dumps(bundle_metadata, indent=4))
+
+        root_nodes = BundleModel.get_only_root_nodes(bundle_id)
+        for root in root_nodes:
+            add_node_to_zip(zip_file, root)
+
+    zip_buffer.seek(0)
+    
+    safe_bundle_name = "".join([c for c in bundle.name if c.isalnum() or c in (' ', '_')]).strip().replace(' ', '_')
+    
+    return send_file(
+        zip_buffer,
+        as_attachment=True,
+        download_name=f"{safe_bundle_name}_structure.zip",
+        mimetype='application/zip'
+    )
+
 ################################
 #   Rule part of the bundle    #
 ################################
@@ -565,7 +646,7 @@ def update_bundle_from_structure():
     bundle_id = request.args.get("id", type=int)
     if not bundle_id:
         return {"message": "No bundle id provided", "toast_class": "danger-subtle"}, 400
-    if current_user.is_admin():
+    if not current_user.is_admin():
         return {"message": "You don't have the permission to do that !", "toast_class": "danger-subtle"}, 401
    # take all the rule associate to ths bundle and create a structure with BundleNode (create one folder and put all the rule id in there)
     success, msg = BundleModel.update_bundle_from_rule_id_into_structure(bundle_id)

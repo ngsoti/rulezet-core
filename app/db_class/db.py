@@ -569,7 +569,6 @@ class BundleNode(db.Model):
     
     custom_content = db.Column(db.Text, nullable=True)
     
-    # CHANGED: ondelete="CASCADE" ensures the node is destroyed if the rule is deleted
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id', ondelete="CASCADE"), nullable=True)
 
     children = db.relationship(
@@ -581,30 +580,26 @@ class BundleNode(db.Model):
     
     rule = db.relationship("Rule") 
 
-    # def to_tree_json(self):
-    #     """Recursively converts nodes to the JSON tree expected by Vue.js"""
-    #     node_data = {
-    #         "name": self.name,
-    #         "type": self.node_type,
-    #         "children": [child.to_tree_json() for child in self.children]
-    #     }
-        
-    #     if self.rule_id:
-    #         node_data["id"] = f"rule_{self.rule_id}_{self.id}"
-    #         node_data["rule_id"] = self.rule_id
-    #         # Note: with CASCADE, self.rule will never be None here because the node wouldn't exist
-    #         node_data["content"] = self.rule.to_string if self.rule else "Rule not found"
-    #     else:
-    #         node_data["id"] = f"node_{self.id}"
-    #         node_data["content"] = self.custom_content or ""
-            
-    #     return node_data
-    
+    EXTENSION_MAP = {
+        'yara': '.yar',
+        'sigma': '.yaml',
+        'suricata': '.rules',
+        'zeek': '.zeek',
+        'wazuh': '.xml',
+        'nse': '.nse',
+        'nova': '.yaml',
+        'crs': '.conf',
+        'no format': '.txt'
+    }
+
     def to_tree_json(self):
         """Recursively converts nodes to the JSON tree expected by Vue.js"""
-
         if self.rule_id and self.rule:
-            ext = ".yar" if self.rule.format == 'yara' else ".yaml"
+            # Use lowercase format to match the mapping keys
+            rule_format = self.rule.format.lower() if self.rule.format else 'no format'
+            ext = self.EXTENSION_MAP.get(rule_format, '.txt')
+            
+            # Display name includes the extension in the tree explorer
             current_name = f"{self.rule.title}{ext}"
             current_content = self.rule.to_string
             node_id = f"rule_{self.rule_id}_{self.id}"
@@ -625,6 +620,7 @@ class BundleNode(db.Model):
             node_data["rule_id"] = self.rule_id
             
         return node_data
+    
 
 class Tag(db.Model):
     __tablename__ = "tag"

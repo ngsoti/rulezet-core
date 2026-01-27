@@ -97,7 +97,7 @@ def get_all_bundles_page(page: int, search: str| None, own: bool) -> dict:
     :param search: The search string to filter by name or description.
     :return: Pagination object with filtered bundles.
     """
-    query = Bundle.query
+    query = Bundle.query    
 
     if search:
         like_pattern = f"%{search}%"
@@ -110,6 +110,19 @@ def get_all_bundles_page(page: int, search: str| None, own: bool) -> dict:
     if own:
         if current_user.is_authenticated:   
             query = query.filter_by(user_id=current_user.id)    
+    if current_user.is_authenticated:
+        # if admin see all elif not admin see only public and user connected see also his private
+        if not current_user.is_admin():
+            query = query.filter(
+                or_(
+                    Bundle.access.is_(True),
+                    Bundle.user_id == current_user.id
+                )
+            )
+        else:
+            pass  
+    else:
+        query = query.filter_by(access=True)
 
     return query.order_by(Bundle.created_at.desc()).paginate(page=page, per_page=20)
 
