@@ -252,7 +252,7 @@
                                 [[ rules.length ]] rules
                             </span>
                         </div>
-
+                        <!-- Rules -->
                         <div class="collapse show" id="collapseRules">
                             <div class="row g-3 mt-2">
                                 <div v-for="(item, index) in rules" :key="item.rule.id" class="col-12">
@@ -270,7 +270,7 @@
                                                         [[ item.rule.format.toUpperCase() ]]
                                                     </span>
                                                     <i class="fas fa-shield-halved text-secondary fs-3"></i>
-                                                    <span class="badge bg-white text-dark border mt-1"
+                                                    <span class="badge text-dark border mt-1"
                                                         style="font-size: 0.6rem;">
                                                         v[[ item.rule.version ]]
                                                     </span>
