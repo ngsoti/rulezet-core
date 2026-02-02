@@ -215,7 +215,14 @@
                                         [[ history.found ?? 0 ]]
                                     </td>
                                     <td class="text-center">
-                                        [[ history.new_rules ?? 0 ]]
+                                        <template v-if="history.new_rules && history.new_rules.length === 0">
+                                            0
+                                        </template>
+                                        <template v-else>
+                                            [[ history.new_rules.length ]]
+                                        </template>
+
+
                                     </td>
                                     <td class="text-center">
                                         [[ history.updated ?? 0 ]]
