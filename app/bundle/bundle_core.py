@@ -662,3 +662,156 @@ def increment_download_count(bundle_id: int) -> None:
     if bundle:
         bundle.download_count += 1
         db.session.commit()
+
+
+##############
+#   Comment  #
+##############
+
+def add_comment_to_bundle(bundle_id: int, user: User, content: str , parent_comment_id: int = None) -> tuple[str, bool]:
+    """
+    Add a comment to a bundle.
+    :param bundle_id: ID of the bundle.
+    :param user: User who adds the comment.
+    :param content: Content of the comment.
+    :return: Tuple of (message, success).
+    """
+    if not bundle_id or not user or not content:
+        return "Missing bundle_id, user, or content", False
+
+    try:
+        new_comment = CommentBundle(
+            uuid=str(uuid.uuid4()),
+            bundle_id=bundle_id,
+            user_id=user.id,
+            user_name=user.first_name + " " + user.last_name,
+            content=content,
+            created_at=datetime.datetime.now(tz=datetime.timezone.utc),
+            updated_at=datetime.datetime.now(tz=datetime.timezone.utc),
+            likes=0,
+            dislikes=0,
+            reaction=None,
+            parent_comment_id=parent_comment_id
+        )
+        db.session.add(new_comment)
+        db.session.commit()
+        return "Comment added successfully", True
+    except Exception as e:
+        db.session.rollback()
+        return f"Error adding comment: {e}", False
+def get_comments_for_bundle(bundle_id: int, page: int):
+    """
+    Retrieve comments for a specific bundle, paginated.
+    :param bundle_id: ID of the bundle.
+    :param page: Page number.
+    :return: Pagination object with comments.
+    """
+    return CommentBundle.query.filter_by(bundle_id=bundle_id, parent_comment_id=None).order_by(CommentBundle.created_at.desc()).paginate(page=page, per_page=10)
+
+def get_comment_bundle_by_id(comment_id: int):
+    """
+    Retrieve a comment by its ID.
+    :param comment_id: ID of the comment.
+    :return: Comment object.
+    """
+    return CommentBundle.query.get(comment_id)
+
+def delete_comment_bundle(comment_id: int) -> bool:
+    """
+    Delete a comment by its ID.
+    :param comment_id: ID of the comment to delete.
+    :return: True if deleted, False if not found.
+    """
+    comment = CommentBundle.query.get(comment_id)
+    if not comment:
+        return False
+    db.session.delete(comment)
+    db.session.commit()
+    return True
+
+def edit_comment_bundle(comment_id: int, content: str) -> bool:
+    """
+    Edit a comment by its ID.
+    :param comment_id: ID of the comment to edit.
+    :param content: New content of the comment.
+    :return: True if edited, False if not found.
+    """
+    comment = CommentBundle.query.get(comment_id)
+    if not comment:
+        return False
+    comment.content = content
+    db.session.commit()
+    return True
+
+def add_reaction_to_comment(comment_id: int, user_id: int, reaction_type: str, bundle_id: int) -> tuple[bool, str]:
+    comment = CommentBundle.query.get(comment_id)
+    if not comment:
+        return False, "Comment not found"
+
+    # Liste des types qui appartiennent au groupe "pouces"
+    thumb_types = ['like', 'dislike']
+    is_thumb = reaction_type in thumb_types
+
+    try:
+        if is_thumb:
+            # --- GESTION LIKE / DISLIKE (Exclusif entre eux) ---
+            existing_thumb = BundleReactionComment.query.filter(
+                BundleReactionComment.comment_id == comment_id,
+                BundleReactionComment.user_id == user_id,
+                BundleReactionComment.reaction_type.in_(thumb_types)
+            ).first()
+
+            if existing_thumb:
+                # Si on clique sur le même pouce -> On l'enlève (Toggle)
+                if existing_thumb.reaction_type == reaction_type:
+                    if reaction_type == 'like': comment.likes = max(0, (comment.likes or 0) - 1)
+                    else: comment.dislikes = max(0, (comment.dislikes or 0) - 1)
+                    db.session.delete(existing_thumb)
+                else:
+                    # On change de pouce (ex: like vers dislike)
+                    if existing_thumb.reaction_type == 'like':
+                        comment.likes = max(0, (comment.likes or 0) - 1)
+                        comment.dislikes = (comment.dislikes or 0) + 1
+                    else:
+                        comment.dislikes = max(0, (comment.dislikes or 0) - 1)
+                        comment.likes = (comment.likes or 0) + 1
+                    existing_thumb.reaction_type = reaction_type
+            else:
+                # Nouveau pouce
+                new_thumb = BundleReactionComment(
+                    comment_id=comment_id, user_id=user_id, bundle_id=bundle_id,
+                    uuid=str(uuid.uuid4()), reaction_type=reaction_type
+                )
+                db.session.add(new_thumb)
+                if reaction_type == 'like': comment.likes = (comment.likes or 0) + 1
+                else: comment.dislikes = (comment.dislikes or 0) + 1
+
+        else:
+            # --- GESTION EMOJI (Un seul emoji max, indépendant des pouces) ---
+            existing_emoji = BundleReactionComment.query.filter(
+                BundleReactionComment.comment_id == comment_id,
+                BundleReactionComment.user_id == user_id,
+                ~BundleReactionComment.reaction_type.in_(thumb_types) # Tout ce qui n'est pas pouce
+            ).first()
+
+            if existing_emoji:
+                # Si c'est le même emoji -> On l'enlève
+                if existing_emoji.reaction_type == reaction_type:
+                    db.session.delete(existing_emoji)
+                else:
+                    # On remplace l'ancien emoji par le nouveau
+                    existing_emoji.reaction_type = reaction_type
+            else:
+                # Nouvel emoji
+                new_emoji = BundleReactionComment(
+                    comment_id=comment_id, user_id=user_id, bundle_id=bundle_id,
+                    uuid=str(uuid.uuid4()), reaction_type=reaction_type
+                )
+                db.session.add(new_emoji)
+
+        db.session.commit()
+        return True, "Reaction updated"
+
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Error: {str(e)}"

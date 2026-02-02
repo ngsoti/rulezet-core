@@ -1751,6 +1751,7 @@ body.dark-mode .d2h-emptyplaceholder{
         line-height: 1.5;
         color: var(--text-color);
         white-space: pre-wrap;
+        
     }
 
     /* Modern YouTube-style Input Area */
@@ -2079,3 +2080,16 @@ body.dark-mode .d2h-emptyplaceholder{
     .cursor-pointer {
         cursor: pointer;
     }
+
+
+
+.btn-hover-emoji {
+    transition: transform 0.2s ease;
+}
+.btn-hover-emoji:hover {
+    transform: scale(1.3);
+    background-color: transparent !important;
+}
+.cursor-pointer {
+    cursor: pointer !important;
+}

@@ -658,3 +658,120 @@ def update_bundle_from_structure():
         return {"message": msg, "toast_class": "danger-subtle"}, 500
 
     return {"toast_class": "success-subtle", "message": "Bundle updated successfully"}, 200
+
+
+
+#######################
+#   Comment section   #
+#######################
+
+@bundle_blueprint.route("/add_comment", methods=['GET'])
+@login_required
+def add_comment():
+    """Add a comment to a bundle."""
+    bundle_id = request.args.get('bundle_id', type=int)
+    content = request.args.get('content', type=str)
+    parent_comment_id = request.args.get('parent_comment_id', type=int, default=None)
+
+    if not bundle_id or not content:
+        return {"message": "Missing bundle_id or content", "toast_class": "danger-subtle"}, 400
+
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle:
+        return {"message": "Bundle not found", "toast_class": "danger-subtle"}, 404
+
+    message, success = BundleModel.add_comment_to_bundle(bundle_id, current_user, content, parent_comment_id)
+    if success:
+        return {"message": message, "toast_class": "success-subtle"}, 200
+    else:
+        return {"message": message, "toast_class": "danger-subtle"}, 500
+
+
+@bundle_blueprint.route("/get_comments", methods=['GET'])
+def get_comments():
+    """Get all comments for a bundle. (parents and children and pagginated)"""
+    bundle_id = request.args.get('bundle_id', None)
+    page = request.args.get('page', 1, type=int)
+    if not bundle_id:
+        return {"message": "Missing bundle_id", "toast_class": "danger-subtle"}, 400
+
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle:
+        return {"message": "Bundle not found", "toast_class": "danger-subtle"}, 404
+
+    comments = BundleModel.get_comments_for_bundle(bundle_id, page)
+
+    return {
+        "comments": [c.to_json() for c in comments.items],
+        "total_pages": comments.pages,
+        "total_comments": comments.total
+    }, 200
+
+# delete_comment
+
+@bundle_blueprint.route("/delete_comment", methods=['GET'])
+@login_required
+def delete_comment():
+    comment_id = request.args.get('comment_id', type=int)
+
+    if not comment_id:
+        return {"message": "Missing comment_id", "toast_class": "danger-subtle"}, 400
+
+    comment = BundleModel.get_comment_bundle_by_id(comment_id)
+    if not comment:
+        return {"message": "Comment not found", "toast_class": "danger-subtle"}, 404
+
+    if comment.user_id != current_user.id and not current_user.is_admin():
+        return {"message": "You don't have the permission to do that !", "toast_class": "danger-subtle"}, 401
+
+
+    success = BundleModel.delete_comment_bundle(comment_id)
+    if success:
+        return {"message": "Comment deleted.", "toast_class": "success-subtle"}, 200
+    else:
+        return {"message": "Not authorized or comment not found.", "toast_class": "danger-subtle"}, 403
+    
+# edit_comment
+
+@bundle_blueprint.route("/edit_comment", methods=['GET'])
+@login_required
+def edit_comment():
+    comment_id = request.args.get('comment_id', type=int)
+    content = request.args.get('content', type=str)
+
+    if not comment_id or not content:
+        return {"message": "Missing comment_id or content", "toast_class": "danger-subtle"}, 400
+
+    comment = BundleModel.get_comment_bundle_by_id(comment_id)
+    if not comment:
+        return {"message": "Comment not found", "toast_class": "danger-subtle"}, 404
+
+    if comment.user_id != current_user.id and not current_user.is_admin():
+        return {"message": "You don't have the permission to do that !", "toast_class": "danger-subtle"}, 401
+
+    success = BundleModel.edit_comment_bundle(comment_id, content)
+    if success:
+        return {"message": "Comment edited.", "toast_class": "success-subtle"}, 200
+    else:
+        return {"message": "Not authorized or comment not found.", "toast_class": "danger-subtle"}, 403
+    
+@bundle_blueprint.route("/add_reaction", methods=['GET'])
+@login_required
+def add_reaction():
+    """ Add a reaction to a comment."""
+    comment_id = request.args.get('comment_id', type=int)
+    reaction_type = request.args.get('reaction_type', type=str)
+    bundle_id = request.args.get('bundle_id', type=int)
+
+    if not comment_id or not reaction_type:
+        return {"message": "Missing comment_id or reaction_type", "toast_class": "danger-subtle"}, 400
+
+    comment = BundleModel.get_comment_bundle_by_id(comment_id)
+    if not comment:
+        return {"message": "Comment not found", "toast_class": "danger-subtle"}, 404
+
+    success, message = BundleModel.add_reaction_to_comment(comment_id, current_user.id, reaction_type, bundle_id)
+    if success:
+        return {"message": message, "toast_class": "success-subtle"}, 200
+    else:
+        return {"message": message, "toast_class": "danger-subtle"}, 500

@@ -35,7 +35,8 @@ class User(UserMixin, db.Model):
     def is_admin(self):
         """Check if the user has admin privileges."""
         return self.admin
-    
+    def get_username(self):
+        return self.first_name + " " + self.last_name
     
     def get_first_name(self):
         return self.first_name 
@@ -63,6 +64,7 @@ class User(UserMixin, db.Model):
             "last_name": self.last_name,
             "email": self.email,
             "admin": self.admin,
+            "username": self.first_name + " " + self.last_name,
             "is_connected": self.is_connected
         }
 
@@ -662,6 +664,86 @@ class Tag(db.Model):
             "created_by_user_name": self.user.first_name if self.user else None,
             "is_approved_by_admin": self.is_approved_by_admin,
             "external_id": self.external_id
+        }
+
+class CommentBundle(db.Model):
+    """Model for user comments on Bundles."""
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, index=True)
+    uuid = db.Column(db.String(36), index=True, unique=True)
+    bundle_id = db.Column(db.Integer, db.ForeignKey('bundle.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_name = db.Column(db.Text, nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, index=True)
+    updated_at = db.Column(db.DateTime, index=True)
+    likes = db.Column(db.Integer, default=0)
+    dislikes = db.Column(db.Integer, default=0)
+    reaction = db.Column(db.String(50), nullable=True) # emodji reaction
+
+    # respond from an other comment
+    parent_comment_id = db.Column(db.Integer, db.ForeignKey('comment_bundle.id'), nullable=True)
+   
+    # Relations
+    user = db.relationship('User', backref=db.backref('comments_users', lazy='dynamic' , cascade='all, delete-orphan'))
+    bundle = db.relationship('Bundle', backref=db.backref('comments_bundles', lazy='dynamic', cascade='all, delete-orphan'))
+    parent_comment = db.relationship(
+        'CommentBundle', 
+        remote_side=[id], 
+        backref=db.backref('replies', lazy='dynamic', cascade='all, delete-orphan')
+    )
+    #get_all_reactions
+    def get_all_reactions(self):
+        """Only reaction different from like or dislike"""
+        reactions = BundleReactionComment.query.filter_by(comment_id=self.id).all()
+        # remove like and dislike from the list
+        reactions = [reaction for reaction in reactions if reaction.reaction_type not in ['like', 'dislike']]
+        return [reaction.to_json() for reaction in reactions]
+
+    def to_json(self, include_replies=True):
+        data = {
+            "id": self.id,
+            "bundle_id": self.bundle_id,
+            "user_id": self.user_id,
+            "user_name": self.user_name,
+            "content": self.content,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else None,
+            "is_admin": self.user.is_admin() if self.user else False,
+            "parent_comment_id": self.parent_comment_id,
+            "likes": self.likes,
+            "dislikes": self.dislikes,
+            # get all the reaction for this comment from BundleREactionComment not the champ reaction
+            "reactions":  self.get_all_reactions(),
+        }
+
+        if include_replies:
+            data["replies"] = [reply.to_json(include_replies=True) for reply in self.replies.all()]
+        
+        return data
+
+class BundleReactionComment(db.Model):
+    """ LIKE/DISLIKE/EMOJI reaction on comment in a Bundle """
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid = db.Column(db.String(36), index=True, unique=True)
+    bundle_id = db.Column(db.Integer, db.ForeignKey('bundle.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment_bundle.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    reaction_type = db.Column(db.String(50), nullable=False) # e.g., 'like', 'dislike', 'emoji_name'
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('bundle_reactions', lazy='dynamic', cascade='all, delete-orphan'))
+    bundle = db.relationship('Bundle', backref=db.backref('reactions', lazy='dynamic', cascade='all, delete-orphan'))
+    comment = db.relationship('CommentBundle', backref=db.backref('reactions', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "bundle_id": self.bundle_id,
+            "user_id": self.user_id,
+            "reaction_type": self.reaction_type,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
+            "is_admin": self.user.is_admin(),
+            "comment_id": self.comment_id
         }
 
 class BundleVote(db.Model):
