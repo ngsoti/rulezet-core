@@ -9,7 +9,6 @@ from uuid import uuid4
 from flask import current_app
 from flask_login import current_user
 
-from app.utils.utils import update_or_clone_repo
 from ... import db
 
 from ...db_class.db import Rule, RuleStatus, UpdateResult, User, NewRule
@@ -85,9 +84,6 @@ class Update_class:
             # found all the rule in the repo currently in Rulezet
             rules_listes_github = RuleModel.get_all_rule_by_url_github(self.repo_sources , self.current_user)
             
-            if not rules_listes_github:
-                print("no rules found in Rulezet")
-            
             # Initialize the list of rules we need to check
             self.rules_to_process = [
                 {"id": r.id, "title": r.title}
@@ -95,7 +91,6 @@ class Update_class:
             ]
 
             total_rule_to_update = len(rules_listes_github)
-            print(len(rules_listes_github))
             self.total = total_rule_to_update
 
             success = git_pull_repo(repo_dir)
@@ -131,8 +126,6 @@ class Update_class:
             
             # get all the rules from Rulezet with the ids
             rules_list: List[Rule] = Rule.query.filter(Rule.id.in_(self.repo_sources) ).all()
-            if not rules_list:
-                print("no rules found in Rulezet")
             
             # Group rules by source to minimize cloning/pulling
             rules_by_source: Dict[str, List[Rule]] = {}
@@ -280,8 +273,8 @@ class Update_class:
                     "found": False,
                     "update_available": False,
                     "rule_syntax_valid": False,
-                    "error": True, # Flag as error/not_found for summary purposes
-                    "history_id": None # No history created for missing rule
+                    "error": True, 
+                    "history_id": None 
                 })
                 # Remove it now that it has been handled
                 self.rules_to_process.remove(rule)
@@ -310,17 +303,7 @@ class Update_class:
 
                     rules = rule_instance.extract_rules_from_file(work[2])
 
-
-                    # if there the same rulename in the same file, (if only one of them has no original_uuid or no one), we decided that the rule can be updated so we make this rule like there is no update but with a message 
-                    # if rules:
-                    #     _original_uuid = rules[0].get("original_uuid")  # Get the original_uuid from the first rule in the list
-
-                        
-
                     for rule_text in rules:    
-                        # enrich info with filepath
-
-
                         enriched_info = {**self.info, "filepath": work[2]}
                         # Validate
                         validation_result  = rule_instance.validate(rule_text)
@@ -356,6 +339,7 @@ class Update_class:
 
                         # we have parse a rule and we want to found if it is already in Rulezet
                         existing_rule , message = RuleModel.get_rule_from_a_github(name , work[2], self.repo_sources, _original_uuid)
+                        print(f"Processing rule: {name}, found in Rulezet: {existing_rule is not None}, message: {message}")
                        
                         if validation_result.ok:
                             # Case 1: Rule is VALID (either an update or a completely new rule)
@@ -374,9 +358,7 @@ class Update_class:
                                     # message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.id, self.local_repo_path ) 
 
                                     message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.to_string, rule_text, existing_rule.id) 
-                                    print(message_dict)
-                                    print(success)
-                                    print(new_rule_content)
+                                  
                                     # --- create history if needed ---
                                     history_id = None
                                     if success and new_rule_content:
@@ -416,7 +398,6 @@ class Update_class:
                                 if message == "[new rule]":
                                     
                                     # Sub-case 1.2: Rule does NOT EXIST (Log as New Valid Rule)
-                                    print("New rule:", message)
                                     new_rule_obj = NewRule(
                                         uuid=str(uuid4()),
                                         update_result_id=None,  # filled later in save_info()
@@ -661,7 +642,7 @@ def Check_for_rule_updates(rule_content, new_rule_content, rule_id):
 
     validation = rule_class.validate(new_rule_content)
 
-    if rule.to_string != validation.normalized_content:
+    if rule.to_string.strip() != validation.normalized_content.strip():
 
         # There is a change
         if validation.ok:

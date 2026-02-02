@@ -516,17 +516,19 @@ def get_rule_from_a_github(title, filepath_in_the_repo, repo_source, original_uu
     Retrieve a rule by title, repository source, and filepath in the repo.
     """
 
+    clean_uuid = str(original_uuid).strip().lower()
 
 
-    # 1️⃣ Try to find the rule by original_uuid
-    if original_uuid and original_uuid != "None" and original_uuid != "none" and original_uuid != "null" and original_uuid != "Unknown":
-      
+    forbidden = ["none", "null", "unknown", "n/a", "undefined", ""]
+    if original_uuid and clean_uuid not in forbidden:
         rule = Rule.query.filter_by(original_uuid=original_uuid).first()
         if rule:
             return rule, "Rule found in Rulezet with this original_uuid"
-       
 
-    # 2️⃣ Try to find rule(s) by title and source
+    # if original_uuid and original_uuid != "None" and original_uuid != "none" and original_uuid != "null" and original_uuid != "Unknown" and original_uuid != "N/A":
+    #     print(f"Searching by original_uuid: {original_uuid}")
+        
+       
    
     query = Rule.query.filter(
         Rule.title == title,
@@ -541,19 +543,11 @@ def get_rule_from_a_github(title, filepath_in_the_repo, repo_source, original_uu
         return None, "[new rule]"
 
     if count_title == 1:
-        # we verify if the filepath in the repo is the same as the one in the DB
         rule = query.first()
        
         if rule.github_path != filepath_in_the_repo:
-            
             return None, "[new rule]"
-
         return rule, "Rule found in Rulezet with this title"
-
-    # 3️⃣ Multiple rules found → filter by github_path
-
-
-    
 
     query_path = query.filter(Rule.github_path == filepath_in_the_repo)
     count_path = query_path.count()

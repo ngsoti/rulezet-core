@@ -187,7 +187,13 @@
                                     <!-- badge to see the version [[currentRule.version]]-->
                                     <span class="badge bg-light text-primary rounded-pill border px-3"
                                         title="Version of the rule">
-                                        v [[ currentRule.version ]]
+                                        <template v-if="currentRule.version == 'Unknown'">
+                                            v 1.0
+                                        </template>
+                                        <template v-else>
+                                            v [[ currentRule.version ]]
+                                        </template>
+
                                     </span>
                                 </div>
 
@@ -225,11 +231,11 @@
                                     </div>
                                     <div class="tab-pane fade" id="json" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);;"><code class="json">{{rule_to_json}}</code></pre>
+                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);"><code class="json" v-text="{{rule_to_json}}"></code></pre>
                                     </div>
                                     <div class="tab-pane fade" id="misp" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);;"><code class="json">{{rule_misp}}</code></pre>
+                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);"><code class="json">{{rule_misp}}</code></pre>
                                     </div>
                                 </div>
                             </div>
@@ -1108,7 +1114,7 @@
              * */
 
 
-            const rule_format = ref({ normal: "", json: "", misp: "" })
+            const rule_format = ref({ normal: '', json: '', misp: '' })
 
             async function get_rule_in_each_format(rule_id) {
                 const params = new URLSearchParams({ rule_id })

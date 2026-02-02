@@ -1,16 +1,16 @@
 import os
 import re
 import subprocess
+import tempfile
 from typing import Any, Dict, List
 from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.utils.utils import detect_cve
 from ...rule import rule_core as RuleModel
-
-# https://github.com/nmap/nmap.git
+import base64
 
 class NseRule(RuleType):
     """
-    Implementation of RuleType for Nmap NSE scripts.
+    NSE Rule implementation with 5 mandatory methods and robust title extraction.
     """
 
     @property
@@ -20,153 +20,114 @@ class NseRule(RuleType):
     def get_class(self) -> str:
         return "NseRule"
 
+    # 1. VALIDATE
     def validate(self, content: str, **kwargs) -> ValidationResult:
-        """
-        Validate the NSE rule using luac -p to check syntax.
-        """
-        errors: List[str] = []
-        warnings: List[str] = []
-
-        # write content to temp file
-        import tempfile
+        errors = []
+        warnings = []
+        
         with tempfile.NamedTemporaryFile(suffix=".nse", delete=False) as tmp:
             tmp.write(content.encode("utf-8"))
-            tmp.flush()
             tmp_path = tmp.name
 
         try:
-            result = subprocess.run(
-                ["luac", "-p", tmp_path],
-                capture_output=True,
-                text=True,
-            )
+            result = subprocess.run(["luac", "-p", tmp_path], capture_output=True, text=True)
             if result.returncode != 0:
                 errors.append(result.stderr.strip())
-                return ValidationResult(ok=False, errors=errors)
-
         except FileNotFoundError:
-            # luac not installed
-            warnings.append("luac not found, syntax not fully validated.")
-
+            warnings.append("luac not found")
         finally:
-            os.unlink(tmp_path)
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
-        # minimal heuristic: check for action function
         if "function action" not in content:
-            warnings.append("Missing action() function in NSE script.")
+            warnings.append("Missing action() function")
 
         return ValidationResult(ok=(len(errors) == 0), errors=errors, warnings=warnings, normalized_content=content)
 
 
     def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
-        """
-        Extract metadata from an NSE rule.
-        """
-        filepath = info.get("filepath")
-        title = os.path.splitext(os.path.basename(filepath))[0] if filepath else "unknown_rule"
+        title = "unknown"
+        
+        filepath = info.get("github_path") or info.get("filepath") 
+        if filepath:
+            if info.get("filepath"):
+                title = os.path.splitext(os.path.basename(filepath))[0].split("/")[-1]
+            else:
+                title = os.path.splitext(os.path.basename(filepath))[0]
+        
+        if title == "unknown":
+            comment_match = re.search(r'^--\s*([\w\-]+)\.nse', content, re.MULTILINE)
+            if comment_match:
+                title = comment_match.group(1)
+        
+        if title == "unknown":
+            id_match = re.search(r'id\s*=\s*["\']([^"\']+)["\']', content)
+            if id_match:
+                title = id_match.group(1)
 
         try:
-            meta: Dict[str, Any] = {}
+            meta = {}
+            # Description extraction
+            desc_m = re.search(r'description\s*=\s*\[\[([\s\S]*?)\]\]', content)
+            meta["description"] = desc_m.group(1).strip() if desc_m else "No description"
             
-            m = re.search(r'description\s*=\s*\[\[([\s\S]*?)\]\]', content)
-            if m:
-                meta["description"] = m.group(1).strip()
-                _, cve = detect_cve(meta["description"]or "")
-            else:
-                cve = None
+            _, cve = detect_cve(meta["description"])
 
+            # Fields extraction
             for key in ("author", "license", "version"):
                 m = re.search(rf'{key}\s*=\s*["\'](.+?)["\']', content)
-                if m:
-                    meta[key] = m.group(1).strip()
+                meta[key] = m.group(1).strip() if m else "Unknown"
 
-            m = re.search(r'categories\s*=\s*\{([^\}]*)\}', content)
-            if m:
-                items = re.findall(r'["\'](.*?)["\']', m.group(1))
-                meta["categories"] = items
+            # Categories
+            cat_m = re.search(r'categories\s*=\s*\{([^\}]*)\}', content)
+            meta["categories"] = re.findall(r'["\'](.*?)["\']', cat_m.group(1)) if cat_m else []
 
-            if re.search(r'\bportrule\b', content):
-                meta["rule_type"] = "portrule"
-            elif re.search(r'\bhostrule\b', content):
-                meta["rule_type"] = "hostrule"
-            elif re.search(r'\bprerule\b|\bpostrule\b', content):
-                meta["rule_type"] = "prerule/postrule"
-            else:
-                meta["rule_type"] = "unknown"
-
-            normalized_content = getattr(validation_result, 'normalized_content', content)
-
+            # Rule Type
+            if "portrule" in content: meta["rule_type"] = "portrule"
+            elif "hostrule" in content: meta["rule_type"] = "hostrule"
+            else: meta["rule_type"] = "unknown"
+            
             return {
                 "format": "nse",
                 "title": title,
-                "license": meta.get("license") or info.get("license") or "unknown",
-                "source": info.get("repo_url"),
-                "version": meta.get("version", "1.0"),
-                "original_uuid": info.get("uuid", "Unknown"),
-                "description": meta.get("description") or info.get("description") or "No description provided",
-                "author": meta.get("author", "Unknown"),
-                "categories": meta.get("categories", []),
-                "rule_type": meta.get("rule_type", "unknown"),
-                "to_string": normalized_content,
+                "license": meta["license"],
+                "source": info.get("repo_url", "Unknown"),
+                "version": meta["version"] or "1.0",
+                "original_uuid": "N/A",
+                "description": meta["description"],
+                "author": meta["author"],
+                "categories": meta["categories"],
+                "rule_type": meta["rule_type"],
+                "to_string": content,
                 "cve_id": cve, 
             }
-
         except Exception as e:
-            return {
-                "format": "nse",
-                "title": f"{title} (Metadata Error)",
-                "license": info.get("license") or "unknown",
-                "description": f"Error parsing metadata: {e}",
-                "version": "N/A",
-                "source": info.get("repo_url", "Unknown"),
-                "original_uuid": "Unknown",
-                "author": info.get("author") or "Unknown",
-                "categories": [],
-                "rule_type": "unknown",
-                "cve_id": None,
-                "to_string": content,
-            }
-
-
+            return {"format": "nse", "title": f"error_{title}", "description": str(e), "to_string": str(content)}
 
     def get_rule_files(self, file: str) -> bool:
-        """
-        Return all .nse files inside a repo directory.
-        """
-        if file.endswith(".nse"):
-            return True
-        return False
+        return file.endswith(".nse")
 
     def extract_rules_from_file(self, filepath: str) -> List[str]:
-        """
-        Each NSE file usually contains exactly one script (rule).
-        """
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 return [f.read()]
-        except Exception as e:
+        except:
             return []
 
-    def get_rule_files_update(self, repo_dir: str) -> List[str]:
-        """
-        Return all .nse files inside a repo directory.
-        """
-        nse_files: List[str] = []
+
+    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
+        rule_name = RuleModel.get_rule(rule_id)
         for root, _, files in os.walk(repo_dir):
             for f in files:
                 if f.endswith(".nse"):
-                    nse_files.append(os.path.join(root, f))
-        return nse_files
-    def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
-        """
-        Very simple implementation:
-        Return the N-th NSE file found in the repo.
-        """
-        rule = RuleModel.get_rule(rule_id)
-        if rule is None:
-            return f"No rule found with ID {rule_id} in the database.", False
-        files = self.get_rule_files_update(repo_dir)
-        if 0 <= rule_id < len(files):
-            with open(files[rule_id], "r", encoding="utf-8") as f:
-                return f.read() , True
-        return f"Nmap Rule with ID '{rule.id}' not found inside repo.", False
+                    file_name_without_ext = f[:-4] 
+                    
+                    if file_name_without_ext == rule_name:
+                        try:
+                            file_path = os.path.join(root, f)
+                            with open(file_path, "r", encoding="utf-8") as f_content:
+                                return f_content.read(), True
+                        except Exception:
+                            pass
+                            
+        return "Rule not found", False
