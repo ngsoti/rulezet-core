@@ -310,12 +310,13 @@
                                                     </button>
                                                 </template>
                                                 <template v-else-if="nr.rule_syntax_valid === true">
-                                                    <template v-if="is_loading === true">
+                                                    <template v-if="loading_rule_id === nr.id">
                                                         <span class="spinner-border spinner-border-sm"
                                                             aria-hidden="true"></span>
                                                     </template>
+
                                                     <template v-else>
-                                                        <button @click.stop class="btn btn-sm btn-success "
+                                                        <button @click.stop class="btn btn-sm btn-success"
                                                             title="Add the rule" @click="addRule(nr.id)">
                                                             <i class="fas fa-plus text-white"></i>
                                                         </button>
@@ -459,21 +460,27 @@
                 window.location.href = `/rule/fix_new_rule/${ruleId}?sid={{sid}}`;
             }
 
-            const is_loading = ref(false)
+
+            const loading_rule_id = ref(null);
 
             async function addRule(ruleId) {
-                is_loading.value = true
+                loading_rule_id.value = ruleId;
+
                 const params = new URLSearchParams({
                     new_rule_id: ruleId,
                     sid: '{{sid}}'
-                })
-                const res = await fetch(`/rule/add_new_rule?` + params.toString());
-                const data = await res.json()
-                is_loading.value = false
-                create_message(data.message, data.toast_class)
-                getRules(1)
-                getNewRules(1)
-                pollScan();
+                });
+
+                try {
+                    const res = await fetch(`/rule/add_new_rule?` + params.toString());
+                    const data = await res.json();
+                    create_message(data.message, data.toast_class);
+                    getRules(1);
+                    getNewRules(1);
+                    pollScan();
+                } finally {
+                    loading_rule_id.value = null; // On remet à null à la fin
+                }
             }
 
 
@@ -617,7 +624,7 @@
 
                 acceptAll,
                 decisionRule,
-                is_loading
+                loading_rule_id
             };
         }
     }).mount('#main-container');
