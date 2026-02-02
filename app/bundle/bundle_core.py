@@ -494,18 +494,6 @@ def remove_has_voted(vote, bundle_id , id) -> bool:
     return False 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 def save_workspace(bundle_id, structure):
     """
     Docstring for save_workspace
@@ -663,3 +651,14 @@ def update_bundle_from_rule_id_into_structure(bundle_id):
         db.session.rollback()
         print(f"Error updating bundle rules: {e}")
         return False, "Error updating bundle rules"
+    
+
+def increment_download_count(bundle_id: int) -> None:
+    """
+    Increment the download count for a bundle.
+    :param bundle_id: ID of the bundle.
+    """
+    bundle = Bundle.query.get(bundle_id)
+    if bundle:
+        bundle.download_count += 1
+        db.session.commit()

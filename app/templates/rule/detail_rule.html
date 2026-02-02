@@ -1089,7 +1089,6 @@
                 detail_page_1_is_loading.value = true
 
                 await nextTick();
-                // 3. Maintenant que le DOM est prêt, on lance la coloration
                 highlightJSON();
                 detail_sinilar_is_loading.value = false
 
@@ -1265,7 +1264,6 @@
 
                 create_message(data.message, data.toast_class);
             }
-            // À ajouter dans les méthodes de ton script Vue
             const switchTab = (tabId) => {
                 const tabTrigger = document.getElementById(tabId);
                 if (tabTrigger) {
@@ -1509,7 +1507,6 @@
                 const btn = event.currentTarget;
                 btn.classList.add('click-pop');
 
-                // On retire la classe après l'animation (300ms) pour pouvoir la rejouer
                 setTimeout(() => {
                     btn.classList.remove('click-pop');
                 }, 300);
@@ -1532,16 +1529,14 @@
 
 
             function similarityColor(score) {
-                if (score >= 0.8) return '#198754'; // green
+                if (score >= 0.8) return '#198754';
                 if (score >= 0.5) return '#ffc107';
-                return '#dc3545'; // rouge
+                return '#dc3545';
             }
             function similarityColorBg(score) {
-                // if (score >= 0.8) return 'var(--bg-color-high-similarity)'; // red
-                // return 'var(--bg-color)'; // rouge
                 return 'var(--bg-color)';
             }
-            //rgb(240, 145, 154)
+
 
 
             function goToRuleDetail(ruleId) {

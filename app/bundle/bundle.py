@@ -498,6 +498,9 @@ def download_bundle():
             rule_json = json.dumps(rule.to_json(), indent=2)
             zip_file.writestr(json_filename, rule_json)
 
+    # add 1 to download count
+    BundleModel.increment_download_count(bundle_id)
+
     zip_buffer.seek(0)
     return send_file(
         zip_buffer,

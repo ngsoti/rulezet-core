@@ -282,7 +282,6 @@ def get_rules_of_user_with_id_page(user_id, page, search, sort_by, rule_type) ->
     else:
         query = query.order_by(Rule.creation_date.desc())
 
-    # Pagination
     return query.paginate(page=page, per_page=20, max_per_page=20)
 
 def get_rule(id) -> Rule:
@@ -296,24 +295,16 @@ def get_rule(id) -> Rule:
 import numpy as np
 import faiss
 from sklearn.feature_extraction.text import TfidfVectorizer
-# Importe ton modèle Rule et db selon ta structure
-# from app import db 
 
-# Variables globales pour le cache en mémoire
 _INDEX = None
 _ID_MAP = []
 _VECTORIZER = None
 
 def get_index():
-    """
-    Initialise ou récupère l'index FAISS et le Vectorizer.
-    Se charge une seule fois en mémoire pour une vitesse maximale.
-    """
     global _INDEX, _ID_MAP, _VECTORIZER
     
     if _INDEX is None:
-        # On récupère toutes les règles ayant du contenu
-        from .rule_core import Rule  # Ajuste l'import selon ton projet
+        from .rule_core import Rule 
         rules = Rule.query.filter(Rule.to_string.isnot(None)).all()
         
         if not rules:
@@ -321,57 +312,48 @@ def get_index():
 
         texts = [r.to_string for r in rules]
         
-        # 1. Vectorisation (limitée pour la performance)
+        
         _VECTORIZER = TfidfVectorizer(
             analyzer="word",
-            ngram_range=(1, 2), # (1, 2) est un bon compromis vitesse/précision
+            ngram_range=(1, 2),
             max_features=10000, 
-            stop_words='english' # Optionnel : à adapter selon la langue
+            stop_words='english' 
         )
         
         tfidf_matrix = _VECTORIZER.fit_transform(texts).toarray().astype('float32')
 
-        # 2. Normalisation pour que le produit scalaire (Inner Product) soit égal à la similarité cosinus
+        
         faiss.normalize_L2(tfidf_matrix)
         
-        # 3. Création de l'index FAISS (IndexFlatIP = Inner Product)
+      
         d = tfidf_matrix.shape[1]
         _INDEX = faiss.IndexFlatIP(d)
         _INDEX.add(tfidf_matrix)
         
-        # 4. On garde la correspondance des IDs en mémoire
+        
         _ID_MAP = [r.id for r in rules]
         
     return _INDEX, _ID_MAP, _VECTORIZER
 
 def refresh_similarity_index():
-    """Appelle cette fonction pour forcer la mise à jour de l'index (ex: après un ajout)"""
     global _INDEX
     _INDEX = None
     return get_index()
 
 def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
-    """
-    Version ultra-optimisée utilisant FAISS et le cache mémoire,
-    filtrée par format identique.
-    """
+   
     index, id_map, vectorizer = get_index()
     
     if index is None:
         return []
 
-    # Récupération de la règle cible
-    # from .rule_core import Rule
     rule = Rule.query.get(rule_id)
     if not rule or not rule.to_string:
         return []
 
-    # 1. Transformer la règle cible en vecteur
     target_vec = vectorizer.transform([rule.to_string]).toarray().astype('float32')
     faiss.normalize_L2(target_vec)
 
-    # 2. Recherche des plus proches voisins
-    # On augmente k car le filtrage par format va éliminer certains candidats
     k = min(len(id_map), limit * 5 + 1 if limit > 0 else len(id_map))
     scores, indices = index.search(target_vec, k)
 
@@ -382,18 +364,15 @@ def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
             
         candidate_id = id_map[idx]
         
-        # On ignore la règle elle-même et on vérifie le score minimumses
         if candidate_id != rule_id and score >= min_score:
             candidate = Rule.query.get(candidate_id)
             
-            # FILTRE : On n'ajoute que si le format est identique
             if candidate and candidate.format == rule.format:
                 results.append({
                     **candidate.to_json(),
                     "similarity": round(float(score), 3)
                 })
                 
-                # Si on a atteint la limite, on s'arrête pour optimiser
                 if limit > 0 and len(results) >= limit:
                     break
 
@@ -408,15 +387,12 @@ def get_similar_rules_paginated(rule_id, page=1, per_page=10, min_score=0.15, se
     if not base_rule or not base_rule.to_string or index is None:
         return [], 0, 1
 
-    # 1. Calcul des scores FAISS (reste ultra rapide)
     target_vec = vectorizer.transform([base_rule.to_string]).toarray().astype('float32')
     faiss.normalize_L2(target_vec)
     all_scores, all_indices = index.search(target_vec, len(id_map))
     
-    # On crée le dictionnaire de scores
     score_dict = {id_map[idx]: float(score) for score, idx in zip(all_scores[0], all_indices[0]) if idx != -1}
 
-    # 2. Database Filtering : On ne filtre QUE par format et search (pas par ID !)
     query = Rule.query.filter(
         Rule.id != base_rule.id,
         Rule.format == base_rule.format,
@@ -431,11 +407,8 @@ def get_similar_rules_paginated(rule_id, page=1, per_page=10, min_score=0.15, se
             Rule.to_string.ilike(search_query)
         ))
 
-    # On récupère les candidats filtrés par la DB
-    # On utilise .with_entities pour ne charger que les colonnes nécessaires au début si besoin
     candidates = query.all()
 
-    # 3. Croisement Python (Score + Seuil)
     try:
         pourcent_val = int(pourcent)
         threshold = pourcent_val / 100 if 0 <= pourcent_val <= 100 else min_score
@@ -444,7 +417,6 @@ def get_similar_rules_paginated(rule_id, page=1, per_page=10, min_score=0.15, se
 
     scored_results = []
     for candidate in candidates:
-        # On récupère le score pré-calculé par FAISS pour cet ID
         score = score_dict.get(candidate.id, 0)
         
         if score >= threshold:
@@ -452,11 +424,10 @@ def get_similar_rules_paginated(rule_id, page=1, per_page=10, min_score=0.15, se
             data["similarity"] = round(score, 4)
             scored_results.append(data)
 
-    # 4. Sorting
     reverse_sort = (sort_by == "highest_match")
     scored_results.sort(key=lambda x: x["similarity"], reverse=reverse_sort)
 
-    # 5. Pagination
+
     total_count = len(scored_results)
     total_pages = max(1, math.ceil(total_count / per_page))
     page = max(1, min(page, total_pages))

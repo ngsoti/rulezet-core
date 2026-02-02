@@ -15,6 +15,7 @@ from app.rule_format.main_format import  parse_rule_by_format, process_and_impor
 from app.rule_format.utils_format.utils_import_update import clone_or_access_repo, fill_all_void_field, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
 
 from . import rule_core as RuleModel
+from ..bundle import bundle_core as BundleModel
 from ..rule_from_github.import_rule import session_class as SessionModel
 from ..rule_from_github.update_rule import update_class as UpdateModel
 from ..account import account_core as AccountModel
@@ -539,6 +540,8 @@ def download_rule_unified() -> Response:
             "success": False,
             "toast_class": "danger",
         })
+    
+   
     
     return jsonify({
         "message": f"Rule {rule.title} ready for download",
