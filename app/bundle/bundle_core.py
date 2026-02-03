@@ -690,7 +690,6 @@ def add_comment_to_bundle(bundle_id: int, user: User, content: str , parent_comm
             updated_at=datetime.datetime.now(tz=datetime.timezone.utc),
             likes=0,
             dislikes=0,
-            reaction=None,
             parent_comment_id=parent_comment_id
         )
         db.session.add(new_comment)

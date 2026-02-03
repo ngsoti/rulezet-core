@@ -679,7 +679,8 @@ class CommentBundle(db.Model):
     updated_at = db.Column(db.DateTime, index=True)
     likes = db.Column(db.Integer, default=0)
     dislikes = db.Column(db.Integer, default=0)
-    reaction = db.Column(db.String(50), nullable=True) # emodji reaction
+    # reaction = db.Column(db.String(50), nullable=True) # emodji reaction
+    active = db.Column(db.Boolean, default=True)
 
     # respond from an other comment
     parent_comment_id = db.Column(db.Integer, db.ForeignKey('comment_bundle.id'), nullable=True)
@@ -714,6 +715,7 @@ class CommentBundle(db.Model):
             "dislikes": self.dislikes,
             # get all the reaction for this comment from BundleREactionComment not the champ reaction
             "reactions":  self.get_all_reactions(),
+            "active": self.active
         }
 
         if include_replies:
