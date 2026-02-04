@@ -574,22 +574,37 @@
 
                                                 <div v-if="comment.reactions && comment.reactions.some(r => !['like', 'dislike'].includes(r.reaction_type))"
                                                     class="d-flex align-items-center gap-1">
-                                                    <template
-                                                        v-map="sumP = comment.reactions.reduce((acc, r) => { if(!['like', 'dislike'].includes(r.reaction_type)) { const icon = emodji_picker.getEmoji(r.reaction_type); acc[icon] = (acc[icon] || 0) + 1; } return acc; }, {})"></template>
-                                                    <template v-for="(count, emo, index) in sumP" :key="emo">
+
+                                                    <template v-map="sumP = comment.reactions.reduce((acc, r) => { 
+                                                        if(!['like', 'dislike'].includes(r.reaction_type)) { 
+                                                            const icon = emodji_picker.getEmoji(r.reaction_type); 
+                                                            if (!acc[icon]) acc[icon] = { count: 0, users: [] };
+                                                            acc[icon].count++;
+                                                            acc[icon].users.push(r.user_name); // On récupère le user_name de l'objet reaction
+                                                        } 
+                                                        return acc; 
+                                                    }, {})">
+                                                    </template>
+
+                                                    <template v-for="(data, emo, index) in sumP" :key="emo">
                                                         <div v-if="index < 4" @click="addReaction(comment.id, emo)"
+                                                            :title="data.users.join(', ')"
                                                             class="badge rounded-pill bg-white border text-dark p-1 px-2 d-flex align-items-center shadow-sm"
-                                                            style="font-size: 0.75rem; cursor: pointer;">
-                                                            [[ emo ]] <span v-if="count > 1" class="ms-1 fw-bold"
-                                                                style="font-size: 0.6rem;">[[ count ]]</span>
+                                                            style="font-size: 0.75rem; cursor: pointer;"
+                                                            data-bs-toggle="tooltip"> [[ emo ]]
+                                                            <span v-if="data.count > 1" class="ms-1 fw-bold"
+                                                                style="font-size: 0.6rem;">
+                                                                [[ data.count ]]
+                                                            </span>
                                                         </div>
                                                     </template>
                                                 </div>
+                                                {% if current_user.is_authenticated %}
 
-                                                <span class="text-light ms-auto">|</span>
                                                 <button @click="replyingTo = comment.id; replyContent = ''"
                                                     class="btn btn-link btn-sm p-0 text-decoration-none fw-bold text-primary"><i
                                                         class="fas fa-reply me-1"></i> Reply</button>
+                                                {% endif %}
                                             </div>
 
                                             <div class="collapse mt-3" :id="'editForm' + comment.id">
@@ -708,24 +723,40 @@
 
                                                         <div v-if="reply.reactions && reply.reactions.some(r => !['like', 'dislike'].includes(r.reaction_type))"
                                                             class="d-flex align-items-center gap-1">
-                                                            <template
-                                                                v-map="sumR = reply.reactions.reduce((acc, r) => { if(!['like', 'dislike'].includes(r.reaction_type)) { const icon = emodji_picker.getEmoji(r.reaction_type); acc[icon] = (acc[icon] || 0) + 1; } return acc; }, {})"></template>
-                                                            <template v-for="(count, emo, index) in sumR" :key="emo">
+
+                                                            <template v-map="sumR = reply.reactions.reduce((acc, r) => { 
+                                                                if(!['like', 'dislike'].includes(r.reaction_type)) { 
+                                                                    const icon = emodji_picker.getEmoji(r.reaction_type); 
+                                                                    if (!acc[icon]) acc[icon] = { count: 0, users: [] };
+                                                                    acc[icon].count++;
+                                                                    // Prevent duplicate names for the same emoji if needed, or just push
+                                                                    if(!acc[icon].users.includes(r.user_name)) acc[icon].users.push(r.user_name);
+                                                                } 
+                                                                return acc; 
+                                                            }, {})"></template>
+
+                                                            <template v-for="(data, emo, index) in sumR" :key="emo">
                                                                 <div v-if="index < 4"
                                                                     @click="addReaction(reply.id, emo)"
+                                                                    :title="data.users.join(', ')"
                                                                     class="badge rounded-pill bg-white border text-dark p-1 px-2 d-flex align-items-center shadow-sm"
-                                                                    style="font-size: 0.7rem; cursor: pointer;">
-                                                                    [[ emo ]] <span v-if="count > 1"
-                                                                        class="ms-1 fw-bold"
-                                                                        style="font-size: 0.55rem;">[[ count ]]</span>
+                                                                    style="font-size: 0.7rem; cursor: pointer;"
+                                                                    data-bs-toggle="tooltip">
+
+                                                                    [[ emo ]]
+                                                                    <span v-if="data.count > 1" class="ms-1 fw-bold"
+                                                                        style="font-size: 0.55rem;">
+                                                                        [[ data.count ]]
+                                                                    </span>
                                                                 </div>
                                                             </template>
                                                         </div>
-
+                                                        {% if current_user.is_authenticated %}
                                                         <button @click="replyingTo = reply.id; replyContent = ''"
                                                             class="btn btn-link btn-sm p-0 text-decoration-none fw-bold ms-auto text-primary"
                                                             style="font-size: 0.75rem;"><i
                                                                 class="fas fa-reply me-1"></i> Reply</button>
+                                                        {% endif %}
                                                     </div>
 
                                                     <div class="collapse mt-2" :id="'editReply' + reply.id">
@@ -1280,6 +1311,9 @@
                     if (parentId) {
                         visibleReplies.value[parentId] = true;
                     }
+                }
+                if (response.status === 401) {
+                    newCommentContent.value = "";
                 }
                 create_message(data.message, data.toast_class);
             }

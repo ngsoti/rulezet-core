@@ -700,9 +700,12 @@ def update_bundle_from_structure():
 #######################
 
 @bundle_blueprint.route("/add_comment", methods=['GET'])
-@login_required
 def add_comment():
     """Add a comment to a bundle."""
+
+    if not current_user.is_authenticated:
+        return {"message": "You must be logged in to add a comment", "toast_class": "warning-subtle"}, 401
+
     bundle_id = request.args.get('bundle_id', type=int)
     content = request.args.get('content', type=str)
     parent_comment_id = request.args.get('parent_comment_id', type=int, default=None)

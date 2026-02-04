@@ -744,7 +744,8 @@ class BundleReactionComment(db.Model):
             "reaction_type": self.reaction_type,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
             "is_admin": self.user.is_admin(),
-            "comment_id": self.comment_id
+            "comment_id": self.comment_id,
+            "user_name": self.user.first_name + " " + self.user.last_name
         }
 
 class BundleVote(db.Model):
