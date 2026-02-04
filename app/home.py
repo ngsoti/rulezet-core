@@ -351,6 +351,8 @@ BACKUP_DIR = os.path.join(os.getcwd(), "backup", "dumps")
 
 @home_blueprint.route('/admin/get_backups', methods=['GET'])
 def get_backups():
+    if not current_user.is_admin():
+        return render_template('access_denied.html')
     return render_template('admin/download_instance.html')
 
 @home_blueprint.route('/admin/backups', methods=['GET'])
