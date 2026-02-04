@@ -59,6 +59,16 @@
                     </select>
                 </div>
             </div>
+
+            <div class="col-lg-6" style="position: relative; z-index: 1040;">
+                <label class="small fw-black text-muted mb-2 ps-1" style="font-size: 0.65rem; letter-spacing: 1px;">
+                    <i class="fa-solid fa-shield-virus me-1 text-danger"></i> VULNERABILITIES (RULES)
+                </label>
+
+                <multi-vulnerability-filter v-model="selectedVulnerabilityNames" @change="fetchRules(1)"
+                    api-endpoint="/rule/get_all_rules_vulnerabilities_usage" placeholder="Filter rules by CVE, GHSA...">
+                </multi-vulnerability-filter>
+            </div>
         </div>
     </div>
 
@@ -275,9 +285,12 @@
     const { createApp, ref, computed, onMounted } = Vue
     import { display_toast, message_list, create_message } from '/static/js/toaster.js'
 
-
+    import MultiVulnerabilityFilter from '/static/js/vulnerability/multiVulnerabilityFilter.js';
     createApp({
         delimiters: ['[[', ']]'],
+        components: {
+            'multi-vulnerability-filter': MultiVulnerabilityFilter
+        },
         setup() {
 
             /*###################################_Fetch_rules_list_#############################*/
@@ -345,6 +358,10 @@
                     rule_type: ruleType.value
                 })
 
+                if (selectedVulnerabilityNames.value.length > 0) {
+                    params.append('vulnerabilities', selectedVulnerabilityNames.value.join(','));
+                }
+
                 const res = await fetch('/rule/get_rules_page_filter?' + params.toString())
                 const data = await res.json()
                 rules_list.value = data
@@ -354,6 +371,10 @@
                 current_page.value = page
                 search_is_loading.value = true
             }
+
+
+            const selectedVulnerabilityNames = ref([]);
+
             fetchRules(1)
 
             async function checkIfUserIsConnected() {
@@ -558,7 +579,9 @@
                 fetchRulesFormats,
                 dayjs,
                 animateClick,
-                search_is_loading
+                search_is_loading,
+                MultiVulnerabilityFilter,
+                selectedVulnerabilityNames
             }
         }
     }).mount('#main-container')

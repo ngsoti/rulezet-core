@@ -1,6 +1,8 @@
 
 import json
+from collections import Counter
 import math
+import re
 from typing import Any, Dict, List, Optional, Tuple
 import uuid
 import datetime
@@ -1162,7 +1164,7 @@ def remove_has_voted(vote, rule_id , id) -> bool:
 #   Filter  #
 #############
 
-def filter_rules(search=None, author=None, sort_by=None, rule_type=None) -> Rule:
+def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None) -> Rule:
     """Filter the rules"""
     query = Rule.query
     if search:
@@ -1177,6 +1179,15 @@ def filter_rules(search=None, author=None, sort_by=None, rule_type=None) -> Rule
                 Rule.uuid.ilike(search_lower)
             )
         )
+    if vulnerabilities:
+        vuln_filters = []
+        for v in vulnerabilities:
+            search_pattern = '%"' + v + '"%'
+            vuln_filters.append(Rule.cve_id.ilike(search_pattern))
+        
+        query = query.filter(or_(*vuln_filters))
+
+
     if author:
         query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
     if rule_type:
@@ -1248,6 +1259,8 @@ def filter_rules_owner(search=None, author=None, sort_by=None, rule_type=None , 
                 Rule.to_string.ilike(search_lower)
             )
         )
+
+
     if author:
         query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
     if rule_type:
@@ -2459,3 +2472,109 @@ def delete_updater_history(id):
     except Exception as e:
         db.session.rollback()
         return False, f"Updater history not deleted: {e}"
+    
+
+
+def get_rules_vulnerabilities_usage():
+    """
+    Retrieves and counts vulnerability identifiers from Rules while respecting access control.
+    Note: If you add an 'access' column to Rules later, the filters below will apply.
+    """
+    
+    # 1. Start the query on the Rule model
+    query = db.session.query(Rule.cve_id).filter(
+        Rule.cve_id.isnot(None),
+        Rule.cve_id != '',
+        Rule.cve_id != '[]'
+    )
+
+    # 2. Apply Access Control Logic (Placeholder for Rule model visibility)
+    # If your Rule model doesn't have 'access', these filters will need 
+    # the column added to the Rule class first.
+    if current_user.is_authenticated:
+        if not current_user.is_admin():
+            # Check if Rule has an 'access' column; if not, this part is skipped or modified
+            if hasattr(Rule, 'access'):
+                query = query.filter(
+                    or_(Rule.access.is_(True), Rule.user_id == current_user.id)
+                )
+    else:
+        if hasattr(Rule, 'access'):
+            query = query.filter(Rule.access.is_(True))
+
+    all_rules_vulns = query.all()
+    
+    # 3. Process and count individual CVEs
+    vulnerability_counter = Counter()
+    
+    for (raw_json,) in all_rules_vulns:
+        try:
+            # Safely parse the JSON list stored in the cve_id column
+            vuln_list = json.loads(raw_json) if isinstance(raw_json, str) else raw_json
+            if isinstance(vuln_list, list):
+                vulnerability_counter.update(vuln_list)
+        except (json.JSONDecodeError, TypeError):
+            # If the data is still "messy" (not JSON), skip it
+            continue
+
+    # 4. Return formatted list for the Vue MultiVulnerabilityFilter
+    return [
+        {
+            "name": vuln_id,
+            "usage_count": count
+        }
+        for vuln_id, count in vulnerability_counter.most_common()
+    ]
+
+
+def migrate_rule_cve_to_json():
+    print("🚀 Starting full CVE data migration and cleanup...")
+    # Fetch ALL rules (including those where cve_id is NULL)
+    rules = Rule.query.all()
+    updated_count = 0
+
+    # Robust regex for CVE, GHSA, PYSEC, RHSA
+    vuln_regex = re.compile(r'(?:CVE|GHSA|PYSEC|RHSA)[\s\-_]\d{4,}[\s\-_]\d{3,}', re.IGNORECASE)
+
+    for rule in rules:
+        # Check if it is truly NULL or empty
+        if rule.cve_id is None:
+            rule.cve_id = json.dumps([])
+            updated_count += 1
+            continue
+
+        original_value = str(rule.cve_id).strip()
+        
+        # If it's already a valid JSON list, we leave it alone
+        if original_value.startswith('[') and original_value.endswith(']'):
+            continue
+
+        # 1. Look for CVE patterns in the string
+        matches = vuln_regex.findall(original_value)
+        
+        if matches:
+            # 2. Normalize format (e.g., "CVE 2019" -> "CVE-2019")
+            cleaned_list = []
+            for m in matches:
+                normalized = re.sub(r'[\s\_]', '-', m).upper()
+                cleaned_list.append(normalized)
+            
+            final_list = sorted(list(set(cleaned_list)))
+            rule.cve_id = json.dumps(final_list)
+            updated_count += 1
+        else:
+            # 3. No CVE found, or it was a string like "None", "vide", etc.
+            # Force it to an empty list
+            rule.cve_id = json.dumps([])
+            updated_count += 1
+            
+    try:
+        db.session.commit()
+        print(f"✅ Success! {updated_count} rules were updated to the standard JSON format.")
+        return True, f"Success! {updated_count} rules were updated to the standard JSON format."
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error during migration: {e}")
+        return False, f"Error during migration: {e}"
+
+# migrate_rule_cve_to_json()

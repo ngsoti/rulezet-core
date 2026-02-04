@@ -102,7 +102,7 @@ class Rule(db.Model):
     vote_up = db.Column(db.Integer)
     vote_down = db.Column(db.Integer)
     to_string = db.Column(db.String)
-    cve_id = db.Column(db.String , nullable=True)
+    cve_id = db.Column(db.Text , nullable=True)
 
     github_path = db.Column(db.String , nullable=True)
 
@@ -744,8 +744,7 @@ class BundleReactionComment(db.Model):
             "reaction_type": self.reaction_type,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
             "is_admin": self.user.is_admin(),
-            "comment_id": self.comment_id,
-            "user_name": self.user.first_name + " " + self.user.last_name
+            "comment_id": self.comment_id
         }
 
 class BundleVote(db.Model):

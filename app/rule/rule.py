@@ -160,7 +160,10 @@ def get_rules_page_filter() -> jsonify:
     sort_by = request.args.get("sort_by", "newest")
     rule_type = request.args.get("rule_type", None) 
 
-    query = RuleModel.filter_rules( search=search, author=author, sort_by=sort_by, rule_type=rule_type)
+    vuln_raw = request.args.get("vulnerabilities", type=str)
+    vuln_list = [v.strip() for v in vuln_raw.split(',') if v.strip()] if vuln_raw else []
+
+    query = RuleModel.filter_rules( search=search, author=author, sort_by=sort_by, rule_type=rule_type, vulnerabilities=vuln_list)
     total_rules = query.count()
     rules = query.offset((page - 1) * per_page).limit(per_page).all()
 
@@ -396,6 +399,10 @@ def get_rules_page_filter_owner() -> jsonify:
     sort_by = request.args.get("sort_by", "newest")
     rule_type = request.args.get("rule_type", None) 
     sourceFilter = request.args.get("source", None) 
+    
+   
+
+
 
     query = RuleModel.filter_rules_owner( search=search, author=author, sort_by=sort_by, rule_type=rule_type , source=sourceFilter)
     total_rules = query.count()
@@ -2508,4 +2515,18 @@ def get_rules_page_filter_bundle() -> jsonify:
         "total_rules": total_rules,
         "total_pages": rules.pages
     }),200
+
+
+@rule_blueprint.route("/get_all_rules_vulnerabilities_usage", methods=['GET'])
+def get_all_rules_vulnerabilities_usage():
+    try:
+        
+        vulnerabilities = RuleModel.get_rules_vulnerabilities_usage()
+        return jsonify({
+            "success": True,
+            "vulnerabilities": vulnerabilities
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    
 
