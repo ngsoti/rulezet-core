@@ -48,6 +48,7 @@ def create_bundle(form_dict , user) -> Bundle:
         view_count=0,
         download_count=0,
         created_at=datetime.datetime.now(tz=datetime.timezone.utc),
+        vulnerability_identifiers=json.dumps(form_dict.get("vulnerability_identifiers", [])),
     )
 
    
