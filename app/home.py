@@ -1,6 +1,7 @@
 import json
+import os
 
-from flask import  Blueprint, flash, jsonify, redirect, render_template, request
+from flask import  Blueprint, flash, jsonify, redirect, render_template, request, send_from_directory, abort
 from flask_login import current_user, login_required
 from flask import get_flashed_messages
 from flask_login import login_required, current_user
@@ -340,3 +341,46 @@ def about() -> render_template:
 def version() -> jsonify:
     version = get_version()
     return jsonify({"version": version }), 200
+
+##############
+#   ADMIN   #
+#############
+
+
+BACKUP_DIR = os.path.join(os.getcwd(), "backup", "dumps")
+
+@home_blueprint.route('/admin/get_backups', methods=['GET'])
+def get_backups():
+    return render_template('admin/download_instance.html')
+
+@home_blueprint.route('/admin/backups', methods=['GET'])
+@login_required
+def list_backups():
+    try:
+        if not current_user.is_admin():
+            return jsonify({"error": "Unauthorized"}), 401
+        files = [f for f in os.listdir(BACKUP_DIR) if f.endswith('.dump')]
+        files.sort(reverse=True)
+        return jsonify({"files": files, "success": True, "toast_class": "success-subtle", "message": "Success"}), 200
+    except Exception as e:
+        return jsonify({"message": str(e), "error": str(e), "success": False, "toast_class": "danger-subtle"}), 500
+
+@home_blueprint.route('/admin/backups/download/<filename>', methods=['GET'])
+@login_required
+def download_backup(filename):
+    if not current_user.is_admin():
+        return jsonify({"error": "Unauthorized"}), 401
+    if ".." in filename or filename.startswith("/"):
+        abort(400)
+    return send_from_directory(BACKUP_DIR, filename, as_attachment=True)
+
+
+@home_blueprint.route('/admin/vulnerabilities/update', methods=['GET'])
+@login_required
+def UpdateVulnerabilities():
+    if not current_user.is_admin():
+        return jsonify({"error": "Unauthorized", "toast_class": "danger-subtle", "message": "Unauthorized"}), 401
+    success , msg = RuleModel.migrate_rule_cve_to_json()
+    if not success:
+        return jsonify({"success": success, "message": msg, "toast_class": "danger-subtle"}), 500
+    return jsonify({"success": success, "message": msg, "toast_class": "success-subtle"}), 200

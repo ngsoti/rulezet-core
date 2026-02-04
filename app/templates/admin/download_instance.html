@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="main-container" class="container mt-5">
+    <ul class="nav nav-underline justify-content-center w-100 mb-4" id="exampleTabs" role="tablist">
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab"
+                aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
+                <i class="bi bi-database-down me-2"></i>Download Backups
+            </a>
+        </li>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab"
+                aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
+                <i class="bi bi-shield-exclamation me-2"></i>Restore Vulnerabilities
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="exampleTabsContent">
+        <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
+            <div class="card h-100 border-0 card-security-premium-detail mb-4 card_detail border-top shadow-lg"
+                style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="card-title mb-0 fw-bold text-uppercase" style="letter-spacing: 1px;">Available Dumps
+                        </h5>
+                        <button @click="fetchBackups" class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                            :disabled="loading">
+                            <i class="bi bi-arrow-clockwise me-1" :class="{'spin': loading}"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div v-if="loading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2">Accessing /backup/dumps/...</p>
+                    </div>
+
+                    <div v-else-if="backups.length === 0" class="alert alert-light border text-center py-4">
+                        <i class="bi bi-folder2-open fs-2 d-block mb-2"></i>
+                        <span class="text-muted">No backup files available at the moment.</span>
+                    </div>
+
+                    <div v-else class="list-group list-group-flush">
+                        <div v-for="file in backups" :key="file"
+                            class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-3 border-bottom">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-file-earmark-binary text-primary fs-4 me-3"></i>
+                                <div>
+                                    <div class="fw-semibold text-dark">[[ file ]]</div>
+                                    <small class="text-muted text-uppercase">PostgreSQL Archive</small>
+                                </div>
+                            </div>
+                            <button @click="downloadBackup(file)"
+                                class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm">
+                                <i class="bi bi-download me-1"></i> Download
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-center pb-3">
+                    <small class="text-muted fw-light italic">Files are stored securely in
+                        <code>/backup/dumps/</code></small>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
+            <div class="card h-100 border-0 card-security-premium-detail mb-4 card_detail border-top shadow-lg"
+                style="border-radius: 12px;">
+                <div class="card-body p-5 text-center">
+                    <div class="mx-auto bg-warning-subtle rounded-circle d-flex align-items-center justify-content-center mb-4"
+                        style="width: 80px; height: 80px;">
+                        <i class="bi bi-arrow-repeat text-warning fs-1"></i>
+                    </div>
+                    <h4 class="fw-bold">Database Synchronisation</h4>
+                    <p class="text-muted mb-4 mx-auto" style="max-width: 450px;">
+                        This action will fetch and restore the latest security vulnerability definitions into your local
+                        database.
+                    </p>
+                    <template v-if="!is_loading">
+                        <button class="btn btn-primary btn-lg rounded-pill px-5 shadow"
+                            @click="vulnerabilitiesUpdate()">
+
+                            <i class="bi bi-cloud-download me-2"></i> Run Update Now
+                        </button>
+                    </template>
+                    <template v-else>
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, onMounted } = Vue;
+    import { create_message, message_list } from '/static/js/toaster.js';
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const backups = ref([]);
+            const loading = ref(true);
+
+            const fetchBackups = async () => {
+                loading.value = true;
+                try {
+                    const response = await fetch('/admin/backups');
+                    const data = await response.json();
+                    if (data.files) {
+                        backups.value = data.files;
+                    } else if (data.message) {
+                        create_message(data.message, data.toast_class);
+                    }
+                } catch (e) {
+                    create_message("Server unreachable", "danger-subtle");
+                }
+                loading.value = false;
+            };
+
+            const is_loading = ref(false);
+
+            async function vulnerabilitiesUpdate() {
+                try {
+                    is_loading.value = true
+                    const response = await fetch('/admin/vulnerabilities/update');
+                    const data = await response.json();
+                    create_message(data.message, data.toast_class);
+                } catch (e) {
+                    create_message("Update failed", "danger-subtle");
+                }
+                is_loading.value = false
+            }
+
+            async function downloadBackup(file) {
+                try {
+                    const response = await fetch(`/admin/backups/download/${file}`);
+                    if (!response.ok) throw new Error('Download failed');
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = file;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    create_message("File downloaded", "success-subtle");
+                } catch (error) {
+                    create_message("Error during transfer", "danger-subtle");
+                }
+            }
+
+            onMounted(() => {
+                fetchBackups();
+            });
+
+            return {
+                backups,
+                loading,
+                fetchBackups,
+                message_list,
+                downloadBackup,
+                vulnerabilitiesUpdate,
+                is_loading
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}
