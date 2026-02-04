@@ -317,18 +317,23 @@ def get_tag_ids_for_bundle(bundle_id: int) -> List[int]:
 
 def get_tags_for_bundle(bundle_id: int) -> List[Tag]:
     """
-    Retrieve a list of active and public Tag objects associated with a bundle.
+    Retrieve a list of active Tag objects associated with a bundle.
+    Users see only 'public' tags, while Admins see 'public' and 'private' tags.
     """
-    return (
+    query = (
         db.session.query(Tag)
         .join(BundleTagAssociation, BundleTagAssociation.tag_id == Tag.id)
         .filter(
             BundleTagAssociation.bundle_id == bundle_id,
-            Tag.is_active == True,
-            Tag.visibility == 'public'
+            Tag.is_active == True
         )
-        .all()
     )
+
+    # Apply visibility constraint only if user is not an Admin
+    if not (current_user.is_authenticated and current_user.is_admin()):
+        query = query.filter(Tag.visibility == 'public')
+
+    return query.all()
 
 
 def get_vulnerabilities_for_bundle(bundle_id: int):
@@ -346,18 +351,23 @@ def get_vulnerabilities_for_bundle(bundle_id: int):
         return []
 def get_tags_for_bundle_json(bundle_id: int) -> List[dict]:
     """
-    Retrieve a list of active and public Tag dictionaries associated with a bundle.
+    Retrieve a list of active Tag dictionaries associated with a bundle.
+    Normal users see only 'public' tags; Admins see both 'public' and 'private'.
     """
-    tags = (
+    query = (
         db.session.query(Tag)
         .join(BundleTagAssociation, BundleTagAssociation.tag_id == Tag.id)
         .filter(
             BundleTagAssociation.bundle_id == bundle_id,
-            Tag.is_active == True,
-            Tag.visibility == 'public'
+            Tag.is_active == True
         )
-        .all()
     )
+
+    # If the user is NOT an admin, restrict visibility to 'public'
+    if not (current_user.is_authenticated and current_user.is_admin()):
+        query = query.filter(Tag.visibility == 'public')
+
+    tags = query.all()
     return [tag.to_json() for tag in tags]
 
 def get_all_rule_bundles_page(page: int, bundle_id: int) -> list[Rule]:
@@ -919,13 +929,15 @@ def add_reaction_to_comment(comment_id: int, user_id: int, reaction_type: str, b
 
 
 
-
 def get_all_used_tags_with_counts():
     """
-    Returns only active tags present in BundleTagAssociation with their usage count.
-    Respects bundle visibility and tag status.
+    Returns tags with their usage count.
+    - Tag must be is_active == True.
+    - Private Tags: Only visible to Admins.
+    - Bundle Visibility: Counts only from bundles the user has access to.
     """
     
+   
     query = (
         db.session.query(
             Tag, 
@@ -933,19 +945,23 @@ def get_all_used_tags_with_counts():
         )
         .join(BundleTagAssociation, Tag.id == BundleTagAssociation.tag_id)
         .join(Bundle, Bundle.id == BundleTagAssociation.bundle_id)
-        # Filter only active tags
         .filter(Tag.is_active.is_(True)) 
     )
 
-    # Apply Visibility Logic
+   
+    if not (current_user.is_authenticated and current_user.is_admin()):
+        query = query.filter(Tag.visibility == 'public')
+
+
     if current_user.is_authenticated:
         if not current_user.is_admin():
-            # Public OR Owned by user
+           
             query = query.filter(
                 or_(Bundle.access.is_(True), Bundle.user_id == current_user.id)
             )
+        
     else:
-        # Anonymous: Public only
+       
         query = query.filter(Bundle.access.is_(True))
 
     results = (
@@ -961,7 +977,6 @@ def get_all_used_tags_with_counts():
         tags_list.append(tag_data)
         
     return tags_list
-
 
 
 def get_all_vulnerabilities_with_counts():

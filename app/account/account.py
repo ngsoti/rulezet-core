@@ -162,7 +162,7 @@ def logout() -> redirect:
     flash('You have been logged out.', 'info')
     # return redirect(url_for('home.home'))
     # we dont want ti go back to home or the connection page we juste want to stay in the page where I am 
-    return redirect(request.referrer or url_for('home.home'))
+    return redirect(url_for('home.home'))
 
 @account_blueprint.route('/register', methods=['GET', 'POST'])
 def add_user() -> redirect:
