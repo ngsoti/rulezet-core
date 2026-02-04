@@ -38,7 +38,7 @@
                 the community.
             </p>
         </div>
-
+        <!-- Main Card -->
         <div class="card h-100 border-0 card-security-premium-detail mb-4 card_detail border-top shadow-lg position-relative"
             style="border-radius: 12px; min-height: 400px;">
 
@@ -138,7 +138,7 @@
 
 
                 <!-- Action -->
-                <div class="row g-3 mb-2">
+                <div class="row g-3 mb-3 mt-3">
                     <div class="d-flex justify-content-between align-items-center pt-4 border-top flex-wrap gap-3">
                         <div class="btn-group shadow-sm border rounded-pill overflow-hidden ">
                             <button @click="vote('up', bundle.id); animateClick($event)"
@@ -174,7 +174,7 @@
                             </div>
 
                             <div class="dropdown"
-                                v-if="parseInt('{{ current_user.id }}') === bundle.user_id || is_admin">
+                                v-if="parseInt('{{ current_user.id }}') === bundle.user_id || current_user_is_admin">
                                 <button
                                     class="btn btn-sm rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center home-btn border"
                                     style="width: 32px; height: 32px;" data-bs-toggle="dropdown">
@@ -227,7 +227,19 @@
                         </div>
                     </div>
                 </div>
-
+                <!-- Tags-->
+                <div class="mt-4">
+                    <!-- Tags Component -->
+                    <tag-display :tags="displayTags" :loading="loadingDisplayTags" section-title="Workspace Tags"
+                        css-path="{{ url_for('static', filename='/css/tag/tags.css') }}">
+                    </tag-display>
+                </div>
+                <div class="mt-4">
+                    <vulnerability-display :vulnerabilities="displayVulnerabilities"
+                        :loading="loadingDisplayVulnerabilities" section-title="Security Identifiers"
+                        css-path="{{ url_for('static', filename='/css/tag/tags.css') }}">
+                    </vulnerability-display>
+                </div>
                 <!-- Rules -->
                 <template v-if="rules.length > 0">
                     <div class="mt-5 mb-4">
@@ -809,6 +821,8 @@
     const { createApp, ref, onMounted, nextTick, computed } = Vue;
     import { message_list, create_message, display_toast } from '/static/js/toaster.js';
     import { emodji_picker } from '/static/emodji/emodji_picker.js';
+    import TagDisplay from '/static/js/tags/tagDisplay.js';
+    import VulnerabilityDisplay from '/static/js/vulnerability/vulnerabilityDisplay.js';
     /* ============================================================
         TREE COMPONENT
     ============================================================ */
@@ -840,7 +854,13 @@
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { 'tree-item-view': TreeItemView },
+
+        components: {
+            'tree-item-view': TreeItemView,
+            'emodji-picker': emodji_picker,
+            'tag-display': TagDisplay,
+            'vulnerability-display': VulnerabilityDisplay
+        },
         setup() {
             /**
             *          #################
@@ -856,11 +876,56 @@
                     fetchCurrentUser(),
                     fetchBundle(),
                     fetchComments(1),
+                    fetchBundleTags(),
+                    fetchBundleVulnerabilities()
                 ])
                 detail_page_1_is_loading.value = true
                 await nextTick();
             }
+            /**
+             *          #####################
+             *          #     Fetch tags    #
+             *          #####################
+             */
 
+            const displayTags = ref([]);
+            const loadingDisplayTags = ref(true);
+
+            const fetchBundleTags = async () => {
+                loadingDisplayTags.value = true;
+                try {
+                    const res = await fetch('/bundle/get_bundle_tags_display/' + bundle_id);
+                    const data = await res.json();
+                    displayTags.value = data.tags || [];
+                } catch (e) {
+                    create_message("Error loading tags", "danger");
+                } finally {
+                    loadingDisplayTags.value = false;
+                }
+            };
+
+
+            /**
+             *          #####################
+             *          #     Fetch tags    #
+             *          #####################
+             */
+
+            const displayVulnerabilities = ref([]);
+            const loadingDisplayVulnerabilities = ref(true);
+
+            const fetchBundleVulnerabilities = async () => {
+                loadingDisplayVulnerabilities.value = true;
+                try {
+                    const res = await fetch('/bundle/get_bundle_vulnerabilities_display/' + bundle_id);
+                    const data = await res.json();
+                    displayVulnerabilities.value = data.vulnerabilities || [];
+                } catch (e) {
+                    create_message("Error loading vulnerabilities", "danger");
+                } finally {
+                    loadingDisplayVulnerabilities.value = false;
+                }
+            };
             /**
              *          #####################
              *          #   Fetch bundle    #
@@ -1374,7 +1439,10 @@
                 treeData, selectedNode, handleSelect, openNodes, handleToggleFolder, toggleAll, isAllExpanded, isRule, clearDisplay, toggleContent,
 
                 comments_list, fetchComments, current_page, total_comments, total_pages, newCommentContent, submitComment, replyingTo, replyContent, visibleReplies, toggleReplies,
-                loadMore, showLess, deleteComment, editComment, addReaction, emodji_picker, current_user_is_admin
+                loadMore, showLess, deleteComment, editComment, addReaction, emodji_picker, current_user_is_admin,
+
+                // tags
+                displayTags, loadingDisplayTags, fetchBundleTags, loadingDisplayVulnerabilities, displayVulnerabilities, fetchBundleVulnerabilities
             };
         }
     }).mount('#main-containers');

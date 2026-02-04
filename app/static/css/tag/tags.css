@@ -1,0 +1,108 @@
+
+/**
+* Tags
+*
+*/
+
+.tag-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.tag-tooltip {
+    visibility: hidden;
+    position: absolute;
+    bottom: 125%; 
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    width: 320px; 
+    background-color: #1e1e26; 
+    color: #eeeeee;
+    text-align: left;
+    border-radius: 8px;
+    z-index: 1050;
+    opacity: 0;
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    pointer-events: auto; 
+}
+
+.hover-bridge {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 25px;
+    background: transparent;
+}
+
+.tooltip-body {
+    padding: 12px 14px;
+    font-size: 0.82rem;
+}
+
+
+.description-container {
+    position: relative;
+}
+
+.description-scroll {
+    max-height: 100px; 
+    overflow-y: auto;
+    line-height: 1.5;
+    padding-bottom: 10px;
+}
+
+
+.description-container::after {
+    content: "scroll for more...";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 30px;
+    background: linear-gradient(transparent, #1e1e26);
+    pointer-events: none;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+    transition: opacity 0.3s;
+}
+
+
+
+.tooltip-header {
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px 8px 0 0;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+}
+
+.tooltip-arrow {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -8px;
+    border-width: 8px;
+    border-style: solid;
+    border-color: #1e1e26 transparent transparent transparent;
+}
+
+.tag-wrapper:hover .tag-tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.tag-wrapper:hover {
+    z-index: 1100;
+}
+
+/* Custom Scrollbar */
+.description-scroll::-webkit-scrollbar { width: 4px; }
+.description-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }

@@ -526,7 +526,7 @@ class Bundle(db.Model):
     # visibility
     access = db.Column(db.Boolean, nullable=False, default=True) # if true all user can see the bundle, if false only the creator can see it
 
-
+    vulnerability_identifiers = db.Column(db.Text, nullable=True) # JSON string of vulnerability identifiers associated with the bundle
 
     user = db.relationship('User', backref=db.backref('user who create bundle', lazy='dynamic', cascade='all, delete-orphan'))
 
@@ -556,7 +556,8 @@ class Bundle(db.Model):
             "view_count": self.view_count,
             "download_count": self.download_count,
             "uuid": self.uuid,
-            "created_by": self.created_by
+            "created_by": self.created_by,
+            "vulnerability_identifiers": json.loads(self.vulnerability_identifiers) if self.vulnerability_identifiers else []
         }
 
 
@@ -763,6 +764,32 @@ class BundleVote(db.Model):
             "bundle_id": self.bundle_id,
             "vote_type": self.vote_type,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M')
+        }
+
+class BundleTagAssociation(db.Model):
+    __tablename__ = 'bundle_tag_association'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    bundle_id = db.Column(db.Integer, db.ForeignKey('bundle.id'), nullable=False)
+    tag_id = db.Column(db.Integer, db.ForeignKey('tag.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # the user who added the tag to the bundle
+
+    added_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+
+    bundle = db.relationship('Bundle', backref=db.backref('tags_assocs', lazy='dynamic', cascade='all, delete-orphan'))
+    tag = db.relationship('Tag', backref=db.backref('bundles_assocs', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User', backref=db.backref('user_tags_assocs', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "bundle_id": self.bundle_id,
+            "tag_id": self.tag_id,
+            "user_id": self.user_id,
+            "tag_name": self.tag.name if self.tag else None,
+            "added_at": self.added_at.strftime('%Y-%m-%d %H:%M'),
         }
 
 

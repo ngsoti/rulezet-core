@@ -1,13 +1,14 @@
 import datetime
 import uuid
-from sqlalchemy import or_
+from sqlalchemy import Tuple, or_
 from flask_login import current_user
 from .. import db
 from ..db_class.db import *
 from app.db_class.db import Bundle, BundleRuleAssociation
 from typing import Dict, Any, Union , List
 from ..rule import rule_core as RuleModel
-
+import json
+from collections import Counter
 
 """
 CRUD operations for Bundle model.
@@ -46,9 +47,10 @@ def create_bundle(form_dict , user) -> Bundle:
         is_verified=verified,
         view_count=0,
         download_count=0,
-        created_at=datetime.datetime.now(tz=datetime.timezone.utc)
+        created_at=datetime.datetime.now(tz=datetime.timezone.utc),
     )
 
+   
     try:
         db.session.add(new_bundle)
         db.session.commit()
@@ -89,38 +91,35 @@ def  get_association_by_id(association_id: int) -> Bundle | None:
     :return: Bundle instance or None if not found.
     """
     return BundleRuleAssociation.query.get(association_id)
-
-def get_all_bundles_page(page: int, search: str| None, own: bool) -> dict:
-    """
-    List all bundles paginated, with optional search filter.
-    :param page: Page number.
-    :param search: The search string to filter by name or description.
-    :return: Pagination object with filtered bundles.
-    """
+def get_all_bundles_page(page: int, search: str | None, own: bool, tag_ids: list[int] | None = None, vulnerabilities: list[str] | None = None) -> dict:
     query = Bundle.query    
 
     if search:
         like_pattern = f"%{search}%"
-        query = query.filter(
-            or_(
-                Bundle.name.ilike(like_pattern),
-                Bundle.description.ilike(like_pattern)
-            )
-        )
-    if own:
-        if current_user.is_authenticated:   
-            query = query.filter_by(user_id=current_user.id)    
+        query = query.filter(or_(Bundle.name.ilike(like_pattern), Bundle.description.ilike(like_pattern)))
+
+
+    if tag_ids:
+        query = query.join(BundleTagAssociation).filter(BundleTagAssociation.tag_id.in_(tag_ids)).distinct()
+
+    if vulnerabilities:
+        vuln_filters = []
+        for v in vulnerabilities:
+            # On construit la chaîne simplement sans mélanger les styles
+            # On cherche littéralement "ID" dans la colonne texte
+            search_pattern = '%"' + v + '"%'
+            vuln_filters.append(Bundle.vulnerability_identifiers.ilike(search_pattern))
+        
+        query = query.filter(or_(*vuln_filters))
+
+    if own and current_user.is_authenticated:   
+        query = query.filter_by(user_id=current_user.id)
+
     if current_user.is_authenticated:
-        # if admin see all elif not admin see only public and user connected see also his private
         if not current_user.is_admin():
             query = query.filter(
-                or_(
-                    Bundle.access.is_(True),
-                    Bundle.user_id == current_user.id
-                )
+                or_(Bundle.access.is_(True), Bundle.user_id == current_user.id)
             )
-        else:
-            pass  
     else:
         query = query.filter_by(access=True)
 
@@ -177,11 +176,27 @@ def update_bundle(bundle_id: int, form_dict: dict ) -> Bundle | None:
     bundle = Bundle.query.get(bundle_id)
     if not bundle:
         return None
+    
+    v_raw = form_dict.get("vulnerabilities") 
+    
+   
+    if isinstance(v_raw, list):
+        vulnerabilities_json = json.dumps(v_raw)
+    elif isinstance(v_raw, str) and v_raw.strip():
+        try:
+            json.loads(v_raw) 
+            vulnerabilities_json = v_raw
+        except:
+            vulnerabilities_json = "[]"
+    else:
+        vulnerabilities_json = "[]"
+
     if form_dict is not None:
         bundle.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
         bundle.name = form_dict["name"]
         bundle.description = form_dict["description"]
         bundle.access = form_dict["public"]
+        bundle.vulnerability_identifiers = vulnerabilities_json
     db.session.commit()
     return bundle
 
@@ -234,6 +249,118 @@ def add_rule_to_bundle(bundle_id: int, rule_id: int , description: str) -> bool:
     if assoc:
         return True
     return False 
+
+ # BundleTagAssociation
+def update_bundle_tags(bundle_id: int, tags: List[int], user: User) -> bool:
+    """
+    Syncs the tags associated with a bundle without deleting existing ones
+    that are still present in the new list.
+    """
+    bundle = get_bundle_by_id(bundle_id)
+    if not bundle:
+        return False
+
+    try:
+        current_associations = BundleTagAssociation.query.filter_by(bundle_id=bundle_id).all()
+        
+        current_tag_ids = {assoc.tag_id for assoc in current_associations}
+        new_tag_ids = set(tags)
+
+        
+
+        ids_to_remove = current_tag_ids - new_tag_ids
+        
+
+        ids_to_add = new_tag_ids - current_tag_ids
+
+
+        if ids_to_remove:
+            BundleTagAssociation.query.filter(
+                BundleTagAssociation.bundle_id == bundle_id,
+                BundleTagAssociation.tag_id.in_(ids_to_remove)
+            ).delete(synchronize_session=False)
+
+
+        for tag_id in ids_to_add:
+            assoc = BundleTagAssociation(
+                bundle_id=bundle_id,
+                tag_id=tag_id,
+                added_at=datetime.datetime.now(tz=datetime.timezone.utc),
+                user_id=user.id,
+                uuid=str(uuid.uuid4())
+            )
+            db.session.add(assoc)
+
+        db.session.commit()
+        return True
+
+    except Exception as e:
+        db.session.rollback()
+        return False
+
+def get_tag_ids_for_bundle(bundle_id: int) -> List[int]:
+    """
+    Retrieve a list of active and public tag IDs associated with a bundle.
+    """
+    # We query only the tag_id column
+    results = (
+        db.session.query(BundleTagAssociation.tag_id)
+        .join(Tag, BundleTagAssociation.tag_id == Tag.id)
+        .filter(
+            BundleTagAssociation.bundle_id == bundle_id,
+            Tag.is_active == True,
+            Tag.visibility == 'public'
+        )
+        .all()
+    )
+
+    # results is [(1,), (5,)], we convert it to [1, 5]
+    return [tag_id for (tag_id,) in results]
+
+def get_tags_for_bundle(bundle_id: int) -> List[Tag]:
+    """
+    Retrieve a list of active and public Tag objects associated with a bundle.
+    """
+    return (
+        db.session.query(Tag)
+        .join(BundleTagAssociation, BundleTagAssociation.tag_id == Tag.id)
+        .filter(
+            BundleTagAssociation.bundle_id == bundle_id,
+            Tag.is_active == True,
+            Tag.visibility == 'public'
+        )
+        .all()
+    )
+
+
+def get_vulnerabilities_for_bundle(bundle_id: int):
+    """
+    Retrieve the list of vulnerability strings stored in the bundle.
+    """
+    bundle = get_bundle_by_id(bundle_id)
+    if not bundle or not bundle.vulnerability_identifiers:
+        return []
+    
+    # vulnerability_identifiers is a string like '["CVE-2024-1234", "GHSA-xxxx"]'
+    try:
+        return json.loads(bundle.vulnerability_identifiers)
+    except (json.JSONDecodeError, TypeError):
+        return []
+def get_tags_for_bundle_json(bundle_id: int) -> List[dict]:
+    """
+    Retrieve a list of active and public Tag dictionaries associated with a bundle.
+    """
+    tags = (
+        db.session.query(Tag)
+        .join(BundleTagAssociation, BundleTagAssociation.tag_id == Tag.id)
+        .filter(
+            BundleTagAssociation.bundle_id == bundle_id,
+            Tag.is_active == True,
+            Tag.visibility == 'public'
+        )
+        .all()
+    )
+    return [tag.to_json() for tag in tags]
 
 def get_all_rule_bundles_page(page: int, bundle_id: int) -> list[Rule]:
     """
@@ -814,3 +941,65 @@ def add_reaction_to_comment(comment_id: int, user_id: int, reaction_type: str, b
     except Exception as e:
         db.session.rollback()
         return False, f"Error: {str(e)}"
+
+
+
+def get_all_used_tags_with_counts():
+    """
+    Returns only tags present in BundleTagAssociation with their global usage count.
+    If 2 bundles share the same tag, count will be 2.
+    """
+    results = (
+        db.session.query(
+            Tag, 
+            func.count(BundleTagAssociation.id).label('usage_count')
+        )
+        .join(BundleTagAssociation, Tag.id == BundleTagAssociation.tag_id)
+        .group_by(Tag.id)
+        .order_by(func.count(BundleTagAssociation.id).desc())
+        .all()
+    )
+    
+    tags_list = []
+    for tag_obj, count in results:
+        tag_data = tag_obj.to_json()
+        tag_data['usage_count'] = count
+        tags_list.append(tag_data)
+        
+    return tags_list
+
+
+
+def get_all_vulnerabilities_with_counts():
+    """
+    Retrieves all vulnerability identifiers stored in the 'vulnerability_identifiers' 
+    JSON columns across all Bundles and returns their global usage count.
+    """
+    all_bundles_vulns = (
+        db.session.query(Bundle.vulnerability_identifiers)
+        .filter(Bundle.vulnerability_identifiers.isnot(None))
+        .filter(Bundle.vulnerability_identifiers != '')
+        .all()
+    )
+    
+    vulnerability_counter = Counter()
+    
+    for (raw_json,) in all_bundles_vulns:
+        try:
+            vuln_list = json.loads(raw_json)
+            if isinstance(vuln_list, list):
+                vulnerability_counter.update(vuln_list)
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+    vulnerabilities_list = [
+        {
+            "name": vuln_id,
+            "usage_count": count
+        }
+        for vuln_id, count in vulnerability_counter.most_common()
+    ]
+
+    return vulnerabilities_list
+    
+   

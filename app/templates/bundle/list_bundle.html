@@ -12,29 +12,54 @@
             effectively.
         </p>
     </div>
+    <!-- filter-->
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 16px; position: relative; z-index: 10;">
+        <div class="card-body p-4">
 
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <div class="row g-3">
+            <div class="row align-items-center g-3 mb-4">
                 <div class="col-md-8">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text border-end-0 bg-white">
-                            <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                    <div class="input-group shadow-sm border rounded-pill  px-2">
+                        <span class="input-group-text border-0 bg-transparent">
+                            <i class="fa-solid fa-magnifying-glass text-primary opacity-75"></i>
                         </span>
-                        <input type="text" v-model="searchQuery" class="form-control rounded-end-pill border-start-0"
-                            @keyup.enter="onEnterKey" placeholder="Search..." @input="onSearchInput">
+                        <input type="text" v-model="searchQuery" class="form-control border-0 shadow-none py-2"
+                            @keyup.enter="onEnterKey" placeholder="Search bundles, rules, or descriptions..."
+                            @input="onSearchInput">
                     </div>
                 </div>
-                <div class="col-md-4">
+
+                <div class="col-md-4 d-flex justify-content-md-end">
                     {% if current_user.is_authenticated %}
-                    <div class="form-check form-switch ms-md-2">
-                        <input class="form-check-input" type="checkbox" id="ownBundlesToggle" v-model="showOwnBundles"
-                            @change="fetchAllBundles(1)">
-                        <label class="form-check-label small fw-bold text-muted" for="ownBundlesToggle">
+                    <div class="form-check form-switch d-flex align-items-center gap-2 m-0 p-0">
+                        <label class="form-check-label small fw-bold text-muted order-1" for="ownBundlesToggle"
+                            style="letter-spacing: 0.5px; cursor: pointer;">
                             MY BUNDLES ONLY
                         </label>
+                        <input class="form-check-input order-2 ms-0" type="checkbox" id="ownBundlesToggle"
+                            v-model="showOwnBundles" @change="fetchAllBundles(1)"
+                            style="width: 2.5em; height: 1.25em; cursor: pointer;">
                     </div>
                     {% endif %}
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-6" style="position: relative; z-index: 1050;">
+                    <label class="small fw-black text-muted mb-2 ps-1" style="font-size: 0.65rem; letter-spacing: 1px;">
+                        <i class="fa-solid fa-tags me-1 text-primary"></i> CATEGORIES / TAGS
+                    </label>
+                    <multi-tag-filter v-model="selectedTagIds" @change="fetchAllBundles(1)"
+                        placeholder="Filter by tags...">
+                    </multi-tag-filter>
+                </div>
+
+                <div class="col-lg-6" style="position: relative; z-index: 1040;">
+                    <label class="small fw-black text-muted mb-2 ps-1" style="font-size: 0.65rem; letter-spacing: 1px;">
+                        <i class="fa-solid fa-shield-virus me-1 text-danger"></i> VULNERABILITIES
+                    </label>
+                    <multi-vulnerability-filter v-model="selectedVulnerabilityNames" @change="fetchAllBundles(1)"
+                        placeholder="Filter by CVE, GHSA, etc...">
+                    </multi-vulnerability-filter>
                 </div>
             </div>
         </div>
@@ -98,14 +123,6 @@
 
             <div class="row g-2 mb-3 pt-2 small text-muted">
                 <div class="col-md-6">
-                    <div class="mb-1 d-flex align-items-center">
-                        <i class="fas fa-fingerprint me-2"></i>
-                        <code class="text-primary me-2">[[ bundle.uuid ]]</code>
-                        <button @click.stop="copyToClipboard(bundle.uuid, $event)"
-                            class="btn btn-link p-0 text-decoration-none">
-                            <i class="fas fa-copy small"></i>
-                        </button>
-                    </div>
                     <div class="mb-1"><i class="fas fa-list-check me-2"></i><strong>Rules:</strong>
                         <span class="badge bg-success shadow-sm pt-1 m-2">
                             [[bundle.number_of_rules ]] items
@@ -118,6 +135,14 @@
                     <div class="mb-1"><i class="fas fa-arrow-up-from-bracket me-2"></i><strong>Downloads:</strong> [[
                         bundle.download_count ]]</div>
                 </div>
+            </div>
+            <div class="mb-3" @click.stop>
+                <tags-displays-list object-type="bundle" :object-id="bundle.id" :max-visible="3">
+                </tags-displays-list>
+            </div>
+            <div class="mb-3" @click.stop>
+                <vulnerability-displays-list object-type="bundle" :object-id="bundle.id" :max-visible="3">
+                </vulnerability-displays-list>
             </div>
 
             <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
@@ -164,6 +189,9 @@
                     {% endif %}
                 </div>
             </div>
+
+
+
         </div>
 
         <div class="modal fade" :id="'delete_bundle_modal_'+bundle.id" tabindex="-1" aria-hidden="true">
@@ -220,9 +248,19 @@
 <script type="module">
     const { createApp, ref, computed, onMounted } = Vue;
     import { message_list, create_message, display_toast } from '/static/js/toaster.js';
+    import MultiTagFilter from "{{ url_for('static', filename='js/tags/multiTagFIlter.js') }}";
 
+    import TagsDisplaysList from '/static/js/tags/tagsDisplaysList.js';
+    import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
+    import MultiVulnerabilityFilter from '/static/js/vulnerability/multiVulnerabilityFilter.js';
     createApp({
         delimiters: ['[[', ']]'],
+        components: {
+            'multi-tag-filter': MultiTagFilter,
+            'tags-displays-list': TagsDisplaysList,
+            'vulnerability-displays-list': VulnerabilityDisplaysList,
+            'multi-vulnerability-filter': MultiVulnerabilityFilter
+        },
         setup() {
             const searchQuery = ref('');
             const showOwnBundles = ref(false);
@@ -238,6 +276,12 @@
                     search: searchQuery.value,
                     own: showOwnBundles.value ? '1' : '0'
                 });
+                if (selectedTagIds.value.length > 0) {
+                    params.append('tag_ids', selectedTagIds.value.join(','));
+                }
+                if (selectedVulnerabilityNames.value.length > 0) {
+                    params.append('vulnerabilities', selectedVulnerabilityNames.value.join(','));
+                }
                 const response = await fetch("/bundle/get_all_bundles?" + params.toString());
                 if (response.status === 200) {
                     const data = await response.json();
@@ -247,6 +291,9 @@
                     bundle_total.value = data.total_bundles;
                 }
             }
+
+            const selectedTagIds = ref([]);
+            const selectedVulnerabilityNames = ref([]);
 
             async function deleteBundle(id, index) {
                 const params = new URLSearchParams({ id });
@@ -329,7 +376,8 @@
                 bundle_current_page, bundle_total_page, bundle_total,
                 is_admin, fetchAllBundles, deleteBundle,
                 goToBundleDetail, copyToClipboard, visiblePages,
-                message_list, onSearchInput, onEnterKey
+                message_list, onSearchInput, onEnterKey,
+                selectedTagIds, TagsDisplaysList, VulnerabilityDisplaysList, selectedVulnerabilityNames
             }
         }
     }).mount('#main-container');

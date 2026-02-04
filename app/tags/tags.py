@@ -138,3 +138,14 @@ def edit_tag(tag_id):
             return {"status": "error", "message": "Error while updating tag", "toast_class": "danger-subtle"}, 500
         else:
             return {"status": "error", "message": message, "toast_class": "warning-subtle"}, 201
+        
+
+
+@tags_blueprint.route('/get_tags_bundle', methods=['GET'])
+@login_required
+def get_tags_bundle():
+    tags = tags_core.get_tags_bundle(request.args)
+    if tags:
+        tags_lists = [tag.to_json() for tag in tags.items]
+    
+    return {"status": "success", "tags": tags_lists, "total_pages": tags.pages, "total_tags": tags.total}, 200

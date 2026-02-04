@@ -34,7 +34,7 @@ def create():
     form = AddNewBundleForm()
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
-
+        
         my_bundle = BundleModel.create_bundle(form_dict, current_user)
         if my_bundle:
             flash('Bundle created !', 'success')
@@ -56,23 +56,28 @@ def list() :
     return render_template("bundle/list_bundle.html" )
 
 @bundle_blueprint.route("/get_all_bundles", methods=['GET'])
-def get_all_bundles() :     
-    """get all bundles for pages"""     
+def get_all_bundles():     
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', type=str)
+    
+    # Existing Tags Logic
+    tag_ids_raw = request.args.get('tag_ids', type=str) 
+    tag_id_list = [int(tid) for tid in tag_ids_raw.split(',') if tid.strip()] if tag_ids_raw else []
+
+    # New Vulnerability Logic
+    vuln_raw = request.args.get('vulnerabilities', type=str)
+    vuln_list = [v.strip() for v in vuln_raw.split(',') if v.strip()] if vuln_raw else []
     own = request.args.get('own', type=str)
-    if own == '1':
-        own = True
-    else:
-        own = False 
+    own = True if own == '1' else False 
 
-    bundles_list = BundleModel.get_all_bundles_page(page, search, own)
-    if bundles_list:
-        return {"bundle_list_": [r.to_json() for r in bundles_list],
-                "total_pages": bundles_list.pages, 
-                "total_bundles": bundles_list.total} , 200
-
-    return {"message": "No Rule"} , 200
+    # Pass vuln_list to the model method
+    bundles_pagination = BundleModel.get_all_bundles_page(page, search, own, tag_id_list, vuln_list)
+    
+    return {
+        "bundle_list_": [r.to_json() for r in bundles_pagination.items],
+        "total_pages": bundles_pagination.pages, 
+        "total_bundles": bundles_pagination.total
+    }, 200
 
 ############
 #  action  #
@@ -104,12 +109,14 @@ def delete() :
 def edit(bundle_id) :     
     """Edit a bundle"""     
     bundle = BundleModel.get_bundle_by_id(bundle_id)
-
     if current_user.id == bundle.user_id or current_user.is_admin():
         form = EditBundleForm(bundle_id=bundle_id)
         if form.validate_on_submit():
             form_dict = form_to_dict(form)
-            BundleModel.update_bundle(bundle_id , form_dict)
+            v_data = request.form.get('vulnerabilities')
+            form_dict['vulnerabilities'] = v_data
+            print(  form_dict['vulnerabilities'])
+            BundleModel.update_bundle(bundle_id , form_dict )
             flash("Bundle modified with success!", "success")
             return redirect(request.referrer or '/')
         else:
@@ -117,7 +124,7 @@ def edit(bundle_id) :
             form.name.data = bundle.name 
             form.public.data = bundle.access
 
-        return render_template("bundle/edit_bundle.html", form=form, bundle=bundle )
+        return render_template("bundle/edit_bundle.html", form=form, bundle=bundle)
     else:
         return render_template("access_denied.html")
     
@@ -216,6 +223,33 @@ def add_rule_bundle() :
     return {"success": False, 
             "message": "You don't have the permission to do that !", 
             "toast_class" : "danger"}, 401
+
+
+
+# update_bundle_tags
+
+@bundle_blueprint.route("/update_bundle_tags/<int:bundle_id>", methods=['POST'])
+@login_required
+def update_bundle_tags(bundle_id):
+    data = request.json
+    tag_ids = data.get('tag_ids', [])
+
+    if not bundle_id:
+        return {"success": False, "message": "Missing bundle_id"}, 400
+
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle:
+        return {"success": False, "message": "Bundle not found"}, 404
+
+    if current_user.id != bundle.user_id and not current_user.is_admin():
+        return {"success": False, "message": "You don't have the permission to do that!"}, 401
+
+    success = BundleModel.update_bundle_tags(bundle_id, tag_ids, current_user)
+    if success:
+        return {"success": True, "message": "Tags updated successfully"}, 200
+    else:
+        return {"success": False, "message": "Error updating tags"}, 500
+
 
 
 @bundle_blueprint.route("/remove", methods=['GET'])
@@ -775,3 +809,84 @@ def add_reaction():
         return {"message": message, "toast_class": "success-subtle"}, 200
     else:
         return {"message": message, "toast_class": "danger-subtle"}, 500
+    
+
+
+@bundle_blueprint.route('/get_bundle_tag_ids/<int:bundle_id>')
+@login_required
+def get_bundle_tag_ids(bundle_id):
+    tag_ids = BundleModel.get_tag_ids_for_bundle(bundle_id)
+    return jsonify({"success": True, "tag_ids": tag_ids})
+
+
+@bundle_blueprint.route('/get_bundle_tags_display/<int:bundle_id>')
+def get_bundle_tags_display(bundle_id):
+    """Returns full tag objects associated with a bundle for display purposes."""
+    try:
+        tags = BundleModel.get_tags_for_bundle(bundle_id)
+        
+        return jsonify({
+            "success": True, 
+            "tags": [t.to_json() for t in tags],
+            "total_tags": len(tags)
+
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    
+@bundle_blueprint.route('/get_bundle_vulnerabilities_display/<int:bundle_id>')
+def get_bundle_vulnerabilities_display(bundle_id):
+    """Returns the list of vulnerability identifier strings."""
+    try:
+        v_list = BundleModel.get_vulnerabilities_for_bundle(bundle_id)
+        
+        return jsonify({
+            "success": True, 
+            "vulnerabilities": v_list, 
+            "total_vulnerabilities": len(v_list)
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@bundle_blueprint.route('/get_all_tags_usage')
+def get_all_tags_usage():
+    try:
+        tags = BundleModel.get_all_used_tags_with_counts()
+        return jsonify({
+            "success": True,
+            "tags": tags
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    
+@bundle_blueprint.route('/get_all_vulnerabilities_usage')
+def get_all_vulnerabilities_usage():
+    try:
+        vulnerabilities = BundleModel.get_all_vulnerabilities_with_counts()
+        return jsonify({
+            "success": True,
+            "vulnerabilities": vulnerabilities
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    
+@bundle_blueprint.route("/get_tags/<int:bundle_id>")
+def get_bundle_tags(bundle_id):
+    try:
+        tags_data = BundleModel.get_tags_for_bundle_json(bundle_id)
+        
+        return jsonify({"tags": tags_data}), 200
+    except Exception as e:
+        print(f"Error fetching tags for bundle {bundle_id}: {e}")
+        return jsonify({"tags": [], "error": str(e)}), 500
+    
+
+@bundle_blueprint.route('/vulnerabilities/<string:target_type>/<int:target_id>')
+@login_required
+def get_vulnerabilities(target_type, target_id):
+    if target_type == 'bundle':
+        item = BundleModel.get_bundle_by_id(target_id)
+    else:
+        return jsonify({"message": "Invalid target type", "vulnerability_identifiers": []}), 400
+        
+    return jsonify(item.to_json().get('vulnerability_identifiers', []))

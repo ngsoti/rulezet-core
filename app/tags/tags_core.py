@@ -68,6 +68,27 @@ def get_tags(args):
     page = int(args.get('page', 1))
     return query.paginate(page=page, per_page=20, max_per_page=20)
 
+
+def get_tags_bundle(args):
+    query = Tag.query
+
+    if args.get('search'):
+        query = query.filter(Tag.name.ilike(f"%{args['search']}%"))
+
+    sort_order = args.get('sort_order', 'asc')
+    if sort_order == 'asc':
+        query = query.order_by(Tag.created_at.desc())
+    else:
+        query = query.order_by(Tag.created_at.asc())
+
+    # Filter only active and public tags
+    query = query.filter_by(is_active=True, visibility='public')
+
+    
+
+    page = int(args.get('page', 1))
+    return query.paginate(page=page, per_page=20, max_per_page=20)
+
 def remove_tag(tag_id):
     try:
         tag = Tag.query.get(tag_id)

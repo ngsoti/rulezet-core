@@ -61,12 +61,12 @@
                 <i class="fas fa-cog me-2"></i>Bundle Settings
             </a>
         </li>
-        <!-- <li class="nav-item flex-fill text-center">
-            <a class="nav-link fw-bold px-4" id="settings-tab" data-bs-toggle="tab" href="#tags-pane" role="tab"
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link fw-bold px-4" id="tags-tab" data-bs-toggle="tab" href="#tags-pane" role="tab"
                 aria-controls="tags-pane" aria-selected="false" style="color: var(--text-color);">
-                <i class="fas fa-cog me-2"></i>Add Tags
+                <i class="fas fa-tags me-2"></i>Add Tags
             </a>
-        </li> -->
+        </li>
     </ul>
 
     <div class="tab-content" id="workspaceTabsContent">
@@ -402,6 +402,13 @@
                         <div class="text-danger small mt-1">[[ error ]]</div>
                         {% endfor %}
                     </div>
+                    <div class="mb-4 text-start">
+                        <vulnerability-input v-model="detectedVulnerabilities" target-type="bundle"
+                            :target-id="bundleId">
+                        </vulnerability-input>
+
+                        <input type="hidden" name="vulnerabilities" :value="JSON.stringify(detectedVulnerabilities)">
+                    </div>
                     <div class="form-check form-switch mb-5 p-3 bg-light rounded shadow-sm border">
                         <div class="ms-4">
                             {{ form.public(class="form-check-input", id="publicSwitch") }}
@@ -422,13 +429,138 @@
             </div>
         </div>
         <!-- Add Tags Pane -->
-        <!-- <div class="tab-pane fade" id="tags-pane" role="tabpanel" aria-labelledby="tags-tab">
-            <div class="card border-0 shadow-lg p-3 mb-4 " style="border-radius: 12px;">
-                <h4 class="fw-bold mb-4 text-dark"><i class="fas fa-info-circle text-primary me-2"></i>Manage Tags</h4>
+        <div class="tab-pane fade" id="tags-pane" role="tabpanel" aria-labelledby="tags-tab">
+            <div class="card border-0 shadow-lg p-4 mb-4" style="border-radius: 12px;">
 
-                <p class="text-muted small mb-0">This feature is under construction. Please check back later.</p>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold text-dark mb-0">
+                        <i class="fas fa-tags text-primary me-2"></i>Manage Tags
+                        <span class="badge bg-secondary ms-2" style="font-size: 0.5em;">[[ total_tags ]]</span>
+                    </h4>
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-success shadow-sm fw-bold text-center" @click="saveTags"
+                            :disabled="save_loading_tags">
+                            <template v-if="save_loading_tags">
+                                <i class="fas fa-spinner fa-spin me-2"></i> Saving...
+                            </template>
+                            <template v-else>
+                                <i class="fas fa-save me-2"></i> Save Workspace
+                            </template>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-4" v-if="allSelectedTagsObjects.length > 0">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Currently Selected & Active
+                        Tags</label>
+                    <div class="d-flex flex-wrap gap-2 p-3 bg-light border-dashed rounded-3"
+                        style="border: 2px dashed #dee2e6;">
+
+                        <template v-for="tag in allSelectedTagsObjects.slice(0, 20)" :key="'selected-' + tag.id">
+                            <span class="badge d-flex align-items-center px-3 py-2 shadow-sm"
+                                :style="{ backgroundColor: tag.color, color: getContrastYIQ(tag.color) }">
+                                <i :class="['fas', tag.icon || 'fa-tag', 'me-2']"></i>
+                                [[ tag.name ]]
+                                <i class="fas fa-times-circle ms-2 cursor-pointer opacity-75"
+                                    @click.stop="toggleSelection(tag.id)" style="cursor: pointer;"></i>
+                            </span>
+                        </template>
+
+                        <span v-if="allSelectedTagsObjects.length > 20"
+                            class="text-muted small fw-bold align-self-center">
+                            ... and [[ allSelectedTagsObjects.length - 20 ]] more
+                        </span>
+                    </div>
+                </div>
+
+                <div class="input-group mb-3">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" v-model="searchQueryTags" @input="fetchTags(1)"
+                        class="form-control border-start-0" placeholder="Search tags by name...">
+                </div>
+
+                <div v-if="selectedTags.length > 0"
+                    class="alert alert-primary d-flex justify-content-between align-items-center py-2">
+                    <span><i class="fas fa-check-circle me-2"></i><strong>[[ selectedTags.length ]]</strong> tag(s)
+                        selected</span>
+                    <button class="btn btn-sm btn-outline-primary" @click="clearSelection">Clear All</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light text-secondary">
+                            <tr>
+                                <th style="width: 40px;"></th>
+                                <th>Tag</th>
+                                <th>Description</th>
+                                <th>Created At</th>
+                                <th class="text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-if="load_tags">
+                                <tr v-for="tag in tags" :key="tag.id" @click="toggleSelection(tag)"
+                                    style="cursor: pointer;">
+                                    <td>
+                                        <input type="checkbox" class="form-check-input" :value="tag.id"
+                                            v-model="selectedTags" @click.stop="toggleSelection(tag)">
+                                    </td>
+                                    <td>
+                                        <span class="badge px-3 py-2 shadow-sm border"
+                                            :style="{ backgroundColor: tag.color, color: getContrastYIQ(tag.color) }">
+                                            <i :class="['fas', tag.icon || 'fa-tag', 'me-1']"></i>
+                                            [[ tag.name ]]
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted d-inline-block text-truncate" style="max-width: 400px;"
+                                            :title="tag.description">
+                                            [[ tag.description ]]
+                                        </small>
+                                    </td>
+                                    <td><small class="text-muted">[[ tag.created_at ]]</small></td>
+                                    <td class="text-end">
+                                        <span v-if="tag.is_active"
+                                            class="badge rounded-pill bg-success text-white">Active</span>
+                                        <span v-else class="badge rounded-pill bg-light text-muted">Inactive</span>
+                                    </td>
+                                </tr>
+                                <tr v-if="tags.length === 0">
+                                    <td colspan="5" class="text-center py-5 text-muted">No tags found.</td>
+                                </tr>
+                            </template>
+
+                            <template v-else>
+                                <tr>
+                                    <td colspan="5" class="text-center py-5">
+                                        <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+                                        <p class="text-muted">Loading tags...</p>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <nav v-if="total_pages_tags > 1" class="d-flex justify-content-center mt-3">
+                    <ul class="pagination">
+                        <li class="page-item" :class="{ disabled: current_page_tags === 1 }">
+                            <button class="page-link" @click="fetchTags(current_page_tags - 1)"><i
+                                    class="fas fa-angle-left"></i></button>
+                        </li>
+                        <li class="page-item" v-for="page in visiblePagesTags" :key="page"
+                            :class="{ active: page === current_page_tags, disabled: page === '...' }">
+                            <button class="page-link" v-if="page !== '...'" @click="fetchTags(page)">[[ page ]]</button>
+                            <span class="page-link" v-else>...</span>
+                        </li>
+                        <li class="page-item" :class="{ disabled: current_page_tags === total_pages_tags }">
+                            <button class="page-link" @click="fetchTags(current_page_tags + 1)"><i
+                                    class="fas fa-angle-right"></i></button>
+                        </li>
+                    </ul>
+                </nav>
             </div>
-        </div> -->
+        </div>
     </div>
 
 </div>
@@ -439,8 +571,6 @@
             <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
         </a>
     </div> -->
-
-</div>
 <!-- Template to fetch folder and file from structure-->
 <template id="tree-item-template">
     <li class="mb-1">
@@ -504,6 +634,7 @@
     // import for the tree component
     import { } from '/static/js/bundle/jsdelivr_sortablejs.js';
     import { } from '/static/js/bundle/jsdelivr_vuedraggable.js';
+    import VulnerabilityInput from '/static/js/vulnerability/vulnerabilityInput.js';
     const TreeItem = {
         name: 'tree-item',
         props: ['node', 'selectedId'],
@@ -520,7 +651,7 @@
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { 'tree-item': TreeItem, 'draggable': window.vuedraggable },
+        components: { 'tree-item': TreeItem, 'draggable': window.vuedraggable, 'vulnerability-input': VulnerabilityInput },
 
         setup() {
 
@@ -539,10 +670,165 @@
                 }
                 fetchFormat();
                 fetchRules(1);
+                fetchTags(1);
+                initBundleTags();
             });
 
             const csrf_token = "{{ csrf_token() }}"
             const is_loading = ref(false);
+
+            /**
+             * #################
+             * #   TAGS LIST   #
+             * #################
+             * */
+            const detectedVulnerabilities = ref([]);
+
+
+
+            const tags = ref([]);
+            const total_tags = ref(0);
+            const total_pages_tags = ref(1);
+            const current_page_tags = ref(1);
+            const save_loading_tags = ref(false);
+            const load_tags = ref(false);
+
+            // Filter & Sort
+            const searchQueryTags = ref('');
+            const sort_order = ref('asc');
+
+            // Selection Management
+            const selectedTags = ref([]); // Stores IDs only for checkboxes/API
+            const allSelectedTagsObjects = ref([]); // Stores full objects for display across pages
+
+            /**
+             * Fetch tags for the table (paginated)
+             */
+            async function fetchTags(page) {
+                load_tags.value = false;
+                const params = new URLSearchParams({
+                    page,
+                    search: searchQueryTags.value,
+                    sort_order: sort_order.value,
+                });
+                const res = await fetch('/tags/get_tags_bundle?' + params.toString());
+                const data = await res.json();
+                if (res.status === 200) {
+                    tags.value = data.tags;
+                    total_tags.value = data.total_tags;
+                    total_pages_tags.value = data.total_pages;
+                    current_page_tags.value = page;
+                }
+                load_tags.value = true;
+            }
+
+
+            /**
+             * Initialize tags already associated with the bundle
+             * This uses the "display" route to get full objects (name, color, etc.)
+             */
+            async function initBundleTags() {
+                try {
+                    const res = await fetch(`/bundle/get_bundle_tags_display/${bundleId.value}`);
+                    const data = await res.json();
+                    if (data.success) {
+                        // Populate both lists to ensure they are visible immediately
+                        selectedTags.value = data.tags.map(t => t.id);
+                        allSelectedTagsObjects.value = data.tags;
+                    }
+                } catch (error) {
+                    console.error("Initialization error:", error);
+                }
+            }
+
+            /**
+             * Toggle selection logic
+             * Handles both table row clicks (full object) and badge removals (ID only)
+             */
+            function toggleSelection(tag) {
+                const tagId = typeof tag === 'object' ? tag.id : tag;
+                const index = selectedTags.value.indexOf(tagId);
+
+                if (index > -1) {
+                    // Remove from both lists
+                    selectedTags.value.splice(index, 1);
+                    const objIndex = allSelectedTagsObjects.value.findIndex(t => t.id === tagId);
+                    if (objIndex > -1) {
+                        allSelectedTagsObjects.value.splice(objIndex, 1);
+                    }
+                } else {
+                    // Add to both lists
+                    selectedTags.value.push(tagId);
+                    if (typeof tag === 'object') {
+                        allSelectedTagsObjects.value.push(tag);
+                    } else {
+                        // Fallback: if we only have an ID (shouldn't happen in table), 
+                        // try to find it in the current page 'tags' list
+                        const found = tags.value.find(t => t.id === tagId);
+                        if (found) allSelectedTagsObjects.value.push(found);
+                    }
+                }
+            }
+
+            function clearSelection() {
+                selectedTags.value = [];
+                allSelectedTagsObjects.value = [];
+            }
+
+            function getContrastYIQ(hexcolor) {
+                if (!hexcolor) return '#000';
+                hexcolor = hexcolor.replace("#", "");
+                const r = parseInt(hexcolor.substr(0, 2), 16);
+                const g = parseInt(hexcolor.substr(2, 2), 16);
+                const b = parseInt(hexcolor.substr(4, 2), 16);
+                const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                return (yiq >= 128) ? '#000000' : '#ffffff';
+            }
+
+            const visiblePagesTags = computed(() => {
+                const pages = [];
+                const total = total_pages_tags.value;
+                const current = current_page_tags.value;
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i);
+                } else {
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total);
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total);
+                    }
+                }
+                return pages;
+            });
+
+            async function saveTags() {
+                if (save_loading_tags.value) return;
+                save_loading_tags.value = true;
+                try {
+                    const res = await fetch(`/bundle/update_bundle_tags/${bundleId.value}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrf_token
+                        },
+                        body: JSON.stringify({ tag_ids: selectedTags.value })
+                    });
+                    const data = await res.json();
+                    if (res.status === 200 && data.success) {
+                        create_message("Tags saved successfully.", "success-subtle");
+                    } else {
+                        create_message(data.message || "Error saving tags.", "danger-subtle");
+                    }
+                } catch (e) {
+                    create_message("Network error.", "danger-subtle");
+                }
+                save_loading_tags.value = false;
+            }
+
+
+
             /**
              * #################
              * #  RULES LIST   #
@@ -886,7 +1172,11 @@
                 fetchRules, addRuleToBundle, importFile, addFolder, addFile, selectNode, setPreview, clearDisplay, saveStructure, isRule, renameNode, addFolderText,
                 bundleId, truncateText, prepareAddFolder, save_loading, prepareDelete, confirmDelete, nodeToDelete, prepareDelete, confirmDelete,
                 prepareAddTarget, addFileText, addFileFormat, triggerDisabledMessage, renameText, confirmRename, nodeToRename, onEnterKey, onSearchInput, is_loading,
-                rules_formats, number_rules_formats, fetchFormat
+                rules_formats, number_rules_formats, fetchFormat,
+
+                // tags
+                tags, total_tags, total_pages_tags, current_page_tags, searchQueryTags, sort_order, fetchTags, selectedTags, toggleSelection, clearSelection, getContrastYIQ, visiblePagesTags,
+                load_tags, save_loading_tags, saveTags, allSelectedTagsObjects, initBundleTags, detectedVulnerabilities
             };
         }
     }).mount('#main-vue-app');
