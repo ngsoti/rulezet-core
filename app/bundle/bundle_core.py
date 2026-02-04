@@ -919,18 +919,37 @@ def add_reaction_to_comment(comment_id: int, user_id: int, reaction_type: str, b
 
 
 
+
 def get_all_used_tags_with_counts():
     """
-    Returns only tags present in BundleTagAssociation with their global usage count.
-    If 2 bundles share the same tag, count will be 2.
+    Returns only active tags present in BundleTagAssociation with their usage count.
+    Respects bundle visibility and tag status.
     """
-    results = (
+    
+    query = (
         db.session.query(
             Tag, 
             func.count(BundleTagAssociation.id).label('usage_count')
         )
         .join(BundleTagAssociation, Tag.id == BundleTagAssociation.tag_id)
-        .group_by(Tag.id)
+        .join(Bundle, Bundle.id == BundleTagAssociation.bundle_id)
+        # Filter only active tags
+        .filter(Tag.is_active.is_(True)) 
+    )
+
+    # Apply Visibility Logic
+    if current_user.is_authenticated:
+        if not current_user.is_admin():
+            # Public OR Owned by user
+            query = query.filter(
+                or_(Bundle.access.is_(True), Bundle.user_id == current_user.id)
+            )
+    else:
+        # Anonymous: Public only
+        query = query.filter(Bundle.access.is_(True))
+
+    results = (
+        query.group_by(Tag.id)
         .order_by(func.count(BundleTagAssociation.id).desc())
         .all()
     )
@@ -947,34 +966,50 @@ def get_all_used_tags_with_counts():
 
 def get_all_vulnerabilities_with_counts():
     """
-    Retrieves all vulnerability identifiers stored in the 'vulnerability_identifiers' 
-    JSON columns across all Bundles and returns their global usage count.
+    Retrieves and counts vulnerability identifiers while respecting access control:
+    - Admins see everything.
+    - Authenticated users see public bundles OR their own private bundles.
+    - Anonymous users see only public bundles.
     """
-    all_bundles_vulns = (
-        db.session.query(Bundle.vulnerability_identifiers)
-        .filter(Bundle.vulnerability_identifiers.isnot(None))
-        .filter(Bundle.vulnerability_identifiers != '')
-        .all()
+    
+    # Start the query
+    query = db.session.query(Bundle.vulnerability_identifiers).filter(
+        Bundle.vulnerability_identifiers.isnot(None),
+        Bundle.vulnerability_identifiers != '',
+        Bundle.vulnerability_identifiers != '[]'
     )
+
+    # Apply Access Control Logic
+    if current_user.is_authenticated:
+        if not current_user.is_admin():
+            query = query.filter(
+                or_(Bundle.access.is_(True), Bundle.user_id == current_user.id)
+            )
+
+    else:
+
+        query = query.filter(Bundle.access.is_(True))
+
+    all_bundles_vulns = query.all()
     
     vulnerability_counter = Counter()
     
     for (raw_json,) in all_bundles_vulns:
         try:
-            vuln_list = json.loads(raw_json)
+            vuln_list = json.loads(raw_json) if isinstance(raw_json, str) else raw_json
             if isinstance(vuln_list, list):
                 vulnerability_counter.update(vuln_list)
         except (json.JSONDecodeError, TypeError):
             continue
 
-    vulnerabilities_list = [
+
+    return [
         {
             "name": vuln_id,
             "usage_count": count
         }
         for vuln_id, count in vulnerability_counter.most_common()
     ]
-
-    return vulnerabilities_list
+   
     
    
