@@ -70,7 +70,7 @@ const MultiTagFilter = {
     },
 template: `
     <div class="dropdown multi-tag-filter w-100">
-        <div class="form-control d-flex flex-wrap gap-2 align-items-center p-2  shadow-sm border-secondary-subtle" 
+        <div class="form-control d-flex flex-wrap gap-2 align-items-center p-2 shadow-sm border-secondary-subtle" 
              data-bs-toggle="dropdown" data-bs-auto-close="outside" 
              style="cursor: pointer; min-height: 48px; border-radius: 12px;">
             
@@ -109,7 +109,7 @@ template: `
                 <div v-if="tagSearchQuery" class="d-flex flex-column gap-1">
                     <div v-for="tag in filteredTagsList" :key="tag.id" 
                          @click="toggleTag(tag.id)" 
-                         class="p-2 rounded border d-flex align-items-center justify-content-between tag-item-hover "
+                         class="p-2 rounded border d-flex align-items-center justify-content-between tag-item-hover"
                          :class="{'border-primary bg-primary-subtle': selectedTagIds.includes(tag.id)}">
                          <div class="d-flex align-items-center">
                             <i :class="['fas', tag.icon || 'fa-tag', 'me-2 ']" style="font-size: 0.8rem; color: var(--text-color);"></i>
@@ -117,12 +117,16 @@ template: `
                          </div>
                          <span class="badge rounded-pill bg-light text-dark border" style="color: var(--text-color);">[[ tag.usage_count ]]</span>
                     </div>
+                    <div v-if="filteredTagsList.length === 0" class="text-center py-3">
+                         <i class="fa-solid fa-magnifying-glass mb-2 opacity-50" style="font-size: 1.2rem; color: var(--text-color);"></i>
+                        <p class=" small fw-bold mb-0" style="color: var(--text-color);">No vulnerability found for this search.</p>
+                    </div>
                 </div>
 
                 <div v-else-if="!activeNamespace" class="d-flex flex-column gap-2">
                     <div v-for="(tags, ns) in groupedTags" :key="ns" 
                          @click="activeNamespace = ns"
-                         class="p-2 px-3 rounded-3 border  d-flex align-items-center justify-content-between tag-item-hover shadow-xs" 
+                         class="p-2 px-3 rounded-3 border d-flex align-items-center justify-content-between tag-item-hover shadow-xs" 
                          style="cursor: pointer; min-height: 50px;">
                         <div class="d-flex align-items-center">
                             <i class="fa-solid fa-tags text-primary me-3"></i>
@@ -130,8 +134,12 @@ template: `
                         </div>
                         <div class="d-flex align-items-center gap-3">
                             <span class="extra-small fw-bold text-nowrap" style="color: var(--text-color);">[[ tags.length ]] tags</span>
-                            <i class="fa-solid fa-chevron-right  opacity-50 small" style="color: var(--text-color);"></i>
+                            <i class="fa-solid fa-chevron-right opacity-50 small" style="color: var(--text-color);"></i>
                         </div>
+                    </div>
+                    <div v-if="Object.keys(groupedTags).length === 0" class="text-center py-4">
+                        
+                        <p class=" small fw-bold mb-0" style="color: var(--text-color);">No vulnerability used in any bundle yet.</p>
                     </div>
                 </div>
 
@@ -144,7 +152,7 @@ template: `
                     <div class="d-flex flex-column gap-2">
                         <div v-for="tag in groupedTags[activeNamespace]" :key="tag.id" 
                              @click="toggleTag(tag.id)" 
-                             class="p-2 rounded-3 border d-flex align-items-center justify-content-between transition-all tag-item-hover "
+                             class="p-2 rounded-3 border d-flex align-items-center justify-content-between transition-all tag-item-hover"
                              :class="selectedTagIds.includes(tag.id) ? 'border-primary bg-primary-subtle' : ''">
                             
                             <div class="d-flex align-items-center">
@@ -159,7 +167,7 @@ template: `
                             </div>
                             
                             <div class="d-flex align-items-center gap-2">
-                                <span class="badge rounded-pill bg-light  border" style="font-size: 0.65rem; color: var(--text-color);">
+                                <span class="badge rounded-pill bg-light border" style="font-size: 0.65rem; color: var(--text-color);">
                                     [[ tag.usage_count ]]
                                 </span>
                                 <i v-if="selectedTagIds.includes(tag.id)" class="fa-solid fa-check-circle text-primary"></i>
