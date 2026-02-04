@@ -105,8 +105,6 @@ def get_all_bundles_page(page: int, search: str | None, own: bool, tag_ids: list
     if vulnerabilities:
         vuln_filters = []
         for v in vulnerabilities:
-            # On construit la chaîne simplement sans mélanger les styles
-            # On cherche littéralement "ID" dans la colonne texte
             search_pattern = '%"' + v + '"%'
             vuln_filters.append(Bundle.vulnerability_identifiers.ilike(search_pattern))
         
@@ -250,7 +248,6 @@ def add_rule_to_bundle(bundle_id: int, rule_id: int , description: str) -> bool:
         return True
     return False 
 
- # BundleTagAssociation
 def update_bundle_tags(bundle_id: int, tags: List[int], user: User) -> bool:
     """
     Syncs the tags associated with a bundle without deleting existing ones
@@ -423,17 +420,15 @@ def get_full_rule_bundle_info(rule_id: int) -> Union[Dict[str, Any], Dict[str, s
         
         If the rule, association or bundle is not found, returns a dict with an "error" message.
     """
-    # Get the Rule
     rule = Rule.query.get(rule_id)
     if not rule:
         return {"error": f"No rule found with id {rule_id}"}
 
-    # Get the BundleRuleAssociation (first found)
     assoc = BundleRuleAssociation.query.filter_by(rule_id=rule_id).first()
     if not assoc:
         return {"error": f"No bundle association found for rule_id {rule_id}"}
 
-    # Return combined data
+
     return {
         "rule": rule.to_json(),
         "association": assoc.to_json()
@@ -455,12 +450,12 @@ def get_rule_ids_by_bundle(bundle_id: int) -> Union[Dict[str, str], List[int]]:
     if not bundle:
         return {"error": f"No bundle found with id {bundle_id}"}
 
-    # Query all associated BundleRuleAssociation entries for this bundle
+
     associations = BundleRuleAssociation.query.filter_by(bundle_id=bundle_id).all()
     if not associations:
         return {"error": f"No rules associated with bundle id {bundle_id}"}
 
-    # Extract rule IDs from associations
+
     rule_ids = [assoc.rule_id for assoc in associations]
     return rule_ids
 def get_rules_from_bundle(bundle_id: int) -> List[Rule]:
@@ -492,7 +487,7 @@ def get_bundles_by_rule(rule_id: int) -> List[Bundle]:
         .join(BundleRuleAssociation, BundleRuleAssociation.bundle_id == Bundle.id)
         .filter(
             BundleRuleAssociation.rule_id == rule_id,
-            Bundle.access.is_(True)  # Only include bundles where access == True
+            Bundle.access.is_(True) 
         )
         .all()
     )
@@ -629,26 +624,23 @@ def save_workspace(bundle_id, structure):
     :param structure: Description
     """
     try:
-        # 1. Clear old structure to rebuild (Simple approach)
-        # Because of cascade delete, deleting the root nodes will clean the rest
+
         
 
         BundleNode.query.filter_by(bundle_id=bundle_id).delete()
 
         def save_recursive(nodes, parent_id=None):
             for node in nodes:
-                # If it's the 'root' folder from your Vue state, we might skip it 
-                # or treat it as the top level.
                 new_node = BundleNode(
                     bundle_id=bundle_id,
                     parent_id=parent_id,
                     name=node.get('name', 'unnamed'),
                     node_type=node.get('type', 'file'),
-                    rule_id=node.get('rule_id'), # Present if added from Rule DB
+                    rule_id=node.get('rule_id'),
                     custom_content=node.get('content') if not node.get('rule_id') else None
                 )
                 db.session.add(new_node)
-                db.session.flush() # Get the new ID for children
+                db.session.flush() 
                 
                 if node.get('children'):
                     save_recursive(node['children'], new_node.id)
@@ -669,10 +661,10 @@ def extract_rule_ids(structure):
     for node in structure:
         rid = node.get('rule_id')
         if rid:
-            # Handle cases where rule_id might be a string or int
+           
             found_ids.add(int(rid))
         
-        # Recursive call for children
+
         if 'children' in node and node['children']:
             found_ids.update(extract_rule_ids(node['children']))
     return found_ids
@@ -688,29 +680,25 @@ def update_bundle_from_structure(bundle_id, structure):
     if not bundle:
         return False
 
-    # 1. Get all rule_ids currently present in the Vue.js tree
+   
     new_rule_ids = extract_rule_ids(structure)
 
-    # 2. Get existing associations from the DB
-    # We fetch them to compare which ones need to be deleted
     existing_assocs = BundleRuleAssociation.query.filter_by(bundle_id=bundle_id).all()
     existing_rule_ids = {assoc.rule_id for assoc in existing_assocs}
 
     try:
-        # --- DELETE PHASE ---
-        # Remove associations that are in DB but NOT in the new structure
+
         for assoc in existing_assocs:
             if assoc.rule_id not in new_rule_ids:
                 db.session.delete(assoc)
 
-        # --- ADD & UPDATE PHASE ---
         for rid in new_rule_ids:
             rule = Rule.query.get(rid)
             if not rule:
                 continue
 
            
-            # If the rule is NEW to the bundle, create the association
+
             if rid not in existing_rule_ids:
                 new_assoc = BundleRuleAssociation(
                     bundle_id=bundle_id,
@@ -740,11 +728,6 @@ def update_bundle_from_rule_id_into_structure(bundle_id):
 
         bundle_rules = BundleRuleAssociation.query.filter_by(bundle_id=bundle_id).all()
         
-        # create a folder and put in there all the rule to have the same structure in the db BundleNode
-        # and resgister in the db BundleNode
-        # create the folder 
-
-        # delete all the children of the folder to create a clean structure
         BundleNode.query.filter_by(bundle_id=bundle_id).delete()
         db.session.commit()
 
@@ -874,13 +857,11 @@ def add_reaction_to_comment(comment_id: int, user_id: int, reaction_type: str, b
     if not comment:
         return False, "Comment not found"
 
-    # Liste des types qui appartiennent au groupe "pouces"
     thumb_types = ['like', 'dislike']
     is_thumb = reaction_type in thumb_types
 
     try:
         if is_thumb:
-            # --- GESTION LIKE / DISLIKE (Exclusif entre eux) ---
             existing_thumb = BundleReactionComment.query.filter(
                 BundleReactionComment.comment_id == comment_id,
                 BundleReactionComment.user_id == user_id,
@@ -888,13 +869,11 @@ def add_reaction_to_comment(comment_id: int, user_id: int, reaction_type: str, b
             ).first()
 
             if existing_thumb:
-                # Si on clique sur le même pouce -> On l'enlève (Toggle)
                 if existing_thumb.reaction_type == reaction_type:
                     if reaction_type == 'like': comment.likes = max(0, (comment.likes or 0) - 1)
                     else: comment.dislikes = max(0, (comment.dislikes or 0) - 1)
                     db.session.delete(existing_thumb)
                 else:
-                    # On change de pouce (ex: like vers dislike)
                     if existing_thumb.reaction_type == 'like':
                         comment.likes = max(0, (comment.likes or 0) - 1)
                         comment.dislikes = (comment.dislikes or 0) + 1
@@ -903,7 +882,6 @@ def add_reaction_to_comment(comment_id: int, user_id: int, reaction_type: str, b
                         comment.likes = (comment.likes or 0) + 1
                     existing_thumb.reaction_type = reaction_type
             else:
-                # Nouveau pouce
                 new_thumb = BundleReactionComment(
                     comment_id=comment_id, user_id=user_id, bundle_id=bundle_id,
                     uuid=str(uuid.uuid4()), reaction_type=reaction_type
@@ -913,22 +891,18 @@ def add_reaction_to_comment(comment_id: int, user_id: int, reaction_type: str, b
                 else: comment.dislikes = (comment.dislikes or 0) + 1
 
         else:
-            # --- GESTION EMOJI (Un seul emoji max, indépendant des pouces) ---
             existing_emoji = BundleReactionComment.query.filter(
                 BundleReactionComment.comment_id == comment_id,
                 BundleReactionComment.user_id == user_id,
-                ~BundleReactionComment.reaction_type.in_(thumb_types) # Tout ce qui n'est pas pouce
+                ~BundleReactionComment.reaction_type.in_(thumb_types) 
             ).first()
 
             if existing_emoji:
-                # Si c'est le même emoji -> On l'enlève
                 if existing_emoji.reaction_type == reaction_type:
                     db.session.delete(existing_emoji)
                 else:
-                    # On remplace l'ancien emoji par le nouveau
                     existing_emoji.reaction_type = reaction_type
             else:
-                # Nouvel emoji
                 new_emoji = BundleReactionComment(
                     comment_id=comment_id, user_id=user_id, bundle_id=bundle_id,
                     uuid=str(uuid.uuid4()), reaction_type=reaction_type
