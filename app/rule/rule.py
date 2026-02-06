@@ -2574,3 +2574,20 @@ def get_rules_sources_usage():
     sources = RuleModel.get_sources_usage_with_filter(search_query, user_id)
     
     return jsonify([{"name": s.source, "count": s.count} for s in sources])
+
+@rule_blueprint.route('/get_rules_licenses_usage')
+def get_rules_licenses_usage():
+    """Returns the list of licenses, filtered by user_id, search query, and source scope."""
+    user_id = request.args.get('user_id', type=int) 
+    search_query = request.args.get('q', '').strip()
+    # Add the source scope parameter
+    source_scope = request.args.get('sources', '').strip()
+    print(source_scope)
+    # Pass source_scope to the model method
+    licenses = RuleModel.get_licenses_usage_with_filter(
+        search_query=search_query, 
+        user_id=user_id, 
+        source_scope=source_scope
+    )
+    
+    return jsonify([{"name": s.license, "count": s.count} for s in licenses])

@@ -2579,3 +2579,30 @@ def get_sources_usage_with_filter(search_term, user_id=None):
         query = query.filter(Rule.user_id == user_id)
 
     return query.group_by(Rule.source).order_by(func.count(Rule.id).desc()).all()
+
+def get_licenses_usage_with_filter(search_query, user_id=None, source_scope=None):
+    """
+    Groups rules by license and counts them.
+    Filters by search term (ILIKE), creator's user_id, and source scope.
+    """
+
+    # Base query: count occurrences of each license string
+    query = db.session.query(
+        Rule.license.label('license'), 
+        func.count(Rule.id).label('count')
+    ).filter(Rule.license != None, Rule.license != '', Rule.license != '[]')
+
+    # Filter by search term
+    if search_query:
+        query = query.filter(Rule.license.ilike(f'%{search_query}%'))
+
+    # Filter by specific user
+    if user_id:
+        query = query.filter(Rule.user_id == user_id)
+
+    # Filter by source scope (GitHub, GitLab, etc.)
+    if source_scope:
+        query = query.filter(Rule.source == source_scope)
+
+    # Return grouped results ordered by the most frequent license
+    return query.group_by(Rule.license).order_by(func.count(Rule.id).desc()).all()
