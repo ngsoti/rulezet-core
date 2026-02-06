@@ -109,7 +109,7 @@ class NovaRule(RuleType):
                 "source": info.get("repo_url", "Unknown"),
                 "original_uuid":  "Unknown",
                 "author": info.get("author", "Unknown"),
-                "cve_id": None,
+                "cve_id": [],
                 "to_string": content,
             }
         

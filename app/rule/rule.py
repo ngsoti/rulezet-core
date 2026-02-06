@@ -56,6 +56,9 @@ def rule() -> render_template:
         if valide == False:
                 return render_template("rule/rule.html",error=error, form=form, rule=rule)
 
+        v_data = request.form.get('vulnerabilities')
+        form_dict['vulnerabilities'] = v_data
+
         new_rule , message = RuleModel.add_rule_core(rule_dict , current_user)
         if new_rule:
             # update the gameifcation section
@@ -134,6 +137,7 @@ def get_rules_page_with_user_id() -> jsonify:
     sort_by = request.args.get("sort_by", "newest")
     search = request.args.get("search", None)
     rule_type = request.args.get("rule_type", None)
+    
 
     rules = RuleModel.get_rules_of_user_with_id_page(user_id, page, search, sort_by, rule_type)
 
@@ -159,11 +163,13 @@ def get_rules_page_filter() -> jsonify:
     author = request.args.get("author", None)
     sort_by = request.args.get("sort_by", "newest")
     rule_type = request.args.get("rule_type", None) 
+    source = request.args.get("sources", None)
+    user_id = request.args.get("user_id", None)
 
     vuln_raw = request.args.get("vulnerabilities", type=str)
     vuln_list = [v.strip() for v in vuln_raw.split(',') if v.strip()] if vuln_raw else []
 
-    query = RuleModel.filter_rules( search=search, author=author, sort_by=sort_by, rule_type=rule_type, vulnerabilities=vuln_list)
+    query = RuleModel.filter_rules( search=search, author=author, sort_by=sort_by, rule_type=rule_type, vulnerabilities=vuln_list, source=source, user_id=user_id)
     total_rules = query.count()
     rules = query.offset((page - 1) * per_page).limit(per_page).all()
 
@@ -297,23 +303,24 @@ def edit_rule(rule_id) -> render_template:
         licenses = get_licst_license()
         form.license.choices = [(lic, lic) for lic in licenses]
 
-        # form send to treatment
 
         if form.validate_on_submit():
             form_dict = form_to_dict(form)
             rule_dict = fill_all_void_field(form_dict)
+           
             
-            # try to compile or verify the syntax of the rule (in the format choose)
             valide , error = verify_syntax_rule_by_format(rule_dict)
             if not valide:
+                form.to_string.errors.append(f"Syntax Error: {error}")
                 return render_template("rule/edit_rule.html",error=error, form=form, rule=rule)
             
-            if rule_dict["version"] == rule.version:
-                rule_dict["version"] = bump_version(rule_dict["version"])
+            
 
-
+            
             # create an history for the rule
             if rule.to_string.strip() != form_dict['to_string'].strip():
+                if rule_dict["version"] == rule.version:
+                    rule_dict["version"] = bump_version(rule_dict["version"])
                 result = {
                     "id": rule_id,
                     "title": rule.title,
@@ -327,10 +334,13 @@ def edit_rule(rule_id) -> render_template:
                 history = RuleModel.get_history_rule_by_id(history_id)
                 history.message = "accepted"
             
+            v_data = request.form.get('vulnerabilities')
+            form_dict['vulnerabilities'] = v_data
+
             success , current_rule = RuleModel.edit_rule_core(rule_dict, rule_id)
             flash("Rule modified with success!", "success")
+            
             return redirect(url_for('rule.detail_rule', rule_id=current_rule.id))
-            # return redirect(request.referrer or '/')
         else:
             form.format.data = rule.format
             form.source.data = rule.source
@@ -342,7 +352,7 @@ def edit_rule(rule_id) -> render_template:
             form.to_string.data = rule.to_string
             form.original_uuid.data= rule.original_uuid
             rule.last_modif = datetime.now(timezone.utc)
-        
+            
         return render_template("rule/edit_rule.html", form=form, rule=rule)
     else:
         return render_template("access_denied.html")
@@ -2520,13 +2530,47 @@ def get_rules_page_filter_bundle() -> jsonify:
 @rule_blueprint.route("/get_all_rules_vulnerabilities_usage", methods=['GET'])
 def get_all_rules_vulnerabilities_usage():
     try:
-        
-        vulnerabilities = RuleModel.get_rules_vulnerabilities_usage()
+
+        user_id = request.args.get('user_id', type=int)
+        source_url = request.args.get('sources', type=str)
+        vulnerabilities = RuleModel.get_rules_vulnerabilities_usage(user_id=user_id, source_url=source_url)
         return jsonify({
             "success": True,
             "vulnerabilities": vulnerabilities
         })
     except Exception as e:
+      
         return jsonify({"success": False, "message": str(e)}), 500
     
 
+
+@rule_blueprint.route('/get_rule_vulnerabilities_display/<int:rule_id>')
+def get_rule_vulnerabilities_display(rule_id):
+    """Returns the list of vulnerability identifier strings."""
+    try:
+        v_list = RuleModel.get_vulnerabilities_for_rule(rule_id)
+        
+        return jsonify({
+            "success": True, 
+            "vulnerabilities": v_list, 
+            "total_vulnerabilities": len(v_list)
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+
+@rule_blueprint.route('/test')
+def test():
+    return render_template('rule/test.html')
+
+
+@rule_blueprint.route('/get_rules_sources_usage')
+def get_rules_sources_usage():
+    """Returns the list of sources, filtered by user_id if provided."""
+    user_id = request.args.get('user_id', type=int) 
+    search_query = request.args.get('q', '').strip()
+
+    sources = RuleModel.get_sources_usage_with_filter(search_query, user_id)
+    
+    return jsonify([{"name": s.source, "count": s.count} for s in sources])

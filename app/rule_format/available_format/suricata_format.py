@@ -24,7 +24,6 @@ class SuricataRule(RuleType):
         Validate Suricata rules.
         """
         try:
-            # On tente de parser toutes les règles présentes dans le contenu
             rules = parse_rules(content)
             if not rules:
                 return ValidationResult(ok=False, errors=["No valid Suricata rules found."], normalized_content=content)
@@ -40,7 +39,7 @@ class SuricataRule(RuleType):
         """
         Extract metadata from a Suricata rule string.
         """
-        # Valeurs par défaut via Regex au cas où le parser strict échoue
+
         msg_match = re.search(r'msg\s*:\s*"(.*?)"', content)
         sid_match = re.search(r'sid\s*:\s*(\d+)', content)
         rev_match = re.search(r'rev\s*:\s*(\d+)', content)
@@ -50,7 +49,6 @@ class SuricataRule(RuleType):
         fallback_rev = rev_match.group(1) if rev_match else "1"
 
         try:
-            # On nettoie pour ne garder que la règle (on enlève les commentaires potentiels au début)
             clean_content = content
             for line in content.splitlines():
                 if line.strip() and not line.strip().startswith('#'):
@@ -75,7 +73,6 @@ class SuricataRule(RuleType):
                 "to_string": content,
             }
         except Exception as e:
-            # Fallback en cas d'erreur de parsing (ex: règle mal formée)
             _, cve = detect_cve(fallback_title)
             return {
                 "format": "suricata",

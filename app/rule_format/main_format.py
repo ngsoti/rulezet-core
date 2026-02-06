@@ -143,7 +143,7 @@ def verify_syntax_rule_by_format(rule_dict: dict) -> tuple[bool, str]:
 # The rule_dict :
 
 # {'format': 'sigma', 'title': 'q', 'license': '0BSD', 'description': 'No description for the rule', 'source': 'admin admin',
-#   'version': '1.0', 'to_string': 'q', 'cve_id': 'None', 'author': 'admin', 'creation_date': (datetime.datetime(2025, 9, 10, 12, 9, 47, 2389, tzinfo=datetime.timezone.utc),)}
+#   'version': '1.0', 'to_string': 'q', 'cve_id': [], 'author': 'admin', 'creation_date': (datetime.datetime(2025, 9, 10, 12, 9, 47, 2389, tzinfo=datetime.timezone.utc),)}
 
 
 def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: str):
@@ -225,11 +225,9 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
 
 def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_repo=None, github_path=None):
     """
-    Parse et importe une seule règle selon son format.
-    Retourne tuple : (success: bool, message: str, rule_obj: RuleModel | None)
+    Parse a rule content based on its format.
     """
 
-    # Trouver la classe correspondant au format
     load_all_rule_formats()
     matching_class = None
     for RuleClass in RuleType.__subclasses__():
@@ -271,7 +269,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
     if exists == True:
         rule = RuleModel.get_rule(rule_id)
         return False, "Rule already exists", rule
-    print( "je n'existe pas")
+
     if github_path:
         metadata["github_path"] = github_path
 

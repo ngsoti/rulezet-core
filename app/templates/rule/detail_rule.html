@@ -60,7 +60,7 @@
                     </div>
 
                     <div class="position-absolute top-0 end-0 mt-3 me-3 d-flex gap-2 z-index-2">
-                        <span v-if="currentRule.cve_id && currentRule.cve_id !== 'None'">
+                        <!-- <span v-if="currentRule.cve_id && currentRule.cve_id !== 'None'">
                             <div class="d-flex flex-wrap gap-1">
                                 <a v-for="(cve, index) in parsedCVE(currentRule.cve_id)" :key="index"
                                     :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()" target="_blank"
@@ -69,7 +69,7 @@
                                     [[ getCVEPrefix(cve) ]]<span class="fw-bold">[[ getCVENumber(cve) ]]</span>
                                 </a>
                             </div>
-                        </span>
+                        </span> -->
                         {% if current_user.id == rule.user_id or current_user.is_admin() %}
                         <span class="badge bg-success shadow-sm pt-1" title="You are the owner">
                             <i class="fa-solid fa-crown me-1"></i> OWNER
@@ -177,6 +177,16 @@
                                 </div>
                             </div>
                         </div>
+
+
+                        <!-- Taxonomies-->
+                        <div class="mt-4">
+                            <vulnerability-display :vulnerabilities="displayVulnerabilities"
+                                :loading="loadingDisplayVulnerabilities" section-title="Security Identifiers"
+                                css-path="{{ url_for('static', filename='/css/tag/tags.css') }}">
+                            </vulnerability-display>
+                        </div>
+
                         <!-- Rule Content Card -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1051,12 +1061,15 @@
         document.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
     }
 
-
+    import VulnerabilityDisplay from '/static/js/vulnerability/vulnerabilityDisplay.js';
 
 
     createApp({
         delimiters: ['[[', ']]'],
         mode: "application/json",
+        components: {
+            'vulnerability-display': VulnerabilityDisplay
+        },
         setup() {
             /**
              * 
@@ -1084,6 +1097,7 @@
                     fetchPullRequest(1),
                     fetchContributor(),
                     highlightJSON(),
+                    fetchBundleVulnerabilities(),
                 ])
 
                 detail_page_1_is_loading.value = true
@@ -1092,9 +1106,9 @@
                 highlightJSON();
                 detail_sinilar_is_loading.value = false
 
-                await Promise.all([
-                    fetch_similar_rules_list()
-                ])
+                // await Promise.all([
+                //     fetch_similar_rules_list()
+                // ])
                 detail_sinilar_is_loading.value = true
 
 
@@ -1103,6 +1117,30 @@
             onMounted(() => {
                 init()
             })
+            /**
+             * 
+             * ###########################
+             * #       Vulnerabilities   #
+             * ###########################
+             * 
+             * */
+
+            const displayVulnerabilities = ref([]);
+            const loadingDisplayVulnerabilities = ref(true);
+
+            const fetchBundleVulnerabilities = async () => {
+                loadingDisplayVulnerabilities.value = true;
+                try {
+                    const res = await fetch('/rule/get_rule_vulnerabilities_display/' + rule_id);
+                    const data = await res.json();
+                    displayVulnerabilities.value = data.vulnerabilities || [];
+                } catch (e) {
+                    create_message("Error loading vulnerabilities", "danger");
+                } finally {
+                    loadingDisplayVulnerabilities.value = false;
+                }
+            };
+
 
             /**
              * 
@@ -1605,7 +1643,11 @@
                 switchTab,
                 goToRuleDetail,
                 autoResize,
-                detail_sinilar_is_loading
+                detail_sinilar_is_loading,
+                VulnerabilityDisplay,
+                displayVulnerabilities,
+                loadingDisplayVulnerabilities,
+                fetchBundleVulnerabilities
             };
         }
     }).mount('#main-container');

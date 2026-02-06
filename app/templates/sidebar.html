@@ -132,9 +132,8 @@
             <div class="d-flex align-items-center gap-3 ms-auto">
                <button
                   class="btn btn-search-trigger d-none d-xl-flex align-items-center rounded-pill px-3 py-1 home-btn"
-                  data-bs-toggle="offcanvas" href="#offcanvasSearch"
-                  @click="fetchRules() ; fetchRulesFormats() ; giveFocus()">
-                  <i class="fa-solid fa-magnifying-glass me-2 text-muted"></i>
+                  data-bs-toggle="offcanvas" href="#offcanvasSearch" @click="initSearch()"> <i
+                     class="fa-solid fa-magnifying-glass me-2 text-muted"></i>
                   <span class="text-muted small">Search rules...</span>
                </button>
 
@@ -258,7 +257,7 @@
       </div>
 
       <div class="offcanvas-body p-4">
-         <div class="search-container  p-3 rounded-4 shadow-sm mb-4">
+         <!-- <div class="search-container  p-3 rounded-4 shadow-sm mb-4">
             <div class="search-bar-container mb-4">
                <div class="input-group input-group-lg search-group">
                   <span class="input-group-text bg-white border-end-0 ps-4">
@@ -298,71 +297,98 @@
                   </select>
                </div>
             </div>
-         </div>
+         </div> -->
+         <rule-filter-bar ref="filterBar" api-endpoint="/rule/get_rules_page_filter" @update:results="onRulesUpdated"
+            @loading="search_is_loading = $event" :auto-fetch="false"> </rule-filter-bar>
 
          <div class="results-wrapper">
-            <div class="d-flex justify-content-between align-items-center mb-3 px-1">
-               <span class="badge   rounded-pill fw-normal" v-if="rules_list && rules_list.rule">
-                  [[ rules_list.rule.length ]] results found
+            <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+               <span class="badge rounded-pill fw-normal p-2 px-3 shadow-sm"
+                  style="background-color: var(--card-bg-color); color: var(--color-text); border: 1px solid rgba(0,0,0,0.1);">
+                  <i class="fa-solid fa-list-check me-2 text-primary"></i>
+                  <strong class="text-primary">[[ total_rules_liste ]]</strong> results found
                </span>
             </div>
-            <template v-if="isLoading">
-               <div class="text-center">
-                  <div class="spinner-border text-primary" role="status">
+
+            <template v-if="search_is_loading">
+               <div class="text-center py-5">
+                  <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                      <span class="visually-hidden">Loading...</span>
                   </div>
+                  <p class="mt-3 text-muted">Searching the database...</p>
                </div>
             </template>
+
             <template v-else>
-               <div v-if="rules_list && rules_list.rule && rules_list.rule.length > 0" class="results-list">
-                  <a v-for="rule in rules_list.rule" :key="rule.id" :href="`/rule/detail_rule/${rule.id}`"
-                     class="search-result-item d-flex align-items-center p-3 mb-2 text-decoration-none shadow-sm">
+               <div v-if="rules_list && rules_list.length > 0" class="results-list">
+                  <pagination-component :current-page="current_page" :total-pages="total_pages"
+                     @change-page="changePage"></pagination-component>
+
+                  <a v-for="rule in rules_list" :key="rule.id" :href="`/rule/detail_rule/${rule.id}`"
+                     class="rule-card d-flex align-items-start p-3 mb-3 text-decoration-none" @click.stop>
+
                      <div class="flex-shrink-0 me-3">
-                        <div class="icon-box  rounded-3 d-flex align-items-center justify-content-center"
-                           style="width: 45px; height: 45px;">
-                           <i class="fa-solid fa-file-code text-primary"></i>
+                        <div class="rule-icon-box rounded-3 d-flex align-items-center justify-content-center shadow-sm">
+                           <i class="fa-solid fa-shield-halved"></i>
                         </div>
                      </div>
+
                      <div class="flex-grow-1 min-width-0">
-                        <h6 class="mb-0 fw-bold text-dark text-truncate">[[ rule.title ]]</h6>
-                        <p class="mb-0 text-muted small text-truncate">[[ rule.description ]]</p>
-                        <div>
-                           <p class="mb-0 text-muted small text-truncate badge bg-primary-subtle">[[ rule.format ]]</p>
-                           <!-- <div v-if="rule.cve_id && rule.cve_id !== 'None'" class="d-flex flex-wrap gap-1">
-                           <a v-for="cve in parsedCVE(rule.cve_id)"
-                              :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()" target="_blank"
-                              :class="['badge', 'text-decoration-none', getCVEColor(cve)]"
-                              style="font-size: 0.75rem; font-weight: 500;">
-                              [[ cve ]]
-                           </a>
-                        </div> -->
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                           <h6 class="mb-0 fw-bold rule-title text-truncate">[[ rule.title ]]</h6>
+                           <span class="badge rule-type-badge ms-2">[[ rule.type ]]</span>
                         </div>
 
+                        <p class="rule-description mb-2 text-truncate-2">[[ rule.description ]]</p>
+
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                           <span class="badge format-badge">
+                              <i class="fa-solid fa-file-code me-1"></i>[[ rule.format ]]
+                           </span>
+                           <div @click.stop class="vuln-list-inline">
+                              <vulnerability-displays-list object-type="rule" :object-id="rule.id" :max-visible="2"
+                                 @click.stop>
+                              </vulnerability-displays-list>
+                           </div>
+                        </div>
                      </div>
-                     <div class="ms-2">
-                        <span class="badge bg-primary  rounded-pill" style="font-size: 0.65rem;">[[ rule.type
-                           ]]</span>
+
+                     <div class="ms-3 align-self-center d-none d-md-block">
+                        <i class="fa-solid fa-chevron-right text-muted opacity-50"></i>
                      </div>
                   </a>
+
+                  <pagination-component :current-page="current_page" :total-pages="total_pages"
+                     @change-page="changePage"></pagination-component>
                </div>
 
                <div v-else class="text-center py-5">
                   <div class="mb-3 opacity-25">
-                     <i class="fa-solid fa-database fa-3x"></i>
+                     <i class="fa-solid fa-box-open fa-4x" style="color: var(--color-text)"></i>
                   </div>
-                  <h6 class="text-muted fw-bold">No rules match your search</h6>
-                  <p class="text-muted small">Try adjusting your keywords or filters.</p>
+                  <h5 class="fw-bold" style="color: var(--color-text)">No results found</h5>
+                  <p class="text-muted small">Try refining your search or removing some filters.</p>
                </div>
             </template>
          </div>
+
+
       </div>
    </div>
 </div>
 
 <script type="module">
    const { createApp, ref, onMounted, computed } = Vue
+   import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
+   import RuleFilterBar from '/static/js/rule/ruleFilterBar.js';
+   import PaginationComponent from '/static/js/rule/paginationComponent.js';
    createApp({
       delimiters: ['[[', ']]'],
+      components: {
+         'vulnerability-displays-list': VulnerabilityDisplaysList,
+         'rule-filter-bar': RuleFilterBar,
+         'pagination-component': PaginationComponent
+      },
       setup() {
 
          /**
@@ -420,42 +446,27 @@
           *    #  Search  #
           *    ############
           * */
-         const isLoading = ref(false)
+         const search_is_loading = ref(true)
+         const filterBar = ref(null);
+         const rules_list = ref([]);
+         const total_rules_liste = ref(0);
+         const current_page = ref(1);
+         const total_pages = ref(1);
 
+         const onRulesUpdated = (results) => {
+            rules_list.value = results.rules.rule || [];
+            total_pages.value = results.total_pages || 1;
+            current_page.value = results.current_page || 1;
+            total_rules_liste.value = results.total_rules || 0;
+         };
 
-         const searchQuery = ref('')
-         const sortBy = ref('newest')
-         const ruleType = ref('')
-
-         const rules_formats = ref([])
-
-         async function fetchRulesFormats() {
-            const res = await fetch('/rule/get_rules_formats')
-            const data = await res.json()
-            if (res.status === 200) {
-               rules_formats.value = data.formats
+         const changePage = (page) => {
+            if (filterBar.value) {
+               filterBar.value.fetchRules(page);
+               window.scrollTo({ top: 0, behavior: 'smooth' });
             }
-         }
+         };
 
-         const rules_list = ref([])
-
-         async function fetchRules() {
-            isLoading.value = true
-            const params = new URLSearchParams({
-               page: 1,
-               search: searchQuery.value,
-               sort_by: sortBy.value,
-               rule_type: ruleType.value
-            })
-
-            const res = await fetch('/rule/get_rules_page_filter?' + params.toString())
-            if (res.status === 200) {
-               const data = await res.json()
-               rules_list.value = data || []
-            }
-            isLoading.value = false
-
-         }
          function giveFocus() {
             setTimeout(() => {
                const input = document.getElementById("searchInputCaneva");
@@ -463,40 +474,6 @@
                   input.focus();
                }
             }, 400);
-         }
-
-
-         async function onSearchInput() {
-            if (searchQuery.value.trim() === "") {
-               await fetchRules(1)
-            }
-         }
-
-         async function onEnterKey() {
-            // if the key pressed is enter launch the request
-            if (event.key === 'Enter') {
-               await fetchRules(1)
-            }
-
-         }
-
-         function parsedCVE(cveField) {
-            if (!cveField) return [];
-            try {
-               const parsed = typeof cveField === 'string' ? JSON.parse(cveField) : cveField;
-               return Array.isArray(parsed) ? parsed : [parsed];
-            } catch (e) {
-               return cveField.replace(/[{}]/g, "").split(",").map(s => s.trim()).filter(s => s !== "");
-            }
-         }
-
-         function getCVEColor(cve) {
-            const c = cve.toUpperCase();
-            if (c.startsWith("CVE")) return "bg-danger";
-            if (c.startsWith("GHSA")) return "bg-warning text-dark";
-            if (c.startsWith("PYSEC")) return "bg-info text-dark";
-            if (c.startsWith("RHSA") || c.startsWith("MS")) return "bg-purple";
-            return "bg-secondary";
          }
 
          /**
@@ -513,9 +490,17 @@
             getNbUpdateImport()
          })
 
-         //fetchRulesFormats(),
-         //fetchRules()
+         const isSearchInitialized = ref(false);
 
+         function initSearch() {
+            giveFocus();
+            if (!isSearchInitialized.value) {
+               if (filterBar.value) {
+                  filterBar.value.fetchRules(1);
+                  isSearchInitialized.value = true;
+               }
+            }
+         }
 
          return {
             requests_to_validate,
@@ -525,23 +510,27 @@
             update_import_to_validate,
             total_notifications,
 
+            VulnerabilityDisplaysList,
+            RuleFilterBar,
+            PaginationComponent,
 
-            searchQuery,
-            sortBy,
-            ruleType,
-            rules_formats,
-            rules_list,
-
-            fetchRules,
-            onSearchInput,
-            onEnterKey,
-            fetchRulesFormats,
+            getNbRequestAdmin,
+            getNbChanges,
+            getNbRepport,
+            getNbUpdate,
             getNbUpdateImport,
 
-            parsedCVE,
-            getCVEColor,
+            rules_list,
+            total_rules_liste,
+            current_page,
+            total_pages,
+            onRulesUpdated,
+            changePage,
             giveFocus,
-            isLoading
+
+            search_is_loading,
+            filterBar,
+            initSearch
          }
       },
    }).mount('#app')

@@ -52,12 +52,11 @@ class SigmaRule(RuleType):
                     normalized_content=content
                 )
 
-            # Validate using JSON schema
+           
             rule_json_str = json.dumps(rule, indent=2, default=str)
             rule_json_obj = json.loads(rule_json_str)
             validate(instance=rule_json_obj, schema=self.schema)
 
-            # IMPORTANT : keep original YAML EXACTLY as user provided
             return ValidationResult(
                 ok=True,
                 normalized_content=content
@@ -98,7 +97,7 @@ class SigmaRule(RuleType):
                 "cve_id": cve,
                 "original_uuid": rule.get("id", "Unknown"),
                 "source": rule.get("source") or info.get("repo_url", "Unknown"),
-                "to_string": content  # KEEP ORIGINAL YAML
+                "to_string": content  
             }
 
         except Exception as e:
@@ -111,7 +110,7 @@ class SigmaRule(RuleType):
                 "source": info.get("repo_url", "Unknown"),
                 "original_uuid": "Unknown",
                 "author": info.get("author", "Unknown"),
-                "cve_id": None,
+                "cve_id": [],
                 "to_string": content,
             }
 

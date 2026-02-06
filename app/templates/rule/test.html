@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="main-container" class="container mt-4">
+
+    <rule-filter-bar ref="filterBar" api-endpoint="/rule/get_rules_page_filter" :rules-formats="rules_formats"
+        @update:results="onRulesUpdated" @loading="search_is_loading = $event">
+    </rule-filter-bar>
+
+    <template v-if="!search_is_loading">
+        <div v-if="rules_list.length > 0">
+
+            <pagination-component :current-page="current_page" :total-pages="total_pages" @change-page="changePage">
+            </pagination-component>
+
+            <div v-for="rule in rules_list" :key="rule.id" class="card mb-3 shadow-sm">
+                <div class="card-body">
+                    <h5 class="fw-bold">[[ rule.title ]]</h5>
+                    <p class="text-muted small">[[ rule.description ]]</p>
+                </div>
+            </div>
+
+            <pagination-component :current-page="current_page" :total-pages="total_pages" @change-page="changePage">
+            </pagination-component>
+
+        </div>
+        <div v-else class="text-center py-5">No rules found.</div>
+    </template>
+
+    <div v-else class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, onMounted } = Vue
+    import RuleFilterBar from '/static/js/rule/ruleFilterBar.js';
+    import PaginationComponent from '/static/js/rule/paginationComponent.js';
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: {
+            'rule-filter-bar': RuleFilterBar,
+            'pagination-component': PaginationComponent
+        },
+        setup() {
+            const filterBar = ref(null);
+            const rules_list = ref([]);
+            const current_page = ref(1);
+            const total_pages = ref(1);
+            const search_is_loading = ref(true);
+            const rules_formats = ref([]);
+
+            const onRulesUpdated = (results) => {
+                rules_list.value = results.rules.rule || [];
+                total_pages.value = results.total_pages;
+                current_page.value = results.current_page;
+            };
+
+            // Cette fonction fait le lien entre la Pagination et le Filtre
+            const changePage = (page) => {
+                filterBar.value.fetchRules(page);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const fetchFormats = async () => {
+                const res = await fetch('/rule/get_rules_formats');
+                const data = await res.json();
+                rules_formats.value = data.formats;
+            };
+
+            onMounted(fetchFormats);
+
+            return {
+                filterBar, rules_list, current_page, total_pages,
+                search_is_loading, rules_formats, onRulesUpdated, changePage
+            }
+        }
+    }).mount('#main-container')
+</script>
+{% endblock %}

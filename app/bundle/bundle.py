@@ -115,7 +115,7 @@ def edit(bundle_id) :
             form_dict = form_to_dict(form)
             v_data = request.form.get('vulnerabilities')
             form_dict['vulnerabilities'] = v_data
-            print(  form_dict['vulnerabilities'])
+            
             BundleModel.update_bundle(bundle_id , form_dict )
             flash("Bundle modified with success!", "success")
             return redirect(request.referrer or '/')

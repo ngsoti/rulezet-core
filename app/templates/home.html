@@ -94,16 +94,9 @@
                                 </p>
                             </div>
 
-                            <div class="mt-3 mb-4 min-h-40">
-                                <div v-if="rule.cve_id && rule.cve_id !== 'None'" class="d-flex flex-wrap gap-1">
-                                    <a v-for="cve in parsedCVE(rule.cve_id)"
-                                        :href="'https://vulnerability.circl.lu/vuln/' + cve.toLowerCase()"
-                                        target="_blank" :class="['badge', 'text-decoration-none', getCVEColor(cve)]"
-                                        style="font-size: 0.75rem; font-weight: 500; border-radius: 6px;"
-                                        title="See more about this cve">
-                                        [[ cve ]]
-                                    </a>
-                                </div>
+                            <div class="mb-3" @click.stop>
+                                <vulnerability-displays-list object-type="rule" :object-id="rule.id" :max-visible="2">
+                                </vulnerability-displays-list>
                             </div>
 
                             <div
@@ -190,9 +183,12 @@
 <script type="module">
     const { createApp, ref, onMounted } = Vue
     import { display_toast, message_list, create_message } from '/static/js/toaster.js'
-
+    import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
     createApp({
         delimiters: ['[[', ']]'],
+        components: {
+            'vulnerability-displays-list': VulnerabilityDisplaysList
+        },
         setup() {
             const is_loading = ref(false)
             const rules_list = ref([])
@@ -306,6 +302,7 @@
                 getCVEColor,
                 animateClick,
                 is_loading,
+                VulnerabilityDisplaysList
             }
         }
     }).mount('#main-container')

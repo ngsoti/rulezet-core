@@ -2,6 +2,7 @@
 #                                               PUBLIC ENDPOINT                                                       #
 # ------------------------------------------------------------------------------------------------------------------- #
 
+import json
 from typing import Optional
 from flask import request, url_for
 from flask_restx import Resource, Namespace
@@ -445,51 +446,49 @@ class RulesByUser(Resource):
 @rule_public_ns.route('/search_rules_by_cve')
 @rule_public_ns.doc(
     description="""
-Search for all rules that match one or more **CVE IDs** or **vulnerability identifiers**.
+Search for all rules that match specific **CVE IDs** or **vulnerability identifiers** (GHSA, PYSEC, etc.).
 
-You may provide multiple IDs using a comma-separated list  
-(e.g. *CVE*, *GHSA*, *MSRC*, etc.).
+This endpoint automatically detects and normalizes vulnerability patterns from the input string, then performs a broad search across the rules database.
 
 ### Query Parameter
 
-| Parameter | Type   | Description                                            |
-|-----------|--------|--------------------------------------------------------|
-| cve_ids   | string | One or more CVE or vulnerability IDs, comma-separated |
+| Parameter | Type   | Description                                                                 |
+|-----------|--------|-----------------------------------------------------------------------------|
+| cve_ids   | string | A comma-separated list or a raw string containing one or more vulnerability IDs |
 
 ### Example cURL Request
 
 ```bash
 curl -G "http://127.0.0.1:7009/api/rule/public/search_rules_by_cve" \
-    --data-urlencode "cve_ids=CVE-2021-34567,GHSA-xy12-zw34-ab56"
-```
-"""
-)
-class RulesByCVE(Resource):
+    --data-urlencode "cve_ids=CVE-2021-44228,GHSA-j8v8-6h6r-m6pq"
 
-    @rule_public_ns.doc(params={
-        "cve_ids": "Comma-separated list of CVE or vulnerability IDs"
-    })
-    def get(self):
-        """
-        Search rules by CVE or vulnerability IDs.
-        Accepts multiple IDs as a comma-separated list.
-        """
-        raw_cve_ids = request.args.get('cve_ids', '')
-        if not raw_cve_ids:
-            return {"error": "No CVE IDs provided."}, 400
+""",
+params={'cve_ids': 'One or more vulnerability identifiers (CVE, GHSA, etc.)'} ) 
 
-        # Detect valid CVE / vuln patterns
-        success, cve_patterns = utils.detect_cve(raw_cve_ids)
+class RulesByCVE(Resource): 
+    def get(self): 
+        """ Search rules by vulnerability identifiers """ 
+        raw_input = request.args.get('cve_ids', '') 
+        if not raw_input: 
+            return {"error": "No IDs provided."}, 400
+        # utils.detect_cve returns (True, '["CVE-XXXX"]')
+        success, cve_json = utils.detect_cve(raw_input)
+        
         if not success:
-            return {"error": "No match for CVE ID"}, 400
+            return {"error": "Detection failed."}, 500
 
-        # Perform search
+        # Load the JSON string into a Python list
+        cve_patterns = json.loads(cve_json)
+        
+        if not cve_patterns:
+            return {"error": "No valid identifiers detected."}, 404
+
+        # Search the database using the cleaned list
         result = RuleModel.search_rules_by_cve_patterns(cve_patterns)
 
         return {
-            "cve_patterns": cve_patterns,
-            "total_all_rules": result["total_all_rules"],
-            "totals_by_cve": result["totals"],
-            "rules": result["rules"]  # only patterns with >0 results appear
+            "detected_patterns": cve_patterns, 
+            "total_matches": result.get("total_all_rules", 0),
+            "stats": result.get("totals", 0),
+            "results": result.get("rules", []) 
         }, 200
-

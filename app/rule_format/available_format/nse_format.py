@@ -102,7 +102,7 @@ class NseRule(RuleType):
                 "cve_id": cve, 
             }
         except Exception as e:
-            return {"format": "nse", "title": f"error_{title}", "description": str(e), "to_string": str(content)}
+            return {"format": "nse", "title": f"error_{title}", "description": str(e), "to_string": str(content), "cve_id": []}
 
     def get_rule_files(self, file: str) -> bool:
         return file.endswith(".nse")

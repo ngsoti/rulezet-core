@@ -86,7 +86,7 @@ const TagDisplay = {
                 </button>
 
                 <div v-if="tags.length === 0 && !loading" class="text-muted small fst-italic py-1">
-                    <i class="fas fa-slash me-1 opacity-50"></i> No tags assigned.
+                    <i class="fas fa-tags me-1 opacity-50"></i> No tags assigned.
                 </div>
                 <div v-if="loading" class="d-flex align-items-center gap-2 py-1">
                     <div class="spinner-border spinner-border-sm text-primary"></div>

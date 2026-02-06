@@ -75,7 +75,7 @@ class Defaulrule(RuleType):
                 "original_uuid": meta.get("id") or  "Unknown",
                 "author": meta.get("author") or info["author"] or "Unknown",
                 "to_string": validation_result.normalized_content,
-                "cve_id": meta.get("cve_id") or cve or None,
+                "cve_id": meta.get("cve_id") or cve or [],
             }
             return rule_dict
         except Exception as e:
@@ -88,7 +88,7 @@ class Defaulrule(RuleType):
                 "source": info["repo_url"],
                 "original_uuid":  "Unknown",
                 "author": info["author"] or "Unknown",
-                "cve_id": None,
+                "cve_id": [],
                 "to_string": content,
             }
 

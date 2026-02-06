@@ -1,3 +1,4 @@
+import json
 import subprocess
 import os
 import re
@@ -141,35 +142,44 @@ def generate_side_by_side_diff_html(text_old: str, text_new: str) -> tuple[str, 
     return ''.join(old_lines_html), ''.join(new_lines_html)
 
 
+
 def detect_cve(text):
     """
     Detect various types of vulnerability identifiers in the given text.
-    Returns a tuple: (True, list_of_matches) if any found, otherwise (False, []).
+    Returns a JSON string of a sorted list of unique identifiers.
     """
+    if not text:
+        return False , json.dumps([])
 
     vulnerability_patterns = re.compile(
-        r"\b(CVE[-\s]\d{4}[-\s]\d{4,7})\b"                  # CVE pattern
-        r"|\b(GCVE-\d+-\d{4}-\d+)\b"                        # GCVE pattern
-        r"|\b(GHSA-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4})\b"  # GHSA pattern
-        r"|\b(PYSEC-\d{4}-\d{2,5})\b"                       # PYSEC pattern
-        r"|\b(GSD-\d{4}-\d{4,5})\b"                         # GSD pattern
-        r"|\b(wid-sec-w-\d{4}-\d{4})\b"                     # CERT-Bund pattern
-        r"|\b(cisco-sa-\d{8}-[a-zA-Z0-9]+)\b"               # Cisco pattern
-        r"|\b(RHSA-\d{4}:\d{4})\b"                          # RedHat pattern
-        r"|\b(msrc_CVE-\d{4}-\d{4,})\b"                     # MSRC CVE pattern
-        r"|\b(CERTFR-\d{4}-[A-Z]{3}-\d{3})\b",              # CERT-FR pattern
+        r"\b("
+        r"CVE[-\s]\d{4}[-\s]\d{4,7}"
+        r"|GCVE-\d+-\d{4}-\d+"
+        r"|GHSA-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}"
+        r"|PYSEC-\d{4}-\d{2,5}"
+        r"|GSD-\d{4}-\d{4,5}"
+        r"|wid-sec-w-\d{4}-\d{4}"
+        r"|cisco-sa-\d{8}-[a-zA-Z0-9]+"
+        r"|RHSA-\d{4}:\d{4}"
+        r"|msrc_CVE-\d{4}-\d{4,}"
+        r"|CERTFR-\d{4}-[A-Z]{3}-\d{3}"
+        r")\b",
         re.IGNORECASE,
     )
 
-    matches = re.findall(vulnerability_patterns, text)
+    matches = vulnerability_patterns.findall(text)
 
-    # Flatten the list of tuples into a list of non-empty matches
-    all_matches = [match for group in matches for match in group if match]
+    if not matches:
+        return True , json.dumps([])
 
-    if all_matches:
-        return True, all_matches
-    else:
-        return False, ""
+    cleaned = []
+    for m in matches:
+        normalized = re.sub(r'[\s\_]', '-', m).upper()
+        cleaned.append(normalized)
+    
+    result_list = sorted(list(set(cleaned)))
+    return True ,json.dumps(result_list)
+
 
 def update_or_clone_repo(repo_url: str) -> str | None:
     """

@@ -2245,3 +2245,175 @@ body.dark-mode .d2h-emptyplaceholder{
 
 
 
+
+
+.rule-card {
+    background-color: var(--card-bg-color); 
+    border: 1px solid rgba(125, 125, 125, 0.1);
+    border-radius: 12px;
+    transition: all 0.2s ease-in-out;
+    color: inherit;
+}
+
+.rule-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1) !important;
+    border-color: var(--bs-primary);
+    background-color: rgba(var(--bs-primary-rgb), 0.03);
+}
+
+.rule-title {
+    color: var(--color-text); 
+    font-size: 1.05rem;
+}
+
+.rule-description {
+    color: #6c757d;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    max-width: 90%;
+}
+
+.rule-icon-box {
+    width: 48px;
+    height: 48px;
+    background: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+    font-size: 1.2rem;
+}
+
+.rule-type-badge {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.format-badge {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+    font-size: 0.75rem;
+    border: 1px solid rgba(108, 117, 125, 0.2);
+}
+
+/* Fix pour l'affichage des vulnérabilités en ligne */
+.vuln-list-inline {
+    display: inline-block;
+}
+
+
+ /* --- Design Système pour Dark/Light Mode --- */
+    .rule-card-modern {
+        background-color: var(--card-bg-color);
+        border: 1px solid rgba(125, 125, 125, 0.1);
+        border-radius: 16px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        position: relative;
+    }
+
+    .rule-card-modern:hover {
+        transform: translateY(-3px);
+        border-color: var(--bs-primary);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .rule-title {
+        color: var(--color-text);
+        font-size: 1rem;
+    }
+
+    .rule-description {
+        color: #888;
+        line-height: 1.4;
+    }
+
+    /* Badges Custom */
+    .badge-custom {
+        font-size: 0.7rem;
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .badge-custom.format {
+        background: rgba(var(--bs-primary-rgb), 0.1);
+        color: var(--bs-primary);
+    }
+
+    .badge-custom.license {
+        background: rgba(108, 117, 125, 0.1);
+        color: #888;
+    }
+
+    /* Boutons d'action */
+    .btn-action {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: none;
+        background: rgba(125, 125, 125, 0.05);
+        color: #888;
+        transition: 0.2s;
+    }
+
+    .btn-action:hover {
+        transform: scale(1.1);
+    }
+
+    .btn-action.edit:hover {
+        background: var(--bs-primary);
+        color: white;
+    }
+
+    .btn-action.delete:hover {
+        background: var(--bs-danger);
+        color: white;
+    }
+
+    .btn-action.favorite:hover {
+        background: rgba(255, 193, 7, 0.1);
+    }
+
+    /* Checkbox Stylisée */
+    .custom-checkbox input {
+        display: none;
+    }
+
+    .custom-checkbox label {
+        width: 22px;
+        height: 22px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        transition: 0.2s;
+    }
+
+    .custom-checkbox input:checked+label {
+        background: var(--bs-danger);
+        border-color: var(--bs-danger);
+    }
+
+    .custom-checkbox input:checked+label::after {
+        content: '\f00c';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        color: white;
+        font-size: 12px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+
+    /* Dark Mode adjustment for dashed border */
+    .bg-light-subtle {
+        background-color: rgba(125, 125, 125, 0.03) !important;
+    }

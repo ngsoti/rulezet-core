@@ -46,6 +46,17 @@ class CRSRule(RuleType):
         """
         Parse the single CRS rule
         """
+
+
+        # title = "unknown"
+        
+        # filepath = info.get("github_path") or info.get("filepath") 
+        # if filepath:
+        #     if info.get("filepath"):
+        #         title = os.path.splitext(os.path.basename(filepath))[0].split("/")[-1]
+        #     else:
+        #         title = os.path.splitext(os.path.basename(filepath))[0]
+
         rule_id = None
     
         id_match = re.search(r'id:(\d+)', content)
@@ -77,7 +88,7 @@ class CRSRule(RuleType):
                 "description": info.get("description", "No description provided"),
                 "version": "1.0",
                 "author": author,
-                "cve_id": None,
+                "cve_id": [],
                 "original_uuid": rule_id or "Unknown",
                 "source": info.get("repo_url", "Unknown"),
                 "to_string": validation_result.normalized_content,
@@ -92,7 +103,7 @@ class CRSRule(RuleType):
                 "source": info.get("repo_url", "Unknown"),
                 "original_uuid": base_id,
                 "author": info.get("author", "Unknown"),
-                "cve_id": None,
+                "cve_id": [],
                 "to_string": content,
             }
 

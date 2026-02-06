@@ -81,7 +81,7 @@ class ZeekRule(RuleType):
                 "version": "N/A",
                 "original_uuid": "Unknown",
                 "author": info.get("author", "Unknown"),
-                "cve_id": None,
+                "cve_id": [],
                 "source": info.get("repo_url", ""),
                 "to_string": content,
             }

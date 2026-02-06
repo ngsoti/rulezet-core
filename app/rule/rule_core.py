@@ -59,6 +59,8 @@ def add_rule_core(form_dict, user) -> tuple[bool, str] | tuple[Rule, str]:
 
         if form_dict.get("cve_id") == "None":
             form_dict["cve_id"] = None
+        if form_dict.get("vulnerabilities") == "None":
+            form_dict["vulnerabilities"] = []
         # Create the new rule
 
         new_rule = Rule(
@@ -77,7 +79,7 @@ def add_rule_core(form_dict, user) -> tuple[bool, str] | tuple[Rule, str]:
             vote_up=0,
             vote_down=0,
             to_string=new_to_string,
-            cve_id=form_dict.get("cve_id") or None,
+            cve_id= form_dict.get("vulnerabilities") or form_dict.get("cve_id") or [],
             github_path=form_dict.get("github_path") or None
         )
 
@@ -154,6 +156,8 @@ def delete_rule_core(id) -> bool:
 def edit_rule_core(form_dict, id) -> tuple[bool,Rule]:
     """Edit the rule in the DB"""
     rule = get_rule(id)
+    if not rule:
+        return False, None
 
     rule.format = form_dict["format"]
     rule.title = form_dict["title"]
@@ -162,7 +166,7 @@ def edit_rule_core(form_dict, id) -> tuple[bool,Rule]:
     rule.source = form_dict["source"]
     rule.version = form_dict["version"]
     rule.to_string = form_dict["to_string"]
-    rule.cve_id = form_dict["cve_id"]
+    rule.cve_id = form_dict["vulnerabilities"]
     rule.last_modif = datetime.datetime.now(tz=datetime.timezone.utc)
 
     db.session.commit()
@@ -498,11 +502,6 @@ def get_rule_from_a_github(title, filepath_in_the_repo, repo_source, original_uu
         if rule:
             return rule, "Rule found in Rulezet with this original_uuid"
 
-    # if original_uuid and original_uuid != "None" and original_uuid != "none" and original_uuid != "null" and original_uuid != "Unknown" and original_uuid != "N/A":
-    #     print(f"Searching by original_uuid: {original_uuid}")
-        
-       
-   
     query = Rule.query.filter(
         Rule.title == title,
         Rule.source == repo_source
@@ -1164,10 +1163,11 @@ def remove_has_voted(vote, rule_id , id) -> bool:
 #   Filter  #
 #############
 
-def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None) -> Rule:
+def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None, source=None, user_id=None) -> Rule:
     """Filter the rules"""
     query = Rule.query
     if search:
+        search = search.strip()
         search_lower = f"%{search.lower()}%"
         query = query.filter(
             or_(
@@ -1186,7 +1186,8 @@ def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnera
             vuln_filters.append(Rule.cve_id.ilike(search_pattern))
         
         query = query.filter(or_(*vuln_filters))
-
+    if source:
+        query = query.filter(Rule.source.ilike(f"%{source}%"))
 
     if author:
         query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
@@ -1202,6 +1203,9 @@ def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnera
         query = query.order_by(Rule.vote_down.desc())
     else:
         query = query.order_by(Rule.creation_date.desc())
+
+    if user_id:
+        query = query.filter(Rule.user_id == user_id)
     return query
 
 def get_rules_page_filter_bundle_page(search=None, author=None, sort_by=None, rule_type=None,page=1, bundle_id=None, per_page=10) -> Rule:
@@ -2069,66 +2073,50 @@ def get_all_rules_in_json_dump(data: Dict[str, Any]) -> dict:
 
     return dump
 
-def search_rules_by_cve_patterns(cve_patterns: list[str]) -> dict:
+
+def search_rules_by_cve_patterns(vulnerabilities: list[str]) -> dict:
     """
-    Search for rules matching CVE patterns and return a structured result.
-    Only include rule lists for patterns that return results.
-    
-    Returns:
-        dict {
-            "totals": {"CVE-2021": 10, "CVE-2019-6813": 2},
-            "total_all_rules": 12,
-            "rules": {
-                "CVE-2021": [...],
-                "CVE-2019-6813": [...]
-            }
-        }
+    Search rules by matching CVE patterns inside the cve_id string column.
+    Optimized to use a single SQL query.
     """
+
     
     base_url = "https://rulezet.org/rule/detail_rule/"
+    query = Rule.query
 
-    totals = {}
-    rules_by_pattern = {}
+    if vulnerabilities:
+        vuln_filters = []
+        for v in vulnerabilities:
+            search_pattern = '%"' + v + '"%'
+            vuln_filters.append(Rule.cve_id.ilike(search_pattern))
+        
+        query = query.filter(or_(*vuln_filters))
+        
 
-    total_all = 0  # total global de règles trouvées
+    all_rules = query.order_by(Rule.last_modif.desc()).all()
+    
+    final_rules = []
+    for rule in all_rules:
+        rule_data = rule.to_json()
+        
+        rule_data["detail_url"] = f"{base_url}{rule.id}"
+        
+        if rule.last_modif:
+            rule_data["formatted_date"] = rule.last_modif.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            rule_data["formatted_date"] = None
 
-    for pattern in cve_patterns:
-        like_pattern = f"%{pattern}%"
+        final_rules.append(rule_data)
 
-        # Query rules
-        rules = (
-            Rule.query.filter(
-                or_(
-                    Rule.cve_id.ilike(like_pattern),
-                    Rule.description.ilike(like_pattern),
-                    Rule.title.ilike(like_pattern),
-                )
-            )
-            .order_by(Rule.last_modif.desc())
-            .all()
-        )
-
-        # Nombre de règles trouvées pour ce pattern
-        count = len(rules)
-        totals[pattern] = count
-        total_all += count
-
-        # Si 0 résultats → ne pas ajouter dans rules
-        if count == 0:
-            continue
-
-        # Ajouter les règles formatées
-        rules_by_pattern[pattern] = []
-        for rule in rules:
-            r = rule.to_json()
-            r["detail_url"] = f"{base_url}{rule.id}"
-            rules_by_pattern[pattern].append(r)
+    total_count = len(all_rules)
 
     return {
-        "totals": totals,
-        "total_all_rules": total_all,
-        "rules": rules_by_pattern
+        "totals": total_count,
+        "total_all_rules": total_count,
+        "rules": final_rules
     }
+
+
 
 def get_new_rule(new_rule_id):
     return NewRule.query.get(new_rule_id)
@@ -2369,10 +2357,8 @@ def get_filtered_history_ids():
     updater = UpdateResult.query.filter_by(uuid=uuid_updater).first()
     
     if not updater:
-        print("updater not found")
         return []
 
-    # 1. Récupérer les RuleStatus avec mise à jour disponible
     rule_statuses = RuleStatus.query.filter_by(
         update_result_id=updater.id, 
         update_available=True
@@ -2382,7 +2368,6 @@ def get_filtered_history_ids():
         print("Aucun status de règle trouvé avec update_available=True")
         return []
 
-    # 2. Récupérer les entrées d'historique correspondantes
     history_ids = [rs.history_id for rs in rule_statuses if rs.history_id]
     history_entries = RuleUpdateHistory.query.filter(RuleUpdateHistory.id.in_(history_ids)).all()
     
@@ -2390,11 +2375,10 @@ def get_filtered_history_ids():
         print("history entries not found")
         return []
 
-    # 3. Construire la liste des résultats uniques par UUID
     unique_uuids = set()
     final_json_list = []
 
-    # Configuration API GitHub
+
     search_url = "https://api.github.com/search/code"
     headers = {"Accept": "application/vnd.github+json"}
     if github_token:
@@ -2407,15 +2391,15 @@ def get_filtered_history_ids():
         
         unique_uuids.add(rule.original_uuid)
         
-        # Initialisation de l'objet de base
+   
         rule_data = {
             "uuid": rule.original_uuid,
             "rule_name": rule.title,
-            "db_source_path": rule.source, # Le chemin actuel en base
-            "github_found_paths": rule.github_path,       # Les chemins trouvés sur GitHub
+            "db_source_path": rule.source, 
+            "github_found_paths": rule.github_path,       
         }
 
-        # 4. Recherche sur GitHub pour trouver les doublons ou le chemin exact
+       
         if rule.original_uuid:
             query = f"{rule.original_uuid} repo:Neo23x0/signature-base"
             try:
@@ -2473,71 +2457,57 @@ def delete_updater_history(id):
         db.session.rollback()
         return False, f"Updater history not deleted: {e}"
     
-
-
-def get_rules_vulnerabilities_usage():
+def get_rules_vulnerabilities_usage(user_id=None, source_url=None):
     """
-    Retrieves and counts vulnerability identifiers from Rules while respecting access control.
-    Note: If you add an 'access' column to Rules later, the filters below will apply.
+    Retrieves and counts vulnerability identifiers from Rules.
+    If user_id is provided, only rules belonging to that user are counted.
     """
-    
-    # 1. Start the query on the Rule model
+
     query = db.session.query(Rule.cve_id).filter(
         Rule.cve_id.isnot(None),
         Rule.cve_id != '',
         Rule.cve_id != '[]'
     )
 
-    # 2. Apply Access Control Logic (Placeholder for Rule model visibility)
-    # If your Rule model doesn't have 'access', these filters will need 
-    # the column added to the Rule class first.
-    if current_user.is_authenticated:
-        if not current_user.is_admin():
-            # Check if Rule has an 'access' column; if not, this part is skipped or modified
-            if hasattr(Rule, 'access'):
-                query = query.filter(
-                    or_(Rule.access.is_(True), Rule.user_id == current_user.id)
-                )
-    else:
-        if hasattr(Rule, 'access'):
-            query = query.filter(Rule.access.is_(True))
+    if user_id:
+        query = query.filter(Rule.user_id == user_id)
+    if source_url:
+        query = query.filter(Rule.source == source_url)
+
+    elif current_user.is_authenticated:
+        if not current_user.is_admin() and hasattr(Rule, 'access'):
+            query = query.filter(
+                or_(Rule.access.is_(True), Rule.user_id == current_user.id)
+            )
+    elif hasattr(Rule, 'access'):
+        query = query.filter(Rule.access.is_(True))
 
     all_rules_vulns = query.all()
     
-    # 3. Process and count individual CVEs
+
     vulnerability_counter = Counter()
-    
     for (raw_json,) in all_rules_vulns:
         try:
-            # Safely parse the JSON list stored in the cve_id column
             vuln_list = json.loads(raw_json) if isinstance(raw_json, str) else raw_json
             if isinstance(vuln_list, list):
                 vulnerability_counter.update(vuln_list)
         except (json.JSONDecodeError, TypeError):
-            # If the data is still "messy" (not JSON), skip it
             continue
 
-    # 4. Return formatted list for the Vue MultiVulnerabilityFilter
     return [
-        {
-            "name": vuln_id,
-            "usage_count": count
-        }
+        {"name": vuln_id, "usage_count": count}
         for vuln_id, count in vulnerability_counter.most_common()
     ]
 
 
-def migrate_rule_cve_to_json():
-    print("🚀 Starting full CVE data migration and cleanup...")
-    # Fetch ALL rules (including those where cve_id is NULL)
+def migrate_rule_cve_to_json() -> Tuple[bool, str]:
+    """Migrate Rule.cve_id to JSON format."""
     rules = Rule.query.all()
     updated_count = 0
 
-    # Robust regex for CVE, GHSA, PYSEC, RHSA
     vuln_regex = re.compile(r'(?:CVE|GHSA|PYSEC|RHSA)[\s\-_]\d{4,}[\s\-_]\d{3,}', re.IGNORECASE)
 
     for rule in rules:
-        # Check if it is truly NULL or empty
         if rule.cve_id is None:
             rule.cve_id = json.dumps([])
             updated_count += 1
@@ -2545,15 +2515,14 @@ def migrate_rule_cve_to_json():
 
         original_value = str(rule.cve_id).strip()
         
-        # If it's already a valid JSON list, we leave it alone
+     
         if original_value.startswith('[') and original_value.endswith(']'):
             continue
 
-        # 1. Look for CVE patterns in the string
+      
         matches = vuln_regex.findall(original_value)
         
         if matches:
-            # 2. Normalize format (e.g., "CVE 2019" -> "CVE-2019")
             cleaned_list = []
             for m in matches:
                 normalized = re.sub(r'[\s\_]', '-', m).upper()
@@ -2563,18 +2532,50 @@ def migrate_rule_cve_to_json():
             rule.cve_id = json.dumps(final_list)
             updated_count += 1
         else:
-            # 3. No CVE found, or it was a string like "None", "vide", etc.
-            # Force it to an empty list
             rule.cve_id = json.dumps([])
             updated_count += 1
             
     try:
         db.session.commit()
-        print(f"✅ Success! {updated_count} rules were updated to the standard JSON format.")
         return True, f"Success! {updated_count} rules were updated to the standard JSON format."
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error during migration: {e}")
         return False, f"Error during migration: {e}"
 
-# migrate_rule_cve_to_json()
+
+
+def get_vulnerabilities_for_rule(rule_id: int):
+    """
+    Retrieve the list of vulnerability strings stored in the rule.
+    """
+    rule = get_rule(rule_id)
+    if not rule or not rule.cve_id:
+        return []
+    
+    # vulnerability_identifiers is a string like '["CVE-2024-1234", "GHSA-xxxx"]'
+    try:
+        return json.loads(rule.cve_id)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    
+
+
+def get_sources_usage_with_filter(search_term, user_id=None):
+    """
+    Groups rules by source and counts them.
+    Filters by search term (ILIKE) and optionally by creator's user_id.
+    """
+
+    query = db.session.query(
+        Rule.source.label('source'), 
+        func.count(Rule.id).label('count')
+    ).filter(Rule.source != None, Rule.source != '')
+
+
+    if search_term:
+        query = query.filter(Rule.source.ilike(f'%{search_term}%'))
+
+    if user_id:
+        query = query.filter(Rule.user_id == user_id)
+
+    return query.group_by(Rule.source).order_by(func.count(Rule.id).desc()).all()

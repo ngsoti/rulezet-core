@@ -145,7 +145,7 @@ class CreateRule(Resource):
             'license': data.get("license").strip(),
             'original_uuid': data.get("original_uuid") or None,
             'author': user.first_name,
-            'cve_id': cve_id if cve_id else None
+            'cve_id': cve_id if cve_id else []
         }
 
         is_valid, error_msg = verify_syntax_rule_by_format(form_dict)

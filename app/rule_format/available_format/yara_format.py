@@ -76,17 +76,13 @@ class YaraRule(RuleType):
         rule_name = rule_name_match.group(1) if rule_name_match else "UNKNOWN_RULE_NAME"
         
         try:
-            # --- 2. Extract optional meta block ---
             meta = {}
-            # Utiliser la version normalisée si disponible, sinon le contenu brut
+
             source_content = validation_result.normalized_content if validation_result.normalized_content else content
             
-            # Recherche du bloc meta (entre 'meta:' et la prochaine section comme 'strings:' ou 'condition:')
             meta_block = re.search(r'meta\s*:\s*(.*?)\n\s*(?:strings|condition|private|global)\s*:', source_content, re.DOTALL | re.IGNORECASE)
             
             if meta_block:
-                # Si le bloc 'strings:' ou 'condition:' n'est pas trouvé immédiatement après,
-                # on utilise une approche plus tolérante :
                 meta_content = meta_block.group(1)
                 entries = re.findall(r'(\w+)\s*=\s*"(.*?)"', meta_content, re.DOTALL)
                 for key, val in entries:
@@ -96,11 +92,10 @@ class YaraRule(RuleType):
             # Utiliser le nom de la règle si aucune description méta n'est trouvée
             description = meta.get("description") or f"Rule {rule_name} (No description metadata provided)."
             _, cve = detect_cve(description)
+            print(f"Detected CVE: {cve}")
 
-            # --- 4. Build normalized dict ---
             rule_dict = {
                 "format": "yara",
-                # Utiliser le nom de règle extrait en première étape (garanti non vide si match)
                 "title": rule_name, 
                 "license": meta.get("license") or info.get("license", "unknown"),
                 "description": description,
@@ -108,25 +103,22 @@ class YaraRule(RuleType):
                 "version": meta.get("version", "1.0"),
                 "original_uuid": meta.get("id") or meta.get("uuid")  or "Unknown",
                 "author": meta.get("author") or info.get("author", "Unknown"),
-                # Utiliser le contenu normalisé après validation
                 "to_string": source_content, 
                 "cve_id": cve
             }
             return rule_dict
             
         except Exception as e:
-            # Si une erreur survient, nous garantissons que 'title' n'est PAS "Invalid Rule" 
-            # mais le nom réel (s'il existe) pour le traitement.
             return {
                 "format": "yara",
-                "title": rule_name, # <-- **CORRECTION CLÉ** : Utiliser le nom extrait
+                "title": rule_name, 
                 "license": info.get("license", "unknown"),
                 "description": f"Error parsing optional metadata in rule '{rule_name}': {e}",
                 "version": "N/A",
                 "source": info.get("repo_url", "Unknown"),
                 "original_uuid": "Unknown",
                 "author": info.get("author", "Unknown"),
-                "cve_id": None,
+                "cve_id": [],
                 "to_string": content,
             }
 
