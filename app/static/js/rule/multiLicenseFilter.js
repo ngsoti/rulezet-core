@@ -4,7 +4,6 @@ const MultiLicenseFilter = {
         placeholder: { type: String, default: 'Filter by licenses...' },
         apiEndpoint: { type: String, default: '/rule/get_rules_licenses_usage' },
         userId: { type: Number, default: null },
-        // Added sourceRules prop to allow scoping by source
         sourceRules: { type: String, default: '' }
     },
     emits: ['update:modelValue', 'change'],
@@ -14,12 +13,14 @@ const MultiLicenseFilter = {
         const searchCtx = Vue.ref('');
         const selectedNames = Vue.ref([...props.modelValue]);
         const activePrefix = Vue.ref(null);
+        const isLoading = Vue.ref(false);
 
         Vue.watch(() => props.modelValue, (newVal) => {
             selectedNames.value = [...newVal];
         }, { deep: true });
 
         const fetchLicenses = async () => {
+            isLoading.value = true;
             try {
                 let url = props.apiEndpoint;
                 const params = new URLSearchParams();
@@ -28,7 +29,6 @@ const MultiLicenseFilter = {
                     params.append('user_id', props.userId.toString());
                 }
 
-                // If a source scope is provided, add it to the request
                 if (props.sourceRules) {
                     params.append('sources', props.sourceRules);
                 }
@@ -44,10 +44,11 @@ const MultiLicenseFilter = {
                 }
             } catch (e) {
                 console.error("Error loading filter licenses", e);
+            } finally {
+                isLoading.value = false;
             }
         };
 
-        // Refresh the list whenever the source scope changes
         Vue.watch(() => props.sourceRules, () => {
             fetchLicenses();
         });
@@ -100,8 +101,8 @@ const MultiLicenseFilter = {
         Vue.onMounted(fetchLicenses);
 
         return {
-            searchCtx, groupedLicenses, selectedNames, activePrefix,
-            toggleLicense, filteredList, getLicenseColor, getLicenseIcon,
+            searchCtx, groupedLicenses, selectedNames, activePrefix, list_licenses,
+            toggleLicense, filteredList, getLicenseColor, getLicenseIcon, isLoading,
             clearAll: () => { 
                 selectedNames.value = []; 
                 emit('update:modelValue', []); 
@@ -148,7 +149,17 @@ const MultiLicenseFilter = {
             </div>
 
             <div class="custom-tag-scroll pe-2" style="max-height: 400px; overflow-y: auto;">
-                <div v-if="searchCtx" class="d-flex flex-column gap-1">
+                
+                <div v-if="(!isLoading && list_licenses.length === 0) || (searchCtx && filteredList.length === 0)" 
+                     class="text-center py-4 animate__animated animate__fadeIn" style="color: var(--text-color)">
+                    <div class="mb-2">
+                        <i class="fa-solid fa-file-circle-exclamation fa-3x text-muted opacity-25"></i>
+                    </div>
+                    <h6 class="text-muted fw-bold">No licenses found</h6>
+                    <p class="small text-muted opacity-75">Try a different search term or check the data source.</p>
+                </div>
+
+                <div v-else-if="searchCtx" class="d-flex flex-column gap-1">
                     <div v-for="l in filteredList" :key="l.name" 
                          @click="toggleLicense(l.name)" 
                          class="p-2 rounded border d-flex align-items-center justify-content-between tag-item-hover"

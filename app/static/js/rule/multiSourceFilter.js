@@ -4,7 +4,6 @@ const MultiSourceFilter = {
         placeholder: { type: String, default: 'Filter by sources...' },
         apiEndpoint: { type: String, default: '/rule/get_rules_sources_usage' },
         userId: { type: Number, default: null },
-        
     },
     emits: ['update:modelValue', 'change'],
     delimiters: ['[[', ']]'],
@@ -13,28 +12,31 @@ const MultiSourceFilter = {
         const searchCtx = Vue.ref('');
         const selectedNames = Vue.ref([...props.modelValue]);
         const activePrefix = Vue.ref(null); 
+        const isLoading = Vue.ref(false);
+
         Vue.watch(() => props.modelValue, (newVal) => {
             selectedNames.value = [...newVal];
         }, { deep: true });
 
         const fetchSources = async () => {
-            let url = props.apiEndpoint;
-                
-               
-            if (props.userId !== null && !isNaN(props.userId)) {
-                const params = new URLSearchParams();
-                
-                params.append('user_id', props.userId.toString());
-                url += `?${params.toString()}`;
-            }
+            isLoading.ref = true;
+            try {
+                let url = props.apiEndpoint;
+                if (props.userId !== null && !isNaN(props.userId)) {
+                    const params = new URLSearchParams();
+                    params.append('user_id', props.userId.toString());
+                    url += `?${params.toString()}`;
+                }
 
-            const response = await fetch(url);
-            if (response.ok) {
-                const data = await response.json();
-                list_sources.value = Array.isArray(data) ? data : (data.sources || []);
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    list_sources.value = Array.isArray(data) ? data : (data.sources || []);
+                }
+            } finally {
+                isLoading.value = false;
             }
         };
-
 
         const groupedSources = Vue.computed(() => {
             const groups = {};
@@ -85,8 +87,8 @@ const MultiSourceFilter = {
         Vue.onMounted(fetchSources);
 
         return {
-            searchCtx, groupedSources, selectedNames, activePrefix,
-            toggleSource, filteredList, getSourceColor, getSourceIcon,
+            searchCtx, groupedSources, selectedNames, activePrefix, list_sources,
+            toggleSource, filteredList, getSourceColor, getSourceIcon, isLoading,
             clearAll: () => { 
                 selectedNames.value = []; 
                 emit('update:modelValue', []); 
@@ -134,7 +136,16 @@ const MultiSourceFilter = {
 
             <div class="custom-tag-scroll pe-2" style="max-height: 400px; overflow-y: auto;">
                 
-                <div v-if="searchCtx" class="d-flex flex-column gap-1">
+                <div v-if="(!isLoading && list_sources.length === 0) || (searchCtx && filteredList.length === 0)" 
+                     class="text-center py-4 animate__animated animate__fadeIn" style="color: var(--text-color)">
+                    <div class="mb-2">
+                        <i class="fa-solid fa-magnifying-glass-chart fa-3x text-muted opacity-25"></i>
+                    </div>
+                    <h6 class="text-muted fw-bold">No sources found</h6>
+                    <p class="small text-muted opacity-75">Try a different search term or check your filters.</p>
+                </div>
+
+                <div v-else-if="searchCtx" class="d-flex flex-column gap-1">
                     <div v-for="s in filteredList" :key="s.name" 
                          @click="toggleSource(s.name)" 
                          class="p-2 rounded border d-flex align-items-center justify-content-between tag-item-hover"
@@ -184,7 +195,7 @@ const MultiSourceFilter = {
                                     <div class="px-2 py-1 bg-black bg-opacity-10 border-end border-white border-opacity-10">
                                         <i :class="getSourceIcon(s.name)" style="color: var(--text-color)"></i>
                                     </div>
-                                    <div class="px-2 py-1 fw-bold" style="color: ">[[ s.name ]]</div>
+                                    <div class="px-2 py-1 fw-bold">[[ s.name ]]</div>
                                 </div>
                             </div>
                             
@@ -195,7 +206,6 @@ const MultiSourceFilter = {
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>

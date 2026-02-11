@@ -11,15 +11,21 @@ const MultiTagFilter = {
         const tagSearchQuery = Vue.ref('');
         const selectedTagIds = Vue.ref([...props.modelValue]);
         const activeNamespace = Vue.ref(null);
+        const isLoading = Vue.ref(false);
 
         const fetchTags = async () => {
+            isLoading.value = true;
             try {
                 const response = await fetch(props.apiEndpoint);
                 if (response.ok) {
                     const data = await response.json();
                     list_tags.value = data.tags || [];
                 }
-            } catch (e) { console.error("Error loading filter tags", e); }
+            } catch (e) { 
+                console.error("Error loading filter tags", e); 
+            } finally {
+                isLoading.value = false;
+            }
         };
 
         const groupedTags = Vue.computed(() => {
@@ -63,12 +69,12 @@ const MultiTagFilter = {
         Vue.onMounted(fetchTags);
 
         return {
-            tagSearchQuery, groupedTags, selectedTagIds, activeNamespace,
-            selectedTagsObjects, toggleTag, getContrastYIQ, filteredTagsList,
+            tagSearchQuery, groupedTags, selectedTagIds, activeNamespace, list_tags,
+            selectedTagsObjects, toggleTag, getContrastYIQ, filteredTagsList, isLoading,
             clearAll: () => { selectedTagIds.value = []; emit('update:modelValue', []); }
         };
     },
-template: `
+    template: `
     <div class="dropdown multi-tag-filter w-100">
         <div class="form-control d-flex flex-wrap gap-2 align-items-center p-2 shadow-sm border-secondary-subtle" 
              data-bs-toggle="dropdown" data-bs-auto-close="outside" 
@@ -106,20 +112,26 @@ template: `
 
             <div class="custom-tag-scroll pe-2" style="max-height: 400px; overflow-y: auto; overflow-x: hidden;">
                 
-                <div v-if="tagSearchQuery" class="d-flex flex-column gap-1">
+                <div v-if="(!isLoading && list_tags.length === 0) || (tagSearchQuery && filteredTagsList.length === 0)" 
+                     class="text-center py-4 animate__animated animate__fadeIn" style="color: var(--text-color)">
+                    <div class="mb-2">
+                        <i class="fa-solid fa-tags fa-3x text-muted opacity-25"></i>
+                    </div>
+                    <h6 class="text-muted fw-bold">No tags found</h6>
+                    <p class="small text-muted opacity-75">No tags match your search or filters.</p>
+                </div>
+
+                <div v-else-if="tagSearchQuery" class="d-flex flex-column gap-1">
                     <div v-for="tag in filteredTagsList" :key="tag.id" 
                          @click="toggleTag(tag.id)" 
                          class="p-2 rounded border d-flex align-items-center justify-content-between tag-item-hover"
-                         :class="{'border-primary bg-primary-subtle': selectedTagIds.includes(tag.id)}">
+                         :class="{'border-primary bg-primary-subtle': selectedTagIds.includes(tag.id)}"
+                         style="cursor: pointer;">
                          <div class="d-flex align-items-center">
                             <i :class="['fas', tag.icon || 'fa-tag', 'me-2 ']" style="font-size: 0.8rem; color: var(--text-color);"></i>
                             <span class="small fw-bold" style="color: var(--text-color);">[[ tag.name ]]</span>
                          </div>
                          <span class="badge rounded-pill bg-light text-dark border" style="color: var(--text-color);">[[ tag.usage_count ]]</span>
-                    </div>
-                    <div v-if="filteredTagsList.length === 0" class="text-center py-3">
-                         <i class="fa-solid fa-magnifying-glass mb-2 opacity-50" style="font-size: 1.2rem; color: var(--text-color);"></i>
-                        <p class=" small fw-bold mb-0" style="color: var(--text-color);">No vulnerability found for this search.</p>
                     </div>
                 </div>
 
@@ -137,10 +149,6 @@ template: `
                             <i class="fa-solid fa-chevron-right opacity-50 small" style="color: var(--text-color);"></i>
                         </div>
                     </div>
-                    <div v-if="Object.keys(groupedTags).length === 0" class="text-center py-4">
-                        
-                        <p class=" small fw-bold mb-0" style="color: var(--text-color);">No vulnerability used in any bundle yet.</p>
-                    </div>
                 </div>
 
                 <div v-else class="animate__animated animate__fadeInUpSmall">
@@ -153,7 +161,8 @@ template: `
                         <div v-for="tag in groupedTags[activeNamespace]" :key="tag.id" 
                              @click="toggleTag(tag.id)" 
                              class="p-2 rounded-3 border d-flex align-items-center justify-content-between transition-all tag-item-hover"
-                             :class="selectedTagIds.includes(tag.id) ? 'border-primary bg-primary-subtle' : ''">
+                             :class="selectedTagIds.includes(tag.id) ? 'border-primary bg-primary-subtle' : ''"
+                             style="cursor: pointer;">
                             
                             <div class="d-flex align-items-center">
                                 <span class="tag-split m-0 shadow-none" style="font-size: 0.75rem;">
@@ -175,7 +184,6 @@ template: `
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
