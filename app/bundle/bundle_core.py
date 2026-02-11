@@ -710,7 +710,6 @@ def save_workspace(bundle_id, structure):
         return True
     except Exception as e:
         db.session.rollback()
-        print(e)
         return False
 def get_only_root_nodes(bundle_id):
     return BundleNode.query.filter_by(bundle_id=bundle_id, parent_id=None).all()
@@ -772,7 +771,6 @@ def update_bundle_from_structure(bundle_id, structure):
 
     except Exception as e:
         db.session.rollback()
-        print(f"Error updating bundle rules: {e}")
         return False
     
 
@@ -819,7 +817,6 @@ def update_bundle_from_rule_id_into_structure(bundle_id):
 
     except Exception as e:
         db.session.rollback()
-        print(f"Error updating bundle rules: {e}")
         return False, "Error updating bundle rules"
     
 
