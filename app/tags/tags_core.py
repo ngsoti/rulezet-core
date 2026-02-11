@@ -4,6 +4,8 @@ import math
 import uuid
 
 from pathlib import Path
+
+from flask_login import current_user
 from app import db
 from app.db_class.db import Tag
 
@@ -21,6 +23,9 @@ def create_tag(form_data, created_by):
             _is_active = False
             _approved_by_admin = False
 
+        if not form_data.get('source'):
+            form_data['source'] = 'Taxonomy'
+
         tag = Tag(
             uuid=str(uuid.uuid4()),
             name=form_data['name'],
@@ -33,7 +38,8 @@ def create_tag(form_data, created_by):
             is_active=_is_active,
             is_approved_by_admin=_approved_by_admin,
             visibility=form_data['visibility'],
-            external_id=form_data.get('external_id', None)
+            external_id=form_data.get('external_id', None),
+            source=form_data.get('source', 'Taxonomy')
         )
         db.session.add(tag)
         db.session.commit()
@@ -72,6 +78,25 @@ def get_tags(args):
 def get_tags_bundle(args):
     query = Tag.query
 
+    if current_user.is_authenticated:
+        if current_user.is_admin():
+            # Filter only active tags
+            query = query.filter_by(is_active=True)
+        elif args.get('user_id'):
+            if current_user.id == int(args.get('user_id')):
+                # filter only active and public tags + private tags the user has access to
+                query = query.filter_by(is_active=True, visibility='public')
+                # add all the tags the user has access to if tags.created_by == current_user.id
+                query = query.union(db.session.query(Tag).filter_by(created_by=current_user.id))
+            else:
+                # Filter only active and public tags
+                query = query.filter_by(is_active=True, visibility='public')
+        else:
+            # Filter only active and public tags
+            query = query.filter_by(is_active=True, visibility='public')
+    else:
+        query = query.filter_by(is_active=True, visibility='public')
+
     if args.get('search'):
         query = query.filter(Tag.name.ilike(f"%{args['search']}%"))
 
@@ -80,11 +105,6 @@ def get_tags_bundle(args):
         query = query.order_by(Tag.created_at.desc())
     else:
         query = query.order_by(Tag.created_at.asc())
-
-    # Filter only active and public tags
-    query = query.filter_by(is_active=True, visibility='public')
-
-    
 
     page = int(args.get('page', 1))
     return query.paginate(page=page, per_page=20, max_per_page=20)
@@ -99,7 +119,6 @@ def remove_tag(tag_id):
         db.session.commit()
         return True, "Tag successfully deleted."
     except Exception as e:
-        print(f"Error deleting tag: {e}")
         return False, "An error occurred while deleting the tag."
 
 def toggle_tag_visibility(tag_uuid):
@@ -291,6 +310,7 @@ def add_tags_from_misp_taxonomy(uuid_from_misp, created_by):
                 if Tag.query.filter_by(name=tag_name).first():
                     continue
 
+
                 db.session.add(Tag(
                     name=tag_name,
                     description=description,
@@ -304,6 +324,7 @@ def add_tags_from_misp_taxonomy(uuid_from_misp, created_by):
                     created_at=datetime.datetime.now(datetime.timezone.utc),
                     updated_at=datetime.datetime.now(datetime.timezone.utc),
                     external_id=entry.get("uuid"),
+                    source="Taxonomy"
                 ))
                 tags_added += 1
 
@@ -339,6 +360,7 @@ def add_tags_from_misp_taxonomy(uuid_from_misp, created_by):
                 visibility="public",
                 created_at=datetime.datetime.now(datetime.timezone.utc),
                 updated_at=datetime.datetime.now(datetime.timezone.utc),
+                source="Taxonomy"
             ))
             tags_added += 1
 
@@ -364,3 +386,71 @@ def get_all_taxonomies_in_db():
             namespaces.add(tag.name.split(":", 1)[0])
 
     return namespaces
+
+def get_my_tags():
+    """ Get all tags created by the current user """
+    my_tags = Tag.query.filter(
+        Tag.created_by == current_user.id,
+        Tag.source != "Taxonomy"
+    ).order_by(Tag.created_at.desc()).all()
+    return my_tags
+
+
+
+def get_all_tags(args):
+    query = Tag.query
+
+    if current_user.is_authenticated:
+        if current_user.is_admin():
+            query = query.filter_by(is_active=True)
+        elif args.get('user_id'):
+            if current_user.id == int(args.get('user_id')):
+                query = query.filter_by(is_active=True, visibility='public')
+                query = query.union(db.session.query(Tag).filter_by(created_by=current_user.id))
+            else:
+                query = query.filter_by(is_active=True, visibility='public')
+        else:
+            query = query.filter_by(is_active=True, visibility='public')
+    else:
+        query = query.filter_by(is_active=True, visibility='public')
+
+    if args.get('search'):
+        query = query.filter(Tag.name.ilike(f"%{args['search']}%"))
+
+    sort_order = args.get('sort_order', 'asc')
+    if sort_order == 'asc':
+        query = query.order_by(Tag.created_at.desc())
+    else:
+        query = query.order_by(Tag.created_at.asc())
+
+    return query.all()
+
+
+def get_all_tags_by_type(args):
+    query = Tag.query
+    
+
+    if current_user.is_authenticated:
+        if current_user.is_admin():
+            query = query.filter_by(is_active=True)
+        elif args.get('user_id'):
+            if current_user.id == int(args.get('user_id')):
+                query = query.filter_by(is_active=True, visibility='public')
+                query = query.union(db.session.query(Tag).filter_by(created_by=current_user.id))
+            else:
+                query = query.filter_by(is_active=True, visibility='public')
+        else:
+            query = query.filter_by(is_active=True, visibility='public')
+    else:
+        query = query.filter_by(is_active=True, visibility='public')
+
+    if args.get('search'):
+        query = query.filter(Tag.name.ilike(f"%{args['search']}%"))
+
+    sort_order = args.get('sort_order', 'asc')
+    if sort_order == 'asc':
+        query = query.order_by(Tag.created_at.desc())
+    else:
+        query = query.order_by(Tag.created_at.asc())
+
+    return query.all()

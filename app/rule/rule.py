@@ -59,6 +59,12 @@ def rule() -> render_template:
         v_data = request.form.get('vulnerabilities')
         form_dict['vulnerabilities'] = v_data
 
+        t_data = request.form.get('tags')
+        try:
+            rule_dict['tags'] = json.loads(t_data) if t_data else []
+        except json.JSONDecodeError:
+            rule_dict['tags'] = []
+
         new_rule , message = RuleModel.add_rule_core(rule_dict , current_user)
         if new_rule:
             # update the gameifcation section
@@ -165,11 +171,17 @@ def get_rules_page_filter() -> jsonify:
     rule_type = request.args.get("rule_type", None) 
     source = request.args.get("sources", None)
     user_id = request.args.get("user_id", None)
+    license = request.args.get("licenses", None)
 
     vuln_raw = request.args.get("vulnerabilities", type=str)
     vuln_list = [v.strip() for v in vuln_raw.split(',') if v.strip()] if vuln_raw else []
 
-    query = RuleModel.filter_rules( search=search, author=author, sort_by=sort_by, rule_type=rule_type, vulnerabilities=vuln_list, source=source, user_id=user_id)
+    tag_raw = request.args.get("tags", type=str)
+    tag_list = [t.strip() for t in tag_raw.split(',') if t.strip()] if tag_raw else []
+
+
+
+    query = RuleModel.filter_rules(search=search, author=author, sort_by=sort_by, rule_type=rule_type, vulnerabilities=vuln_list, source=source, user_id=user_id, license=license, tags=tag_list)
     total_rules = query.count()
     rules = query.offset((page - 1) * per_page).limit(per_page).all()
 
@@ -336,6 +348,12 @@ def edit_rule(rule_id) -> render_template:
             
             v_data = request.form.get('vulnerabilities')
             form_dict['vulnerabilities'] = v_data
+
+            t_data = request.form.get('tags')
+            try:
+                rule_dict['tags'] = json.loads(t_data) if t_data else []
+            except json.JSONDecodeError:
+                rule_dict['tags'] = []
 
             success , current_rule = RuleModel.edit_rule_core(rule_dict, rule_id)
             flash("Rule modified with success!", "success")
@@ -2580,10 +2598,8 @@ def get_rules_licenses_usage():
     """Returns the list of licenses, filtered by user_id, search query, and source scope."""
     user_id = request.args.get('user_id', type=int) 
     search_query = request.args.get('q', '').strip()
-    # Add the source scope parameter
     source_scope = request.args.get('sources', '').strip()
-    print(source_scope)
-    # Pass source_scope to the model method
+    
     licenses = RuleModel.get_licenses_usage_with_filter(
         search_query=search_query, 
         user_id=user_id, 
@@ -2591,3 +2607,45 @@ def get_rules_licenses_usage():
     )
     
     return jsonify([{"name": s.license, "count": s.count} for s in licenses])
+
+
+@rule_blueprint.route('/get_tags/<int:rule_id>')
+def get_tags(rule_id):
+    """Returns full tag objects associated with a rule for display purposes."""
+    try:
+        tags = RuleModel.get_tags_for_rule(rule_id)
+        
+        return jsonify({
+            "success": True, 
+            "tags": [t.to_json() for t in tags],
+            "total_tags": len(tags)
+
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    
+@rule_blueprint.route('/get_all_tags_usage')
+def get_all_tags_usage():
+    try:
+        tags = RuleModel.get_all_used_tags_with_counts()
+        return jsonify({
+            "success": True,
+            "tags": tags
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    
+@rule_blueprint.route('/get_rule_tags_display/<int:rule_id>')
+def get_rule_tags_display(rule_id):
+    """Returns full tag objects associated with a rule for display purposes."""
+    try:
+        tags = RuleModel.get_tags_for_rule(rule_id)
+        
+        return jsonify({
+            "success": True, 
+            "tags": [t.to_json() for t in tags],
+            "total_tags": len(tags)
+
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500

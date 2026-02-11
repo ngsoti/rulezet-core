@@ -499,6 +499,32 @@ class RuleUpdateHistory(db.Model):
             "manuel_submit": self.manuel_submit if self.manuel_submit else False
         }
 
+class RuleTagAssociation(db.Model):
+    __tablename__ = 'rule_tag_association'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    tag_id = db.Column(db.Integer, db.ForeignKey('tag.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # the user who added the tag to the bundle
+
+    added_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
+
+    rule = db.relationship('Rule', backref=db.backref('rule_tags_assocs', lazy='dynamic', cascade='all, delete-orphan'))
+    tag = db.relationship('Tag', backref=db.backref('rules_assocs', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User', backref=db.backref('user_rule_tags_assocs', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "rule_id": self.rule_id,
+            "tag_id": self.tag_id,
+            "user_id": self.user_id,
+            "tag_name": self.tag.name if self.tag else None,
+            "added_at": self.added_at.strftime('%Y-%m-%d %H:%M'),
+        }
+    
 #############
 #   Bundle  #
 #############
@@ -640,6 +666,7 @@ class Tag(db.Model):
 
     color = db.Column(db.String(50), nullable=True) # Hex color code, e.g., #FF5733
     icon = db.Column(db.String(50), nullable=True) # fontawesome icon name
+    source = db.Column(db.String(255), nullable=True) # Taxonomy or Manuel or Other
 
     # Relationships
 

@@ -2,194 +2,217 @@
 {% import 'macros/form_macros.html' as f %}
 
 {% block content %}
-<div class="container mt-4 mb-4" id="main-container">
+<div class="container mt-4 mb-5" id="main-container">
     <div class="mb-4 border-bottom pb-3">
         <h2 class="fw-bold mb-1 text-primary text-center">
-            Edit {{ rule.title }}
+            Edit [[ currentRule.title || 'Rule' ]]
             <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
         </h2>
-        <p class="text-muted mt-2">
-            Stay updated with the latest rules added to our repository. Browse through recent contributions and find new
-            detection rules to enhance your security measures.
+        <p class="text-muted mt-2 text-center">
+            Modify the details of your rule below. Ensure all required fields marked with an asterisk are completed.
         </p>
     </div>
 
-    <form action="" method="post">
-        {{ form.hidden_tag() }}
+    <div class="row justify-content-center">
+        <div class="col-lg-12">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <form action="" method="post" id="form">
+                        {{ form.hidden_tag() }}
 
-        <div class="modal-body">
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        {{ form.title.label(class_="col-form-label") }}
-                        {{ form.title(class_="form-control",
-                        placeholder="Enter the rule title...",
-                        title="This is the title of your rule (e.g. SQL Injection Detection)") }}
-                        {% if form.title.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.title.errors[0] | safe }}
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label fw-bold text-dark">
+                                        {{ form.title.label.text }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.title(class_="form-control rounded-3", placeholder="Enter the rule
+                                    title...") }}
+                                    {% if form.title.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.title.errors[0] | safe }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label fw-bold text-dark">
+                                        {{ form.format.label.text }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.format(class_="form-select rounded-3") }}
+                                    {% if form.format.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.format.errors[0] | safe }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label fw-bold text-dark">{{ form.license.label.text }}</label>
+                                    {{ form.license(class_="form-control rounded-3", id="license-select") }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label fw-bold text-dark">{{ form.source.label.text }}</label>
+                                    {{ form.source(class_="form-control rounded-3", placeholder="Source URL...") }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <version-picker v-model="formData.version" label="Version">
+                                </version-picker>
+                                <input type="hidden" name="version" :value="formData.version">
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-12 text-start">
+                                <tag-input v-model="selectedTags" label="Rule Tags" :user-id="{{current_user.id}}"
+                                    placeholder="Search and add tags...">
+                                </tag-input>
+                                <input type="hidden" name="tags" :value="JSON.stringify(selectedTags)">
+                            </div>
+                        </div>
+
+                        <div class="row mb-4 text-start">
+                            <div class="col-12">
+                                <vulnerability-input v-model="detectedVulnerabilities" target-type="rule"
+                                    :target-id="ruleId" label="Vulnerabilities (CVE, GHSA...)">
+                                </vulnerability-input>
+                                <input type="hidden" name="vulnerabilities"
+                                    :value="JSON.stringify(detectedVulnerabilities)">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-12 text-start">
+                                <div class="form-group">
+                                    <label class="form-label fw-bold text-dark">{{ form.description.label.text
+                                        }}</label>
+                                    {{ form.description(class_="form-control rounded-3", rows=3, placeholder="Describe
+                                    the purpose of this rule...") }}
+                                </div>
+                            </div>
+                            <div class="col-md-12 text-start">
+                                <div class="form-group">
+                                    <label class="form-label fw-bold text-dark">{{ form.original_uuid.label.text
+                                        }}</label>
+                                    {{ form.original_uuid(class_="form-control rounded-3", placeholder="Optional:
+                                    Existing UUID if any...") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 text-start">
+                            <div class="form-group">
+                                <label class="form-label fw-bold text-dark">
+                                    {{ form.to_string.label.text }} <span class="text-danger">*</span>
+                                </label>
+                                <div class="border rounded-3 overflow-hidden shadow-sm">
+                                    <codemirror-editor v-model="currentRule.to_string" mode="yaml" height="500px">
+                                    </codemirror-editor>
+                                </div>
+                                <input type="hidden" name="to_string" :value="currentRule.to_string">
+                                {% if form.to_string.errors %}
+                                <div class="invalid-feedback d-block fw-bold mt-2">{{ form.to_string.errors[0] | safe }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if error %}
+                        <div class="alert alert-danger rounded-3 d-flex align-items-center mb-4 border-0 shadow-sm">
+                            <i class="fas fa-exclamation-triangle me-3 fa-lg"></i>
+                            <div>{{ error }}</div>
                         </div>
                         {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        {{ form.format.label(class_="col-form-label") }}
-                        {{ form.format(class_="form-select",
-                        placeholder="Choose a rule format...",
-                        title="Format of the rule") }}
-                        {% if form.format.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.format.errors[0] | safe }}
+
+                        <div class="text-center pt-2">
+                            {{ form.submit(class='btn btn-primary btn-lg rounded-pill px-5 shadow-sm') }}
                         </div>
-                        {% endif %}
-                    </div>
+                    </form>
                 </div>
             </div>
-
-            <div class="mb-3">
-                <div class="form-group">
-                    {{ form.license.label(class_="col-form-label") }}
-                    {{ form.license(class_="form-control", id="license-select",
-                    placeholder="Choose a license...",
-                    title="License for the visibility of the rule") }}
-                    {% if form.license.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.license.errors[0] | safe }}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <div class="form-group">
-                    {{ form.source.label(class_="col-form-label") }}
-                    {{ form.source(class_="form-control",
-                    placeholder="Enter the rule source...",
-                    title="Source to find the rule in the net") }}
-                    {% if form.source.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.source.errors[0] | safe }}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        {{ form.version.label(class_="col-form-label") }}
-                        {{ form.version(class_="form-control",
-                        placeholder="Enter the rule version (1.0 or 1)...",
-                        title="Source to find the rule in the net") }}
-                        {% if form.version.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.version.errors[0] | safe }}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="mb-4 text-start">
-                    <vulnerability-input v-model="detectedVulnerabilities" target-type="rule" :target-id="ruleId">
-                    </vulnerability-input>
-
-                    <input type="hidden" name="vulnerabilities" :value="JSON.stringify(detectedVulnerabilities)">
-                </div>
-            </div>
-
-
-            <div class="mb-3">
-                <div class="form-group">
-                    {{ form.description.label(class_="col-form-label") }}
-                    {{ form.description(class_="form-control", rows=4,
-                    placeholder="Enter the description of the rule (context, explain...)...",
-                    title="Description for the context, the syntax... to help the community to found it") }}
-                    {% if form.description.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.description.errors[0] | safe }}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="row mb-3">
-                <div class="col">
-                    <div class="form-group">
-                        {{ form.original_uuid.label(class_="col-form-label") }}
-                        {{ form.original_uuid(class_="form-control", rows=4,
-                        placeholder="Enter the original uuid if the rule has already one...",
-                        title="UUID to the rule. (one will be generate after the creation of the rule)") }}
-                        {% if form.original_uuid.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.original_uuid.errors[0] | safe }}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label fw-bold">Rule Content</label>
-                {% if form.to_string.errors %}
-                <div class="invalid-feedback d-block text-start mt-2 mb-2 text-danger fw-bold fs-6 ">
-                    {{ form.to_string.errors[0] | safe }}
-                </div>
-                {% endif %}
-                <codemirror-editor v-model="currentRule.to_string" mode="yaml" height="500px">
-                </codemirror-editor>
-
-                <input type="hidden" name="to_string" :value="currentRule.to_string">
-            </div>
-
-            <div class="text-center">
-                {{ form.submit(class='btn btn-primary') }}
-            </div>
-
         </div>
-    </form>
+    </div>
 </div>
 {% endblock %}
-
-
 {% block script %}
 <script type="module">
-    const { createApp, ref, computed, onMounted } = Vue
+    const { createApp, ref, reactive, onMounted, watch } = Vue
     import { message_list, create_message } from '/static/js/toaster.js'
     import VulnerabilityInput from '/static/js/vulnerability/vulnerabilityInput.js';
     import CodeMirrorEditor from '/static/js/codeMirror/codeMirrorEditor.js';
+    import TagInput from '/static/js/tags/tagInput.js';
+    import VersionPicker from '/static/js/tags/utils/versionPicker.js';
 
     createApp({
         delimiters: ['[[', ']]'],
         components: {
             'vulnerability-input': VulnerabilityInput,
-            'codemirror-editor': CodeMirrorEditor
+            'codemirror-editor': CodeMirrorEditor,
+            'tag-input': TagInput,
+            'version-picker': VersionPicker
         },
         setup() {
-            const ruleId = "{{ rule.id | safe }}";
 
-            const currentRule = ref([]);
-
-
+            const ruleId = ref("{{ rule.id | safe }}");
+            const currentRule = ref({ title: '', to_string: '' });
 
 
-            async function fetchCurrentRule() {
-                const response = await fetch('/rule/get_current_rule?rule_id=' + ruleId)
-                if (response.ok) {
-                    const data = await response.json();
-                    currentRule.value = data.rule;
+            const detectedVulnerabilities = ref([]);
+            const selectedTags = ref([]);
+
+            const formData = reactive({
+                version: "{{ form.version.data or '1.0' }}",
+            });
+
+
+            async function initRuleTags() {
+                try {
+                    const res = await fetch(`/rule/get_rule_tags_display/${ruleId.value}`);
+                    const data = await res.json();
+                    if (data.success) {
+                        selectedTags.value = data.tags;
+                    }
+                } catch (error) {
+                    console.error("Initialization error tags:", error);
                 }
             }
 
 
+            async function fetchCurrentRule() {
+                try {
+                    const response = await fetch('/rule/get_current_rule?rule_id=' + ruleId.value);
+                    if (response.ok) {
+                        const data = await response.json();
+                        currentRule.value = data.rule;
+                        if (data.rule.to_string) {
+                            currentRule.value.to_string = data.rule.to_string;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error fetching rule info:", e);
+                }
+            }
 
-            const detectedVulnerabilities = ref([]);
+            onMounted(async () => {
+
+                await Promise.all([
+                    fetchCurrentRule(),
+                    initRuleTags()
+                ]);
 
 
-            onMounted(() => {
-                fetchCurrentRule();
-                $('#license-select').select2({
-                    placeholder: "Search for a license",
-                    allowClear: true
-                });
+                if (window.$ && $.fn.select2) {
+                    $('#license-select').select2({
+                        placeholder: "Search for a license",
+                        allowClear: true,
+                        width: '100%'
+                    });
+                }
             });
 
             return {
@@ -197,12 +220,15 @@
                 create_message,
                 detectedVulnerabilities,
                 ruleId,
-                VulnerabilityInput,
-                CodeMirrorEditor,
                 currentRule,
+                selectedTags,
+                formData,
+                VersionPicker,
+                TagInput,
+                CodeMirrorEditor,
+                VulnerabilityInput
             }
         },
     }).mount('#main-container');
 </script>
-
 {% endblock %}

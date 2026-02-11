@@ -1,6 +1,7 @@
 import MultiVulnerabilityFilter from '/static/js/vulnerability/multiVulnerabilityFilter.js';
 import MultiSourceFilter from '/static/js/rule/multiSourceFilter.js';
 import MultiLicenseFilter from '/static/js/rule/multiLicenseFilter.js';
+import MultiTagFilter from '/static/js/tags/multiTagFIlter.js';
 
 const RuleFilterBar = {
     props: {
@@ -10,14 +11,15 @@ const RuleFilterBar = {
         autoFetch: { type: Boolean, default: true },
         userId: { type: Number, default: null },
         hiddenFields: { type: Array, default: () => [] },
-        sourceRules: { type: String, default: '' } // Scope passed from parent
+        sourceRules: { type: String, default: '' }
     },
     emits: ['update:results', 'loading'],
     delimiters: ['[[', ']]'],
     components: {
         'multi-vulnerability-filter': MultiVulnerabilityFilter,
         'multi-source-filter': MultiSourceFilter,
-        'multi-license-filter': MultiLicenseFilter
+        'multi-license-filter': MultiLicenseFilter,
+        'multi-tag-filter': MultiTagFilter,
     },
     setup(props, { emit }) {
         const searchQuery = Vue.ref('');
@@ -28,6 +30,7 @@ const RuleFilterBar = {
         const selectedSourceNames = Vue.ref([]); 
         const selectedVulnerabilityNames = Vue.ref([]); 
         const selectedLicenseNames = Vue.ref([]);
+        const selectedTagNames = Vue.ref([]); 
         const rulesFormats = Vue.ref([]);
 
         const isVisible = (field) => !props.hiddenFields.includes(field);
@@ -61,7 +64,6 @@ const RuleFilterBar = {
                 params.append('user_id', props.userId.toString());
             }
 
-            // Priority: sourceRules (URL/Context) > selectedSourceNames (UI Filter)
             if (props.sourceRules) {
                 params.append('sources', props.sourceRules);
             } else if (isVisible('sources') && selectedSourceNames.value.length > 0) {
@@ -74,6 +76,10 @@ const RuleFilterBar = {
 
             if (isVisible('licenses') && selectedLicenseNames.value.length > 0) {
                 params.append('licenses', selectedLicenseNames.value.join(','));
+            }
+
+            if (isVisible('tags') && selectedTagNames.value.length > 0) {
+                params.append('tags', selectedTagNames.value.join(','));
             }
 
             try {
@@ -104,7 +110,7 @@ const RuleFilterBar = {
 
         return {
             searchQuery, sortBy, ruleType, selectedSourceNames, 
-            selectedVulnerabilityNames, selectedLicenseNames, 
+            selectedVulnerabilityNames, selectedLicenseNames, selectedTagNames,
             searchIsLoading, rulesFormats, fetchRules, clearSearch, isVisible
         };
     },
@@ -126,7 +132,7 @@ const RuleFilterBar = {
                         <input type="text" v-model="searchQuery" @keyup.enter="fetchRules(1)" 
                             class="form-control border-0 bg-light pe-5" :placeholder="placeholder" 
                             style="border-radius: 0 10px 10px 0; height: 38px;" :disabled="searchIsLoading">
-                        <span v-if="searchQuery && !searchIsLoading" @click="clearSearch" class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted cursor-pointer" style="z-index: 5; cursor: pointer;">
+                        <span v-if="searchQuery && !searchIsLoading" @click="clearSearch" class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted cursor-pointer" style="z-index: 5;">
                             <i class="fa-solid fa-circle-xmark opacity-50"></i>
                         </span>
                     </div>
@@ -152,10 +158,10 @@ const RuleFilterBar = {
                 </div>
             </div>
 
-            <div class="row g-3 mt-1" v-if="isVisible('sources') || isVisible('vulnerabilities') || isVisible('licenses')" 
+            <div class="row g-3 mt-1" v-if="isVisible('sources') || isVisible('vulnerabilities') || isVisible('licenses') || isVisible('tags')" 
                  :style="{ opacity: searchIsLoading ? 0.6 : 1, pointerEvents: searchIsLoading ? 'none' : 'auto' }">
                 
-                <div class="col-md-4" v-if="isVisible('sources')">
+                <div class="col-md-6" v-if="isVisible('sources')">
                     <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
                         <i class="fa-solid fa-code-branch me-1 text-primary"></i> Sources
                     </label>
@@ -164,7 +170,7 @@ const RuleFilterBar = {
                     </multi-source-filter>
                 </div>
 
-                <div class="col-md-4" v-if="isVisible('vulnerabilities')">
+                <div class="col-md-6" v-if="isVisible('vulnerabilities')">
                     <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
                         <i class="fa-solid fa-shield-virus me-1 text-danger"></i> Vulnerabilities
                     </label>
@@ -178,7 +184,7 @@ const RuleFilterBar = {
                     </multi-vulnerability-filter>
                 </div>
 
-                <div class="col-md-4" v-if="isVisible('licenses')">
+                <div class="col-md-6" v-if="isVisible('licenses')">
                     <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
                         <i class="fa-solid fa-scale-balanced me-1 text-info"></i> Licenses
                     </label>
@@ -190,6 +196,20 @@ const RuleFilterBar = {
                         :user-id="userId"
                         :source-rules="sourceRules">
                     </multi-license-filter>
+                </div>
+
+                <div class="col-md-6" v-if="isVisible('tags')">
+                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
+                        <i class="fa-solid fa-tags me-1 text-primary"></i> Tags
+                    </label>
+                    <multi-tag-filter 
+                        v-model="selectedTagNames" 
+                        @change="fetchRules(1)"
+                        api-endpoint="/rule/get_all_tags_usage" 
+                        placeholder="Filter tags..." 
+                        :user-id="userId"
+                        target-type="rule">
+                    </multi-tag-filter>
                 </div>
             </div>
         </div>

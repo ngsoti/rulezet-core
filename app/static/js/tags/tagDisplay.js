@@ -1,4 +1,9 @@
+import SingleTagDisplay from './singleTagDisplay.js';
+
 const TagDisplay = {
+    components: {
+        'single-tag': SingleTagDisplay
+    },
     props: {
         tags: { type: Array, required: true },
         loading: { type: Boolean, default: false },
@@ -39,44 +44,11 @@ const TagDisplay = {
         <div v-show="!isCollapsed" class="mt-3 animate__animated animate__fadeIn">
             <div class="d-flex flex-wrap gap-2 p-3 bg-light rounded-3 shadow-sm border border-dashed">
                 
-                <div v-for="tag in visibleTags" :key="tag.id" class="tag-wrapper">
-                    <span class="tag-split shadow-sm on-hover-zoom">
-                        <span class="tag-left">
-                            <i :class="['fas', tag.icon || 'fa-tag']"></i>
-                        </span>
-                        <span class="tag-right" :style="{ backgroundColor: tag.color }">
-                            <span :style="{ color: getContrastYIQ(tag.color) }">
-                                [[ tag.name ]]
-                            </span>
-                        </span>
-                    </span>
-                    
-                    <div class="tag-tooltip">
-                        <div class="hover-bridge"></div>
-                        <div class="tooltip-header" :style="{ borderLeft: '4px solid ' + tag.color }">
-                            <i :class="['fas', tag.icon || 'fa-tag', 'me-2 text-primary']"></i>
-                            <strong class="text-white">[[ tag.name ]]</strong>
-                        </div>
-                        <div class="tooltip-body">
-                            <div class="description-container">
-                                <div class="description-scroll text-white-50">
-                                    [[ tag.description || 'No description provided.' ]]
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-between mt-2 pt-2 border-top border-white border-opacity-10 small">
-                                <span class="text-white-50">
-                                    <i :class="['fas', tag.visibility === 'public' ? 'fa-globe' : 'fa-lock', 'me-1']"></i>
-                                    [[ tag.visibility ]]
-                                </span>
-                                <span v-if="tag.created_at" class="text-white-50">
-                                    <i class="fas fa-calendar-alt me-1"></i>
-                                    [[ tag.created_at ]]
-                                </span>
-                            </div>
-                        </div>
-                        <div class="tooltip-arrow"></div>
-                    </div>
-                </div>
+                <single-tag 
+                    v-for="tag in visibleTags" 
+                    :key="tag.id" 
+                    :tag="tag">
+                </single-tag>
 
                 <button v-if="tags.length > maxVisible" 
                         @click.stop="isShowingAll = !isShowingAll" 
@@ -100,13 +72,7 @@ const TagDisplay = {
         visibleTags() {
             return this.isShowingAll ? this.tags : this.tags.slice(0, this.maxVisible);
         }
-    },
-    methods: {
-        getContrastYIQ(hex) {
-            if (!hex) return '#000';
-            const r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16), b = parseInt(hex.substr(5, 2), 16);
-            return ((r * 299) + (g * 587) + (b * 114)) / 1000 >= 128 ? '#000' : '#fff';
-        }
     }
 };
+
 export default TagDisplay;

@@ -186,6 +186,13 @@
                                 css-path="{{ url_for('static', filename='/css/tag/tags.css') }}">
                             </vulnerability-display>
                         </div>
+                        <div class="mt-2 mb-4">
+                            <!-- Tags Component -->
+                            <tag-display :tags="displayTags" :loading="loadingDisplayTags"
+                                section-title="Workspace Tags"
+                                css-path="{{ url_for('static', filename='/css/tag/tags.css') }}">
+                            </tag-display>
+                        </div>
 
                         <!-- Rule Content Card -->
                         <div class="mb-4">
@@ -1062,13 +1069,15 @@
     }
 
     import VulnerabilityDisplay from '/static/js/vulnerability/vulnerabilityDisplay.js';
+    import TagDisplay from '/static/js/tags/tagDisplay.js';
 
 
     createApp({
         delimiters: ['[[', ']]'],
         mode: "application/json",
         components: {
-            'vulnerability-display': VulnerabilityDisplay
+            'vulnerability-display': VulnerabilityDisplay,
+            'tag-display': TagDisplay
         },
         setup() {
             /**
@@ -1098,6 +1107,7 @@
                     fetchContributor(),
                     highlightJSON(),
                     fetchBundleVulnerabilities(),
+                    fetchRuleTags()
                 ])
 
                 detail_page_1_is_loading.value = true
@@ -1117,6 +1127,25 @@
             onMounted(() => {
                 init()
             })
+
+
+
+            const displayTags = ref([]);
+            const loadingDisplayTags = ref(true);
+
+            const fetchRuleTags = async () => {
+                loadingDisplayTags.value = true;
+                try {
+                    const res = await fetch('/rule/get_tags/' + rule_id);
+                    const data = await res.json();
+                    displayTags.value = data.tags || [];
+                } catch (e) {
+                    create_message("Error loading tags", "danger");
+                } finally {
+                    loadingDisplayTags.value = false;
+                }
+            };
+
             /**
              * 
              * ###########################
@@ -1647,7 +1676,12 @@
                 VulnerabilityDisplay,
                 displayVulnerabilities,
                 loadingDisplayVulnerabilities,
-                fetchBundleVulnerabilities
+                fetchBundleVulnerabilities,
+
+                displayTags,
+                loadingDisplayTags,
+                fetchRuleTags,
+                TagDisplay
             };
         }
     }).mount('#main-container');

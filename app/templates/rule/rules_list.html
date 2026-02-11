@@ -104,6 +104,10 @@
                         <vulnerability-displays-list object-type="rule" :object-id="rule.id" :max-visible="3">
                         </vulnerability-displays-list>
                     </div>
+                    <div class="mb-3" @click.stop>
+                        <tags-displays-list object-type="rule" :object-id="rule.id" :max-visible="3">
+                        </tags-displays-list>
+                    </div>
 
                     <div class="row g-2 mb-4 pt-3  small text-muted">
                         <div class="col-6">
@@ -236,13 +240,15 @@
     import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
     import RuleFilterBar from '/static/js/rule/ruleFilterBar.js';
     import PaginationComponent from '/static/js/rule/paginationComponent.js';
+    import TagsDisplaysList from '/static/js/tags/tagsDisplaysList.js';
 
     createApp({
         delimiters: ['[[', ']]'],
         components: {
             'vulnerability-displays-list': VulnerabilityDisplaysList,
             'rule-filter-bar': RuleFilterBar,
-            'pagination-component': PaginationComponent
+            'pagination-component': PaginationComponent,
+            'tags-displays-list': TagsDisplaysList,
         },
         setup() {
 
@@ -360,7 +366,8 @@
                 // Utils / Refs
                 filterBar,
                 dayjs,
-                message_list
+                message_list,
+                TagsDisplaysList,
             }
         }
     }).mount('#main-container')

@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4" id="main-container">
+    <template v-if="!detail_page_1_is_loading">
+        <div class="d-flex justify-content-center align-items-center" style="height: 300px;">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    </template>
+
+    <template v-else>
+        <div class="mb-5 text-center">
+            <h2 class="fw-bold text-primary mb-2"><i class="fa-solid fa-tags me-2"></i>My Tags</h2>
+            <p class="text-muted mx-auto" style="max-width: 600px;">Manage your custom tags.</p>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <list-my-tags ref="myTagsComponent" :csrf="csrfToken" @edit-tag="openEditModal"
+                    @tag-deleted="handleTagDeleted" @tag-created-success="handleTagCreated">
+                </list-my-tags>
+            </div>
+        </div>
+
+        <tag-edit-modal v-if="selectedTag" :tag-data="selectedTag" :csrf="csrfToken" @tag-updated="handleTagUpdated"
+            @server-message="handleServerMessage">
+        </tag-edit-modal>
+    </template>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, onMounted, nextTick } = Vue;
+    import { create_message, message_list } from '/static/js/toaster.js';
+    import listMyTags from '/static/js/tags/listMyTags.js';
+    import TagEditModal from '/static/js/tags/TagEditModal.js';
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: {
+            'list-my-tags': listMyTags,
+            'tag-edit-modal': TagEditModal
+        },
+        setup() {
+            const detail_page_1_is_loading = ref(false);
+            const selectedTag = ref(null);
+            const csrfToken = ref('{{ csrf_token() }}');
+
+            const myTagsComponent = ref(null);
+
+            function openEditModal(tag) {
+                selectedTag.value = { ...tag };
+                nextTick(() => {
+                    const modalElement = document.getElementById('edit_tag_modal_');
+                    if (modalElement) {
+                        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+                        modalInstance.show();
+                    }
+                });
+            }
+
+            function handleTagCreated() {
+                create_message('New tag created!', 'success-subtle');
+            }
+
+            function handleTagUpdated(data) {
+                create_message(data.message || 'Updated!', data.type || 'success-subtle');
+
+                if (myTagsComponent.value) {
+                    myTagsComponent.value.fetchMyTags();
+                }
+
+                selectedTag.value = null;
+            }
+
+            function handleServerMessage(data) {
+                create_message(data.message, data.type || 'warning-subtle');
+            }
+
+            function handleTagDeleted() {
+                create_message('Tag deleted.', 'info-subtle');
+            }
+
+            onMounted(() => {
+                setTimeout(() => detail_page_1_is_loading.value = true, 300);
+            });
+
+            return {
+                detail_page_1_is_loading,
+                selectedTag,
+                myTagsComponent,
+                openEditModal,
+                handleTagCreated,
+                handleTagUpdated,
+                handleServerMessage,
+                handleTagDeleted,
+                csrfToken,
+                message_list
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

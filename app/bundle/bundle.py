@@ -876,7 +876,9 @@ def get_all_vulnerabilities_usage():
 @bundle_blueprint.route("/get_tags/<int:bundle_id>")
 def get_bundle_tags(bundle_id):
     try:
-        tags_data = BundleModel.get_tags_for_bundle_json(bundle_id)
+        user_id = request.args.get('user_id', type=int)
+
+        tags_data = BundleModel.get_tags_for_bundle_json(bundle_id, user_id)
         
         return jsonify({"tags": tags_data}), 200
     except Exception as e:

@@ -95,9 +95,14 @@
                             </div>
 
                             <div class="mb-3" @click.stop>
-                                <vulnerability-displays-list object-type="rule" :object-id="rule.id" :max-visible="2">
+                                <vulnerability-displays-list object-type="rule" :object-id="rule.id" :max-visible="1">
                                 </vulnerability-displays-list>
                             </div>
+                            <div class="mb-3" @click.stop>
+                                <tags-displays-list object-type="rule" :object-id="rule.id" :max-visible="1">
+                                </tags-displays-list>
+                            </div>
+
 
                             <div
                                 class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto bg-transparent">
@@ -184,10 +189,12 @@
     const { createApp, ref, onMounted } = Vue
     import { display_toast, message_list, create_message } from '/static/js/toaster.js'
     import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
+    import TagsDisplaysList from '/static/js/tags/tagsDisplaysList.js';
     createApp({
         delimiters: ['[[', ']]'],
         components: {
-            'vulnerability-displays-list': VulnerabilityDisplaysList
+            'vulnerability-displays-list': VulnerabilityDisplaysList,
+            'tags-displays-list': TagsDisplaysList
         },
         setup() {
             const is_loading = ref(false)
@@ -302,7 +309,8 @@
                 getCVEColor,
                 animateClick,
                 is_loading,
-                VulnerabilityDisplaysList
+                VulnerabilityDisplaysList,
+                TagsDisplaysList
             }
         }
     }).mount('#main-container')

@@ -2,7 +2,7 @@ const MultiTagFilter = {
     props: {
         modelValue: { type: Array, default: () => [] },
         placeholder: { type: String, default: 'Filter by tags...' },
-        apiEndpoint: { type: String, default: '/bundle/get_all_tags_usage' }
+        apiEndpoint: { type: String, default: '/bundle/get_all_tags_usage' },
     },
     emits: ['update:modelValue', 'change'],
     delimiters: ['[[', ']]'],
@@ -83,7 +83,7 @@ template: `
                 </span>
                 <span class="tag-right" :style="{ backgroundColor: tag.color, padding: '0.2rem 0.5rem' }">
                     <span :style="{ color: getContrastYIQ(tag.color) }" class="me-2" style="font-size: 0.75rem;">[[ tag.name ]]</span>
-                    <i class="fa-solid fa-circle-xmark opacity-75 ms-1" @click.stop="toggleTag(tag.id)" style="cursor: pointer;"></i>
+                    <i class="fa-solid fa-circle-xmark opacity-75 ms-1" @click.stop="toggleTag(tag.id)" style="cursor: pointer; color: black;"></i>
                 </span>
             </span>
             <i class="fa-solid fa-chevron-down ms-auto me-1 text-muted small"></i>

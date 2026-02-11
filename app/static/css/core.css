@@ -2200,6 +2200,7 @@ body.dark-mode .d2h-emptyplaceholder{
 
 .tag-left i {
   font-size: 0.9rem;
+  color: #fff !important;
 }
 
 /* Custom Scrollbar */

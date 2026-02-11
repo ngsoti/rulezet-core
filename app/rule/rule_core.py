@@ -10,7 +10,7 @@ from typing import List
 from sqlalchemy.exc import SQLAlchemyError
 from flask import jsonify
 from flask_login import current_user
-from sqlalchemy import case, or_
+from sqlalchemy import and_, case, or_
 from sqlalchemy.orm import joinedload
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -84,6 +84,26 @@ def add_rule_core(form_dict, user) -> tuple[bool, str] | tuple[Rule, str]:
         )
 
         db.session.add(new_rule)
+        db.session.flush()
+        
+
+        tags_list = form_dict.get("tags")
+        if tags_list and isinstance(tags_list, list):
+            for tag_data in tags_list:
+                tag_id = tag_data.get('id')
+                if tag_id:
+                    assoc = RuleTagAssociation(
+                        uuid=str(uuid.uuid4()),  
+                        rule_id=new_rule.id,
+                        tag_id=int(tag_id),
+                        user_id=user.id if user else None, 
+                        added_at=datetime.datetime.now(tz=datetime.timezone.utc)
+                    )
+                    db.session.add(assoc)
+
+
+
+
         db.session.commit()
         return new_rule , "rule created" 
 
@@ -153,8 +173,8 @@ def delete_rule_core(id) -> bool:
 
 # Update
 
-def edit_rule_core(form_dict, id) -> tuple[bool,Rule]:
-    """Edit the rule in the DB"""
+def edit_rule_core(form_dict, id) -> tuple[bool, Rule]:
+    """Edit the rule in the DB with proper Tag synchronization"""
     rule = get_rule(id)
     if not rule:
         return False, None
@@ -169,9 +189,45 @@ def edit_rule_core(form_dict, id) -> tuple[bool,Rule]:
     rule.cve_id = form_dict["vulnerabilities"]
     rule.last_modif = datetime.datetime.now(tz=datetime.timezone.utc)
 
-    db.session.commit()
-    return True , rule
 
+    if "tags" in form_dict:
+        try:
+            tags_input = form_dict.get("tags")
+            if isinstance(tags_input, str):
+                tags_data_list = json.loads(tags_input)
+            else:
+                tags_data_list = tags_input
+
+            new_tag_ids = set()
+            for t in tags_data_list:
+                if isinstance(t, dict) and t.get('id'):
+                    new_tag_ids.add(int(t.get('id')))
+                elif isinstance(t, (int, str)):
+                    new_tag_ids.add(int(t))
+
+            current_associations = RuleTagAssociation.query.filter_by(rule_id=rule.id).all()
+            current_tag_ids = {assoc.tag_id for assoc in current_associations}
+
+            for assoc in current_associations:
+                if assoc.tag_id not in new_tag_ids:
+                    db.session.delete(assoc)
+
+            for tag_id in new_tag_ids:
+                if tag_id not in current_tag_ids:
+                    new_assoc = RuleTagAssociation(
+                        uuid=str(uuid.uuid4()),
+                        rule_id=rule.id,
+                        tag_id=tag_id,
+                        user_id=current_user.id,
+                        added_at=datetime.datetime.now(tz=datetime.timezone.utc)
+                    )
+                    db.session.add(new_assoc)
+                    
+        except Exception as e:
+            print(f"Error processing tags: {e}")
+
+    db.session.commit()
+    return True, rule
 
 # Read
 
@@ -1163,7 +1219,7 @@ def remove_has_voted(vote, rule_id , id) -> bool:
 #   Filter  #
 #############
 
-def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None, source=None, user_id=None) -> Rule:
+def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None, source=None, user_id=None, license=None, tags: list[str] | None = None) -> Rule:
     """Filter the rules"""
     query = Rule.query
     if search:
@@ -1179,6 +1235,7 @@ def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnera
                 Rule.uuid.ilike(search_lower)
             )
         )
+
     if vulnerabilities:
         vuln_filters = []
         for v in vulnerabilities:
@@ -1186,8 +1243,16 @@ def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnera
             vuln_filters.append(Rule.cve_id.ilike(search_pattern))
         
         query = query.filter(or_(*vuln_filters))
+
+    if tags:
+        query = query.join(RuleTagAssociation)
+        query = query.filter(RuleTagAssociation.tag_id.in_(tags))
+        query = query.distinct()
+    
     if source:
         query = query.filter(Rule.source.ilike(f"%{source}%"))
+    if license:
+        query = query.filter(Rule.license.ilike(f"%{license}%"))
 
     if author:
         query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
@@ -2606,3 +2671,113 @@ def get_licenses_usage_with_filter(search_query, user_id=None, source_scope=None
 
     # Return grouped results ordered by the most frequent license
     return query.group_by(Rule.license).order_by(func.count(Rule.id).desc()).all()
+
+
+def get_tags_for_rule(rule_id: int) -> List[Tag]:
+    """
+    Retrieve a list of active Tag objects associated with a rule.
+    Users see only 'public' tags, while Admins see 'public' and 'private' tags.
+    """
+    query = (
+        db.session.query(Tag)
+        .join(RuleTagAssociation, RuleTagAssociation.tag_id == Tag.id)
+        .filter(
+            RuleTagAssociation.rule_id == rule_id,
+            Tag.is_active == True
+        )
+    )
+
+    if current_user.is_authenticated:
+        if not current_user.is_admin():
+            query = query.filter(
+                or_(
+                    Tag.visibility.ilike('public'),
+                    and_(
+                        Tag.visibility.ilike('private'), 
+                        Tag.created_by == current_user.id
+                    )
+                )
+            )
+    else:
+        query = query.filter(Tag.visibility.ilike('public'))    
+
+
+    return query.all()
+
+
+
+def get_all_used_tags_with_counts():
+    """
+    Returns tags with their usage count.
+    """
+   
+    query = (
+        db.session.query(
+            Tag, 
+            func.count(RuleTagAssociation.id).label('usage_count')
+        )
+        .join(RuleTagAssociation, Tag.id == RuleTagAssociation.tag_id)
+        .join(Rule, Rule.id == RuleTagAssociation.rule_id)
+        .filter(Tag.is_active.is_(True)) 
+    )
+
+   
+    if current_user.is_authenticated:
+        if not current_user.is_admin():
+            
+            query = query.filter(
+                or_(
+                    Tag.visibility.ilike('public'),
+                    and_(
+                        Tag.visibility.ilike('private'),
+                        Tag.created_by == current_user.id
+                    )
+                )
+            )
+    else:
+        query = query.filter(Tag.visibility.ilike('public'))
+
+
+    results = (
+        query.group_by(Tag.id)
+        .order_by(func.count(RuleTagAssociation.id).desc(), Tag.name.asc())
+        .all()
+    )
+
+    tags_list = []
+    for tag_obj, count in results: 
+        tag_data = tag_obj.to_json()
+        tag_data['usage_count'] = count
+        tags_list.append(tag_data)
+    return tags_list
+
+def get_tags_for_rule(rule_id: int) -> List[Tag]:
+    """
+    Retrieve a list of active Tag objects associated with a rule.
+    Users see only 'public' tags, while Admins see 'public' and 'private' tags.
+    """
+    query = (
+        db.session.query(Tag)
+        .join(RuleTagAssociation, RuleTagAssociation.tag_id == Tag.id)
+        .filter(
+            RuleTagAssociation.rule_id == rule_id,
+            Tag.is_active == True
+        )
+    )
+
+    if current_user.is_authenticated:
+        if not current_user.is_admin():
+            query = query.filter(
+                or_(
+                    Tag.visibility.ilike('public'),
+                    and_(
+                        Tag.visibility.ilike('private'), 
+                        Tag.created_by == current_user.id
+                    )
+                )
+            )
+    else:
+        query = query.filter(Tag.visibility.ilike('public'))    
+
+
+    return query.all()

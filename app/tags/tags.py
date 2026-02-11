@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 import app.tags.tags_core as tags_core
 
@@ -143,9 +143,86 @@ def edit_tag(tag_id):
 
 @tags_blueprint.route('/get_tags_bundle', methods=['GET'])
 @login_required
-def get_tags_bundle():
+def get_tags_bundle():    
     tags = tags_core.get_tags_bundle(request.args)
     if tags:
         tags_lists = [tag.to_json() for tag in tags.items]
     
     return {"status": "success", "tags": tags_lists, "total_pages": tags.pages, "total_tags": tags.total}, 200
+
+
+@tags_blueprint.route('/create_tag', methods=['POST'])
+@login_required
+def create_tag():
+    data = request.json
+    if not data or not data.get('name'):
+        return {"status": "error", "message": "Tag name is required."}, 400
+
+    if 'visibility' not in data:
+        data['visibility'] = 'private' 
+
+    tag = tags_core.create_tag(data, current_user)
+    
+    if tag is False:
+        return {"status": "error", "message": "A tag with this name already exists.", "toast_class": "warning-subtle"}, 201
+    
+    if tag is None:
+        return {"status": "error", "message": "Error while creating tag", "toast_class": "danger-subtle"}, 500
+    return {
+        "status": "success", 
+        "message": "Tag created successfully!", 
+        "tag": {
+            "id": tag.id,
+            "uuid": tag.uuid,
+            "name": tag.name,
+            "color": tag.color
+        },
+        "toast_class": "success-subtle"
+    }, 200
+
+################
+#   my_tags    #
+################
+
+@tags_blueprint.route('/my_tags', methods=['GET'])
+@login_required
+def my_tags():
+    return render_template("tags/my_tags.html")
+
+@tags_blueprint.route('/get_my_tags', methods=['GET'])
+@login_required
+def get_my_tags():
+    my_tags = tags_core.get_my_tags()
+    return jsonify([tag.to_json() for tag in my_tags])
+
+@tags_blueprint.route('/delete_tag/<int:tag_id>', methods=['POST'])
+@login_required
+def delete_tag(tag_id):
+    success , msg = tags_core.remove_tag(tag_id)
+    if not success:
+        return jsonify({"status": "error", "message": msg, "toast_class": "danger-subtle"}), 500
+    return jsonify({"status": "success", "message": msg, "toast_class": "success-subtle"}), 200
+
+
+# get_all_public_tags
+
+@tags_blueprint.route('/get_all_tags', methods=['GET'])
+@login_required
+def get_all_tags():    
+    tags = tags_core.get_all_tags(request.args)
+    if tags:
+        tags_lists = [tag.to_json() for tag in tags]
+    
+    return {"status": "success", "tags": tags_lists, "total_tags": len(tags)}, 200
+
+
+# get_all_tags_by_type
+
+@tags_blueprint.route('/get_all_tags_by_type', methods=['GET'])
+@login_required
+def get_all_tags_by_type():    
+    tags = tags_core.get_all_tags_by_type(request.args)
+    if tags:
+        tags_lists = [tag.to_json() for tag in tags]
+    
+    return {"status": "success", "tags": tags_lists, "total_tags": len(tags)}, 200

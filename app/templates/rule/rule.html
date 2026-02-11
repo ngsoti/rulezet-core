@@ -40,171 +40,134 @@
 
             <div class="tab-content" id="exampleTabsContent">
                   <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
-                        <div class="card card-body shadow-sm">
-                              <form action="" method="post" id="form">
-                                    {{ form.hidden_tag() }}
+                        <div class="card border-0 shadow-sm rounded-4">
+                              <div class="card-body p-4">
+                                    <form action="" method="post" id="form">
+                                          {{ form.hidden_tag() }}
 
-                                    <div class="row mb-3">
-                                          <div class="col-md-6">
-                                                <div class="form-group">
-                                                      <strong>{{ form.title.label(class_="col-form-label") }} <span
-                                                                  style="color:red">*</span></strong>
-
-                                                      {{ form.title(
-                                                      class_="form-control",
-                                                      placeholder="Enter the rule title...",
-                                                      title="This is the title of your rule (e.g. SQL Injection
-                                                      Detection)"
-                                                      ) }}
-
-                                                      {% if form.title.errors %}
-                                                      <div class="invalid-feedback d-block">
-                                                            {{ form.title.errors[0] | safe }}
+                                          <div class="row g-3 mb-4">
+                                                <div class="col-md-6">
+                                                      <div class="form-group">
+                                                            <label class="form-label fw-bold text-dark">
+                                                                  {{ form.title.label.text }} <span
+                                                                        class="text-danger">*</span>
+                                                            </label>
+                                                            {{ form.title(class_="form-control rounded-3",
+                                                            placeholder="Enter the rule title...") }}
+                                                            {% if form.title.errors %}
+                                                            <div class="invalid-feedback d-block">{{
+                                                                  form.title.errors[0] | safe }}</div>
+                                                            {% endif %}
                                                       </div>
-                                                      {% endif %}
+                                                </div>
+
+                                                <div class="col-md-6">
+                                                      <div class="form-group">
+                                                            <label class="form-label fw-bold text-dark">
+                                                                  {{ form.format.label.text }} <span
+                                                                        class="text-danger">*</span>
+                                                            </label>
+                                                            {{ form.format(class_="form-select rounded-3") }}
+                                                            {% if form.format.errors %}
+                                                            <div class="invalid-feedback d-block">{{
+                                                                  form.format.errors[0] | safe }}</div>
+                                                            {% endif %}
+                                                      </div>
                                                 </div>
                                           </div>
 
-                                          <div class="col-md-6">
-                                                <div class="form-group">
-                                                      <strong>{{ form.format.label(class_="col-form-label") }} <span
-                                                                  style="color:red">*</span></strong>
+                                          <div class="row g-3 mb-4">
+                                                <div class="col-md-4">
+                                                      <div class="form-group">
+                                                            <label class="form-label fw-bold text-dark">{{
+                                                                  form.license.label.text }}</label>
+                                                            {{ form.license(class_="form-control rounded-3",
+                                                            id="license-select") }}
+                                                      </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                      <div class="form-group">
+                                                            <label class="form-label fw-bold text-dark">{{
+                                                                  form.source.label.text }}</label>
+                                                            {{ form.source(class_="form-control rounded-3",
+                                                            placeholder="Source URL...") }}
+                                                      </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                      <version-picker v-model="formData.version" label="Version">
+                                                      </version-picker>
+                                                      <input type="hidden" name="version" :value="formData.version">
+                                                </div>
+                                          </div>
 
-                                                      {{ form.format(class_="form-select",
-                                                      placeholder="Choose a rule format...",
-                                                      title="Format of the rule") }}
+                                          <div class="row mb-4">
+                                                <div class="form-group">
+                                                      <tag-input v-model="selectedTags" label="Rule Tags"
+                                                            :user-id="{{current_user.id}}">
+                                                            placeholder="Search and add tags...">
+                                                      </tag-input>
 
-                                                      {% if form.format.errors %}
-                                                      <div class="invalid-feedback d-block">
-                                                            {{ form.format.errors[0] | safe }}
-                                                      </div>
-                                                      {% endif %}
+                                                      <input type="hidden" name="tags"
+                                                            :value="JSON.stringify(selectedTags)">
                                                 </div>
                                           </div>
-                                    </div>
-
-                                    <div class="row mb-3">
-                                          <div class="col-md-6">
-                                                <div class="form-group">
-                                                      <strong>{{ form.license.label(class_="col-form-label") }}</strong>
-                                                      {{ form.license(class_="
-                                                      form-control",
-                                                      id="license-select",
-                                                      placeholder="Choose a license...",
-                                                      title="License for the visibility of the rule") }}
-                                                      {% if form.license.errors %}
-                                                      <div class="invalid-feedback d-block">
-                                                            {{ form.license.errors[0] | safe }}
-                                                      </div>
-                                                      {% endif %}
-                                                </div>
-                                          </div>
-                                          <div class="col-md-6">
-                                                <div class="form-group">
-                                                      <strong>{{ form.source.label(class_="col-form-label") }}</strong>
-                                                      {{ form.source(class_="form-control",
-                                                      placeholder="Enter the rule source...",
-                                                      title="Source to find the rule in the net") }}
-                                                      {% if form.source.errors %}
-                                                      <div class="invalid-feedback d-block">
-                                                            {{ form.source.errors[0] | safe }}
-                                                      </div>
-                                                      {% endif %}
-                                                </div>
-                                          </div>
-                                          <div class="col-md-6">
-                                                <div class="form-group">
-                                                      <strong>{{ form.version.label(class_="col-form-label") }}
-                                                      </strong>
-                                                      {{ form.version(class_="form-control",
-                                                      placeholder="Enter the rule version (1.0 or 1)...",
-                                                      title="Source to find the rule in the net") }}
-                                                      {% if form.version.errors %}
-                                                      <div class="invalid-feedback d-block">
-                                                            {{ form.version.errors[0] | safe }}
-                                                      </div>
-                                                      {% endif %}
-                                                </div>
-                                          </div>
-                                          <div class="mb-4 text-start">
+                                          <div class="row ">
                                                 <vulnerability-input v-model="detectedVulnerabilities"
-                                                      target-type="rule">
+                                                      target-type="rule" label="Vulnerabilities (CVE, GHSA...)">
                                                 </vulnerability-input>
-
                                                 <input type="hidden" name="vulnerabilities"
                                                       :value="JSON.stringify(detectedVulnerabilities)">
                                           </div>
-                                    </div>
 
-                                    <div class="row mb-3">
-                                          <div class="col">
-                                                <div class="form-group">
-                                                      <strong>{{ form.description.label(class_="col-form-label")
-                                                            }}</strong>
-                                                      {{ form.description(class_="form-control", rows=4,
-                                                      placeholder="Enter the description of the rule...",
-                                                      title="Description for the context, the syntax... to help the
-                                                      community to found it") }}
-                                                      {% if form.description.errors %}
-                                                      <div class="invalid-feedback d-block">
-                                                            {{ form.description.errors[0] | safe }}
+                                          <div class="row g-3 mb-4">
+                                                <div class="col-md-12">
+                                                      <div class="form-group">
+                                                            <label class="form-label fw-bold text-dark">{{
+                                                                  form.description.label.text }}</label>
+                                                            {{ form.description(class_="form-control rounded-3", rows=3,
+                                                            placeholder="Describe the purpose of this rule...") }}
                                                       </div>
+                                                </div>
+                                                <div class="col-md-12">
+                                                      <div class="form-group">
+                                                            <label class="form-label fw-bold text-dark">{{
+                                                                  form.original_uuid.label.text }}</label>
+                                                            {{ form.original_uuid(class_="form-control rounded-3",
+                                                            placeholder="Optional: Existing UUID if any...") }}
+                                                      </div>
+                                                </div>
+                                          </div>
+
+                                          <div class="mb-4">
+                                                <div class="form-group">
+                                                      <label class="form-label fw-bold text-dark">
+                                                            {{ form.to_string.label.text }} <span
+                                                                  class="text-danger">*</span>
+                                                      </label>
+                                                      <div class="border rounded-3 overflow-hidden">
+                                                            <textarea id="editor"
+                                                                  name="to_string">{{ (form.to_string.data or '') | e }}</textarea>
+                                                      </div>
+                                                      {% if form.to_string.errors %}
+                                                      <div class="invalid-feedback d-block">{{ form.to_string.errors[0]
+                                                            | safe }}</div>
                                                       {% endif %}
                                                 </div>
                                           </div>
-                                    </div>
 
-                                    <div class="row mb-3">
-                                          <div class="col">
-                                                <div class="form-group">
-                                                      <strong>{{ form.original_uuid.label(class_="col-form-label")
-                                                            }}</strong>
-                                                      {{ form.original_uuid(class_="form-control", rows=4,
-                                                      placeholder="Enter the uuid if the rule has already one...",
-                                                      title="UUID to the rule. (one will be generate after the creation
-                                                      of the rule)") }}
-                                                      {% if form.original_uuid.errors %}
-                                                      <div class="invalid-feedback d-block">
-                                                            {{ form.original_uuid.errors[0] | safe }}
-                                                      </div>
-                                                      {% endif %}
-                                                </div>
-                                          </div>
-                                    </div>
-
-                                    <div class="mb-3">
                                           {% if error %}
-                                          <div class="alert alert-danger d-flex align-items-center" role="alert">
-                                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                                <div>
-                                                      {{ error }}
-                                                </div>
+                                          <div
+                                                class="alert alert-danger rounded-3 d-flex align-items-center mb-4 border-0 shadow-sm">
+                                                <i class="fas fa-exclamation-triangle me-3 fa-lg"></i>
+                                                <div>{{ error }}</div>
                                           </div>
                                           {% endif %}
 
-                                          <div class="form-group">
-                                                <strong>{{ form.to_string.label(class_="col-form-label") }} <span
-                                                            style="color:red">*</span></strong>
-
-                                                <textarea id="editor"
-                                                      name="to_string">{{ (form.to_string.data or '') | e }}</textarea>
-
-
-                                                {% if form.to_string.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                      {{ form.to_string.errors[0] | safe }}
-                                                </div>
-                                                {% endif %}
+                                          <div class="text-center">
+                                                {{ form.submit(class='btn btn-primary') }}
                                           </div>
-                                    </div>
-
-                                    <div class="text-center">
-                                          {{ form.submit(class='btn btn-primary') }}
-                                    </div>
-                              </form>
-
-
-
+                                    </form>
+                              </div>
                         </div>
                   </div>
                   <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
@@ -498,12 +461,16 @@
       import { message_list, display_toast } from '/static/js/toaster.js';
       import VulnerabilityInput from '/static/js/vulnerability/vulnerabilityInput.js';
       import CodeMirrorEditor from '/static/js/codeMirror/codeMirrorEditor.js';
+      import TagInput from '/static/js/tags/tagInput.js';
+      import VersionPicker from '/static/js/tags/utils/versionPicker.js';
 
       createApp({
             delimiters: ['[[', ']]'],
             components: {
                   'vulnerability-input': VulnerabilityInput,
-                  'codemirror-editor': CodeMirrorEditor
+                  'codemirror-editor': CodeMirrorEditor,
+                  'tag-input': TagInput,
+                  'version-picker': VersionPicker
             },
             setup() {
                   const license = ref([]);
@@ -608,6 +575,11 @@
                   }
 
                   const detectedVulnerabilities = ref([]);
+                  const selectedTags = ref([]);
+
+                  const formData = Vue.reactive({
+                        version: "{{ form.version.data or '1.0' }}",
+                  });
 
                   onMounted(() => {
                         fetchRules();
@@ -634,7 +606,11 @@
 
                         detectedVulnerabilities,
                         VulnerabilityInput,
-                        CodeMirrorEditor
+                        CodeMirrorEditor,
+                        selectedTags,
+                        TagInput,
+                        VersionPicker,
+                        formData
                   };
             }
       }).mount('#main-container');

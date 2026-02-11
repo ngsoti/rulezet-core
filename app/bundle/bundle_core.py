@@ -1,6 +1,6 @@
 import datetime
 import uuid
-from sqlalchemy import Tuple, or_
+from sqlalchemy import Tuple, and_, or_
 from flask_login import current_user
 from .. import db
 from ..db_class.db import *
@@ -329,9 +329,20 @@ def get_tags_for_bundle(bundle_id: int) -> List[Tag]:
         )
     )
 
-    # Apply visibility constraint only if user is not an Admin
-    if not (current_user.is_authenticated and current_user.is_admin()):
-        query = query.filter(Tag.visibility == 'public')
+    if current_user.is_authenticated:
+        if not current_user.is_admin():
+            query = query.filter(
+                or_(
+                    Tag.visibility.ilike('public'),
+                    and_(
+                        Tag.visibility.ilike('private'), 
+                        Tag.created_by == current_user.id
+                    )
+                )
+            )
+    else:
+        query = query.filter(Tag.visibility.ilike('public'))    
+
 
     return query.all()
 
@@ -349,7 +360,7 @@ def get_vulnerabilities_for_bundle(bundle_id: int):
         return json.loads(bundle.vulnerability_identifiers)
     except (json.JSONDecodeError, TypeError):
         return []
-def get_tags_for_bundle_json(bundle_id: int) -> List[dict]:
+def get_tags_for_bundle_json(bundle_id: int, user_id=None) -> List[dict]:
     """
     Retrieve a list of active Tag dictionaries associated with a bundle.
     Normal users see only 'public' tags; Admins see both 'public' and 'private'.
@@ -362,10 +373,23 @@ def get_tags_for_bundle_json(bundle_id: int) -> List[dict]:
             Tag.is_active == True
         )
     )
-
-    # If the user is NOT an admin, restrict visibility to 'public'
-    if not (current_user.is_authenticated and current_user.is_admin()):
-        query = query.filter(Tag.visibility == 'public')
+    if user_id:
+        # Only show tags that the user has created
+        query = query.filter(Tag.created_by == user_id)
+    else:
+        if current_user.is_authenticated:
+            if not current_user.is_admin():
+                query = query.filter(
+                    or_(
+                        Tag.visibility.ilike('public'),
+                        and_(
+                            Tag.visibility.ilike('private'), 
+                            Tag.created_by == current_user.id
+                        )
+                    )
+                )
+        else:
+            query = query.filter(Tag.visibility.ilike('public'))
 
     tags = query.all()
     return [tag.to_json() for tag in tags]
@@ -928,15 +952,10 @@ def add_reaction_to_comment(comment_id: int, user_id: int, reaction_type: str, b
         return False, f"Error: {str(e)}"
 
 
-
 def get_all_used_tags_with_counts():
     """
     Returns tags with their usage count.
-    - Tag must be is_active == True.
-    - Private Tags: Only visible to Admins.
-    - Bundle Visibility: Counts only from bundles the user has access to.
     """
-    
    
     query = (
         db.session.query(
@@ -949,35 +968,42 @@ def get_all_used_tags_with_counts():
     )
 
    
-    if not (current_user.is_authenticated and current_user.is_admin()):
-        query = query.filter(Tag.visibility == 'public')
-
+    if current_user.is_authenticated:
+        if not current_user.is_admin():
+            
+            query = query.filter(
+                or_(
+                    Tag.visibility.ilike('public'),
+                    and_(
+                        Tag.visibility.ilike('private'),
+                        Tag.created_by == current_user.id
+                    )
+                )
+            )
+    else:
+        query = query.filter(Tag.visibility.ilike('public'))
 
     if current_user.is_authenticated:
         if not current_user.is_admin():
-           
             query = query.filter(
-                or_(Bundle.access.is_(True), Bundle.user_id == current_user.id)
+                or_(Bundle.id.is_(None), Bundle.access.is_(True), Bundle.user_id == current_user.id)
             )
-        
     else:
-       
-        query = query.filter(Bundle.access.is_(True))
+        query = query.filter(or_(Bundle.id.is_(None), Bundle.access.is_(True)))
 
     results = (
         query.group_by(Tag.id)
-        .order_by(func.count(BundleTagAssociation.id).desc())
+        .order_by(func.count(BundleTagAssociation.id).desc(), Tag.name.asc())
         .all()
     )
     
+
     tags_list = []
-    for tag_obj, count in results:
+    for tag_obj, count in results: 
         tag_data = tag_obj.to_json()
         tag_data['usage_count'] = count
         tags_list.append(tag_data)
-        
     return tags_list
-
 
 def get_all_vulnerabilities_with_counts():
     """

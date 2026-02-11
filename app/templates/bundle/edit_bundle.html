@@ -433,21 +433,30 @@
             <div class="card border-0 shadow-lg p-4 mb-4" style="border-radius: 12px;">
 
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h4 class="fw-bold text-dark mb-0">
+                    <h4 class="fw-bold text-dark mb-0 ">
                         <i class="fas fa-tags text-primary me-2"></i>Manage Tags
                         <span class="badge bg-secondary ms-2" style="font-size: 0.5em;">[[ total_tags ]]</span>
                     </h4>
-                    <div class="d-flex align-items-center">
-                        <button class="btn btn-success shadow-sm fw-bold text-center" @click="saveTags"
-                            :disabled="save_loading_tags">
-                            <template v-if="save_loading_tags">
-                                <i class="fas fa-spinner fa-spin me-2"></i> Saving...
-                            </template>
-                            <template v-else>
-                                <i class="fas fa-save me-2"></i> Save Workspace
-                            </template>
+                    <div class="d-flex align-items-center gap-3">
+                        <button class="btn btn-primary shadow-sm fw-bold rounded-pill px-4" data-bs-toggle="modal"
+                            data-bs-target="#add_tag_modal_">
+                            <i class="fas fa-plus me-2"></i> Add New Tag
                         </button>
+
+                        <tag-create-modal @tag-created="handleRefreshList" csrf="{{ csrf_token() }}"></tag-create-modal>
+                        <div class="d-flex align-items-center">
+                            <button class="btn btn-success shadow-sm fw-bold text-center" @click="saveTags"
+                                :disabled="save_loading_tags">
+                                <template v-if="save_loading_tags">
+                                    <i class="fas fa-spinner fa-spin me-2"></i> Saving...
+                                </template>
+                                <template v-else>
+                                    <i class="fas fa-save me-2"></i> Save Workspace
+                                </template>
+                            </button>
+                        </div>
                     </div>
+
                 </div>
 
                 <div class="mb-4" v-if="allSelectedTagsObjects.length > 0">
@@ -635,6 +644,7 @@
     import { } from '/static/js/bundle/jsdelivr_sortablejs.js';
     import { } from '/static/js/bundle/jsdelivr_vuedraggable.js';
     import VulnerabilityInput from '/static/js/vulnerability/vulnerabilityInput.js';
+    import TagCreateModal from '/static/js/tags/tagCreateModal.js';
     const TreeItem = {
         name: 'tree-item',
         props: ['node', 'selectedId'],
@@ -651,7 +661,7 @@
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { 'tree-item': TreeItem, 'draggable': window.vuedraggable, 'vulnerability-input': VulnerabilityInput },
+        components: { 'tree-item': TreeItem, 'draggable': window.vuedraggable, 'vulnerability-input': VulnerabilityInput, 'tag-create-modal': TagCreateModal },
 
         setup() {
 
@@ -676,6 +686,12 @@
 
             const csrf_token = "{{ csrf_token() }}"
             const is_loading = ref(false);
+
+
+            const handleRefreshList = (newlyCreatedTag) => {
+                fetchTags(1);
+                create_message("Tag saved successfully.", "success-subtle");
+            };
 
             /**
              * #################
@@ -710,6 +726,7 @@
                     page,
                     search: searchQueryTags.value,
                     sort_order: sort_order.value,
+                    user_id: "{{ current_user.id }}"
                 });
                 const res = await fetch('/tags/get_tags_bundle?' + params.toString());
                 const data = await res.json();
@@ -1176,7 +1193,7 @@
 
                 // tags
                 tags, total_tags, total_pages_tags, current_page_tags, searchQueryTags, sort_order, fetchTags, selectedTags, toggleSelection, clearSelection, getContrastYIQ, visiblePagesTags,
-                load_tags, save_loading_tags, saveTags, allSelectedTagsObjects, initBundleTags, detectedVulnerabilities
+                load_tags, save_loading_tags, saveTags, allSelectedTagsObjects, initBundleTags, detectedVulnerabilities, handleRefreshList
             };
         }
     }).mount('#main-vue-app');

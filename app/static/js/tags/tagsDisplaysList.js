@@ -1,9 +1,14 @@
+import SingleTagDisplay from './singleTagDisplay.js'; 
 const tagsDisplaysList = {
+    components: {
+        'single-tag-display': SingleTagDisplay
+    },
     props: {
         objectId: { type: [Number, String], required: true },
         objectType: { type: String, required: true, validator: v => ['bundle', 'rule'].includes(v) },
         maxVisible: { type: Number, default: 5 },
         sectionTitle: { type: String, default: '' },
+        user_id: { type: Number, default: null }
     },
     delimiters: ['[[', ']]'],
     setup(props) {
@@ -13,7 +18,11 @@ const tagsDisplaysList = {
         const fetchTags = async () => {
             loading.value = true;
             try {
-                const response = await fetch(`/${props.objectType}/get_tags/${props.objectId}`);
+                let url = `/${props.objectType}/get_tags/${props.objectId}`;
+                if (props.user_id !== null && !isNaN(props.user_id)) {
+                    url += `?user_id=${props.user_id}`;
+                }
+                const response = await fetch(url);
                 if (response.ok) {
                     const data = await response.json();
                     tags.value = data.tags || [];
@@ -25,24 +34,15 @@ const tagsDisplaysList = {
             }
         };
 
-        const getContrastYIQ = (hex) => {
-            if (!hex) return '#000';
-            const r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16), b = parseInt(hex.substr(5, 2), 16);
-            return ((r * 299) + (g * 587) + (b * 114)) / 1000 >= 128 ? '#000' : '#fff';
-        };
-
-        Vue.onMounted(() => {
-        fetchTags();
-    });
-
+        Vue.onMounted(fetchTags);
         Vue.watch(() => props.objectId, fetchTags);
 
-        return { tags, loading, getContrastYIQ };
+        return { tags, loading };
     },
     data() {
         return { isCollapsed: false, isShowingAll: false };
     },
-template: `
+    template: `
     <div class="tag-display-container">
         <div v-if="sectionTitle" class="d-flex align-items-center mb-2 mt-1">
             <div class="bg-primary rounded-pill me-2" style="width: 3px; height: 14px;"></div>
@@ -57,46 +57,12 @@ template: `
         </div>
 
         <div v-else class="d-flex flex-wrap gap-2 align-items-center">
-            <div v-for="tag in visibleTags" :key="tag.id" class="tag-wrapper">
-                
-                <span class="tag-split shadow-sm on-hover-zoom">
-                    <span class="tag-left">
-                        <i :class="['fas', tag.icon || 'fa-tag']"></i>
-                    </span>
-                    <span class="tag-right" :style="{ backgroundColor: tag.color }">
-                        <span :style="{ color: getContrastYIQ(tag.color) }">
-                            [[ tag.name ]]
-                        </span>
-                    </span>
-                </span>
-                
-                <div class="tag-tooltip animate__animated animate__fadeIn">
-                    <div class="hover-bridge"></div> 
-                    
-                    <div class="tooltip-header" :style="{ borderLeft: '4px solid ' + tag.color }">
-                        <i :class="['fas', tag.icon || 'fa-tag', 'me-2 text-primary']"></i>
-                        <strong class="text-white">[[ tag.name ]]</strong>
-                    </div>
-
-                    <div class="tooltip-body">
-                        <div class="description-container">
-                            <div class="description-scroll">
-                                [[ tag.description || 'No description available for this tag.' ]]
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between mt-2 pt-2 border-top border-white border-opacity-10" style="font-size: 0.7rem;">
-                            <span class="text-white-50">
-                                <i class="fas fa-fingerprint me-1"></i> ID: [[ tag.id ]]
-                            </span>
-                            <span v-if="tag.created_at" class="text-white-50">
-                                <i class="far fa-calendar-alt me-1"></i> [[ tag.created_at ]]
-                            </span>
-                        </div>
-                    </div>
-                    <div class="tooltip-arrow"></div>
-                </div>
-            </div>
+            
+            <single-tag-display 
+                v-for="tag in visibleTags" 
+                :key="tag.id" 
+                :tag="tag">
+            </single-tag-display>
 
             <button v-if="tags.length > maxVisible" 
                 @click.stop="isShowingAll = !isShowingAll" 
@@ -104,15 +70,14 @@ template: `
                 style="font-size: 0.7rem; padding: 2px 10px; height: 26px;">
                 [[ isShowingAll ? 'Collapse' : '+' + (tags.length - maxVisible) ]]
             </button>
-
-           
         </div>
     </div>
-`,
+    `,
     computed: {
         visibleTags() {
             return this.isShowingAll ? this.tags : this.tags.slice(0, this.maxVisible);
         }
     }
 };
+
 export default tagsDisplaysList;
