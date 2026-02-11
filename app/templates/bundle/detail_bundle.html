@@ -267,6 +267,31 @@
                         <!-- Rules -->
                         <div class="collapse show" id="collapseRules">
                             <div class="row g-3 mt-2">
+                                <nav v-if="totalPages > 1" class="d-flex justify-content-center ">
+                                    <ul class="pagination pagination-sm shadow-sm rounded border-0 bg-white">
+                                        <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                                            <a class="page-link border-0 px-3 py-2" href="#"
+                                                @click.prevent="changePage(currentPage - 1)">
+                                                <i class="fas fa-chevron-left small"></i>
+                                            </a>
+                                        </li>
+
+                                        <li v-for="page in visiblePages" :key="page" class="page-item"
+                                            :class="{ active: page === currentPage, disabled: page === '...' }">
+                                            <a class="page-link border-0 px-3 py-2 fw-bold" href="#"
+                                                @click.prevent="page !== '...' && changePage(page)">
+                                                [[ page ]]
+                                            </a>
+                                        </li>
+
+                                        <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                                            <a class="page-link border-0 px-3 py-2" href="#"
+                                                @click.prevent="changePage(currentPage + 1)">
+                                                <i class="fas fa-chevron-right small"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
                                 <div v-for="(item, index) in rules" :key="item.rule.id" class="col-12">
                                     <div class="card border-0 shadow-sm hover-shadow transition-all card-security-premium"
                                         style="background-color: var(--bg-color);" @click="toggleContent(index)">
@@ -275,7 +300,6 @@
 
                                         <div class="card-body p-3">
                                             <div class="d-flex align-items-start gap-3">
-
                                                 <div class="flex-shrink-0 bg-light rounded border d-flex flex-column align-items-center justify-content-center shadow-sm"
                                                     style="min-width: 80px; height: 80px;">
                                                     <span class="d-block small fw-bold text-primary mb-1">
@@ -319,19 +343,10 @@
                                                             dayjs.utc(item.rule.last_modif).fromNow() ]]</span>
                                                     </div>
 
-                                                    <div v-if="item.rule.cve_id && item.rule.cve_id !== 'None'"
-                                                        class="d-flex flex-wrap gap-1 mb-2">
-                                                        <span v-for="cve in parsedCVE(item.rule.cve_id)" :key="cve"
-                                                            :class="['badge', getCVEColor(cve), ' border shadow-sm']">
-                                                            <template v-if="cve != None">
-                                                                <i :class="getCVEIcon(cve)" class="me-1"></i>[[ cve ]]
-                                                            </template>
-
-                                                        </span>
-                                                    </div>
+                                                    <!-- CVE !!!!-->
 
                                                     <p class="text-muted small mb-0 text-truncate-custom"
-                                                        v-if="!item.showContent" style=" cursor: pointer;">
+                                                        v-if="!item.showContent" style="cursor: pointer;">
                                                         <i class="fas fa-align-left me-1 opacity-50"></i>
                                                         [[ truncateText(item.rule.description, 160) ]]
                                                     </p>
@@ -340,26 +355,18 @@
 
                                             <div v-if="item.showContent" class="mt-3 transition-all animate-fade-in">
                                                 <hr class="my-3 opacity-10">
-
                                                 <div class="d-flex justify-content-between align-items-center mb-2"
                                                     @click.stop>
-                                                    <span class="small fw-bold text-muted">
-                                                        <i class="fas fa-terminal me-2 text-primary"></i>RAW RULE
-                                                        CONTENT
-                                                    </span>
+                                                    <span class="small fw-bold text-muted"><i
+                                                            class="fas fa-terminal me-2 text-primary"></i>RAW
+                                                        CONTENT</span>
                                                     <button @click="copyToClipboard(item.rule.to_string, $event)"
                                                         class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm border-0">
-                                                        <i class="fas fa-copy me-1"></i> Copy Code
+                                                        <i class="fas fa-copy me-1"></i> Copy
                                                     </button>
                                                 </div>
-
-                                                <div class="position-relative" @click.stop>
-                                                    <pre class="bg-dark text-light p-3 rounded-3 small mb-0 shadow-inner custom-scrollbar"
-                                                        style="max-height: 450px; overflow-y: auto; font-family: 'Fira Code', monospace; line-height: 1.5; border: 1px solid #333;">
-[[ item.rule.to_string ]]
-                            </pre>
-                                                </div>
-
+                                                <pre class="bg-dark text-light p-3 rounded-3 small mb-0 shadow-inner custom-scrollbar"
+                                                    style="max-height: 450px; overflow-y: auto; font-family: 'Fira Code', monospace; border: 1px solid #333;">[[ item.rule.to_string ]]</pre>
                                                 <div class="text-center mt-3">
                                                     <button
                                                         class="btn btn-sm btn-light border rounded-pill px-4 shadow-sm"
@@ -372,6 +379,32 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <nav v-if="totalPages > 1" class="d-flex justify-content-center my-4 pb-5">
+                                <ul class="pagination pagination-sm shadow-sm rounded border-0 bg-white">
+                                    <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                                        <a class="page-link border-0 px-3 py-2" href="#"
+                                            @click.prevent="changePage(currentPage - 1)">
+                                            <i class="fas fa-chevron-left small"></i>
+                                        </a>
+                                    </li>
+
+                                    <li v-for="page in visiblePages" :key="page" class="page-item"
+                                        :class="{ active: page === currentPage, disabled: page === '...' }">
+                                        <a class="page-link border-0 px-3 py-2 fw-bold" href="#"
+                                            @click.prevent="page !== '...' && changePage(page)">
+                                            [[ page ]]
+                                        </a>
+                                    </li>
+
+                                    <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                                        <a class="page-link border-0 px-3 py-2" href="#"
+                                            @click.prevent="changePage(currentPage + 1)">
+                                            <i class="fas fa-chevron-right small"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
                         </div>
 
 
@@ -965,21 +998,62 @@
 
             const bundle = ref(null);
             const rules = ref([]);
+            const currentPage = ref(1);
+            const totalPages = ref(1);
+            const totalRules = ref(0);
 
-            async function fetchBundle() {
-                const params = new URLSearchParams({ bundle_id });
-                const res = await fetch('/bundle/get_bundle?' + params.toString());
+            async function fetchBundle(page = 1) {
+                const params = new URLSearchParams({
+                    bundle_id: bundle_id,
+                    page: page
+                });
+
+                const res = await fetch('/bundle/get_bundle_page?' + params.toString());
                 const data = await res.json();
+
                 if (res.ok && data.success) {
                     bundle.value = data.bundle;
+
+
                     rules.value = (data.rules || []).map(item => ({
                         ...item,
                         showContent: false
                     }));
 
 
+                    if (data.pagination) {
+                        currentPage.value = data.pagination.current_page;
+                        totalPages.value = data.pagination.total_pages;
+                        totalRules.value = data.pagination.total_rules;
+                    }
                 }
             }
+
+
+            function changePage(page) {
+                if (page >= 1 && page <= totalPages.value) {
+                    fetchBundle(page);
+
+                    //document.getElementById('collapseRules').scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+            const visiblePages = Vue.computed(() => {
+                const pages = [];
+                const range = 2;
+
+                for (let i = 1; i <= totalPages.value; i++) {
+                    if (
+                        i === 1 ||
+                        i === totalPages.value ||
+                        (i >= currentPage.value - range && i <= currentPage.value + range)
+                    ) {
+                        pages.push(i);
+                    } else if (pages[pages.length - 1] !== '...') {
+                        pages.push('...');
+                    }
+                }
+                return pages;
+            });
 
             /**
              *          ######################
@@ -1118,7 +1192,6 @@
             }
 
             async function update(id) {
-                // transform rule in bundle to a reel structure with folders and files
                 const params = new URLSearchParams({
                     id
                 })
@@ -1128,81 +1201,6 @@
 
             }
 
-            function parsedCVE(cveField) {
-                if (!cveField) return [];
-
-                // Tentative JSON (tableau ou string)
-                try {
-                    const parsed = JSON.parse(cveField);
-                    if (Array.isArray(parsed)) return parsed;
-                    if (typeof parsed === "string") return [parsed];
-                } catch (e) {
-                    // Ignore error, fallback below
-                }
-
-
-                return cveField
-                    .replace(/[{}[\]]/g, "")
-                    .split(",")
-                    .map(s => s.trim())
-                    .filter(s => s.length > 0);
-            }
-
-
-            // --------------------------------------------
-            // COULEURS
-            // --------------------------------------------
-            function getCVEColor(cve) {
-                if (!cve) return "bg-dark";
-
-                if (cve.startsWith("CVE")) return "bg-danger";
-                if (cve.startsWith("GHSA")) return "bg-warning text-dark";
-                if (cve.startsWith("PYSEC")) return "bg-info text-dark";
-                if (cve.startsWith("GSD")) return "bg-secondary";
-                if (cve.startsWith("GCVE")) return "bg-primary";
-                if (cve.startsWith("RHSA")) return "bg-danger-subtle text-dark";
-                if (cve.startsWith("CERTFR")) return "bg-success";
-                if (cve.startsWith("cisco-sa")) return "bg-dark";
-                if (cve.startsWith("wid-sec-w")) return "bg-secondary";
-                if (cve.startsWith("msrc_CVE")) return "bg-purple";
-
-                return "bg-dark"; // fallback
-            }
-
-
-            // --------------------------------------------
-            // ICONES
-            // --------------------------------------------
-            function getCVEIcon(cve) {
-                if (!cve) return "fas fa-exclamation-triangle";
-
-                if (cve.startsWith("CVE")) return "fas fa-shield-alt";
-                if (cve.startsWith("GHSA")) return "fas fa-bug";
-                if (cve.startsWith("PYSEC")) return "fas fa-code";
-                if (cve.startsWith("GSD")) return "fas fa-database";
-                if (cve.startsWith("GCVE")) return "fas fa-globe";
-                if (cve.startsWith("RHSA")) return "fas fa-lock";
-                if (cve.startsWith("CERTFR")) return "fas fa-flag";
-                if (cve.startsWith("cisco-sa")) return "fas fa-network-wired";
-                if (cve.startsWith("wid-sec-w")) return "fas fa-exclamation-circle";
-                if (cve.startsWith("msrc_CVE")) return "fas fa-shield-virus";
-
-                return "fas fa-exclamation-triangle";
-            }
-
-
-            // --------------------------------------------
-            // UTILITAIRES
-            // --------------------------------------------
-            function getCVEPrefix(cve) {
-                if (!cve) return "";
-                return cve.split("-")[0].toUpperCase();
-            }
-
-            function getCVENumber(cve) {
-                if (!cve) return "";
-                return cve.replace(/^[A-Za-z_:-]+/, "").replace(/^-/, "");
-            }
 
             function goToRule(rule_id) {
                 window.location.href = `/rule/detail_rule/${rule_id}`;
@@ -1467,8 +1465,8 @@
 
             return {
                 init, detail_page_1_is_loading, animateClick, dayjs, bundle, rules, message_list, bundle_id, is_admin, copyToClipboard,
-                vote, edit_access, deleteBundle, saveNewDescription, DownloadBundle, DownloadBundleStructure, current_user_is_connected, parsedCVE,
-                getCVEColor, getCVEIcon, getCVEPrefix, getCVENumber, goToRule, showFullDesc, truncateText, stats, update,
+                vote, edit_access, deleteBundle, saveNewDescription, DownloadBundle, DownloadBundleStructure, current_user_is_connected,
+                goToRule, showFullDesc, truncateText, stats, update,
 
                 treeData, selectedNode, handleSelect, openNodes, handleToggleFolder, toggleAll, isAllExpanded, isRule, clearDisplay, toggleContent,
 
@@ -1476,7 +1474,9 @@
                 loadMore, showLess, deleteComment, editComment, addReaction, emodji_picker, current_user_is_admin,
 
                 // tags
-                displayTags, loadingDisplayTags, fetchBundleTags, loadingDisplayVulnerabilities, displayVulnerabilities, fetchBundleVulnerabilities
+                displayTags, loadingDisplayTags, fetchBundleTags, loadingDisplayVulnerabilities, displayVulnerabilities, fetchBundleVulnerabilities,
+
+                currentPage, totalPages, changePage, visiblePages
             };
         }
     }).mount('#main-containers');

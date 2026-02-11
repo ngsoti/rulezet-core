@@ -1219,29 +1219,35 @@ def remove_has_voted(vote, rule_id , id) -> bool:
 #   Filter  #
 #############
 
-def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None, source=None, user_id=None, license=None, tags: list[str] | None = None) -> Rule:
-    """Filter the rules"""
+def filter_rules(search=None, search_field="all", author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None, source=None, user_id=None, license=None, tags: list[str] | None = None) -> Rule:
+    """Filter the rules with specific field targeting"""
     query = Rule.query
+    
     if search:
         search = search.strip()
         search_lower = f"%{search.lower()}%"
-        query = query.filter(
-            or_(
-                Rule.title.ilike(search_lower),
-                Rule.description.ilike(search_lower),
-                Rule.format.ilike(search_lower),
-                Rule.author.ilike(search_lower),
-                Rule.to_string.ilike(search_lower),
-                Rule.uuid.ilike(search_lower)
+        
+        if search_field == "title":
+            query = query.filter(Rule.title.ilike(search_lower))
+        elif search_field == "content":
+            query = query.filter(Rule.to_string.ilike(search_lower))
+        else:
+            query = query.filter(
+                or_(
+                    Rule.title.ilike(search_lower),
+                    Rule.description.ilike(search_lower),
+                    Rule.format.ilike(search_lower),
+                    Rule.author.ilike(search_lower),
+                    Rule.to_string.ilike(search_lower),
+                    Rule.uuid.ilike(search_lower)
+                )
             )
-        )
 
     if vulnerabilities:
         vuln_filters = []
         for v in vulnerabilities:
             search_pattern = '%"' + v + '"%'
             vuln_filters.append(Rule.cve_id.ilike(search_pattern))
-        
         query = query.filter(or_(*vuln_filters))
 
     if tags:
@@ -1250,14 +1256,18 @@ def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnera
         query = query.distinct()
     
     if source:
-        query = query.filter(Rule.source.ilike(f"%{source}%"))
+        source_list = [s.strip() for s in source.split(',')] if isinstance(source, str) else source
+        query = query.filter(or_(*[Rule.source.ilike(f"%{s}%") for s in source_list]))
+
     if license:
-        query = query.filter(Rule.license.ilike(f"%{license}%"))
+        license_list = [l.strip() for l in license.split(',')] if isinstance(license, str) else license
+        query = query.filter(or_(*[Rule.license.ilike(f"%{l}%") for l in license_list]))
 
     if author:
         query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
     if rule_type:
         query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))  
+        
     if sort_by == "newest":
         query = query.order_by(Rule.creation_date.desc())
     elif sort_by == "oldest":
@@ -1271,7 +1281,11 @@ def filter_rules(search=None, author=None, sort_by=None, rule_type=None, vulnera
 
     if user_id:
         query = query.filter(Rule.user_id == user_id)
+        
     return query
+
+
+
 
 def get_rules_page_filter_bundle_page(search=None, author=None, sort_by=None, rule_type=None,page=1, bundle_id=None, per_page=10) -> Rule:
     """Filter the rules"""

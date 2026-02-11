@@ -141,6 +141,24 @@ class Rule(db.Model):
             "editor": self.get_rule_user_first_name_by_id(),
             "github_path": self.github_path if self.github_path else None
         }
+    
+    def get_extension(self):
+        """ Get the file extension for each format """
+        format_name = self.format.lower() if self.format else ""
+        
+        extensions = {
+            'yara': 'yar',
+            'sigma': 'yml',
+            'suricata': 'rules',
+            'zeek': 'zeek',
+            'wazuh': 'xml',
+            'nse': 'nse',
+            'crs': 'conf',
+            'nova': 'nov'
+        }
+        
+        return extensions.get(format_name, 'txt') 
+
 
 class FormatRule(db.Model):
     """Table for all the formats of the rules"""

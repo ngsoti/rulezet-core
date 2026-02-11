@@ -2,6 +2,7 @@ import MultiVulnerabilityFilter from '/static/js/vulnerability/multiVulnerabilit
 import MultiSourceFilter from '/static/js/rule/multiSourceFilter.js';
 import MultiLicenseFilter from '/static/js/rule/multiLicenseFilter.js';
 import MultiTagFilter from '/static/js/tags/multiTagFIlter.js';
+import RuleExportAction from '/static/js/rule/ruleExportAction.js';
 
 const RuleFilterBar = {
     props: {
@@ -11,7 +12,9 @@ const RuleFilterBar = {
         autoFetch: { type: Boolean, default: true },
         userId: { type: Number, default: null },
         hiddenFields: { type: Array, default: () => [] },
-        sourceRules: { type: String, default: '' }
+        sourceRules: { type: String, default: '' },
+        csrfToken: { type: String, default: '' },
+        currentUserIsAuthenticated: { type: Boolean, default: false }
     },
     emits: ['update:results', 'loading'],
     delimiters: ['[[', ']]'],
@@ -20,20 +23,33 @@ const RuleFilterBar = {
         'multi-source-filter': MultiSourceFilter,
         'multi-license-filter': MultiLicenseFilter,
         'multi-tag-filter': MultiTagFilter,
+        'rule-export-action': RuleExportAction
     },
     setup(props, { emit }) {
         const searchQuery = Vue.ref('');
+        const searchField = Vue.ref('all'); // 'all', 'title', 'content'
         const sortBy = Vue.ref('newest');
         const ruleType = Vue.ref('');
         const searchIsLoading = Vue.ref(false);
-        
+        const csrfToken = Vue.ref(props.csrfToken);
         const selectedSourceNames = Vue.ref([]); 
         const selectedVulnerabilityNames = Vue.ref([]); 
         const selectedLicenseNames = Vue.ref([]);
         const selectedTagNames = Vue.ref([]); 
         const rulesFormats = Vue.ref([]);
+        const total_rules_count = Vue.ref(0);
+        const current_user_is_authenticated = Vue.ref(props.currentUserIsAuthenticated);
 
         const isVisible = (field) => !props.hiddenFields.includes(field);
+
+        const hasActiveFilters = Vue.computed(() => {
+            return searchQuery.value.trim() !== '' || 
+                   ruleType.value !== '' || 
+                   selectedSourceNames.value.length > 0 || 
+                   selectedVulnerabilityNames.value.length > 0 || 
+                   selectedLicenseNames.value.length > 0 || 
+                   selectedTagNames.value.length > 0;
+        });
 
         Vue.watch(searchQuery, (newVal) => {
             if (newVal.trim() === '') fetchRules(1);
@@ -55,6 +71,7 @@ const RuleFilterBar = {
             const params = new URLSearchParams();
             params.append('page', page.toString());
             params.append('search', searchQuery.value || '');
+            params.append('search_field', searchField.value); // New param
             params.append('author', props.authorFilter || '');
 
             if (isVisible('sort')) params.append('sort_by', sortBy.value);
@@ -86,7 +103,7 @@ const RuleFilterBar = {
                 const url = `${props.apiEndpoint}?${params.toString()}`;
                 const res = await fetch(url);
                 const data = await res.json();
-                
+                total_rules_count.value = data.total_rules;
                 emit('update:results', {
                     rules: data, 
                     total_pages: data.total_pages,
@@ -109,9 +126,9 @@ const RuleFilterBar = {
         });
 
         return {
-            searchQuery, sortBy, ruleType, selectedSourceNames, 
+            searchQuery, searchField, sortBy, ruleType, selectedSourceNames, 
             selectedVulnerabilityNames, selectedLicenseNames, selectedTagNames,
-            searchIsLoading, rulesFormats, fetchRules, clearSearch, isVisible
+            searchIsLoading, rulesFormats, fetchRules, clearSearch, isVisible, hasActiveFilters, total_rules_count, csrfToken, current_user_is_authenticated
         };
     },
     template: `
@@ -124,15 +141,25 @@ const RuleFilterBar = {
             <div class="row g-3">
                 <div :class="isVisible('sort') || isVisible('format') ? 'col-md-6' : 'col-md-12'" v-if="isVisible('search')">
                     <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Keywords</label>
-                    <div class="input-group input-group-sm position-relative">
-                        <span class="input-group-text border-0 bg-light text-muted" style="border-radius: 10px 0 0 10px; min-width: 40px; justify-content: center;">
+                    <div class="input-group input-group-sm position-relative shadow-sm" style="border-radius: 10px; overflow: hidden; background-color: var(--bg-color);">
+                        <select v-model="searchField" class="form-select border-0  text-muted small fw-bold" @change="fetchRules(1)"
+                                style="max-width: 100px; font-size: 0.75rem; border-right: 1px solid; background-color: var(--bg-color); cursor: pointer;">
+                            <option value="all">All</option>
+                            <option value="title">Title</option>
+                            <option value="content">Content</option>
+                        </select>
+
+                        <span class="input-group-text border-0  text-muted" style="min-width: 40px; justify-content: center; background-color: var(--bg-color);">
                             <div v-if="searchIsLoading" class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                            <i v-else class="fa-solid fa-magnifying-glass"></i>
+                            <i v-else class="fa-solid fa-magnifying-glass" ></i>
                         </span>
+                        
                         <input type="text" v-model="searchQuery" @keyup.enter="fetchRules(1)" 
-                            class="form-control border-0 bg-light pe-5" :placeholder="placeholder" 
-                            style="border-radius: 0 10px 10px 0; height: 38px;" :disabled="searchIsLoading">
-                        <span v-if="searchQuery && !searchIsLoading" @click="clearSearch" class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted cursor-pointer" style="z-index: 5;">
+                            class="form-control border-0 pe-5" :placeholder="placeholder" 
+                            style="height: 38px;" :disabled="searchIsLoading">
+                        
+                        <span v-if="searchQuery && !searchIsLoading" @click="clearSearch" 
+                              class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted cursor-pointer" style="z-index: 5;">
                             <i class="fa-solid fa-circle-xmark opacity-50"></i>
                         </span>
                     </div>
@@ -213,6 +240,22 @@ const RuleFilterBar = {
                 </div>
             </div>
         </div>
+
+        <rule-export-action 
+            v-if="hasActiveFilters"
+            :search-query="searchQuery"
+            :sort-by="sortBy"
+            :rule-type="ruleType"
+            :selected-sources="selectedSourceNames"
+            :selected-vulnerabilities="selectedVulnerabilityNames"
+            :selected-licenses="selectedLicenseNames"
+            :selected-tags="selectedTagNames"
+            :user-id="userId"
+            :author-filter="authorFilter"
+            :total-rules="total_rules_count"
+            :csrf-token="csrfToken"
+            :current-user-is-authenticated="current_user_is_authenticated">
+        </rule-export-action>
     </div>
     `
 };

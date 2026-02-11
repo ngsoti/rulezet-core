@@ -300,7 +300,9 @@
             </div>
          </div> -->
          <rule-filter-bar ref="filterBar" api-endpoint="/rule/get_rules_page_filter" @update:results="onRulesUpdated"
-            @loading="search_is_loading = $event" :auto-fetch="false"> </rule-filter-bar>
+            :current-user-is-authenticated="'{{current_user.is_authenticated}}'" @loading="search_is_loading = $event"
+            :auto-fetch="false" :csrf-token="'{{ csrf_token() }}'">
+         </rule-filter-bar>
 
          <div class="results-wrapper">
             <div class="d-flex justify-content-between align-items-center mb-4 px-2">

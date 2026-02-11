@@ -161,7 +161,7 @@ def save_workspace(bundle_id):
     data = request.json
     structure = data.get('structure') # The tree from Vue.js
 
-    if not bundle_id or not structure:
+    if not bundle_id:
         return {"success": False, "toast_class": "danger", "message": "Missing bundle_id or structure"}, 500
     
     # Check if the bundle exists
@@ -895,3 +895,63 @@ def get_vulnerabilities(target_type, target_id):
         return jsonify({"message": "Invalid target type", "vulnerability_identifiers": []}), 400
         
     return jsonify(item.to_json().get('vulnerability_identifiers', []))
+
+
+
+@bundle_blueprint.route('/my-bundles')
+@login_required
+def my_bundles():
+    bundles = BundleModel.get_bundles_by_user_id(current_user.id)
+    
+    bundle_data = []
+    for b in bundles:
+        root_nodes = BundleModel.get_only_root_nodes(b.id)
+        
+        json_bundle = b.to_json()
+        
+        json_bundle['tree'] = [node.to_tree_json() for node in root_nodes]
+        bundle_data.append(json_bundle)
+
+    return jsonify({
+        "success": True,
+        "bundles": bundle_data,
+        "total_bundles": len(bundle_data)
+    })
+
+
+@bundle_blueprint.route("/get_bundle_page", methods=['GET'])
+def get_bundle_page():
+    """Get a bundle and its associated rules with pagination."""
+    bundle_id = request.args.get('bundle_id', type=int)
+    page = request.args.get('page', type=int, default=1)
+    
+    if not bundle_id:
+        return {"message": "Missing bundle_id parameter", "success": False}, 400
+
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle:
+        return {"message": f"No bundle found with id {bundle_id}", "success": False}, 404
+
+   
+    pagination = BundleModel.get_paginated_rules_info_by_bundle(bundle_id, page)
+    
+    
+    root_nodes = BundleModel.get_only_root_nodes(bundle_id)
+    if not root_nodes:
+        structure = [{"id": "root", "name": "Main Bundle", "type": "folder", "children": []}]
+    else:
+        structure = [node.to_tree_json() for node in root_nodes]
+
+    return {
+        "success": True,
+        "bundle": bundle.to_json() if hasattr(bundle, 'to_json') else bundle,
+        "rules": pagination.items, 
+        "pagination": {
+            "current_page": pagination.page,
+            "total_pages": pagination.pages,
+            "total_rules": pagination.total,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
+        },
+        "structure": structure
+    }, 200

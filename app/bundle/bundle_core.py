@@ -61,6 +61,34 @@ def create_bundle(form_dict , user) -> Bundle:
         
     return new_bundle
 
+def add_rules_to_bundle(bundle_id: int, rule_ids: list[int]) -> bool:
+    try:
+        existing_rule_ids = {
+            res[0] for res in db.session.query(BundleRuleAssociation.rule_id)
+            .filter(BundleRuleAssociation.bundle_id == bundle_id)
+            .filter(BundleRuleAssociation.rule_id.in_(rule_ids))
+            .all()
+        }
+
+        new_rules_added = False
+        for rule_id in rule_ids:
+            if rule_id not in existing_rule_ids:
+                association = BundleRuleAssociation(bundle_id=bundle_id, rule_id=rule_id)
+                db.session.add(association)
+                new_rules_added = True
+        
+        if new_rules_added:
+            db.session.commit()
+            success, msg = update_bundle_from_rule_id_into_structure(bundle_id)
+            if not success:
+                return False, msg
+
+        return True, "Successfully added rules to bundle"
+    except Exception as e:
+        db.session.rollback()
+        return False, str(e)
+
+
 
 def get_bundle_by_id(bundle_id: int) -> Bundle | None:
     """
@@ -659,9 +687,6 @@ def save_workspace(bundle_id, structure):
     :param structure: Description
     """
     try:
-
-        
-
         BundleNode.query.filter_by(bundle_id=bundle_id).delete()
 
         def save_recursive(nodes, parent_id=None):
@@ -1052,5 +1077,37 @@ def get_all_vulnerabilities_with_counts():
         for vuln_id, count in vulnerability_counter.most_common()
     ]
    
+def get_bundles_by_user_id(user_id):
+    return Bundle.query.filter(Bundle.user_id == user_id).all()
+
+
+
+def get_paginated_rules_info_by_bundle(bundle_id: int, page: int):
+    """
+    Returns a pagination object containing combined info for rules in a bundle.
+    """
+
+    query = BundleRuleAssociation.query.filter_by(bundle_id=bundle_id)
     
-   
+
+    pagination = query.paginate(page=page, per_page=20, error_out=False)
+    
+
+    enriched_items = []
+    for assoc in pagination.items:
+        rule = Rule.query.get(assoc.rule_id)
+        if rule:
+            enriched_items.append({
+                "rule": rule.to_json(),
+                "association": assoc.to_json()
+            })
+    
+
+    pagination.items = enriched_items
+    return pagination
+
+def get_bundle_by_id(bundle_id: int):
+    return Bundle.query.get(bundle_id)
+
+def get_only_root_nodes(bundle_id: int):
+    return BundleNode.query.filter_by(bundle_id=bundle_id, parent_id=None).all()

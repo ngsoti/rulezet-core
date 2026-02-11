@@ -15,7 +15,9 @@
     </div>
 
     <rule-filter-bar ref="filterBar" :user-id="user_id" :auto-fetch="true" api-endpoint="/rule/get_rules_page_filter"
-        @update:results="onRulesUpdated" @loading="search_is_loading = $event"> </rule-filter-bar>
+        :current-user-is-authenticated="'{{current_user.is_authenticated}}'" @update:results="onRulesUpdated"
+        @loading="search_is_loading = $event" :csrf-token="'{{ csrf_token() }}'">
+    </rule-filter-bar>
 
     <div v-if="selectedRules.length > 0" class="bulk-action-bar shadow-lg animate slideInUp">
         <div class="d-flex align-items-center justify-content-between bg-danger text-white p-3 rounded-4 mb-4">

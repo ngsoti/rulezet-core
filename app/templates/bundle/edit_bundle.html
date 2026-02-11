@@ -758,29 +758,21 @@
                 }
             }
 
-            /**
-             * Toggle selection logic
-             * Handles both table row clicks (full object) and badge removals (ID only)
-             */
             function toggleSelection(tag) {
                 const tagId = typeof tag === 'object' ? tag.id : tag;
                 const index = selectedTags.value.indexOf(tagId);
 
                 if (index > -1) {
-                    // Remove from both lists
                     selectedTags.value.splice(index, 1);
                     const objIndex = allSelectedTagsObjects.value.findIndex(t => t.id === tagId);
                     if (objIndex > -1) {
                         allSelectedTagsObjects.value.splice(objIndex, 1);
                     }
                 } else {
-                    // Add to both lists
                     selectedTags.value.push(tagId);
                     if (typeof tag === 'object') {
                         allSelectedTagsObjects.value.push(tag);
                     } else {
-                        // Fallback: if we only have an ID (shouldn't happen in table), 
-                        // try to find it in the current page 'tags' list
                         const found = tags.value.find(t => t.id === tagId);
                         if (found) allSelectedTagsObjects.value.push(found);
                     }

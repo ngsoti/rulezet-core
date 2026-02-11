@@ -1,8 +1,9 @@
+import io
 import json
 import zipfile
 import os
 import tempfile
-from flask import request
+from flask import request, send_file
 from math import ceil
 from urllib.parse import urlparse
 from datetime import datetime,  timezone
@@ -165,7 +166,10 @@ def get_rules_page_filter() -> jsonify:
     """Get all the rules with filter"""
     page = int(request.args.get("page", 1))
     per_page = 10
+    
     search = request.args.get("search", None)
+    search_field = request.args.get("search_field", "all") # 'all', 'title', 'content'
+    
     author = request.args.get("author", None)
     sort_by = request.args.get("sort_by", "newest")
     rule_type = request.args.get("rule_type", None) 
@@ -179,9 +183,20 @@ def get_rules_page_filter() -> jsonify:
     tag_raw = request.args.get("tags", type=str)
     tag_list = [t.strip() for t in tag_raw.split(',') if t.strip()] if tag_raw else []
 
-
-
-    query = RuleModel.filter_rules(search=search, author=author, sort_by=sort_by, rule_type=rule_type, vulnerabilities=vuln_list, source=source, user_id=user_id, license=license, tags=tag_list)
+  
+    query = RuleModel.filter_rules(
+        search=search, 
+        search_field=search_field, 
+        author=author, 
+        sort_by=sort_by, 
+        rule_type=rule_type, 
+        vulnerabilities=vuln_list, 
+        source=source, 
+        user_id=user_id, 
+        license=license, 
+        tags=tag_list
+    )
+    
     total_rules = query.count()
     rules = query.offset((page - 1) * per_page).limit(per_page).all()
 
@@ -189,7 +204,7 @@ def get_rules_page_filter() -> jsonify:
         "rule": [r.to_json() for r in rules],
         "total_rules": total_rules,
         "total_pages": ceil(total_rules / per_page)
-    }),200
+    }), 200
 
 
 #####################
@@ -2649,3 +2664,153 @@ def get_rule_tags_display(rule_id):
         })
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+    
+
+
+
+
+@rule_blueprint.route('/export/download', methods=['GET'])
+def download_rules_export():
+    filters = {
+        "search": request.args.get("search"),
+        "author": request.args.get("author"),
+        "sort_by": request.args.get("sort_by", "newest"),
+        "rule_type": request.args.get("rule_type"),
+        "sources": request.args.get("sources"),
+        "user_id": request.args.get("user_id"),
+        "licenses": request.args.get("licenses"),
+        "export_format": request.args.get("export_format", "json_each")
+    }
+
+    vuln_raw = request.args.get("vulnerabilities", "")
+    vuln_list = [v.strip() for v in vuln_raw.split(',') if v.strip()] if vuln_raw else []
+    filters["vulnerabilities"] = vuln_list
+
+    tag_raw = request.args.get("tags", "")
+    tag_list = [t.strip() for t in tag_raw.split(',') if t.strip()] if tag_raw else []
+    filters["tags"] = tag_list
+
+    query = RuleModel.filter_rules(
+        search=filters["search"], 
+        author=filters["author"], 
+        sort_by=filters["sort_by"], 
+        rule_type=filters["rule_type"], 
+        vulnerabilities=vuln_list, 
+        source=filters["sources"], 
+        user_id=filters["user_id"], 
+        license=filters["licenses"], 
+        tags=tag_list
+    )
+    
+    rules = query.all()
+
+    if not rules:
+        return "No rules found", 404
+
+    memory_file = io.BytesIO()
+    
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        metadata = {
+            "export_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "total_rules": len(rules),
+            "applied_filters": filters
+        }
+        zf.writestr("rules_export/metadata.json", json.dumps(metadata, indent=4))
+
+        merged_contents = {}
+
+        for rule in rules:
+            rtype = rule.format.upper() if rule.format else "UNKNOWN"
+            safe_title = rule.title.replace(" ", "_").replace("/", "-") if rule.title else f"rule_{rule.id}"
+            
+            if filters["export_format"] == 'json_each':
+                path = f"rules_export/{rtype}/{safe_title}_{rule.id}.json"
+                data = json.dumps(rule.to_json(), indent=4) 
+                zf.writestr(path, data)
+
+            elif filters["export_format"] == 'ext_each':
+                ext = rule.get_extension()
+                path = f"rules_export/{rtype}/{safe_title}.{ext}"
+                content = rule.to_string() if callable(rule.to_string) else rule.to_string
+                zf.writestr(path, str(content))
+
+            elif filters["export_format"] == 'merged_by_type':
+                if rtype not in merged_contents:
+                    merged_contents[rtype] = [] 
+                
+                content = rule.to_string() if callable(rule.to_string) else rule.to_string
+                merged_contents[rtype].append(f"\n// --- Rule: {rule.title} ---\n{content}\n")
+
+        if filters["export_format"] == 'merged_by_type':
+            for rtype, contents in merged_contents.items():
+                sample_rule = next((r for r in rules if (r.format.upper() if r.format else "UNKNOWN") == rtype), None)
+                sample_ext = sample_rule.get_extension() if sample_rule else "txt"
+                
+                path = f"rules_export/{rtype}/{rtype}_merged.{sample_ext}"
+                zf.writestr(path, "".join(contents))
+
+    memory_file.seek(0)
+    
+    return send_file(
+        memory_file,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=f'rules_export_{filters["export_format"]}.zip'
+    )
+########################
+#  Bundle from Filter  #
+########################
+@rule_blueprint.route('/bundle/create-from-filters', methods=['POST'])
+@login_required
+def bundle_from_filters():
+    data = request.json
+    filters = data.get('filters', {})
+    
+    query = RuleModel.filter_rules(
+        search=filters.get("search"),
+        author=filters.get("author"),
+        sort_by=filters.get("sort_by"),
+        rule_type=filters.get("rule_type"),
+        vulnerabilities=filters.get("vulnerabilities", []),
+        source=filters.get("sources", []),
+        user_id=filters.get("user_id"),
+        license=filters.get("licenses", []),
+        tags=filters.get("tags", [])
+    )
+    rules_objects = query.all()
+
+    if not rules_objects:
+        return jsonify({"message": "No rules found to bundle"}), 404
+
+    rule_ids = [r.id for r in rules_objects]
+
+    try:
+        existing_id = data.get('existing_bundle_id')
+
+        if existing_id:
+            success, msg = BundleModel.add_rules_to_bundle(existing_id, rule_ids)
+            if not success:
+                return jsonify({"message": msg}), 500
+            bundle = BundleModel.get_bundle_by_id(existing_id)
+        else:
+            dict_form = {
+                "name": data.get('new_bundle_name'),
+                "description": data.get('new_bundle_description'),
+                "public": data.get('is_public', True)
+            }
+            bundle = BundleModel.create_bundle(dict_form, current_user)
+            if bundle:
+                success, msg = BundleModel.add_rules_to_bundle(bundle.id, rule_ids)
+                if not success:
+                    return jsonify({"message": msg}), 500
+            else:
+                return jsonify({"message": "Failed to create bundle"}), 500
+
+        return jsonify({
+            "success": True, 
+            "message": "Bundle processed successfully", 
+            "uuid": bundle.uuid
+        }), 200
+
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500

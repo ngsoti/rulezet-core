@@ -29,6 +29,7 @@
     </div>
 
     <rule-filter-bar ref="filterBar" api-endpoint="/rule/get_rules_page_filter" @update:results="onRulesUpdated"
+        :current-user-is-authenticated="'{{current_user.is_authenticated}}'" :csrf-token="'{{ csrf_token() }}'"
         @loading="search_is_loading = $event">
     </rule-filter-bar>
 
