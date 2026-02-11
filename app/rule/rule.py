@@ -2673,6 +2673,7 @@ def get_rule_tags_display(rule_id):
 def download_rules_export():
     filters = {
         "search": request.args.get("search"),
+        "search_field": request.args.get("search_field", "all"),
         "author": request.args.get("author"),
         "sort_by": request.args.get("sort_by", "newest"),
         "rule_type": request.args.get("rule_type"),
@@ -2684,14 +2685,13 @@ def download_rules_export():
 
     vuln_raw = request.args.get("vulnerabilities", "")
     vuln_list = [v.strip() for v in vuln_raw.split(',') if v.strip()] if vuln_raw else []
-    filters["vulnerabilities"] = vuln_list
-
+    
     tag_raw = request.args.get("tags", "")
     tag_list = [t.strip() for t in tag_raw.split(',') if t.strip()] if tag_raw else []
-    filters["tags"] = tag_list
 
     query = RuleModel.filter_rules(
-        search=filters["search"], 
+        search=filters["search"],
+        search_field=filters["search_field"],
         author=filters["author"], 
         sort_by=filters["sort_by"], 
         rule_type=filters["rule_type"], 
@@ -2705,7 +2705,7 @@ def download_rules_export():
     rules = query.all()
 
     if not rules:
-        return "No rules found", 404
+        return "No rules found to export", 404
 
     memory_file = io.BytesIO()
     
@@ -2721,12 +2721,11 @@ def download_rules_export():
 
         for rule in rules:
             rtype = rule.format.upper() if rule.format else "UNKNOWN"
-            safe_title = rule.title.replace(" ", "_").replace("/", "-") if rule.title else f"rule_{rule.id}"
+            safe_title = "".join([c if c.isalnum() else "_" for c in rule.title]) if rule.title else f"rule_{rule.id}"
             
             if filters["export_format"] == 'json_each':
                 path = f"rules_export/{rtype}/{safe_title}_{rule.id}.json"
-                data = json.dumps(rule.to_json(), indent=4) 
-                zf.writestr(path, data)
+                zf.writestr(path, json.dumps(rule.to_json(), indent=4))
 
             elif filters["export_format"] == 'ext_each':
                 ext = rule.get_extension()
@@ -2737,25 +2736,21 @@ def download_rules_export():
             elif filters["export_format"] == 'merged_by_type':
                 if rtype not in merged_contents:
                     merged_contents[rtype] = [] 
-                
                 content = rule.to_string() if callable(rule.to_string) else rule.to_string
-                merged_contents[rtype].append(f"\n// --- Rule: {rule.title} ---\n{content}\n")
+                merged_contents[rtype].append(f"\n// --- Rule: {rule.title} ({rule.id}) ---\n{content}\n")
 
         if filters["export_format"] == 'merged_by_type':
             for rtype, contents in merged_contents.items():
                 sample_rule = next((r for r in rules if (r.format.upper() if r.format else "UNKNOWN") == rtype), None)
                 sample_ext = sample_rule.get_extension() if sample_rule else "txt"
-                
-                path = f"rules_export/{rtype}/{rtype}_merged.{sample_ext}"
-                zf.writestr(path, "".join(contents))
+                zf.writestr(f"rules_export/{rtype}/{rtype}_merged.{sample_ext}", "".join(contents))
 
     memory_file.seek(0)
-    
     return send_file(
         memory_file,
         mimetype='application/zip',
         as_attachment=True,
-        download_name=f'rules_export_{filters["export_format"]}.zip'
+        download_name=f'rules_export_{datetime.now().strftime("%Y%m%d")}.zip'
     )
 ########################
 #  Bundle from Filter  #

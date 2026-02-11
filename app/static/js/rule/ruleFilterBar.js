@@ -71,7 +71,7 @@ const RuleFilterBar = {
             const params = new URLSearchParams();
             params.append('page', page.toString());
             params.append('search', searchQuery.value || '');
-            params.append('search_field', searchField.value); // New param
+            params.append('search_field', searchField.value);
             params.append('author', props.authorFilter || '');
 
             if (isVisible('sort')) params.append('sort_by', sortBy.value);
@@ -254,7 +254,8 @@ const RuleFilterBar = {
             :author-filter="authorFilter"
             :total-rules="total_rules_count"
             :csrf-token="csrfToken"
-            :current-user-is-authenticated="current_user_is_authenticated">
+            :current-user-is-authenticated="current_user_is_authenticated"
+            :search-field="searchField">
         </rule-export-action>
     </div>
     `

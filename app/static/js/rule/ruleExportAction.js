@@ -8,6 +8,7 @@ const RuleExportAction = {
         totalRules: { type: Number, default: 0 },
         searchQuery: { type: String, default: '' },
         sortBy: { type: String, default: 'newest' },
+        searchField: { type: String, default: 'all' },
         ruleType: { type: String, default: '' },
         selectedSources: { type: Array, default: () => [] },
         selectedVulnerabilities: { type: Array, default: () => [] },
@@ -67,6 +68,7 @@ const RuleExportAction = {
                 if (props.selectedVulnerabilities.length) params.append('vulnerabilities', props.selectedVulnerabilities.join(','));
                 if (props.selectedLicenses.length) params.append('licenses', props.selectedLicenses.join(','));
                 if (props.selectedTags.length) params.append('tags', props.selectedTags.join(','));
+                if (props.searchField) params.append('search_field', props.searchField);
 
                 const response = await fetch(`/rule/export/download?${params.toString()}`);
                 if (!response.ok) throw new Error('Export failed');

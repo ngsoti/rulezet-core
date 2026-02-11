@@ -82,7 +82,7 @@ const RuleBundleManager = {
     },
     template: `
     <div class="bundle-manager-ui position-relative">
-        <div v-if="isLoading" class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-75" style="z-index: 10;">
+        <div v-if="isLoading" class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center  bg-opacity-75" style="z-index: 10;">
             <div class="spinner-border text-success" role="status"></div>
         </div>
 
@@ -113,10 +113,10 @@ const RuleBundleManager = {
                     <div v-for="bundle in userBundles" :key="bundle.id" 
                          @click="selectedBundleId = bundle.id"
                          class="p-3 border rounded-4 mb-2 cursor-pointer transition-all d-flex align-items-center"
-                         :class="selectedBundleId === bundle.id ? 'border-primary bg-primary-subtle ring-primary' : 'shadow-sm-hover bg-white'">
+                         :class="selectedBundleId === bundle.id ? 'border-primary bg-primary-subtle ring-primary' : 'shadow-sm-hover '">
                         
                         <div class="bundle-icon me-3">
-                            <div class="rounded-circle shadow-sm d-flex align-items-center justify-content-center position-relative bg-white" style="width: 40px; height: 40px;">
+                            <div class="rounded-circle shadow-sm d-flex align-items-center justify-content-center position-relative " style="width: 40px; height: 40px;">
                                 <i class="fa-solid fa-folder-open text-primary"></i>
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill border border-light" 
                                       :class="bundle.access ? 'bg-success' : 'bg-danger'" 
@@ -148,7 +148,7 @@ const RuleBundleManager = {
             </div>
 
             <div v-if="bundleMode === 'create'" class="col-12 animate__animated animate__fadeIn">
-                <div class="bundle-creation-form p-3 rounded-4 border shadow-sm text-start bg-white">
+                <div class="bundle-creation-form p-3 rounded-4 border shadow-sm text-start ">
                     <label class="ls-1 small fw-bold text-primary text-uppercase mb-3 d-flex align-items-center">
                         <i class="fa-solid fa-id-card me-2"></i> Bundle Identity
                     </label>
