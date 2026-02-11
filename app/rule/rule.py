@@ -2768,6 +2768,7 @@ def bundle_from_filters():
     
     query = RuleModel.filter_rules(
         search=filters.get("search"),
+        search_field=filters.get("search_field", "all"), 
         author=filters.get("author"),
         sort_by=filters.get("sort_by"),
         rule_type=filters.get("rule_type"),
