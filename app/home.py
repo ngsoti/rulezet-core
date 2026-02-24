@@ -386,3 +386,10 @@ def UpdateVulnerabilities():
     if not success:
         return jsonify({"success": success, "message": msg, "toast_class": "danger-subtle"}), 500
     return jsonify({"success": success, "message": msg, "toast_class": "success-subtle"}), 200
+
+@home_blueprint.route('/admin/similar_rules', methods=['GET'])
+@login_required
+def similar_rules():
+    if not current_user.is_admin():
+        return render_template('access_denied.html')
+    return render_template('admin/similar_rule_update.html')

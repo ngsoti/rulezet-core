@@ -123,6 +123,10 @@
                         <a href="/admin/get_backups" class="dropdown-item py-2"><i
                               class="fa-solid fa-database fa-fw me-2 text-muted"></i>Backups</a>
                      </li>
+                     <li>
+                        <a href="/admin/similar_rules" class="dropdown-item py-2"><i
+                              class="fa-solid fa-link fa-fw me-2 text-muted"></i>Similar Rules</a>
+                     </li>
                   </ul>
                </li>
                {% endif %}
@@ -299,10 +303,21 @@
                </div>
             </div>
          </div> -->
-         <rule-filter-bar ref="filterBar" api-endpoint="/rule/get_rules_page_filter" @update:results="onRulesUpdated"
+         <!-- <rule-filter-bar ref="filterBar" api-endpoint="/rule/get_rules_page_filter" @update:results="onRulesUpdated"
             :current-user-is-authenticated="'{{current_user.is_authenticated}}'" @loading="search_is_loading = $event"
             :auto-fetch="false" :csrf-token="'{{ csrf_token() }}'">
-         </rule-filter-bar>
+         </rule-filter-bar> -->
+         <template v-if="showSearchContent">
+
+            <rule-filter-bar ref="filterBar" api-endpoint="/rule/get_rules_page_filter" @update:results="onRulesUpdated"
+               :current-user-is-authenticated="'{{current_user.is_authenticated}}'"
+               @loading="search_is_loading = $event" :auto-fetch="false" :csrf-token="'{{ csrf_token() }}'">
+            </rule-filter-bar>
+
+            <div class="results-wrapper">
+            </div>
+
+         </template>
 
          <div class="results-wrapper">
             <div class="d-flex justify-content-between align-items-center mb-4 px-2">
@@ -470,9 +485,14 @@
 
          function giveFocus() {
             setTimeout(() => {
+
                const input = document.getElementById("searchInputCaneva");
                if (input) {
+                  // apply a first fetch of the rules
+
                   input.focus();
+               } else {
+                  filterBar.value.fetchRules(1);
                }
             }, 400);
          }
@@ -492,8 +512,10 @@
          })
 
          const isSearchInitialized = ref(false);
+         const showSearchContent = ref(false);
 
          function initSearch() {
+            showSearchContent.value = true;
             giveFocus();
             if (!isSearchInitialized.value) {
                if (filterBar.value) {
@@ -531,7 +553,8 @@
 
             search_is_loading,
             filterBar,
-            initSearch
+            initSearch,
+            showSearchContent
          }
       },
    }).mount('#app')

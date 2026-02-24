@@ -14,7 +14,7 @@ from sqlalchemy import and_, case, or_
 from sqlalchemy.orm import joinedload
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-            
+from sqlalchemy.orm import aliased
 from app.rule_format.abstract_rule_type import rule_type_abstract
 from app.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult, load_all_rule_formats
 
@@ -354,150 +354,150 @@ def get_rule(id) -> Rule:
 
 
 
-import numpy as np
-import faiss
-from sklearn.feature_extraction.text import TfidfVectorizer
+# import numpy as np
+# import faiss
+# from sklearn.feature_extraction.text import TfidfVectorizer
 
-_INDEX = None
-_ID_MAP = []
-_VECTORIZER = None
+# _INDEX = None
+# _ID_MAP = []
+# _VECTORIZER = None
 
-def get_index():
-    global _INDEX, _ID_MAP, _VECTORIZER
+# def get_index():
+#     global _INDEX, _ID_MAP, _VECTORIZER
     
-    if _INDEX is None:
-        from .rule_core import Rule 
-        rules = Rule.query.filter(Rule.to_string.isnot(None)).all()
+#     if _INDEX is None:
+#         from .rule_core import Rule 
+#         rules = Rule.query.filter(Rule.to_string.isnot(None)).all()
         
-        if not rules:
-            return None, None, None
+#         if not rules:
+#             return None, None, None
 
-        texts = [r.to_string for r in rules]
+#         texts = [r.to_string for r in rules]
         
         
-        _VECTORIZER = TfidfVectorizer(
-            analyzer="word",
-            ngram_range=(1, 2),
-            max_features=10000, 
-            stop_words='english' 
-        )
+#         _VECTORIZER = TfidfVectorizer(
+#             analyzer="word",
+#             ngram_range=(1, 2),
+#             max_features=10000, 
+#             stop_words='english' 
+#         )
         
-        tfidf_matrix = _VECTORIZER.fit_transform(texts).toarray().astype('float32')
+#         tfidf_matrix = _VECTORIZER.fit_transform(texts).toarray().astype('float32')
 
         
-        faiss.normalize_L2(tfidf_matrix)
+#         faiss.normalize_L2(tfidf_matrix)
         
       
-        d = tfidf_matrix.shape[1]
-        _INDEX = faiss.IndexFlatIP(d)
-        _INDEX.add(tfidf_matrix)
+#         d = tfidf_matrix.shape[1]
+#         _INDEX = faiss.IndexFlatIP(d)
+#         _INDEX.add(tfidf_matrix)
         
         
-        _ID_MAP = [r.id for r in rules]
+#         _ID_MAP = [r.id for r in rules]
         
-    return _INDEX, _ID_MAP, _VECTORIZER
+#     return _INDEX, _ID_MAP, _VECTORIZER
 
-def refresh_similarity_index():
-    global _INDEX
-    _INDEX = None
-    return get_index()
+# def refresh_similarity_index():
+#     global _INDEX
+#     _INDEX = None
+#     return get_index()
 
-def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
+# def get_similar_rule(rule_id, limit=3, min_score=0.15) -> list:
    
-    index, id_map, vectorizer = get_index()
+#     index, id_map, vectorizer = get_index()
     
-    if index is None:
-        return []
+#     if index is None:
+#         return []
 
-    rule = Rule.query.get(rule_id)
-    if not rule or not rule.to_string:
-        return []
+#     rule = Rule.query.get(rule_id)
+#     if not rule or not rule.to_string:
+#         return []
 
-    target_vec = vectorizer.transform([rule.to_string]).toarray().astype('float32')
-    faiss.normalize_L2(target_vec)
+#     target_vec = vectorizer.transform([rule.to_string]).toarray().astype('float32')
+#     faiss.normalize_L2(target_vec)
 
-    k = min(len(id_map), limit * 5 + 1 if limit > 0 else len(id_map))
-    scores, indices = index.search(target_vec, k)
+#     k = min(len(id_map), limit * 5 + 1 if limit > 0 else len(id_map))
+#     scores, indices = index.search(target_vec, k)
 
-    results = []
-    for score, idx in zip(scores[0], indices[0]):
-        if idx == -1:
-            continue
+#     results = []
+#     for score, idx in zip(scores[0], indices[0]):
+#         if idx == -1:
+#             continue
             
-        candidate_id = id_map[idx]
+#         candidate_id = id_map[idx]
         
-        if candidate_id != rule_id and score >= min_score:
-            candidate = Rule.query.get(candidate_id)
+#         if candidate_id != rule_id and score >= min_score:
+#             candidate = Rule.query.get(candidate_id)
             
-            if candidate and candidate.format == rule.format:
-                results.append({
-                    **candidate.to_json(),
-                    "similarity": round(float(score), 3)
-                })
+#             if candidate and candidate.format == rule.format:
+#                 results.append({
+#                     **candidate.to_json(),
+#                     "similarity": round(float(score), 3)
+#                 })
                 
-                if limit > 0 and len(results) >= limit:
-                    break
+#                 if limit > 0 and len(results) >= limit:
+#                     break
 
-    return results
+#     return results
 
 
 
-def get_similar_rules_paginated(rule_id, page=1, per_page=10, min_score=0.15, search=None, sort_by="highest_match", pourcent=111):
-    index, id_map, vectorizer = get_index()
+# def get_similar_rules_paginated(rule_id, page=1, per_page=10, min_score=0.15, search=None, sort_by="highest_match", pourcent=111):
+#     index, id_map, vectorizer = get_index()
     
-    base_rule = Rule.query.get(rule_id)
-    if not base_rule or not base_rule.to_string or index is None:
-        return [], 0, 1
+#     base_rule = Rule.query.get(rule_id)
+#     if not base_rule or not base_rule.to_string or index is None:
+#         return [], 0, 1
 
-    target_vec = vectorizer.transform([base_rule.to_string]).toarray().astype('float32')
-    faiss.normalize_L2(target_vec)
-    all_scores, all_indices = index.search(target_vec, len(id_map))
+#     target_vec = vectorizer.transform([base_rule.to_string]).toarray().astype('float32')
+#     faiss.normalize_L2(target_vec)
+#     all_scores, all_indices = index.search(target_vec, len(id_map))
     
-    score_dict = {id_map[idx]: float(score) for score, idx in zip(all_scores[0], all_indices[0]) if idx != -1}
+#     score_dict = {id_map[idx]: float(score) for score, idx in zip(all_scores[0], all_indices[0]) if idx != -1}
 
-    query = Rule.query.filter(
-        Rule.id != base_rule.id,
-        Rule.format == base_rule.format,
-        Rule.to_string.isnot(None)
-    )
+#     query = Rule.query.filter(
+#         Rule.id != base_rule.id,
+#         Rule.format == base_rule.format,
+#         Rule.to_string.isnot(None)
+#     )
 
-    if search:
-        search_query = f"%{search}%"
-        query = query.filter(or_(
-            Rule.title.ilike(search_query),
-            Rule.description.ilike(search_query),
-            Rule.to_string.ilike(search_query)
-        ))
+#     if search:
+#         search_query = f"%{search}%"
+#         query = query.filter(or_(
+#             Rule.title.ilike(search_query),
+#             Rule.description.ilike(search_query),
+#             Rule.to_string.ilike(search_query)
+#         ))
 
-    candidates = query.all()
+#     candidates = query.all()
 
-    try:
-        pourcent_val = int(pourcent)
-        threshold = pourcent_val / 100 if 0 <= pourcent_val <= 100 else min_score
-    except:
-        threshold = min_score
+#     try:
+#         pourcent_val = int(pourcent)
+#         threshold = pourcent_val / 100 if 0 <= pourcent_val <= 100 else min_score
+#     except:
+#         threshold = min_score
 
-    scored_results = []
-    for candidate in candidates:
-        score = score_dict.get(candidate.id, 0)
+#     scored_results = []
+#     for candidate in candidates:
+#         score = score_dict.get(candidate.id, 0)
         
-        if score >= threshold:
-            data = candidate.to_json()
-            data["similarity"] = round(score, 4)
-            scored_results.append(data)
+#         if score >= threshold:
+#             data = candidate.to_json()
+#             data["similarity"] = round(score, 4)
+#             scored_results.append(data)
 
-    reverse_sort = (sort_by == "highest_match")
-    scored_results.sort(key=lambda x: x["similarity"], reverse=reverse_sort)
+#     reverse_sort = (sort_by == "highest_match")
+#     scored_results.sort(key=lambda x: x["similarity"], reverse=reverse_sort)
 
 
-    total_count = len(scored_results)
-    total_pages = max(1, math.ceil(total_count / per_page))
-    page = max(1, min(page, total_pages))
+#     total_count = len(scored_results)
+#     total_pages = max(1, math.ceil(total_count / per_page))
+#     page = max(1, min(page, total_pages))
     
-    start = (page - 1) * per_page
-    end = start + per_page
+#     start = (page - 1) * per_page
+#     end = start + per_page
     
-    return scored_results[start:end], total_count, total_pages
+#     return scored_results[start:end], total_count, total_pages
 
 
 
@@ -1219,12 +1219,37 @@ def remove_has_voted(vote, rule_id , id) -> bool:
 #   Filter  #
 #############
 
-def filter_rules(search=None, search_field="all", author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None, source=None, user_id=None, license=None, tags: list[str] | None = None) -> Rule:
+def filter_rules(search=None, search_field="all", author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None, source=None, user_id=None, license=None, tags: list[str] | None = None, exact_match=False) -> Rule:
     """Filter the rules with specific field targeting"""
     query = Rule.query
     
     if search:
         search = search.strip()
+
+
+
+        if exact_match is True:
+            print("go")
+
+            if search_field == "title":
+                # Strict case-sensitive equality
+                query = query.filter(Rule.title == search)
+
+            elif search_field == "content":
+                # Case-sensitive exact substring match
+                query = query.filter(Rule.to_string.like(f"%{search}%"))
+
+            else:
+                # If "all":
+                # Title = strict equality
+                # Content = case-sensitive substring
+                query = query.filter(
+                    or_(
+                        Rule.title == search,
+                        Rule.to_string.like(f"%{search}%")
+                    )
+                )
+
         search_lower = f"%{search.lower()}%"
         
         if search_field == "title":
@@ -2795,3 +2820,75 @@ def get_tags_for_rule(rule_id: int) -> List[Tag]:
 
 
     return query.all()
+
+
+
+def get_similarity_result(sid: str):
+    return SimilarResult.query.filter_by(uuid=sid).first()
+
+def get_similar_rules_query(rule_id):
+    """
+    Returns a query object for similarities related to a specific rule.
+    """
+    RuleSource = aliased(Rule)
+    RuleTarget = aliased(Rule)
+
+    # We return the query object itself, WITHOUT .all()
+    return db.session.query(RuleSimilarity, RuleSource, RuleTarget)\
+        .join(RuleSource, RuleSimilarity.rule_id == RuleSource.id)\
+        .join(RuleTarget, RuleSimilarity.similar_rule_id == RuleTarget.id)\
+        .filter(RuleSimilarity.rule_id == rule_id)\
+        .order_by(RuleSimilarity.score.desc())
+
+def get_top_global_duplicates_query(min_score=0.85):
+    """
+    Returns a query object for the highest similarities in the entire DB,
+    filtering out mirrored duplicates (A-B vs B-A).
+    """
+    RuleA = aliased(Rule)
+    RuleB = aliased(Rule)
+
+    return db.session.query(RuleSimilarity, RuleA, RuleB)\
+        .join(RuleA, RuleSimilarity.rule_id == RuleA.id)\
+        .join(RuleB, RuleSimilarity.similar_rule_id == RuleB.id)\
+        .filter(
+            RuleSimilarity.score >= min_score,
+            # Ensure Rule A ID is always lower than Rule B ID to prevent mirrors
+            RuleSimilarity.rule_id < RuleSimilarity.similar_rule_id 
+        )\
+        .order_by(RuleSimilarity.score.desc())
+
+def get_similarity_list_page(page: int = 1):
+    if current_user.is_admin():
+        return SimilarResult.query.paginate(page=page, per_page=20, max_per_page=20)
+    else :
+        return SimilarResult.query.filter_by(user_id=str(current_user.id)).paginate(page=page, per_page=20, max_per_page=20)
+    
+
+def delete_similarity_history(uuid: str):
+    try:
+        RuleSimilarity.query.filter_by(result_uuid=uuid).delete()
+
+        
+        SimilarResult.query.filter_by(uuid=uuid).delete()
+
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        return False
+    
+
+def get_similar_rule(rule_id: int = None, number: int = None):
+    query = db.session.query(RuleSimilarity, Rule).join(
+        Rule, RuleSimilarity.similar_rule_id == Rule.id
+    ).order_by(RuleSimilarity.score.desc())
+
+    if rule_id:
+        query = query.filter(RuleSimilarity.rule_id == rule_id)
+    
+    if number:
+        query = query.limit(number)
+    
+    return query.all()
+   

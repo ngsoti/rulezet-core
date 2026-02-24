@@ -19,6 +19,7 @@ from . import rule_core as RuleModel
 from ..bundle import bundle_core as BundleModel
 from ..rule_from_github.import_rule import session_class as SessionModel
 from ..rule_from_github.update_rule import update_class as UpdateModel
+from .similar_rules import similarity_class as SimilarityModel
 from ..account import account_core as AccountModel
 
 from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for
@@ -107,32 +108,32 @@ def get_rules_page() -> jsonify:
     return {"message": "No Rule"}
 
 
-@rule_blueprint.route("/get_similar_rule", methods=["GET"])
-def get_similar_rules() -> jsonify:
-    """
-    Return similar rules with similarity index
-    """
+# @rule_blueprint.route("/get_similar_rule", methods=["GET"])
+# def get_similar_rules() -> jsonify:
+#     """
+#     Return similar rules with similarity index
+#     """
 
-    rule_id = request.args.get("rule_id", type=int)
+#     rule_id = request.args.get("rule_id", type=int)
 
-    if not rule_id:
-        return jsonify({
-            "message": "Missing rule_id",
-            "similar_rules": []
-        }), 400
+#     if not rule_id:
+#         return jsonify({
+#             "message": "Missing rule_id",
+#             "similar_rules": []
+#         }), 400
 
-    similar_rules = RuleModel.get_similar_rule(rule_id)
+#     similar_rules = RuleModel.get_similar_rule(rule_id)
 
-    if not similar_rules:
-        return jsonify({
-            "message": "No similar rules found",
-            "similar_rules": []
-        }), 200
+#     if not similar_rules:
+#         return jsonify({
+#             "message": "No similar rules found",
+#             "similar_rules": []
+#         }), 200
 
-    return jsonify({
-        "message": "Success",
-        "similar_rules": similar_rules
-    }), 200
+#     return jsonify({
+#         "message": "Success",
+#         "similar_rules": similar_rules
+#     }), 200
 
 
 @rule_blueprint.route("/get_rules_page_filter_with_id", methods=['GET'])
@@ -169,6 +170,9 @@ def get_rules_page_filter() -> jsonify:
     
     search = request.args.get("search", None)
     search_field = request.args.get("search_field", "all") # 'all', 'title', 'content'
+    exact_match = request.args.get("exact_match", False)
+    if exact_match == "true":
+        exact_match = True
     
     author = request.args.get("author", None)
     sort_by = request.args.get("sort_by", "newest")
@@ -194,7 +198,8 @@ def get_rules_page_filter() -> jsonify:
         source=source, 
         user_id=user_id, 
         license=license, 
-        tags=tag_list
+        tags=tag_list,
+        exact_match=exact_match
     )
     
     total_rules = query.count()
@@ -2810,3 +2815,210 @@ def bundle_from_filters():
 
     except Exception as e:
         return jsonify({"message": str(e)}), 500
+    
+
+#####################
+#   Similar rules   #
+#####################
+
+@rule_blueprint.route("/similar_get_info_session/<sid>", methods=['GET'])
+@login_required
+def similar_get_info_session(sid):
+    for s in SimilarityModel.sessions:
+        if s.uuid == sid:
+            return jsonify(s.info)
+
+    r = RuleModel.get_similarity_result(sid)
+    if r:
+        if not r.info:
+            return jsonify({"message": "No details available"}), 200
+        
+        try:
+           
+            return jsonify(json.loads(r.info))
+        except (json.JSONDecodeError, TypeError):
+            return jsonify({"info": r.info, "status": "completed"})
+
+    return jsonify({"message": "Session Not found", 'toast_class': "danger-subtle"}), 404
+
+
+@rule_blueprint.route("/similar_loading_status/<sid>", methods=['GET'])
+@login_required
+def similar_loading_status(sid):
+    is_finished = request.args.get('is_finished', 'false', type=str)
+    if not is_finished == 'true':
+        for s in SimilarityModel.sessions:
+            if s.uuid == sid:
+                return jsonify(s.status())
+        
+    r = RuleModel.get_similarity_result(sid)
+    if r:
+        loc = r.to_json()
+        if not loc:
+            return {"error": "Session not found"}, 404
+
+        if "total" not in loc:
+            loc["total"] = 100
+
+        loc["remaining"] = 0
+        
+
+        return loc
+    return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
+
+
+@rule_blueprint.route("/similar_rules/update", methods=['GET' ,'POST'])
+@login_required
+def similar_update():
+    if request.method == "POST":
+        # same but we want to pass the params
+        data = request.json
+        similar_session = SimilarityModel.Similarity_class(current_user, "Update similar rules", mode="filter", params=data)
+        similar_session.start()
+        SimilarityModel.sessions.append(similar_session)
+
+        return {
+            "message": "Update check started successfully. Processing repositories...",
+            "session_uuid": similar_session.uuid,
+            "toast_class": "success-subtle"
+        }, 201
+    else:
+        similar_session = SimilarityModel.Similarity_class(current_user, "Update similar rules", mode="global")
+        similar_session.start()
+        SimilarityModel.sessions.append(similar_session)
+
+        return {
+            "message": "Update check started successfully. Processing repositories...",
+            "session_uuid": similar_session.uuid,
+            "toast_class": "success-subtle"
+        }, 201
+
+
+@rule_blueprint.route("/similar_loading/<sid>", methods=['GET'])
+@login_required
+def similar_loading(sid):
+    
+    for s in SimilarityModel.sessions:
+        if s.uuid == sid:
+            return render_template("rule/compare_rules/similar_rule.html", sid=sid)
+    r = RuleModel.get_similarity_result(sid)
+    if r:
+        return render_template("rule/compare_rules/similar_rule.html", sid=sid)
+    return render_template("404.html"), 404
+
+
+@rule_blueprint.route("/similar_detail/<int:rule_id>")
+@login_required
+def similar_detail(rule_id):
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    
+    # We call the function that returns the Query, then paginate
+    pagination = RuleModel.get_similar_rules_query(rule_id).paginate(page=page, per_page=per_page)
+
+    result = []
+    for sim, rule_source, rule_target in pagination.items:
+        result.append({
+            "rule_id": rule_target.id,
+            "title": rule_target.title or f"Rule #{rule_target.id}",
+            "score": sim.score,
+            "content": rule_target.to_string if hasattr(rule_target, 'to_string') else "",
+            "base_content": rule_source.to_string if hasattr(rule_source, 'to_string') else ""
+        })
+        
+    return jsonify({
+        "items": result,
+        "has_next": pagination.has_next,
+        "total": pagination.total,
+        "current_page": pagination.page
+    })
+
+@rule_blueprint.route("/similar_global_duplicates")
+@login_required
+def similar_global_duplicates():
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    pagination = RuleModel.get_top_global_duplicates_query(min_score=0.80).paginate(page=page, per_page=per_page)
+
+    result = []
+    for sim, rule_a, rule_b in pagination.items:
+        result.append({
+            "rule_a_id": rule_a.id,
+            "rule_a_title": rule_a.title or f"Rule #{rule_a.id}",
+            "rule_a_content": rule_a.to_string if hasattr(rule_a, 'to_string') else "",
+            "rule_b_id": rule_b.id,
+            "rule_b_title": rule_b.title or f"Rule #{rule_b.id}",
+            "rule_b_content": rule_b.to_string if hasattr(rule_b, 'to_string') else "",
+            "score": sim.score
+        })
+        
+    return jsonify({
+        "items": result,
+        "has_next": pagination.has_next,
+        "total": pagination.total,
+        "current_page": pagination.page
+    })
+@rule_blueprint.route("/similar_detail_page/<int:rule_id>")
+@login_required
+def similar_detail_page(rule_id):
+    return render_template("rule/compare_rules/detail_similar.html", rule_id=rule_id)
+
+@rule_blueprint.route("/history_updater/list", methods=['GET'])
+@login_required
+def history_updater_list():
+    page = request.args.get('page', 1, type=int)
+    github_importer_list = RuleModel.get_similarity_list_page(page)
+
+    return {"history": [g.to_json() for g in github_importer_list], 
+            "total_history": github_importer_list.total, 
+            "total_pages": github_importer_list.pages}, 200
+
+@rule_blueprint.route("/history_updater/list_in_progress", methods=['GET'])
+@login_required
+def history_updater_list_in_progress():
+    is_admin = current_user.is_admin()
+    current_user_id = current_user.id
+    unique_sessions = {
+        s.uuid: {"uuid": s.uuid, "info": s.info, "date_time": s.start_time, "mode" : s.mode, "step" : s.status_message, "percentage" : s.indexing_progress} 
+        for s in SimilarityModel.sessions
+        if is_admin or s.current_user.id == current_user_id
+    }
+
+    return {"history": list(unique_sessions.values())}, 200
+
+@rule_blueprint.route("/history_updater/delete/<uuid>", methods=['GET'])
+@login_required
+def history_updater_delete(uuid):
+    if current_user.is_admin() == False:
+        return {"message": "Access denied", 'toast_class': "danger-subtle", "success": False}, 403
+    success = RuleModel.delete_similarity_history(uuid)
+    if not success:
+        return {"message": "Failled to delete history", 'toast_class': "danger-subtle","success": False}, 500
+    return {"message": "History deleted", 'toast_class': "success-subtle", "success": True}, 200
+
+
+
+@rule_blueprint.route("/similarity", methods=['GET'])
+def similarity():
+    rule_id = request.args.get('rule_id', None, type=int)
+    number = request.args.get('number', None, type=int)
+    
+    results = RuleModel.get_similar_rule(rule_id, number)
+    
+    if not results:
+        return {"success": False, "rules": []}, 200
+
+    formatted_rules = []
+    for similarity_entry, rule_info in results:
+        formatted_rules.append({
+            "id": rule_info.id,          
+            "name": rule_info.title,    
+            "format": rule_info.format,  
+            "score": similarity_entry.score,
+            "description": rule_info.description,
+            "uuid": rule_info.uuid,
+            "author": rule_info.author
+        })
+
+    return {"success": True, "rules": formatted_rules}, 200

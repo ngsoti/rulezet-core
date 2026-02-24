@@ -1,83 +1,230 @@
-{% extends 'base.html' %}
+import datetime
+import json
+import numpy as np
+import faiss
+from uuid import uuid4
+from queue import Queue
+from threading import Thread
+from concurrent.futures import ProcessPoolExecutor
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sqlalchemy import delete, or_
 
-{% block content %}
-<div id="main-container" class="container mt-4">
+from ... import db
+from ...db_class.db import Rule, SimilarResult, RuleSimilarity, User
+from flask import current_app
 
-    <rule-filter-bar ref="filterBar" api-endpoint="/rule/get_rules_page_filter" :rules-formats="rules_formats"
-        @update:results="onRulesUpdated" @loading="search_is_loading = $event">
-    </rule-filter-bar>
+sessions = list()
 
-    <template v-if="!search_is_loading">
-        <div v-if="rules_list.length > 0">
+def _parallel_fuzzy_worker(batch_data):
+"""
+Worker executed on multiple CPU cores via ProcessPoolExecutor.
+"""
+from rapidfuzz import fuzz
+source_id, source_text, candidates, min_score, uuid = batch_data
+results = []
 
-            <pagination-component :current-page="current_page" :total-pages="total_pages" @change-page="changePage">
-            </pagination-component>
+source_id = int(source_id)
+for sim_id, target_text in candidates:
+sim_id = int(sim_id)
+if source_id == sim_id:
+continue
 
-            <div v-for="rule in rules_list" :key="rule.id" class="card mb-3 shadow-sm">
-                <div class="card-body">
-                    <h5 class="fw-bold">[[ rule.title ]]</h5>
-                    <p class="text-muted small">[[ rule.description ]]</p>
-                </div>
-            </div>
+if source_text == target_text:
+final_score = 1.0
+else:
+score_ratio = fuzz.ratio(source_text, target_text)
+final_score = score_ratio / 100.0
 
-            <pagination-component :current-page="current_page" :total-pages="total_pages" @change-page="changePage">
-            </pagination-component>
+if final_score >= min_score:
+results.append({
+"rule_id": source_id,
+"similar_rule_id": sim_id,
+"score": round(final_score, 4),
+"result_uuid": uuid
+})
+return results
 
-        </div>
-        <div v-else class="text-center py-5">No rules found.</div>
-    </template>
+class Similarity_class:
+def __init__(self, user: User, info, mode="global", target_rule_id=None, params=None) -> None:
+self.uuid = str(uuid4())
+self.thread_count = 4
+self.jobs = Queue(maxsize=0)
+self.threads = []
+self.stopped = False
 
-    <div v-else class="text-center py-5">
-        <div class="spinner-border text-primary"></div>
-    </div>
-</div>
-{% endblock %}
+self.current_user = user
+self.user_id = user.id
+self.info = info
+self.mode = mode
+self.target_rule_id = target_rule_id
+self.params = params # Contient {mode: 'all'/'partial', selected_ids: [], excluded_ids: [], filters: {}}
 
-{% block script %}
-<script type="module">
-    const { createApp, ref, onMounted } = Vue
-    import RuleFilterBar from '/static/js/rule/ruleFilterBar.js';
-    import PaginationComponent from '/static/js/rule/paginationComponent.js';
+self.top_k = 12
+self.min_score = 0.15
+self.total = 0
+self.similar_pairs_found = 0
+self.total_percent = 0
+self.status_message = "Initializing..."
+self.start_time = datetime.datetime.now(tz=datetime.timezone.utc)
 
-    createApp({
-        delimiters: ['[[', ']]'],
-        components: {
-            'rule-filter-bar': RuleFilterBar,
-            'pagination-component': PaginationComponent
-        },
-        setup() {
-            const filterBar = ref(null);
-            const rules_list = ref([]);
-            const current_page = ref(1);
-            const total_pages = ref(1);
-            const search_is_loading = ref(true);
-            const rules_formats = ref([]);
+print(f"New Similarity session started: {self.uuid}")
 
-            const onRulesUpdated = (results) => {
-                rules_list.value = results.rules.rule || [];
-                total_pages.value = results.total_pages;
-                current_page.value = results.current_page;
-            };
+def start(self):
+self.status_message = "Preparing rules and Index..."
+app_obj = current_app._get_current_object()
 
-            // Cette fonction fait le lien entre la Pagination et le Filtre
-            const changePage = (page) => {
-                filterBar.value.fetchRules(page);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
+with app_obj.app_context():
+# Create the result entry in DB
+new_res = SimilarResult(
+uuid=self.uuid,
+info=json.dumps(self.info) if isinstance(self.info, dict) else str(self.info),
+mode=self.mode,
+user_id=self.user_id
+)
+db.session.add(new_res)
+db.session.commit()
 
-            const fetchFormats = async () => {
-                const res = await fetch('/rule/get_rules_formats');
-                const data = await res.json();
-                rules_formats.value = data.formats;
-            };
+# PHASE 1: Data Preparation
+# On récupère TOUTES les règles pour l'index FAISS (le dictionnaire de comparaison)
+rules_data = db.session.query(Rule.id, Rule.to_string).filter(Rule.to_string.isnot(None)).all()
+if not rules_data:
+self.stopped = True
+return
 
-            onMounted(fetchFormats);
+num_rules = len(rules_data)
+rule_ids = np.array([r[0] for r in rules_data])
+content_list = [(r[1] or "").strip() for r in rules_data]
+content_map = {r[0]: content_list[i] for i, r in enumerate(rules_data)}
 
-            return {
-                filterBar, rules_list, current_page, total_pages,
-                search_is_loading, rules_formats, onRulesUpdated, changePage
-            }
-        }
-    }).mount('#main-container')
-</script>
-{% endblock %}
+# PHASE 2: Vectorization & FAISS
+vectorizer = TfidfVectorizer(max_features=3500, stop_words='english')
+tfidf_matrix = vectorizer.fit_transform(content_list).toarray().astype('float32')
+faiss.normalize_L2(tfidf_matrix)
+
+d = tfidf_matrix.shape[1]
+index = faiss.IndexHNSWFlat(d, 32)
+index.add(tfidf_matrix)
+
+# PHASE 3: Determine Target Rules (Quelles règles on va analyser)
+target_indices = []
+
+if self.mode == "global":
+db.session.execute(delete(RuleSimilarity))
+db.session.commit()
+target_indices = range(num_rules)
+
+elif self.mode == "filter" and self.params:
+# Logique de sélection filtrée
+p_mode = self.params.get('mode')
+selected_ids = self.params.get('selected_ids', [])
+excluded_ids = self.params.get('excluded_ids', [])
+
+if p_mode == 'partial':
+# On ne traite que les IDs sélectionnés manuellement
+target_indices = [i for i, rid in enumerate(rule_ids) if rid in selected_ids]
+else:
+# Mode 'all' (tout le dataset filtré sauf les exclus)
+# Note: Si tu as des filtres complexes (Backend Filters), il faudrait refaire la query ici
+# Pour l'instant, on traite l'exclusion sur l'ensemble global
+target_indices = [i for i, rid in enumerate(rule_ids) if rid not in excluded_ids]
+
+elif self.target_rule_id:
+# Mode single rule
+target_indices = [i for i, rid in enumerate(rule_ids) if rid == self.target_rule_id]
+
+if not target_indices:
+self.stopped = True
+self.status_message = "No rules to process."
+return
+
+# PHASE 4: Queue Jobs
+batch_size = 100
+job_index = 0
+for i in range(0, len(target_indices), batch_size):
+batch_indices = target_indices[i : i + batch_size]
+self.jobs.put((job_index, batch_indices))
+job_index += 1
+
+self.total = job_index
+
+# Start Workers
+for _ in range(self.thread_count):
+worker = Thread(target=self.process, args=[app_obj, tfidf_matrix, index, rule_ids, content_map])
+worker.daemon = True
+worker.start()
+self.threads.append(worker)
+
+def status(self):
+if self.jobs.empty():
+self.stop()
+total = self.total
+remaining = self.jobs.qsize()
+complete = total - remaining
+self.total_percent = int((complete / total) * 100) if total > 0 else 0
+return {
+'id': self.uuid,
+'total': total,
+'complete': complete,
+'remaining': remaining,
+'stopped': self.stopped,
+'percentage': self.total_percent,
+'status_message': self.status_message,
+'similar_pairs_found': self.similar_pairs_found
+}
+
+def stop(self):
+self.stopped = True
+self.jobs.queue.clear()
+for worker in self.threads:
+worker.join(3.5)
+self.threads.clear()
+self.save_final_stats()
+if self in sessions:
+sessions.remove(self)
+
+def process(self, loc_app, tfidf_matrix, index, rule_ids, content_map):
+with ProcessPoolExecutor(max_workers=2) as executor:
+while not self.jobs.empty() and not self.stopped:
+try:
+_, batch_indices = self.jobs.get(timeout=1)
+vectors = tfidf_matrix[batch_indices]
+_, neighbors = index.search(vectors, self.top_k)
+
+tasks = []
+for k, idx_in_matrix in enumerate(batch_indices):
+source_id = rule_ids[idx_in_matrix]
+candidates = []
+for sim_idx in neighbors[k]:
+if sim_idx == -1: continue
+cid = rule_ids[sim_idx]
+candidates.append((cid, content_map[cid]))
+tasks.append((source_id, content_map[source_id], candidates, self.min_score, self.uuid))
+
+chunk_results = list(executor.map(_parallel_fuzzy_worker, tasks))
+flat_entries = [item for sublist in chunk_results for item in sublist]
+
+with loc_app.app_context():
+if flat_entries and not self.stopped:
+db.session.bulk_insert_mappings(RuleSimilarity, flat_entries)
+db.session.commit()
+self.similar_pairs_found += len(flat_entries)
+
+self.status_message = f"Processing batch... {self.jobs.qsize()} left"
+self.jobs.task_done()
+except Exception as e:
+if not self.jobs.empty():
+self.jobs.task_done()
+print(f"Error in worker: {e}")
+return True
+
+def save_final_stats(self):
+duration = int((datetime.datetime.now(tz=datetime.timezone.utc) - self.start_time).total_seconds())
+try:
+res = SimilarResult.query.filter_by(uuid=self.uuid).first()
+if res:
+res.time_taken = duration
+res.similar_pairs_found = self.similar_pairs_found
+res.total_rules_processed = self.total
+db.session.commit()
+except Exception:
+db.session.rollback()

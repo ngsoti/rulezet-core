@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-4" id="main-container" v-cloak>
+    <template v-if="fetch_all_pages">
+        <div class="mb-4 border-bottom pb-3">
+            <h2 class="mb-3 text-center text-primary fw-bold">Update Rule Similarities</h2>
+            <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+        </div>
+
+        <ul class="nav nav-underline justify-content-center w-100 mb-4" id="updateTabs" role="tablist">
+            <li class="nav-item flex-fill text-center"><a class="nav-link active" data-bs-toggle="tab"
+                    href="#global-pane">Global Update</a></li>
+            <li class="nav-item flex-fill text-center"><a class="nav-link" data-bs-toggle="tab"
+                    href="#filtered-pane">Filtered Results</a></li>
+            <li class="nav-item flex-fill text-center"><a class="nav-link" data-bs-toggle="tab"
+                    href="#history-pane">History <span class="badge bg-danger rounded-pill ms-1"
+                        v-cloak>[[running_sessions.length]]</span></a>
+
+            </li>
+        </ul>
+
+        <div class="tab-content" id="updateTabsContent">
+            <!-- Global Update -->
+            <div class="tab-pane fade show active" id="global-pane" role="tabpanel">
+                <div class="card border-0 shadow-sm p-4 text-center">
+                    <h5 class="fw-bold">Process All Rules</h5>
+                    <template v-if="running_sessions.length > 0">
+                        <div class="alert alert-secondary d-inline-block px-4 mt-3">
+                            A session is already running. You can check the history for more details.</div>
+                    </template>
+                    <template v-else>
+                        <button v-if="!is_loading_" class="btn btn-dark rounded-pill px-4 mt-3"
+                            @click="runUpdate('global')">Launch Global Update</button>
+                        <button v-else class="btn btn-dark rounded-pill px-4 mt-3" disabled><span
+                                class="spinner-border spinner-border-sm me-2"></span>Processing...</button>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Filtered Results -->
+            <div class="tab-pane fade" id="filtered-pane" role="tabpanel">
+                <div class="card border-0 shadow-sm p-4">
+                    <h5 class="fw-bold mb-4">Batch Processing Interface</h5>
+
+                    <rule-selection-table api-endpoint="/rule/get_rules_page_filter"
+                        submit-endpoint="/rule/similar_rules/update" is-similarity-update="true"
+                        csrf-token="{{ csrf_token() }}">
+                    </rule-selection-table>
+
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="tab-pane fade" id="history-pane" role="tabpanel">
+                <div class="card border-0 shadow-sm p-4">
+                    <h5 class="fw-bold text-center mb-4">Update History</h5>
+
+                    <!-- In progress-->
+                    <button type="button" class="btn btn-outline-primary float-end position-relative"
+                        data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                        Running
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                            v-cloak>
+                            [[running_sessions.length]]
+                            <span class="visually-hidden">unread messages</span>
+                        </span>
+                    </button>
+                    <div class="modal fade" id="staticBackdrop" tabindex="-1" aria-labelledby="staticBackdropLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Running Sessions</h1>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th class="text-center">Date & Time</th>
+                                                    <th class="text-center">Step</th>
+                                                    <th class="text-center">Mode</th>
+                                                    <th class="text-center">Description</th>
+                                                    <th class="text-end pe-4">%</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Import sessions -->
+                                                <tr v-for="(running, index) in running_sessions"
+                                                    :key="'import-' + index" @click="goto(running.uuid)"
+                                                    style="cursor: pointer;" class="table-info">
+                                                    <td class="text-center">
+                                                        [[ formatDate(running.date_time) || running.date_time || 'N/A'
+                                                        ]]
+                                                    </td>
+                                                    <td class="text-center text-capitalize">[[ running.step ||
+                                                        'N/A' ]]</td>
+                                                    <td class="text-center">
+                                                        <!-- badge by mode global or filtered -->
+                                                        <span
+                                                            :class="['badge rounded-pill px-3', running.mode === 'global' ? 'bg-primary' : 'bg-info text-dark']">
+                                                            [[ running.mode.toUpperCase() ]]
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        [[ running.info || 'N/A' ]]
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress">
+                                                            <div class="progress-bar bg-info" role="progressbar"
+                                                                :style="'width: ' + running.percentage + '%'"
+                                                                :aria-valuenow="running.percentage" aria-valuemin="0"
+                                                                aria-valuemax="100"></div>
+
+                                                        </div>
+                                                        <span>
+                                                            [[ running.percentage || 'N/A' ]] %
+                                                        </span>
+                                                    </td>
+                                                </tr>
+
+                                                <!-- No sessions -->
+                                                <tr v-if="running_sessions.length === 0">
+                                                    <td colspan="5" class="text-center text-muted py-3">
+                                                        No running sessions at the moment.
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- History-->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">Date & Time</th>
+                                    <th>Mode</th>
+                                    <th>Description</th>
+                                    <th class="text-center">Processed</th>
+                                    <th class="text-center">Pairs</th>
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in history_list" :key="item.uuid" @click="goto(item.uuid)"
+                                    style="cursor: pointer;">
+                                    <td class="ps-4">
+                                        <div class="fw-bold">[[ formatDate(item.date) ]]</div>
+                                        <div class="small text-muted">[[ formatTime(item.date) ]]</div>
+                                    </td>
+                                    <td>
+                                        <span
+                                            :class="['badge rounded-pill px-3', item.mode === 'global' ? 'bg-primary' : 'bg-info text-dark']">
+                                            [[ item.mode.toUpperCase() ]]
+                                        </span>
+                                    </td>
+                                    <td class="small text-truncate" style="max-width: 200px;">[[ item.info ]]</td>
+                                    <td class="text-center fw-semibold">[[ item.total_rules_processed ]]</td>
+                                    <td class="text-center">[[ item.similar_pairs_found ]]</td>
+                                    <td class="text-end pe-4" @click.stop>
+                                        <button class="btn btn-link text-danger p-0" @click="prepDelete(item, index)">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="history_list.length === 0">
+                                    <td colspan="6" class="text-center py-5 text-muted">No records found.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div v-if="total_pages > 1" class="mt-4">
+                        <pagination-component :current-page="current_page" :total-pages="total_pages"
+                            @change-page="changePage"></pagination-component>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;" v-if="itemToDelete">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">Confirm Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body py-4 text-center">
+                        <div class="text-danger mb-3"><i class="fas fa-exclamation-triangle fa-3x"></i></div>
+                        <p class="mb-0">Are you sure you want to delete this record?<br>
+                            <strong>[[ itemToDelete.uuid.substring(0,8) ]]...</strong>
+                        </p>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 justify-content-center">
+                        <button type="button" class="btn btn-light rounded-pill px-4"
+                            data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-danger rounded-pill px-4" @click="confirmDelete">Confirm Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    <template v-else>
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, onMounted, computed, nextTick } = Vue;
+    import { create_message, message_list } from '/static/js/toaster.js';
+    import PaginationComponent from '/static/js/rule/paginationComponent.js';
+    import RuleSelectionTable from '/static/js/rule/ruleSelectionTable.js';
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: {
+            'pagination-component': PaginationComponent,
+            'rule-selection-table': RuleSelectionTable
+        },
+        setup() {
+            const fetch_all_pages = ref(false);
+
+            async function init() {
+                fetch_all_pages.value = false
+
+                await Promise.all([
+                    fetchHistory(1),
+                    fetchInProgress()
+                ])
+                await nextTick();
+
+                fetch_all_pages.value = true
+            }
+
+            onMounted(() => {
+                init()
+            })
+
+
+
+
+
+            /**
+             * #################
+             * # Fetch History #
+             * #################
+             * */
+            // History
+
+            const history_list = ref([]);
+            const current_page = ref(1);
+            const total_pages = ref(1);
+
+            async function fetchHistory(page) {
+                const res = await fetch(`/rule/history_updater/list?page=${page}`);
+                const data = await res.json();
+                if (res.status === 200) {
+                    history_list.value = data.history || [];
+                    total_pages.value = data.total_pages || 1;
+                    current_page.value = page;
+                } else {
+                    history_list.value = [];
+                    total_pages.value = 1;
+                    current_page.value = 1;
+                    create_message("Error fetching history", "danger-subtle");
+                }
+            }
+
+            // In progress
+
+            const running_sessions = ref({});
+
+            async function fetchInProgress() {
+                const res = await fetch(`/rule/history_updater/list_in_progress`);
+                const data = await res.json();
+                if (res.status === 200) {
+                    running_sessions.value = data.history || {};
+                }
+            }
+
+            /**
+             * ##################
+             * # Action History #
+             * ##################
+             * */
+
+            const itemToDelete = ref(null);
+            const indexToDelete = ref(null);
+            let bsModal = null;
+            const prepDelete = (item, index) => {
+                itemToDelete.value = item;
+                indexToDelete.value = index;
+                if (!bsModal) bsModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+                bsModal.show();
+            };
+
+            async function confirmDelete() {
+                try {
+                    const res = await fetch(`/rule/history_updater/delete/${itemToDelete.value.uuid}`);
+                    if (res.ok) {
+                        history_list.value.splice(indexToDelete.value, 1);
+                        create_message("History deleted", "success-subtle");
+                    }
+                } catch (e) {
+                    create_message("Error during deletion", "danger-subtle");
+                } finally {
+                    bsModal.hide();
+                    itemToDelete.value = null;
+                }
+            };
+
+            /**
+             * #################
+             * # Global Update #
+             * #################
+             * */
+
+            const is_loading_ = ref(false);
+            async function runUpdate(mode) {
+                is_loading_.value = true;
+                const res = await fetch('/rule/similar_rules/update');
+                if (res.status === 201) {
+                    let loc = await res.json();
+                    window.location.href = "/rule/similar_loading/" + loc["session_uuid"];
+                }
+                is_loading_.value = false;
+            };
+
+            /**
+             * ################
+             * # Utilities    #
+             * ################
+             * */
+
+            const changePage = (p) => fetchHistory(p);
+            const goto = (uuid) => window.location.href = `/rule/similar_loading/${uuid}`;
+            const formatDate = (d) => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            const formatTime = (d) => new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+            return {
+                is_loading_, history_list, current_page, total_pages,
+                formatDate, formatTime, fetchHistory, changePage, goto,
+                prepDelete, confirmDelete, itemToDelete,
+                message_list, fetch_all_pages, running_sessions, fetchInProgress, runUpdate,
+                RuleSelectionTable
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

@@ -14,7 +14,9 @@ const RuleFilterBar = {
         hiddenFields: { type: Array, default: () => [] },
         sourceRules: { type: String, default: '' },
         csrfToken: { type: String, default: '' },
-        currentUserIsAuthenticated: { type: Boolean, default: false }
+        currentUserIsAuthenticated: { type: Boolean, default: false },
+        showExport: { type: Boolean, default: true },
+        exactMatch: { type: Boolean, default: false } 
     },
     emits: ['update:results', 'loading'],
     delimiters: ['[[', ']]'],
@@ -28,6 +30,7 @@ const RuleFilterBar = {
     setup(props, { emit }) {
         const searchQuery = Vue.ref('');
         const searchField = Vue.ref('all'); // 'all', 'title', 'content'
+        const exactMatch = Vue.ref(props.exactMatch);
         const sortBy = Vue.ref('newest');
         const ruleType = Vue.ref('');
         const searchIsLoading = Vue.ref(false);
@@ -72,6 +75,7 @@ const RuleFilterBar = {
             params.append('page', page.toString());
             params.append('search', searchQuery.value || '');
             params.append('search_field', searchField.value);
+            params.append('exact_match', exactMatch.value ? 'true' : 'false');
             params.append('author', props.authorFilter || '');
 
             if (isVisible('sort')) params.append('sort_by', sortBy.value);
@@ -128,7 +132,8 @@ const RuleFilterBar = {
         return {
             searchQuery, searchField, sortBy, ruleType, selectedSourceNames, 
             selectedVulnerabilityNames, selectedLicenseNames, selectedTagNames,
-            searchIsLoading, rulesFormats, fetchRules, clearSearch, isVisible, hasActiveFilters, total_rules_count, csrfToken, current_user_is_authenticated
+            searchIsLoading, rulesFormats, fetchRules, clearSearch, isVisible, hasActiveFilters, total_rules_count, csrfToken, current_user_is_authenticated,
+            exactMatch
         };
     },
     template: `
@@ -141,27 +146,53 @@ const RuleFilterBar = {
             <div class="row g-3">
                 <div :class="isVisible('sort') || isVisible('format') ? 'col-md-6' : 'col-md-12'" v-if="isVisible('search')">
                     <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Keywords</label>
-                    <div class="input-group input-group-sm position-relative shadow-sm" style="border-radius: 10px; overflow: hidden; background-color: var(--bg-color);">
-                        <select v-model="searchField" class="form-select border-0  text-muted small fw-bold" @change="fetchRules(1)"
+
+                    <!-- INPUT GROUP -->
+                    <div class="input-group input-group-sm position-relative shadow-sm"
+                        style="border-radius: 10px; overflow: hidden; background-color: var(--bg-color);">
+
+                        <select v-model="searchField"
+                                class="form-select border-0 text-muted small fw-bold"
+                                @change="fetchRules(1)"
                                 style="max-width: 100px; font-size: 0.75rem; border-right: 1px solid; background-color: var(--bg-color); cursor: pointer;">
                             <option value="all">All</option>
                             <option value="title">Title</option>
                             <option value="content">Content</option>
                         </select>
 
-                        <span class="input-group-text border-0  text-muted" style="min-width: 40px; justify-content: center; background-color: var(--bg-color);">
+                        <span class="input-group-text border-0 text-muted"
+                            style="min-width: 40px; justify-content: center; background-color: var(--bg-color);">
                             <div v-if="searchIsLoading" class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                            <i v-else class="fa-solid fa-magnifying-glass" ></i>
+                            <i v-else class="fa-solid fa-magnifying-glass"></i>
                         </span>
-                        
-                        <input type="text" v-model="searchQuery" @keyup.enter="fetchRules(1)" 
-                            class="form-control border-0 pe-5" :placeholder="placeholder" 
-                            style="height: 38px;" :disabled="searchIsLoading">
-                        
-                        <span v-if="searchQuery && !searchIsLoading" @click="clearSearch" 
-                              class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted cursor-pointer" style="z-index: 5;">
+
+                        <input type="text"
+                            v-model="searchQuery"
+                            @keyup.enter="fetchRules(1)"
+                            class="form-control border-0 pe-5"
+                            :placeholder="placeholder"
+                            style="height: 38px;"
+                            :disabled="searchIsLoading">
+
+                        <!-- Clear button -->
+                        <span v-if="searchQuery && !searchIsLoading"
+                            @click="clearSearch"
+                            class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted cursor-pointer"
+                            style="z-index: 5;">
                             <i class="fa-solid fa-circle-xmark opacity-50"></i>
                         </span>
+                    </div>
+
+                    <!-- EXACT MATCH SWITCH (moved outside input group) -->
+                    <div class="form-check form-switch mt-2 ms-1">
+                        <input class="form-check-input"
+                            type="checkbox"
+                            v-model="exactMatch"
+                            @change="fetchRules(1)"
+                            :disabled="searchIsLoading">
+                        <label class="form-check-label small text-muted">
+                            Exact match
+                        </label>
                     </div>
                 </div>
 
@@ -242,7 +273,7 @@ const RuleFilterBar = {
         </div>
 
         <rule-export-action 
-            v-if="hasActiveFilters"
+            v-if="showExport && hasActiveFilters"
             :search-query="searchQuery"
             :sort-by="sortBy"
             :rule-type="ruleType"
