@@ -10,31 +10,47 @@
 
         <ul class="nav nav-underline justify-content-center w-100 mb-4" id="updateTabs" role="tablist">
             <li class="nav-item flex-fill text-center"><a class="nav-link active" data-bs-toggle="tab"
-                    href="#global-pane">Global Update</a></li>
+                    href="#global-pane">Global Similarity</a></li>
             <li class="nav-item flex-fill text-center"><a class="nav-link" data-bs-toggle="tab"
-                    href="#filtered-pane">Filtered Results</a></li>
+                    href="#filtered-pane">Udpated Rules Similarity</a></li>
             <li class="nav-item flex-fill text-center"><a class="nav-link" data-bs-toggle="tab"
-                    href="#history-pane">History <span class="badge bg-danger rounded-pill ms-1"
+                    href="#history-pane">History<span class="badge bg-danger rounded-pill ms-1"
                         v-cloak>[[running_sessions.length]]</span></a>
 
             </li>
         </ul>
 
         <div class="tab-content" id="updateTabsContent">
-            <!-- Global Update -->
+            <!-- Global Similarity -->
             <div class="tab-pane fade show active" id="global-pane" role="tabpanel">
-                <div class="card border-0 shadow-sm p-4 text-center">
-                    <h5 class="fw-bold">Process All Rules</h5>
-                    <template v-if="running_sessions.length > 0">
-                        <div class="alert alert-secondary d-inline-block px-4 mt-3">
-                            A session is already running. You can check the history for more details.</div>
-                    </template>
-                    <template v-else>
-                        <button v-if="!is_loading_" class="btn btn-dark rounded-pill px-4 mt-3"
-                            @click="runUpdate('global')">Launch Global Update</button>
-                        <button v-else class="btn btn-dark rounded-pill px-4 mt-3" disabled><span
-                                class="spinner-border spinner-border-sm me-2"></span>Processing...</button>
-                    </template>
+                <div class="card border-0 shadow-sm p-4">
+                    <div v-if="loading_global" class="text-center py-5">
+                        <div class="spinner-grow text-success" role="status"></div>
+                    </div>
+
+                    <div v-else class="animate__animated animate__fadeIn">
+                        <template v-if="global_duplicates.length > 0">
+                            <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
+                                :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
+                            </pagination-component>
+
+                            <similar-rule-card v-for="(pair, index) in global_duplicates" :key="'glob-' + index"
+                                :rule-a="pair.rule_a_data" :rule-b="pair.rule_b_data" :score="pair.score" type="global"
+                                :unique-id="'glob-' + index" @refresh-list="fetchGlobalDuplicates(1)"
+                                :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}">
+                            </similar-rule-card>
+
+                            <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
+                                :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
+                            </pagination-component>
+                        </template>
+
+                        <template v-else>
+                            <div class="text-center py-5">
+                                <p class="text-muted">No similar rules found.</p>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
 
@@ -229,10 +245,14 @@
     import { create_message, message_list } from '/static/js/toaster.js';
     import PaginationComponent from '/static/js/rule/paginationComponent.js';
     import RuleSelectionTable from '/static/js/rule/ruleSelectionTable.js';
+    import DiffDisplay from '/static/js/codeMirror/diffDisplay.js';
+    import SimilarRuleCard from '/static/js/rule/similarity/similarRulesCard.js';
     createApp({
         delimiters: ['[[', ']]'],
         components: {
+            'diff-display': DiffDisplay,
             'pagination-component': PaginationComponent,
+            'similar-rule-card': SimilarRuleCard,
             'rule-selection-table': RuleSelectionTable
         },
         setup() {
@@ -243,7 +263,8 @@
 
                 await Promise.all([
                     fetchHistory(1),
-                    fetchInProgress()
+                    fetchInProgress(),
+                    fetchGlobalDuplicates(1)
                 ])
                 await nextTick();
 
@@ -333,16 +354,25 @@
              * #################
              * */
 
-            const is_loading_ = ref(false);
-            async function runUpdate(mode) {
-                is_loading_.value = true;
-                const res = await fetch('/rule/similar_rules/update');
-                if (res.status === 201) {
-                    let loc = await res.json();
-                    window.location.href = "/rule/similar_loading/" + loc["session_uuid"];
+            const global_duplicates = ref([]);
+            const global_page = ref(1);
+            const global_total_pages = ref(1);
+            const loading_global = ref(false);
+
+            async function fetchGlobalDuplicates(page = 1) {
+                loading_global.value = true;
+                const res = await fetch(`/rule/similar_global_duplicates?page=${page}`);
+                if (res.ok) {
+                    const data = await res.json();
+
+                    global_duplicates.value = data.items;
+                    global_page.value = data.current_page || page;
+                    global_total_pages.value = Math.ceil(data.total / 20);
                 }
-                is_loading_.value = false;
-            };
+                loading_global.value = false;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
 
             /**
              * ################
@@ -356,11 +386,13 @@
             const formatTime = (d) => new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
             return {
-                is_loading_, history_list, current_page, total_pages,
+                history_list, current_page, total_pages,
                 formatDate, formatTime, fetchHistory, changePage, goto,
                 prepDelete, confirmDelete, itemToDelete,
-                message_list, fetch_all_pages, running_sessions, fetchInProgress, runUpdate,
-                RuleSelectionTable
+                message_list, fetch_all_pages, running_sessions, fetchInProgress,
+                RuleSelectionTable,
+
+                global_duplicates, global_page, global_total_pages, loading_global, fetchGlobalDuplicates
             };
         }
     }).mount('#main-container');

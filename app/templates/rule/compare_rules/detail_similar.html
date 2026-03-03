@@ -1,28 +1,29 @@
 {% extends 'base.html' %}
 {% block content %}
-<div id="main-container" class="container py-5">
+<div id="main-container" class="container py-5" v-cloak>
     <div class="row justify-content-center mb-5">
         <div class="col-lg-8 text-center">
-            <h1 class="fw-black page-title mb-2">Similarity Analyzer</h1>
-            <p class="text-muted">Identify and merge overlapping logic within your security library.</p>
+            <h2 class="fw-bold mb-1 text-center text-primary">Identify Duplicates</h2>
+            <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;">
+            </div>
+            <p class="text-muted mt-2">Identify and merge overlapping logic within your security library.</p>
         </div>
     </div>
 
-    <ul class="nav nav-pills justify-content-center mb-5" id="similarityTabs" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link active rounded-pill px-4 me-2" id="specific-tab" data-bs-toggle="tab"
-                data-bs-target="#specific-pane" type="button">
-                <i class="fas fa-fingerprint me-2"></i>Targeted Analysis
-            </button>
+    <ul class="nav nav-underline justify-content-center w-100 mb-3" id="similarityTabs" role="tablist">
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link active" id="specific-tab" data-bs-toggle="tab" data-bs-target="#specific-pane" role="tab"
+                aria-controls="specific-pane" aria-selected="true" style="color: var(--text-color); cursor: pointer;">
+                Rule Similarity
+            </a>
         </li>
-        <li class="nav-item">
-            <button @click="initGlobal" class="nav-link rounded-pill px-4" id="global-tab" data-bs-toggle="tab"
-                data-bs-target="#global-pane" type="button">
-                <i class="fas fa-project-diagram me-2"></i>Global Duplicates
-            </button>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link" id="global-tab" data-bs-toggle="tab" data-bs-target="#global-pane" role="tab"
+                aria-controls="global-pane" aria-selected="false" style="color: var(--text-color); cursor: pointer;">
+                Global Similarity
+            </a>
         </li>
     </ul>
-
     <div class="tab-content" id="similarityTabsContent">
         <div class="tab-pane fade show active" id="specific-pane" role="tabpanel">
             <div v-if="loading_specific" class="text-center py-5">
@@ -30,34 +31,28 @@
             </div>
 
             <div v-else class="animate__animated animate__fadeIn">
-                <pagination-component v-if="specific_total_pages > 1" :current-page="specific_page"
-                    :total-pages="specific_total_pages" @change-page="(p) => fetchSimilar(p)">
-                </pagination-component>
+                <template v-if="similar_rules.length > 0">
+                    <pagination-component v-if="specific_total_pages > 1" :current-page="specific_page"
+                        :total-pages="specific_total_pages" @change-page="(p) => fetchSimilar(p)">
+                    </pagination-component>
 
-                <div v-for="rule in similar_rules" :key="rule.rule_id" class="card card-rule mb-4 shadow-sm border-0">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-grow-1">
-                                <h5 class="fw-bold mb-0">[[ rule.title ]]</h5>
-                                <span class="badge bg-light text-primary border">ID: [[ rule.rule_id ]]</span>
-                            </div>
-                            <div :class="['score-badge px-3 py-1 rounded-pill fw-bold', getScoreColor(rule.score)]">
-                                [[ (rule.score * 100).toFixed(0) ]]%
-                            </div>
-                        </div>
-                        <div class="mt-4 pt-3 border-top d-flex justify-content-end">
-                            <button class="btn btn-sm btn-primary px-4 rounded-pill"
-                                @click="rule.isOpen = !rule.isOpen">
-                                <i :class="['fas me-2', rule.isOpen ? 'fa-compress-alt' : 'fa-columns']"></i>
-                                [[ rule.isOpen ? 'Close' : 'Compare' ]]
-                            </button>
-                        </div>
-                        <div v-if="rule.isOpen" class="mt-4 animate__animated animate__fadeIn">
-                            <diff-display :unique-id="'spec-' + rule.rule_id" :old-text="rule.base_content"
-                                :new-text="rule.content"></diff-display>
-                        </div>
+                    <similar-rule-card v-for="rule in similar_rules" :key="'spec-' + rule.rule_id"
+                        :rule-a="rule.rule_a_data" :rule-b="rule.rule_b_data" :score="rule.score" type="specific"
+                        :unique-id="'spec-' + rule.rule_id" @refresh-list="fetchSimilar(1)"
+                        :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}">
+                    </similar-rule-card>
+
+                    <pagination-component v-if="specific_total_pages > 1" :current-page="specific_page"
+                        :total-pages="specific_total_pages" @change-page="(p) => fetchSimilar(p)">
+                    </pagination-component>
+                </template>
+
+                <template v-else>
+                    <div class="text-center py-5">
+                        <p class="text-muted">No similar rules found.</p>
                     </div>
-                </div>
+                </template>
+
             </div>
         </div>
 
@@ -67,48 +62,27 @@
             </div>
 
             <div v-else class="animate__animated animate__fadeIn">
-                <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
-                    :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
-                </pagination-component>
+                <template v-if="global_duplicates.length > 0">
+                    <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
+                        :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
+                    </pagination-component>
 
-                <div v-for="(pair, index) in global_duplicates" :key="index" class="card border-0 shadow-sm mb-3">
-                    <div class="card-body p-0">
-                        <div class="d-flex align-items-stretch">
-                            <div :class="getScoreColor(pair.score).split(' ')[0]"
-                                style="width: 6px; border-radius: 4px 0 0 4px;"></div>
+                    <similar-rule-card v-for="(pair, index) in global_duplicates" :key="'glob-' + index"
+                        :rule-a="pair.rule_a_data" :rule-b="pair.rule_b_data" :score="pair.score" type="global"
+                        :unique-id="'glob-' + index" @refresh-list="fetchGlobalDuplicates(1)"
+                        :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}">
+                    </similar-rule-card>
 
-                            <div class="flex-grow-1 p-3">
-                                <div class="row align-items-center">
-                                    <div class="col-md-4"><strong class="text-truncate d-block">[[ pair.rule_a_title
-                                            ]]</strong></div>
-                                    <div class="col-md-1 text-center text-muted"><i class="fas fa-exchange-alt"></i>
-                                    </div>
-                                    <div class="col-md-4"><strong class="text-truncate d-block">[[ pair.rule_b_title
-                                            ]]</strong></div>
-                                    <div class="col-md-3 text-end">
-                                        <span class="me-3 fw-bold"
-                                            :class="pair.score > 0.85 ? 'text-danger' : 'text-muted'">
-                                            [[ (pair.score * 100).toFixed(0) ]]%
-                                        </span>
-                                        <button @click="pair.isOpen = !pair.isOpen" class="btn btn-sm rounded-pill"
-                                            :class="pair.isOpen ? 'btn-secondary' : 'btn-outline-primary'">
-                                            [[ pair.isOpen ? 'Hide' : 'Compare' ]]
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div v-if="pair.isOpen" class="p-3 bg-light border-top animate__animated animate__fadeIn">
-                            <diff-display :unique-id="'glob-' + index" :old-text="pair.rule_a_content"
-                                :new-text="pair.rule_b_content">
-                            </diff-display>
-                        </div>
+                    <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
+                        :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
+                    </pagination-component>
+                </template>
+
+                <template v-else>
+                    <div class="text-center py-5">
+                        <p class="text-muted">No similar rules found.</p>
                     </div>
-                </div>
-
-                <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
-                    :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
-                </pagination-component>
+                </template>
             </div>
         </div>
     </div>
@@ -120,12 +94,14 @@
     const { createApp, ref, onMounted } = Vue;
     import DiffDisplay from '/static/js/codeMirror/diffDisplay.js';
     import PaginationComponent from '/static/js/rule/paginationComponent.js';
+    import SimilarRuleCard from '/static/js/rule/similarity/similarRulesCard.js';
 
     createApp({
         delimiters: ['[[', ']]'],
         components: {
             DiffDisplay,
-            PaginationComponent
+            PaginationComponent,
+            SimilarRuleCard
         },
         setup() {
             const similar_rules = ref([]);
@@ -143,7 +119,8 @@
                 const res = await fetch(`/rule/similar_detail/{{rule_id}}?page=${page}`);
                 if (res.ok) {
                     const data = await res.json();
-                    similar_rules.value = data.items.map(r => ({ ...r, isOpen: false }));
+
+                    similar_rules.value = data.items;
                     specific_page.value = data.current_page || page;
                     specific_total_pages.value = Math.ceil(data.total / 10);
                 }
@@ -151,16 +128,13 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
-            function initGlobal() {
-                if (global_duplicates.value.length === 0) fetchGlobalDuplicates(1);
-            }
-
             async function fetchGlobalDuplicates(page = 1) {
                 loading_global.value = true;
                 const res = await fetch(`/rule/similar_global_duplicates?page=${page}`);
                 if (res.ok) {
                     const data = await res.json();
-                    global_duplicates.value = data.items.map(p => ({ ...p, isOpen: false }));
+
+                    global_duplicates.value = data.items;
                     global_page.value = data.current_page || page;
                     global_total_pages.value = Math.ceil(data.total / 20);
                 }
@@ -168,18 +142,16 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
-            function getScoreColor(score) {
-                if (score > 0.85) return 'bg-danger text-white';
-                if (score > 0.6) return 'bg-warning text-dark';
-                return 'bg-success text-white';
-            }
 
-            onMounted(() => fetchSimilar(1));
+            onMounted(() => {
+                fetchSimilar(1);
+                fetchGlobalDuplicates(1);
+            });
 
             return {
                 similar_rules, specific_page, specific_total_pages, loading_specific, fetchSimilar,
-                global_duplicates, global_page, global_total_pages, loading_global, fetchGlobalDuplicates, initGlobal,
-                getScoreColor
+                global_duplicates, global_page, global_total_pages, loading_global, fetchGlobalDuplicates,
+                SimilarRuleCard
             };
         }
     }).mount('#main-container');

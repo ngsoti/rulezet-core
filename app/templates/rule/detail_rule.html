@@ -396,21 +396,21 @@
                             </template>
                         </div>
                         <!-- Similar Rules Section -->
-                        <div class="justify-content-between d-flex align-items-center mb-4">
-                            <h4 class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3">
-                                Similar Rules
-                            </h4>
-                            <!-- refresh button to update only this rules-->
-                            {% if current_user.is_authenticated and current_user.is_admin() %}
-                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold shadow-sm"
-                                type="button" @click="refreshSimilarRules">
-                                <i class="fas fa-sync me-1"></i>
-                                Refresh
-                            </button>
-                            {% endif %}
-                        </div>
                         <div class="mb-2 mt-3 similar-rules-section shadow-sm p-4 rounded-4"
                             style="background-color: var(--bg-color);">
+                            <div class="justify-content-between d-flex align-items-center mb-4">
+                                <h4 class="fw-bold mb-0 text-dark border-start border-primary border-4 ps-3">
+                                    Similar Rules
+                                </h4>
+                                <!-- refresh button to update only this rules-->
+                                {% if current_user.is_authenticated and current_user.is_admin() %}
+                                <!-- <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold shadow-sm"
+                                    type="button" @click="refreshSimilarRules">
+                                    <i class="fas fa-sync me-1"></i>
+                                    Refresh
+                                </button> -->
+                                {% endif %}
+                            </div>
                             <similar-rules-display :rule-id="currentRule.id" :number="3"
                                 :api-endpoint="'/rule/similarity'">
                             </similar-rules-display>

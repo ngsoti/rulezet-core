@@ -230,7 +230,6 @@ def delete_rule() -> jsonify:
             return jsonify({"success": False, "message": "Failed to delete the rule!",
                             "toast_class" : "danger"}), 400
         
-        # update the gameifcation section
 
         profil_game_user = AccountModel.get_or_create_gamification_profile(user_id)
         if profil_game_user == None:
@@ -2906,24 +2905,31 @@ def similar_loading(sid):
         return render_template("rule/compare_rules/similar_rule.html", sid=sid)
     return render_template("404.html"), 404
 
-
 @rule_blueprint.route("/similar_detail/<int:rule_id>")
 @login_required
 def similar_detail(rule_id):
     page = request.args.get('page', 1, type=int)
     per_page = 10
-    
-    # We call the function that returns the Query, then paginate
+
     pagination = RuleModel.get_similar_rules_query(rule_id).paginate(page=page, per_page=per_page)
 
     result = []
     for sim, rule_source, rule_target in pagination.items:
         result.append({
-            "rule_id": rule_target.id,
-            "title": rule_target.title or f"Rule #{rule_target.id}",
+            "rule_id": rule_target.id, 
             "score": sim.score,
-            "content": rule_target.to_string if hasattr(rule_target, 'to_string') else "",
-            "base_content": rule_source.to_string if hasattr(rule_source, 'to_string') else ""
+            "rule_a_data": {
+                "id": rule_source.id,
+                "title": rule_source.title,
+                "content": rule_source.to_string if hasattr(rule_source, 'to_string') else "",
+                **rule_source.to_json() 
+            },
+            "rule_b_data": {
+                "id": rule_target.id,
+                "title": rule_target.title,
+                "content": rule_target.to_string if hasattr(rule_target, 'to_string') else "",
+                **rule_target.to_json()
+            }
         })
         
     return jsonify({
@@ -2944,13 +2950,21 @@ def similar_global_duplicates():
     result = []
     for sim, rule_a, rule_b in pagination.items:
         result.append({
-            "rule_a_id": rule_a.id,
-            "rule_a_title": rule_a.title or f"Rule #{rule_a.id}",
-            "rule_a_content": rule_a.to_string if hasattr(rule_a, 'to_string') else "",
-            "rule_b_id": rule_b.id,
-            "rule_b_title": rule_b.title or f"Rule #{rule_b.id}",
-            "rule_b_content": rule_b.to_string if hasattr(rule_b, 'to_string') else "",
-            "score": sim.score
+            "score": sim.score,
+            # Objet Rule A
+            "rule_a_data": {
+                "id": rule_a.id,
+                "title": rule_a.title or f"Rule #{rule_a.id}",
+                "content": rule_a.to_string if hasattr(rule_a, 'to_string') else "",
+                **rule_a.to_json()
+            },
+            # Objet Rule B
+            "rule_b_data": {
+                "id": rule_b.id,
+                "title": rule_b.title or f"Rule #{rule_b.id}",
+                "content": rule_b.to_string if hasattr(rule_b, 'to_string') else "",
+                **rule_b.to_json()
+            }
         })
         
     return jsonify({

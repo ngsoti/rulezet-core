@@ -30,6 +30,7 @@ def _parallel_fuzzy_worker(batch_data):
         if source_text == target_text:
             final_score = 1.0
         else:
+            # Rapidfuzz is used for the final precise verification
             score_ratio = fuzz.ratio(source_text, target_text)
             final_score = score_ratio / 100.0
 
@@ -63,13 +64,13 @@ class Similarity_class:
         self.similar_pairs_found = 0
         
         # Percentage management
-        self.indexing_progress = 0  # 0 to 30
+        self.indexing_progress = 0  
         self.is_indexing = True
         
         self.status_message = "Initializing environment..."
         self.start_time = datetime.datetime.now(tz=datetime.timezone.utc)
-        self.name = user.last_name + " " + user.first_name,
-        self.title = "Calculating Similar Rules for " + user.last_name + " " + user.first_name,
+        self.name = user.last_name + " " + user.first_name
+        self.title = "Calculating Similar Rules for " + user.last_name + " " + user.first_name
 
     def start(self):
         app_obj = current_app._get_current_object()
@@ -91,12 +92,11 @@ class Similarity_class:
         try:
             with app_obj.app_context():
                 # --- STEP 1: INDEXING (1% to 30%) ---
-                self.status_message = "Preparing rules and Index..."
+                self.status_message = "Fetching rules from database..."
                 self.indexing_progress = 5 
                 
                 rules_data = db.session.query(Rule.id, Rule.to_string).filter(Rule.to_string.isnot(None)).all()
-                self.indexing_progress = 15
-
+                
                 if not rules_data:
                     self.status_message = "No rules found."
                     self.stopped = True
@@ -105,25 +105,34 @@ class Similarity_class:
                 rule_ids = np.array([r[0] for r in rules_data])
                 content_list = [(r[1] or "").strip() for r in rules_data]
                 content_map = {r[0]: content_list[i] for i, r in enumerate(rules_data)}
-                self.status_message = "Indexing rules..."
+                
+                self.status_message = "Vectorizing rules (TF-IDF Sparse)..."
+                self.indexing_progress = 15
+
+                # Optimization: We keep the matrix sparse to save RAM
+                vectorizer = TfidfVectorizer(max_features=5000, stop_words='english')
+                tfidf_sparse = vectorizer.fit_transform(content_list)
+                
+                self.status_message = "Building FAISS HNSW Index..."
                 self.indexing_progress = 20
 
-                vectorizer = TfidfVectorizer(max_features=3500, stop_words='english')
-                tfidf_matrix = vectorizer.fit_transform(content_list).toarray().astype('float32')
-                faiss.normalize_L2(tfidf_matrix)
-                self.status_message = "Building index..."
-                self.indexing_progress = 25
-
-                d = tfidf_matrix.shape[1]
+                # Initialize HNSW index (Efficient for 180k+ items)
+                d = tfidf_sparse.shape[1]
                 index = faiss.IndexHNSWFlat(d, 32)
-                index.add(tfidf_matrix)
+                
+                # Add to index in chunks to avoid memory spikes
+                chunk_size = 10000
+                for i in range(0, tfidf_sparse.shape[0], chunk_size):
+                    chunk = tfidf_sparse[i : i + chunk_size].toarray().astype('float32')
+                    faiss.normalize_L2(chunk)
+                    index.add(chunk)
                 
                 # Logic for target selection
                 target_indices = []
                 if self.mode == "global":
                     db.session.execute(delete(RuleSimilarity))
                     db.session.commit()
-                    target_indices = range(len(rules_data))
+                    target_indices = list(range(len(rules_data)))
                 elif self.mode == "filter" and self.params:
                     p_mode = self.params.get('mode')
                     sel, exc = self.params.get('selected_ids', []), self.params.get('excluded_ids', [])
@@ -132,22 +141,22 @@ class Similarity_class:
                     target_indices = [i for i, rid in enumerate(rule_ids) if rid == self.target_rule_id]
 
                 self.total = len(target_indices)
-                self.status_message = "Indexing complete..."
+                self.status_message = "Indexing complete. Starting match..."
                 self.indexing_progress = 30
                 
                 # --- STEP 2: PROCESSING (31% to 100%) ---
-                batch_size = 100
+                batch_size = 200 # Increased batch size for FAISS efficiency
                 job_count = 0
                 for i in range(0, len(target_indices), batch_size):
                     self.jobs.put((job_count, target_indices[i : i + batch_size]))
                     job_count += 1
                 
-                self.total = job_count
-                self.is_indexing = False # Switch to queue-based percentage
-                self.status_message = "Rule matching started..."
-
+                self.total_jobs = job_count
+                self.is_indexing = False 
+                
             for _ in range(self.thread_count):
-                worker = Thread(target=self.process, args=[app_obj, tfidf_matrix, index, rule_ids, content_map])
+                # We pass the sparse matrix to the worker
+                worker = Thread(target=self.process, args=[app_obj, tfidf_sparse, index, rule_ids, content_map])
                 worker.daemon = True
                 worker.start()
                 self.threads.append(worker)
@@ -156,31 +165,48 @@ class Similarity_class:
             self.status_message = f"Error: {str(e)}"
             self.stopped = True
 
-    def process(self, loc_app, tfidf_matrix, index, rule_ids, content_map):
+    def process(self, loc_app, tfidf_sparse, index, rule_ids, content_map):
         with ProcessPoolExecutor(max_workers=2) as executor:
             while not self.jobs.empty() and not self.stopped:
                 try:
                     _, batch_indices = self.jobs.get(timeout=1)
-                    vectors = tfidf_matrix[batch_indices]
-                    _, neighbors = index.search(vectors, self.top_k)
+                    
+                    # Convert only the current batch to dense for FAISS search
+                    vectors_dense = tfidf_sparse[batch_indices].toarray().astype('float32')
+                    faiss.normalize_L2(vectors_dense)
+                    
+                    # Search for top_k + 1 (to account for the rule itself)
+                    _, neighbors = index.search(vectors_dense, self.top_k + 1)
 
                     tasks = []
                     for k, idx_in_matrix in enumerate(batch_indices):
                         source_id = rule_ids[idx_in_matrix]
-                        candidates = [(rule_ids[sid], content_map[rule_ids[sid]]) for sid in neighbors[k] if sid != -1]
-                        tasks.append((source_id, content_map[source_id], candidates, self.min_score, self.uuid))
+                        
+                        # Filter candidates (exclude self and invalid indices)
+                        candidates = []
+                        for sid in neighbors[k]:
+                            if sid != -1:
+                                target_id = rule_ids[sid]
+                                if target_id != source_id:
+                                    candidates.append((target_id, content_map[target_id]))
+                        
+                        if candidates:
+                            tasks.append((source_id, content_map[source_id], candidates, self.min_score, self.uuid))
 
-                    chunk_results = list(executor.map(_parallel_fuzzy_worker, tasks))
-                    flat_entries = [item for sublist in chunk_results for item in sublist]
+                    # Fuzzy matching via ProcessPool
+                    if tasks:
+                        chunk_results = list(executor.map(_parallel_fuzzy_worker, tasks))
+                        flat_entries = [item for sublist in chunk_results for item in sublist]
 
-                    with loc_app.app_context():
-                        if flat_entries and not self.stopped:
-                            db.session.bulk_insert_mappings(RuleSimilarity, flat_entries)
-                            db.session.commit()
-                            self.similar_pairs_found += len(flat_entries)
+                        with loc_app.app_context():
+                            if flat_entries and not self.stopped:
+                                db.session.bulk_insert_mappings(RuleSimilarity, flat_entries)
+                                db.session.commit()
+                                self.similar_pairs_found += len(flat_entries)
 
                     self.jobs.task_done()
                 except Exception as e:
+                    print(f"Process Error: {e}")
                     if not self.jobs.empty(): self.jobs.task_done()
         return True
 
@@ -189,22 +215,22 @@ class Similarity_class:
             self.stop()
         
         remaining = self.jobs.qsize()
-        complete = self.total - remaining
+        # Progress based on total jobs created in _run_session
+        complete_jobs = getattr(self, 'total_jobs', 1) - remaining
 
         if self.is_indexing:
             display_percent = self.indexing_progress
         else:
-            # Map completion of queue (0-100%) to a range of (30-100%)
-            processing_ratio = (complete / self.total) if self.total > 0 else 0
+            processing_ratio = (complete_jobs / self.total_jobs) if self.total_jobs > 0 else 0
             display_percent = int(30 + (processing_ratio * 70))
 
         return {
             'id': self.uuid,
             'total': self.total,
-            'complete': complete,
+            'complete': complete_jobs,
             'remaining': remaining,
             'stopped': self.stopped,
-            'percentage': display_percent,
+            'percentage': min(display_percent, 100),
             'status_message': self.status_message,
             'similar_pairs_found': self.similar_pairs_found,
             'step': "Indexing" if self.is_indexing else "Fuzzy Matching",
@@ -217,9 +243,10 @@ class Similarity_class:
 
     def stop(self):
         self.stopped = True
-        self.jobs.queue.clear()
+        with self.jobs.mutex:
+            self.jobs.queue.clear()
         for worker in self.threads:
-            worker.join(0.5)
+            worker.join(timeout=0.5)
         self.save_final_stats()
         if self in sessions:
             sessions.remove(self)

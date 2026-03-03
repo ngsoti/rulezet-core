@@ -325,3 +325,10 @@ def get_total_users():
         return jsonify({"message": "Failed to get total users", "success": False , "toast_class" : "danger-subtle"}), 500
 
     return jsonify({"total_users": total_users, "success": True , "toast_class" : "success-subtle"}), 200
+
+
+@account_blueprint.route('/admin', methods=['GET'])
+def admin():
+    if current_user.is_admin():
+        return jsonify({"message": "Access granted", "success": True , "toast_class" : "success-subtle"}), 200
+    return jsonify({"message": "Access denied", "success": False , "toast_class" : "danger-subtle"}), 403
