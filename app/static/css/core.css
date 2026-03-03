@@ -3007,3 +3007,26 @@ hr { animation: fadeInUp 0.8s ease-out forwards; animation-delay: 0.5s; opacity:
 .col-xl-4:nth-child(3) .card-security-premium { animation-delay: 0.8s; }
 .col-xl-4:nth-child(4) .card-security-premium { animation-delay: 0.9s; }
 .col-xl-4:nth-child(n+5) .card-security-premium { animation-delay: 1s; }
+
+
+
+hr.opacity-10.mb-5 {
+    opacity: 0;
+    animation: fadeInUp 0.8s ease-out forwards;
+    animation-delay: 0.5s; 
+}
+
+.d-flex.align-items-center.justify-content-between.mb-4 {
+    opacity: 0;
+    animation: fadeInUp 0.8s ease-out forwards;
+    animation-delay: 0.6s; 
+}
+
+
+.text-primary {
+    transition: text-shadow 0.3s ease;
+}
+
+h4:hover .text-primary {
+    text-shadow: 0 0 8px rgba(13, 110, 253, 0.3);
+}
