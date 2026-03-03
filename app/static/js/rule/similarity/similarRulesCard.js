@@ -64,7 +64,7 @@ const SimilarRulesCard = {
     template: `
     <div :class="['rule-analysis-wrapper mb-3 shadow-sm border-0', { 'is-open': isOpen }]" 
          @click="isOpen = !isOpen" 
-         style="transition: all 0.3s ease; cursor: pointer; border-radius: 8px; overflow: hidden; background: #fff;">
+         style="transition: all 0.3s ease; cursor: pointer; border-radius: 8px; overflow: hidden; ">
         
         <div class="rule-header p-3 d-flex align-items-center">
             <div class="me-3">
@@ -108,14 +108,14 @@ const SimilarRulesCard = {
             </div>
         </div>
 
-        <div v-if="isOpen" class="rule-details-area border-top animate__animated animate__fadeIn" @click.stop style="background: #f8f9fa;">
+        <div v-if="isOpen" class="rule-details-area border-top animate__animated animate__fadeIn" @click.stop >
             <div class="row g-0">
                 <div class="col-md-3 border-end p-3 bg-light-subtle">
                     <div class="d-flex flex-column gap-4">
                         <div class="meta-group">
                             <label class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.65rem; letter-spacing: 0.05rem;">Asset Comparison</label>
                             
-                            <div class="p-2 rounded bg-white border mb-2 shadow-xs">
+                            <div class="p-2 rounded border mb-2 shadow-xs">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <span class="fw-bold small text-primary">A: Base Asset</span>
                                     <span class="badge bg-light text-dark border" style="font-size: 0.6rem;">ID: [[ ruleA.id ]]</span>
@@ -146,7 +146,7 @@ const SimilarRulesCard = {
                                 </div>
                             </div>
 
-                            <div class="p-2 rounded bg-white border shadow-xs">
+                            <div class="p-2 rounded  border shadow-xs">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <span class="fw-bold small text-success">B: Match Found</span>
                                     <span class="badge bg-light text-dark border" style="font-size: 0.6rem;">ID: [[ ruleB.id ]]</span>
@@ -179,13 +179,7 @@ const SimilarRulesCard = {
                     </div>
                 </div>
 
-                <div class="col-md-9 bg-white d-flex flex-column" style="height: 550px;">
-                    <div class="p-2 border-bottom flex-shrink-0 bg-light-subtle d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-muted small px-2" style="font-size: 0.7rem;">
-                            <i class="fa-solid fa-code me-2"></i>SYNCHRONIZED DIFF ANALYSIS
-                        </span>
-                    </div>
-                    
+                <div class="col-md-9  d-flex flex-column" style="height: 550px;">            
                     <div class="flex-grow-1 diff-scroll-container">
                         <div class="p-0">
                             <diff-display 

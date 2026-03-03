@@ -81,8 +81,8 @@ const DiffDisplay = {
             <span>[[ newName ]] <i class="fas fa-file-edit ms-1"></i></span>
         </div>
         
-        <div class="modern-diff-view-scroll-wrapper bg-white flex-grow-1 overflow-auto">
-            <div :id="'diff-target-' + uniqueId" class="modern-diff-view-content">
+        <div class="flex-grow-1 overflow-auto">
+            <div :id="'diff-target-' + uniqueId" >
                 <div class="text-center p-3 text-muted italic">
                     <i class="fas fa-spinner fa-spin me-2"></i> Loading comparison...
                 </div>

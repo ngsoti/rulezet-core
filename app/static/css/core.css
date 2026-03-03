@@ -314,9 +314,7 @@ body.dark-mode .title {
 }
 
 body.dark-mode a,
-body.dark-mode td {
-  color: var(--text-color) !important;
-}
+
 
 body.dark-mode strong {
   color: #ffffff;
@@ -895,6 +893,18 @@ main {
 .d2h-file-diff .d2h-del.d2h-change {
   background-color: #f8d7da !important;
   color: #721c24 !important;
+}
+
+body.dark-mode td {
+  color: var(--text-color) !important;
+}
+
+.d2h-file-diff .d2h-ins.d2h-change {
+  color: #30721c !important;
+}
+
+.d2h-code-linenumber {
+  background-color: var(--bg-color);
 }
 
 /* --- Code & Highlighting Blocks --- */
@@ -2768,8 +2778,8 @@ body.dark-mode .d2h-emptyplaceholder{
 
 /* --- Score Badge (Modernized) --- */
 .score-badge-square {
-    width: 48px;
-    height: 48px;
+    width: 54px;
+    height: 54px;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
