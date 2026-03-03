@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid p-0" id="container">
+    <div class="container animation-fade-in-up pt-5 pb-5 text-center">
+        <span class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2 mb-4 fw-bold shadow-sm"
+            style="letter-spacing: 1px;">
+            OUR JOURNEY
+        </span>
+
+        <h1 class="display-4 fw-bold text-dark mb-3">
+            The Visual Evolution of <span class="text-primary">RULEZET</span>
+        </h1>
+
+        <p class="lead text-muted mx-auto mb-5" style="max-width: 600px; font-size: 1.1rem; line-height: 1.6;">
+            From a dedicated <span class="fw-bold text-primary">internship project</span> to a professional
+            Security Intelligence Repository. Discover our growth.
+        </p>
+
+        <div class="d-flex justify-content-center gap-3">
+            <a href="#timeline" class="btn btn-primary rounded-pill px-5 py-3 fw-bold shadow-sm transition-hover">
+                View Evolution <i class="fa-solid fa-chevron-down ms-2"></i>
+            </a>
+            <a href="/" class="btn btn-link text-decoration-none text-muted fw-bold px-4">
+                Back to Rules
+            </a>
+        </div>
+    </div>
+
+    <section id="timeline" class="timeline-section py-5">
+        <div class="container py-5">
+            <div class="timeline-container position-relative">
+                <div class="timeline-line position-absolute h-100"
+                    style="left: 50%; width: 2px; background: #e9ecef; transform: translateX(-50%);"></div>
+
+                <div v-for="(item, index) in logoItems" :key="item.id"
+                    class="timeline-item row mb-5 pb-5 position-relative align-items-center animation-fade-in-up"
+                    :style="{ animationDelay: (index * 0.2) + 's' }">
+
+                    <div class="timeline-dot position-absolute d-flex align-items-center justify-content-center rounded-circle border border-4 bg-white"
+                        :class="item.dotClass"
+                        style="left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; z-index: 10; top: 50%;">
+                        <i :class="item.icon"></i>
+                    </div>
+
+                    <div class="col-md-5"
+                        :class="index % 2 === 0 ? 'order-1 text-md-end' : 'order-1 order-md-3 text-md-start'">
+                        <div class="card p-4 rounded-4 shadow-sm border-0 timeline-card bg-white">
+                            <div class="d-flex align-items-center mb-2"
+                                :class="index % 2 === 0 ? 'justify-content-md-end' : 'justify-content-md-start'">
+                                <span class="badge rounded-pill px-3 py-1 text-uppercase fw-bold me-2"
+                                    :class="item.badgeClass" style="font-size: 0.7rem;">[[ item.era ]]</span>
+                                <span class="text-muted small">[[ item.period ]]</span>
+                            </div>
+                            <h4 class="fw-bold mb-3">[[ item.title ]]</h4>
+                            <p class="text-muted small mb-0">[[ item.description ]]</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2 order-2"></div>
+
+                    <div class="col-md-5" :class="index % 2 === 0 ? 'order-3' : 'order-1'">
+                        <div class="p-3 bg-white rounded-4 shadow-sm">
+                            <img :src="item.is_doc ? '../doc/' + item.filename : '/static/image/' + item.filename"
+                                :alt="item.title"
+                                class="img-fluid rounded-3 shadow-sm timeline-img transition-transform"
+                                style="max-height: 250px; object-fit: contain; width: 100%;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="text-center py-5">
+        <h3 class="fw-bold mb-4">Ready to contribute to the next chapter?</h3>
+        <a href="/" class="btn btn-primary rounded-pill px-5 py-3 fw-bold shadow">
+            Return to Dashboard <i class="fa-solid fa-gauge-high ms-2"></i>
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref } = Vue;
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const logoItems = ref([
+                {
+                    id: 1,
+                    era: 'Inception',
+                    period: 'Internship Stage',
+                    title: 'The Seed: Early Internship',
+                    filename: 'Rulezet.png',
+                    is_doc: false,
+                    icon: 'fa-solid fa-seedling',
+                    dotClass: 'text-primary border-primary',
+                    badgeClass: 'bg-primary-subtle text-primary',
+                    description: 'Everything started during a focused internship. This first logo was our original identity as we began brainstorming how to structure security intelligence into a shared repository.'
+                },
+                {
+                    id: 2,
+                    era: 'Development',
+                    period: 'Growth Phase',
+                    title: 'Refining the Vision',
+                    filename: 'logo_rulezet_bg.png',
+                    is_doc: false,
+                    icon: 'fa-solid fa-code-branch',
+                    dotClass: 'text-success border-success',
+                    badgeClass: 'bg-success-subtle text-success',
+                    description: 'As the internship progressed into a full-scale project, we streamlined the design. This version accompanied us through the core development of the platform logic.'
+                },
+                {
+                    id: 3,
+                    era: 'Interface V1',
+                    period: 'Initial UI',
+                    title: 'The Legacy Interface',
+                    filename: 'rulezet_home.png',
+                    is_doc: true,
+                    icon: 'fa-solid fa-desktop',
+                    dotClass: 'text-info border-info',
+                    badgeClass: 'bg-info-subtle text-info',
+                    description: 'A look back at our first functional dashboard. It was simple and focused on basic rule storage, setting the stage for more complex features.'
+                },
+                {
+                    id: 4,
+                    era: 'Modernization',
+                    period: 'Current Era',
+                    title: 'The Cyber-Brand Identity',
+                    filename: 'logo.png',
+                    is_doc: false,
+                    icon: 'fa-solid fa-shield-halved',
+                    dotClass: 'text-warning border-warning',
+                    badgeClass: 'bg-warning-subtle text-warning',
+                    description: 'Our new identity. A sophisticated mix of protection (Shield) and active analysis (Magnifying Glass), representing a mature, community-driven intelligence platform.'
+                },
+                {
+                    id: 5,
+                    era: 'Interface V2',
+                    period: 'Latest UI',
+                    title: 'Modern Intelligence Hub',
+                    filename: 'rulezet_home_final.png',
+                    is_doc: true,
+                    icon: 'fa-solid fa-wand-magic-sparkles',
+                    dotClass: 'text-dark border-dark',
+                    badgeClass: 'bg-dark text-white',
+                    description: 'The current state of RULEZET. A fully responsive, animated, and feature-rich interface designed for professional security analysts and threat hunters.'
+                }
+            ]);
+
+            return { logoItems };
+        }
+    }).mount('#container');
+</script>
+{% endblock %}

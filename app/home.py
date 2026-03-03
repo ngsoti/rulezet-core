@@ -1,6 +1,6 @@
 import json
 import os
-
+from flask import send_from_directory
 from flask import  Blueprint, flash, jsonify, redirect, render_template, request, send_from_directory, abort
 from flask_login import current_user, login_required
 from flask import get_flashed_messages
@@ -393,3 +393,15 @@ def similar_rules():
     if not current_user.is_admin():
         return render_template('access_denied.html')
     return render_template('admin/similar_rule_update.html')
+
+@home_blueprint.route("/history_logo")
+def history_logo() -> render_template:
+    return render_template("macros/history_logo.html")
+
+
+
+
+@home_blueprint.route('/doc/<path:filename>')
+def serve_doc_images(filename):
+    doc_path = os.path.join(home_blueprint.root_path, '../doc') 
+    return send_from_directory(doc_path, filename)

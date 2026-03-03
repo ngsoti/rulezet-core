@@ -769,25 +769,6 @@ main {
   transition: all 0.3s ease-in-out;
 }
 /* --- Style de base du logo --- */
-.navbar-brand img {
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
-}
-
-
-
-
-[data-bs-theme="dark"] .navbar-brand img, 
-.dark-mode .navbar-brand img {
-    filter: invert(1) brightness(1.2) drop-shadow(0 2px 4px rgba(255, 255, 255, 0.1));
-}
-
-@media (prefers-color-scheme: dark) {
-    body:not(.light-mode) .navbar-brand img {
-        filter: invert(1) brightness(0,1);
-    }
-}
-
 
 .navbar-brand:hover img {
     transform: scale(1.08) rotate(-1deg);
@@ -3029,4 +3010,146 @@ hr.opacity-10.mb-5 {
 
 h4:hover .text-primary {
     text-shadow: 0 0 8px rgba(13, 110, 253, 0.3);
+}
+
+
+/* Custom CSS Variables for our Brand */
+:root {
+    --bs-primary-brand: #0d6efd; /* Bootstrap Primary */
+    --bs-light-brand: #f8f9fa; /* Bootstrap Light */
+    --bs-dark-brand: #212529; /* Bootstrap Dark */
+    --text-muted-brand: #adb5bd;
+}
+
+/* Base style for text-dark */
+.timeline-card h4.text-dark {
+    color: #212529 !important;
+}
+
+/* Base style for Lead Text Muted */
+.text-muted-brand {
+    color: var(--text-muted-brand);
+}
+
+/* Custom Buttons and Colors */
+.btn-primary-brand {
+    background-color: var(--bs-primary-brand);
+    border-color: var(--bs-primary-brand);
+    color: #fff;
+    transition: all 0.3s ease;
+}
+
+.btn-primary-brand:hover {
+    background-color: #0b5ed7;
+    border-color: #0b5ed7;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.text-primary-brand {
+    color: var(--bs-primary-brand);
+}
+
+/* Timeline Layout */
+.timeline-line {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    background-color: #e9ecef;
+    z-index: 0;
+}
+
+.timeline-dot {
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    font-size: 1.25rem;
+    z-index: 2;
+}
+
+/* Alternate Left/Right Items */
+.timeline-item-left .timeline-content-wrapper {
+    order: 1;
+    text-align: right;
+}
+
+.timeline-item-left .timeline-image-wrapper {
+    order: 3;
+}
+
+.timeline-item-right .timeline-content-wrapper {
+    order: 3;
+}
+
+.timeline-item-right .timeline-image-wrapper {
+    order: 1;
+}
+
+.timeline-item-left .timeline-dot {
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.timeline-item-right .timeline-dot {
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@media (max-width: 768px) {
+    .timeline-line { left: 20px; }
+    .timeline-dot { left: 20px; transform: translateY(-50%); }
+    .timeline-item-left .timeline-content-wrapper,
+    .timeline-item-right .timeline-content-wrapper { order: 2; text-align: left; padding-left: 60px; }
+    .timeline-item-left .timeline-image-wrapper,
+    .timeline-item-right .timeline-image-wrapper { order: 1; margin-bottom: 2rem; }
+}
+
+/* Card Hover Animation */
+.timeline-card {
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0,0,0,0.05) !important;
+}
+
+.timeline-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+.timeline-img {
+    transition: all 0.3s ease;
+}
+
+.rounded-4.border-start:hover {
+    transform: scale(1.05); /* Image zoom on parent hover */
+}
+
+/* Basic Animations */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+.animation-fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.animation-fade-in {
+    animation: fadeIn 1s ease-out forwards;
+}
+
+.animation-pulse {
+    animation: pulse 2s infinite ease-in-out;
 }
