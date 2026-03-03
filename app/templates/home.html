@@ -8,23 +8,75 @@
             <div class="col-lg-8">
                 <h1 class="display-5 fw-bold text-dark mb-2">
                     Security Intelligence <span class="text-primary">Repository</span>
+                    <small class="fw-light opacity-50">with</small>
+                    <span class="rulezet-brand">RULEZET</span>
                 </h1>
                 <p class="lead text-muted">
                     Explore the latest community-contributed detection rules. Stay ahead of threats with real-time
                     updates.
                 </p>
             </div>
-            <div class="col-lg-4 text-lg-end">
-                <div class="d-inline-flex p-2 rounded-3 border">
-                    <div class="px-3 border-end">
-                        <span class="d-block fw-bold text-primary">[[ rules_list.length ]]</span>
-                        <small class="text-uppercase text-muted" style="font-size: 0.7rem;">New Rules</small>
-                    </div>
-                    <div class="px-3">
-                        <span class="d-block fw-bold text-success">Live</span>
-                        <small class="text-uppercase text-muted" style="font-size: 0.7rem;">Status</small>
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="p-4 rounded-4  border-start border-primary border-4 shadow-sm h-100"
+                        style="background-color: var(--bg-color);">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-shape bg-primary-subtle text-primary rounded-circle p-2 me-3">
+                                <i class="fa-solid fa-magnifying-glass-chart"></i>
+                            </div>
+                            <h6 class="fw-bold mb-0">Explore Intelligence</h6>
+                        </div>
+                        <p class="small text-muted mb-3">Browse our curated database of YARA, Sigma, and NSE rules
+                            shared by security experts worldwide.</p>
+                        <a href="/rule/rules_list" class="text-primary text-decoration-none small fw-bold">
+                            View full catalog <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </a>
                     </div>
                 </div>
+
+                <div class="col-md-4">
+                    <div class="p-4 rounded-4  border-start border-success border-4 shadow-sm h-100"
+                        style="background-color: var(--bg-color);">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-shape bg-success-subtle text-success rounded-circle p-2 me-3">
+                                <i class="fa-solid fa-plus"></i>
+                            </div>
+                            <h6 class="fw-bold mb-0">Contribute Rules</h6>
+                        </div>
+                        <p class="small text-muted mb-3">Join the defense community! Upload your own detection assets to
+                            help others track emerging threats.</p>
+                        <a href="/rule/create_rule" class="text-success text-decoration-none small fw-bold">
+                            Submit an asset <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="p-4 rounded-4  border-start border-warning border-4 shadow-sm h-100"
+                        style="background-color: var(--bg-color);">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-shape bg-warning-subtle text-warning rounded-circle p-2 me-3">
+                                <i class="fa-solid  fas fas fa-boxes"></i>
+                            </div>
+                            <h6 class="fw-bold mb-0">Bundle Rules</h6>
+                        </div>
+                        <p class="small text-muted mb-3">Organize your detection assets into bundles for easy sharing
+                            and management.
+                        </p>
+                        <a href="/bundle/list" class="text-warning text-decoration-none small fw-bold">
+                            Go to bundles <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="opacity-10 mb-5">
+
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h4 class="fw-bold mb-0">Recently Added <span class="text-primary">Intelligence</span></h4>
+                <div class="vr mx-3 d-none d-lg-block"></div>
+                <p class="text-muted small mb-0 d-none d-lg-block">Review the latest 10 assets updated by the community.
+                </p>
             </div>
         </div>
 
