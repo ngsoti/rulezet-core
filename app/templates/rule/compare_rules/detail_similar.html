@@ -38,7 +38,7 @@
 
                     <similar-rule-card v-for="rule in similar_rules" :key="'spec-' + rule.rule_id"
                         :rule-a="rule.rule_a_data" :rule-b="rule.rule_b_data" :score="rule.score" type="specific"
-                        :unique-id="'spec-' + rule.rule_id" @refresh-list="fetchSimilar(1)"
+                        :unique-id="'spec-' + rule.rule_id" @refresh-list="fetchSimilar(1)" :rule="rule"
                         :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}">
                     </similar-rule-card>
 
@@ -62,7 +62,11 @@
             </div>
 
             <div v-else class="animate__animated animate__fadeIn">
+                <similar-rules-filter v-model:score="global_min_score" v-model:format="global_format"
+                    @filter="fetchGlobalDuplicates(1)">
+                </similar-rules-filter>
                 <template v-if="global_duplicates.length > 0">
+
                     <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
                         :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
                     </pagination-component>
@@ -95,13 +99,15 @@
     import DiffDisplay from '/static/js/codeMirror/diffDisplay.js';
     import PaginationComponent from '/static/js/rule/paginationComponent.js';
     import SimilarRuleCard from '/static/js/rule/similarity/similarRulesCard.js';
+    import SimilarRulesFilter from '/static/js/rule/similarity/similarRulesFilter.js';
 
     createApp({
         delimiters: ['[[', ']]'],
         components: {
             DiffDisplay,
             PaginationComponent,
-            SimilarRuleCard
+            SimilarRuleCard,
+            SimilarRulesFilter
         },
         setup() {
             const similar_rules = ref([]);
@@ -114,23 +120,47 @@
             const global_total_pages = ref(1);
             const loading_global = ref(false);
 
+            const global_min_score = ref(0.80);
+            const global_format = ref('');
+
             async function fetchSimilar(page = 1) {
                 loading_specific.value = true;
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const compareWithId = urlParams.get('compare_with');
+
                 const res = await fetch(`/rule/similar_detail/{{rule_id}}?page=${page}`);
                 if (res.ok) {
                     const data = await res.json();
 
-                    similar_rules.value = data.items;
+
+                    similar_rules.value = data.items.map(rule => ({
+                        ...rule,
+                        startOpen: compareWithId && String(rule.rule_b_data.id) === String(compareWithId)
+                    }));
+
                     specific_page.value = data.current_page || page;
                     specific_total_pages.value = Math.ceil(data.total / 10);
+
+
+                    if (compareWithId) {
+                        setTimeout(() => {
+                            const el = document.getElementById('spec-' + compareWithId);
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 800);
+                    }
                 }
                 loading_specific.value = false;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
             async function fetchGlobalDuplicates(page = 1) {
                 loading_global.value = true;
-                const res = await fetch(`/rule/similar_global_duplicates?page=${page}`);
+                const params = new URLSearchParams({
+                    page: page,
+                    min_score: global_min_score.value,
+                    format: global_format.value,
+                });
+                const res = await fetch(`/rule/similar_global_duplicates?${params.toString()}`);
                 if (res.ok) {
                     const data = await res.json();
 
@@ -151,7 +181,7 @@
             return {
                 similar_rules, specific_page, specific_total_pages, loading_specific, fetchSimilar,
                 global_duplicates, global_page, global_total_pages, loading_global, fetchGlobalDuplicates,
-                SimilarRuleCard
+                SimilarRuleCard, global_min_score, SimilarRulesFilter, global_format,
             };
         }
     }).mount('#main-container');

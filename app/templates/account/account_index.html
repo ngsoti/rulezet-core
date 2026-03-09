@@ -7,10 +7,12 @@
             <div class="mb-4 border-bottom pb-3">
                 <h2 class="mb-3 text-center text-primary fw-bold">
                     Account Information
-                    <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+                    <div class="mx-auto"
+                        style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
                 </h2>
                 <p class="text-muted mt-2 text-center">
-                    Review and manage your account details below. Keep your information up to date to ensure seamless access to all features.
+                    Review and manage your account details below. Keep your information up to date to ensure seamless
+                    access to all features.
                 </p>
             </div>
 
@@ -34,7 +36,9 @@
                             {% if user.api_key %}
                             <div class="d-flex align-items-center">
                                 <span id="api-key" class="api-key blurred me-2"><b>{{ user.api_key }}</b></span>
-                                <button id="toggle-api-key" type="button" class="btn btn-sm btn-outline-secondary blur-btn" aria-pressed="false" aria-label="Show API key" title="Show API key" data-visible="false">
+                                <button id="toggle-api-key" type="button"
+                                    class="btn btn-sm btn-outline-secondary blur-btn" aria-pressed="false"
+                                    aria-label="Show API key" title="Show API key" data-visible="false">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
@@ -48,7 +52,7 @@
             </div>
             <div class="text-end mt-4">
                 <a class="btn btn-outline-success btn-lg" href="{{ url_for('account.edit_user') }}">
-                <i class="fas fa-edit me-2"></i>Edit Profile
+                    <i class="fas fa-edit me-2"></i>Edit Profile
                 </a>
             </div>
         </div>

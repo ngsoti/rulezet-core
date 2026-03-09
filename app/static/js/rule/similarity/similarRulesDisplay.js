@@ -5,6 +5,7 @@ const SimilarRulesDisplay = {
         apiEndpoint: { type: String, default: '/similarity' }
     },
     delimiters: ['[[', ']]'],
+    emits: ['found-similar-rules'],
     data() {
         return {
             rules: [],
@@ -23,12 +24,13 @@ const SimilarRulesDisplay = {
                 const data = await response.json();
                 if (data.success && data.rules.length > 0) {
                     this.rules = data.rules;
+                    this.$emit('found-similar-rules', true);
                 } else {
-                    this.error = "No similar correlations found.";
+                    this.$emit('found-similar-rules', false);
                 }
             } catch (err) {
                 this.error = "Correlation engine offline.";
-                console.error(err);
+                this.$emit('found-similar-rules', false);
             } finally {
                 this.loading = false;
             }
@@ -66,7 +68,7 @@ const SimilarRulesDisplay = {
         
         <div v-else class="row g-3">
             <div v-for="rule in rules" :key="rule.id" class="col-12">
-                <div class="card h-100 shadow-sm border-0  position-relative overflow-hidden">
+                <div class="card h-100 shadow-sm border-0  position-relative overflow-hidden border rounded-4">
                     
                    
 
@@ -113,7 +115,9 @@ const SimilarRulesDisplay = {
                                 </div>
                                 <small class="text-muted fw-medium">[[ rule.author ]]</small>
                             </div>
-                            <a :href="'/rule/detail_rule/' + rule.id" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-0" style="font-size: 0.7rem;">
+                            <a :href="'/rule/similar_detail_page/' + ruleId + '?compare_with=' + rule.id" 
+                            class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-0" 
+                            style="font-size: 0.7rem;">
                                 Compare <i class="fas fa-arrow-right ms-1"></i>
                             </a>
                         </div>

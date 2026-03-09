@@ -5,6 +5,7 @@ const SimilarRulesCard = {
     name: 'SimilarRulesCard',
     components: { DiffDisplay, DeleteRuleModal },
     props: {
+        rule: { type: Object, default: () => ({}) }, // open this rule on load if there is a startOpen flag
         ruleA: { type: Object, required: true },
         ruleB: { type: Object, required: true },
         score: { type: [Number, String], default: 0 },
@@ -16,6 +17,12 @@ const SimilarRulesCard = {
     delimiters: ['[[', ']]'],
     setup(props, { emit }) {
         const isOpen = Vue.ref(false);
+
+        Vue.onMounted(() => {
+            if (props.rule && props.rule.startOpen) {
+                toggleOpen();
+            }
+        });
 
         const getScoreDetails = (score) => {
             const numScore = parseFloat(score);
@@ -58,8 +65,12 @@ const SimilarRulesCard = {
             return dateStr.split(' ')[0]; 
         };
 
+        const isIdentical = Vue.computed(() => {
+            return props.ruleA.to_string === props.ruleB.to_string;
+        });
 
-        return { getScoreDetails, isOpen, formatDate , toggleOpen, viewDetails, handleDeleted };
+
+        return {isIdentical, getScoreDetails, isOpen, formatDate , toggleOpen, viewDetails, handleDeleted };
     },
     template: `
     <div :class="['rule-analysis-wrapper mb-3 shadow-sm border-0', { 'is-open': isOpen }]" 
@@ -87,7 +98,7 @@ const SimilarRulesCard = {
                     </div>
                     
                     <div class="ms-3 flex-shrink-0 d-flex align-items-center gap-3">
-                        <span v-if="score >= 0.99" class="badge rounded-pill bg-danger shadow-sm animate__animated animate__pulse animate__infinite" style="font-size: 0.7rem;">Exact Match Detected</span>
+                        <span v-if="isIdentical" class="badge rounded-pill bg-danger shadow-sm animate__animated animate__pulse animate__infinite" style="font-size: 0.7rem;">Exact Match Detected</span>
                         <div class="btn-action-chevron">
                             <i :class="['fa-solid fa-chevron-down small transition-icon', { 'rotate-180': isOpen }]"></i>
                         </div>
@@ -179,14 +190,14 @@ const SimilarRulesCard = {
                     </div>
                 </div>
 
-                <div class="col-md-9  d-flex flex-column" style="height: 550px;">            
+                <div class="col-md-9  d-flex flex-column">            
                     <div class="flex-grow-1 diff-scroll-container">
                         <div class="p-0">
                             <diff-display 
                                 :unique-id="uniqueId" 
                                 :old-text="ruleA.content"
                                 :new-text="ruleB.content"
-                                displayMode="one-side">
+                                displayMode="one-side" max-height="none">
                             </diff-display>
                         </div>
                     </div>

@@ -2840,23 +2840,28 @@ def get_similar_rules_query(rule_id):
         .filter(RuleSimilarity.rule_id == rule_id)\
         .order_by(RuleSimilarity.score.desc())
 
-def get_top_global_duplicates_query(min_score=0.85):
-    """
-    Returns a query object for the highest similarities in the entire DB,
-    filtering out mirrored duplicates (A-B vs B-A).
-    """
+def get_top_global_duplicates_query(min_score=0.85, filters=None):
     RuleA = aliased(Rule)
     RuleB = aliased(Rule)
-
-    return db.session.query(RuleSimilarity, RuleA, RuleB)\
+    
+    query = db.session.query(RuleSimilarity, RuleA, RuleB)\
         .join(RuleA, RuleSimilarity.rule_id == RuleA.id)\
         .join(RuleB, RuleSimilarity.similar_rule_id == RuleB.id)\
         .filter(
             RuleSimilarity.score >= min_score,
-            # Ensure Rule A ID is always lower than Rule B ID to prevent mirrors
             RuleSimilarity.rule_id < RuleSimilarity.similar_rule_id 
-        )\
-        .order_by(RuleSimilarity.score.desc())
+        )
+
+    if filters:
+        # Filter by Format (Check if either Rule A or Rule B matches)
+        if filters.get('format'):
+            query = query.filter(or_(
+                RuleA.format == filters['format'],
+                RuleB.format == filters['format']
+            ))
+        
+
+    return query.order_by(RuleSimilarity.score.desc())
 
 def get_similarity_list_page(page: int = 1):
     if current_user.is_admin():

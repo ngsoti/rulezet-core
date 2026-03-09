@@ -6,6 +6,7 @@
   **/
 
 :root {
+  --sidebar-color: rgb(15 23 42); 
   --bg-color: #fbfbfb;
   --text-color: #1e1e1e;
   --subtle-text-color: #6c757d;
@@ -28,9 +29,12 @@
 
   --page-selected-color: rgba(13,110,253,1);
   --selected-color: rgb(207, 226, 255);
+
+  --bar-bg-color: rgb(226, 231, 237);
 }
 
 body.dark-mode {
+  --sidebar-color: #272727; 
   --bg-color: #272727;
   --text-color: #f8f9fa;
   --subtle-text-color: #adb5bd;
@@ -52,9 +56,16 @@ body.dark-mode {
 
   --page-selected-color: rgb(13, 69, 253);
   --selected-color: rgba(13,110,253,1);
+
+  --bar-bg-color: #1e1e1e;
 }
 
-/*_______________________________________TEST____________________________________________*/
+/**
+  *****************************
+  *       HTML BODY           *
+  *****************************
+  **/
+
 html, body {
     height: 100%;
     margin: 0;
@@ -64,13 +75,9 @@ html, body {
 body {
     position: relative; 
     z-index: 0;     
-    background-color: #fff; 
     transition: background-color 0.3s ease;
 }
 
-body.dark-mode {
-    background-color: #121212;
-}
 
 body::before {
     content: "";
@@ -90,9 +97,10 @@ body::before {
 }
 
 body.dark-mode::before {
-    background-image: url('../image/test_bg_rulezet_dark_mode.png');
+    background-image: none;
+     background-color: #121212;
 }
-/*_______________________________________________________________________________________*/
+
 /**
   *****************************
   *    v-cloak / and size     *
@@ -102,7 +110,7 @@ body.dark-mode::before {
     display: none;
   }
 
-  /*---------------Size_Website---------------*/
+
   .container {
     max-width: 85% !important;  
   }
@@ -112,16 +120,13 @@ body.dark-mode::before {
   }
 
  .on-hover-zoom {
-    /* transition pour tout ce qu'on veut animer */
     transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
-    /* arrondis et bordures si nécessaire */
     border-radius: 0.5rem;
 }
 
-/* hover effect */
 .on-hover-zoom:hover {
-    transform: translateY(-5px) scale(1.05); /* monte et légèrement agrandi */
-    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15); /* ombre plus visible */
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15); 
     cursor: pointer;
 }
 
@@ -136,13 +141,10 @@ body.dark-mode::before {
 .card-rule-home {
   background-color: var(--bg-color);
   border: #80808024 solid 1px;
-  /* Ombre de base plus douce */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   border-radius: 10px;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Transition fluide */
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
-
-
 
 .custom-inner-card {
   background: var(--bg-color);
@@ -155,9 +157,7 @@ body.dark-mode::before {
 /* --- Base Card Styles --- */
 .card {
   background: var(--bg-color);
-  color: #06182b;
   border: 1px solid #dee2e6;
-  
 }
 
 /* Dynamic & Utility Card Variants */
@@ -191,10 +191,6 @@ body.dark-mode::before {
 
 .card-footer {
   background-color: var(--bg-color);
-}
-
-.card p {
-  color: #212529;
 }
 
 .card .text-secondary {
@@ -246,9 +242,7 @@ body.dark-mode .card-body {
   background-color: transparent;
 }
 
-body.dark-mode .card p {
-  color: #e0e0e0;
-}
+
 
 body.dark-mode .card .text-secondary {
   color: #aaa !important;
@@ -314,8 +308,6 @@ body.dark-mode .title {
 }
 
 body.dark-mode a,
-
-
 body.dark-mode strong {
   color: #ffffff;
 }
@@ -355,7 +347,7 @@ body.dark-mode .fw-semibold {
 }
 
 body.dark-mode .form-control {
-  background-color: #2b2b2b;
+  background-color: #1e1e1e !important;
   color: #f1f1f1;
   border-color: #444;
 }
@@ -434,7 +426,7 @@ body.dark-mode .btn-close {
 }
 
 body.dark-mode .custom-navbar .dropdown-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color:  rgba(255, 255, 255, 0.1);
 }
 
 /* 6. Accordions */
@@ -778,16 +770,11 @@ main {
     filter: invert(1) brightness(1.2) drop-shadow(0 8px 15px rgba(255, 255, 255, 0.2));
 }
 
-.nav-underline .nav-link {
-  color: #333;
-  font-weight: 500;
-  border: none;
-  transition: color 0.2s ease;
-}
+
 
 .nav-underline .nav-link.active {
   font-weight: 600;
-  color: #000;
+  color: var(--text-color);
   border-bottom: 2px solid #0d6efd;
 }
 
@@ -1052,7 +1039,7 @@ span#project-version {
    }
 
    .custom-nav-link {
-      color: #495057 !important;
+      color: var(--text-color) !important;
       padding: 8px 16px !important;
       border-radius: 12px;
       transition: all 0.25s ease;
@@ -1098,7 +1085,7 @@ span#project-version {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
    }
    .dropdown-menu .dropdown-item {
-      color: #495057;
+      color: var(--text-color);
       transition: all 0.2s ease;
    }
 
@@ -1432,11 +1419,6 @@ body.modal-open .custom-rule-link {
     color: #000 !important;
     text-decoration: underline;
 }
-
-
-
-
-
 
 
     
@@ -3013,31 +2995,31 @@ h4:hover .text-primary {
 }
 
 
-/* Custom CSS Variables for our Brand */
 :root {
-    --bs-primary-brand: #0d6efd; /* Bootstrap Primary */
-    --bs-light-brand: #f8f9fa; /* Bootstrap Light */
-    --bs-dark-brand: #212529; /* Bootstrap Dark */
+    --bs-primary-brand: #0d6efd; 
+    --bs-light-brand: #f8f9fa; 
+    --bs-dark-brand: #212529; 
     --text-muted-brand: #adb5bd;
 }
 
-/* Base style for text-dark */
+
 .timeline-card h4.text-dark {
     color: #212529 !important;
 }
 
-/* Base style for Lead Text Muted */
+
 .text-muted-brand {
     color: var(--text-muted-brand);
 }
 
-/* Custom Buttons and Colors */
 .btn-primary-brand {
     background-color: var(--bs-primary-brand);
     border-color: var(--bs-primary-brand);
     color: #fff;
     transition: all 0.3s ease;
 }
+
+
 
 .btn-primary-brand:hover {
     background-color: #0b5ed7;
@@ -3050,7 +3032,6 @@ h4:hover .text-primary {
     color: var(--bs-primary-brand);
 }
 
-/* Timeline Layout */
 .timeline-line {
     top: 0;
     left: 50%;
@@ -3153,3 +3134,13 @@ h4:hover .text-primary {
 .animation-pulse {
     animation: pulse 2s infinite ease-in-out;
 }
+
+
+.diff-outer-container.hide-diff-colors .d2h-del,
+.diff-outer-container.hide-diff-colors .d2h-ins,
+.diff-outer-container.hide-diff-colors .d2h-code-line-ctn,
+.diff-outer-container.hide-diff-colors .d2h-code-linenumber {
+    background-color: transparent !important;
+   
+}
+

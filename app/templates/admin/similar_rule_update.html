@@ -24,11 +24,16 @@
             <!-- Global Similarity -->
             <div class="tab-pane fade show active" id="global-pane" role="tabpanel">
                 <div class="card border-0 shadow-sm p-4">
+                    <h5 class="fw-bold mb-4">Global Similarity</h5>
+
                     <div v-if="loading_global" class="text-center py-5">
                         <div class="spinner-grow text-success" role="status"></div>
                     </div>
 
                     <div v-else class="animate__animated animate__fadeIn">
+                        <similar-rules-filter v-model:score="global_min_score" v-model:format="global_format"
+                            @filter="fetchGlobalDuplicates(1)">
+                        </similar-rules-filter>
                         <template v-if="global_duplicates.length > 0">
                             <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
                                 :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
@@ -70,7 +75,7 @@
             <!-- History -->
             <div class="tab-pane fade" id="history-pane" role="tabpanel">
                 <div class="card border-0 shadow-sm p-4">
-                    <h5 class="fw-bold text-center mb-4">Update History</h5>
+                    <h5 class="fw-bold mb-4">Update History</h5>
 
                     <!-- In progress-->
                     <button type="button" class="btn btn-outline-primary float-end position-relative"
@@ -247,13 +252,15 @@
     import RuleSelectionTable from '/static/js/rule/ruleSelectionTable.js';
     import DiffDisplay from '/static/js/codeMirror/diffDisplay.js';
     import SimilarRuleCard from '/static/js/rule/similarity/similarRulesCard.js';
+    import SimilarRulesFilter from '/static/js/rule/similarity/similarRulesFilter.js';
     createApp({
         delimiters: ['[[', ']]'],
         components: {
             'diff-display': DiffDisplay,
             'pagination-component': PaginationComponent,
             'similar-rule-card': SimilarRuleCard,
-            'rule-selection-table': RuleSelectionTable
+            'rule-selection-table': RuleSelectionTable,
+            'similar-rules-filter': SimilarRulesFilter
         },
         setup() {
             const fetch_all_pages = ref(false);
@@ -359,9 +366,17 @@
             const global_total_pages = ref(1);
             const loading_global = ref(false);
 
+            const global_min_score = ref(0.80);
+            const global_format = ref('');
+
             async function fetchGlobalDuplicates(page = 1) {
                 loading_global.value = true;
-                const res = await fetch(`/rule/similar_global_duplicates?page=${page}`);
+                const params = new URLSearchParams({
+                    page: page,
+                    min_score: global_min_score.value,
+                    format: global_format.value,
+                });
+                const res = await fetch(`/rule/similar_global_duplicates?${params.toString()}`);
                 if (res.ok) {
                     const data = await res.json();
 
@@ -392,7 +407,8 @@
                 message_list, fetch_all_pages, running_sessions, fetchInProgress,
                 RuleSelectionTable,
 
-                global_duplicates, global_page, global_total_pages, loading_global, fetchGlobalDuplicates
+                global_duplicates, global_page, global_total_pages, loading_global, fetchGlobalDuplicates,
+                SimilarRuleCard, global_min_score, SimilarRulesFilter, global_format
             };
         }
     }).mount('#main-container');

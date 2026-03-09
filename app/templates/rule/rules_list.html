@@ -115,11 +115,12 @@
                             <div class="mb-1"><i class="fas fa-link me-2"></i><strong>Source:</strong> [[ rule.source ]]
                             </div>
                             <div class="mb-1"><i class="fas fa-balance-scale me-2"></i><strong>License:</strong> [[
-                                rule.license ]]</div>
+                                rule.license && rule.license !== 'Unknown' ? rule.license : 'No license' ]]</div>
                         </div>
                         <div class="col-6">
                             <div class="mb-1"><i class="fas fa-code-branch me-2"></i><strong>Version:</strong> <span
-                                    class="badge text-bg-light border px-1">[[ rule.version ]]</span></div>
+                                    class="badge text-bg-light border px-1">[[ rule.version && rule.version !==
+                                    'Unknown' ? rule.version : '1.0' ]]</span></div>
                             <div class="mb-1">
                                 <a :href="`/account/detail_user/${rule.user_id}`"
                                     class="text-decoration-none text-muted">

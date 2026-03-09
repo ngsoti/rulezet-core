@@ -2943,9 +2943,16 @@ def similar_detail(rule_id):
 @login_required
 def similar_global_duplicates():
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    min_score = request.args.get('min_score', 0.80, type=float)
     
-    pagination = RuleModel.get_top_global_duplicates_query(min_score=0.80).paginate(page=page, per_page=per_page)
+    filters = {
+        "format": request.args.get('format'),
+    }
+    
+    pagination = RuleModel.get_top_global_duplicates_query(
+        min_score=min_score, 
+        filters=filters
+    ).paginate(page=page, per_page=20)
 
     result = []
     for sim, rule_a, rule_b in pagination.items:

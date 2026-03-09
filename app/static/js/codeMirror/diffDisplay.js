@@ -8,13 +8,20 @@ const DiffDisplay = {
         oldName: { type: String, default: 'Original' },
         newName: { type: String, default: 'Modified' },
         displayMode: { type: String, default: 'side-by-side' },
-        maxHeight: { type: String, default: '850px' }
+        maxHeight: { type: String, default: 'none' }
     },
     delimiters: ['[[', ']]'],
     setup(props) {
+        // État pour la visibilité des couleurs
+        const showColors = Vue.ref(true);
+
         const isIdentical = Vue.computed(() => {
             return (props.oldText || "").trim() === (props.newText || "").trim();
         });
+
+        const toggleColors = () => {
+            showColors.value = !showColors.value;
+        };
 
         const renderUI = () => {
             Vue.nextTick(() => {
@@ -71,13 +78,25 @@ const DiffDisplay = {
         Vue.onMounted(renderUI);
         Vue.watch(() => [props.oldText, props.newText, props.displayMode], renderUI);
 
-        return { isIdentical };
+        return { isIdentical, showColors, toggleColors };
     },
     template: `
-    <div class="diff-outer-container shadow-sm border rounded d-flex flex-column" :style="{ maxHeight: maxHeight, minHeight: '200px' }">
-        <div class="diff-header-info d-flex justify-content-between px-3 py-2 bg-light border-bottom small fw-bold text-secondary">
-            <span><i class="fas fa-file-alt me-1"></i> [[ oldName ]]</span>
+    <div class="diff-outer-container shadow-sm border rounded d-flex flex-column" 
+         :class="{ 'hide-diff-colors': !showColors }"
+         :style="{ maxHeight: maxHeight, minHeight: '200px' }">
+        
+        <div class="diff-header-info d-flex justify-content-between align-items-center px-3 py-2 bg-light border-bottom small fw-bold text-secondary">
+            <div class="d-flex align-items-center gap-3">
+                <span><i class="fas fa-file-alt me-1"></i> [[ oldName ]]</span>
+                
+                <button @click="toggleColors" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.7rem;">
+                    <i :class="showColors ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                    <span class="ms-1">[[ showColors ? 'Hide Colors' : 'Show Colors' ]]</span>
+                </button>
+            </div>
+
             <span v-if="isIdentical"><i class="fas fa-equals me-1"></i> IDENTICAL CONTENT</span>
+            
             <span>[[ newName ]] <i class="fas fa-file-edit ms-1"></i></span>
         </div>
         
@@ -89,7 +108,7 @@ const DiffDisplay = {
             </div>
         </div>
 
-       
+        
     </div>
     `
 };
