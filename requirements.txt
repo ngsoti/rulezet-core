@@ -29,3 +29,4 @@ pymisp
 flask_mail
 scikit-learn
 faiss-cpu
+rapidfuzz
