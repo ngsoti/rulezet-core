@@ -32,6 +32,7 @@
 
                     <div v-else class="animate__animated animate__fadeIn">
                         <similar-rules-filter v-model:score="global_min_score" v-model:format="global_format"
+                            v-model:source-mode="global_source_mode" v-model:author-mode="global_author_mode"
                             @filter="fetchGlobalDuplicates(1)">
                         </similar-rules-filter>
                         <template v-if="global_duplicates.length > 0">
@@ -368,6 +369,8 @@
 
             const global_min_score = ref(0.80);
             const global_format = ref('');
+            const global_source_mode = ref('all');
+            const global_author_mode = ref('all');
 
             async function fetchGlobalDuplicates(page = 1) {
                 loading_global.value = true;
@@ -375,6 +378,8 @@
                     page: page,
                     min_score: global_min_score.value,
                     format: global_format.value,
+                    source_mode: global_source_mode.value,
+                    author_mode: global_author_mode.value
                 });
                 const res = await fetch(`/rule/similar_global_duplicates?${params.toString()}`);
                 if (res.ok) {
@@ -408,7 +413,7 @@
                 RuleSelectionTable,
 
                 global_duplicates, global_page, global_total_pages, loading_global, fetchGlobalDuplicates,
-                SimilarRuleCard, global_min_score, SimilarRulesFilter, global_format
+                SimilarRuleCard, global_min_score, SimilarRulesFilter, global_format, global_source_mode, global_author_mode
             };
         }
     }).mount('#main-container');

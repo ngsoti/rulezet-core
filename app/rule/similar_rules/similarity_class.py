@@ -110,7 +110,11 @@ class Similarity_class:
                 self.indexing_progress = 15
 
                 # Optimization: We keep the matrix sparse to save RAM
-                vectorizer = TfidfVectorizer(max_features=5000, stop_words='english')
+                vectorizer = TfidfVectorizer(
+                    max_features=2500, 
+                    min_df=3,
+                    dtype=np.float32, 
+                )
                 tfidf_sparse = vectorizer.fit_transform(content_list)
                 
                 self.status_message = "Building FAISS HNSW Index..."

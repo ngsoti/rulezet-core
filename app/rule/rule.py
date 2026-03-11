@@ -2432,11 +2432,9 @@ def add_new_rule():
     if not s:
         return jsonify({"success": False, "message": "Error while updating rule", "toast_class": "danger-subtle"}), 500
         
-    # On passe le 'source_info' corrigé
     success, message, imported_object = parse_rule_by_format(content, current_user, format, source_info) 
     
     if success:
-        # update gamafication section
         profil_game_user_ = AccountModel.get_or_create_gamification_profile(imported_object.user_id)
         if profil_game_user_ :
      
@@ -2444,7 +2442,7 @@ def add_new_rule():
 
         return jsonify({"success": True, "message": message, "toast_class": "success-subtle"}), 200
     elif imported_object:
-        # duplicate case
+
         return jsonify({"success": False, "message": message, "toast_class": "warning-subtle"}), 200
     else:
         return jsonify({"success": False, "message": message, "toast_class": "danger-subtle"}), 500
@@ -2947,6 +2945,8 @@ def similar_global_duplicates():
     
     filters = {
         "format": request.args.get('format'),
+        "source_mode": request.args.get('source_mode', 'all'),
+        "author_mode": request.args.get('author_mode', 'all')
     }
     
     pagination = RuleModel.get_top_global_duplicates_query(

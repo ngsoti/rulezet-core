@@ -2853,12 +2853,23 @@ def get_top_global_duplicates_query(min_score=0.85, filters=None):
         )
 
     if filters:
-        # Filter by Format (Check if either Rule A or Rule B matches)
         if filters.get('format'):
             query = query.filter(or_(
                 RuleA.format == filters['format'],
                 RuleB.format == filters['format']
             ))
+        source_mode = filters.get('source_mode')
+        if source_mode == 'same':
+            query = query.filter(RuleA.source == RuleB.source)
+        elif source_mode == 'different':
+            query = query.filter(RuleA.source != RuleB.source)
+
+
+        author_mode = filters.get('author_mode')
+        if author_mode == 'same':
+            query = query.filter(RuleA.author == RuleB.author)
+        elif author_mode == 'different':
+            query = query.filter(RuleA.author != RuleB.author)
         
 
     return query.order_by(RuleSimilarity.score.desc())
