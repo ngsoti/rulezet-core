@@ -1,16 +1,19 @@
 
+import io
 import json
 from collections import Counter
 import math
 import re
+import threading
 from typing import Any, Dict, List, Optional, Tuple
 import uuid
 import datetime
 from typing import List
+import zipfile
 from sqlalchemy.exc import SQLAlchemyError
-from flask import jsonify
+from flask import current_app, jsonify, send_file
 from flask_login import current_user
-from sqlalchemy import and_, case, or_
+from sqlalchemy import and_, case, or_, text
 from sqlalchemy.orm import joinedload
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -1830,42 +1833,89 @@ def get_all_format() -> list[dict]:
     formats = FormatRule.query.all()
     return [fmt.to_json() for fmt in formats]
 
-def get_rule_count_for_urls(urls: list[str]):
-        """Return a dict {url: count} for a list of URLs"""
-        if not urls:
-            return {}
-        counts = db.session.query(
-            Rule.source,
-            func.count(Rule.id).label("rule_count")
-        ).filter(Rule.source.in_(urls)).group_by(Rule.source).all()
-        return {c.source: c.rule_count for c in counts}
-
-def get_all_url_github_page(page: int = 1, search: str = None):
-    """Get paginated unique GitHub project URLs from Rule.source and return pagination + total count."""
-    
+def get_optimized_github_data(page: int = 1, search: str = None, search_field: str = 'url', format_filter: str = None, author_filter: str = None):
     github_pattern = r'^https?://(www\.)?github\.com/[\w\-_]+/[\w\-_]+'
+    author_expr = func.substring(Rule.source, r'github\.com/([^/]+)')
+    query = db.session.query(
+        Rule.source.label("url"),
+        author_expr.label("author"),
+        func.count(Rule.id).label("rule_count"),
+        func.string_agg(Rule.format.distinct(), text("','")).label("formats"),
+        func.sum(
+            case(
+                (and_(Rule.cve_id.isnot(None), Rule.cve_id != '[]', Rule.cve_id != ''), 1),
+                else_=0
+            )
+        ).label("cve_count"),
+        func.max(
+            db.session.query(func.count(RuleSimilarity.id))
+            .filter(RuleSimilarity.rule_id == Rule.id)
+            .filter(RuleSimilarity.score > 0.99)
+            .as_scalar()
+        ).label("has_high_similarity")
+    ).filter(Rule.source.op('~')(github_pattern))
 
-    query = Rule.query.filter(Rule.source.isnot(None))
+    if format_filter:
+        query = query.filter(Rule.format == format_filter)
 
-    # if current_user.is_admin():
-    #     if search:
-    #         query = query.filter(Rule.source.ilike(f"%{search}%"))
-
-    # else:
-    #     query = query.filter(Rule.user_id == current_user.id)
+    if author_filter and author_filter != "":
+        query = query.filter(author_expr.ilike(f"%{author_filter}%"))
 
     if search:
-        query = query.filter(Rule.source.ilike(f"%{search}%"))
+        if search_field == 'url':
+            query = query.filter(Rule.source.ilike(f"%{search}%"))
+        else:
+            query = query.filter(
+                or_(
+                    Rule.source.ilike(f"%{search}%"),
+                    Rule.format.ilike(f"%{search}%"),
+                    Rule.title.ilike(f"%{search}%")
+                )
+            )
 
-    query = query.filter(Rule.source.op('~')(github_pattern))
+    query = query.group_by(Rule.source)
+    
+    pagination = query.paginate(page=page, per_page=20)
+    
+    github_data = []
+    for row in pagination.items:
+        url = row.url
+        
+        last_import = ImporterResult.query.filter(ImporterResult.info.ilike(f"%{url}%"))\
+            .order_by(ImporterResult.query_date.desc()).first()
+            
+        last_update = UpdateResult.query.filter(
+            or_(
+                UpdateResult.info.ilike(f"%{url}%"),
+                UpdateResult.repo_sources.ilike(f"%{url}%")
+            )
+        ).order_by(UpdateResult.query_date.desc()).first()
 
-    query = query.distinct(Rule.source)
+        github_data.append({
+            "url": url,
+            "author": row.author,
+            "rule_count": row.rule_count,
+            "formats": row.formats.split(',') if row.formats else [],
+            "cve_count": row.cve_count,
+            "has_conflicts": (row.has_high_similarity or 0) > 0,
+            "last_import": {
+                "date": last_import.query_date.strftime('%Y-%m-%d %H:%M') if last_import else None,
+                "url_imported": "/rule/import_loading/"+ last_import.uuid if last_import else None,
+                "imported": last_import.imported if last_import else 0,
+                "bad_rules": last_import.bad_rules if last_import else 0,
+                "total": last_import.total if last_import else 0
+            } if last_import else None,
+            "last_update": {
+                "date": last_update.query_date.strftime('%Y-%m-%d %H:%M') if last_update else None,
+                "updated": last_update.updated if last_update else 0,
+                "url_updated": "/rule/update_loading/"+ last_update.uuid if last_update else None,
+                "new_rules_count": len(last_update.new_rules) if last_update else 0,
+                "found": last_update.found if last_update else 0
+            } if last_update else None
+        })
 
-    total_count = query.count()
+    return github_data, pagination.total, pagination.pages
 
-    pagination = query.paginate(page=page, per_page=20, max_per_page=20)
-
-    return pagination, total_count
 
 def get_rule_count_by_github_page(page: int = 1, search: str = None):
         """Return paginated list of GitHub URLs with how many rules are linked to each."""
@@ -2436,103 +2486,107 @@ def get_total_rules():
 def get_total_formats():
     return Rule.query.distinct(Rule.format).count()
 
+def delete_all_rule_by_url(urls):
+    try:
+        if not urls:
+            return False, "URL is required", 0
 
-def delete_all_rule_by_url(url, batch_size=100):
-    while True:
-        rules = Rule.query.filter_by(source=url).limit(batch_size).all()
-        if not rules:
-            break
-        for rule in rules:
-            db.session.delete(rule)
+        if isinstance(urls, str):
+            target_urls = [urls.strip()]
+        else:
+            target_urls = [u.strip() for u in urls]
+
+        rule_ids = [r[0] for r in db.session.query(Rule.id).filter(Rule.source.in_(target_urls)).all()]
+
+        if not rule_ids:
+            return True, "No rules found to delete", 0
+
+        db.session.query(RuleUpdateHistory).filter(RuleUpdateHistory.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        db.session.query(Comment).filter(Comment.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        db.session.query(RuleSimilarity).filter(RuleSimilarity.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        db.session.query(RuleVote).filter(RuleVote.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        db.session.query(BundleRuleAssociation).filter(BundleRuleAssociation.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        db.session.query(RuleEditContribution).filter(RuleEditContribution.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        db.session.query(RuleEditProposal).filter(RuleEditProposal.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        deleted_count = Rule.query.filter(Rule.id.in_(rule_ids)).delete(synchronize_session=False)
+
+        for url in target_urls:
+            ImporterResult.query.filter(ImporterResult.info.like(f'%{url}%')).delete(synchronize_session=False)
+            UpdateResult.query.filter(UpdateResult.repo_sources.like(f'%{url}%')).delete(synchronize_session=False)
+
         db.session.commit()
-    return True
 
+        return True, f"{deleted_count} rules deleted", deleted_count
 
-import requests
-import time
-import os
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Error occurred while deleting rules: {str(e)}", 0
 
-def get_filtered_history_ids():
-    # Configuration du Token GitHub (à définir dans ton environnement ou en dur pour test)
-    # os.environ['GITHUB_TOKEN'] = "ton_token_ici"
-    github_token = os.getenv('GITHUB_TOKEN')
+def get_all_github_sources(exclude_urls=None):
+    """
+    Returns a unique list of all GitHub repository URLs in the database,
+    excluding specific ones.
+    """
+
+    query = db.session.query(Rule.source).distinct()
     
-    uuid_updater = "335338e8-9a08-41e7-a1c5-e05096298911"
-    updater = UpdateResult.query.filter_by(uuid=uuid_updater).first()
+    query = query.filter(Rule.source.like('https://github.com/%'))
     
-    if not updater:
-        return []
 
-    rule_statuses = RuleStatus.query.filter_by(
-        update_result_id=updater.id, 
-        update_available=True
-    ).all()
+    if exclude_urls:
+        query = query.filter(Rule.source.notin_(exclude_urls))
+
+    return [r[0] for r in query.all()]
+
+
+def export_rules_by_urls_as_zip(urls):
+    """
+    Exports rules into a ZIP file structure.
+    Structure:
+    /repo_name/info.json
+    /repo_name/rules/rule_1.json
+    /repo_name/rules/rule_2.json
+    """
+    if isinstance(urls, str):
+        target_urls = [urls.strip()]
+    else:
+        target_urls = [u.strip() for u in urls]
+
+    memory_file = io.BytesIO()
     
-    if not rule_statuses:
-        print("Aucun status de règle trouvé avec update_available=True")
-        return []
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for url in target_urls:
+            folder_name = url.replace('https://', '').replace('http://', '').replace('/', '_').strip('_')
+            
+            rules = Rule.query.filter(Rule.source == url).all()
+            
 
-    history_ids = [rs.history_id for rs in rule_statuses if rs.history_id]
-    history_entries = RuleUpdateHistory.query.filter(RuleUpdateHistory.id.in_(history_ids)).all()
-    
-    if not history_entries:
-        print("history entries not found")
-        return []
+            repo_info = {
+                "repository_url": url,
+                "exported_at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+                "total_rules_found": len(rules),
+                "platform": "rulezet.org"
+            }
 
-    unique_uuids = set()
-    final_json_list = []
-
-
-    search_url = "https://api.github.com/search/code"
-    headers = {"Accept": "application/vnd.github+json"}
-    if github_token:
-        headers["Authorization"] = f"token {github_token}"
-
-    for his in history_entries:
-        rule = Rule.query.filter_by(id=his.rule_id).first()
-        if not rule or rule.original_uuid in unique_uuids:
-            continue
-        
-        unique_uuids.add(rule.original_uuid)
-        
-   
-        rule_data = {
-            "uuid": rule.original_uuid,
-            "rule_name": rule.title,
-            "db_source_path": rule.source, 
-            "github_found_paths": rule.github_path,       
-        }
-
-       
-        if rule.original_uuid:
-            query = f"{rule.original_uuid} repo:Neo23x0/signature-base"
-            try:
-                response = requests.get(search_url, headers=headers, params={'q': query})
+            zf.writestr(f"{folder_name}/info.json", json.dumps(repo_info, indent=4))
+            
+            for rule in rules: 
+                rule_filename = f"{folder_name}/rules/rule_{rule.title}_{rule.id}.json"
                 
-                if response.status_code == 200:
-                    items = response.json().get('items', [])
-                    # On récupère tous les chemins de fichiers où cet UUID apparaît
-                    rule_data["github_found_paths"] = [item['path'] for item in items]
-                elif response.status_code == 403:
-                    print("Rate limit GitHub atteint, pause nécessaire...")
+
+                rule_data = rule.to_json() 
                 
-                # Petit délai pour ne pas brusquer l'API
-                time.sleep(1) 
-            except Exception as e:
-                print(f"Erreur recherche GitHub pour {rule.original_uuid}: {e}")
-
-        final_json_list.append(rule_data)
-
-    return final_json_list
-
-# Exemple d'exécution
-# results = get_filtered_history_ids()
-# import json
-# print(json.dumps(results, indent=4))
+                zf.writestr(rule_filename, json.dumps(rule_data, indent=4))
 
 
-
+    memory_file.seek(0)
     
+    return send_file(
+        memory_file,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=f"github_rules_export_{datetime.date.today()}.zip"
+    )
 
 def delete_importer_history(id):
     try:

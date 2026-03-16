@@ -1,9 +1,10 @@
 import io
 import json
+import threading
 import zipfile
 import os
 import tempfile
-from flask import request, send_file
+from flask import current_app, request, send_file
 from math import ceil
 from urllib.parse import urlparse
 from datetime import datetime,  timezone
@@ -2280,36 +2281,84 @@ def list_github_url() :
 
 @rule_blueprint.route("/get_url_github", methods=['GET'])
 def get_url_github():
-    """List all GitHub URLs and show how many Rules exist for each one."""
-    
     search = request.args.get("search", default=None, type=str)
+    search_field = request.args.get("search_field", default='url', type=str)
+    format_filter = request.args.get("format", default=None, type=str)
+    author_filter = request.args.get("author", "")
     page = request.args.get("page", default=1, type=int)
 
-
-    pagination_urls, total_urls = RuleModel.get_all_url_github_page(page, search)
-    urls_in_page = [rule.source for rule in pagination_urls.items]
-
-
-    counts_map = RuleModel.get_rule_count_for_urls(urls_in_page)
-
-
-    github_data = []
-    for rule in pagination_urls.items:
-        github_data.append({
-            "id": rule.id,
-            "url": rule.source,
-            "rule_count": counts_map.get(rule.source, 0)
-        })
+    github_data, total_url, total_pages = RuleModel.get_optimized_github_data(
+        page=page, 
+        search=search, 
+        search_field=search_field, 
+        format_filter=format_filter,
+        author_filter=author_filter
+    )
 
     return jsonify({
         "success": True,
         "github_url": github_data,
-        "total_url": total_urls,
-        "total_pages": pagination_urls.pages
+        "total_url": total_url,
+        "total_pages": total_pages
     }), 200
 
+@rule_blueprint.route("/delete_all_rule_github", methods=['GET', 'POST'])
+def delete_all_rule_github():
+    if current_user.is_admin() == False:
+        return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
+    url = request.args.get("url")
+    if not url:
+        return jsonify({"message": "URL is required"}), 400
 
+    
+    success , message , nb = RuleModel.delete_all_rule_by_url(url)
 
+    return jsonify({
+        "status": "processing",
+        "message": message,
+        "deleted_count": nb,
+        "url": url,
+        "toast_class": "success-subtle" if success else "danger-subtle"
+    }), 202
+
+@rule_blueprint.route("/bulk_action_github", methods=['POST'])
+def bulk_action_github():
+    data = request.get_json()
+    action = data.get('action')
+    mode = data.get('mode', 'partial')
+    excluded_ids = data.get('excluded_ids') or []
+    
+
+    if mode == 'all':
+        target_urls = RuleModel.get_all_github_sources(exclude_urls=excluded_ids)
+    else:
+        target_urls = data.get('selected_ids') or []
+    if action == 'delete':
+        if current_user.is_admin() == False:
+            return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
+        if not target_urls:
+            return jsonify({"message": "No URLs to delete", "status": "warning-subtle"}), 400
+        
+        success, message, nb = RuleModel.delete_all_rule_by_url(target_urls)
+        
+        return jsonify({
+            "status": "success" if success else "error",
+            "message": message,
+            "deleted_count": nb,
+            "toast_class": "success-subtle" if success else "danger-subtle"
+        }), 200
+
+    elif action == 'export':
+        if not target_urls:
+            return jsonify({"message": "No URLs to export", "toast_class": "warning-subtle"}), 400
+        
+       
+        try:
+            return RuleModel.export_rules_by_urls_as_zip(target_urls)
+        except Exception as e:
+            return jsonify({"message": f"Export failed: {str(e)}", "toast_class": "danger-subtle"}), 500
+
+    return jsonify({"message": "Action not supported"}), 400
 
 @rule_blueprint.route("/github_detail", methods=['GET'])
 def github_detail():

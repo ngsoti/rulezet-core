@@ -175,18 +175,17 @@ class Similarity_class:
                 try:
                     _, batch_indices = self.jobs.get(timeout=1)
                     
-                    # Convert only the current batch to dense for FAISS search
+
                     vectors_dense = tfidf_sparse[batch_indices].toarray().astype('float32')
                     faiss.normalize_L2(vectors_dense)
                     
-                    # Search for top_k + 1 (to account for the rule itself)
+
                     _, neighbors = index.search(vectors_dense, self.top_k + 1)
 
                     tasks = []
                     for k, idx_in_matrix in enumerate(batch_indices):
                         source_id = rule_ids[idx_in_matrix]
                         
-                        # Filter candidates (exclude self and invalid indices)
                         candidates = []
                         for sid in neighbors[k]:
                             if sid != -1:
