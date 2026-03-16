@@ -2508,6 +2508,8 @@ def delete_all_rule_by_url(urls):
         db.session.query(BundleRuleAssociation).filter(BundleRuleAssociation.rule_id.in_(rule_ids)).delete(synchronize_session=False)
         db.session.query(RuleEditContribution).filter(RuleEditContribution.rule_id.in_(rule_ids)).delete(synchronize_session=False)
         db.session.query(RuleEditProposal).filter(RuleEditProposal.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        db.session.query(RuleFavoriteUser).filter(RuleFavoriteUser.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+
         deleted_count = Rule.query.filter(Rule.id.in_(rule_ids)).delete(synchronize_session=False)
 
         for url in target_urls:

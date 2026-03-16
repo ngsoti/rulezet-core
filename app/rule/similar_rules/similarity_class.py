@@ -109,7 +109,7 @@ class Similarity_class:
                 self.status_message = "Vectorizing rules (TF-IDF Sparse)..."
                 self.indexing_progress = 15
 
-                # Optimization: We keep the matrix sparse to save RAM
+                # Sparse TF-IDF vectorization to manage memory better, especially for large datasets
                 vectorizer = TfidfVectorizer(
                     max_features=2500, 
                     min_df=3,
@@ -120,7 +120,7 @@ class Similarity_class:
                 self.status_message = "Building FAISS HNSW Index..."
                 self.indexing_progress = 20
 
-                # Initialize HNSW index (Efficient for 180k+ items)
+                # Initialize HNSW index 
                 d = tfidf_sparse.shape[1]
                 index = faiss.IndexHNSWFlat(d, 32)
                 

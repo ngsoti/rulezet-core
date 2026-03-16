@@ -2941,36 +2941,6 @@ body.dark-mode .text-dark {
 }
 
 
-.col-lg-8, .row.g-4.mb-5 .col-md-4, .card-security-premium {
-    opacity: 0; 
-    animation: fadeInUp 0.6s ease-out forwards;
-}
-
-.col-lg-8 { animation-delay: 0.1s; }
-
-
-.row.g-4.mb-5 .col-md-4:nth-child(1) { animation-delay: 0.2s; }
-.row.g-4.mb-5 .col-md-4:nth-child(2) { animation-delay: 0.3s; }
-.row.g-4.mb-5 .col-md-4:nth-child(3) { animation-delay: 0.4s; }
-
-
-hr.anim { animation: fadeInUp 0.8s ease-out forwards; animation-delay: 0.5s; opacity: 0; }
-
-
-.col-xl-4:nth-child(1) .card-security-premium { animation-delay: 0.6s; }
-.col-xl-4:nth-child(2) .card-security-premium { animation-delay: 0.7s; }
-.col-xl-4:nth-child(3) .card-security-premium { animation-delay: 0.8s; }
-.col-xl-4:nth-child(4) .card-security-premium { animation-delay: 0.9s; }
-.col-xl-4:nth-child(n+5) .card-security-premium { animation-delay: 1s; }
-
-
-
-
-.d-flex.align-items-center.justify-content-between.mb-4 {
-    opacity: 0;
-    animation: fadeInUp 0.8s ease-out forwards;
-    animation-delay: 0.6s; 
-}
 
 
 .text-primary {
