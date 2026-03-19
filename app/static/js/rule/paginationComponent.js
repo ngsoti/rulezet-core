@@ -12,7 +12,7 @@ export default {
         const visiblePages = Vue.computed(() => {
             const total = props.totalPages;
             const current = props.currentPage;
-            const delta = 2; // Pages autour de la page actuelle
+            const delta = 2; 
             
             if (total <= 10) {
                 return Array.from({ length: total }, (_, i) => i + 1);
@@ -22,7 +22,7 @@ export default {
             const left = current - delta;
             const right = current + delta;
 
-            range.push(1); // Toujours la première
+            range.push(1); 
 
             if (left > 2) range.push('...');
 
@@ -32,7 +32,7 @@ export default {
 
             if (right < total - 1) range.push('...');
 
-            range.push(total); // Toujours la dernière
+            range.push(total); 
 
             return range;
         });

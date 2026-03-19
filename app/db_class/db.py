@@ -363,23 +363,34 @@ class InvalidRuleModel(db.Model):
         }
     
 
-
 class RuleEditProposal(db.Model):
+    __tablename__ = 'rule_edit_proposal'
+
     id = db.Column(db.Integer, primary_key=True)
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # the user who made the request
-    proposed_content = db.Column(db.Text, nullable=False)
-    old_content = db.Column(db.String)
-    message = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
-    status = db.Column(db.String, default="pending")
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) 
 
-    rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic',  cascade='all, delete-orphan'))
-    user = db.relationship('User', backref=db.backref('proposed_edits', lazy='dynamic', cascade='all, delete-orphan'))
+    proposed_content = db.Column(db.Text, nullable=False)
+    old_content = db.Column(db.Text) 
+    message = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.datetime.now(tz=datetime.timezone.utc))
+    status = db.Column(db.String(20), default="pending") # pending, approved, rejected
+
+    edit_type = db.Column(db.String(50), nullable=True) # ex: 'typo', 'content_update', 'legal'
+    change_score = db.Column(db.Float, nullable=True)   # (0-100)
+    
+    reviewed_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    rejection_reason = db.Column(db.Text, nullable=True)
+
+    # Relations
+    rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('proposed_edits', lazy='dynamic', cascade='all, delete-orphan'))
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by_id])
 
     def get_rule_title(self):
-        rule = Rule.query.get(self.rule_id)  
-        return rule.title if rule else None
+        rule_obj = Rule.query.get(self.rule_id)  
+        return rule_obj.title if rule_obj else None
 
 
     def to_json(self):
@@ -388,13 +399,17 @@ class RuleEditProposal(db.Model):
             'rule_id': self.rule_id,
             'rule_name': self.get_rule_title(),
             'user_id': self.user_id,
-            'user_name': self.user.first_name if self.user else None,
+            'user_name': f"{self.user.first_name} {self.user.last_name}" if self.user else "Unknown",
             'proposed_content': self.proposed_content,
             'old_content': self.old_content,
             'message': self.message,
             'status': self.status,
-            'timestamp': self.timestamp.isoformat(),      #2021-07-27#16:01:12.090202        DateTime_in_ISOFormat.isoformat("#", "auto")
-            'comments': [comment.to_json() for comment in self.comments.order_by(RuleEditComment.created_at.asc())]  # take all the message which was concerne by this pull request with date order
+            'edit_type': self.edit_type,
+            'change_score': self.change_score,
+            'timestamp': self.timestamp.isoformat(),
+            'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,
+            'rejection_reason': self.rejection_reason,
+            'comments': [comment.to_json() for comment in self.comments.order_by(RuleEditComment.created_at.asc())] if hasattr(self, 'comments') else []
         }
 
 

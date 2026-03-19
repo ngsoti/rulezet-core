@@ -37,115 +37,10 @@
 
     <div class="tab-content" id="exampleTabsContent">
         <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
-            <div class="card card-body shadow-sm" id="main-container">
-                <template v-if="rules_pendings_list && rules_pendings_list.length > 0">
-                    <div v-for="(rule, index) in rules_pendings_list" :key="rule.id">
-                        <div class="card shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h5 class="card-title mb-0">
-                                        <a :href="`/rule/detail_rule/${rule.id}`" title="view more about this rule">
-                                            <i class="fas fa-shield-alt me-2 text-primary"></i>
-                                            [[ rule.rule_name ]]
-                                        </a>
-                                    </h5>
-
-                                    <span class="badge" :class="{
-                                            'bg-secondary': rule.status === 'pending',
-                                            'bg-success': rule.status === 'accepted',
-                                            'bg-danger': rule.status === 'rejected'
-                                        }">
-                                        [[ rule.status ]]
-                                    </span>
-                                </div>
-
-                                <p class="text-muted small mb-2">A new edit has been proposed.</p>
-
-                                <div class="d-flex flex-wrap gap-2 mb-2">
-                                    <!-- Accept Button -->
-                                    <button class="btn btn-success btn-sm d-inline-flex align-items-center"
-                                        @click="handleDecision(rule.id, 'accepted', rule.rule_id, index)">
-                                        <i class="fas fa-check me-1"></i> Accept
-                                    </button>
-
-                                    <!-- Reject Button -->
-                                    <button class="btn btn-danger btn-sm d-inline-flex align-items-center"
-                                        @click="handleDecision(rule.id, 'rejected', rule.rule_id, index)">
-                                        <i class="fas fa-times me-1"></i> Reject
-                                    </button>
-
-                                    <!-- Toggle Details Button -->
-                                    <button class="btn btn-secondary btn-sm d-inline-flex align-items-center"
-                                        type="button" data-bs-toggle="modal"
-                                        data-bs-target="#fullscreenDiffModalpending"
-                                        @click="loadDiffInModalPending(rule)">
-                                        <i class="fas fa-eye me-1"></i> Details
-                                    </button>
-
-
-                                    <!-- Discuss Content Link -->
-                                    <a :href="'/rule/proposal_content_discuss?id=' + rule.id"
-                                        class="btn btn-primary btn-sm d-inline-flex align-items-center">
-                                        <i class="fas fa-comments me-1 text-info"></i> Discuss
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal fade" id="fullscreenDiffModalpending" tabindex="-1"
-                        aria-labelledby="diffModalLabelpending" aria-hidden="true">
-                        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="diffModalLabelpending">
-                                        Changes for Rule: [[ selectedRuleNamePending ]]
-                                    </h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body p-0">
-                                    <div class="table-responsive">
-                                        <div id="modalDiffContainerPending"></div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary"
-                                        data-bs-dismiss="modal">Close</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <template v-if="rules_pendings_list && rules_pendings_list.length > 10"
-                        class="mt-3 d-flex justify-content-center">
-                        <nav aria-label="Page navigation" class="mt-3 d-flex justify-content-center">
-                            <ul class="pagination">
-                                <li class="page-item" :class="{ disabled: current_page === 1 }">
-                                    <a class="page-link" href="#" @click.prevent="fetchRules(current_page - 1)">
-                                        <i class="fas fa-arrow-left"></i> Previous
-                                    </a>
-                                </li>
-                                <li class="page-item" v-for="page in visiblePages" :key="page"
-                                    :class="{ active: current_page === page, disabled: page === '...' }">
-                                    <a v-if="page !== '...'" class="page-link" href="#"
-                                        @click.prevent="fetchRules(page)">[[ page ]]</a>
-                                    <span v-else class="page-link">...</span>
-                                </li>
-                                <li class="page-item" :class="{ disabled: current_page === total_pages_pending }">
-                                    <a class="page-link" href="#" @click.prevent="fetchRules(current_page + 1)">
-                                        Next <i class="fas fa-arrow-right"></i>
-                                    </a>
-                                </li>
-                            </ul>
-                        </nav>
-                    </template>
-                </template>
-
-                <template v-else>
-                    <div class="text-center mt-5">
-                        <p class="text-muted">No proposed edits found.</p>
-                    </div>
-                </template>
+            <div class="card card-body shadow-sm">
+                <proposal-selection-table submit-endpoint="/rule/votre_route_bulk_action"
+                    csrf-token="{{ csrf_token() }}">
+                </proposal-selection-table>
             </div>
         </div>
         <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
@@ -332,8 +227,12 @@
     const { createApp, ref, computed, nextTick } = Vue;
     import { message_list, display_toast, create_message } from '/static/js/toaster.js';
     import { renderDiff } from "/static/js/diff_macro.js";
+    import ProposalSelectionTable from '/static/js/rule/proposal/proposalSelectionTable.js';
     createApp({
         delimiters: ['[[', ']]'],
+        components: {
+            'proposal-selection-table': ProposalSelectionTable
+        },
         setup() {
             // get the current user id with script var 
             const currentUserId = parseInt('{{ current_user.id }}');
@@ -365,7 +264,7 @@
                 }
             }
 
-            fetchRules(1);
+            //fetchRules(1);
 
             const selectedRuleName = ref('');
 
@@ -679,7 +578,8 @@
 
                 loadDiffInModalPending,
                 renderDiffOnExpandPending,
-                selectedRuleNamePending
+                selectedRuleNamePending,
+                ProposalSelectionTable
 
             };
         }

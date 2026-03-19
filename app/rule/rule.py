@@ -865,8 +865,14 @@ def propose_edit(rule_id) -> redirect:
     if not valide:
         flash(f"Syntax error in proposed content: {error}", "error")
         return redirect(url_for('rule.detail_rule', rule_id=rule_id) + "#chap2-pane")
+    
+    form = {
+        "rule_id": rule_id,
+        "proposed_content": proposed_content,
+        "message": message,
+    }
 
-    success = RuleModel.propose_edit_core(rule_id, proposed_content, message)
+    success = RuleModel.propose_edit_core(form, current_user.id)
     if success:
         # add to gamification 
         gamification = AccountModel.get_or_create_gamification_profile(current_user.id)

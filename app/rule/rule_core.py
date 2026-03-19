@@ -1005,22 +1005,43 @@ def get_rules_page_favorite(page, id_user, search=None, author=None, sort_by=Non
 # CRUD
 
 # Create
-def propose_edit_core(rule_id, proposed_content, message=None) -> bool:
+def propose_edit_core(form , user_id) -> bool:
     """create an issue for a rule"""
-    if not proposed_content:
+    if not form or not user_id:
+        return False
+    rule_id = form.get("rule_id")
+    if not rule_id:
         return False
     rule = get_rule(rule_id)
+    if not rule:
+        return False
+    
+    proposed_content = form.get("proposed_content") or rule.to_string or "No content provided"
+    message = form.get("message") or "No message provided"
+    timestamp = datetime.datetime.now(tz=datetime.timezone.utc) or form.get("timestamp")
+    status = form.get("status") or "pending"
+    edit_type = form.get("edit_type") or "content_update"
+    change_score = calculate_diff_score(rule.to_string or "", proposed_content)
+    
 
     new_proposal = RuleEditProposal(
         rule_id=rule_id,
-        user_id=current_user.id,
+        user_id=user_id,
         proposed_content=proposed_content,
+        old_content =rule.to_string,
+        edit_type=edit_type,
         message=message,
-        old_content =rule.to_string
+        timestamp=timestamp,
+        status=status,
+        change_score=change_score or 0.0,
     )
     db.session.add(new_proposal)
     db.session.commit()
     return True
+
+def calculate_diff_score(old_content, new_content) -> float:
+    from rapidfuzz import fuzz
+    return round(fuzz.ratio(old_content, new_content), 2)
 
 # Read
 
