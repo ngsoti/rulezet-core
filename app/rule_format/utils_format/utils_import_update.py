@@ -5,8 +5,9 @@ import shutil
 from urllib.parse import urlparse
 from flask_login import current_user
 import datetime
-from git import Repo
+
 from urllib.parse import urlparse
+from git import Repo
 import requests
 
 def get_repo_name_from_url(repo_url):

@@ -27,7 +27,7 @@ fi
 
 # 3. DATABASE UPGRADE
 echo -e "\n${YELLOW}[3/5] Upgrading Database...${NC}"
-export FLASK_ENV=development # Note: common typo fix, usually FLASK_ENV
+ export FLASKENV=development    
 if flask db upgrade; then
     echo -e "${GREEN}✔ Database upgrade successful.${NC}"
 else
