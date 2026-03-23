@@ -1,0 +1,408 @@
+/***************************************************************************__USER_DETAIL_GLOBAL_INFO__*********************************************************************************/
+
+/**
+ * User Detail Global Info Styles
+ * Following Rulezet.org design system
+ */
+
+/* ==================== Global Info Container ==================== */
+.User-detail-global-info {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.User-detail-contribution-info {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.User-detail-rule-info {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.User-detail-activity-info {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.User-detail-proposal-info {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+/* ==================== Info Grid Layout ==================== */
+.global-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ==================== Individual Info Item ==================== */
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-item-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--subtle-text-color);
+}
+
+.info-item-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-color);
+    word-break: break-word;
+}
+
+/* ==================== Badge Styles ==================== */
+.info-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    width: fit-content;
+}
+
+.badge-admin {
+    background-color: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+}
+
+.badge-verified {
+    background-color: rgba(40, 167, 69, 0.15);
+    color: #198754;
+}
+
+.badge-unverified {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #ffc107;
+}
+
+.badge-connected {
+    background-color: rgba(40, 167, 69, 0.15);
+    color: #198754;
+}
+
+.badge-disconnected {
+    background-color: rgba(108, 117, 125, 0.15);
+    color: #6c757d;
+}
+
+/* ==================== Status Indicator ==================== */
+.status-indicator-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-indicator-badge i {
+    font-size: 0.6rem;
+}
+
+/* ==================== Info Section Header ==================== */
+.info-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.info-section-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.info-section-header i {
+    color: var(--rule-name-color);
+    font-size: 1.2rem;
+}
+
+/* ==================== Admin Only Section ==================== */
+.admin-only-info {
+    background-color: rgba(220, 53, 69, 0.08);
+    border: 1px solid rgba(220, 53, 69, 0.2);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+}
+
+.admin-only-info .info-section-header {
+    border-bottom-color: rgba(220, 53, 69, 0.2);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+.admin-only-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.75px;
+    color: #dc3545;
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background-color: rgba(220, 53, 69, 0.15);
+    border-radius: 3px;
+    margin-bottom: 0.5rem;
+}
+
+/* ==================== Avatar Section ==================== */
+.avatar-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--rule-name-color), rgba(13, 110, 253, 0.6));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.avatar-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.avatar-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.avatar-email {
+    font-size: 0.9rem;
+    color: var(--subtle-text-color);
+}
+
+/* ==================== Responsive Design ==================== */
+@media (max-width: 1024px) {
+    .global-info-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .User-detail-global-info {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .global-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .User-detail-global-info {
+        padding: 1.25rem;
+    }
+
+    .avatar-container {
+        flex-direction: column;
+        text-align: center;
+        padding: 0.75rem 0;
+        margin-bottom: 0.75rem;
+    }
+
+    .user-avatar {
+        width: 70px;
+        height: 70px;
+        font-size: 1.8rem;
+    }
+
+    .info-item-label {
+        font-size: 0.75rem;
+    }
+
+    .info-item-value {
+        font-size: 0.95rem;
+    }
+
+    .info-badge {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .global-info-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .User-detail-global-info {
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .avatar-container {
+        padding: 0.5rem 0;
+        margin-bottom: 0.5rem;
+        gap: 0.75rem;
+    }
+
+    .user-avatar {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+
+    .avatar-name {
+        font-size: 1.1rem;
+    }
+
+    .avatar-email {
+        font-size: 0.85rem;
+    }
+
+    .info-item-label {
+        font-size: 0.7rem;
+    }
+
+    .info-item-value {
+        font-size: 0.9rem;
+    }
+
+    .info-badge {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* ==================== Dark Mode ==================== */
+body.dark-mode .User-detail-global-info {
+    background-color: #1e1e1e;
+    border-color: #444;
+}
+
+body.dark-mode .info-item-label {
+    color: var(--subtle-text-color);
+}
+
+body.dark-mode .info-item-value {
+    color: #f1f1f1;
+}
+
+body.dark-mode .info-section-header {
+    border-bottom-color: #444;
+}
+
+body.dark-mode .info-section-header h3 {
+    color: #f1f1f1;
+}
+
+body.dark-mode .user-avatar {
+    background: linear-gradient(135deg, var(--rule-name-color), rgba(13, 110, 253, 0.4));
+}
+
+body.dark-mode .avatar-name {
+    color: #f1f1f1;
+}
+
+body.dark-mode .avatar-email {
+    color: #adb5bd;
+}
+
+body.dark-mode .badge-admin {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: #ff6b6b;
+}
+
+body.dark-mode .badge-verified {
+    background-color: rgba(40, 167, 69, 0.2);
+    color: #51cf66;
+}
+
+body.dark-mode .badge-unverified {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #ffd43b;
+}
+
+body.dark-mode .badge-connected {
+    background-color: rgba(40, 167, 69, 0.2);
+    color: #51cf66;
+}
+
+body.dark-mode .badge-disconnected {
+    background-color: rgba(108, 117, 125, 0.2);
+    color: #adb5bd;
+}
+
+body.dark-mode .admin-only-info {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: rgba(220, 53, 69, 0.25);
+}
+
+body.dark-mode .admin-only-label {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: #ff6b6b;
+}
+
+body.dark-mode .avatar-container {
+    border-bottom-color: #444;
+}
+
+/***************************************************************************__USER_RULES_MANAGEMENT_COMPONENT__*********************************************************************************/
+
+/**
+ * User Rules Management Component Styles
+ * Following Rulezet.org design system - Matches user_detail styling
+ */
+body.dark-mode .user-rules-management-component .column-filter-header {
+    background-color: #1e1e1e;
+    border-color: #444;
+}
+
+body.dark-mode .user-rules-management-component .column-filter-header .btn-link {
+    color: #f1f1f1;
+}
+
+body.dark-mode .user-rules-management-component .column-filter-options {
+    background-color: rgba(13, 110, 253, 0.04);
+    border-bottom-color: #444;
+}

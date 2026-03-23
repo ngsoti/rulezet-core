@@ -68,6 +68,7 @@ class User(UserMixin, db.Model):
             "username": self.first_name + " " + self.last_name,
             "is_connected": self.is_connected,
             "is_verified": self.is_verified,
+            "is_admin": self.is_admin()
         }
 
 class AnonymousUser(AnonymousUserMixin):
@@ -412,6 +413,26 @@ class RuleEditProposal(db.Model):
             'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,
             'rejection_reason': self.rejection_reason,
             'comments': [comment.to_json() for comment in self.comments.order_by(RuleEditComment.created_at.asc())] if hasattr(self, 'comments') else []
+        }
+    def to_json_for_discuss(self):
+        rule_obj = Rule.query.get(self.rule_id)
+        
+        return {
+            'id': self.id,
+            'rule_id': self.rule_id,
+            'rule_name': rule_obj.title if rule_obj else "Unknown Rule",
+            'rule_format': rule_obj.format if rule_obj else "N/A",
+            'status': self.status,
+            'edit_type': self.edit_type or 'general',
+            'timestamp': self.timestamp.strftime('%Y-%m-%d %H:%M'),
+            'change_score': self.change_score,
+            'message': self.message,
+            'discuss_url': f"/rule/proposal_content_discuss?id={self.id}",
+            'status_color': {
+                'pending': 'warning',
+                'approved': 'success',
+                'rejected': 'danger'
+            }.get(self.status, 'secondary')
         }
 
 

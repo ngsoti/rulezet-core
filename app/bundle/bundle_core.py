@@ -97,6 +97,8 @@ def get_bundle_by_id(bundle_id: int) -> Bundle | None:
     :return: Bundle instance or None if not found.
     """
     return Bundle.query.get(bundle_id)
+def get_all_bundles_by_user(user_id: int):
+     return Bundle.query.filter_by(user_id=user_id).all()
 
 def get_bundle_by_uuid(uuid: str) -> Bundle | None:
     """

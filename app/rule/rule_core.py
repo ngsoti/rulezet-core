@@ -1102,7 +1102,13 @@ def get_rule_proposal(id) -> RuleEditProposal:
 def get_rule_proposal_user_id(proposal_id) -> id:
     """Get the user id of a proposal"""
     rule_proposal = get_rule_proposal(proposal_id)
+    if not rule_proposal:
+        return None
     return rule_proposal.user_id
+
+def get_all_rule_proposal_user_id(user_id) -> RuleEditProposal:
+    """Get all the rule edit porposal where the current user has part of """
+    return RuleEditProposal.query.filter(RuleEditProposal.user_id == user_id).all()
 
 def get_all_rules_edit_propose_user_part_from_page(page, user_id, per_page=30)-> RuleEditProposal:
         """Get all the rule edit porposal where the current user has part of """

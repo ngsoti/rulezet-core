@@ -5,9 +5,11 @@ from flask import Blueprint, jsonify, render_template, redirect, url_for, reques
 from .form import LoginForm, EditUserForm, AddNewUserForm
 from ..rule import rule_core as RuleModel
 from . import account_core as AccountModel
+from ..bundle import bundle_core as BundleModel
 from ..utils.utils import form_to_dict, generate_api_key
 from flask_login import current_user, login_required, login_user, logout_user
 from datetime import datetime, timedelta, timezone
+from collections import Counter
 account_blueprint = Blueprint(
     'account',
     __name__,
@@ -35,7 +37,12 @@ def user_list() -> render_template:
 @login_required
 def detail_user(user_id) -> render_template:
     """Redirect to the detail user section"""
-    return render_template("account/detail_user.html" , user_id=user_id)
+    user = AccountModel.get_user(user_id)
+    if not user:
+        flash("User not found.", "error")
+        # redirect to the previous page
+        return redirect(request.referrer)
+    return render_template("account/detail_user.html" , user=user.to_json())
 
 @account_blueprint.route("/get_user")
 @login_required
@@ -355,6 +362,24 @@ def get_my_contributions():
   
     return jsonify(data)
 
+
+@account_blueprint.route('/user_contributions/<user_id>', methods=['GET'])
+@login_required
+def get_user_contributions(user_id):
+    """Recup the user contributions"""
+   
+    data = AccountModel.get_user_contributions_data(user_id=user_id)
+    
+    if not data or not data.get('user_stats'):
+        # create the user_stats if it doesn't exist
+        success = AccountModel.get_or_create_gamification_profile(user_id=user_id)
+        if not success:
+            return jsonify({"error": "Failed to create user_stats"}), 500
+        data = AccountModel.get_user_contributions_data(user_id=user_id)
+    
+  
+    return jsonify(data)
+
 #refresh
 @account_blueprint.route('/refresh', methods=['GET'])
 @login_required
@@ -389,3 +414,71 @@ def admin():
     if current_user.is_admin():
         return jsonify({"message": "Access granted", "success": True , "toast_class" : "success-subtle"}), 200
     return jsonify({"message": "Access denied", "success": False , "toast_class" : "danger-subtle"}), 403
+
+
+
+
+@account_blueprint.route('/user_activity_stats/<int:user_id>')
+def get_user_activity_stats(user_id):
+    user_rules = RuleModel.get_all_rules_by_user(user_id)
+    user_bundles = BundleModel.get_all_bundles_by_user(user_id)
+    
+
+    formats_counts = Counter([r.format for r in user_rules if r.format])
+    
+
+    timeline_data = Counter([r.creation_date.strftime('%Y-%m') for r in user_rules if r.creation_date])
+    sorted_timeline = dict(sorted(timeline_data.items()))
+
+
+    r_likes = sum(r.vote_up or 0 for r in user_rules)
+    r_dislikes = sum(r.vote_down or 0 for r in user_rules)
+    b_likes = sum(b.vote_up or 0 for b in user_bundles)
+    b_dislikes = sum(b.vote_down or 0 for b in user_bundles)
+
+    
+    total_votes = r_likes + r_dislikes + b_likes + b_dislikes
+    trust_score = 100
+    if total_votes > 0:
+        trust_score = round((r_likes + b_likes) / total_votes * 100, 1)
+
+    return jsonify({
+        "activity_stats": {
+            "rules_likes": r_likes,
+            "rules_dislikes": r_dislikes,
+            "bundles_likes": b_likes,
+            "bundles_dislikes": b_dislikes,
+            "total_rules": len(user_rules),
+            "total_bundles": len(user_bundles),
+            "trust_score": trust_score
+        },
+        "format_distribution": dict(formats_counts),
+        "timeline": sorted_timeline
+    })
+
+@account_blueprint.route('/user_edit_proposals/<int:user_id>')
+def get_user_edit_proposals(user_id):
+
+    print(user_id)
+    proposals = RuleModel.get_all_rule_proposal_user_id(user_id)
+
+    if not proposals:
+        return jsonify({
+            "proposals": [],
+            "stats": {
+                "total": 0,
+                "pending": 0,
+                "accepted": 0,
+                "rejected": 0
+            }
+        })
+
+    return jsonify({
+        "proposals": [p.to_json_for_discuss() for p in proposals],
+        "stats": {
+            "total": len(proposals),
+            "pending": len([p for p in proposals if p.status == 'pending']),
+            "accepted": len([p for p in proposals if p.status == 'accepted']),
+            "rejected": len([p for p in proposals if p.status == 'rejected'])
+        }
+    })
