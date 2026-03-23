@@ -89,11 +89,10 @@ def delete_user() -> render_template:
         if delete:
             return {"message": "User Deleted",
                     "success": True,
-                    "toast_class" : "success"}, 200
+                    "toast_class" : "success-subtle"}, 200
         return {"message": "Failed to delete",
                 "success": False,
-                "toast_class" : "danger"
-                }, 500
+                "toast_class" : "danger-subtle"}, 500
     else:
         return render_template("access_denied.html")
 

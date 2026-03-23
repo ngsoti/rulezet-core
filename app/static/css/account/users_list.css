@@ -1,0 +1,486 @@
+/**************************************************************************__USER_MANAGEMENT_TABLE__*********************************************************************************/
+
+/**
+ * User Management Table Styles - Compact Version
+ * Following Rulezet.org design system
+ */
+
+/* ==================== Header Section ==================== */
+.header-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.header-section h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.header-section p {
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* ==================== Filters Container ==================== */
+.filters-container {
+    background-color: var(--card-bg-color);
+    padding: 1.25rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.filters-container .form-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--subtle-text-color);
+    margin-bottom: 0.5rem;
+}
+
+.filters-container .form-control,
+.filters-container .form-select {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.875rem;
+}
+
+.filters-container .form-control:focus,
+.filters-container .form-select:focus {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border-color: var(--rule-name-color);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.filters-container .form-control::placeholder {
+    color: var(--subtle-text-color);
+    opacity: 0.6;
+}
+
+/* ==================== Users Count ==================== */
+.users-count {
+    font-size: 0.9rem;
+}
+
+.badge {
+    padding: 0.4rem 0.8rem;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+.badge.bg-primary {
+    background-color: var(--rule-name-color) !important;
+    color: #fff !important;
+}
+
+/* ==================== Table Styles ==================== */
+.table-responsive {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.users-table {
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
+    border-collapse: collapse;
+    margin-bottom: 0;
+}
+
+/* Table Header */
+.users-table thead {
+    background-color: rgba(13, 110, 253, 0.08);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.users-table thead th {
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Table Body */
+.users-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.users-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.users-table tbody tr.current-user {
+    background-color: rgba(13, 110, 253, 0.04);
+}
+
+.users-table tbody td {
+    padding: 0.75rem 1rem;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+/* Table Columns */
+.col-user {
+    min-width: 200px;
+}
+
+.col-email {
+    min-width: 200px;
+}
+
+.col-role {
+    min-width: 120px;
+}
+
+.col-status {
+    min-width: 120px;
+}
+
+.col-verified {
+    min-width: 100px;
+}
+
+.col-actions {
+    min-width: 120px;
+    text-align: center;
+}
+
+/* ==================== Status Indicators ==================== */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-online {
+    background-color: rgba(40, 167, 69, 0.15);
+    color: #198754;
+}
+
+.status-online i {
+    font-size: 0.6rem;
+}
+
+.status-offline {
+    background-color: rgba(108, 117, 125, 0.15);
+    color: #6c757d;
+}
+
+.status-offline i {
+    font-size: 0.6rem;
+}
+
+/* ==================== Badges ==================== */
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+    font-size: 0.75rem;
+}
+
+.badge.bg-success {
+    background-color: #198754 !important;
+    color: #fff !important;
+    font-size: 0.75rem;
+}
+
+.badge.bg-info {
+    background-color: #17a2b8 !important;
+    color: #fff !important;
+    font-size: 0.65rem;
+}
+
+/* ==================== Buttons ==================== */
+.btn-sm {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    border: none;
+}
+
+.btn-primary {
+    background-color: var(--rule-name-color);
+    color: #fff;
+}
+
+.btn-primary:focus {
+    background-color: var(--rule-name-color);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.btn-danger:focus {
+    background-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.btn-secondary:focus {
+    background-color: #6c757d;
+    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+}
+
+/* ==================== Modal Styles ==================== */
+.modal-content {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.modal-header {
+    background-color: rgba(220, 53, 69, 0.08);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem;
+}
+
+.modal-header .modal-title {
+    color: #dc3545;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.modal-body {
+    padding: 1rem;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.modal-footer {
+    background-color: var(--card-bg-color);
+    border-top: 1px solid var(--border-color);
+    padding: 1rem;
+}
+
+/* ==================== Pagination ==================== */
+.pagination-sm .page-link {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    color: var(--rule-name-color);
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.pagination-sm .page-item:not(:last-child) .page-link {
+    margin-right: 0.3rem;
+}
+
+.pagination-sm .page-item.active .page-link {
+    background-color: var(--rule-name-color);
+    border-color: var(--rule-name-color);
+    color: #fff;
+}
+
+.pagination-sm .page-item.disabled .page-link {
+    color: var(--subtle-text-color);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* ==================== Dark Mode ==================== */
+body.dark-mode .header-section {
+    border-bottom-color: #444;
+}
+
+body.dark-mode .filters-container {
+    background-color: #1e1e1e;
+    border-color: #444;
+}
+
+body.dark-mode .filters-container .form-control,
+body.dark-mode .filters-container .form-select {
+    background-color: #2a2a2a;
+    color: #f1f1f1;
+    border-color: #444;
+}
+
+body.dark-mode .filters-container .form-control:focus,
+body.dark-mode .filters-container .form-select:focus {
+    background-color: #2a2a2a;
+    border-color: var(--rule-name-color);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+body.dark-mode .table-responsive {
+    background-color: #1e1e1e;
+    border-color: #444;
+}
+
+body.dark-mode .users-table {
+    background-color: #1e1e1e;
+    color: #f1f1f1;
+}
+
+body.dark-mode .users-table thead {
+    background-color: rgba(13, 110, 253, 0.12);
+    border-bottom-color: #444;
+}
+
+body.dark-mode .users-table thead th {
+    color: #f1f1f1;
+    border-color: #444;
+}
+
+body.dark-mode .users-table tbody tr {
+    border-bottom-color: #444;
+}
+
+body.dark-mode .users-table tbody tr.current-user {
+    background-color: rgba(13, 110, 253, 0.08);
+}
+
+body.dark-mode .users-table tbody td {
+    color: #f1f1f1;
+}
+
+body.dark-mode .modal-content {
+    background-color: #1e1e1e;
+    border-color: #444;
+}
+
+body.dark-mode .modal-header {
+    background-color: rgba(220, 53, 69, 0.12);
+    border-bottom-color: #444;
+}
+
+body.dark-mode .modal-body {
+    color: #f1f1f1;
+}
+
+body.dark-mode .modal-footer {
+    background-color: #1e1e1e;
+    border-top-color: #444;
+}
+
+body.dark-mode .pagination-sm .page-link {
+    color: var(--rule-name-color);
+    background-color: #2a2a2a;
+    border-color: #444;
+}
+
+body.dark-mode .pagination-sm .page-item.active .page-link {
+    background-color: var(--rule-name-color);
+    border-color: var(--rule-name-color);
+    color: #fff;
+}
+
+/* ==================== Responsive Design ==================== */
+@media (max-width: 1024px) {
+    .col-user {
+        min-width: 150px;
+    }
+
+    .col-email {
+        min-width: 150px;
+    }
+
+    .col-actions {
+        min-width: 100px;
+    }
+}
+
+@media (max-width: 768px) {
+    .filters-container {
+        padding: 1rem;
+    }
+
+    .users-table thead th {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .users-table tbody td {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .col-user {
+        min-width: 120px;
+    }
+
+    .col-email {
+        min-width: 140px;
+    }
+
+    .col-role {
+        min-width: 100px;
+    }
+
+    .col-status {
+        min-width: 100px;
+    }
+
+    .col-verified {
+        min-width: 80px;
+    }
+
+    .col-actions {
+        min-width: 80px;
+    }
+
+    .btn-sm {
+        padding: 0.3rem 0.4rem;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .filters-container {
+        padding: 0.75rem;
+    }
+
+    .filters-container .col-lg-4 {
+        min-width: 100%;
+    }
+
+    .table-responsive {
+        border-radius: 0;
+        margin-left: -12px;
+        margin-right: -12px;
+        border-left: none;
+        border-right: none;
+    }
+
+    .users-table {
+        font-size: 0.75rem;
+    }
+
+    .users-table thead th {
+        padding: 0.4rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .users-table tbody td {
+        padding: 0.4rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .col-user {
+        min-width: 100px;
+    }
+
+    .col-email {
+        min-width: 120px;
+    }
+}

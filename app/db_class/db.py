@@ -66,7 +66,8 @@ class User(UserMixin, db.Model):
             "email": self.email,
             "admin": self.admin,
             "username": self.first_name + " " + self.last_name,
-            "is_connected": self.is_connected
+            "is_connected": self.is_connected,
+            "is_verified": self.is_verified,
         }
 
 class AnonymousUser(AnonymousUserMixin):

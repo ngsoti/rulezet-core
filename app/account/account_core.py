@@ -267,7 +267,7 @@ def get_user_data_full(user_id: int) -> dict:
 
 def get_users_page_filter(page, search=None, connected=None, admin=None):
     """Get paginated users with optional filters"""
-    per_page = 10
+    per_page = 30
     query = User.query  
 
     if search:

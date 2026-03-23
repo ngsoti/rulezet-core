@@ -1,254 +1,287 @@
-<!-- Get the list of all the user for action (delete, view profil)-->
 {% extends 'base.html' %}
 
 {% block content %}
 {% if current_user.is_admin() %}
-    <div class="container my-4" id="main-container" v-cloak>
+<div class="container-fluid my-4" id="main-container" v-cloak>
 
-        <div class="mb-4 border-bottom pb-3">
-                <h2 class="mb-3 text-center text-primary fw-bold">
-                    User Management
-                    <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
-                </h2>
-                <p class="text-muted mt-2">
-                    Manage all registered users in the system. View user details, filter by admin status or connection status, and perform administrative actions such as deleting users.
-                </p>
-        </div>
+    <!-- Header Section -->
+    <div class="mb-4 header-section">
+        <h2 class="mb-2 text-primary fw-bold">
+            <i class="fas fa-users me-2"></i>User Management
+        </h2>
+        <p class="text-muted mb-0">
+            Manage all registered users in the system. View user details, filter by admin status or connection status,
+            and perform administrative actions.
+        </p>
+    </div>
 
-        <div class="card bg-white shadow-sm border-0 mb-4">
-            <div class="card-body ">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey" class="form-control form-control-sm " placeholder="Search by keywords...">
-                    </div>
-                    <div class="col-md-4">
-                        <select v-model="isAdminFilter" class="form-select form-select-sm" @change="fetchUsers(1)">
-                            <option value="">All Users</option>
-                            <option value="true">Admins</option>
-                            <option value="false">Non-admins</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <select v-model="isConnectedFilter" class="form-select form-select-sm" @change="fetchUsers(1)">
-                            <option value="">All Connections</option>
-                            <option value="true">Connected</option>
-                            <option value="false">Disconnected</option>
-                        </select>
-                    </div>
-                </div>
+    <!-- Filters & Search -->
+    <div class="filters-container mb-4">
+        <div class="row g-3">
+            <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold small text-muted mb-2">Search</label>
+                <input type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey"
+                    class="form-control form-control-sm" placeholder="Search by name or email...">
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold small text-muted mb-2">Admin Status</label>
+                <select v-model="isAdminFilter" class="form-select form-select-sm" @change="fetchUsers(1)">
+                    <option value="">All Users</option>
+                    <option value="true">Admins</option>
+                    <option value="false">Non-admins</option>
+                </select>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold small text-muted mb-2">Connection Status</label>
+                <select v-model="isConnectedFilter" class="form-select form-select-sm" @change="fetchUsers(1)">
+                    <option value="">All Connections</option>
+                    <option value="true">Online</option>
+                    <option value="false">Offline</option>
+                </select>
             </div>
         </div>
-        <h5 class="mb-3">
-                Total Users: <span class="badge bg-primary">[[ total_users ]]</span>
-            </h5>
-        <template v-if="users_list && users_list.length > 0">
-            <div class="row row-cols-1 row-cols-md-2 g-4">
-                <div class="col" v-for="(user, index) in users_list" :key="user.id">
-                    <div class="card shadow-sm h-100 ">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-user me-2"></i>
-                                <template v-if="{{current_user.id}} == user.id">
-                                    <span>
-                                        [[ user.first_name ]] [[ user.last_name || '' ]]
-                                        <span class="badge bg-info text-dark ms-2">me</span>
-                                    </span>
-                                </template>
-                                <template v-else>
-                                    <span>
-                                        [[ user.first_name ]] [[ user.last_name || '' ]]
-                                    </span>
-                                </template>
+    </div>
 
-                                <span class="badge bg-secondary float-end" v-if="user.admin">
-                                <i class="fas fa-user-shield me-1"></i> Admin
+    <!-- Users Count -->
+    <div class="mb-3">
+        <span class="text-muted">Total Users:</span>
+        <span class="badge bg-primary">[[ total_users ]]</span>
+    </div>
+
+    <!-- Users Table -->
+    <template v-if="users_list && users_list.length > 0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover users-table">
+                <thead>
+                    <tr>
+                        <th class="col-user">User</th>
+                        <th class="col-email">Email</th>
+                        <th class="col-role">Role</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-verified">Verified</th>
+                        <th class="col-actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(user, index) in users_list" :key="user.id"
+                        :class="{ 'current-user': {{current_user.id}} == user.id }">
+                        <td class="col-user">
+                            <strong>[[ user.first_name ]] [[ user.last_name || '' ]]</strong>
+                            <template v-if="{{current_user.id}} == user.id">
+                                <span class="badge bg-info text-dark ms-1" style="font-size: 0.65rem;">YOU</span>
+                            </template>
+                        </td>
+                        <td class="col-email">
+                            <small>[[ user.email ]]</small>
+                        </td>
+                        <td class="col-role">
+                            <template v-if="user.admin">
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-user-shield me-1"></i>Admin
                                 </span>
-                            </h5>
-
-                            <p class="card-text mb-1">
-                                <i class="fas fa-envelope me-2"></i>[[ user.email ]]
-                            </p>
-
-                            <p class="card-text">
-                                <i :class="user.is_connected ? 'fas fa-circle text-success' : 'fas fa-circle text-secondary'"></i>
+                            </template>
+                            <template v-else>
+                                <span class="text-muted small">User</span>
+                            </template>
+                        </td>
+                        <td class="col-status">
+                            <span :class="['status-indicator', user.is_connected ? 'status-online' : 'status-offline']">
+                                <i :class="user.is_connected ? 'fas fa-circle' : 'fas fa-circle'"></i>
                                 [[ user.is_connected ? 'Online' : 'Offline' ]]
-                            </p>
-                        </div>
-
-                        <div class="card-footer  border-0 d-flex justify-content-between">
-                            <a :href="'/account/detail_user/' + user.id" title="view more about this user" class="btn btn-primary btn-sm">
-                                <i class="fas fa-eye me-1"></i> View Profile
+                            </span>
+                        </td>
+                        <td class="col-verified">
+                            <template v-if="user.is_verified">
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>Verified
+                                </span>
+                            </template>
+                            <template v-else>
+                                <span class="text-muted small">-</span>
+                            </template>
+                        </td>
+                        <td class="col-actions">
+                            <a :href="'/account/detail_user/' + user.id" title="View user profile"
+                                class="btn btn-sm btn-primary me-2">
+                                <i class="fas fa-eye"></i>
                             </a>
-
-                            <button type="button" class="btn btn-danger btn-sm" title="Delete the user" data-bs-toggle="modal" :data-bs-target="'#delete_user_modal_'+user.id">
-                                <i class="fas fa-trash-alt me-1"></i> Delete
+                            <button type="button" class="btn btn-sm btn-danger" title="Delete the user"
+                                data-bs-toggle="modal" :data-bs-target="'#delete_user_modal_'+user.id">
+                                <i class="fas fa-trash-alt"></i>
                             </button>
-                            <div class="modal fade" :id="'delete_user_modal_'+user.id" tabindex="-1" aria-labelledby="delete_user_modal" aria-hidden="true">
-                                <div class="modal-dialog modal-lg">
+
+                            <!-- Delete Modal -->
+                            <div class="modal fade" :id="'delete_user_modal_'+user.id" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered modal-sm">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h1 class="modal-title fs-5" id="delete_user_modal">
-                                            Delete [[ user.first_name ]] [[ user.last_name ]] ?
-                                            </h1>
-                                            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            <h6 class="modal-title fw-bold text-danger">
+                                                <i class="fas fa-exclamation-triangle me-2"></i>Delete User
+                                            </h6>
+                                            <button class="btn-close" data-bs-dismiss="modal"
+                                                aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="mb-2">
+                                                Delete <strong>[[ user.first_name ]] [[ user.last_name ]]</strong>?
+                                            </p>
+                                            <p class="text-danger small mb-0">
+                                                This action cannot be undone.
+                                            </p>
                                         </div>
                                         <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                            <button class="btn btn-danger" @click="deleteUser(user.id, index)">
-                                            <i class="fa-solid fa-trash"></i> Confirm
+                                            <button type="button" class="btn btn-sm btn-secondary"
+                                                data-bs-dismiss="modal">
+                                                Cancel
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" @click="deleteUser(user.id, index)">
+                                                <i class="fas fa-trash me-1"></i>Delete
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
+        <!-- Pagination -->
+        <pagination-component :current-page="current_page" :total-pages="total_pages" @change-page="changePage">
+        </pagination-component>
+    </template>
 
-
-
-                        
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <nav aria-label="Page navigation">
-                <ul class="pagination mt-3 justify-content-center">
-                    <li class="page-item" :class="{ disabled: current_page === 1 }">
-                    <a class="page-link" href="#" @click.prevent="fetchUsers(current_page - 1  )">
-                        <i class="fas fa-arrow-left"></i> Previous
-                    </a>
-                    </li>
-                    <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: current_page === page, disabled: page === '...' }">
-                    <a v-if="page !== '...'" class="page-link" href="#" @click.prevent="fetchUsers(page)">[[ page ]]</a>
-                    <span v-else class="page-link">...</span>
-                    </li>
-                    <li class="page-item" :class="{ disabled: current_page === total_pages }">
-                    <a class="page-link" href="#" @click.prevent="fetchUsers(current_page + 1)">
-                        Next <i class="fas fa-arrow-right"></i>
-                    </a>
-                    </li>
-                </ul>
-            </nav>
-        </template>
-
-        <i v-else class="text-muted">No users found.</i>
+    <!-- Empty State -->
+    <div v-else class="text-center py-5">
+        <p class="text-muted">No users found.</p>
     </div>
+</div>
 
 {% else %}
-    <script>
-        window.location.href = "{{ url_for('account.acces_denied') }}";
-    </script>
+<script>
+    window.location.href = "{{ url_for('account.acces_denied') }}";
+</script>
 {% endif %}
 {% endblock %}
 
 {% block script %}
 <script type="module">
-const { createApp, ref, computed } = Vue;
-import { display_toast,   message_list } from '/static/js/toaster.js';
+    const { createApp, ref, computed } = Vue;
+    import { display_toast, message_list, create_message } from '/static/js/toaster.js';
+    import PaginationComponent from '/static/js/rule/paginationComponent.js';
 
-createApp({
-    delimiters: ['[[', ']]'],
-    setup() {
-        // fetch section
-        const users_list = ref([])
-        const total_users = ref(0)
-        const total_pages = ref(0)
-        const current_page = ref(0)
-        
-        // filter
-        const isAdminFilter = ref("")
-        const isConnectedFilter = ref("")
-        const searchQuery = ref("")
-        /******************fetch users section************************/
-        async function fetchUsers(page) {
-            // use URLSearchParams to add futur param for the filter (easy way)
-            const params = new URLSearchParams({
-                page,
-                search: searchQuery.value,
-                connected: isConnectedFilter.value,
-                admin: isAdminFilter.value
-            })
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: {
+            'pagination-component': PaginationComponent
+        },
+        setup() {
+            // Fetch section
+            const users_list = ref([])
+            const total_users = ref(0)
+            const total_pages = ref(0)
+            const current_page = ref(0)
 
-            const res = await fetch('/account/get_all_users?' + params.toString())
-            if(await res.status == 200){ 
-                const data = await res.json()
-                if(data.success){
-                    users_list.value = data.user
-                    total_pages.value = data.total_pages
-                    total_users.value = data.total_users
-                    current_page.value = page
+            // Filter
+            const isAdminFilter = ref("")
+            const isConnectedFilter = ref("")
+            const searchQuery = ref("")
+
+
+            const changePage = (page) => {
+                fetchUsers(page)
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+            /******************fetch users section************************/
+            async function fetchUsers(page) {
+                const params = new URLSearchParams({
+                    page,
+                    search: searchQuery.value,
+                    connected: isConnectedFilter.value,
+                    admin: isAdminFilter.value
+                })
+
+                const res = await fetch('/account/get_all_users?' + params.toString())
+                if (await res.status == 200) {
+                    const data = await res.json()
+                    if (data.success) {
+                        users_list.value = data.user
+                        total_pages.value = data.total_pages
+                        total_users.value = data.total_users
+                        current_page.value = page
+                    }
+                } else {
+                    create_message(res, "danger-subtle");
                 }
-            }else{
-                display_toast(res);
             }
-        }
-        fetchUsers(1)
+            fetchUsers(1)
 
-        const visiblePages = computed(() => {
-            const pages = []
-            const total = total_pages.value
-            const current = current_page.value
-            if (total <= 7) {
-            for (let i = 1; i <= total; i++) pages.push(i)
-            } else {
-            if (current <= 4) {
-                pages.push(1, 2, 3, 4, 5, '...', total)
-            } else if (current >= total - 3) {
-                pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-            } else {
-                pages.push(1, '...', current - 1, current, current + 1, '...', total)
-            }
-            }
-            return pages
-        })
-        /******************delete user section************************/
-        async function deleteUser(id, index) {
-            const params = new URLSearchParams({
-                id
+            const visiblePages = computed(() => {
+                const pages = []
+                const total = total_pages.value
+                const current = current_page.value
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total)
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                    }
+                }
+                return pages
             })
-            const res = await fetch('/account/delete_user?' + params.toString())
-            if(await res.status == 200){
-                users_list.value.splice(index, 1)
-                total_users.value -= 1
+
+            /******************delete user section************************/
+            async function deleteUser(id, index) {
+                const params = new URLSearchParams({
+                    id
+                })
+                const res = await fetch('/account/delete_user?' + params.toString())
+                const data = await res.json()
+                if (data.status == 200) {
+                    users_list.value.splice(index, 1)
+                    total_users.value -= 1
+                }
+                var myModalEl = document.getElementById('delete_user_modal_' + id);
+                var modal = bootstrap.Modal.getInstance(myModalEl)
+                modal.hide();
+
+                create_message(data.message, data.toast_class)
+
+                fetchUsers(current_page.value)
+
             }
-            var myModalEl = document.getElementById('delete_user_modal_'+id);
-            var modal = bootstrap.Modal.getInstance(myModalEl)
-            modal.hide();
-            
-            display_toast(res)
-        }
-        /*************************filter section******************************/
-        async function onSearchInput() {
-            if (searchQuery.value.trim() === "") {
-                await fetchUsers(1)
-            } else {
+
+            /*************************filter section******************************/
+            async function onSearchInput() {
                 await fetchUsers(1)
             }
+
+            async function onEnterKey() {
+                await fetchUsers(1)
+            }
+
+            return {
+                message_list,
+                total_users,
+                users_list,
+                deleteUser,
+                visiblePages,
+                fetchUsers,
+                isAdminFilter,
+                isConnectedFilter,
+                searchQuery,
+                total_pages,
+                current_page,
+                onSearchInput,
+                onEnterKey,
+                changePage
+            };
         }
-
-        async function onEnterKey() {
-            await fetchUsers(1)
-        }
-
-
-        return {
-            message_list,
-            total_users,
-            users_list,
-            deleteUser,
-            visiblePages,
-            fetchUsers,
-
-            isAdminFilter,
-            isConnectedFilter,
-            searchQuery,
-            total_pages,
-            current_page,
-
-            onSearchInput,
-            onEnterKey
-        };
-    }
-}).mount('#main-container');
+    }).mount('#main-container');
 </script>
 {% endblock %}
