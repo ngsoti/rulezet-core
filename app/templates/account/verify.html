@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/account/verify_email.css') }}">
+{% endblock %}
+{% block content %}
+<div class="verify-container" id="verify-container">
+    <div class="verify-card">
+        <!-- Header with icon -->
+        <div class="verify-header">
+            <div class="verify-icon-wrapper">
+                <i class="fas fa-envelope-circle-check"></i>
+            </div>
+            <h2 class="verify-title">Email Verification</h2>
+            <p class="verify-subtitle">A verification code has been sent to your email address</p>
+            <p class="verify-duration">Valid for <strong>30 minutes</strong></p>
+        </div>
+
+
+
+        <!-- Form -->
+        <form method="POST" action="{{ url_for('account.verify', user_id=user_id) }}" class="verify-form">
+            <!-- CSRF Token for security -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+            <div class="form-group mb-4">
+                <label for="verification_code" class="form-label">Enter the 6-digit code</label>
+                <div class="code-input-wrapper">
+                    <input type="text" name="verification_code" id="verification_code" class="code-input"
+                        placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]+" required autofocus>
+                    <div class="code-input-underline"></div>
+                </div>
+                <small class="form-text text-muted mt-2">Only digits are accepted</small>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn-verify btn-verify-primary">
+                <span class="btn-verify-text">Verify Account</span>
+                <i class="fas fa-arrow-right btn-verify-icon"></i>
+            </button>
+        </form>
+
+        <!-- Form Footer -->
+        <div class="verify-footer">
+            <p class="verify-footer-text">
+                <small>
+                    If the code expires, you will need to <a href="{{ url_for('account.add_user') }}"
+                        class="verify-link">start the registration again</a>
+                </small>
+            </p>
+        </div>
+
+        <!-- Help Section -->
+        <div class="verify-help">
+            <details class="help-details">
+                <summary class="help-summary">
+                    <i class="fas fa-question-circle"></i>
+                    <span>I didn't receive the code</span>
+                </summary>
+                <div class="help-content">
+                    <p>Check your spam or junk mail folder.</p>
+                    <p>You can request a new code after a few seconds.</p>
+                    <p>
+                    <form action="{{ url_for('account.resend_verification_code', user_id=user_id) }}" method="POST"
+                        style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit" class="btn-resend"
+                            style="background: none; border: none; color: blue; text-decoration: underline; cursor: pointer;">
+                            Resend Code
+                        </button>
+                    </form>
+                    </p>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <!-- Background Decoration -->
+    <div class="verify-bg-decoration"></div>
+</div>
+
+<script>
+    // Restrict input to digits only
+    document.getElementById('verification_code').addEventListener('input', function (e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    // Auto-submit when 6 digits are entered
+    const input = document.getElementById('verification_code');
+    input.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' && this.value.length === 6) {
+            this.form.submit();
+        }
+    });
+</script>
+{% endblock %}
+{% block script %}
+<script type="module">
+    const { createApp, ref } = Vue
+    import { message_list } from '/static/js/toaster.js';
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            return { message_list }
+        },
+    }).mount('#verify-container')
+</script>
+{% endblock %}

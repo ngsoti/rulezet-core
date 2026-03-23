@@ -1,8 +1,10 @@
-import datetime
+import datetime , random
+from datetime import timezone, timedelta, datetime
 from typing import  Tuple
 from flask_login import current_user
 from sqlalchemy import or_
-
+from flask_mail import Message
+from app import mail
 
 from .. import db
 from ..db_class.db import Bundle, BundleVote, Gamification, RequestOwnerRule, Rule, RuleEditProposal, RuleFavoriteUser, RuleUpdateHistory, RuleVote, User
@@ -16,24 +18,116 @@ import uuid
 
 # CRUD
 
-# Create
-def add_user_core(form_dict) -> User :
-    """Add a user to the DB"""
-    api_key = form_dict.get("key")
+TIME_EMAIL_EXPIRATION = timedelta(minutes=30)
 
+# Create
+def add_user_core(form_dict) -> User:
+    """Add a user to the DB with email verification logic"""
+    api_key = form_dict.get("key")
     if not api_key:
         api_key = generate_api_key()
+
+    code = str(random.randint(100000, 999999))
+    
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    expires = now + TIME_EMAIL_EXPIRATION
+
     user = User(
         first_name=form_dict["first_name"],
         last_name=form_dict["last_name"],
         email=form_dict["email"],
         password=form_dict["password"],
-        api_key = api_key
+        api_key=api_key,
+        verification_code=code,
+        verification_expiration=expires,
+        is_verified=False
     )
+    
     db.session.add(user)
     db.session.commit()
 
-    return user
+    success , message = send_verify_email(user, code)
+    if not success:
+        return message, False
+
+    return user, True
+
+def resend_verification_code_core(user_id) -> bool:
+    """Resend the verification code to the user"""
+    user = get_user(user_id)
+    if user:
+        user.verification_code = str(random.randint(100000, 999999))
+        user.verification_expiration = datetime.now(timezone.utc).replace(tzinfo=None) + TIME_EMAIL_EXPIRATION
+        db.session.commit()
+        
+        success , message = send_verify_email(user, user.verification_code)
+        if not success:
+            return False , message
+
+        return True , "Verification code resent"
+    else:
+        return False , "User not found"
+
+def send_verify_email(user, code):
+   try:
+        msg = Message(
+            "Your Verification Code",
+            sender="noreply@your-app.com",
+            recipients=[user.email]
+        )
+
+        msg.body = f"Hello {user.first_name}, your verification code is: {code}. It expires in 30 minutes."
+
+        msg.html = f"""
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eeeeee; border-radius: 12px; overflow: hidden;">
+
+            <div style="text-align: center; margin: 20px 0;">
+                <img src="https://rulezet.org/static/image/logo.png" 
+                    alt="Rulezet Logo" 
+                    style="display: inline-block; width: 150px; height: auto;">
+            </div>
+            <div style="background-color: #2c3e50; padding: 30px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">Confirm Your Email </h1>
+            </div>
+            
+            <div style="padding: 40px 30px; line-height: 1.6; color: #333333; background-color: #ffffff;">
+                <p style="font-size: 16px;">Hi {user.first_name},</p>
+                <p style="font-size: 16px;">Thank you for joining our community! To secure your account, please enter the following verification code on the registration page:</p>
+                
+                <div style="text-align: center; margin: 40px 0;">
+                    <div style="display: inline-block; padding: 20px 40px; font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #3498db; background-color: #f7f9fc; border: 2px solid #3498db; border-radius: 8px;">
+                        {code}
+                    </div>
+                </div>
+                
+                <p style="font-size: 14px; color: #7f8c8d; text-align: center;">
+                    This code is valid for <strong>30 minutes</strong>.<br>
+                    If you did not request this code, you can safely ignore this email.
+                </p>
+            </div>
+            
+            <div style="background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #bdc3c7; border-top: 1px solid #eeeeee;">
+                <p style="margin: 5px 0;">&copy; 2026 Rulezet. All rights reserved.</p>
+            </div>
+        </div>
+        """
+        
+        mail.send(msg)
+
+        return True , "Email sent successfully"
+
+   except Exception as e:
+        return False , str(e)
+
+def verify_user_core(id) -> bool:
+    """Verify the user in the DB"""
+    user = get_user(id)
+    if user:
+        user.is_verified = True
+        db.session.commit()
+        return True
+    else:
+        return False
 
 # Update
 

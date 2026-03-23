@@ -1,4 +1,6 @@
 import threading
+
+from dotenv import load_dotenv
 from app import create_app, db
 import argparse
 from flask import render_template, request, Response
@@ -22,6 +24,8 @@ args = parser.parse_args()
 
 
 os.environ.setdefault('FLASKENV', 'development')
+
+load_dotenv()
 
 app = create_app()
 

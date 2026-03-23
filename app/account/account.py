@@ -1,5 +1,5 @@
 from typing import Union
-
+import datetime
 from ..db_class.db import User
 from flask import Blueprint, jsonify, render_template, redirect, url_for, request, flash
 from .form import LoginForm, EditUserForm, AddNewUserForm
@@ -7,7 +7,7 @@ from ..rule import rule_core as RuleModel
 from . import account_core as AccountModel
 from ..utils.utils import form_to_dict, generate_api_key
 from flask_login import current_user, login_required, login_user, logout_user
-
+from datetime import datetime, timedelta, timezone
 account_blueprint = Blueprint(
     'account',
     __name__,
@@ -144,6 +144,9 @@ def login() -> redirect:
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user is not None and user.password_hash is not None and user.verify_password(form.password.data):
+            if not user.is_verified:
+                flash("Please verify your email first.", "warning")
+                return redirect(f"/account/verify/{user.id}")
             login_user(user, form.remember_me.data)
             AccountModel.connected(current_user)
             flash('You are now logged in. Welcome back!', 'success')
@@ -171,14 +174,17 @@ def add_user() -> redirect:
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
         form_dict["key"] = generate_api_key()
-        user = AccountModel.add_user_core(form_dict)
+        user, success = AccountModel.add_user_core(form_dict)
 
-        if user is None:
+        if not success:
+            flash('Error during the registration. Please try again !', 'error')
+            return redirect("/account/register")
+        if not user:
             flash('Error during the registration. Please try again !', 'error')
             return redirect("/account/register")
 
-        flash('You are now register. You can connect !', 'success')
-        return redirect("/account/login")
+        flash('Registration successful. Please check your email for verification.', 'success')
+        return redirect(f"/account/verify/{user.id}")
     return render_template("account/register_user.html", form=form)
 
 @account_blueprint.route('/favorite')
@@ -198,6 +204,58 @@ def profil() -> render_template:
 def acces_denied() -> render_template:
     """acces_denied page"""
     return render_template("access_denied.html")
+
+#############
+#   Email   #
+#############
+
+@account_blueprint.route('/verify/<int:user_id>', methods=['GET', 'POST'])
+def verify(user_id):
+    user = AccountModel.get_user(user_id)
+    if not user:
+        flash("User not found.", "error")
+        return redirect("/account/login")
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if now > user.verification_expiration:
+        # delete user
+        AccountModel.delete_user_core(user_id)
+        flash("Code expired. Your account has been deleted. Please register again.", "error")
+        return redirect("/account/register")
+
+    if request.method == 'POST':
+        input_code = request.form.get('verification_code')
+        if not input_code:
+            flash("Please enter a code.", "error")
+            return redirect(f"/account/verify/{user_id}")
+        if input_code == user.verification_code:
+            success = AccountModel.verify_user_core(user_id)
+            if not success:
+                flash("Failed to verify account.", "error")
+                return redirect("/account/login")
+            flash("Account verified!", "success")
+            login_user(user, remember=True)
+            return redirect("/")
+        else:
+            flash("Invalid code.", "error")
+            
+    return render_template("account/verify.html", user_id=user_id)
+
+# /resend-verification-code
+
+@account_blueprint.route('/resend-verification-code/<int:user_id>', methods=['POST'])
+def resend_verification_code(user_id):
+    user = AccountModel.get_user(user_id)
+    if not user:
+        flash("User not found.", "error")
+        return redirect("/account/login")
+
+    success = AccountModel.resend_verification_code_core(user_id)
+    if not success:
+        flash("Failed to resend verification code.", "error")
+        return redirect(f"/account/verify/{user_id}")
+    flash("Verification code resent.", "success")
+    return render_template("account/verify.html", user_id=user_id)
 
 ############
 # Favorite #

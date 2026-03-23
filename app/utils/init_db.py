@@ -38,7 +38,8 @@ def create_admin():
         email="admin@admin.admin",
         password= raw_password,  #"admin",
         admin=True,
-        api_key = generate_api_key() #for test  "admin_api_key"
+        api_key = generate_api_key(), #for test  "admin_api_key",
+        is_verified=True
     )
     db.session.add(user)
     db.session.commit()
@@ -51,7 +52,8 @@ def create_default_user():
         email="default@default.default",
         password= generate_api_key(),
         admin=False,
-        api_key = generate_api_key()
+        api_key = generate_api_key(),
+        is_verified=True
     )
     db.session.add(user)
     db.session.commit()
@@ -68,6 +70,7 @@ def create_user_test():
         email="neo@admin.admin",
         password=generate_api_key(),
         api_key = "user_api_key",
+        is_verified=True
     )
     db.session.add(user)
     db.session.commit()
@@ -78,7 +81,8 @@ def create_user_test():
         email="t@t.t",
         password="password1@A",
         admin=False,
-        api_key = "api_key_user_rule"
+        api_key = "api_key_user_rule",
+        is_verified=True
     )
     db.session.add(user2)
     db.session.commit()
@@ -91,7 +95,8 @@ def create_admin_test():
         email="admin@admin.admin",
         password= "admin",
         admin=True,
-        api_key = "admin_api_key"
+        api_key = "admin_api_key",
+        is_verified=True
     )
     db.session.add(user)
     db.session.commit()

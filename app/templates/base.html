@@ -12,20 +12,24 @@
 
     <!-- CSS -->
     <link rel="icon" href="{{ url_for('static',filename='image/logo.png') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/select2.min.css') }}">
     <link rel="stylesheet" type="text/css"
-        href="{{ url_for('static',filename='css/select2-bootstrap-5-theme.min.css') }}">
+        href="{{ url_for('static',filename='css/external_library/select2.min.css') }}">
+    <link rel="stylesheet" type="text/css"
+        href="{{ url_for('static',filename='css/external_library/select2-bootstrap-5-theme.min.css') }}">
     <link rel="stylesheet" type="text/css"
         href="{{ url_for('static',filename='bootstrap-5.3.0/css/bootstrap.min.css') }}">
     <link rel="stylesheet" type="text/css"
         href="{{ url_for('static',filename='fontawesome-6.3.0/css/fontawesome.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/solid.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='fontawesome-6.3.0/css/brands.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/jquery-ui.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/external_library/jquery-ui.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/core.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/sidebar.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/importer.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/base/sidebar.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/github/importer.css') }}">
+
+
     <!-- CodeMirror CSS (core + themes) -->
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/codemirror.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/dracula.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.16.0/theme/monokai.min.css" rel="stylesheet">
@@ -34,7 +38,8 @@
 
     <!-- Color for json -->
     <!-- Highlight.js CSS -->
-
+    {% block head %}
+    {% endblock %}
 
     <!-- Scripts -->
     <!-- CodeMirror JavaScript -->

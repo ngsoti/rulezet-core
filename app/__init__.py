@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
@@ -7,7 +8,9 @@ from flask_session import Session
 from sqlalchemy.orm import sessionmaker
 from config import config as Config
 import os
+from flask_mail import Mail, Message
 
+load_dotenv()
 
 db = SQLAlchemy()
 csrf = CSRFProtect()
@@ -15,8 +18,11 @@ migrate = Migrate()
 login_manager = LoginManager()
 sess = Session()
 ThreadLocalSession = None
+mail = Mail()
 
 def create_app():
+    load_dotenv()
+
     app = Flask(__name__)
     global ThreadLocalSession
     
@@ -34,6 +40,7 @@ def create_app():
     app.config["SESSION_SQLALCHEMY"] = db
     sess.init_app(app)
 
+    mail.init_app(app)
 
     with app.app_context():
         ThreadLocalSession = sessionmaker(bind=db.engine)

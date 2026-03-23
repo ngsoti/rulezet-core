@@ -6,13 +6,13 @@ set -e
 DB_NAME="rulezet"
 DB_USER="$(whoami)"
 
-# Detect project root (Rulezet-core)
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 BACKUP_DIR="$PROJECT_ROOT/backup/dumps"
 
-# --- Vérification de l'argument ---
+
 if [ -z "$1" ]; then
   echo "Usage: $0 <backup_filename>"
   echo "Example: $0 rulezet_2025-11-18_15-18.dump"
@@ -28,15 +28,15 @@ fi
 
 echo "Starting restoration of database '$DB_NAME' from '$BACKUP_FILE'..."
 
-# --- Supprimer DB existante ---
+
 echo "Dropping existing database '$DB_NAME'..."
 dropdb -U "$DB_USER" --if-exists "$DB_NAME"
 
-# --- Créer DB vide ---
+
 echo "Creating new empty database '$DB_NAME'..."
 createdb -U "$DB_USER" "$DB_NAME"
 
-# --- Restaurer backup ---
+
 echo "Restoring backup..."
 pg_restore -U "$DB_USER" -d "$DB_NAME" "$BACKUP_FILE"
 

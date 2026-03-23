@@ -1,8 +1,27 @@
+import os
+
+from dotenv import load_dotenv
+
+
 class Config:
-    SECRET_KEY = 'SECRET_KEY_ENV_VAR_SET'
+    load_dotenv()
+
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     
     FLASK_URL = '127.0.0.1'
     FLASK_PORT = 7009
+
+    MAIL_SERVER = 'smtp.gmail.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USE_SSL = False
+    MAIL_USERNAME = 'rulezet.org@gmail.com'
+    MAIL_DEFAULT_SENDER = 'rulezet.org@gmail.com'
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+   
+    
+
+
 
 class DevelopmentConfig(Config):
     DEBUG = True
