@@ -70,9 +70,9 @@ Create a new detection rule in the system. You must authenticate using your **AP
 | X-API-KEY       | string  | Yes      | Your personal API key for authentication                                                     | Must be valid. Found in your user profile                        |
 | title           | string  | Yes      | Title of the rule                                                                             | Must be unique, non-empty                                        |
 | description     | string  | No       | Description of the rule                                                                       | Optional. If not provided, defaults to "No description provided"|
-| version         | string  | Yes      | Version of the rule                                                                           | Must be non-empty                                                |
+| version         | string  | No      | Version of the rule                                                                           | Must be non-empty                                                |
 | format          | string  | Yes      | Rule format                                                                                   | Supported: yara, sigma, suricata, zeek, crs, nova, nse, wazuh   |
-| license         | string  | Yes      | License applied to the rule                                                                   | Must be non-empty                                                |
+| license         | string  | No      | License applied to the rule                                                                   | Must be non-empty                                                |
 | source          | string  | No       | Source or origin of the rule                                                                  | Optional. Defaults to the user's name                            |
 | to_string       | string  | Yes      | String representation of the rule content                                                    | Must be valid syntax for the specified format                    |
 | original_uuid   | string  | No       | Original UUID of the rule                                                                    | Optional. Only provide if preserving original UUID               |
@@ -120,35 +120,40 @@ class CreateRule(Resource):
         data = request.get_json(silent=True) or request.args.to_dict()
 
         # Required fields
-        required_fields = ["title", "format", "version", "to_string", "license"]
+        required_fields = ["title", "format", "to_string"]
+
+        print(data)
+
         missing_fields = [f for f in required_fields if not data.get(f) or not str(data.get(f)).strip()]
         if missing_fields:
             return {"message": f"Missing or empty fields: {', '.join(missing_fields)}"}, 400
 
         title = data.get("title").strip()
-        if Rule.query.filter_by(title=title).first():
-            return {"message": "Rule already exists"}, 409
+
 
         cve_id = data.get("cve_id")
+        matches = [] 
+        
         if cve_id:
-            valid, matches = utils.detect_cve(cve_id)
+            valid, matches = utils.detect_cve(str(cve_id).strip())
             if not valid:
                 return {"message": "Invalid CVE ID format or not recognized"}, 400
 
         form_dict = {
             'title': title,
             'format': data.get("format").strip(),
-            'description': data.get("description", "").strip() or "No description provided",
-            'version': data.get("version").strip(),
-            'source': data.get("source", "").strip() or f"{user.first_name}, {user.last_name}",
+            'description': (data.get("description") or "").strip() or "No description provided",
+            'version': (data.get("version") or "1.0.0").strip(),
+            'source': (data.get("source") or f"{user.first_name}, {user.last_name}").strip(),
             'to_string': data.get("to_string").strip(),
-            'license': data.get("license").strip(),
+            'license': (data.get("license") or "MIT").strip(),
             'original_uuid': data.get("original_uuid") or None,
             'author': user.first_name,
-            'cve_id': cve_id if cve_id else []
+            'vulnerabilities': matches if matches else '[]'
         }
 
         is_valid, error_msg = verify_syntax_rule_by_format(form_dict)
+
         if not is_valid:
             return {"message": "Invalid rule", "error": error_msg}, 400
 

@@ -224,11 +224,21 @@
                                             data-bs-toggle="tab" data-bs-target="#json" type="button"
                                             role="tab">JSON</button>
                                     </li>
+                                    {% if rule_misp %}
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link small fw-bold py-2 border-0" id="misp-tab"
                                             data-bs-toggle="tab" data-bs-target="#misp" type="button" role="tab">MISP
                                             Object</button>
                                     </li>
+                                    {% endif %}
+                                    {% if rule_stix %}
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link small fw-bold py-2 border-0" id="stix-tab"
+                                            data-bs-toggle="tab" data-bs-target="#stix" type="button" role="tab">STIX
+                                            Object</button>
+                                    </li>
+                                    {% endif %}
+
                                 </ul>
 
                                 <div class="tab-content" id="ruleTabsContent">
@@ -240,10 +250,23 @@
                                         <pre class="custom-pre m-0 p-3"
                                             style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);"><code class="json" v-text="{{rule_to_json}}"></code></pre>
                                     </div>
-                                    <div class="tab-pane fade" id="misp" role="tabpanel">
+                                    {% if rule_misp %}
+                                    <div class="tab-pane fade " id="misp" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);"><code class="json">{{rule_misp}}</code></pre>
+                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);">
+                                                <code class="json">{{ rule_misp }}</code>
+                                            </pre>
                                     </div>
+                                    {% endif %}
+
+                                    {% if rule_stix %}
+                                    <div class="tab-pane fade " id="stix" role="tabpanel">
+                                        <pre class="custom-pre m-0 p-3"
+                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);">
+                                                <code class="json">{{ rule_stix }}</code>
+                                            </pre>
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
 
@@ -285,11 +308,21 @@
                                         <li><button class="dropdown-item small" @click="download_rule('txt')"><i
                                                     class="fas fa-file-alt me-2 opacity-50"></i>Download Rule</button>
                                         </li>
+                                        {% if rule_misp %}
                                         <li><button class="dropdown-item small" @click="download_rule('misp')"><i
                                                     class="fas fa-project-diagram me-2 opacity-50"></i>Download
                                                 MISP</button></li>
+                                        {% endif %}
                                         <li><button class="dropdown-item small" @click="download_rule('json')"><i
                                                     class="fas fa-code me-2 opacity-50"></i>Download JSON</button></li>
+                                        {% if rule_stix %}
+                                        <li><button class="dropdown-item small" @click="download_rule('stix')"><i
+                                                    class="fas fa-street-view me-2 opacity-50"></i>Download
+                                                STIX</button></li>
+                                        {% endif %}
+                                        <li><button class="dropdown-item small" @click="download_rule('all')"><i
+                                                    class="fas fa-download me-2 opacity-50"></i>Download All</button>
+                                        </li>
                                     </ul>
                                 </div>
 
@@ -978,7 +1011,7 @@
              * */
 
 
-            const rule_format = ref({ normal: '', json: '', misp: '' })
+            const rule_format = ref({ normal: '', json: '', misp: '', stix: '' })
 
             async function get_rule_in_each_format(rule_id) {
                 const params = new URLSearchParams({ rule_id })
@@ -1146,13 +1179,18 @@
                     rule_id: rule_id,
                     format: format
                 });
-
                 const res = await fetch('/rule/download_rule?' + params.toString());
                 const data = await res.json();
-
                 if (res.ok && data.success) {
-
-                    const blob = new Blob([data.content], { type: 'application/octet-stream' });
+                    let blob;
+                    if (data.encoding === 'base64') {
+                        const binary = atob(data.content);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        blob = new Blob([bytes], { type: 'application/zip' });
+                    } else {
+                        blob = new Blob([data.content], { type: 'application/octet-stream' });
+                    }
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -1162,7 +1200,6 @@
                     a.remove();
                     window.URL.revokeObjectURL(url);
                 }
-
                 create_message(data.message, data.toast_class);
             }
             const switchTab = (tabId) => {

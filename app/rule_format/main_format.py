@@ -138,7 +138,8 @@ def verify_syntax_rule_by_format(rule_dict: dict) -> tuple[bool, str]:
             return False, error_msg
 
     except Exception as e:
-        return False, str(e)
+        print(f"Error validating rule: {str(e)}")
+        return False, str(e) 
 
 # The rule_dict :
 

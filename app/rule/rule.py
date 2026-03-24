@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 import threading
@@ -12,7 +13,7 @@ from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm
 from ..utils.utils import  bump_version, form_to_dict, generate_side_by_side_diff_html
 
 from app.account.account_core import add_favorite, remove_favorite
-from app.misp.misp_core import content_convert_to_misp_object
+from app.misp.misp_core import content_convert_to_misp_object, convert_misp_to_stix
 from app.rule_format.main_format import  parse_rule_by_format, process_and_import_fixed_rule, verify_syntax_rule_by_format
 from app.rule_format.utils_format.utils_import_update import clone_or_access_repo, fill_all_void_field, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
 
@@ -543,13 +544,21 @@ def detail_rule(rule_id)-> render_template:
     if not rule:
         return render_template("404.html")
     rule_misp = content_convert_to_misp_object(rule_id)
+
+    if rule_misp:
+        rule_stix = convert_misp_to_stix(rule_misp)
+        rule_stix = json.dumps(rule_stix, indent=4)
+
     if not rule_misp:
-        rule_misp = "No misp format for this rule"
+        rule_misp = None
+        rule_stix = None
+    if not rule_stix:
+        rule_stix = None
     rule_to_json = json.dumps(rule.to_json(), indent=4)
     if not rule_to_json:
         rule_to_json = "No json format for this rule"
     if rule:
-        return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp=rule_misp, rule_to_json=rule_to_json)
+        return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp=rule_misp, rule_to_json=rule_to_json, rule_stix=rule_stix)
     return render_template("404.html")
     
 
@@ -557,55 +566,92 @@ def detail_rule(rule_id)-> render_template:
 def download_rule_unified() -> Response:
     rule_id = request.args.get('rule_id', type=int)
     fmt = request.args.get('format', default='txt')
-
     rule = RuleModel.get_rule(rule_id)
     if not rule:
         return jsonify({
             "message": f"No rule found with id={rule_id}",
             "success": False,
-            "toast_class": "danger",
+            "toast_class": "danger-subtle",
         })
-
+    
     error_mesg = ""
     try:
         if fmt == 'txt':
-            content = rule.to_string 
-            filename = f"{rule.title}.txt"
-
+            content = rule.to_string
+            extention = rule.get_extension()
+            filename = f"{rule.title}.{extention}"
         elif fmt == 'json':
             content = json.dumps(rule.to_json(), indent=2)
-            filename = f"rule_{rule.id}.json"
-
+            filename = f"{rule.title}.json"
         elif fmt == 'misp':
             object_json = content_convert_to_misp_object(rule_id)
             if not object_json:
                 error_mesg = f"Format {rule.format} not found on MISP"
-            content = json.dumps(object_json, indent=2)
-            filename = f"rule_{rule.id}_misp_object.json"
+            else:
+                content = json.dumps(object_json, indent=2)
+                filename = f"{rule.title}_misp_object.json"
+        elif fmt == 'stix':
+            object_json = convert_misp_to_stix(content_convert_to_misp_object(rule_id))
+            if not object_json:
+                error_mesg = f"Format {rule.format} not found on STIX"
+            else:
+                content = json.dumps(object_json, indent=2)
+                filename = f"{rule.title}_stix_object.json"
+        elif fmt == 'all':
+            
 
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                # TXT
+                try:
+                    zip_file.writestr(f"{rule.title}.txt", rule.to_string)
+                except Exception as e:
+                    zip_file.writestr("errors.txt", f"TXT error: {str(e)}\n")
+                # JSON
+                try:
+                    zip_file.writestr(f"{rule.title}.json", json.dumps(rule.to_json(), indent=2))
+                except Exception as e:
+                    zip_file.writestr("errors.txt", f"JSON error: {str(e)}\n")
+                # MISP
+                try:
+                    misp_object = content_convert_to_misp_object(rule_id)
+                    if misp_object:
+                        zip_file.writestr(f"{rule.title}_misp_object.json", json.dumps(misp_object, indent=2))
+                except Exception:
+                    pass
+                # STIX
+                try:
+                    misp_object = content_convert_to_misp_object(rule_id)
+                    if misp_object:
+                        stix_object = convert_misp_to_stix(misp_object)
+                        if stix_object:
+                            zip_file.writestr(f"{rule.title}_stix_object.json", json.dumps(stix_object, indent=2))
+                except Exception:
+                    pass
+
+            zip_buffer.seek(0)
+            content = base64.b64encode(zip_buffer.read()).decode('utf-8')
+            filename = f"{rule.title}_all_formats.zip"
         else:
             error_mesg = f"Unknown format: {fmt}"
-
     except Exception as e:
         error_mesg = f"Failed to prepare download: {str(e)}"
-    
+
     if error_mesg:
         return jsonify({
             "message": error_mesg,
             "success": False,
-            "toast_class": "danger",
+            "toast_class": "danger-subtle",
         })
-    
-   
-    
+
     return jsonify({
         "message": f"Rule {rule.title} ready for download",
         "success": True,
-        "toast_class": "success",
+        "toast_class": "success-subtle",
         "filename": filename,
         "content": content,
+        "encoding": "base64" if fmt == 'all' else "plain",
     })
-
 
 
 @rule_blueprint.route("/get_rule_each_format", methods=["GET"])
@@ -624,6 +670,9 @@ def get_rule_each_format():
     rule_json = rule.to_json()
     rule_misp_object = content_convert_to_misp_object(rule_id)
 
+    if rule_misp_object:
+        rule_stix = convert_misp_to_stix(rule_misp_object)
+
     return_dict = {
         "success": True,
         "rule_id": rule_id,
@@ -635,6 +684,7 @@ def get_rule_each_format():
 
     if rule_misp_object and rule_json:
         return_dict["formats"]["misp"] = rule_misp_object
+        return_dict["formats"]["stix"] = rule_stix
     elif rule_json:
         return_dict["formats"]["misp"] = "No MISP object for the format"
     else:
@@ -1475,7 +1525,7 @@ def delete_bad_rule(rule_id) -> jsonify:
             if request.method == 'POST':
                 success = RuleModel.delete_bad_rule(rule_id)
                 if success:
-                    return jsonify({"success": True, "message": "Rule deleted!" , "toast_class": "success"})
+                    return jsonify({"success": True, "message": "Rule deleted!" , "toast_class": "success-subtle"}), 200
             return render_template('rule/edit_bad_rule.html', rule=bad_rule)
         return render_template("access_denied.html")
     return render_template("404.html")
@@ -1549,12 +1599,12 @@ def report_rule():
     if result:
         return {
             "message": "Report created successfully.",
-            "toast_class": "success",
+            "toast_class": "success-subtle",
             "success": True}, 200 
     else:
         return {"success": False,
                 "message": "Error to create the report",
-                "toast_class": "danger"
+                "toast_class": "danger-subtle"
                 }, 500 
 
 @rule_blueprint.route('/rules_reported', methods=['GET'])
@@ -1602,12 +1652,12 @@ def   deleteReport() -> jsonify:
         if check:
             return {"success": True,
                     "message": "Report deleted successfully.",
-                    "toast_class": "success"
+                    "toast_class": "success-subtle"
                     }, 200
     
         return {"message": "No Repport",
                 "success": False,
-                "toast_class": "danger"
+                "toast_class": "danger-subtle"
                 }, 404
     else:
         return render_template("access_denied.html")
@@ -1790,18 +1840,18 @@ def delete_format_rule():
     else:
         {"message": "Failled to change format",
             "success": False,
-            "toast_class": "danger"}, 500
+            "toast_class": "danger-subtle"}, 500
     
 
     success = RuleModel.delete_format(id)
     if success:
         return {"success": True,
                 "message": "Format delete",
-                "toast_class": "success"
+                "toast_class": "success-subtle"
             }, 200
     return {"message": "Failled to delete format",
             "success": False,
-            "toast_class": "danger"}, 500
+            "toast_class": "danger-subtle"}, 500
 
 #
 #   First attempt to parse all the rule in a github project (YARA)

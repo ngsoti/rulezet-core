@@ -38,35 +38,45 @@ class YaraRule(RuleType):
     # ---------------------#
     #   Abstract section  #
     # ---------------------#
-
     def validate(self, content: str, **kwargs) -> ValidationResult:
-        """Try to compile the YARA rule, auto-adding imports if necessary."""
-        externals = {}
-        attempts = 0
-        max_attempts = 10
-        current_rule_text = content
+            ALLOWED_EXTERNALS = {
+                "filename", "filepath", "extension", "filetype", 
+                "md5", "sha1", "sha256", "owner", "new_file"
+            }
+            
+            externals = {}
+            attempts = 0
+            max_attempts = 10
+            current_rule_text = content
 
-        while attempts < max_attempts:
-            try:
-                yara.compile(source=current_rule_text, externals=externals)
-                # Correction: S'assurer que normalized_content est le texte final
-                return ValidationResult(ok=True, errors=[], normalized_content=current_rule_text)
-            except yara.SyntaxError as e:
-                error_msg = str(e)
+            while attempts < max_attempts:
+                try:
+                    yara.compile(source=current_rule_text, externals=externals)
+                    return ValidationResult(ok=True, errors=[], normalized_content=current_rule_text)
+                
+                except yara.SyntaxError as e:
+                    error_msg = str(e)
+                    match_id = re.search(r'undefined identifier "(\w+)"', error_msg)
+                    
+                    if match_id:
+                        var_name = match_id.group(1)
+                        
+                        if var_name in self.YARA_MODULES:
+                            current_rule_text = insert_import_module(current_rule_text, var_name)
+                            attempts += 1
+                            continue
+                        
+                        elif var_name in ALLOWED_EXTERNALS:
+                            externals[var_name] = "dummy_value"
+                            attempts += 1
+                            continue
+                    
+                    return ValidationResult(ok=False, errors=[error_msg], normalized_content=current_rule_text)
 
-                match_id = re.search(r'undefined identifier "(\w+)"', error_msg)
-                if match_id:
-                    var_name = match_id.group(1)
-                    if var_name in self.YARA_MODULES:
-                        current_rule_text = insert_import_module(current_rule_text, var_name)
-                    else:
-                        externals[var_name] = "example.txt"
-                    attempts += 1
-                    continue
+                except Exception as e:
+                    return ValidationResult(ok=False, errors=[str(e)], normalized_content=current_rule_text)
 
-                return ValidationResult(ok=False, errors=[error_msg], normalized_content=current_rule_text)
-
-        return ValidationResult(ok=False, errors=["Max validation attempts exceeded"], normalized_content=current_rule_text)
+            return ValidationResult(ok=False, errors=["Max validation attempts exceeded"], normalized_content=current_rule_text)
 
     def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
         """Extract metadata and normalize it into a rule dict."""
@@ -89,10 +99,8 @@ class YaraRule(RuleType):
                     meta[key] = val
             
             # --- 3. Detect CVE in description ---
-            # Utiliser le nom de la règle si aucune description méta n'est trouvée
             description = meta.get("description") or f"Rule {rule_name} (No description metadata provided)."
             _, cve = detect_cve(description)
-            print(f"Detected CVE: {cve}")
 
             rule_dict = {
                 "format": "yara",

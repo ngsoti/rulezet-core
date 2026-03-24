@@ -1,6 +1,7 @@
 from pymisp import MISPObject, MISPEvent
 from ..rule import rule_core as RuleModel
 from app.rule.rule_core import get_all_format
+import requests
 
 
 def content_convert_to_misp_object(rule_id: int) -> dict:
@@ -120,3 +121,19 @@ def content_convert_to_misp_object(rule_id: int) -> dict:
 
 
 
+
+
+def convert_misp_to_stix(misp_object: dict) -> dict | None:
+    """Converts a MISP object to STIX via the cti-transmute.org API."""
+    try:
+        response = requests.post(
+            "https://cti-transmute.org/api/convert/misp_to_stix",
+            json=misp_object,
+            headers={"Content-Type": "application/json"},
+            timeout=10
+        )
+        response.raise_for_status()
+
+        return response.json()
+    except requests.RequestException as e:
+        return None

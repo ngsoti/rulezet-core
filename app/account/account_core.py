@@ -309,6 +309,7 @@ def get_username_by_id(user_id) -> str:
 
 def add_favorite(user_id: int, rule_id: int) -> RuleFavoriteUser:
     """Adds a rule to the user's favorites"""
+    import datetime 
     exists = is_rule_favorited_by_user(user_id=user_id, rule_id=rule_id)
     if not exists:
         favorite = RuleFavoriteUser(user_id=user_id, rule_id=rule_id, created_at=datetime.datetime.now(tz=datetime.timezone.utc))
