@@ -16,7 +16,8 @@ const RuleFilterBar = {
         csrfToken: { type: String, default: '' },
         currentUserIsAuthenticated: { type: Boolean, default: false },
         showExport: { type: Boolean, default: true },
-        exactMatch: { type: Boolean, default: false } 
+        exactMatch: { type: Boolean, default: false } ,
+        initialFilters: { type: Object, default: () => ({}) },
     },
     emits: ['update:results', 'loading'],
     delimiters: ['[[', ']]'],
@@ -28,17 +29,24 @@ const RuleFilterBar = {
         'rule-export-action': RuleExportAction
     },
     setup(props, { emit }) {
-        const searchQuery = Vue.ref('');
-        const searchField = Vue.ref('all'); // 'all', 'title', 'content'
-        const exactMatch = Vue.ref(props.exactMatch);
-        const sortBy = Vue.ref('newest');
-        const ruleType = Vue.ref('');
+
+        const init = props.initialFilters;
+
+        const searchQuery = Vue.ref(init.search || '');
+        const searchField = Vue.ref(init.search_field || 'all');
+        const exactMatch = Vue.ref(init.exact_match === 'true' || props.exactMatch);
+        const sortBy = Vue.ref(init.sort_by || 'newest');
+
+
+        const ruleType = Vue.ref(init.format || '');
         const searchIsLoading = Vue.ref(false);
         const csrfToken = Vue.ref(props.csrfToken);
-        const selectedSourceNames = Vue.ref([]); 
-        const selectedVulnerabilityNames = Vue.ref([]); 
-        const selectedLicenseNames = Vue.ref([]);
-        const selectedTagNames = Vue.ref([]); 
+
+        const selectedSourceNames = Vue.ref(init.sources ? init.sources.split(',') : []); 
+        const selectedVulnerabilityNames = Vue.ref(init.vulnerabilities ? init.vulnerabilities.split(',') : []); 
+        const selectedLicenseNames = Vue.ref(init.licenses ? init.licenses.split(',') : []);
+        const selectedTagNames = Vue.ref(init.tags ? init.tags.split(',') : []);
+
         const rulesFormats = Vue.ref([]);
         const total_rules_count = Vue.ref(0);
         const current_user_is_authenticated = Vue.ref(props.currentUserIsAuthenticated);

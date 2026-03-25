@@ -89,7 +89,12 @@ def rule() -> render_template:
 @rule_blueprint.route("/rules_list", methods=['GET'])
 def rules_list() -> render_template:   
     """Redirect to rules list"""     
-    return render_template("rule/rules_list.html")
+
+    # filter by search in the url
+    url_filters = request.args.to_dict()
+
+
+    return render_template("rule/rules_list.html", url_filters=url_filters)
 
 # without search
 @rule_blueprint.route("/get_rules_page", methods=['GET'])
