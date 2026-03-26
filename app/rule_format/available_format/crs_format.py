@@ -88,7 +88,7 @@ class CRSRule(RuleType):
                 "description": info.get("description", "No description provided"),
                 "version": "1.0",
                 "author": author,
-                "cve_id": [],
+                "cve_id": '[]',
                 "original_uuid": rule_id or "Unknown",
                 "source": info.get("repo_url", "Unknown"),
                 "to_string": validation_result.normalized_content,
@@ -103,7 +103,7 @@ class CRSRule(RuleType):
                 "source": info.get("repo_url", "Unknown"),
                 "original_uuid": base_id,
                 "author": info.get("author", "Unknown"),
-                "cve_id": [],
+                "cve_id": '[]',
                 "to_string": content,
             }
 
