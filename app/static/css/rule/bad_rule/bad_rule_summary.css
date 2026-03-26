@@ -1,0 +1,36 @@
+    .rule-item {
+        transition: all 0.2s ease-in-out;
+        border: 1px solid #eee;
+        border-radius: 12px;
+    }
+
+    .rule-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05) !important;
+        border-color: #f8d7da;
+    }
+
+    
+
+    .error-box {
+        background-color: var(--bg-color);
+        border-radius: 8px;
+        padding: 10px;
+        border-left: 3px solid #dc3545;
+    }
+
+    .code-preview {
+        font-size: 0.85rem;
+        max-height: 250px;
+        border-radius: 8px;
+    }
+
+    .btn-action-round {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+    }

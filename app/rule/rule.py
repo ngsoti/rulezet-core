@@ -1479,18 +1479,23 @@ def get_bad_rule() -> jsonify:
 @login_required
 def get_bads_rules_page_filter():
     """Get all the bad rules with filter and pagination."""
-    page = int(request.args.get("page", 1))
-    per_page = 10
-    search = request.args.get("search", "")
+    params = request.args
+    # page = request.args.get('page', 1, type=int)
+    # search = request.args.get('search', '', type=str)
+    # search_field = request.args.get('search_field', 'all', type=str)
+    # error_messages = request.args.get('error_messages', '', type=str)
+    # sources = request.args.get('sources', '', type=str)
+    # rule_types = request.args.get('rule_types', '', type=str)
+    # licenses = request.args.get('licenses', '', type=str)
+    # user_id = request.args.get('user_id', type=int)
 
-    query = RuleModel.get_filtered_bad_rules_query(search)
-    total_rules = query.count()
-    paginated = query.paginate(page=page, per_page=per_page)
+    paginated, total_rules = RuleModel.get_filtered_bad_rules_query(params=params)
+   
 
     return jsonify({
         "rule": [r.to_json() for r in paginated.items],
         "total_rules": total_rules,
-        "total_pages": ceil(total_rules / per_page),
+        "total_pages": paginated.pages,
         "user": current_user.first_name
     })
 
@@ -1538,41 +1543,67 @@ def delete_bad_rule(rule_id) -> jsonify:
 @rule_blueprint.route('/bad_rule/delete_all_bad_rule', methods=['GET', 'POST'])
 @login_required
 def delete_all_bad_rule() -> jsonify:
-    """Delete all bad rule (error from import)"""
+    """
+    Delete bad rules based on the active filters provided in the request.
+    If no filters are provided, it clears all bad rules for the user (or all if admin).
+    """
+    filters = {
+        'search': request.args.get('search', '', type=str),
+        'search_field': request.args.get('search_field', 'all', type=str),
+        'error_messages': request.args.get('error_messages', '', type=str),
+        'sources': request.args.get('sources', '', type=str),
+        'rule_types': request.args.get('rule_types', '', type=str),
+        'user_id': request.args.get('user_id', type=int)
+    }
 
-    bad_rules = RuleModel.get_all_bad_rule_user(current_user.id)
-    error = 0
-    if bad_rules:
-        for bad_rule in bad_rules:
-            if current_user.is_admin() or current_user.id == bad_rule.user_id :
-                success = RuleModel.delete_bad_rule(bad_rule.id)
-                if success == False:
-                    error += 1
-            else:
-                return jsonify({ 
-                    "success": False,
-                    "toast_class": 'danger',
-                    "message": "access denied"
-                }), 403
-        if error > 0:
-            return jsonify({ 
-                "success": False,
-                "toast_class": 'danger',
-                "message": "Error to delete {error} bad rules"
-            }), 500
-        else:
-            return jsonify({ 
+    try:
+        deleted_count = RuleModel.delete_all_bad_rules(filters)
+
+        if deleted_count == 0:
+             return jsonify({ 
                 "success": True,
-                "toast_class": 'success',
-                "message": "All the bad rules are delete !"
+                "toast_class": 'info',
+                "message": "No rules matched the filters to delete."
             }), 200
 
-    else:
+        return jsonify({ 
+            "success": True,
+            "toast_class": 'success',
+            "message": f"Successfully deleted {deleted_count} rules!"
+        }), 200
+
+    except Exception as e:
         return jsonify({ 
             "success": False,
             "toast_class": 'danger',
-            "message": "Error to access bad rule"
+            "message": f"System error during deletion: {str(e)}"
         }), 500
+
+
+@rule_blueprint.route('/get_bad_rules_sources_usage', methods=['GET'])
+def get_bad_rules_sources_usage():
+    user_id = request.args.get('user_id', type=int)
+    
+    sources = RuleModel.get_sources_usage(user_id)
+    
+    return sources
+
+# /get_bad_rules_error_messages_usage
+@rule_blueprint.route('/get_bad_rules_error_messages_usage', methods=['GET'])
+def get_bad_rules_error_messages_usage():
+    user_id = request.args.get('user_id', type=int)
+    
+    error_messages = RuleModel.get_error_messages_usage(user_id)
+    
+    return error_messages
+@rule_blueprint.route('/get_bad_rules_licenses_usage', methods=['GET'])
+def get_bad_rules_licenses_usage():
+    user_id = request.args.get('user_id', type=int)
+    
+    licenses = RuleModel.get_licenses_usage(user_id)
+    
+    return licenses
+    
 
 #####################
 #   Repport rule    #

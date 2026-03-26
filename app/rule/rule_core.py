@@ -929,6 +929,98 @@ def delete_bad_rule(rule_id) -> bool:
     else:
         return False
 
+def delete_all_bad_rules(filters):
+    try:
+        query = InvalidRuleModel.query
+
+
+        if not current_user.is_admin():
+            query = query.filter(InvalidRuleModel.user_id == current_user.id)
+        elif filters.get('user_id'):
+            query = query.filter(InvalidRuleModel.user_id == filters.get('user_id'))
+
+        search = filters.get('search')
+        if search:
+            search_val = f"%{search}%"
+            field = filters.get('search_field')
+            if field == 'file_name':
+                query = query.filter(InvalidRuleModel.file_name.ilike(search_val))
+            elif field == 'error_message':
+                query = query.filter(InvalidRuleModel.error_message.ilike(search_val))
+            else:
+                query = query.filter(db.or_(
+                    InvalidRuleModel.file_name.ilike(search_val),
+                    InvalidRuleModel.error_message.ilike(search_val)
+                ))
+
+        if filters.get('error_messages'):
+            query = query.filter(InvalidRuleModel.error_message.in_(filters.get('error_messages').split(',')))
+        
+        if filters.get('sources'):
+            query = query.filter(InvalidRuleModel.url.in_(filters.get('sources').split(',')))
+
+        if filters.get('rule_types'):
+            query = query.filter(InvalidRuleModel.rule_type.in_(filters.get('rule_types').split(',')))
+
+
+        deleted_count = query.delete(synchronize_session=False)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return False
+
+def get_sources_usage(user_id=None):
+    query = db.session.query(
+        InvalidRuleModel.url,
+        db.func.count(InvalidRuleModel.id).label('count')
+    ).group_by(InvalidRuleModel.url)
+    # flter by user_id
+    if user_id:
+        query = query.filter(InvalidRuleModel.user_id == user_id)
+    
+    results = query.all()
+    sources = [{'name': url, 'count': count} for url, count in results]
+    return sources
+
+def get_error_messages_usage(user_id=None):
+    query = db.session.query(
+        InvalidRuleModel.error_message,
+        db.func.count(InvalidRuleModel.id).label('count')
+    ).group_by(InvalidRuleModel.error_message)
+    # flter by user_id
+    if user_id:
+        query = query.filter(InvalidRuleModel.user_id == user_id)
+    
+    results = query.all()
+    error_messages = [{'name': error_message, 'count': count} for error_message, count in results]
+    return error_messages
+
+def get_types_usage(user_id=None):
+    query = db.session.query(
+        InvalidRuleModel.rule_type,
+        db.func.count(InvalidRuleModel.id).label('count')
+    ).group_by(InvalidRuleModel.rule_type)
+    # flter by user_id
+    if user_id:
+        query = query.filter(InvalidRuleModel.user_id == user_id)
+    
+    results = query.all()
+    types = [{'name': rule_type, 'count': count} for rule_type, count in results]
+    return types
+
+def get_licenses_usage(user_id=None):
+    query = db.session.query(
+        InvalidRuleModel.license,
+        db.func.count(InvalidRuleModel.id).label('count')
+    ).group_by(InvalidRuleModel.license)
+    # flter by user_id
+    if user_id:
+        query = query.filter(InvalidRuleModel.user_id == user_id)
+    
+    results = query.all()
+    licenses = [{'name': license, 'count': count} for license, count in results]
+    return licenses
+
 #################
 #   Owner Rule  #
 #################
@@ -1466,22 +1558,64 @@ def filter_rules_owner_github(search=None, author=None, sort_by=None, rule_type=
     return query
 
 
-def get_filtered_bad_rules_query(search=None) -> InvalidRuleModel:
-    """Return a SQLAlchemy query for filtered bad rules belonging to the current user."""
-    query = InvalidRuleModel.query.filter_by(user_id=current_user.id)
-
-    if search:
-        search_pattern = f"%{search.strip()}%"
-        query = query.filter(
-            or_(
-                InvalidRuleModel.file_name.ilike(search_pattern),
-                InvalidRuleModel.error_message.ilike(search_pattern),
-                InvalidRuleModel.raw_content.ilike(search_pattern),
-                InvalidRuleModel.url.ilike(search_pattern)
+def get_filtered_bad_rules_query(params) -> tuple:
+    """Return a SQLAlchemy paginated query for filtered bad rules belonging to the current user."""
+    page = params.get('page', 1, type=int)
+    search = params.get('search', '', type=str)
+    search_field = params.get('search_field', 'all', type=str)
+    error_messages = params.get('error_messages', '', type=str)
+    sources = params.get('sources', '', type=str)
+    user_id = params.get('user_id', type=int)
+    rule_types = params.get('rule_types', '', type=str)
+    licenses = params.get('licenses', '', type=str)
+    
+    query = InvalidRuleModel.query
+    
+    if user_id:
+        query = query.filter(InvalidRuleModel.user_id == user_id)
+    else:
+        query = query.filter(InvalidRuleModel.user_id == current_user.id)
+    
+    if search and search.strip():
+        search_term = f"%{search}%"
+        if search_field == 'file_name':
+            query = query.filter(InvalidRuleModel.file_name.ilike(search_term))
+        elif search_field == 'error_message':
+            query = query.filter(InvalidRuleModel.error_message.ilike(search_term))
+        else:
+            query = query.filter(
+                db.or_(
+                    InvalidRuleModel.file_name.ilike(search_term),
+                    InvalidRuleModel.error_message.ilike(search_term)
+                )
             )
-        )
+    
+    if error_messages and error_messages.strip():
+        error_list = [msg.strip() for msg in error_messages.split(',') if msg.strip()]
+        if error_list:
+            query = query.filter(InvalidRuleModel.error_message.in_(error_list))
+    
+    if sources and sources.strip():
+        source_list = [src.strip() for src in sources.split(',') if src.strip()]
+        if source_list:
+            query = query.filter(InvalidRuleModel.url.in_(source_list))
+    
+    if rule_types and rule_types.strip():
+        rule_type_list = [rule_type.strip() for rule_type in rule_types.split(',') if rule_type.strip()]
+        if rule_type_list:
+            query = query.filter(InvalidRuleModel.rule_type.in_(rule_type_list))
+    
+    if licenses and licenses.strip():
+        license_list = [license.strip() for license in licenses.split(',') if license.strip()]
+        if license_list:
+            query = query.filter(InvalidRuleModel.license.in_(license_list))
+    
+    total_rules = query.count()
+    per_page = 12
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    return paginated, total_rules
 
-    return query.order_by(InvalidRuleModel.created_at.desc())
 
 ############################
 #   Owner Request section  #

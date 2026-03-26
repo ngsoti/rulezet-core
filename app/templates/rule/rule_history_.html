@@ -207,8 +207,8 @@
             const slotA = ref(null);
             const slotB = ref(null);
 
-            const contentLoaded = ref(false); // Remplace diffGenerated pour inclure le mode solo
-            const viewMode = ref('diff'); // 'diff' ou 'solo'
+            const contentLoaded = ref(false);
+            const viewMode = ref('diff');
             const noChangeDetected = ref(false);
 
             async function fetchRules(page) {
@@ -239,7 +239,6 @@
                 const content = type === 'old' ? entry.old_content : entry.new_content;
                 const selection = { id: entry.id, type: type, content: content };
 
-                // 1. Vérification de la désélection (Toggle) avec sécurité
                 if (slotA.value && slotA.value.id === entry.id && slotA.value.type === type) {
                     slotA.value = null;
                     return;
@@ -250,13 +249,11 @@
                     return;
                 }
 
-                // 2. Attribution aux slots vides
                 if (slotA.value === null) {
                     slotA.value = selection;
                 } else if (slotB.value === null) {
                     slotB.value = selection;
                 } else {
-                    // Si les deux sont pleins, on remplace le deuxième
                     slotB.value = selection;
                 }
             }

@@ -1,269 +1,241 @@
 {% extends "base.html" %}
 
-{% block content %}
-{% with messages = get_flashed_messages(with_categories=True) %}
-{% if messages %}
-{% for category, message in messages %}
-<div class="alert alert-{{ category }} alert-dismissible fade show mt-3" role="alert">
-  <i class="fas fa-info-circle me-2"></i>{{ message }}
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-{% endfor %}
-{% endif %}
-{% endwith %}
-
-<div id="container" class="container mt-5">
-  <div class="mb-4 border-bottom pb-3">
-    <h2 class="mb-3 text-center text-primary fw-bold">
-      Invalid or Non-Conforming Rules
-      <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
-    </h2>
-    <p class="text-muted mt-2">
-      The following rules are invalid because they did not pass syntax parsing validation.
-    </p>
-  </div>
-
-
-  <div class="card border-0 shadow  p-4  mb-4">
-    <div class="row g-3 align-items-center mb-3 flex-wrap">
-      <div class="col flex-grow-1">
-        <input id="searchInput" type="text" v-model="searchQuery" @input="onSearchInput" @keyup.enter="onEnterKey"
-          class="form-control shadow-sm" placeholder="Title, description...">
-      </div>
-
-      <div class="col-auto">
-        <button class="btn btn-sm btn-primary d-flex align-items-center shadow-sm" @click="fetchRules(1)">
-          <i class="fas fa-filter me-2"></i> Apply
-        </button>
-      </div>
-
-      <div class="col-auto">
-        <button class="btn btn-sm btn-danger d-flex align-items-center" title="Delete All bad Rules"
-          data-bs-toggle="modal" data-bs-target="#confirmDeleteAllModal">
-          <i class="fas fa-trash me-2"></i> Delete All
-        </button>
-      </div>
-
-    </div>
-
-    <div class="modal fade" id="confirmDeleteAllModal" tabindex="-1" aria-labelledby="confirmDeleteAllModalLabel"
-      aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content p-3">
-          <div class="modal-header border-0">
-            <h5 class="modal-title" id="confirmDeleteAllModalLabel">
-              <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Deletion
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body text-center">
-            <p class="mb-3">Are you sure you want to permanently delete <strong> [[ total_rules ]] bads rules</strong>?
-            </p>
-            <div v-if="isDeleting" class="d-flex justify-content-center align-items-center">
-              <div class="spinner-border text-danger me-2" role="status">
-                <span class="visually-hidden">Deleting...</span>
-              </div>
-              <strong>Deleting...</strong>
-            </div>
-          </div>
-          <div class="modal-footer border-0" v-if="!isDeleting">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-danger" @click="confirmDeleteAll">
-              <i class="fas fa-trash-alt me-1"></i> Yes, Delete All
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <div v-if="rules_list.length > 0">
-    <div class="mb-3">
-      <i class="fas fa-exclamation-triangle me-2"></i> [[ total_rules ]] bads rules
-    </div>
-
-    <div class="row row-cols-1 row-cols-md-2 g-4">
-      <div class="col" v-for="(rule, index) in rules_list" :key="rule.id">
-        <div class="card h-100 shadow-sm border-start border-4 border-danger">
-          <div class="card-body">
-            <h5 class="card-title text-secondary">
-              <i class="fas fa-file-alt me-2"></i>[[ rule.file_name ]]
-            </h5>
-            <p class="card-text text-danger">
-              <strong><i class="fas fa-bug me-2"></i>Error:</strong> [[ rule.error_message ]]
-            </p>
-            <p class="card-text mb-1">
-              <i class="far fa-calendar-alt me-2 text-muted"></i><strong>Date:</strong> [[ rule.created_at ]]
-            </p>
-            <p class="card-text mb-1">
-              <i class="fas fa-link me-2 text-muted"></i><strong>Source:</strong> [[ rule.url ]]
-            </p>
-            <p class="card-text mb-2">
-              <i class="fas fa-user me-2 text-muted"></i><strong>User:</strong> [[ user ]]
-            </p>
-            <details class="mt-3">
-              <summary class="text-primary">
-                <i class="fas fa-code me-1"></i> View raw content
-              </summary>
-              <pre class="bg-light border rounded p-2 mt-2"><code>[[ rule.raw_content ]]</code></pre>
-            </details>
-            <div class="d-flex flex-wrap gap-2 mt-3">
-              <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-sm btn-dark">
-                <i class="fas fa-edit me-1"></i> Edit
-              </a>
-              <button @click="deleteRule(rule.id, index)" class="btn btn-sm btn-danger" title="Delete Rule">
-                <i class="fas fa-trash me-1"></i> Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {% set current_page = 'current_page' %}
-    {% set total_pages = 'total_pages' %}
-    {% set visible_pages = 'visiblePages' %}
-    {% set fetch_function = 'fetchRules' %}
-
-    {% include "components/pagination.html" %}
-  </div>
-
-  <template v-else>
-    <div class="alert alert-warning text-center mt-5 shadow-sm">
-      <i class="fas fa-info-circle me-2"></i>
-      No invalid rule found!
-    </div>
-  </template>
-</div>
-
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/bad_rule/bad_rule_summary.css') }}">
 {% endblock %}
 
+{% block content %}
+<div id="main-container" class="container mt-5" v-cloak>
+    <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+        <div>
+            <h2 class="text-danger fw-bold mb-0">
+                Invalid Rules <span class="badge bg-danger-subtle text-danger ms-2" style="font-size: 1rem;">[[
+                    total_rules ]]</span>
+            </h2>
+            <p class="text-muted small mb-0">Syntax validation failed for the following assets.</p>
+        </div>
+        <button class="btn btn-outline-danger btn-sm rounded-pill px-3" data-bs-toggle="modal"
+            data-bs-target="#confirmDeleteAllModal">
+            <i class="fas fa-trash-alt me-2"></i>Clear All Bads
+        </button>
+    </div>
+
+    <bad-rule-filter-bar ref="filterBar" api-endpoint="/rule/get_bads_rules_page_filter"
+        @update:results="onRulesUpdated" @loading="search_is_loading = $event" :user-id="null">
+    </bad-rule-filter-bar>
+
+    <div v-if="rules_list.length > 0">
+        <div class="row g-4">
+            <div class="col-12 col-xl-6" v-for="(rule, index) in rules_list" :key="rule.id">
+                <div class="card rule-item border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center overflow-hidden">
+                                <div class="bg-danger bg-opacity-10 p-2 rounded-3 me-3">
+                                    <i class="fas fa-file-code text-danger"></i>
+                                </div>
+                                <div class="overflow-hidden">
+                                    <h6 class="text-dark fw-bold mb-0 text-truncate">[[ rule.file_name ]]</h6>
+                                    <span v-if="rule.rule_type" class="badge rounded-pill bg-dark pt-1 shadow-sm">[[
+                                        rule.rule_type.toUpperCase() ]]</span>
+
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-action-round text-dark"
+                                    title="Edit">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <button @click="deleteRule(rule.id, index)" class="btn btn-action-round text-danger"
+                                    title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="error-box mb-3">
+                            <div class="small fw-bold text-danger mb-1">
+                                <i class="fas fa-circle-exclamation me-1"></i> Parsing Error
+                            </div>
+                            <div class="small text-dark fw-medium">[[ rule.error_message ]]</div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="text-muted" style="font-size: 0.75rem;">DATE DETECTED</div>
+                                <div class="small fw-semibold">[[ rule.created_at ]]</div>
+                            </div>
+                            <div class="col-6" v-if="rule.license">
+                                <div class="text-muted" style="font-size: 0.75rem;">LICENSE</div>
+                                <div class="small fw-semibold">[[ rule.license ]]</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="text-muted" style="font-size: 0.75rem;">SOURCE ORIGIN</div>
+                            <a :href="rule.url" target="_blank"
+                                class="small text-primary text-decoration-none d-block text-truncate">
+                                <i class="fas fa-external-link-alt me-1" style="font-size: 0.7rem;"></i>[[ rule.url ]]
+                            </a>
+                        </div>
+
+                        <details class="mt-3">
+                            <summary class="text-secondary small fw-bold" style="cursor: pointer;">
+                                <i class="fas fa-chevron-right me-1 shadow-none"></i> RAW CONTENT
+                            </summary>
+                            <div class="position-relative mt-2">
+                                <pre
+                                    class="bg-dark text-light p-3 mb-0 code-preview"><code>[[ rule.raw_content ]]</code></pre>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-5">
+            <pagination-component :current-page="current_page" :total-pages="total_pages" @change-page="changePage">
+            </pagination-component>
+        </div>
+    </div>
+
+    <template v-else>
+        <div class="text-center py-5 mt-5">
+            <div class="bg-success bg-opacity-10 d-inline-block p-4 rounded-circle mb-3">
+                <i class="fas fa-check-circle text-success fa-3x"></i>
+            </div>
+            <h4 class="fw-bold">All clear!</h4>
+            <p class="text-muted">No invalid rules were found in the database.</p>
+        </div>
+    </template>
+
+    <div class="modal fade" id="confirmDeleteAllModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold text-danger">Confirm Bulk Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="fas fa-exclamation-circle text-danger fa-3x mb-3"></i>
+                    <p class="fs-5">Delete all <strong>[[ total_rules ]]</strong> invalid rules permanently?</p>
+                    <div v-if="isDeleting" class="mt-3">
+                        <div class="spinner-border text-danger me-2" role="status"></div>
+                        <span class="fw-bold">Deleting...</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 rounded-bottom" v-if="!isDeleting">
+                    <button type="button" class="btn btn-secondary px-4 rounded-pill"
+                        data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger px-4 rounded-pill" @click="confirmDeleteAll">Delete
+                        Everything</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
 {% block script %}
 <script type="module">
-  const { createApp, ref, computed } = Vue
-  import { message_list, create_message, display_toast } from '/static/js/toaster.js'
+    const { createApp, ref, computed } = Vue
+    import { message_list, create_message, display_toast } from '/static/js/toaster.js'
+    import BadRuleFilterBar from '/static/js/rule/bad/badRuleFilter.js';
+    import PaginationComponent from '/static/js/rule/paginationComponent.js';
 
-  createApp({
-    delimiters: ['[[', ']]'],
-    setup() {
-      const csrf_token = '{{ csrf_token() }}';
-      const rules_list = ref([])
-      const total_rules = ref(0)
-      const current_page = ref(1)
-      const total_pages = ref(1)
-      const user = ref()
-      const searchQuery = ref('')
-      const authorFilter = ref('')
-      const sortBy = ref('newest')
-      const isDeleting = ref(false)
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: {
+            'bad-rule-filter-bar': BadRuleFilterBar,
+            'pagination-component': PaginationComponent
+        },
+        setup() {
+            const csrf_token = '{{ csrf_token() }}';
+            const rules_list = ref([])
+            const total_rules = ref(0)
+            const current_page = ref(1)
+            const total_pages = ref(1)
+            const search_is_loading = ref(false)
+            const filterBar = ref(null)
+            const isDeleting = ref(false)
 
-      async function fetchRules(page) {
-        const params = new URLSearchParams({
-          page,
-          search: searchQuery.value
-        })
+            const onRulesUpdated = (results) => {
+                rules_list.value = results.rules.rule || [];
+                total_pages.value = results.total_pages || 1;
+                current_page.value = results.current_page || 1;
+                total_rules.value = results.total_rules || 0;
+            };
 
-        const res = await fetch('/rule/get_bads_rules_page_filter?' + params.toString())
-        const data = await res.json()
-        rules_list.value = data.rule
-        total_pages.value = data.total_pages
-        total_rules.value = data.total_rules
-        current_page.value = page
-        user.value = data.user;
-      }
+            const changePage = (page) => {
+                if (filterBar.value) {
+                    filterBar.value.fetchRules(page);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            };
 
-      async function deleteAllRule() {
-        if (rules_list.value.length === 0) {
-          create_message('No rules to delete.', 'info-subtle')
+            async function deleteAllRule() {
+                if (rules_list.value.length === 0) {
+                    create_message('No rules to delete.', 'info-subtle')
+                    return;
+                }
+                const params = new URLSearchParams({
+                    'params': filterBar.value.getParams().toString()
+                });
+
+
+                const res = await fetch('/rule/bad_rule/delete_all_bad_rule?' + params.toString())
+                if (res.status === 200) {
+                    rules_list.value = []
+                    total_rules.value = 0
+                }
+                display_toast(res)
+            }
+
+            async function confirmDeleteAll() {
+                isDeleting.value = true
+                await deleteAllRule()
+                isDeleting.value = false
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteAllModal'))
+                if (modal) modal.hide()
+            }
+
+            async function deleteRule(id, index) {
+                const res = await fetch(`/rule/bad_rule/${id}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf_token
+                    },
+                    body: JSON.stringify({ id: id })
+                })
+
+                const data = await res.json()
+                if (data.success) {
+                    rules_list.value.splice(index, 1)
+                    total_rules.value -= 1
+                    if (rules_list.value.length === 0 && current_page.value > 1) {
+                        changePage(current_page.value - 1)
+                    }
+                    create_message('Rule deleted.', 'success-subtle')
+                }
+            }
+
+            return {
+                message_list,
+                csrf_token,
+                rules_list,
+                total_rules,
+                current_page,
+                total_pages,
+                search_is_loading,
+                filterBar,
+                deleteRule,
+                onRulesUpdated,
+                changePage,
+                confirmDeleteAll,
+                isDeleting,
+            }
         }
-
-        const res = await fetch('/rule/bad_rule/delete_all_bad_rule')
-        if (res.status === 200) {
-          rules_list.value = []
-        }
-        display_toast(res)
-      }
-
-      async function confirmDeleteAll() {
-        isDeleting.value = true
-        await deleteAllRule()
-        isDeleting.value = false
-
-        const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteAllModal'))
-        modal.hide()
-      }
-
-      async function onSearchInput() {
-        await fetchRules(1)
-      }
-
-      async function onEnterKey() {
-        await fetchRules(1)
-      }
-
-      async function deleteRule(id, index) {
-        const res = await fetch(`/rule/bad_rule/${id}/delete`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrf_token
-          },
-          body: JSON.stringify({ id: id })
-        })
-
-        const data = await res.json()
-        if (data.success) {
-          rules_list.value.splice(index, 1)
-          if (rules_list.value.length === 0 && current_page.value > 1) {
-            fetchRules(current_page.value - 1)
-          } else {
-            fetchRules(current_page.value)
-          }
-          create_message('Rule deleted.', 'success-subtle')
-        }
-      }
-
-      const visiblePages = computed(() => {
-        const pages = []
-        const total = total_pages.value
-        const current = current_page.value
-        if (total <= 7) {
-          for (let i = 1; i <= total; i++) pages.push(i)
-        } else {
-          if (current <= 4) {
-            pages.push(1, 2, 3, 4, 5, '...', total)
-          } else if (current >= total - 3) {
-            pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-          } else {
-            pages.push(1, '...', current - 1, current, current + 1, '...', total)
-          }
-        }
-        return pages
-      })
-
-      fetchRules(1)
-
-      return {
-        message_list,
-        csrf_token,
-        rules_list,
-        total_rules,
-        current_page,
-        total_pages,
-        fetchRules,
-        user,
-        deleteRule,
-        visiblePages,
-        searchQuery,
-        onEnterKey,
-        onSearchInput,
-        deleteAllRule,
-        confirmDeleteAll,
-        isDeleting
-      }
-    }
-  }).mount('#main-container')
+    }).mount('#main-container')
 </script>
 {% endblock %}
