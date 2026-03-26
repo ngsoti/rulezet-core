@@ -122,8 +122,6 @@ class CreateRule(Resource):
         # Required fields
         required_fields = ["title", "format", "to_string"]
 
-        print(data)
-
         missing_fields = [f for f in required_fields if not data.get(f) or not str(data.get(f)).strip()]
         if missing_fields:
             return {"message": f"Missing or empty fields: {', '.join(missing_fields)}"}, 400

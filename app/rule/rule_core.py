@@ -227,7 +227,7 @@ def edit_rule_core(form_dict, id) -> tuple[bool, Rule]:
                     db.session.add(new_assoc)
                     
         except Exception as e:
-            print(f"Error processing tags: {e}")
+            pass
 
     db.session.commit()
     return True, rule
@@ -1873,7 +1873,6 @@ def create_rule_history(data: dict) -> bool:
 
     except Exception as e:
         db.session.rollback()
-        print(e)
         return None
 
 def was_last_history_manuel(rule_id):

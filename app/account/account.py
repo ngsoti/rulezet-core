@@ -458,8 +458,6 @@ def get_user_activity_stats(user_id):
 
 @account_blueprint.route('/user_edit_proposals/<int:user_id>')
 def get_user_edit_proposals(user_id):
-
-    print(user_id)
     proposals = RuleModel.get_all_rule_proposal_user_id(user_id)
 
     if not proposals:

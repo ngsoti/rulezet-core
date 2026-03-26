@@ -882,7 +882,6 @@ def get_bundle_tags(bundle_id):
         
         return jsonify({"tags": tags_data}), 200
     except Exception as e:
-        print(f"Error fetching tags for bundle {bundle_id}: {e}")
         return jsonify({"tags": [], "error": str(e)}), 500
     
 
