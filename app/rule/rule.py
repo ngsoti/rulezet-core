@@ -192,6 +192,7 @@ def get_rules_page_filter() -> jsonify:
     vuln_list = [v.strip() for v in vuln_raw.split(',') if v.strip()] if vuln_raw else []
 
     tag_raw = request.args.get("tags", type=str)
+    
     tag_list = [t.strip() for t in tag_raw.split(',') if t.strip()] if tag_raw else []
 
   

@@ -9,9 +9,17 @@ const MultiTagFilter = {
     setup(props, { emit }) {
         const list_tags = Vue.ref([]);
         const tagSearchQuery = Vue.ref('');
-        const selectedTagIds = Vue.ref([...props.modelValue]);
+        const selectedTagNames = Vue.ref([...props.modelValue]);
         const activeNamespace = Vue.ref(null);
         const isLoading = Vue.ref(false);
+
+        const isNameSelected = (name) => {
+            return selectedTagNames.value.some(n => n.toLowerCase() === name.toLowerCase());
+        };
+
+        Vue.watch(() => props.modelValue, (newVal) => {
+            selectedTagNames.value = [...newVal];
+        });
 
         const fetchTags = async () => {
             isLoading.value = true;
@@ -46,32 +54,41 @@ const MultiTagFilter = {
         });
 
         const selectedTagsObjects = Vue.computed(() => {
-            return list_tags.value.filter(t => selectedTagIds.value.includes(t.id));
+            return list_tags.value.filter(t => isNameSelected(t.name));
         });
 
-        const toggleTag = (tagId) => {
-            const index = selectedTagIds.value.indexOf(tagId);
+        const toggleTag = (tagName) => {
+            const index = selectedTagNames.value.findIndex(n => n.toLowerCase() === tagName.toLowerCase());
+            
             if (index > -1) {
-                selectedTagIds.value.splice(index, 1);
+                selectedTagNames.value.splice(index, 1);
             } else {
-                selectedTagIds.value.push(tagId);
+                selectedTagNames.value.push(tagName);
             }
-            emit('update:modelValue', selectedTagIds.value);
-            emit('change', selectedTagIds.value);
+            
+            emit('update:modelValue', [...selectedTagNames.value]);
+            emit('change', [...selectedTagNames.value]);
         };
 
         const getContrastYIQ = (hex) => {
             if (!hex) return '#000';
-            const r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16), b = parseInt(hex.substr(5, 2), 16);
+            const r = parseInt(hex.substr(1, 2), 16), 
+                  g = parseInt(hex.substr(3, 2), 16), 
+                  b = parseInt(hex.substr(5, 2), 16);
             return ((r * 299) + (g * 587) + (b * 114)) / 1000 >= 128 ? '#000' : '#fff';
         };
 
         Vue.onMounted(fetchTags);
 
         return {
-            tagSearchQuery, groupedTags, selectedTagIds, activeNamespace, list_tags,
+            tagSearchQuery, groupedTags, selectedTagNames, activeNamespace, list_tags,
             selectedTagsObjects, toggleTag, getContrastYIQ, filteredTagsList, isLoading,
-            clearAll: () => { selectedTagIds.value = []; emit('update:modelValue', []); }
+            isNameSelected, // On l'expose pour le template
+            clearAll: () => { 
+                selectedTagNames.value = []; 
+                emit('update:modelValue', []); 
+                emit('change', []);
+            }
         };
     },
     template: `
@@ -81,15 +98,15 @@ const MultiTagFilter = {
              style="cursor: pointer; min-height: 48px; border-radius: 12px;">
             
             <i class="fa-solid fa-tags text-primary opacity-75 ms-1 me-1"></i>
-            <span v-if="selectedTagIds.length === 0" class="text-muted small fw-bold">[[ placeholder ]]</span>
+            <span v-if="selectedTagsObjects.length === 0" class="text-muted small fw-bold">[[ placeholder ]]</span>
 
-            <span v-for="tag in selectedTagsObjects" :key="tag.id" class="tag-split animate__animated animate__fadeInSmall shadow-sm m-0">
+            <span v-for="tag in selectedTagsObjects" :key="tag.name" class="tag-split animate__animated animate__fadeInSmall shadow-sm m-0">
                 <span class="tag-left" style="padding: 0.2rem 0.4rem; background-color: #212529;">
                     <i :class="['fas', tag.icon || 'fa-tag']"></i>
                 </span>
                 <span class="tag-right" :style="{ backgroundColor: tag.color, padding: '0.2rem 0.5rem' }">
                     <span :style="{ color: getContrastYIQ(tag.color) }" class="me-2" style="font-size: 0.75rem;">[[ tag.name ]]</span>
-                    <i class="fa-solid fa-circle-xmark opacity-75 ms-1" @click.stop="toggleTag(tag.id)" style="cursor: pointer; color: black;"></i>
+                    <i class="fa-solid fa-circle-xmark opacity-75 ms-1" @click.stop="toggleTag(tag.name)" style="cursor: pointer; color: black;"></i>
                 </span>
             </span>
             <i class="fa-solid fa-chevron-down ms-auto me-1 text-muted small"></i>
@@ -113,25 +130,24 @@ const MultiTagFilter = {
             <div class="custom-tag-scroll pe-2" style="max-height: 400px; overflow-y: auto; overflow-x: hidden;">
                 
                 <div v-if="(!isLoading && list_tags.length === 0) || (tagSearchQuery && filteredTagsList.length === 0)" 
-                     class="text-center py-4 animate__animated animate__fadeIn" style="color: var(--text-color)">
+                     class="text-center py-4 animate__animated animate__fadeIn">
                     <div class="mb-2">
                         <i class="fa-solid fa-tags fa-3x text-muted opacity-25"></i>
                     </div>
                     <h6 class="text-muted fw-bold">No tags found</h6>
-                    <p class="small text-muted opacity-75">No tags match your search or filters.</p>
                 </div>
 
                 <div v-else-if="tagSearchQuery" class="d-flex flex-column gap-1">
-                    <div v-for="tag in filteredTagsList" :key="tag.id" 
-                         @click="toggleTag(tag.id)" 
+                    <div v-for="tag in filteredTagsList" :key="tag.name" 
+                         @click="toggleTag(tag.name)" 
                          class="p-2 rounded border d-flex align-items-center justify-content-between tag-item-hover"
-                         :class="{'border-primary bg-primary-subtle': selectedTagIds.includes(tag.id)}"
+                         :class="{'border-primary bg-primary-subtle': isNameSelected(tag.name)}"
                          style="cursor: pointer;">
                          <div class="d-flex align-items-center">
-                            <i :class="['fas', tag.icon || 'fa-tag', 'me-2 ']" style="font-size: 0.8rem; color: var(--text-color);"></i>
-                            <span class="small fw-bold" style="color: var(--text-color);">[[ tag.name ]]</span>
+                            <i :class="['fas', tag.icon || 'fa-tag', 'me-2 ']" style="font-size: 0.8rem;"></i>
+                            <span class="small fw-bold">[[ tag.name ]]</span>
                          </div>
-                         <span class="badge rounded-pill bg-light text-dark border" style="color: var(--text-color);">[[ tag.usage_count ]]</span>
+                         <span class="badge rounded-pill bg-light text-dark border">[[ tag.usage_count ]]</span>
                     </div>
                 </div>
 
@@ -142,11 +158,11 @@ const MultiTagFilter = {
                          style="cursor: pointer; min-height: 50px;">
                         <div class="d-flex align-items-center">
                             <i class="fa-solid fa-tags text-primary me-3"></i>
-                            <span class="fw-bold text-truncate" style="max-width: 180px; color: var(--text-color);">[[ ns ]]</span>
+                            <span class="fw-bold text-truncate" style="max-width: 180px;">[[ ns ]]</span>
                         </div>
                         <div class="d-flex align-items-center gap-3">
-                            <span class="extra-small fw-bold text-nowrap" style="color: var(--text-color);">[[ tags.length ]] tags</span>
-                            <i class="fa-solid fa-chevron-right opacity-50 small" style="color: var(--text-color);"></i>
+                            <span class="extra-small fw-bold text-nowrap">[[ tags.length ]] tags</span>
+                            <i class="fa-solid fa-chevron-right opacity-50 small"></i>
                         </div>
                     </div>
                 </div>
@@ -154,14 +170,14 @@ const MultiTagFilter = {
                 <div v-else class="animate__animated animate__fadeInUpSmall">
                     <div class="px-2 mb-2 d-flex justify-content-between align-items-center">
                         <small class="fw-black text-primary text-uppercase">[[ activeNamespace ]]</small>
-                        <small style="color: var(--text-color);">[[ groupedTags[activeNamespace].length ]] items</small>
+                        <small>[[ groupedTags[activeNamespace].length ]] items</small>
                     </div>
                     
                     <div class="d-flex flex-column gap-2">
-                        <div v-for="tag in groupedTags[activeNamespace]" :key="tag.id" 
-                             @click="toggleTag(tag.id)" 
+                        <div v-for="tag in groupedTags[activeNamespace]" :key="tag.name" 
+                             @click="toggleTag(tag.name)" 
                              class="p-2 rounded-3 border d-flex align-items-center justify-content-between transition-all tag-item-hover"
-                             :class="selectedTagIds.includes(tag.id) ? 'border-primary bg-primary-subtle' : ''"
+                             :class="isNameSelected(tag.name) ? 'border-primary bg-primary-subtle' : ''"
                              style="cursor: pointer;">
                             
                             <div class="d-flex align-items-center">
@@ -176,10 +192,10 @@ const MultiTagFilter = {
                             </div>
                             
                             <div class="d-flex align-items-center gap-2">
-                                <span class="badge rounded-pill bg-light border" style="font-size: 0.65rem; color: var(--text-color);">
+                                <span class="badge rounded-pill bg-light border" style="font-size: 0.65rem;">
                                     [[ tag.usage_count ]]
                                 </span>
-                                <i v-if="selectedTagIds.includes(tag.id)" class="fa-solid fa-check-circle text-primary"></i>
+                                <i v-if="isNameSelected(tag.name)" class="fa-solid fa-check-circle text-primary"></i>
                             </div>
                         </div>
                     </div>

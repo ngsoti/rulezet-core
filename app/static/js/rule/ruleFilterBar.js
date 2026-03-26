@@ -45,6 +45,7 @@ const RuleFilterBar = {
         const selectedSourceNames = Vue.ref(init.sources ? init.sources.split(',') : []); 
         const selectedVulnerabilityNames = Vue.ref(init.vulnerabilities ? init.vulnerabilities.split(',') : []); 
         const selectedLicenseNames = Vue.ref(init.licenses ? init.licenses.split(',') : []);
+       
         const selectedTagNames = Vue.ref(init.tags ? init.tags.split(',') : []);
 
         const rulesFormats = Vue.ref([]);

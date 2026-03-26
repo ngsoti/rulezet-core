@@ -1351,7 +1351,6 @@ def filter_rules(search=None, search_field="all", author=None, sort_by=None, rul
 
 
         if exact_match is True:
-            print("go")
 
             if search_field == "title":
                 # Strict case-sensitive equality
@@ -1398,10 +1397,20 @@ def filter_rules(search=None, search_field="all", author=None, sort_by=None, rul
         query = query.filter(or_(*vuln_filters))
 
     if tags:
-        query = query.join(RuleTagAssociation)
-        query = query.filter(RuleTagAssociation.tag_id.in_(tags))
-        query = query.distinct()
-    
+        tags_lowercase = [t.lower() for t in tags]
+
+        found_tags = Tag.query.filter(
+            func.lower(Tag.name).in_(tags_lowercase)
+        ).all()
+        
+        tag_ids = [tag.id for tag in found_tags]
+
+        if tag_ids:
+            query = query.join(RuleTagAssociation).filter(
+                RuleTagAssociation.tag_id.in_(tag_ids)
+            ).distinct()
+
+
     if source:
         source_list = [s.strip() for s in source.split(',')] if isinstance(source, str) else source
         query = query.filter(or_(*[Rule.source.ilike(f"%{s}%") for s in source_list]))
