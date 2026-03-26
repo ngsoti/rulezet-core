@@ -130,95 +130,112 @@ const BadRuleFilterBar = {
         };
     },
     template: `
-    <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px; background-color: var(--card-bg-color);">
-        <div class="card-body p-4 position-relative">
-            <div v-if="searchIsLoading" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-                 style="background: rgba(255,255,255,0.5); z-index: 10; border-radius: 15px;">
-            </div>
+    <div class="filter-container">
+        <div class="d-inline-flex gap-1 mb-3">
+            <button class="btn btn-primary rounded-pill px-3 shadow-sm" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#collapseFilter" 
+                    aria-expanded="false" 
+                    aria-controls="collapseFilter">
+                <i class="fas fa-filter me-2"></i>Filter Rules
+            </button>
+        </div>
 
-            <div class="row g-3">
-                <div :class="isVisible('search') ? 'col-md-6' : 'col-md-12'" v-if="isVisible('search')">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Keywords</label>
-
-                    <div class="input-group input-group-sm position-relative shadow-sm"
-                        style="border-radius: 10px; overflow: hidden; background-color: var(--bg-color);">
-
-                        <select v-model="searchField"
-                                class="form-select border-0 text-muted small fw-bold"
-                                @change="fetchRules(1)"
-                                style="max-width: 100px; font-size: 0.75rem; border-right: 1px solid; background-color: var(--bg-color); cursor: pointer;">
-                            <option value="all">All</option>
-                            <option value="file_name">File Name</option>
-                            <option value="error_message">Error</option>
-                        </select>
-
-                        <span class="input-group-text border-0 text-muted"
-                            style="min-width: 40px; justify-content: center; background-color: var(--bg-color);">
-                            <div v-if="searchIsLoading" class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                            <i v-else class="fa-solid fa-magnifying-glass"></i>
-                        </span>
-
-                        <input type="text"
-                            v-model="searchQuery"
-                            @keyup.enter="fetchRules(1)"
-                            class="form-control border-0 pe-5"
-                            :placeholder="placeholder"
-                            style="height: 38px;"
-                            :disabled="searchIsLoading">
-
-                        <span v-if="searchQuery && !searchIsLoading"
-                            @click="clearSearch"
-                            class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted cursor-pointer"
-                            style="z-index: 5;">
-                            <i class="fa-solid fa-circle-xmark opacity-50"></i>
-                        </span>
+        <div class="collapse" id="collapseFilter">
+            <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px; background-color: var(--card-bg-color);">
+                <div class="card-body p-4 position-relative">
+                    
+                    <div v-if="searchIsLoading" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                        style="background: rgba(255,255,255,0.5); z-index: 10; border-radius: 15px;">
+                        <div class="spinner-border text-primary" role="status"></div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Format</label>
-                    <select v-model="selectedFormat" 
-                            class="form-select form-select-sm border-0 bg-light px-3" 
-                            @change="fetchRules(1)" 
-                            style="border-radius: 10px; height: 38px;" 
-                            :disabled="searchIsLoading">
-                        <option value="">All Formats</option>
-                        <option v-for="f in rulesFormats" :key="f.id" :value="f.name">
-                            [[ f.name.toUpperCase() ]]
-                        </option>
-                    </select>
-                </div>
-            </div>
 
-            <div class="row g-3 mt-1" v-if="isVisible('error_messages') || isVisible('sources')"
-                 :style="{ opacity: searchIsLoading ? 0.6 : 1, pointerEvents: searchIsLoading ? 'none' : 'auto' }">
+                    <div class="row g-3">
+                        <div :class="isVisible('search') ? 'col-md-6' : 'col-md-12'" v-if="isVisible('search')">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Keywords</label>
 
-                <div class="col-md-6" v-if="isVisible('error_messages')">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
-                        <i class="fa-solid fa-bug me-1 text-danger"></i> Error Messages
-                    </label>
-                    <bad-rule-multi-error-message v-model="selectedErrorMessages" @change="fetchRules(1)"
-                        api-endpoint="/rule/get_bad_rules_error_messages_usage" placeholder="Filter errors..." :userId="userId">
-                    </bad-rule-multi-error-message>
-                </div>
+                            <div class="input-group input-group-sm position-relative shadow-sm"
+                                style="border-radius: 10px; overflow: hidden; background-color: var(--bg-color);">
 
-                <div class="col-md-6" v-if="isVisible('sources')">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
-                        <i class="fa-solid fa-code-branch me-1 text-primary"></i> Sources
-                    </label>
-                    <bad-rule-multi-source v-model="selectedSources" @change="fetchRules(1)"
-                        api-endpoint="/rule/get_bad_rules_sources_usage" placeholder="Filter sources..." :userId="userId">
-                    </bad-rule-multi-source>
-                </div>
-            </div>
-            <!-- Selected license -->
-            <div class="row g-3 mt-1" v-if="isVisible('licenses')">
-                <div class="col-md-6">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
-                        <i class="fa-solid fa-scale-balanced me-1 text-info"></i> Licenses
-                    </label>
-                    <bad-rule-multi-license v-model="selectedLicenses" @change="fetchRules(1)"
-                        api-endpoint="/rule/get_bad_rules_licenses_usage" placeholder="Filter licenses..." :userId="userId">
-                    </bad-rule-multi-license>
+                                <select v-model="searchField"
+                                        class="form-select border-0 text-muted small fw-bold"
+                                        @change="fetchRules(1)"
+                                        style="max-width: 100px; font-size: 0.75rem; border-right: 1px solid; background-color: var(--bg-color); cursor: pointer;">
+                                    <option value="all">All</option>
+                                    <option value="file_name">File Name</option>
+                                    <option value="error_message">Error</option>
+                                </select>
+
+                                <span class="input-group-text border-0 text-muted"
+                                    style="min-width: 40px; justify-content: center; background-color: var(--bg-color);">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                </span>
+
+                                <input type="text"
+                                    v-model="searchQuery"
+                                    @keyup.enter="fetchRules(1)"
+                                    class="form-control border-0 pe-5"
+                                    :placeholder="placeholder"
+                                    style="height: 38px;"
+                                    :disabled="searchIsLoading">
+
+                                <span v-if="searchQuery && !searchIsLoading"
+                                    @click="clearSearch"
+                                    class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted cursor-pointer"
+                                    style="z-index: 5;">
+                                    <i class="fa-solid fa-circle-xmark opacity-50"></i>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Format</label>
+                            <select v-model="selectedFormat" 
+                                    class="form-select form-select-sm border-0 bg-light px-3" 
+                                    @change="fetchRules(1)" 
+                                    style="border-radius: 10px; height: 38px;" 
+                                    :disabled="searchIsLoading">
+                                <option value="">All Formats</option>
+                                <option v-for="f in rulesFormats" :key="f.id" :value="f.name">
+                                    [[ f.name.toUpperCase() ]]
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1" v-if="isVisible('error_messages') || isVisible('sources')"
+                        :style="{ opacity: searchIsLoading ? 0.6 : 1, pointerEvents: searchIsLoading ? 'none' : 'auto' }">
+
+                        <div class="col-md-6" v-if="isVisible('error_messages')">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
+                                <i class="fa-solid fa-bug me-1 text-danger"></i> Error Messages
+                            </label>
+                            <bad-rule-multi-error-message v-model="selectedErrorMessages" @change="fetchRules(1)"
+                                api-endpoint="/rule/get_bad_rules_error_messages_usage" placeholder="Filter errors..." :userId="userId">
+                            </bad-rule-multi-error-message>
+                        </div>
+
+                        <div class="col-md-6" v-if="isVisible('sources')">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
+                                <i class="fa-solid fa-code-branch me-1 text-primary"></i> Sources
+                            </label>
+                            <bad-rule-multi-source v-model="selectedSources" @change="fetchRules(1)"
+                                api-endpoint="/rule/get_bad_rules_sources_usage" placeholder="Filter sources..." :userId="userId">
+                            </bad-rule-multi-source>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1" v-if="isVisible('licenses')">
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
+                                <i class="fa-solid fa-scale-balanced me-1 text-info"></i> Licenses
+                            </label>
+                            <bad-rule-multi-license v-model="selectedLicenses" @change="fetchRules(1)"
+                                api-endpoint="/rule/get_bad_rules_licenses_usage" placeholder="Filter licenses..." :userId="userId">
+                            </bad-rule-multi-license>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

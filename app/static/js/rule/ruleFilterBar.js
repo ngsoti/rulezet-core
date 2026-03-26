@@ -145,157 +145,172 @@ const RuleFilterBar = {
         };
     },
     template: `
-    <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px; background-color: var(--card-bg-color);">
-        <div class="card-body p-4 position-relative">
-            <div v-if="searchIsLoading" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
-                 style="background: rgba(255,255,255,0.5); z-index: 10; border-radius: 15px;">
-            </div>
-
-            <div class="row g-3">
-                <div :class="isVisible('sort') || isVisible('format') ? 'col-md-6' : 'col-md-12'" v-if="isVisible('search')">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Keywords</label>
-
-                    <!-- INPUT GROUP -->
-                    <div class="input-group input-group-sm position-relative shadow-sm"
-                        style="border-radius: 10px; overflow: hidden; background-color: var(--bg-color);">
-
-                        <select v-model="searchField"
-                                class="form-select border-0 text-muted small fw-bold"
-                                @change="fetchRules(1)"
-                                style="max-width: 100px; font-size: 0.75rem; border-right: 1px solid; background-color: var(--bg-color); cursor: pointer;">
-                            <option value="all">All</option>
-                            <option value="title">Title</option>
-                            <option value="content">Content</option>
-                        </select>
-
-                        <span class="input-group-text border-0 text-muted"
-                            style="min-width: 40px; justify-content: center; background-color: var(--bg-color);">
-                            <div v-if="searchIsLoading" class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                            <i v-else class="fa-solid fa-magnifying-glass"></i>
-                        </span>
-
-                        <input type="text"
-                            v-model="searchQuery"
-                            @keyup.enter="fetchRules(1)"
-                            class="form-control border-0 pe-5"
-                            :placeholder="placeholder"
-                            style="height: 38px;"
-                            :disabled="searchIsLoading">
-
-                        <!-- Clear button -->
-                        <span v-if="searchQuery && !searchIsLoading"
-                            @click="clearSearch"
-                            class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted cursor-pointer"
-                            style="z-index: 5;">
-                            <i class="fa-solid fa-circle-xmark opacity-50"></i>
-                        </span>
-                    </div>
-
-                    <!-- EXACT MATCH SWITCH (moved outside input group) -->
-                    <div class="form-check form-switch mt-2 ms-1">
-                        <input class="form-check-input"
-                            type="checkbox"
-                            v-model="exactMatch"
-                            @change="fetchRules(1)"
-                            :disabled="searchIsLoading">
-                        <label class="form-check-label small text-muted">
-                            Exact match
-                        </label>
-                    </div>
-                </div>
-
-                <div class="col-md-3" v-if="isVisible('sort')">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Sort</label>
-                    <select v-model="sortBy" class="form-select form-select-sm border-0 bg-light px-3" @change="fetchRules(1)" 
-                            style="border-radius: 10px; height: 38px;" :disabled="searchIsLoading">
-                        <option value="newest">Newest</option>
-                        <option value="oldest">Oldest</option>
-                        <option value="most_likes">Most Liked</option>
-                    </select>
-                </div>
-
-                <div class="col-md-3" v-if="isVisible('format')">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Format</label>
-                    <select v-model="ruleType" class="form-select form-select-sm border-0 bg-light px-3" @change="fetchRules(1)" 
-                            style="border-radius: 10px; height: 38px;" :disabled="searchIsLoading">
-                        <option value="">All Formats</option>
-                        <option v-for="f in rulesFormats" :key="f.id" :value="f.name">[[ f.name.toUpperCase() ]]</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="row g-3 mt-1" v-if="isVisible('sources') || isVisible('vulnerabilities') || isVisible('licenses') || isVisible('tags')" 
-                 :style="{ opacity: searchIsLoading ? 0.6 : 1, pointerEvents: searchIsLoading ? 'none' : 'auto' }">
-                
-                <div class="col-md-6" v-if="isVisible('sources')">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
-                        <i class="fa-solid fa-code-branch me-1 text-primary"></i> Sources
-                    </label>
-                    <multi-source-filter v-model="selectedSourceNames" @change="fetchRules(1)"
-                        api-endpoint="/rule/get_rules_sources_usage" placeholder="Filter sources..." :userId="userId">
-                    </multi-source-filter>
-                </div>
-
-                <div class="col-md-6" v-if="isVisible('vulnerabilities')">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
-                        <i class="fa-solid fa-shield-virus me-1 text-danger"></i> Vulnerabilities
-                    </label>
-                    <multi-vulnerability-filter 
-                        v-model="selectedVulnerabilityNames" 
-                        @change="fetchRules(1)"
-                        api-endpoint="/rule/get_all_rules_vulnerabilities_usage" 
-                        placeholder="CVE, GHSA..." 
-                        :user-id="userId"
-                        :source-rules="sourceRules"> 
-                    </multi-vulnerability-filter>
-                </div>
-
-                <div class="col-md-6" v-if="isVisible('licenses')">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
-                        <i class="fa-solid fa-scale-balanced me-1 text-info"></i> Licenses
-                    </label>
-                    <multi-license-filter 
-                        v-model="selectedLicenseNames" 
-                        @change="fetchRules(1)"
-                        api-endpoint="/rule/get_rules_licenses_usage" 
-                        placeholder="Filter licenses..." 
-                        :user-id="userId"
-                        :source-rules="sourceRules">
-                    </multi-license-filter>
-                </div>
-
-                <div class="col-md-6" v-if="isVisible('tags')">
-                    <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
-                        <i class="fa-solid fa-tags me-1 text-primary"></i> Tags
-                    </label>
-                    <multi-tag-filter 
-                        v-model="selectedTagNames" 
-                        @change="fetchRules(1)"
-                        api-endpoint="/rule/get_all_tags_usage" 
-                        placeholder="Filter tags..." 
-                        :user-id="userId"
-                        target-type="rule">
-                    </multi-tag-filter>
-                </div>
-            </div>
+    <div class="filter-container">
+        <div class="d-inline-flex gap-1 mb-3">
+            <button class="btn btn-primary rounded-pill px-3 shadow-sm" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#collapseFilter" 
+                    aria-expanded="false" 
+                    aria-controls="collapseFilter">
+                <i class="fas fa-filter me-2"></i>Filter Rules <i class="fas fa-chevron-down"></i>
+            </button>
         </div>
 
-        <rule-export-action 
-            v-if="showExport && hasActiveFilters"
-            :search-query="searchQuery"
-            :sort-by="sortBy"
-            :rule-type="ruleType"
-            :selected-sources="selectedSourceNames"
-            :selected-vulnerabilities="selectedVulnerabilityNames"
-            :selected-licenses="selectedLicenseNames"
-            :selected-tags="selectedTagNames"
-            :user-id="userId"
-            :author-filter="authorFilter"
-            :total-rules="total_rules_count"
-            :csrf-token="csrfToken"
-            :current-user-is-authenticated="current_user_is_authenticated"
-            :search-field="searchField">
-        </rule-export-action>
+        <div class="collapse show" id="collapseFilter">
+            <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px; background-color: var(--card-bg-color);">
+                <div class="card-body p-4 position-relative">
+                    <div v-if="searchIsLoading" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
+                        style="background: rgba(255,255,255,0.5); z-index: 10; border-radius: 15px;">
+                    </div>
+
+                    <div class="row g-3">
+                        <div :class="isVisible('sort') || isVisible('format') ? 'col-md-6' : 'col-md-12'" v-if="isVisible('search')">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Keywords</label>
+
+                            <!-- INPUT GROUP -->
+                            <div class="input-group input-group-sm position-relative shadow-sm"
+                                style="border-radius: 10px; overflow: hidden; background-color: var(--bg-color);">
+
+                                <select v-model="searchField"
+                                        class="form-select border-0 text-muted small fw-bold"
+                                        @change="fetchRules(1)"
+                                        style="max-width: 100px; font-size: 0.75rem; border-right: 1px solid; background-color: var(--bg-color); cursor: pointer;">
+                                    <option value="all">All</option>
+                                    <option value="title">Title</option>
+                                    <option value="content">Content</option>
+                                </select>
+
+                                <span class="input-group-text border-0 text-muted"
+                                    style="min-width: 40px; justify-content: center; background-color: var(--bg-color);">
+                                    <div v-if="searchIsLoading" class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <i v-else class="fa-solid fa-magnifying-glass"></i>
+                                </span>
+
+                                <input type="text"
+                                    v-model="searchQuery"
+                                    @keyup.enter="fetchRules(1)"
+                                    class="form-control border-0 pe-5"
+                                    :placeholder="placeholder"
+                                    style="height: 38px;"
+                                    :disabled="searchIsLoading">
+
+                                <!-- Clear button -->
+                                <span v-if="searchQuery && !searchIsLoading"
+                                    @click="clearSearch"
+                                    class="position-absolute end-0 top-50 translate-middle-y me-2 text-muted cursor-pointer"
+                                    style="z-index: 5;">
+                                    <i class="fa-solid fa-circle-xmark opacity-50"></i>
+                                </span>
+                            </div>
+
+                            <!-- EXACT MATCH SWITCH (moved outside input group) -->
+                            <div class="form-check form-switch mt-2 ms-1">
+                                <input class="form-check-input"
+                                    type="checkbox"
+                                    v-model="exactMatch"
+                                    @change="fetchRules(1)"
+                                    :disabled="searchIsLoading">
+                                <label class="form-check-label small text-muted">
+                                    Exact match
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3" v-if="isVisible('sort')">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Sort</label>
+                            <select v-model="sortBy" class="form-select form-select-sm border-0 bg-light px-3" @change="fetchRules(1)" 
+                                    style="border-radius: 10px; height: 38px;" :disabled="searchIsLoading">
+                                <option value="newest">Newest</option>
+                                <option value="oldest">Oldest</option>
+                                <option value="most_likes">Most Liked</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3" v-if="isVisible('format')">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">Format</label>
+                            <select v-model="ruleType" class="form-select form-select-sm border-0 bg-light px-3" @change="fetchRules(1)" 
+                                    style="border-radius: 10px; height: 38px;" :disabled="searchIsLoading">
+                                <option value="">All Formats</option>
+                                <option v-for="f in rulesFormats" :key="f.id" :value="f.name">[[ f.name.toUpperCase() ]]</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1" v-if="isVisible('sources') || isVisible('vulnerabilities') || isVisible('licenses') || isVisible('tags')" 
+                        :style="{ opacity: searchIsLoading ? 0.6 : 1, pointerEvents: searchIsLoading ? 'none' : 'auto' }">
+                        
+                        <div class="col-md-6" v-if="isVisible('sources')">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
+                                <i class="fa-solid fa-code-branch me-1 text-primary"></i> Sources
+                            </label>
+                            <multi-source-filter v-model="selectedSourceNames" @change="fetchRules(1)"
+                                api-endpoint="/rule/get_rules_sources_usage" placeholder="Filter sources..." :userId="userId">
+                            </multi-source-filter>
+                        </div>
+
+                        <div class="col-md-6" v-if="isVisible('vulnerabilities')">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
+                                <i class="fa-solid fa-shield-virus me-1 text-danger"></i> Vulnerabilities
+                            </label>
+                            <multi-vulnerability-filter 
+                                v-model="selectedVulnerabilityNames" 
+                                @change="fetchRules(1)"
+                                api-endpoint="/rule/get_all_rules_vulnerabilities_usage" 
+                                placeholder="CVE, GHSA..." 
+                                :user-id="userId"
+                                :source-rules="sourceRules"> 
+                            </multi-vulnerability-filter>
+                        </div>
+
+                        <div class="col-md-6" v-if="isVisible('licenses')">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
+                                <i class="fa-solid fa-scale-balanced me-1 text-info"></i> Licenses
+                            </label>
+                            <multi-license-filter 
+                                v-model="selectedLicenseNames" 
+                                @change="fetchRules(1)"
+                                api-endpoint="/rule/get_rules_licenses_usage" 
+                                placeholder="Filter licenses..." 
+                                :user-id="userId"
+                                :source-rules="sourceRules">
+                            </multi-license-filter>
+                        </div>
+
+                        <div class="col-md-6" v-if="isVisible('tags')">
+                            <label class="small fw-bold text-muted mb-1 ms-1 text-uppercase">
+                                <i class="fa-solid fa-tags me-1 text-primary"></i> Tags
+                            </label>
+                            <multi-tag-filter 
+                                v-model="selectedTagNames" 
+                                @change="fetchRules(1)"
+                                api-endpoint="/rule/get_all_tags_usage" 
+                                placeholder="Filter tags..." 
+                                :user-id="userId"
+                                target-type="rule">
+                            </multi-tag-filter>
+                        </div>
+                    </div>
+                </div>
+
+                <rule-export-action 
+                    v-if="showExport && hasActiveFilters"
+                    :search-query="searchQuery"
+                    :sort-by="sortBy"
+                    :rule-type="ruleType"
+                    :selected-sources="selectedSourceNames"
+                    :selected-vulnerabilities="selectedVulnerabilityNames"
+                    :selected-licenses="selectedLicenseNames"
+                    :selected-tags="selectedTagNames"
+                    :user-id="userId"
+                    :author-filter="authorFilter"
+                    :total-rules="total_rules_count"
+                    :csrf-token="csrfToken"
+                    :current-user-is-authenticated="current_user_is_authenticated"
+                    :search-field="searchField">
+                </rule-export-action>
+            </div>
+        </div>
     </div>
     `
 };
