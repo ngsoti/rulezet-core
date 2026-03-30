@@ -160,14 +160,12 @@ def create_nse_misp_object(rule) -> MISPObject:
             type='text'
         )
 
-
     if rule.title:
         misp_object.add_attribute(
             'nse-script-name', 
             value=rule.title, 
             type='text'
         )
-
 
     if rule.author:
         misp_object.add_attribute('author', value=rule.author, type='text')
@@ -180,7 +178,6 @@ def create_nse_misp_object(rule) -> MISPObject:
     
     if rule.version:
         misp_object.add_attribute('version', value=rule.version, type='text')
-
 
     if rule.source:
         misp_object.add_attribute('reference', value=rule.source, type='link')
