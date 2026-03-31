@@ -1,3 +1,4 @@
+from flask import json
 from pymisp import MISPObject, MISPEvent
 from pymisp import InvalidMISPObject
 
@@ -39,6 +40,8 @@ def content_convert_to_misp_object(rule_id: int) -> str:
 
         # If valid, wrap and export
         event = MISPEvent()
+        # add meta catgeory 
+        #event.info = f"Rule {rule.title} converted to MISP object"
         event.add_object(misp_object)
         return event.to_json(indent=2)
 
@@ -279,9 +282,11 @@ def create_nova_misp_object(rule) -> MISPObject:
         
 
     return misp_object
-def convert_misp_to_stix(misp_object: dict) -> dict | None:
+def convert_misp_to_stix(misp_object: json) -> dict | None:
     """Converts a MISP object to STIX via the cti-transmute.org API."""
     try:
+        print("Converting MISP object to STIX via API...")
+        print("MISP Object being sent to API:", misp_object)
         response = requests.post(
             "https://cti-transmute.org/api/convert/misp_to_stix",
             json=misp_object,

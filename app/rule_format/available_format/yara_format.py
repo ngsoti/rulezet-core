@@ -51,9 +51,20 @@ class YaraRule(RuleType):
 
             while attempts < max_attempts:
                 try:
-                    yara.compile(source=current_rule_text, externals=externals)
+                    temp_compile_text = current_rule_text
+                    
+                    def escape_internal_quotes(match):
+                        prefix = match.group(1) 
+                        content = match.group(2) 
+
+                        escaped_content = content.replace('"', '\\"')
+                        return f'{prefix}"{escaped_content}"'
+                    temp_compile_text = re.sub(r'(\$\w+\s*=\s*)"(.*)"', escape_internal_quotes, temp_compile_text)
+
+                    yara.compile(source=temp_compile_text, externals=externals)
+                    
                     return ValidationResult(ok=True, errors=[], normalized_content=current_rule_text)
-                
+
                 except yara.SyntaxError as e:
                     error_msg = str(e)
                     match_id = re.search(r'undefined identifier "(\w+)"', error_msg)
