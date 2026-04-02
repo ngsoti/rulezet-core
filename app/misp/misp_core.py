@@ -285,8 +285,6 @@ def create_nova_misp_object(rule) -> MISPObject:
 def convert_misp_to_stix(misp_object: json) -> dict | None:
     """Converts a MISP object to STIX via the cti-transmute.org API."""
     try:
-        print("Converting MISP object to STIX via API...")
-        print("MISP Object being sent to API:", misp_object)
         response = requests.post(
             "https://cti-transmute.org/api/convert/misp_to_stix",
             json=misp_object,

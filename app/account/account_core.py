@@ -1,5 +1,5 @@
 import datetime , random
-from datetime import timezone, timedelta, datetime
+from datetime import timezone, timedelta 
 from typing import  Tuple
 from flask_login import current_user
 from sqlalchemy import or_
@@ -28,7 +28,7 @@ def add_user_core(form_dict) -> User:
         api_key = generate_api_key()
 
     code = str(random.randint(100000, 999999))
-    
+    from datetime import timezone, timedelta, datetime
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     expires = now + TIME_EMAIL_EXPIRATION
 

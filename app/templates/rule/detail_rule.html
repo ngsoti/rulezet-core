@@ -1228,7 +1228,7 @@
 
             async function vote(voteType) {
                 if (current_user_is_connected.value == true) {
-                    const res = await fetch(`/rule/vote_rule?id=${rule_id}&vote_type=${voteType}`, { method: 'GET' })
+                    const res = await fetch(`/rule/vote_rule?id=${rule_id}&vote_type=${voteType}`);
                     const data = await res.json()
 
                     currentRule.value.vote_up = data.vote_up

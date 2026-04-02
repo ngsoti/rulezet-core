@@ -35,6 +35,10 @@ else
     exit 1
 fi
 
+# 3.1 SUBMODULES UPDATE
+echo -e "\n${YELLOW}Updating Git submodules...${NC}"
+git submodule update --remote
+
 # 4. REQUIREMENTS CHECK
 echo -e "\n${YELLOW}[4/5] Checking and installing requirements...${NC}"
 if [ -f "requirements.txt" ]; then

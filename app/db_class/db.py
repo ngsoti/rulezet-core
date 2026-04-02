@@ -783,13 +783,17 @@ class CommentBundle(db.Model):
         # remove like and dislike from the list
         reactions = [reaction for reaction in reactions if reaction.reaction_type not in ['like', 'dislike']]
         return [reaction.to_json() for reaction in reactions]
+    
+    def get_username_by_id(self):
+        user = User.query.get(self.user_id)  
+        return user.first_name + " " + user.last_name if user else self.user_name
 
     def to_json(self, include_replies=True):
         data = {
             "id": self.id,
             "bundle_id": self.bundle_id,
             "user_id": self.user_id,
-            "user_name": self.user_name,
+            "user_name": self.get_username_by_id(),
             "content": self.content,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else None,
             "is_admin": self.user.is_admin() if self.user else False,
