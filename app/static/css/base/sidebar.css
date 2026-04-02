@@ -2,3 +2,18 @@
   color:black;
 }
 
+.dropdown-item.active, 
+.dropdown-item:active {
+  background-color: #e3f2fd; 
+  color: black !important;
+  border-left: rgb(13, 110, 253) 3px solid; 
+ 
+}
+
+.custom-nav-link.active {
+  color: #0d6efd !important;
+  border-bottom: #0d6efd 1px solid;
+  border-radius: 0;
+  
+}
+

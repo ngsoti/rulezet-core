@@ -17,7 +17,7 @@ tags_blueprint = Blueprint(
 #   Tags routes  #
 ##################
 
-@tags_blueprint.route('/list', methods=['GET'])
+@tags_blueprint.route('/admin/list', methods=['GET'])
 @login_required
 def list_tags():
     if not current_user.is_admin():

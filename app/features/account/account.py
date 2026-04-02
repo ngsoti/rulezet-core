@@ -27,7 +27,7 @@ def index() -> render_template:
     """Redirect to the user section"""
     return render_template("account/account_index.html", user=current_user)
 
-@account_blueprint.route("/all_users")
+@account_blueprint.route("/admin/all_users")
 @login_required
 def user_list() -> render_template:
     """Redirect to the user section"""

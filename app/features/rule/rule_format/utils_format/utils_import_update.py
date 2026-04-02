@@ -177,7 +177,7 @@ def valider_repo_github(repo_url: str) -> bool:
 
 def get_licst_license() -> list:
     licenses = []
-    with open("app/rule/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
+    with open("app/features/rule/utils/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:

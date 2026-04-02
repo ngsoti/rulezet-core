@@ -1385,7 +1385,7 @@ def decision_rule() -> jsonify:
             "toast_class": "danger-subtle"
         })
 
-@rule_blueprint.route("/update_github/update_rules_from_github", methods=['GET'])
+@rule_blueprint.route("/github/update_github/update_rules_from_github", methods=['GET'])
 @login_required
 def get_update_page() -> render_template:
     """Redirect to updating interface"""
@@ -1450,7 +1450,7 @@ def get_update_to_check():
 def get_license() -> jsonify:
     """Import license"""
     licenses = []
-    with open("app/rule/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
+    with open("app/features/rule/utils/import_licenses/licenses.txt", "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
@@ -1652,7 +1652,7 @@ def report_rule():
                 "toast_class": "danger-subtle"
                 }, 500 
 
-@rule_blueprint.route('/rules_reported', methods=['GET'])
+@rule_blueprint.route('/admin/rules_reported', methods=['GET'])
 @login_required
 def rules_repported():
     """Redirect to the admin report secion"""
@@ -1826,7 +1826,7 @@ def get_rules_format()-> dict:
     return {"message": "No formats"}, 404
 
 
-@rule_blueprint.route("/manage_format_rule", methods=["GET", "POST"])
+@rule_blueprint.route("/admin/manage_format_rule", methods=["GET", "POST"])
 @login_required
 def manage_format_rule() -> render_template:
     """Afficher ou créer un nouveau format de règle"""
@@ -2076,7 +2076,7 @@ def import_get_info_session(sid):
         return json.loads(r.info)
     return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
 
-@rule_blueprint.route("/history_github_importer", methods=['GET'])
+@rule_blueprint.route("/github/history_github_importer", methods=['GET'])
 @login_required
 def history_github_importer():
     return render_template("rule/url_github/github_importer.html")
@@ -2373,7 +2373,7 @@ def check_updates_by_rule():
 #   Github url section  #
 #########################
 
-@rule_blueprint.route("/list_github_url", methods=['GET'])
+@rule_blueprint.route("/github/list_github_url", methods=['GET'])
 def list_github_url() :
     """Go to the list of all github url"""
     return render_template("rule/url_github/list_url_github.html")
