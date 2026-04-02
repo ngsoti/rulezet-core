@@ -3,11 +3,11 @@ from flask import jsonify, request, url_for
 from flask_login import  current_user, login_required
 from wtforms.validators import Email, ValidationError
 
-from app.utils.utils import get_user_from_api
+from app.core.utils.utils import get_user_from_api
 
-from app.db_class.db import User
-from app.account import account_core as AccountModel
-from ...rule import rule_core as RuleModel
+from app.core.db_class.db import User
+from app.features.account import account_core as AccountModel
+from ...features.rule import rule_core as RuleModel
 
 account_private_ns = Namespace(
     "Private account action 🔑 (with api key)",

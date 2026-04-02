@@ -6,14 +6,14 @@ import asyncio
 from flask_restx import Resource, Namespace
 
 from app.api.utils.rule_validation import *
-from app.db_class.db import Rule
+from app.core.db_class.db import Rule
 
-from app.rule_format.main_format import extract_rule_from_repo, verify_syntax_rule_by_format
-from app.rule_format.utils_format.utils_import_update import clone_or_access_repo, delete_existing_repo_folder, github_repo_metadata, valider_repo_github
-from app.utils import utils
-from app.utils.decorators import api_required
-from ...rule import rule_core as RuleModel
-from ...account import account_core as AccountModel
+from app.features.rule.rule_format.main_format import extract_rule_from_repo, verify_syntax_rule_by_format
+from app.features.rule.rule_format.utils_format.utils_import_update import clone_or_access_repo, delete_existing_repo_folder, github_repo_metadata, valider_repo_github
+from app.core.utils import utils
+from app.core.utils.decorators import api_required
+from ...features.rule import rule_core as RuleModel
+from ...features.account import account_core as AccountModel
 from flask_restx import Namespace, Resource
 from flask import request
 

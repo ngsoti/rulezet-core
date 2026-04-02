@@ -6,10 +6,10 @@ from flask_login import current_user, login_required
 from flask import get_flashed_messages
 from flask_login import login_required, current_user
 
-from app.utils.utils import get_version
+from app.core.utils.utils import get_version
 
-from .rule import rule_core as RuleModel
-from .account import account_core as AccountModel
+from .features.rule import rule_core as RuleModel
+from .features.account import account_core as AccountModel
 
 
 home_blueprint = Blueprint(

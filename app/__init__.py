@@ -42,26 +42,12 @@ def create_app():
 
     mail.init_app(app)
 
-    with app.app_context():
-        ThreadLocalSession = sessionmaker(bind=db.engine)
-
-    
-
-    #delete_existing_repo_folder("Rules_Github")
-
-    # take all the licenses 
-    #fetch_and_save_licenses()
-
-    # remove the previous rule
-    #  REPO_DIR = "Rules_Github"
-    #  if os.path.exists(REPO_DIR):
-    #     shutil.rmtree(REPO_DIR)
-
     from .home import home_blueprint
-    from .account.account import account_blueprint
-    from .rule.rule import rule_blueprint  
-    from .bundle.bundle import bundle_blueprint
-    from .tags.tags import tags_blueprint
+
+    from .features.account.account import account_blueprint
+    from .features.rule.rule import rule_blueprint  
+    from .features.bundle.bundle import bundle_blueprint
+    from .features.tags.tags import tags_blueprint
 
 
     app.register_blueprint(home_blueprint, url_prefix="/")

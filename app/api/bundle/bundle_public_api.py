@@ -1,6 +1,6 @@
 from flask import request
 from flask_restx import Namespace, Resource
-from ...bundle import bundle_core as BundleModel
+from ...features.bundle import bundle_core as BundleModel
 
 bundle_public_ns = Namespace(
     "Public action on Bundle ✅",

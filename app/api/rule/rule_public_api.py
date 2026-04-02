@@ -8,10 +8,10 @@ from flask import request, url_for
 from flask_restx import Resource, Namespace
 
 from app.api.utils.rule_validation import *
-from app.misp.misp_core import content_convert_to_misp_object
-from app.utils import utils
-from ...rule import rule_core as RuleModel
-from ...account import account_core as AccountModel
+from app.features.misp.misp_core import content_convert_to_misp_object
+from app.core.utils import utils
+from ...features.rule import rule_core as RuleModel
+from ...features.account import account_core as AccountModel
 from flask_restx import Namespace, Resource
 
 

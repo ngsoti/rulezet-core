@@ -1,0 +1,482 @@
+from typing import Union
+import datetime
+from ...core.db_class.db import User
+from flask import Blueprint, jsonify, render_template, redirect, url_for, request, flash
+from .form import LoginForm, EditUserForm, AddNewUserForm
+from ..rule import rule_core as RuleModel
+from . import account_core as AccountModel
+from ..bundle import bundle_core as BundleModel
+from ...core.utils.utils import form_to_dict, generate_api_key
+from flask_login import current_user, login_required, login_user, logout_user
+from datetime import datetime, timedelta, timezone
+from collections import Counter
+account_blueprint = Blueprint(
+    'account',
+    __name__,
+    template_folder='templates',
+    static_folder='static'
+)
+
+###############
+# User action #
+###############
+
+@account_blueprint.route("/")
+@login_required
+def index() -> render_template:
+    """Redirect to the user section"""
+    return render_template("account/account_index.html", user=current_user)
+
+@account_blueprint.route("/all_users")
+@login_required
+def user_list() -> render_template:
+    """Redirect to the user section"""
+    return render_template("admin/user_list.html")
+
+@account_blueprint.route("/detail_user/<int:user_id>")
+@login_required
+def detail_user(user_id) -> render_template:
+    """Redirect to the detail user section"""
+    user = AccountModel.get_user(user_id)
+    if not user:
+        flash("User not found.", "error")
+        # redirect to the previous page
+        return redirect(request.referrer)
+    return render_template("account/detail_user.html" , user=user.to_json())
+
+@account_blueprint.route("/get_user")
+@login_required
+def get_user() -> jsonify:
+    """Give the user section"""
+    user_id = request.args.get('user_id',type=int)
+    my_user = AccountModel.get_user(user_id)
+    if my_user:
+        return jsonify({"success": True, "user": my_user.to_json()})
+    else:
+        return jsonify({"success": False, "message": "no user found"})
+
+@account_blueprint.route("/get_user_donne")
+@login_required
+def get_user_donne() -> jsonify:
+    """Return the user activity and metadata."""
+    user_id = request.args.get('user_id', type=int)
+    user_data = AccountModel.get_user_data_full(user_id)
+    if user_data:
+        return jsonify({"success": True, "donne": user_data})
+    else:
+        return jsonify({"success": False, "message": "User not found"})
+
+
+@account_blueprint.route("/promote_remove_admin")
+@login_required
+def promote_remove_admin() -> jsonify:
+    """Return the user activity and metadata."""
+    user_id = request.args.get('userId', type=int)
+    action = request.args.get('action', type=str)
+
+    if current_user.is_admin():
+        response = AccountModel.promote_remove_user_admin(user_id, action)
+        if response:
+            if action == "remove":
+                return jsonify({"success": True , "admin": False})
+            else:
+                return jsonify({"success": True , "admin": True})
+        else:
+            return jsonify({"success": False})
+    else:
+        return render_template("access_denied.html")
+
+@account_blueprint.route("/delete_user")
+@login_required
+def delete_user() -> render_template:
+    """Delete an user"""
+    user_id = request.args.get('id', 1, type=int)
+    if current_user.is_admin():
+        delete = AccountModel.delete_user_core(user_id)
+        if delete:
+            return {"message": "User Deleted",
+                    "success": True,
+                    "toast_class" : "success-subtle"}, 200
+        return {"message": "Failed to delete",
+                "success": False,
+                "toast_class" : "danger-subtle"}, 500
+    else:
+        return render_template("access_denied.html")
+
+@account_blueprint.route("/get_all_users")
+@login_required
+def get_all_users() -> Union[render_template, dict]:
+    """Get all the users"""
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get("search", None)
+    connected = request.args.get("connected", None)
+    admin = request.args.get("admin", None)
+
+    users_filter = AccountModel.get_users_page_filter(page , search , connected, admin)
+
+    if current_user.is_admin():
+        if users_filter:
+            return {"user": [user.to_json() for user in users_filter],
+                    "total_pages": users_filter.pages,
+                    "total_users": users_filter.total ,
+                    "success": True}, 200
+        return {"message": "No User",
+                "toast_class": "danger-subtle"}, 404
+    else:
+        return render_template("access_denied.html")
+
+@account_blueprint.route("/edit", methods=['GET', "POST"])
+@login_required
+def edit_user() -> redirect:
+    """Edit the user"""
+    form = EditUserForm()
+    if form.validate_on_submit():
+        form_dict = form_to_dict(form)
+        AccountModel.edit_user_core(form_dict, current_user.id)
+        flash('Profile update with success!', 'success')
+        return redirect("/account")
+    else:
+        form.first_name.data = current_user.first_name
+        form.last_name.data = current_user.last_name
+        form.email.data = current_user.email
+
+    return render_template("account/edit_user.html", form=form)
+
+
+@account_blueprint.route('/login', methods=['GET', 'POST'])
+def login() -> redirect:
+    """Log in an existing user."""
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user is not None and user.password_hash is not None and user.verify_password(form.password.data):
+            if not user.is_verified:
+                flash("Please verify your email first.", "warning")
+                return redirect(f"/account/verify/{user.id}")
+            login_user(user, form.remember_me.data)
+            AccountModel.connected(current_user)
+            flash('You are now logged in. Welcome back!', 'success')
+            return redirect( "/")
+        else:
+            flash('Invalid email or password.', 'error')
+    return render_template('account/login.html', form=form)
+
+@account_blueprint.route('/logout')
+@login_required
+def logout() -> redirect:
+    "Log out an User"
+    AccountModel.disconnected(current_user)
+    logout_user()
+
+    flash('You have been logged out.', 'info')
+    # return redirect(url_for('home.home'))
+    # we dont want ti go back to home or the connection page we juste want to stay in the page where I am 
+    return redirect(url_for('home.home'))
+
+@account_blueprint.route('/register', methods=['GET', 'POST'])
+def add_user() -> redirect:
+    """Add a new user"""
+    form = AddNewUserForm()
+    if form.validate_on_submit():
+        form_dict = form_to_dict(form)
+        form_dict["key"] = generate_api_key()
+        user, success = AccountModel.add_user_core(form_dict)
+
+        if not success:
+            flash('Error during the registration. Please try again !', 'error')
+            return redirect("/account/register")
+        if not user:
+            flash('Error during the registration. Please try again !', 'error')
+            return redirect("/account/register")
+
+        flash('Registration successful. Please check your email for verification.', 'success')
+        return redirect(f"/account/verify/{user.id}")
+    return render_template("account/register_user.html", form=form)
+
+@account_blueprint.route('/favorite')
+@login_required
+def favorite() -> render_template:
+    """Favorite page"""
+    return render_template("account/favorite_user.html")
+
+@account_blueprint.route("/profil")
+@login_required
+def profil() -> render_template:
+    """Profile page"""
+    return render_template("account/account_index.html", user=current_user)
+
+@account_blueprint.route("/acces_denied")
+@login_required
+def acces_denied() -> render_template:
+    """acces_denied page"""
+    return render_template("access_denied.html")
+
+#############
+#   Email   #
+#############
+
+@account_blueprint.route('/verify/<int:user_id>', methods=['GET', 'POST'])
+def verify(user_id):
+    user = AccountModel.get_user(user_id)
+    if not user:
+        flash("User not found.", "error")
+        return redirect("/account/login")
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if now > user.verification_expiration:
+        # delete user
+        AccountModel.delete_user_core(user_id)
+        flash("Code expired. Your account has been deleted. Please register again.", "error")
+        return redirect("/account/register")
+
+    if request.method == 'POST':
+        input_code = request.form.get('verification_code')
+        if not input_code:
+            flash("Please enter a code.", "error")
+            return redirect(f"/account/verify/{user_id}")
+        if input_code == user.verification_code:
+            success = AccountModel.verify_user_core(user_id)
+            if not success:
+                flash("Failed to verify account.", "error")
+                return redirect("/account/login")
+            flash("Account verified!", "success")
+            login_user(user, remember=True)
+            return redirect("/")
+        else:
+            flash("Invalid code.", "error")
+            
+    return render_template("account/verify.html", user_id=user_id)
+
+# /resend-verification-code
+
+@account_blueprint.route('/resend-verification-code/<int:user_id>', methods=['POST'])
+def resend_verification_code(user_id):
+    user = AccountModel.get_user(user_id)
+    if not user:
+        flash("User not found.", "error")
+        return redirect("/account/login")
+
+    success = AccountModel.resend_verification_code_core(user_id)
+    if not success:
+        flash("Failed to resend verification code.", "error")
+        return redirect(f"/account/verify/{user_id}")
+    flash("Verification code resent.", "success")
+    return render_template("account/verify.html", user_id=user_id)
+
+############
+# Favorite #
+############
+
+@account_blueprint.route("/favorite/get_rules_page_favorite",  methods=['GET'])
+@login_required
+def get_rules_page_favorite() -> jsonify:
+    """Rule favorite page"""
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get("search", None)
+    author = request.args.get("author", None)
+    sort_by = request.args.get("sort_by", "newest")
+    rule_type = request.args.get("rule_type", None)
+    rules = RuleModel.get_rules_page_favorite(page, current_user.id , search,author, sort_by, rule_type)
+
+    if rules:
+        return {"rule": [rule.to_json() for rule in rules], "total_pages": rules.pages}
+    return {"message": "No Rule"}, 404
+
+@account_blueprint.route("/favorite/delete_rule",  methods=['GET','POST'])
+@login_required
+def remove_rule_favorite() -> jsonify:
+    """Remove a rule from favorite"""
+    rule_id = request.args.get('id', 1, type=int)
+    rep = AccountModel.remove_favorite(current_user.id, rule_id)
+    if rep:
+        return jsonify({"success": True, "message": "Rule deleted!"})
+    return jsonify({"success": False, "message": "Access denied"}), 403
+
+
+#####################
+#    contributor    #
+#####################
+@account_blueprint.route("/contributor")
+@login_required
+def contributor() -> str: 
+    """Contributor page"""
+    return render_template("account/contributor.html")
+
+
+@account_blueprint.route('/leaderboard/global', methods=['GET'])
+def get_global_leaderboard():
+    """Recup the global leaderboard"""
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+   
+    pagination_data = AccountModel.get_global_leaderboard_paginated(
+        page=page, 
+        per_page=per_page
+    )
+   
+        
+    return jsonify(pagination_data)
+
+
+@account_blueprint.route('/leaderboard/category', methods=['GET'])
+def get_category_leaderboard():
+    """Recup the category leaderboard"""
+    
+    sort_by = request.args.get('sort_by', 'suggestions_accepted', type=str)
+    per_page = request.args.get('per_page', 5, type=int)
+    
+    if sort_by not in ['suggestions_accepted', 'rules_popular_score']:
+        return jsonify({"error": "Invalid sort_by parameter"}), 400
+
+   
+    leaderboard_data = AccountModel.get_category_leaderboard(
+        sort_by=sort_by,
+        per_page=per_page
+    )
+    
+    
+    return jsonify({
+        "leaderboard": leaderboard_data
+    })
+
+
+@account_blueprint.route('/my_contributions', methods=['GET'])
+@login_required
+def get_my_contributions():
+    """Recup the my contributions"""
+    
+    user_id = current_user.id
+    
+   
+    data = AccountModel.get_user_contributions_data(user_id=user_id)
+    
+    if not data or not data.get('user_stats'):
+        # create the user_stats if it doesn't exist
+        success = AccountModel.get_or_create_gamification_profile(user_id=user_id)
+        if not success:
+            return jsonify({"error": "Failed to create user_stats"}), 500
+        data = AccountModel.get_user_contributions_data(user_id=user_id)
+    
+  
+    return jsonify(data)
+
+
+@account_blueprint.route('/user_contributions/<user_id>', methods=['GET'])
+@login_required
+def get_user_contributions(user_id):
+    """Recup the user contributions"""
+   
+    data = AccountModel.get_user_contributions_data(user_id=user_id)
+    
+    if not data or not data.get('user_stats'):
+        # create the user_stats if it doesn't exist
+        success = AccountModel.get_or_create_gamification_profile(user_id=user_id)
+        if not success:
+            return jsonify({"error": "Failed to create user_stats"}), 500
+        data = AccountModel.get_user_contributions_data(user_id=user_id)
+    
+  
+    return jsonify(data)
+
+#refresh
+@account_blueprint.route('/refresh', methods=['GET'])
+@login_required
+def refresh():
+    """Recup the my contributions"""
+    action = request.args.get('action')
+
+    success = AccountModel.refreshData(action)
+    if not success:
+        return jsonify({"message": "Failed to refresh data", "success": False , "toast_class" : "danger-subtle"}), 500
+    
+    # update the user with the reel value like If someone has already like or propose an edit 
+    success_ = AccountModel.update_gamification_profiles()
+    if not success_:
+        return jsonify({"message": "Error to update the gameifcation section", "success": False , "toast_class" : "danger-subtle"}), 500
+
+
+    return jsonify({"message": "Data refreshed", "success": True , "toast_class" : "success-subtle"}), 200
+
+# get_total_users
+@account_blueprint.route('/get_total_users', methods=['GET'])
+def get_total_users():
+    total_users = AccountModel.get_total_users()
+    if not total_users:
+        return jsonify({"message": "Failed to get total users", "success": False , "toast_class" : "danger-subtle"}), 500
+
+    return jsonify({"total_users": total_users, "success": True , "toast_class" : "success-subtle"}), 200
+
+
+@account_blueprint.route('/admin', methods=['GET'])
+def admin():
+    if current_user.is_admin():
+        return jsonify({"message": "Access granted", "success": True , "toast_class" : "success-subtle"}), 200
+    return jsonify({"message": "Access denied", "success": False , "toast_class" : "danger-subtle"}), 403
+
+
+
+
+@account_blueprint.route('/user_activity_stats/<int:user_id>')
+def get_user_activity_stats(user_id):
+    user_rules = RuleModel.get_all_rules_by_user(user_id)
+    user_bundles = BundleModel.get_all_bundles_by_user(user_id)
+    
+
+    formats_counts = Counter([r.format for r in user_rules if r.format])
+    
+
+    timeline_data = Counter([r.creation_date.strftime('%Y-%m') for r in user_rules if r.creation_date])
+    sorted_timeline = dict(sorted(timeline_data.items()))
+
+
+    r_likes = sum(r.vote_up or 0 for r in user_rules)
+    r_dislikes = sum(r.vote_down or 0 for r in user_rules)
+    b_likes = sum(b.vote_up or 0 for b in user_bundles)
+    b_dislikes = sum(b.vote_down or 0 for b in user_bundles)
+
+    
+    total_votes = r_likes + r_dislikes + b_likes + b_dislikes
+    trust_score = 100
+    if total_votes > 0:
+        trust_score = round((r_likes + b_likes) / total_votes * 100, 1)
+
+    return jsonify({
+        "activity_stats": {
+            "rules_likes": r_likes,
+            "rules_dislikes": r_dislikes,
+            "bundles_likes": b_likes,
+            "bundles_dislikes": b_dislikes,
+            "total_rules": len(user_rules),
+            "total_bundles": len(user_bundles),
+            "trust_score": trust_score
+        },
+        "format_distribution": dict(formats_counts),
+        "timeline": sorted_timeline
+    })
+
+@account_blueprint.route('/user_edit_proposals/<int:user_id>')
+def get_user_edit_proposals(user_id):
+    proposals = RuleModel.get_all_rule_proposal_user_id(user_id)
+
+    if not proposals:
+        return jsonify({
+            "proposals": [],
+            "stats": {
+                "total": 0,
+                "pending": 0,
+                "accepted": 0,
+                "rejected": 0
+            }
+        })
+
+    return jsonify({
+        "proposals": [p.to_json_for_discuss() for p in proposals],
+        "stats": {
+            "total": len(proposals),
+            "pending": len([p for p in proposals if p.status == 'pending']),
+            "accepted": len([p for p in proposals if p.status == 'accepted']),
+            "rejected": len([p for p in proposals if p.status == 'rejected'])
+        }
+    })

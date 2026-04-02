@@ -8,8 +8,8 @@ import json
 import os
 
 
-from app.rule_format.utils_format.utils_import_update import delete_existing_repo_folder
-from app.utils.init_db import create_admin, create_default_user, insert_default_formats, show_admin_first_connection
+from app.features.rule.rule_format.utils_format.utils_import_update import delete_existing_repo_folder
+from app.core.utils.init_db import create_admin, create_default_user, insert_default_formats, show_admin_first_connection
 
 
 

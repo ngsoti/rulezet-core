@@ -3,9 +3,9 @@
 # ------------------------------------------------------------------------------------------------------------------- #
 from flask_restx import Namespace, Resource
 from flask import  request
-from app.bundle import bundle_core as BundleModel
-from app.utils import utils
-from app.utils.decorators import api_required
+from app.features.bundle import bundle_core as BundleModel
+from app.core.utils import utils
+from app.core.utils.decorators import api_required
 
 bundle_private_ns = Namespace(
     "Private action on Bundle 🔑 (with api key)",
