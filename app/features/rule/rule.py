@@ -574,8 +574,6 @@ def detail_rule(rule_id)-> render_template:
     if rule:
         return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp=rule_misp, rule_to_json=rule_to_json, rule_stix=rule_stix)
     return render_template("404.html")
-    
-
 @rule_blueprint.route("/download_rule", methods=['GET'])
 def download_rule_unified() -> Response:
     rule_id = request.args.get('rule_id', type=int)
@@ -587,7 +585,6 @@ def download_rule_unified() -> Response:
             "success": False,
             "toast_class": "danger-subtle",
         })
-    
     error_mesg = ""
     try:
         if fmt == 'txt':
@@ -602,47 +599,43 @@ def download_rule_unified() -> Response:
             if not object_json:
                 error_mesg = f"Format {rule.format} not found on MISP"
             else:
-                content = json.dumps(object_json, indent=2)
+                content = json.dumps(json.loads(object_json), indent=2)
                 filename = f"{rule.title}_misp_object.json"
         elif fmt == 'stix':
-            object_json = convert_misp_to_stix(content_convert_to_misp_object(rule_id))
+            misp_raw = content_convert_to_misp_object(rule_id)
+            object_json = convert_misp_to_stix(misp_raw)
             if not object_json:
                 error_mesg = f"Format {rule.format} not found on STIX"
             else:
-                content = json.dumps(object_json, indent=2)
+                stix_data = json.loads(object_json) if isinstance(object_json, str) else object_json
+                content = json.dumps(stix_data, indent=2)
                 filename = f"{rule.title}_stix_object.json"
         elif fmt == 'all':
-            
-
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                # TXT
                 try:
                     zip_file.writestr(f"{rule.title}.txt", rule.to_string)
                 except Exception as e:
                     zip_file.writestr("errors.txt", f"TXT error: {str(e)}\n")
-                # JSON
                 try:
                     zip_file.writestr(f"{rule.title}.json", json.dumps(rule.to_json(), indent=2))
                 except Exception as e:
                     zip_file.writestr("errors.txt", f"JSON error: {str(e)}\n")
-                # MISP
                 try:
-                    misp_object = content_convert_to_misp_object(rule_id)
-                    if misp_object:
-                        zip_file.writestr(f"{rule.title}_misp_object.json", json.dumps(misp_object, indent=2))
+                    misp_raw = content_convert_to_misp_object(rule_id)
+                    if misp_raw:
+                        zip_file.writestr(f"{rule.title}_misp_object.json", json.dumps(json.loads(misp_raw), indent=2))
                 except Exception:
                     pass
-                # STIX
                 try:
-                    misp_object = content_convert_to_misp_object(rule_id)
-                    if misp_object:
-                        stix_object = convert_misp_to_stix(misp_object)
-                        if stix_object:
-                            zip_file.writestr(f"{rule.title}_stix_object.json", json.dumps(stix_object, indent=2))
+                    misp_raw = content_convert_to_misp_object(rule_id)
+                    if misp_raw:
+                        stix_raw = convert_misp_to_stix(misp_raw)
+                        if stix_raw:
+                            stix_data = json.loads(stix_raw) if isinstance(stix_raw, str) else stix_raw
+                            zip_file.writestr(f"{rule.title}_stix_object.json", json.dumps(stix_data, indent=2))
                 except Exception:
                     pass
-
             zip_buffer.seek(0)
             content = base64.b64encode(zip_buffer.read()).decode('utf-8')
             filename = f"{rule.title}_all_formats.zip"
@@ -650,14 +643,12 @@ def download_rule_unified() -> Response:
             error_mesg = f"Unknown format: {fmt}"
     except Exception as e:
         error_mesg = f"Failed to prepare download: {str(e)}"
-
     if error_mesg:
         return jsonify({
             "message": error_mesg,
             "success": False,
             "toast_class": "danger-subtle",
         })
-
     return jsonify({
         "message": f"Rule {rule.title} ready for download",
         "success": True,
@@ -684,6 +675,7 @@ def get_rule_each_format():
     rule_json = rule.to_json()
     rule_misp_object = content_convert_to_misp_object(rule_id)
 
+
     if rule_misp_object:
         rule_stix = convert_misp_to_stix(rule_misp_object)
 
@@ -697,8 +689,8 @@ def get_rule_each_format():
     }
 
     if rule_misp_object and rule_json:
-        return_dict["formats"]["misp"] = rule_misp_object
-        return_dict["formats"]["stix"] = rule_stix
+        return_dict["formats"]["misp"] = json.loads(rule_misp_object)
+        return_dict["formats"]["stix"] = json.loads(rule_stix) if isinstance(rule_stix, str) else rule_stix
     elif rule_json:
         return_dict["formats"]["misp"] = "No MISP object for the format"
     else:

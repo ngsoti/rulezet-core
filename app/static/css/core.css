@@ -136,6 +136,7 @@ body:not(.dark-mode) .container.bg-white {
 
 h1, h2, h3, h4, h5, h6,
 label, .form-label {
+  font-family: 'Space Mono', monospace;
   color: var(--text-color);
 }
 
@@ -457,9 +458,11 @@ body.modal-open .custom-rule-link {
 /* Card decorative elements */
 .premium-accent-line {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 4px;
-  background: #0d6efd;
+  top: 0; left: 10%; right: 10%;
+  width: 80%;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, transparent, rgb(10, 88, 202), transparent);
 }
 
 .card-watermark,
@@ -1338,8 +1341,8 @@ textarea:focus {
    ========================================================================= */
 
 .modal-content {
-  background-color: inherit;
-  color: inherit;
+  background-color: var(--card-bg-color);
+  color: var(--text-color);
 }
 
 .accordion-item   { background-color: var(--card-bg-color); color: var(--text-color); border: 1px solid var(--border-color); }
@@ -1394,6 +1397,8 @@ textarea:focus {
   overflow: auto;
 }
 
+
+
 .diff-modern-ui {
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
@@ -1406,9 +1411,14 @@ textarea:focus {
   background-color: transparent !important;
 }
 
+
 /* Precise diff highlights */
-.d2h-code-line ins, .d2h-code-side-line ins { background-color: var(--bg-diff-add-highlight); }
+.d2h-code-line ins, .d2h-code-side-line ins { background-color: var(--bg-diff-add-highlight) ; }
 .d2h-code-line del, .d2h-code-side-line del { background-color: var(--bg-diff-remove-highlight); }
+.d2h-diff-table td.d2h-cntx,
+.d2h-diff-table td.d2h-code-linenumber {
+    background-color: var(--bg-color) !important;
+}
 
 /* Inline code color blocks */
 .d-block.p-1.text-success { background-color: rgba(40, 167, 69, 0.1); }

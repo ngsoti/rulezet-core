@@ -1,4 +1,23 @@
 {% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+
+<link rel="stylesheet" id="hljs-theme-light"
+    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css">
+<link rel="stylesheet" id="hljs-theme-dark"
+    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css" disabled>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/idea.min.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/rule/base/detail_rule.css') }}">
+{% endblock %}
 {% import 'macros/form_macros.html' as f %}
 
 {% block content %}
@@ -170,7 +189,7 @@
 
 
                         <!-- Taxonomies-->
-                        <div class="mt-4">
+                        <div class="mt-2">
                             <vulnerability-display :vulnerabilities="displayVulnerabilities"
                                 :loading="loadingDisplayVulnerabilities" section-title="Security Identifiers"
                                 css-path="{{ url_for('static', filename='/css/tag/tags.css') }}">
@@ -212,59 +231,66 @@
                                 </button>
                             </div>
 
-                            <div class="border rounded-3 overflow-hidden shadow-sm ">
-                                <ul class="nav nav-tabs nav-fill bg-light border-bottom" id="ruleTabs" role="tablist">
+                            <div class="border rounded-3 overflow-hidden shadow-sm">
+
+
+                                <ul class="nav nav-tabs nav-fill border-bottom" id="ruleTabs" role="tablist">
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link active small fw-bold py-2 border-0" id="normal-tab"
-                                            data-bs-toggle="tab" data-bs-target="#normal" type="button"
-                                            role="tab">Normal</button>
+                                            data-bs-toggle="tab" data-bs-target="#normal" type="button" role="tab">
+                                            <i class="fas fa-file-code"></i> Normal
+                                        </button>
                                     </li>
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link small fw-bold py-2 border-0" id="json-tab"
-                                            data-bs-toggle="tab" data-bs-target="#json" type="button"
-                                            role="tab">JSON</button>
+                                            data-bs-toggle="tab" data-bs-target="#json" type="button" role="tab">
+                                            <i class="fas fa-code"></i> JSON
+                                        </button>
                                     </li>
                                     {% if rule_misp %}
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link small fw-bold py-2 border-0" id="misp-tab"
-                                            data-bs-toggle="tab" data-bs-target="#misp" type="button" role="tab">MISP
-                                            Object</button>
+                                            data-bs-toggle="tab" data-bs-target="#misp" type="button" role="tab">
+                                            <i class="fas fa-project-diagram"></i> MISP Object
+                                        </button>
                                     </li>
                                     {% endif %}
                                     {% if rule_stix %}
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link small fw-bold py-2 border-0" id="stix-tab"
-                                            data-bs-toggle="tab" data-bs-target="#stix" type="button" role="tab">STIX
-                                            Object</button>
+                                            data-bs-toggle="tab" data-bs-target="#stix" type="button" role="tab">
+                                            <i class="fas fa-shield-halved"></i> STIX Object
+                                        </button>
                                     </li>
                                     {% endif %}
-
                                 </ul>
 
-                                <div class="tab-content" id="ruleTabsContent">
+                                <div v-if="rule_format_is_loading"
+                                    class="d-flex align-items-center justify-content-center p-5"
+                                    style="background-color: var(--bg-color);">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                                <div v-else class="tab-content" id="ruleTabsContent">
                                     <div class="tab-pane fade show active" id="normal" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);"><code class="javascript">[[ currentRule.to_string ]]</code></pre>
+                                            style="max-height: 600px; overflow-y: auto;"><code class="javascript">[[ currentRule.to_string ]]</code></pre>
                                     </div>
                                     <div class="tab-pane fade" id="json" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);"><code class="json" v-text="{{rule_to_json}}"></code></pre>
+                                            style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_to_json}}"></code></pre>
                                     </div>
                                     {% if rule_misp %}
-                                    <div class="tab-pane fade " id="misp" role="tabpanel">
+                                    <div class="tab-pane fade" id="misp" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);">
-                                                <code class="json" v-text="{{rule_misp}}"></code>
-                                            </pre>
+                                            style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_misp}}"></code></pre>
                                     </div>
                                     {% endif %}
-
                                     {% if rule_stix %}
-                                    <div class="tab-pane fade " id="stix" role="tabpanel">
+                                    <div class="tab-pane fade" id="stix" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto; background-color: var(--bg-color);">
-                                                <code class="json">{{ rule_stix }}</code>
-                                            </pre>
+                                            style="max-height: 600px; overflow-y: auto;"><code class="json">{{ rule_stix }}</code></pre>
                                     </div>
                                     {% endif %}
                                 </div>
@@ -878,23 +904,19 @@
 {% endblock %}
 
 {% block script %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/base16/dracula.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
 
 <script type="module">
-    const { createApp, ref, onMounted, nextTick } = Vue;
+    const { createApp, ref, onMounted, nextTick, watch } = Vue;
     import { message_list, create_message, display_toast } from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
 
     function highlightJSON() {
-        document.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+        nextTick(() => {
+            document.querySelectorAll('pre code').forEach(block => {
+                block.removeAttribute('data-highlighted');
+                hljs.highlightElement(block);
+            });
+        });
     }
 
     import VulnerabilityDisplay from '/static/js/vulnerability/vulnerabilityDisplay.js';
@@ -925,10 +947,8 @@
             const handleSimilarRulesFound = ref(false);
             async function init() {
                 detail_page_1_is_loading.value = false
-
+                get_rule_in_each_format(rule_id)
                 await Promise.all([
-
-                    get_rule_in_each_format(rule_id),
                     checkIfUserIsConnected(),
                     getCurrentRuleHistoryCount(),
                     fetchCurrentRule(),
@@ -936,7 +956,7 @@
                     fetchComments(1),
                     fetchPullRequest(1),
                     fetchContributor(),
-                    highlightJSON(),
+
                     fetchBundleVulnerabilities(),
                     fetchRuleTags()
                 ])
@@ -955,9 +975,7 @@
 
             }
 
-            onMounted(() => {
-                init()
-            })
+
 
 
 
@@ -1012,8 +1030,20 @@
 
 
             const rule_format = ref({ normal: '', json: '', misp: '', stix: '' })
+            const rule_format_is_loading = ref(true)
+            watch(rule_format_is_loading, async (newVal) => {
+                if (newVal === false) {
+                    await nextTick();
+                    document.querySelectorAll('pre code').forEach(block => {
+                        block.removeAttribute('data-highlighted');
+                        hljs.highlightElement(block);
+                    });
+                }
+            });
+
 
             async function get_rule_in_each_format(rule_id) {
+                rule_format_is_loading.value = true
                 const params = new URLSearchParams({ rule_id })
                 const res = await fetch(`/rule/get_rule_each_format?` + params.toString())
 
@@ -1021,6 +1051,8 @@
                     const data = await res.json()
                     rule_format.value = data.formats
                 }
+
+                rule_format_is_loading.value = false
             }
 
             const current_user_is_admin = ref()
@@ -1348,6 +1380,7 @@
              * */
 
             onMounted(async () => {
+                init()
                 await fetchCurrentRule();
                 highlightJSON();
                 await nextTick();
@@ -1361,21 +1394,27 @@
                             if (!editorDiv) return;
 
                             if (editor.value == null) {
+                                const isDark = document.body.classList.contains('dark-mode');
                                 editor.value = CodeMirror(editorDiv, {
                                     value: currentRule.value?.to_string || "",
                                     mode: "javascript",
-                                    theme: "dracula",
+                                    theme: isDark ? "dracula" : "idea",
                                     lineNumbers: true,
                                     autoCloseBrackets: true,
                                     lineWrapping: true
                                 });
                                 editor.value.focus();
 
-
+                                const cmObserver = new MutationObserver(() => {
+                                    const dark = document.body.classList.contains('dark-mode');
+                                    editor.value.setOption('theme', dark ? 'dracula' : 'idea');
+                                });
+                                cmObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
                             }
                         }
                     });
                 });
+
                 const form = document.getElementById('proposalForm');
                 if (!form) return;
                 form.addEventListener('submit', (e) => {
@@ -1384,62 +1423,12 @@
                         hiddenField.value = editor.value.getValue();
                     }
                 });
-
             });
 
 
 
 
-            /**
-             * 
-            *   #################
-            *   #       CVE     #
-            *   #################
-            * 
-            * */
 
-            function parsedCVE(cveField) {
-                try {
-                    return JSON.parse(cveField);
-                } catch (e) {
-                    return cveField.replace(/[{}]/g, "").split(",").map(s => s.trim());
-                }
-            }
-
-            function getCVEColor(cve) {
-                if (cve.startsWith("CVE")) return "bg-danger";
-                if (cve.startsWith("GHSA")) return "bg-warning text-dark";
-                if (cve.startsWith("PYSEC")) return "bg-info text-dark";
-                if (cve.startsWith("GSD")) return "bg-secondary";
-                if (cve.startsWith("GCVE")) return "bg-primary";
-                if (cve.startsWith("RHSA")) return "bg-danger-subtle text-dark";
-                if (cve.startsWith("CERTFR")) return "bg-success";
-                if (cve.startsWith("cisco-sa")) return "bg-dark";
-                if (cve.startsWith("wid-sec-w")) return "bg-secondary";
-                if (cve.startsWith("msrc_CVE")) return "bg-purple";
-                return "bg-dark";
-            }
-
-            function getCVEIcon(cve) {
-                if (cve.startsWith("CVE")) return "fas fa-shield-alt";
-                if (cve.startsWith("GHSA")) return "fas fa-bug";
-                if (cve.startsWith("PYSEC")) return "fas fa-code";
-                if (cve.startsWith("GSD")) return "fas fa-database";
-                if (cve.startsWith("GCVE")) return "fas fa-globe";
-                if (cve.startsWith("RHSA")) return "fas fa-lock";
-                if (cve.startsWith("CERTFR")) return "fas fa-flag";
-                if (cve.startsWith("cisco-sa")) return "fas fa-network-wired";
-                if (cve.startsWith("wid-sec-w")) return "fas fa-exclamation-circle";
-                if (cve.startsWith("msrc_CVE")) return "fas fa-shield-virus";
-                return "fas fa-exclamation-triangle";
-            }
-
-            function getCVEPrefix(cve) {
-                return cve.split("-")[0].toUpperCase();
-            }
-            function getCVENumber(cve) {
-                return cve.replace(/^[A-Za-z_:-]+/, "").replace(/^-/, "");
-            }
 
             function animateClick(event) {
                 const btn = event.currentTarget;
@@ -1499,10 +1488,6 @@
                 getRandomColor,
                 similarityColorBg,
                 similarityColor,
-                getCVEColor,
-                getCVEIcon,
-                getCVEPrefix,
-                getCVENumber,
                 bundleListRule,
                 Ownership,
                 favorite,
@@ -1533,7 +1518,6 @@
                 download_rule,
                 csrf_token,
                 favoriteSimilar,
-                parsedCVE,
                 dayjs,
                 init,
                 detail_page_1_is_loading,
@@ -1555,13 +1539,30 @@
                 TagDisplay,
                 SimilarRulesDisplay,
                 refreshSimilarRules,
-                handleSimilarRulesFound
+                handleSimilarRulesFound,
+                rule_format_is_loading,
+
             };
         }
     }).mount('#main-container');
 
 </script>
 <script>
+    function applyHljsTheme() {
+        const isDark = document.body.classList.contains('dark-mode');
+        document.getElementById('hljs-theme-light').disabled = isDark;
+        document.getElementById('hljs-theme-dark').disabled = !isDark;
+
+        document.querySelectorAll('pre code').forEach(block => {
+            block.removeAttribute('data-highlighted');
+            hljs.highlightElement(block);
+        });
+    }
+
+    applyHljsTheme();
+
+    const observer = new MutationObserver(() => applyHljsTheme());
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
     function copyToClipboard() {
         const copyIcon = document.getElementById("copyIcon");
         const copyText = document.getElementById("copyText");

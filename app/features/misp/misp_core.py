@@ -41,7 +41,7 @@ def content_convert_to_misp_object(rule_id: int) -> str:
         # If valid, wrap and export
         event = MISPEvent()
         # add meta catgeory 
-        #event.info = f"Rule {rule.title} converted to MISP object"
+        event.info = f"Rule {rule.title} converted to MISP object"
         event.add_object(misp_object)
         return event.to_json(indent=2)
 

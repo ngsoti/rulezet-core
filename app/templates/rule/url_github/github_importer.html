@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% import 'macros/form_macros.html' as f %}
-
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/github/importer.css') }}">
+{% endblock %}
 {% block content %}
 <div class="container mt-4" id="main-container">
     <div class="mb-4 border-bottom pb-3">

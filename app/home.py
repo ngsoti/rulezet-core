@@ -38,6 +38,9 @@ def inject_requests_to_validate() -> jsonify:
 ###################
 #   Home section  #
 ###################
+@home_blueprint.route("/why")
+def why():
+    return render_template("why.html")
 
 @home_blueprint.route("/")
 def home() -> render_template:

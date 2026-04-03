@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/base/why.css') }}">
+{% endblock %}
+
+
+{% block content %}
+<div class="why-page">
+
+    <!-- ═══════════════════════════════════════
+       HERO
+  ═══════════════════════════════════════ -->
+    <section class="why-hero">
+        <div class="container">
+            <div class="row align-items-center g-5">
+
+                <!-- Left col -->
+                <div class="col-lg-7 anim-up d1">
+                    <div class="why-badge">
+                        <i class="fa-solid fa-shield-halved me-1"></i>
+                        open-source &middot; community-driven
+                    </div>
+
+                    <h1>
+                        Why use<br>
+                        <span class="accent-word">Rulezet?</span>
+                    </h1>
+
+                    <p class="why-lead">
+                        Detection rules are the foundation of any security system.
+                        Rulezet gives you <strong>one place</strong> to share, improve,
+                        and trust them &mdash; together.
+                    </p>
+
+                    <div class="format-tags-row">
+                        <a href="/rule/rules_list?format=yara"><span class="fmt-tag">YARA</span></a>
+                        <a href="/rule/rules_list?format=sigma"><span class="fmt-tag">Sigma</span></a>
+                        <a href="/rule/rules_list?format=suricata"><span class="fmt-tag">Suricata</span></a>
+                        <a href="/rule/rules_list?format=zeek"><span class="fmt-tag">Zeek</span></a>
+                        <a href="/rule/rules_list?format=wazuh"><span class="fmt-tag">Wazuh</span></a>
+                        <a href="/rule/rules_list?format=nse"><span class="fmt-tag">NSE</span></a>
+                        <a href="/rule/rules_list?format=crs"><span class="fmt-tag">CRS</span></a>
+                        <a href="/rule/rules_list?format=nova"><span class="fmt-tag">Nova</span></a>
+                    </div>
+
+
+                    <div class="d-flex gap-3 mt-4 flex-wrap">
+                        <a href="{{ url_for('rule.rules_list') }}" class="btn-why-primary">
+                            <i class="fa-solid fa-rocket"></i> Explore rules
+                        </a>
+                        <a href="{{ url_for('account.add_user') }}" class="btn-why-outline">
+                            <i class="fa-solid fa-user-plus"></i> Create an account
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right col -->
+                <div class="col-lg-5 anim-up d2">
+
+                    <!-- Stats -->
+                    <div class="row g-0 mb-3 text-center">
+                        <div class="col-4">
+                            <div class="hero-stat-box">
+                                <span class="hero-stat-num">8</span>
+                                <span class="hero-stat-lbl">Formats</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="hero-stat-box">
+                                <span class="hero-stat-num">
+                                    <i class="fa-brands fa-github" style="font-size:1.7rem;"></i>
+                                </span>
+                                <span class="hero-stat-lbl">Open source</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="hero-stat-box">
+                                <span class="hero-stat-num">
+                                    <i class="fa-solid fa-users" style="font-size:1.6rem;"></i>
+                                </span>
+                                <span class="hero-stat-lbl">Community</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Code snippet decoration -->
+                    <div class="hero-snippet">
+                        <div class="dot-row">
+                            <span class="dot dot-red"></span>
+                            <span class="dot dot-amber"></span>
+                            <span class="dot dot-green"></span>
+                            <span class="dot-file">detect_malware.yar</span>
+                        </div>
+                        <span class="snip-kw">rule</span> DetectMimikatz {
+                        <span class="snip-kw">meta:</span>
+                        author = <span class="snip-str">"community"</span>
+                        score = <span class="snip-num">95</span>
+                        votes = <span class="snip-num">142</span>
+                        <span class="snip-kw">strings:</span>
+                        $s1 = <span class="snip-str">"sekurlsa"</span>
+                        <span class="snip-kw">condition:</span>
+                        $s1
+                        }
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+       QUOTE
+  ═══════════════════════════════════════ -->
+    <div class="container">
+        <div class="why-quote">
+            <i class="fa-solid fa-quote-left me-2" style="color:var(--rule-name-color);opacity:0.45;"></i>
+            A detection rule written alone is only as strong as the person who wrote it.
+            <strong>A rule reviewed by a community is battle-tested.</strong>
+            Rulezet brings researchers, analysts, and engineers together so every rule gets better &mdash; faster.
+        </div>
+    </div>
+
+    <hr class="why-hr" />
+
+    <!-- ═══════════════════════════════════════
+       PROFILES — who is it for?
+  ═══════════════════════════════════════ -->
+    <section class="py-5">
+        <div class="container">
+            <p class="section-eyebrow">
+                <i class="fa-solid fa-users me-1"></i> Who is it for?
+            </p>
+            <h2 class="section-heading">Made for everyone in security</h2>
+            <p class="section-sub">From seasoned researchers to curious beginners — Rulezet has a place for you.</p>
+
+            <div class="row g-4">
+
+                <div class="col-sm-6 col-lg-3 anim-up d1">
+                    <div class="profile-card-why">
+                        <div class="profile-icon-circle">
+                            <i class="fa-solid fa-flask"></i>
+                        </div>
+                        <span class="profile-role-label">Security researcher</span>
+                        <h5>You build detection logic</h5>
+                        <p>Publish your rules, collect community feedback, track improvements over time, and gain
+                            visibility for your work.</p>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-lg-3 anim-up d2">
+                    <div class="profile-card-why">
+                        <div class="profile-icon-circle">
+                            <i class="fa-solid fa-tower-broadcast"></i>
+                        </div>
+                        <span class="profile-role-label">SOC analyst</span>
+                        <h5>You respond to threats</h5>
+                        <p>Find reliable, community-validated rules. Import what works and adapt it to your environment
+                            in minutes.</p>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-lg-3 anim-up d3">
+                    <div class="profile-card-why">
+                        <div class="profile-icon-circle">
+                            <i class="fa-solid fa-gears"></i>
+                        </div>
+                        <span class="profile-role-label">Threat intel engineer</span>
+                        <h5>You run rule pipelines</h5>
+                        <p>Organize rules into bundles, version them, export in any format, and keep your detection
+                            stack in sync.</p>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-lg-3 anim-up d4">
+                    <div class="profile-card-why">
+                        <div class="profile-icon-circle">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                        </div>
+                        <span class="profile-role-label">Student / beginner</span>
+                        <h5>You&rsquo;re learning</h5>
+                        <p>Browse real rules written by experts. Comment, ask questions, and propose edits — the
+                            community is open to everyone.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <hr class="why-hr" />
+
+    <!-- ═══════════════════════════════════════
+       FEATURES
+  ═══════════════════════════════════════ -->
+    <section class="py-5">
+        <div class="container">
+            <p class="section-eyebrow">
+                <i class="fa-solid fa-star me-1"></i> Features
+            </p>
+            <h2 class="section-heading">Everything in one place</h2>
+            <p class="section-sub">No more scattered files, no more guessing which version is correct.</p>
+
+            <div class="row g-3">
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ url_for('rule.rule') }}" class="text-decoration-none">
+                        <div class="feature-why feature-clickable">
+                            <div class="feature-icon-sq"><i class="fa-solid fa-file-import"></i></div>
+                            <div>
+                                <h6>Create &amp; import rules</h6>
+                                <p>Write rules directly or import from files. All 8 formats supported out of the box.
+                                </p>
+                            </div>
+                            <i class="fa-solid fa-arrow-right feature-arrow"></i>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ url_for('rule.rules_list') }}" class="text-decoration-none">
+                        <div class="feature-why feature-clickable">
+                            <div class="feature-icon-sq"><i class="fa-solid fa-thumbs-up"></i></div>
+                            <div>
+                                <h6>Vote &amp; validate</h6>
+                                <p>Community voting surfaces the most reliable rules. Bad rules sink, great ones rise.
+                                </p>
+                            </div>
+                            <i class="fa-solid fa-arrow-right feature-arrow"></i>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ url_for('rule.rules_list') }}" class="text-decoration-none">
+                        <div class="feature-why feature-clickable">
+                            <div class="feature-icon-sq"><i class="fa-solid fa-code-compare"></i></div>
+                            <div>
+                                <h6>Propose edits with diff</h6>
+                                <p>Suggest improvements with visual diffs — like a pull request, but for detection
+                                    rules.</p>
+                            </div>
+                            <i class="fa-solid fa-arrow-right feature-arrow"></i>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ url_for('bundle.list') }}" class="text-decoration-none">
+                        <div class="feature-why feature-clickable">
+                            <div class="feature-icon-sq"><i class="fa-solid fa-box-archive"></i></div>
+                            <div>
+                                <h6>Bundle &amp; export</h6>
+                                <p>Group rules into bundles and export them in any supported format in one click.</p>
+                            </div>
+                            <i class="fa-solid fa-arrow-right feature-arrow"></i>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ url_for('tags.my_tags') }}" class="text-decoration-none">
+                        <div class="feature-why feature-clickable">
+                            <div class="feature-icon-sq"><i class="fa-solid fa-tags"></i></div>
+                            <div>
+                                <h6>Search &amp; tag</h6>
+                                <p>Find rules by format, tag, author, or keyword — search is instant and precise.</p>
+                            </div>
+                            <i class="fa-solid fa-arrow-right feature-arrow"></i>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="/api/" class="text-decoration-none">
+                        <div class="feature-why feature-clickable">
+                            <div class="feature-icon-sq"><i class="fa-solid fa-plug"></i></div>
+                            <div>
+                                <h6>REST API</h6>
+                                <p>Integrate Rulezet into your own pipelines via the full <code>X-API-KEY</code>
+                                    authenticated API.</p>
+                            </div>
+                            <i class="fa-solid fa-arrow-right feature-arrow"></i>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ url_for('rule.rules_list') }}" class="text-decoration-none">
+                        <div class="feature-why feature-clickable">
+                            <div class="feature-icon-sq"><i class="fa-solid fa-comments"></i></div>
+                            <div>
+                                <h6>Comments &amp; discussion</h6>
+                                <p>Every rule has a discussion thread. Ask, answer, and improve together.</p>
+                            </div>
+                            <i class="fa-solid fa-arrow-right feature-arrow"></i>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ url_for('account.contributor') }}" class="text-decoration-none">
+                        <div class="feature-why feature-clickable">
+                            <div class="feature-icon-sq"><i class="fa-solid fa-trophy"></i></div>
+                            <div>
+                                <h6>Gamification</h6>
+                                <p>Earn points and badges for contributions. The more you give, the more you gain.</p>
+                            </div>
+                            <i class="fa-solid fa-arrow-right feature-arrow"></i>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ url_for('account.index', username=current_user.username) if current_user.is_authenticated else url_for('account.add_user') }}"
+                        class="text-decoration-none">
+                        <div class="feature-why feature-clickable">
+                            <div class="feature-icon-sq"><i class="fa-solid fa-lock"></i></div>
+                            <div>
+                                <h6>Roles &amp; permissions</h6>
+                                <p>Fine-grained access control so teams can collaborate safely at scale.</p>
+                            </div>
+                            <i class="fa-solid fa-arrow-right feature-arrow"></i>
+                        </div>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <hr class="why-hr" />
+
+    <!-- ═══════════════════════════════════════
+       OPEN SOURCE
+  ═══════════════════════════════════════ -->
+    <section class="py-5">
+        <div class="container">
+            <div class="oss-banner-why">
+                <i class="fa-brands fa-github oss-fa-icon"></i>
+                <div>
+                    <h5>Rulezet is fully open source</h5>
+                    <p>
+                        Read the code, contribute new rule formats, and run your own instance.
+                        No vendor lock-in, no black box, no hidden telemetry.
+                        Built by the community, for the community.
+                    </p>
+                    <a href="https://github.com/ngsoti/rulezet-core" target="_blank" class="btn-why-primary"
+                        style="font-size:0.82rem;padding:8px 18px;">
+                        <i class="fa-brands fa-github"></i> View on GitHub
+                    </a>
+                    <a href="{{ url_for('account.add_user') }}" class="btn-why-outline ms-2"
+                        style="font-size:0.82rem;padding:8px 18px;">
+                        <i class="fa-solid fa-user-plus"></i> Join the community
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div><!-- /.why-page -->
+{% endblock %}
+
+
+{% block script %}
+<script>
+    /* Scroll-triggered fade-up for cards below the fold */
+    document.addEventListener("DOMContentLoaded", () => {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.style.opacity = "1";
+                    e.target.style.transform = "translateY(0)";
+                    observer.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll(".profile-card-why, .feature-why").forEach(el => {
+            el.style.opacity = "0";
+            el.style.transform = "translateY(16px)";
+            el.style.transition = "opacity 0.45s ease, transform 0.45s ease";
+            observer.observe(el);
+        });
+    });
+</script>
+{% endblock %}

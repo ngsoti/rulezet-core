@@ -1,9 +1,14 @@
 {% extends 'base.html' %}
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/external_library/codemirror/codemirror.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/external_library/codemirror/monokai.min.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/display/autorefresh.js"></script>
+{% endblock %}
 {% block content %}
-
-
-
-<div class="container mt-4">
+<div class="container mt-4" v-cloak>
       <h2 class="fw-bold mb-1 text-center text-primary">Create a Rule</h2>
       <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
       <p class="text-muted mt-2">

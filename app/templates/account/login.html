@@ -1,88 +1,86 @@
 {% extends 'base.html' %}
 {% import 'macros/form_macros.html' as f %}
 
-{% block content %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/account/login.css') }}">
+{% endblock %}
 
-<div class="container d-flex justify-content-center align-items-center" style="min-height: 50vh;">
-    <div class="col-md-5">
+{% block content %}
+<div class="container login-wrapper">
+    <div class="col-md-5 col-lg-4">
 
         {% include 'macros/_flashes.html' %}
 
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
+        <div class="login-card">
+            <div class="login-underline mt-3"></div>
+            <h2 class="login-title">Login</h2>
+            <div class="login-underline"></div>
 
-                <h3 class="text-center">Login</h3>
+            <form action="" method="post">
+                {{ form.hidden_tag() }}
 
-                <form action="" method="post">
-                    {{ form.hidden_tag() }}
+                <!-- Email -->
+                <div class="mb-3">
+                    <label for="email" class="form-label">
+                        {{ form.email.label }} <span class="text-danger">*</span>
+                    </label>
+                    {{ form.email(class_="form-control", id="email", placeholder="Enter your email") }}
+                    {% if form.email.errors %}
+                    <div class="text-danger small mt-1">{{ form.email.errors[0] | safe }}</div>
+                    {% endif %}
+                </div>
 
-                    <!-- Email -->
-                    <div class="mb-3">
-                        <label for="email" class="form-label">
-                            {{ form.email.label }} <span class="text-danger">*</span>
-                        </label>
-                        {{ form.email(class_="form-control", id="email", placeholder="Enter your email") }}
-
-                        {% if form.email.errors %}
-                        <div class="text-danger small mt-1">
-                            {{ form.email.errors[0] | safe }}
-                        </div>
-                        {% endif %}
+                <!-- Password -->
+                <div class="mb-3">
+                    <label for="password" class="form-label">
+                        {{ form.password.label }} <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        {{ form.password(class_="form-control", id="password", placeholder="Enter your password") }}
+                        <span class="input-group-text" style="cursor:pointer;" onclick="togglePassword()">
+                            <i id="togglePasswordIcon" class="fa fa-eye"></i>
+                        </span>
                     </div>
+                </div>
 
-                    <!-- Password -->
-                    <div class="mb-3">
-                        <label for="password" class="form-label">
-                            {{ form.password.label }} <span class="text-danger">*</span>
-                        </label>
+                <!-- Remember me -->
+                <div class="form-check mb-3">
+                    {{ form.remember_me(class_="form-check-input", id="remember_me") }}
+                    <label class="form-check-label" for="remember_me">
+                        {{ form.remember_me.label.text }}
+                    </label>
+                </div>
 
-                        <div class="input-group">
-                            {{ form.password(class_="form-control", id="password", placeholder="Enter your password") }}
-                            <span class="input-group-text" style="cursor:pointer;" onclick="togglePassword()">
-                                <i id="togglePasswordIcon" class="fa fa-eye"></i>
-                            </span>
-                        </div>
-                    </div>
+                <!-- Submit -->
+                <button type="submit" class="btn-login mb-3">
+                    <i class="fa-solid fa-right-to-bracket me-1"></i>
+                    {{ form.submit.label.text }}
+                </button>
 
-                    <script>
-                        function togglePassword() {
-                            const passwordInput = document.getElementById("password");
-                            const icon = document.getElementById("togglePasswordIcon");
-                            const isPassword = passwordInput.type === "password";
+                <!-- Register link -->
+                <div class="text-center">
+                    <a href="/account/register" class="login-register-link text-decoration-none small">
+                        <i class="fa fa-user-plus me-1"></i> Create an account
+                    </a>
+                </div>
 
-                            passwordInput.type = isPassword ? "text" : "password";
-                            icon.classList.toggle("fa-eye");
-                            icon.classList.toggle("fa-eye-slash");
-                        }
-                    </script>
-
-                    <!-- Remember me -->
-                    <div class="form-check mb-3">
-                        {{ form.remember_me(class_="form-check-input", id="remember_me") }}
-                        <label class="form-check-label" for="remember_me">
-                            {{ form.remember_me.label.text }}
-                        </label>
-                    </div>
-
-                    <!-- Submit -->
-                    {{ form.submit(class='btn btn-primary w-100 mb-3') }}
-
-                    <!-- Register link -->
-                    <div class="text-center">
-                        <a href="/account/register" class="text-decoration-none">
-                            <i class="fa fa-user-plus"></i> Create an account
-                        </a>
-                    </div>
-                </form>
-
-            </div>
+            </form>
         </div>
 
-        <p class="text-center text-muted mt-3 small">
+        <p class="text-center mt-3 small" style="color: var(--subtle-text-color);">
             © 2025 RULEZET. All rights reserved.
         </p>
 
     </div>
 </div>
 
+<script>
+    function togglePassword() {
+        const input = document.getElementById("password");
+        const icon = document.getElementById("togglePasswordIcon");
+        input.type = input.type === "password" ? "text" : "password";
+        icon.classList.toggle("fa-eye");
+        icon.classList.toggle("fa-eye-slash");
+    }
+</script>
 {% endblock %}

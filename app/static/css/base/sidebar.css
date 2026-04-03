@@ -11,9 +11,8 @@
 }
 
 .custom-nav-link.active {
-  color: #0d6efd !important;
-  border-bottom: #0d6efd 1px solid;
+  color: rgb(10, 88, 202) !important;
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, rgb(10, 88, 202), transparent) 1;
   border-radius: 0;
-  
 }
-

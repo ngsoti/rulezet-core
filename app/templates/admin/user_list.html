@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
-
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/account/users_list.css') }}">
+{% endblock %}
 {% block content %}
 {% if current_user.is_admin() %}
 <div class="container-fluid my-4" id="main-container" v-cloak>

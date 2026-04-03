@@ -1,0 +1,81 @@
+#ruleTabs {
+    background: var(--light-bg-color);
+    padding: 6px 6px 0 6px;
+    gap: 4px;
+    border-bottom: none !important;
+}
+
+#ruleTabs .nav-link {
+    color: var(--subtle-text-color);
+    border: none;
+    border-radius: 8px 8px 0 0;
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    position: relative;
+    transition: color 0.25s ease, background 0.25s ease;
+    background: transparent;
+}
+
+#ruleTabs .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 80%;
+    height: 2px;
+    background: #0d6efd;
+    border-radius: 2px 2px 0 0;
+    transition: none;
+}
+
+#ruleTabs .nav-link:hover {
+    color: var(--text-color);
+    background: var(--card-bg-color);
+}
+
+#ruleTabs .nav-link:hover::after {
+    transform: translateX(-50%) scaleX(0.5);
+}
+
+#ruleTabs .nav-link.active {
+    color: #0d6efd;
+    background: var(--card-bg-color);
+    border-bottom: 2px solid #0d6efd;
+    font-weight: 700;
+}
+
+#ruleTabs .nav-link.active::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+#ruleTabs .nav-link i {
+    font-size: 11px;
+    margin-right: 5px;
+    opacity: 0.8;
+}
+
+#ruleTabsContent {
+    border-top: 2px solid var(--border-color);
+    background-color: var(--bg-color);
+}
+
+#ruleTabsContent .tab-pane {
+    background-color: var(--code-bg-color);
+}
+
+#ruleTabsContent .tab-pane.fade {
+    transition: opacity 0.05s ease;
+}
+
+#ruleTabsContent .tab-pane.fade:not(.show) {
+    opacity: 0;
+    background-color: var(--code-bg-color);
+}
+
+.custom-pre {
+    background-color: var(--bg-color) !important;
+    margin: 0;
+}
