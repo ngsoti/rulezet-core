@@ -28,7 +28,9 @@ def content_convert_to_misp_object(rule_id: int) -> str:
         elif fmt == "nse":
             misp_object = create_nse_misp_object(rule)
         elif fmt == "crs":
-            misp_object = create_crs_misp_object(rule)
+            misp_object = create_crs_misp_object(rule)            
+
+
         elif fmt == "nova":
             misp_object = create_nova_misp_object(rule)
         else:
@@ -54,6 +56,8 @@ def create_yara_misp_object(rule) -> MISPObject:
     """
     try:
         misp_object = MISPObject(name='yara', ignore_warning=False)
+        # "meta-category": "misc",
+        misp_object['meta-category'] = "misc"
 
         # Required: YARA rule content
         if rule.to_string:
@@ -80,6 +84,8 @@ def create_sigma_misp_object(rule) -> MISPObject:
     Specific mapper for Sigma rules based on the 'sigma' object template.
     """
     misp_object = MISPObject(name='sigma', ignore_warning=False)
+    # "meta-category": "misc",
+    misp_object['meta-category'] = "misc"
 
     if rule.to_string:
         misp_object.add_attribute(
@@ -117,6 +123,8 @@ def create_suricata_misp_object(rule) -> MISPObject:
     Specific mapper for Suricata rules based on the 'suricata' object template.
     """
     misp_object = MISPObject(name='suricata', ignore_warning=False)
+    # "meta-category": "network",
+    misp_object['meta-category'] = "network"
 
     if rule.to_string:
         misp_object.add_attribute(
@@ -155,6 +163,7 @@ def create_nse_misp_object(rule) -> MISPObject:
     """
     misp_object = MISPObject(name='nse', ignore_warning=False)
 
+    misp_object['meta-category'] = "network"
 
     if rule.to_string:
         misp_object.add_attribute(
@@ -162,6 +171,8 @@ def create_nse_misp_object(rule) -> MISPObject:
             value=rule.to_string, 
             type='text'
         )
+
+    print(rule.to_string)
 
     if rule.title:
         misp_object.add_attribute(
@@ -193,6 +204,7 @@ def create_wazuh_misp_object(rule) -> MISPObject:
     
     misp_object = MISPObject(name='wazuh-rule', ignore_warning=False)
 
+    misp_object['meta-category'] = "misc"
 
     if rule.to_string:
         misp_object.add_attribute(
@@ -235,7 +247,9 @@ def create_crs_misp_object(rule) -> MISPObject:
     """
     Specific mapper for OWASP CRS (WAF) rules based on the 'owasp-crs-rule' template.
     """
-    misp_object = MISPObject(name='owasp-crs-rule', ignore_warning=False)
+    misp_object = MISPObject(name='owasp-crs-rule' ,ignore_warning=False)
+    
+    misp_object['meta-category'] = 'network'
 
     if rule.title:
         misp_object.add_attribute('rule-id', value=rule.title, type='text')
@@ -253,6 +267,9 @@ def create_crs_misp_object(rule) -> MISPObject:
         misp_object.add_attribute('reference', value=rule.source, type='link')
 
 
+
+
+
     return misp_object
 
 def create_nova_misp_object(rule) -> MISPObject:
@@ -262,6 +279,8 @@ def create_nova_misp_object(rule) -> MISPObject:
 
     misp_object = MISPObject(name='nova-rule', ignore_warning=False)
 
+    #   "meta-category": "detection"
+    misp_object['meta-category'] = "detection"
 
     if rule.to_string:
         misp_object.add_attribute('raw-rule', value=rule.to_string, type='text')

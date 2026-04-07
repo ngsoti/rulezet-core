@@ -568,7 +568,7 @@ def detail_rule(rule_id)-> render_template:
         rule_stix = None
     if not rule_stix:
         rule_stix = None
-    rule_to_json = json.dumps(rule.to_json(), indent=4)
+    rule_to_json = json.dumps(rule.to_json_detail(), indent=4)
     if not rule_to_json:
         rule_to_json = "No json format for this rule"
     if rule:
@@ -592,7 +592,7 @@ def download_rule_unified() -> Response:
             extention = rule.get_extension()
             filename = f"{rule.title}.{extention}"
         elif fmt == 'json':
-            content = json.dumps(rule.to_json(), indent=2)
+            content = json.dumps(rule.to_json_detail(), indent=2)
             filename = f"{rule.title}.json"
         elif fmt == 'misp':
             object_json = content_convert_to_misp_object(rule_id)
@@ -618,7 +618,7 @@ def download_rule_unified() -> Response:
                 except Exception as e:
                     zip_file.writestr("errors.txt", f"TXT error: {str(e)}\n")
                 try:
-                    zip_file.writestr(f"{rule.title}.json", json.dumps(rule.to_json(), indent=2))
+                    zip_file.writestr(f"{rule.title}.json", json.dumps(rule.to_json_detail(), indent=2))
                 except Exception as e:
                     zip_file.writestr("errors.txt", f"JSON error: {str(e)}\n")
                 try:

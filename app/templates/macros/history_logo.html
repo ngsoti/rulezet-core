@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container-fluid p-0" id="container">
+<div class="container-fluid p-0" id="container-history" v-cloak>
     <div class="container animation-fade-in-up pt-5 pb-5 text-center">
         <span class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2 mb-4 fw-bold shadow-sm"
             style="letter-spacing: 1px;">
@@ -152,6 +152,6 @@
 
             return { logoItems };
         }
-    }).mount('#container');
+    }).mount('#container-history');
 </script>
 {% endblock %}

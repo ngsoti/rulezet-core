@@ -1,9 +1,7 @@
 {% extends 'base.html' %}
 
 {% block head %}
-<link
-    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600&display=swap"
-    rel="stylesheet" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/external_library/image_code.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/base/why.css') }}">
 {% endblock %}
 
@@ -26,7 +24,7 @@
                     </div>
 
                     <h1>
-                        Why use<br>
+                        <span style="color: var(--text-color) !important;">Why use</span><br>
                         <span class="accent-word">Rulezet?</span>
                     </h1>
 

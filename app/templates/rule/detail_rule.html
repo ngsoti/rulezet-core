@@ -290,7 +290,7 @@
                                     {% if rule_stix %}
                                     <div class="tab-pane fade" id="stix" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto;"><code class="json">{{ rule_stix }}</code></pre>
+                                            style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{ rule_stix }}"></code></pre>
                                     </div>
                                     {% endif %}
                                 </div>

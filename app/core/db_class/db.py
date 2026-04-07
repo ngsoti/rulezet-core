@@ -161,6 +161,142 @@ class Rule(db.Model):
         }
         
         return extensions.get(format_name, 'txt') 
+    
+    def to_json_detail(self):
+        """ Return a detailed JSON representation of the rule, including all fields. This is used for the rule detail page. """
+        
+        # votes
+        total_votes = (self.vote_up or 0) + (self.vote_down or 0)
+        vote_ratio = round((self.vote_up or 0) / total_votes * 100) if total_votes > 0 else 0
+
+        # favorites count
+        favorites_count = self.favorited_by_users_assocs.count()
+
+        # is favorited by current user
+        is_favorited = False
+        if not current_user.is_anonymous():
+            is_favorited = RuleFavoriteUser.query.filter_by(user_id=current_user.id, rule_id=self.id).first() is not None
+
+        # submitter
+        submitter = User.query.get(self.user_id)
+        submitter_info = None
+        if submitter:
+            gamification = submitter.gamification_stats
+            submitter_info = {
+                "id": submitter.id,
+                "username": submitter.first_name + " " + submitter.last_name,
+                "level": gamification.current_level if gamification else 1,
+                "total_points": gamification.total_points if gamification else 0,
+            }
+
+        # tags
+        tags = [assoc.to_json() for assoc in self.rule_tags_assocs]
+
+        # comments
+        comments = [c.to_json() for c in self.comments_rule.order_by(Comment.created_at.desc()).limit(20)]
+
+        # edit proposals
+        proposals = self.edit_proposals.order_by(RuleEditProposal.timestamp.desc()).limit(10).all()
+        proposals_summary = [p.to_json_for_discuss() for p in proposals]
+
+        # bundles containing this rule
+        bundles = [
+            {
+                "id": assoc.bundle.id,
+                "name": assoc.bundle.name,
+                "uuid": assoc.bundle.uuid,
+                "is_verified": assoc.bundle.is_verified,
+            }
+            for assoc in self.bundles_assoc.all()
+            if assoc.bundle and assoc.bundle.access
+        ]
+
+        # update history
+        history = self.rule_update_history.order_by(RuleUpdateHistory.analyzed_at.desc()).limit(5).all()
+        update_history = [h.to_json() for h in history]
+
+        # similar rules
+        similar = RuleSimilarity.query.filter_by(rule_id=self.id).order_by(RuleSimilarity.score.desc()).limit(5).all()
+        similar_rules = []
+        for s in similar:
+            r = Rule.query.get(s.similar_rule_id)
+            if r:
+                similar_rules.append({
+                    "id": r.id,
+                    "title": r.title,
+                    "format": r.format,
+                    "score": round(s.score * 100),
+                })
+
+        return {
+            # --- identity ---
+            "identity": {
+                "id": self.id,
+                "uuid": self.uuid,
+                "original_uuid": self.original_uuid,
+                "title": self.title,
+                "version": self.version,
+                "format": self.format,
+            },
+
+            # --- content ---
+            "content": {
+                "to_string": self.to_string,
+                "description": self.description,
+                "source": self.source,
+                "github_path": self.github_path,
+                "extension": self.get_extension(),
+            },
+
+            # --- authorship ---
+            "authorship": {
+                "author": self.author,
+                "license": self.license,
+                "creation_date": self.creation_date.strftime('%Y-%m-%d %H:%M'),
+                "last_modif": self.last_modif.strftime('%Y-%m-%d %H:%M'),
+                "submitter": submitter_info,
+            },
+
+            # --- community ---
+            "community": {
+                "votes": {
+                    "up": self.vote_up or 0,
+                    "down": self.vote_down or 0,
+                    "total": total_votes,
+                    "ratio_percent": vote_ratio,
+                },
+                "favorites": {
+                    "count": favorites_count,
+                    "is_favorited": is_favorited,
+                },
+                "comments": {
+                    "count": self.comments_rule.count(),
+                    "latest": comments,
+                },
+            },
+
+            # --- relations ---
+            "relations": {
+                "tags": tags,
+                "bundles": bundles,
+                "similar_rules": similar_rules,
+            },
+
+            # --- vulnerability ---
+            "vulnerability": {
+                "cve_ids": self.cve_id if self.cve_id is not None else [],
+            },
+
+            # --- history ---
+            "history": {
+                "edit_proposals": {
+                    "count": self.edit_proposals.count(),
+                    "latest": proposals_summary,
+                },
+                "update_history": update_history,
+            },
+        }
+
 
 
 class FormatRule(db.Model):

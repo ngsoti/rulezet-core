@@ -1,5 +1,6 @@
 .nav-link{
   color:black;
+    font-family: 'Space Mono', monospace;
 }
 
 .dropdown-item.active, 
@@ -15,4 +16,11 @@
   border-bottom: 1px solid transparent;
   border-image: linear-gradient(90deg, transparent, rgb(10, 88, 202), transparent) 1;
   border-radius: 0;
+}
+
+body.dark-mode .logo img {
+  filter: brightness(1.3) contrast(1.1);
+
+  filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.9));
+  background-color: transparent;
 }

@@ -57,10 +57,10 @@
 
 body.dark-mode {
   --sidebar-color:          #272727;
-  --bg-color:               #272727;
+  --bg-color:               #3a3a3a;
   --text-color:             #f8f9fa;
   --subtle-text-color:      #adb5bd;
-  --card-bg-color:          #2a2a2a;
+  --card-bg-color:          #2c2c2c;
   --light-bg-color:         #343a40;
   --code-bg-color:          #2d2d2d;
   --border-color:           #495057;
@@ -94,11 +94,58 @@ html {
   scroll-behavior: smooth;
 }
 
+/* body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+} */
+
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
   transition: background-color 0.3s ease, color 0.3s ease;
+  position: relative;
+  overflow-x: hidden;
 }
+
+/* Background*/
+body::before {
+  content: '';
+  position: fixed;
+  top: -80px;
+  right: -150px;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: rgba(10, 88, 202, 0.05);
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -100px;
+  left: -100px;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: rgba(10, 88, 202, 0.03);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+body.dark-mode::before {
+  background: rgba(10, 88, 202, 0.04);
+}
+
+body.dark-mode::after {
+  background: rgba(10, 88, 202, 0.02);
+}
+
+/* End Background */
 
 a {
   text-decoration: none;
@@ -228,6 +275,7 @@ label, .form-label {
 .dropdown-menu .dropdown-item {
   color: var(--text-color);
   transition: all 0.2s ease;
+      font-family: 'Space Mono', monospace;
 }
 
 .dropdown-menu .dropdown-item:hover {
@@ -436,6 +484,7 @@ label, .form-label {
 /* Security / Premium card */
 .card-security-premium {
   transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+   isolation: isolate;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
 }
 
@@ -1768,7 +1817,7 @@ body.dark-mode .accordion-button.collapsed { background-color: #2c2c2c; color: #
 body.dark-mode .accordion-body    { background-color: #262626; color: #dddddd; }
 
 /* Cards */
-body.dark-mode .card               { background-color: #1e1e1e; color: #e0e0e0; border: 1px solid #444; }
+body.dark-mode .card               { background-color: var(--card-bg-color); color: #e0e0e0; border: 1px solid #444; }
 body.dark-mode .card.bg-light,
 body.dark-mode .bg-light           { background-color: #1e1e1e !important; color: #f1f1f1 !important; }
 body.dark-mode .card-header.bg-light { background-color: #2c2c2c !important; color: #e0e0e0; border-bottom: 1px solid #555; }
