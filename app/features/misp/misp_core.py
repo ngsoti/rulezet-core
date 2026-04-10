@@ -307,7 +307,7 @@ def convert_misp_to_stix(misp_object: json) -> dict | None:
             "https://cti-transmute.org/api/convert/misp_to_stix",
             json=misp_object,
             headers={"Content-Type": "application/json"},
-            timeout=10
+            timeout=3
         )
         response.raise_for_status()
 
