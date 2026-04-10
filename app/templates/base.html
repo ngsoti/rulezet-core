@@ -10,7 +10,6 @@
         href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
 
-    <!-- CSS -->
     <link rel="icon" href="{{ url_for('static',filename='image/logo.png') }}">
     <link rel="stylesheet" type="text/css"
         href="{{ url_for('static',filename='css/external_library/select2.min.css') }}">
@@ -26,19 +25,10 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/core.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/base/sidebar.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/base/toaster.css') }}">
-
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/account/verify_email.css') }}">
-
-
-
-
-
 
     {% block head %}
     {% endblock %}
-
-
-
 
     <script src="{{ url_for('static',filename='js/popper.min.js') }}"></script>
     <script src="{{ url_for('static',filename='bootstrap-5.3.0/js/bootstrap.min.js') }}"></script>
@@ -56,70 +46,33 @@
 
 <body>
     {% include 'sidebar.html' %}
+
+    <!-- Toast app — standalone Vue instance, always active regardless of page app mount point -->
+    <div id="rz-toast-app">
+        <div class="rz-toast-container" role="region" aria-live="polite">
+            <template v-if="message_list">
+                <template v-for="msg in message_list" :key="msg.id">
+                    <div :id="`rz-toast-${msg.id}`" :class="`rz-toast rz-toast--${msg.variant}`" role="alert">
+                        <i :class="msg.icon" class="rz-toast__icon"></i>
+                        <div class="rz-toast__body">[[msg.message]]</div>
+                        <button class="rz-toast__close" type="button" aria-label="Fermer">
+                            <i class="fas fa-xmark"></i>
+                        </button>
+                        <div class="rz-toast__bar"></div>
+                    </div>
+                </template>
+            </template>
+        </div>
+    </div>
+
     <div class="d-flex flex-column min-vh-100">
         <div class="flex-grow-1 container" id="main-container">
             <main class="col ps-md-4 pt-2">
                 {% include 'macros/_flashes.html' %}
                 <script>
-                        (function () {
-                            function dismissFlash(el) {
-                                if (el.dataset.dismissing) return
-                                el.dataset.dismissing = '1'
-                                el.classList.remove('rz-show')
-                                el.classList.add('rz-hide')
-                                setTimeout(function () { el.remove() }, 300)
-                            }
 
-                            function initFlashes() {
-                                var flashes = document.querySelectorAll('.rz-flash-container .rz-flash')
-                                flashes.forEach(function (el, i) {
-                                    var duration = parseInt(el.dataset.duration || '8000', 10)
-                                    var delay = i * 100
-
-                                    // progress bar
-                                    var bar = el.querySelector('.rz-flash__bar')
-                                    if (bar) {
-                                        bar.style.animationDuration = duration + 'ms'
-                                        bar.style.animationDelay = delay + 'ms'
-                                    }
-
-                                    // slide-in staggeré
-                                    setTimeout(function () {
-                                        requestAnimationFrame(function () {
-                                            requestAnimationFrame(function () { el.classList.add('rz-show') })
-                                        })
-                                    }, delay)
-
-                                    // bouton fermer
-                                    var btn = el.querySelector('.rz-flash__close')
-                                    if (btn) btn.addEventListener('click', function () { dismissFlash(el) })
-
-                                    // auto-dismiss
-                                    setTimeout(function () { dismissFlash(el) }, duration + delay)
-                                })
-                            }
-
-                            if (document.readyState === 'loading') {
-                                document.addEventListener('DOMContentLoaded', initFlashes)
-                            } else {
-                                initFlashes()
-                            }
-                        })()
                 </script>
-                <div class="rz-toast-container" role="region" aria-live="polite">
-                    <template v-if="message_list">
-                        <template v-for="msg in message_list" :key="msg.id">
-                            <div :id="`rz-toast-${msg.id}`" :class="`rz-toast rz-toast--${msg.variant}`" role="alert">
-                                <i :class="msg.icon" class="rz-toast__icon"></i>
-                                <div class="rz-toast__body">[[msg.message]]</div>
-                                <button class="rz-toast__close" type="button" aria-label="Fermer">
-                                    <i class="fas fa-xmark"></i>
-                                </button>
-                                <div class="rz-toast__bar"></div>
-                            </div>
-                        </template>
-                    </template>
-                </div>
+
                 <!-- Scroll to top -->
                 <button id="scrollToTopBtn" title="Retour en haut"><i class="fa-solid fa-up-long"></i></button>
 
@@ -132,119 +85,24 @@
             </div>
             {% endif %}
         </div>
-        <footer class="bg-dark text-white py-4 mt-auto border-top border-secondary">
-            <div class="container">
-                <div class="row align-items-center">
 
-                    <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
-                        <small class="fw-bold text-uppercase">
-                            <span class="text-primary">Rulezet</span>
-                            <span class="badge bg-secondary ms-1" style="font-weight:500;font-size:.7rem;">v1.4.1</span>
-                        </small>
-                    </div>
-
-                    <div class="col-md-4 text-center mb-3 mb-md-0">
-                        <ul class="list-inline mb-0">
-                            <li class="list-inline-item px-2">
-                                <a href="/about"
-                                    class="text-decoration-none text-light opacity-75 hover-opacity-100 small fw-semibold">
-                                    <i class="fa-solid fa-circle-info me-1"></i> About Us
-                                </a>
-                            </li>
-                            <li class="list-inline-item px-2">
-                                <a href="https://github.com/ngsoti/rulezet-core/discussions" target="_blank"
-                                    class="text-decoration-none text-light opacity-75 hover-opacity-100 small fw-semibold">
-                                    <i class="fa-solid fa-envelope me-1"></i> Contact
-                                </a>
-                            </li>
-                            <li class="list-inline-item px-2">
-                                <a href="/history_logo"
-                                    class="text-decoration-none text-light opacity-75 hover-opacity-100 small fw-semibold">
-                                    <i class="fa-solid fa-history me-1"></i> History
-                                </a>
-                            </li>
-                            <li class="list-inline-item px-2">
-                                <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
-                                    class="text-decoration-none text-light opacity-75 hover-opacity-100 small fw-semibold">
-                                    <i class="fa-solid fa-balance-scale me-1"></i> Licenses
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="col-md-4 text-center text-md-end">
-                        <div class="d-flex align-items-center justify-content-center justify-content-md-end gap-2">
-                            <a href="https://github.com/ngsoti/rulezet-core.git" target="_blank"
-                                class="btn btn-outline-light rounded-circle btn-sm d-flex align-items-center justify-content-center"
-                                style="width:30px;height:30px;" title="GitHub Source">
-                                <i class="fa-brands fa-github"></i>
-                            </a>
-                            <div id="toggle-theme" class="theme-toggle" title="Toggle theme">
-                                <div class="theme-toggle__option" data-theme="light">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                                        stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px">
-                                        <circle cx="12" cy="12" r="4" />
-                                        <line x1="12" y1="2" x2="12" y2="4" />
-                                        <line x1="12" y1="20" x2="12" y2="22" />
-                                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                                        <line x1="2" y1="12" x2="4" y2="12" />
-                                        <line x1="20" y1="12" x2="22" y2="12" />
-                                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                                    </svg>
-                                    Light
-                                </div>
-                                <div class="theme-toggle__option" data-theme="dark">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                                        stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px">
-                                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                                    </svg>
-                                    Dark
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <hr class="border-secondary my-3 opacity-25">
-
-                <div class="row">
-                    <div class="col-12 text-center">
-                        <small class="mb-0" style="color:rgba(255,255,255,.4)">
-                            &copy; 2025 <span class="text-light fw-bold">RULEZET</span>. Built for security researchers.
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </footer>
-
-
+        {% include 'footer.html' %}
     </div>
 
-    {% block script %}
+    {% block toast_app %}
     <script type="module">
-
-        const { createApp, ref } = Vue
+        const { createApp } = Vue
+        import { message_list } from '/static/js/toaster.js';
         createApp({
             delimiters: ['[[', ']]'],
-            setup() {
-
-
-                const version = ref("")
-                async function fetchVersion() {
-                    const res = await fetch('/version')
-                    if (res.status === 200) {
-                        const data = await res.json()
-                        version.value = data.version
-                    }
-                }
-                fetchVersion()
-                return { version }
-            },
-        }).mount('#main-container')
+            setup() { return { message_list } }
+        }).mount('#rz-toast-app')
     </script>
     {% endblock %}
+
+    {% block script %}
+    {% endblock %}
+
     <script>
         $(document).ready(function () {
             $('.message').each((i, el) => {
@@ -259,7 +117,6 @@
         });
         (function () {
             const html = document.documentElement;
-
             function setTheme(theme) {
                 html.classList.remove("light-mode", "dark-mode");
                 html.classList.add(theme + "-mode");
@@ -267,24 +124,57 @@
                     document.body.classList.remove("light-mode", "dark-mode");
                     document.body.classList.add(theme + "-mode");
                 }
-                // update pill active state
                 document.querySelectorAll('.theme-toggle__option').forEach(opt => {
                     opt.classList.toggle('active', opt.dataset.theme === theme);
                 });
                 localStorage.setItem("theme", theme);
             }
-
             const saved = localStorage.getItem("theme") ||
                 (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
             setTheme(saved);
-
             document.addEventListener('click', function (e) {
                 const opt = e.target.closest('.theme-toggle__option');
                 if (opt && opt.dataset.theme) setTheme(opt.dataset.theme);
             });
         })();
-    </script>
-    <script>
+
+        (function () {
+            function dismissFlash(el) {
+                if (el.dataset.dismissing) return
+                el.dataset.dismissing = '1'
+                el.classList.remove('rz-show')
+                el.classList.add('rz-hide')
+                setTimeout(function () { el.remove() }, 300)
+            }
+
+            function initFlashes() {
+                var flashes = document.querySelectorAll('.rz-flash-container .rz-flash')
+                flashes.forEach(function (el, i) {
+                    var duration = parseInt(el.dataset.duration || '8000', 10)
+                    var delay = i * 100
+                    var bar = el.querySelector('.rz-flash__bar')
+                    if (bar) {
+                        bar.style.animationDuration = duration + 'ms'
+                        bar.style.animationDelay = delay + 'ms'
+                    }
+                    setTimeout(function () {
+                        requestAnimationFrame(function () {
+                            requestAnimationFrame(function () { el.classList.add('rz-show') })
+                        })
+                    }, delay)
+                    var btn = el.querySelector('.rz-flash__close')
+                    if (btn) btn.addEventListener('click', function () { dismissFlash(el) })
+                    setTimeout(function () { dismissFlash(el) }, duration + delay)
+                })
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initFlashes)
+            } else {
+                initFlashes()
+            }
+        })();
+
         (function () {
             let savedTheme = localStorage.getItem('theme');
             if (!savedTheme) {
@@ -300,11 +190,9 @@
         document.addEventListener("DOMContentLoaded", () => {
             const scrollToTopBtn = document.getElementById("scrollToTopBtn");
             if (!scrollToTopBtn) return;
-
             window.addEventListener("scroll", () => {
                 scrollToTopBtn.style.display = (window.scrollY > 300) ? "flex" : "none";
             });
-
             scrollToTopBtn.addEventListener("click", () => {
                 window.scrollTo({ top: 0, behavior: "smooth" });
             });
