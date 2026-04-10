@@ -223,12 +223,7 @@
                                     </span>
                                 </div>
 
-                                <button id="copyBtn"
-                                    class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm transition-all"
-                                    onclick="copyToClipboard()" title="Copy content">
-                                    <i id="copyIcon" class="fas fa-copy me-1"></i>
-                                    <span id="copyText" class="small fw-bold">Copy</span>
-                                </button>
+
                             </div>
 
                             <div class="border rounded-3 overflow-hidden shadow-sm">
@@ -276,25 +271,56 @@
                                 </div>
                                 <div v-else class="tab-content" id="ruleTabsContent">
                                     <div class="tab-pane fade show active" id="normal" role="tabpanel">
-                                        <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto;"><code class="javascript">[[ currentRule.to_string ]]</code></pre>
+                                        <div class="position-relative">
+                                            <button
+                                                class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm position-absolute top-0 end-0 m-2"
+                                                @click="copyContent('normal')" title="Copy content"
+                                                style="z-index: 10;">
+                                                <i class="fas fa-copy me-1"></i>
+                                                <span class="small fw-bold">Copy</span>
+                                            </button>
+                                            <pre class="custom-pre m-0 p-3"
+                                                style="max-height: 600px; overflow-y: auto;"><code class="javascript">[[ currentRule.to_string ]]</code></pre>
+                                        </div>
                                     </div>
                                     <div class="tab-pane fade" id="json" role="tabpanel">
-                                        <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_to_json}}"></code></pre>
+                                        <div class="position-relative">
+                                            <button
+                                                class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm position-absolute top-0 end-0 m-2"
+                                                @click="copyContent('json')" title="Copy content" style="z-index: 10;">
+                                                <i class="fas fa-copy me-1"></i>
+                                                <span class="small fw-bold">Copy</span>
+                                            </button>
+                                            <pre class="custom-pre m-0 p-3"
+                                                style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_to_json}}"></code></pre>
+                                        </div>
                                     </div>
                                     {% if rule_misp %}
                                     <div class="tab-pane fade" id="misp" role="tabpanel">
-                                        <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_misp}}"></code></pre>
+                                        <div class="position-relative">
+                                            <button
+                                                class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm position-absolute top-0 end-0 m-2"
+                                                @click="copyContent('misp')" title="Copy content" style="z-index: 10;">
+                                                <i class="fas fa-copy me-1"></i>
+                                                <span class="small fw-bold">Copy</span>
+                                            </button>
+                                            <pre class="custom-pre m-0 p-3"
+                                                style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_misp}}"></code></pre>
+                                        </div>
                                     </div>
                                     {% endif %}
-
                                     <div class="tab-pane fade" id="stix" role="tabpanel">
-                                        <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="rule_stix"></code></pre>
+                                        <div class="position-relative">
+                                            <button
+                                                class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm position-absolute top-0 end-0 m-2"
+                                                @click="copyContent('stix')" title="Copy content" style="z-index: 10;">
+                                                <i class="fas fa-copy me-1"></i>
+                                                <span class="small fw-bold">Copy</span>
+                                            </button>
+                                            <pre class="custom-pre m-0 p-3"
+                                                style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="rule_stix"></code></pre>
+                                        </div>
                                     </div>
-
                                 </div>
                             </div>
 
@@ -1502,6 +1528,21 @@
                 }
                 return colors[Math.abs(hash) % colors.length];
             }
+            function copyContent(tabId) {
+                const pane = document.getElementById(tabId);
+                const text = pane?.querySelector('pre')?.innerText || '';
+                if (!text) return;
+                navigator.clipboard.writeText(text).then(() => {
+                    const btn = pane.querySelector('button span');
+                    const icon = pane.querySelector('button i');
+                    btn.textContent = 'Copied';
+                    icon.classList.replace('fa-copy', 'fa-check');
+                    setTimeout(() => {
+                        btn.textContent = 'Copy';
+                        icon.classList.replace('fa-check', 'fa-copy');
+                    }, 2000);
+                });
+            }
 
             return {
                 getRandomColor,
@@ -1560,7 +1601,8 @@
                 refreshSimilarRules,
                 handleSimilarRulesFound,
                 rule_format_is_loading,
-                rule_stix
+                rule_stix,
+                copyContent
 
             };
         }
@@ -1583,39 +1625,6 @@
 
     const observer = new MutationObserver(() => applyHljsTheme());
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-    function copyToClipboard() {
-        const copyIcon = document.getElementById("copyIcon");
-        const copyText = document.getElementById("copyText");
 
-        // Find the currently visible tab pane
-        const tabPanes = document.querySelectorAll('.tab-pane');
-        let text = "";
-        tabPanes.forEach(pane => {
-            // offsetParent is null if the element is hidden
-            if (pane.offsetParent !== null) {
-                const pre = pane.querySelector('pre');
-                if (pre) text = pre.innerText;
-            }
-        });
-
-        if (!text) {
-            alert("Nothing to copy!");
-            return;
-        }
-
-        navigator.clipboard.writeText(text).then(() => {
-            copyIcon.classList.remove("fa-copy");
-            copyIcon.classList.add("fa-check");
-            copyText.textContent = "Copied";
-
-            setTimeout(() => {
-                copyIcon.classList.remove("fa-check");
-                copyIcon.classList.add("fa-copy");
-                copyText.textContent = "Copy";
-            }, 2000);
-        }).catch(() => {
-            alert("Failed to copy text.");
-        });
-    }
 </script>
 {% endblock %}
