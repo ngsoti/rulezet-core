@@ -1,12 +1,11 @@
 """add vulnerability_identifiers with default empty list
-
 Revision ID: 67d889c747bf
 Revises: 0419cbf0f1fa
 Create Date: 2026-02-04 07:29:27.194693
-
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = '67d889c747bf'
@@ -16,17 +15,25 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('bundle', sa.Column('vulnerability_identifiers', sa.Text(), nullable=True))
+    bind = op.get_bind()
+    inspector = inspect(bind)
 
-    op.execute("UPDATE bundle SET vulnerability_identifiers = '[]' WHERE vulnerability_identifiers IS NULL")
-
-    with op.batch_alter_table('bundle', schema=None) as batch_op:
-        batch_op.alter_column('vulnerability_identifiers',
-               existing_type=sa.Text(),
-               nullable=False,
-               server_default='[]')
+    bundle_columns = [col['name'] for col in inspector.get_columns('bundle')]
+    if 'vulnerability_identifiers' not in bundle_columns:
+        op.add_column('bundle', sa.Column('vulnerability_identifiers', sa.Text(), nullable=True))
+        op.execute("UPDATE bundle SET vulnerability_identifiers = '[]' WHERE vulnerability_identifiers IS NULL")
+        with op.batch_alter_table('bundle', schema=None) as batch_op:
+            batch_op.alter_column('vulnerability_identifiers',
+                existing_type=sa.Text(),
+                nullable=False,
+                server_default='[]')
 
 
 def downgrade():
-    with op.batch_alter_table('bundle', schema=None) as batch_op:
-        batch_op.drop_column('vulnerability_identifiers')
+    bind = op.get_bind()
+    inspector = inspect(bind)
+
+    bundle_columns = [col['name'] for col in inspector.get_columns('bundle')]
+    if 'vulnerability_identifiers' in bundle_columns:
+        with op.batch_alter_table('bundle', schema=None) as batch_op:
+            batch_op.drop_column('vulnerability_identifiers')

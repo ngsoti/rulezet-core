@@ -11,6 +11,7 @@ from app.features.rule.rule_format.utils_format.utils_import_update import delet
 from ..... import db
 from .....core.db_class.db import ImporterResult, User
 from app.features.rule import rule_core as RuleModel
+from app.features.rule.rules_core import bad_rule_core as BadRuleModel
 from flask import current_app
 from flask_login import current_user
 
@@ -139,7 +140,7 @@ class Session_class:
                                 self.skipped += 1
                                 self.count_per_format[rule_instance.format]["skipped"] += 1
                         else:
-                            RuleModel.save_invalid_rule(
+                            BadRuleModel.save_invalid_rule(
                                 form_dict=metadata,
                                 to_string=clean_text,
                                 rule_type=rule_instance.format,

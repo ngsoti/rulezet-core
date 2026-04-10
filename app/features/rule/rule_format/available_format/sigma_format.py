@@ -18,7 +18,7 @@ class SigmaRule(RuleType):
     Concrete implementation of RuleType for Sigma rules.
     """
 
-    def __init__(self, schema_path: str = "app/rule_format/schema_format/sigma_format.json"):
+    def __init__(self, schema_path: str = "app/features/rule/rule_format/schema_format/sigma_format.json"):
         self.schema = self._load_schema(schema_path)
 
     @property

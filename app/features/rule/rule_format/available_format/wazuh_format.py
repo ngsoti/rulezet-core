@@ -123,7 +123,7 @@ class WazuhRule(RuleType):
         """
         Get all Wazuh XML rule files from a repo.
         """
-        if file.endswith(".xml") and "rules" in file.lower():
+        if file.endswith(".xml"):
             return True
         return False
 
@@ -153,7 +153,7 @@ class WazuhRule(RuleType):
         for root, dirs, files in os.walk(repo_dir):
             dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
             for file in files:
-                if file.endswith(".xml") and "rules" in file.lower():
+                if file.endswith(".xml"):
                     rule_files.append(os.path.join(root, file))
         return rule_files
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:

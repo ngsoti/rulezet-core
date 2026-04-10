@@ -129,6 +129,7 @@ class YaraRule(RuleType):
             return rule_dict
             
         except Exception as e:
+            
             return {
                 "format": "yara",
                 "title": rule_name, 

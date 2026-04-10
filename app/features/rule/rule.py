@@ -2516,7 +2516,7 @@ def fix_new_rule(new_rule_id: int):
         flash("This rule is already marked as valid. Use 'Add Rule' instead.", "info")
         return redirect(request.referrer or url_for('rule.rules_summary'))
 
-    result_obj, error_message = RuleModel.save_invalid_rule_from_new_rule(
+    result_obj, error_message = BadRuleModel.save_invalid_rule_from_new_rule(
         new_rule_obj=temp_rule, 
         user=current_user,
         github_path=temp_rule.github_path

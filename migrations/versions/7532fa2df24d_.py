@@ -35,8 +35,17 @@ def upgrade():
     if 'auto_update_schedule' in existing_tables:
         op.drop_table('auto_update_schedule')
 
-    with op.batch_alter_table('rule_update_history', schema=None) as batch_op:
-        batch_op.create_foreign_key('fk_rule_update_history_rule_id_rule', 'rule', ['rule_id'], ['id'])
+    # Remove orphaned rows before adding FK constraint
+    if 'rule_update_history' in existing_tables:
+        op.execute("""
+            DELETE FROM rule_update_history
+            WHERE rule_id NOT IN (SELECT id FROM rule)
+        """)
+
+    existing_fks = [fk['name'] for fk in inspector.get_foreign_keys('rule_update_history')]
+    if 'fk_rule_update_history_rule_id_rule' not in existing_fks:
+        with op.batch_alter_table('rule_update_history', schema=None) as batch_op:
+            batch_op.create_foreign_key('fk_rule_update_history_rule_id_rule', 'rule', ['rule_id'], ['id'])
     # ### end Alembic commands ###
 
 

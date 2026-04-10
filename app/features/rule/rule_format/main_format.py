@@ -4,6 +4,7 @@ from ....core.db_class.db import *
 from app.features.rule.rule_format.available_format import * 
 
 from app.features.rule import rule_core as RuleModel
+from app.features.rule.rules_core import bad_rule_core as BadRuleModel
 from flask_login import current_user
 
 #############################################################################################
@@ -49,7 +50,7 @@ def Process_rules_by_format(format_files: list, format_rule: dict, info: dict, f
                 else:
                     skipped += 1
             else:
-                RuleModel.save_invalid_rule(
+                BadRuleModel.save_invalid_rule(
                     form_dict=metadata,
                     to_string=rule_text,
                     rule_type=format_name,
@@ -138,7 +139,6 @@ def verify_syntax_rule_by_format(rule_dict: dict) -> tuple[bool, str]:
             return False, error_msg
 
     except Exception as e:
-        print(f"Error validating rule: {str(e)}")
         return False, str(e) 
 
 # The rule_dict :
@@ -191,7 +191,7 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
 
         validation_result: ValidationResult = rule_instance.validate(raw_content)
         metadata = rule_instance.parse_metadata(raw_content, info, validation_result)
-        print(bad_rule_obj.github_path)
+
         metadata["github_path"] = bad_rule_obj.github_path
 
         result_dict = {
@@ -256,7 +256,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
     metadata = rule_instance.parse_metadata(rule_content, info, validation_result)
 
     if not validation_result.ok:
-        RuleModel.save_invalid_rule(
+        BadRuleModel.save_invalid_rule(
             form_dict=metadata,
             to_string=rule_content,
             rule_type=format_name,
@@ -278,8 +278,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
     if rule:
         return True, "Rule created", rule
     else:
-        print("j'ai pas ete cree")
-        RuleModel.save_invalid_rule(
+        BadRuleModel.save_invalid_rule_from_new_rule(
             form_dict=metadata,
             to_string=rule_content,
             rule_type=format_name,
