@@ -1,0 +1,364 @@
+/* ============================================================
+   toaster.css — Rulezet custom toast notifications
+   Slide from right, colored left border + light tinted bg
+   Compatible with light-mode / dark-mode via core.css vars
+   ============================================================ */
+
+/* ── Container ─────────────────────────────────────────────── */
+.rz-toast-container {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  pointer-events: none;
+  width: 360px;
+  max-width: calc(100vw - 2.5rem);
+}
+
+/* ── Base toast ─────────────────────────────────────────────── */
+.rz-toast {
+  pointer-events: all;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  border-left-width: 4px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  transform: translateX(calc(100% + 2rem));
+  opacity: 0;
+  transition:
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
+}
+
+.rz-toast.rz-show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.rz-toast.rz-hide {
+  transform: translateX(calc(100% + 2rem));
+  opacity: 0;
+  transition:
+    transform 0.28s cubic-bezier(0.55, 0, 1, 0.45),
+    opacity 0.22s ease;
+}
+
+/* ── Variants light ─────────────────────────────────────────── */
+.rz-toast--success {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  border-left-color: #198754;
+  color: #14532d;
+}
+.rz-toast--success .rz-toast__icon { color: #198754; }
+
+.rz-toast--warning {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+  border-left-color: #d97706;
+  color: #78350f;
+}
+.rz-toast--warning .rz-toast__icon { color: #d97706; }
+
+.rz-toast--danger,
+.rz-toast--error {
+  background-color: #fff1f2;
+  border-color: #fecdd3;
+  border-left-color: #dc3545;
+  color: #7f1d1d;
+}
+.rz-toast--danger .rz-toast__icon,
+.rz-toast--error .rz-toast__icon { color: #dc3545; }
+
+.rz-toast--info {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  border-left-color: var(--rule-name-color);
+  color: #1e3a5f;
+}
+.rz-toast--info .rz-toast__icon { color: var(--rule-name-color); }
+
+/* ── Variants dark ──────────────────────────────────────────── */
+body.dark-mode .rz-toast--success {
+  background-color: #052e16;
+  border-color: #166534;
+  border-left-color: #22c55e;
+  color: #bbf7d0;
+}
+body.dark-mode .rz-toast--success .rz-toast__icon { color: #22c55e; }
+
+body.dark-mode .rz-toast--warning {
+  background-color: #1c1400;
+  border-color: #92400e;
+  border-left-color: #f59e0b;
+  color: #fde68a;
+}
+body.dark-mode .rz-toast--warning .rz-toast__icon { color: #f59e0b; }
+
+body.dark-mode .rz-toast--danger,
+body.dark-mode .rz-toast--error {
+  background-color: #2d0a0a;
+  border-color: #7f1d1d;
+  border-left-color: #f87171;
+  color: #fecdd3;
+}
+body.dark-mode .rz-toast--danger .rz-toast__icon,
+body.dark-mode .rz-toast--error .rz-toast__icon { color: #f87171; }
+
+body.dark-mode .rz-toast--info {
+  background-color: #0c1a2e;
+  border-color: #1e3a5f;
+  border-left-color: rgb(10, 88, 202);
+  color: #bfdbfe;
+}
+body.dark-mode .rz-toast--info .rz-toast__icon { color: rgb(10, 88, 202); }
+
+/* ── Parts ──────────────────────────────────────────────────── */
+.rz-toast__icon {
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.rz-toast__body {
+  flex: 1;
+  word-break: break-word;
+}
+
+.rz-toast__close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  line-height: 1;
+  margin-top: 0.1rem;
+  opacity: 0.55;
+  color: inherit;
+  transition: opacity 0.15s, background 0.15s;
+}
+.rz-toast__close:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
+}
+body.dark-mode .rz-toast__close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Progress bar ───────────────────────────────────────────── */
+.rz-toast__bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  transform-origin: left;
+  opacity: 0.4;
+  animation: rz-bar-shrink linear forwards;
+}
+.rz-toast--success .rz-toast__bar { background: #198754; }
+.rz-toast--warning .rz-toast__bar { background: #d97706; }
+.rz-toast--danger .rz-toast__bar,
+.rz-toast--error .rz-toast__bar   { background: #dc3545; }
+.rz-toast--info .rz-toast__bar    { background: var(--rule-name-color); }
+
+body.dark-mode .rz-toast--success .rz-toast__bar { background: #22c55e; }
+body.dark-mode .rz-toast--warning .rz-toast__bar { background: #f59e0b; }
+body.dark-mode .rz-toast--danger .rz-toast__bar,
+body.dark-mode .rz-toast--error .rz-toast__bar   { background: #f87171; }
+
+@keyframes rz-bar-shrink {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* ── Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .rz-toast-container {
+    top: auto;
+    bottom: 1rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    max-width: 100%;
+  }
+}
+
+
+/* ============================================================
+   Flash alerts — server-side flashed messages (Jinja2)
+   Same visual style as toasts — class-driven transitions (no CSS animation forwards)
+   ============================================================ */
+
+.rz-flash-container {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  pointer-events: none;
+  width: 360px;
+  max-width: calc(100vw - 2.5rem);
+}
+
+/* hidden by default — JS adds .rz-show to slide in */
+.rz-flash {
+  pointer-events: all;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  border-left-width: 4px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+
+  transform: translateX(calc(100% + 2rem));
+  opacity: 0;
+  transition:
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
+}
+
+.rz-flash.rz-show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.rz-flash.rz-hide {
+  transform: translateX(calc(100% + 2rem));
+  opacity: 0;
+  transition:
+    transform 0.28s cubic-bezier(0.55, 0, 1, 0.45),
+    opacity 0.22s ease;
+}
+
+/* ── Variants light ─────────────────────────────────────────── */
+.rz-flash--success {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  border-left-color: #198754;
+  color: #14532d;
+}
+.rz-flash--success .rz-flash__icon { color: #198754; }
+.rz-flash--success .rz-flash__bar  { background: #198754; }
+
+.rz-flash--warning {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+  border-left-color: #d97706;
+  color: #78350f;
+}
+.rz-flash--warning .rz-flash__icon { color: #d97706; }
+.rz-flash--warning .rz-flash__bar  { background: #d97706; }
+
+.rz-flash--danger {
+  background-color: #fff1f2;
+  border-color: #fecdd3;
+  border-left-color: #dc3545;
+  color: #7f1d1d;
+}
+.rz-flash--danger .rz-flash__icon { color: #dc3545; }
+.rz-flash--danger .rz-flash__bar  { background: #dc3545; }
+
+.rz-flash--info {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  border-left-color: var(--rule-name-color);
+  color: #1e3a5f;
+}
+.rz-flash--info .rz-flash__icon { color: var(--rule-name-color); }
+.rz-flash--info .rz-flash__bar  { background: var(--rule-name-color); }
+
+/* ── Variants dark ──────────────────────────────────────────── */
+body.dark-mode .rz-flash--success {
+  background-color: #052e16; border-color: #166534;
+  border-left-color: #22c55e; color: #bbf7d0;
+}
+body.dark-mode .rz-flash--success .rz-flash__icon { color: #22c55e; }
+body.dark-mode .rz-flash--success .rz-flash__bar  { background: #22c55e; }
+
+body.dark-mode .rz-flash--warning {
+  background-color: #1c1400; border-color: #92400e;
+  border-left-color: #f59e0b; color: #fde68a;
+}
+body.dark-mode .rz-flash--warning .rz-flash__icon { color: #f59e0b; }
+body.dark-mode .rz-flash--warning .rz-flash__bar  { background: #f59e0b; }
+
+body.dark-mode .rz-flash--danger {
+  background-color: #2d0a0a; border-color: #7f1d1d;
+  border-left-color: #f87171; color: #fecdd3;
+}
+body.dark-mode .rz-flash--danger .rz-flash__icon { color: #f87171; }
+body.dark-mode .rz-flash--danger .rz-flash__bar  { background: #f87171; }
+
+body.dark-mode .rz-flash--info {
+  background-color: #0c1a2e; border-color: #1e3a5f;
+  border-left-color: rgb(10, 88, 202); color: #bfdbfe;
+}
+body.dark-mode .rz-flash--info .rz-flash__icon { color: rgb(10, 88, 202); }
+body.dark-mode .rz-flash--info .rz-flash__bar  { background: rgb(10, 88, 202); }
+
+/* ── Parts ──────────────────────────────────────────────────── */
+.rz-flash__icon {
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.rz-flash__body {
+  flex: 1;
+  word-break: break-word;
+}
+
+.rz-flash__close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  line-height: 1;
+  margin-top: 0.1rem;
+  opacity: 0.55;
+  color: inherit;
+  transition: opacity 0.15s, background 0.15s;
+}
+.rz-flash__close:hover { opacity: 1; background: rgba(0,0,0,.08); }
+body.dark-mode .rz-flash__close:hover { background: rgba(255,255,255,.1); }
+
+/* ── Progress bar ───────────────────────────────────────────── */
+.rz-flash__bar {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 3px; width: 100%;
+  transform-origin: left;
+  opacity: 0.4;
+  animation: rz-bar-shrink linear forwards;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .rz-flash-container {
+    top: auto; bottom: 1rem;
+    right: 0.75rem; left: 0.75rem;
+    width: auto; max-width: 100%;
+  }
+}

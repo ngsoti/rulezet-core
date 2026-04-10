@@ -1,23 +1,28 @@
-{% macro render_flashes(class) %}
-{% with msgs = get_flashed_messages(category_filter=[class]) %}
+{% macro render_flashes(category) %}
+{% with msgs = get_flashed_messages(category_filter=[category]) %}
 {% for msg in msgs %}
-{% if class == 'error'%}
-<div class="alert alert-danger alert-dismissible fade show message" data-autohide="3">
-    {%else%}
-    <div class="alert alert-{{ class }} alert-dismissible fade show message" data-autohide="3">
-        {%endif%}
-        {{ msg }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endfor %}
-    {% endwith %}
-    {% endmacro %}
+{% set variant = 'danger' if category == 'error' else category %}
+{% set icons = {
+'success': 'fas fa-check',
+'warning': 'fas fa-triangle-exclamation',
+'danger': 'fas fa-xmark',
+'info': 'fas fa-circle-info'
+} %}
+<div class="rz-flash rz-flash--{{ variant }}" data-duration="4000">
+    <i class="{{ icons.get(variant, 'fas fa-bell') }} rz-flash__icon"></i>
+    <div class="rz-flash__body">{{ msg }}</div>
+    <button type="button" class="rz-flash__close" aria-label="Close">
+        <i class="fas fa-xmark"></i>
+    </button>
+    <div class="rz-flash__bar"></div>
+</div>
+{% endfor %}
+{% endwith %}
+{% endmacro %}
 
-    <div class="ui text container">
-        <div class="flashes" style="position:fixed; left: 40%">
-            {{ render_flashes('error') }}
-            {{ render_flashes('warning') }}
-            {{ render_flashes('info') }}
-            {{ render_flashes('success') }}
-        </div>
-    </div>
+<div class="rz-flash-container">
+    {{ render_flashes('error') }}
+    {{ render_flashes('warning') }}
+    {{ render_flashes('info') }}
+    {{ render_flashes('success') }}
+</div>
