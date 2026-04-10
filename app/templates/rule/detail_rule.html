@@ -255,14 +255,16 @@
                                         </button>
                                     </li>
                                     {% endif %}
-                                    {% if rule_stix %}
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link small fw-bold py-2 border-0" id="stix-tab"
-                                            data-bs-toggle="tab" data-bs-target="#stix" type="button" role="tab">
-                                            <i class="fas fa-shield-halved"></i> STIX Object
-                                        </button>
-                                    </li>
-                                    {% endif %}
+                                    <template v-if="rule_stix">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link small fw-bold py-2 border-0" id="stix-tab"
+                                                data-bs-toggle="tab" data-bs-target="#stix" type="button" role="tab">
+                                                <i class="fas fa-shield-halved"></i> STIX Object
+                                            </button>
+                                        </li>
+                                    </template>
+
+
                                 </ul>
 
                                 <div v-if="rule_format_is_loading"
@@ -287,12 +289,12 @@
                                             style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_misp}}"></code></pre>
                                     </div>
                                     {% endif %}
-                                    {% if rule_stix %}
+
                                     <div class="tab-pane fade" id="stix" role="tabpanel">
                                         <pre class="custom-pre m-0 p-3"
-                                            style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{ rule_stix }}"></code></pre>
+                                            style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="rule_stix"></code></pre>
                                     </div>
-                                    {% endif %}
+
                                 </div>
                             </div>
 
@@ -341,14 +343,16 @@
                                         {% endif %}
                                         <li><button class="dropdown-item small" @click="download_rule('json')"><i
                                                     class="fas fa-code me-2 opacity-50"></i>Download JSON</button></li>
-                                        {% if rule_stix %}
+
                                         <li><button class="dropdown-item small" @click="download_rule('stix')"><i
                                                     class="fas fa-street-view me-2 opacity-50"></i>Download
                                                 STIX</button></li>
-                                        {% endif %}
-                                        <li><button class="dropdown-item small" @click="download_rule('all')"><i
-                                                    class="fas fa-download me-2 opacity-50"></i>Download All</button>
-                                        </li>
+                                        <template v-if="rule_stix">
+                                            <li><button class="dropdown-item small" @click="download_rule('all')"><i
+                                                        class="fas fa-download me-2 opacity-50"></i>Download
+                                                    All</button>
+                                            </li>
+                                        </template>
                                     </ul>
                                 </div>
 
@@ -974,9 +978,24 @@
 
 
             }
+            get_stix_format(rule_id)
+            const rule_stix = ref(null)
 
+            async function get_stix_format(rule_id) {
+                try {
+                    const res = await fetch('/rule/get_stix/' + rule_id);
+                    const data = await res.json();
 
-
+                    if (data.stix) {
+                        const stixContent = JSON.parse(data.stix);
+                        rule_stix.value = JSON.stringify(stixContent, null, 4);
+                    } else {
+                        rule_stix.value = null;
+                    }
+                } catch (e) {
+                    create_message("Error loading STIX format", "danger");
+                }
+            }
 
 
             const displayTags = ref([]);
@@ -1541,6 +1560,7 @@
                 refreshSimilarRules,
                 handleSimilarRulesFound,
                 rule_format_is_loading,
+                rule_stix
 
             };
         }

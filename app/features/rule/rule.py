@@ -514,10 +514,10 @@ def detail_rule(rule_id)-> render_template:
         return render_template("404.html")
     rule_misp = content_convert_to_misp_object(rule_id)
 
-    if rule_misp:
-        rule_stix = convert_misp_to_stix(rule_misp)
-        rule_stix = json.dumps(rule_stix, indent=4)
-
+    # if rule_misp:
+    #     rule_stix = convert_misp_to_stix(rule_misp)
+    #     rule_stix = json.dumps(rule_stix, indent=4)
+    rule_stix = None
     if not rule_misp:
         rule_misp = None
         rule_stix = None
@@ -529,6 +529,16 @@ def detail_rule(rule_id)-> render_template:
     if rule:
         return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp=rule_misp, rule_to_json=rule_to_json, rule_stix=rule_stix)
     return render_template("404.html")
+
+
+@rule_blueprint.route("/get_stix/<int:rule_id>")
+def get_stix(rule_id):
+    rule_misp = content_convert_to_misp_object(rule_id)
+    if not rule_misp:
+        return jsonify({"stix": None})
+    rule_stix = convert_misp_to_stix(rule_misp)
+    return jsonify({"stix": json.dumps(rule_stix, indent=4) if rule_stix else None})
+
 @rule_blueprint.route("/download_rule", methods=['GET'])
 def download_rule_unified() -> Response:
     rule_id = request.args.get('rule_id', type=int)
