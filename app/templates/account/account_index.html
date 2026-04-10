@@ -1,65 +1,147 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="container  justify-content-center my-5">
-    <div class="card shadow border-0">
-        <div class="card-body p-4 bg-light rounded">
-            <div class="mb-4 border-bottom pb-3">
-                <h2 class="mb-3 text-center text-primary fw-bold">
-                    Account Information
-                    <div class="mx-auto"
-                        style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
-                </h2>
-                <p class="text-muted mt-2 text-center">
-                    Review and manage your account details below. Keep your information up to date to ensure seamless
-                    access to all features.
-                </p>
-            </div>
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/account/user_detail.css') }}">
+{% endblock %}
 
-            <div class="table-responsive">
-                <table class="table">
-                    <tr>
-                        <td style="color:#494950"><i class="fas fa-id-badge me-2 text-secondary"></i>First Name</td>
-                        <td><b>{{user.first_name}}</b></td>
-                    </tr>
-                    <tr>
-                        <td style="color:#494950"><i class="fas fa-id-badge me-2 text-secondary"></i>Last Name</td>
-                        <td><b>{{user.last_name}}</b></td>
-                    </tr>
-                    <tr>
-                        <td style="color:#494950"><i class="fas fa-envelope me-2 text-secondary"></i>Email</td>
-                        <td><b>{{user.email}}</b></td>
-                    </tr>
-                    <tr>
-                        <td style="color:#494950"><i class="fas fa-key me-2 text-secondary"></i>API key</td>
-                        <td>
-                            {% if user.api_key %}
-                            <div class="d-flex align-items-center">
-                                <span id="api-key" class="api-key blurred me-2"><b>{{ user.api_key }}</b></span>
-                                <button id="toggle-api-key" type="button"
-                                    class="btn btn-sm btn-outline-secondary blur-btn" aria-pressed="false"
-                                    aria-label="Show API key" title="Show API key" data-visible="false">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                            (click <a href="http://rulezet.org/api/">here for the API</a>).
-                            {% else %}
-                            <span class="text-muted"><b>No API key</b></span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                </table>
+{% block content %}
+<div class="container my-5" id="page-app" v-cloak>
+
+    <!-- Header -->
+    <div class="mb-5 header-section text-center">
+        <div class="position-relative d-inline-block mb-3">
+            <div class="rounded-circle shadow-sm d-flex align-items-center justify-content-center bg-light border border-2 border-primary"
+                style="width: 120px; height: 120px; overflow: hidden;">
+                <i class="fas fa-user fa-4x text-primary opacity-50"></i>
             </div>
-            <div class="text-end mt-4">
-                <a class="btn btn-outline-success btn-lg" href="{{ url_for('account.edit_user') }}">
-                    <i class="fas fa-edit me-2"></i>Edit Profile
-                </a>
+            <span class="position-absolute bottom-0 end-0 p-2 bg-success border border-2 border-white rounded-circle"
+                title="Online" style="margin-bottom: 5px; margin-right: 5px;"></span>
+        </div>
+        <h1 class="mb-2 text-primary fw-bold text-uppercase" style="letter-spacing: 2px;">
+            {{ user.get_username() }}
+        </h1>
+        <p class="text-muted mb-0 fw-medium">
+            <i class="fas fa-id-badge me-2 text-secondary"></i>
+            ACCOUNT INFORMATION AND SETTINGS
+        </p>
+        <div class="mx-auto mt-3 bg-primary opacity-25" style="width: 60px; height: 4px; border-radius: 2px;"></div>
+    </div>
+
+    <!-- Main card -->
+    <div class="User-detail-global-info">
+
+        <!-- Avatar row -->
+        <div class="avatar-container">
+            <div class="user-avatar">
+                {{ user.first_name[0] }}{{ user.last_name[0] }}
+            </div>
+            <div class="avatar-info">
+                <div class="avatar-name">{{ user.username }}</div>
+                <div class="avatar-email">{{ user.email }}</div>
             </div>
         </div>
+
+        <!-- Info grid -->
+        <div class="global-info-grid">
+            <div class="info-item">
+                <label class="info-item-label">First Name</label>
+                <div class="info-item-value">{{ user.first_name }}</div>
+            </div>
+            <div class="info-item">
+                <label class="info-item-label">Last Name</label>
+                <div class="info-item-value">{{ user.last_name }}</div>
+            </div>
+            <div class="info-item">
+                <label class="info-item-label">Username</label>
+                <div class="info-item-value">{{ user.get_username() }}</div>
+            </div>
+            <div class="info-item">
+                <label class="info-item-label">User ID</label>
+                <div class="info-item-value font-monospace">#{{ user.id }}</div>
+            </div>
+            <div class="info-item">
+                <label class="info-item-label">Verification</label>
+                {% if user.is_verified %}
+                <div class="info-badge badge-verified">
+                    <i class="fas fa-check-circle"></i> Verified
+                </div>
+                {% else %}
+                <div class="info-badge badge-unverified">
+                    <i class="fas fa-clock"></i> Pending
+                </div>
+                {% endif %}
+            </div>
+            <div class="info-item">
+                <label class="info-item-label">Role</label>
+                {% if user.is_admin() %}
+                <div class="info-badge badge-admin">
+                    <i class="fas fa-crown"></i> Administrator
+                </div>
+                {% else %}
+                <div class="info-badge">
+                    <i class="fas fa-user"></i> User
+                </div>
+                {% endif %}
+            </div>
+            <div class="info-item">
+                <label class="info-item-label">Email Address</label>
+                <div class="info-item-value">
+                    {{ user.email }}
+                </div>
+            </div>
+        </div>
+
+        <!-- API Key section -->
+        <div class="info-section-header mt-3">
+            <i class="fas fa-key"></i>
+            <h3>API Access</h3>
+        </div>
+        {% if user.api_key %}
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+            <code id="api-key" class="api-key blurred flex-grow-1 p-2 rounded"
+                style="background: var(--code-bg-color); font-size: 0.85rem; word-break: break-all;">
+                {{ user.api_key }}
+            </code>
+            <button id="toggle-api-key" type="button" class="btn btn-sm btn-outline-secondary blur-btn"
+                title="Show/Hide" data-visible="false">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary"
+                onclick="navigator.clipboard.writeText('{{ user.api_key }}').then(() => window.create_message('API key copied!', 'success-subtle'))"
+                title="Copy">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>
+        <small class="text-muted">
+            Use the <code>X-API-KEY</code> header —
+            <a href="http://rulezet.org/api/" target="_blank">API docs <i class="fas fa-arrow-up-right-from-square ms-1"
+                    style="font-size: 0.7rem;"></i></a>
+        </small>
+        {% else %}
+        <p class="text-muted mb-0"><i class="fas fa-ban me-2"></i>No API key generated yet.</p>
+        {% endif %}
     </div>
+
+    <!-- Actions -->
+    <div class="text-end mt-2 mb-5">
+        <a class="btn btn-outline-success" href="{{ url_for('account.edit_user') }}">
+            <i class="fas fa-edit me-2"></i>Edit Profile
+        </a>
+    </div>
+
 </div>
 {% endblock %}
-{% block scripts %}
 
+{% block script %}
+<script type="module">
+    const { createApp } = Vue;
+    import { message_list, create_message } from '/static/js/toaster.js';
 
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() { return { message_list }; }
+    }).mount('#page-app');
+
+    window.create_message = create_message;
+</script>
 {% endblock %}

@@ -29,7 +29,7 @@ class EditUserForm(FlaskForm):
             Regexp(r'.*\d.*', message="Password must contain at least one digit.")
         ]
     )
-    submit = SubmitField('Register')
+    submit = SubmitField('Save changes')
 
     def validate_email(self, field):
         if field.data != current_user.email:

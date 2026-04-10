@@ -362,3 +362,14 @@ body.dark-mode .rz-flash__close:hover { background: rgba(255,255,255,.1); }
     width: auto; max-width: 100%;
   }
 }
+
+.rz-toast__link {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    opacity: 0.9;
+    white-space: nowrap;
+}
+.rz-toast__link:hover {
+    opacity: 1;
+}

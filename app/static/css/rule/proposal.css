@@ -1,0 +1,56 @@
+.skeleton-line {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(
+        90deg,
+        var(--light-bg-color) 25%,
+        var(--border-color) 50%,
+        var(--light-bg-color) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.2s infinite;
+}
+
+@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+
+.proposal-history-container .btn {
+    transition: filter 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.proposal-history-container .btn:hover {
+    filter: brightness(0.92);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+.proposal-history-container .btn:active {
+    transform: translateY(0px);
+    filter: brightness(0.85);
+    box-shadow: none !important;
+}
+
+/* pending row highlight */
+.proposal-history-container tbody tr.row-pending {
+    background-color: rgba(255, 193, 7, 0.06);
+}
+
+body.dark-mode .proposal-history-container tbody tr.row-pending {
+    background-color: rgba(255, 193, 7, 0.08);
+}
+
+.proposal-history-container tbody tr.row-pending:hover {
+    background-color: rgba(255, 193, 7, 0.12);
+}
+
+body.dark-mode .proposal-history-container tbody tr.row-pending:hover {
+    background-color: rgba(255, 193, 7, 0.15);
+}
+
+/* left accent bar */
+.proposal-history-container tbody tr.row-pending {
+    border-left: 3px solid rgba(255, 193, 7, 0.6) !important;
+}

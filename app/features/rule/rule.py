@@ -783,53 +783,44 @@ def rule_propose_edit() -> render_template:
     """Redirect to propose an edit"""
     return render_template("rule/rule_propose_edit.html")
 
-@rule_blueprint.route("/get_rules_propose_edit_page", methods=['GET'])
+@rule_blueprint.route('/get_rules_propose_edit_page', methods=['GET'])
+@login_required
 def get_rules_propose_edit_page() -> jsonify:
-    """Get all the changes propose"""
     page = request.args.get('page', 1, type=int)
-    if current_user.is_admin():
-        rules_pendings = RuleModel.get_rules_edit_propose_page_pending_admin(page)
-    else:
-        rules_pendings = RuleModel.get_rules_edit_propose_page_pending(page)
-    if rules_pendings:
-        rules_pendings_list = [rule_pending.to_json() for rule_pending in rules_pendings]
-        return jsonify({
-            "total_pages_pending": rules_pendings.pages,
-            "rules_pendings_list": rules_pendings_list
-        })
-    return jsonify({"message": "No Rule"})
+    result = RuleModel.get_rules_propose_edit_page(page, current_user.id, current_user.is_admin())
+    return jsonify({
+        "rules_pendings_list": [r.to_json() for r in result],
+        "total_pages_pending": result.pages,
+        "total_count": result.total,
+    })
 
+@rule_blueprint.route('/get_my_proposals', methods=['GET'])
+@login_required
+def get_my_proposals() -> jsonify:
+    """Get proposals submitted by current user"""
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '', type=str)
+    status = request.args.get('status', '', type=str)
 
-@rule_blueprint.route("/get_rules_propose_edit_history_page", methods=['GET'])
+    result = RuleModel.get_my_proposals_page(page, current_user.id, search=search, status=status)
+    return jsonify({
+        "rules_list": [r.to_json() for r in result],
+        "total_pages_old": result.pages,
+    })
+
+@rule_blueprint.route('/get_rules_propose_edit_history_page', methods=['GET'])
 @login_required
 def get_rules_propose_edit_history_page() -> jsonify:
-    """Get all proposed edit changes (paginated history)"""
     page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '', type=str)
+    status = request.args.get('status', '', type=str)
 
-    if current_user.is_admin():
-        rules_propose_paginated = RuleModel.get_rules_edit_propose_page_admin(page)
-    else:
-        rules_propose_paginated = RuleModel.get_rules_edit_propose_page(page)
-
-    rules_list = []
-    for rule in rules_propose_paginated.items:
-        old_content = rule.old_content or ""
-        new_content = rule.proposed_content or ""
-
-        old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
-
-        d = rule.to_json()
-        d['old_diff_html'] = old_html
-        d['new_diff_html'] = new_html
-
-        rules_list.append(d)
-
-    if rules_list:
-        return jsonify({
-            "rules_list": rules_list,
-            "total_pages_old": rules_propose_paginated.pages
-        })
-    return jsonify({"message": "No Rule"})
+    result , total_pending = RuleModel.get_rules_propose_edit_history_page(page, search=search, status=status, user_id=current_user.id, is_admin=current_user.is_admin())
+    return jsonify({
+        "rules_list": [r.to_json() for r in result],
+        "total_pages_old": result.pages,
+        "total_count": total_pending
+    })
 
 @rule_blueprint.route("/get_rules_propose_page", methods=['GET'])
 def get_rules_propose_page() -> jsonify:
@@ -883,7 +874,7 @@ def propose_edit(rule_id) -> redirect:
         "message": message,
     }
 
-    success = RuleModel.propose_edit_core(form, current_user.id)
+    success , proposal_id = RuleModel.propose_edit_core(form, current_user.id)
     if success:
         # add to gamification 
         gamification = AccountModel.get_or_create_gamification_profile(current_user.id)
@@ -893,7 +884,8 @@ def propose_edit(rule_id) -> redirect:
         
         _ = AccountModel.update_propose_edit_gamification(gamification.id , "add_one_to_suggested")
 
-        flash("Request sended.", "success")
+
+        flash("Request sended.", "success", f"/rule/proposal_content_discuss?id={proposal_id}")
     else:
         flash("Request sended but fail.", "error")
     return redirect(url_for('rule.detail_rule', rule_id=rule_id))
@@ -971,6 +963,42 @@ def validate_proposal() -> jsonify:
     else:
         return render_template("access_denied.html")
 
+# manage_proposals
+@rule_blueprint.route("/manage_proposals", methods=['POST'])
+@login_required
+def manage_proposals() -> jsonify:
+    """Bulk accept or reject proposals"""
+    data = request.get_json()
+    if not data:
+        return jsonify({"message": "Invalid request.", "success": False, "toast_class": "danger-subtle"}), 400
+
+    action = data.get("action")  # "accept" or "reject"
+    mode = data.get("mode")      # "all" or "partial"
+    selected_ids = data.get("selected_ids", [])
+    excluded_ids = data.get("excluded_ids", [])
+
+    if action not in ("accept", "reject"):
+        return jsonify({"message": "Invalid action.", "success": False, "toast_class": "danger-subtle"}), 400
+
+    result = RuleModel.bulk_manage_proposals(
+        action=action,
+        mode=mode,
+        selected_ids=selected_ids,
+        excluded_ids=excluded_ids,
+        reviewed_by_id=current_user.id
+    )
+
+    if result["success"]:
+        return jsonify({
+            "message": result["message"],
+            "success": True,
+            "toast_class": "success-subtle"
+        }), 200
+    return jsonify({
+        "message": result["message"],
+        "success": False,
+        "toast_class": "danger-subtle"
+    }), 500
 
 @rule_blueprint.route('/proposal_content_discuss', methods=['GET'])
 @login_required
@@ -1033,17 +1061,20 @@ def delete_comment_discuss() -> jsonify:
 @rule_blueprint.route('/get_discuss_part_from', methods=['GET'])
 @login_required
 def get_discuss_part_from() -> jsonify:
-    """Get all the discuss  where the current user speak"""
-    page = request.args.get('page', type=int)
-    all_discuss_proposal = RuleModel.get_all_rules_edit_propose_user_part_from_page(page , current_user.id)
+    """Get all the discuss where the current user speak"""
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '', type=str)
+    status = request.args.get('status', '', type=str)
 
+    all_discuss_proposal = RuleModel.get_all_rules_edit_propose_user_part_from_page(
+        page, current_user.id, search=search, status=status
+    )
     if all_discuss_proposal:
-        discuss_list = [rule.to_json() for rule in all_discuss_proposal]
         return jsonify({
-            "discuss_list": discuss_list,
-            "total_page_discuss": all_discuss_proposal.pages,
+            "rules_list": [rule.to_json() for rule in all_discuss_proposal],
+            "total_pages_old": all_discuss_proposal.pages,
         })
-    return jsonify({"message": "No Discuss"})
+    return jsonify({"rules_list": [], "total_pages_old": 1})
 
 #########################
 #   Import from Github  #

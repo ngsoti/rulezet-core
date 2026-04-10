@@ -332,7 +332,7 @@
                     const rule = rules_list.value.find(r => r.id === rule_id);
                     if (rule) rule.is_favorited = data.is_favorited;
                 }
-                create_message(data.message, data.toast_class);
+                create_message(data.message, data.toast_class, false, null, "/rule/owner_rules");
             }
 
             function animateClick(event) {

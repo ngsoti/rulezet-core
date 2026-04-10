@@ -1305,7 +1305,7 @@
                     toast_class: data.toast_class,
                     id: Math.random()
                 };
-                create_message(data.message, data.toast_class);
+                create_message(data.message, data.toast_class, false, null, "/rule/owner_rules");
             }
 
             async function favoriteSimilar(similar_rule_id) {

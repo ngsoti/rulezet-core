@@ -7,7 +7,7 @@
 const { nextTick, ref } = Vue
 export const message_list = ref([])
 
-const DURATION = 8000  // ms before auto-dismiss
+const DURATION = 4000  // ms before auto-dismiss
 
 function manage_icon(toast_class) {
   switch (toast_class) {
@@ -47,40 +47,33 @@ function dismiss(id) {
   }, 300)
 }
 
-export async function create_message(message, toast_class, not_hide, icon) {
-  const id = Math.random().toString(36).slice(2)
-  if (!icon) icon = manage_icon(toast_class)
-  const variant = to_variant(toast_class)
-
-  const message_loc = { id, message, toast_class, variant, icon, not_hide }
-  message_list.value.push(message_loc)
-  await nextTick()
-
-  const el = document.getElementById('rz-toast-' + id)
-  if (!el) return
-
-  // Set progress bar duration
-  const bar = el.querySelector('.rz-toast__bar')
-  if (bar) {
-    if (not_hide) {
-      bar.style.display = 'none'
-    } else {
-      bar.style.animationDuration = DURATION + 'ms'
+export async function create_message(message, toast_class, not_hide, icon, link = null) {
+    const id = Math.random().toString(36).slice(2)
+    if (!icon) icon = manage_icon(toast_class)
+    const variant = to_variant(toast_class)
+   const message_loc = { 
+    id, message, toast_class, variant, icon, not_hide, 
+    link: link || null  
+}
+    message_list.value.push(message_loc)
+    await nextTick()
+    const el = document.getElementById('rz-toast-' + id)
+    if (!el) return
+    const bar = el.querySelector('.rz-toast__bar')
+    if (bar) {
+        if (not_hide) {
+            bar.style.display = 'none'
+        } else {
+            bar.style.animationDuration = DURATION + 'ms'
+        }
     }
-  }
-
-  // Trigger slide-in (double rAF ensures transition fires after paint)
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => el.classList.add('rz-show'))
-  })
-
-  // Auto-dismiss
-  if (!not_hide) {
-    setTimeout(() => dismiss(id), DURATION)
-  }
-
-  // Expose dismiss on close button
-  el.querySelector('.rz-toast__close')?.addEventListener('click', () => dismiss(id))
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => el.classList.add('rz-show'))
+    })
+    if (!not_hide) {
+        setTimeout(() => dismiss(id), DURATION)
+    }
+    el.querySelector('.rz-toast__close')?.addEventListener('click', () => dismiss(id))
 }
 
 export async function display_toast(res, not_hide = false) {

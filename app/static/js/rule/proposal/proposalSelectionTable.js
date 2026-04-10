@@ -1,4 +1,5 @@
 import PaginationComponent from '/static/js/rule/paginationComponent.js';
+import { create_message } from '/static/js/toaster.js';
 
 const ProposalSelectionTable = {
     props: {
@@ -76,12 +77,10 @@ const ProposalSelectionTable = {
                 if (res.status === 200) {
                     this.fetchRules(this.currentPage);
                 }
-                // Global toast function if available
-                if (typeof create_message !== 'undefined') {
-                    create_message(result.message, result.toast_class);
-                }
+                create_message(result.message, result.toast_class); 
             } catch (err) {
                 console.error("Decision error:", err);
+                create_message("An error occurred.", "danger-subtle");
             } finally {
                 this.loading = false;
             }
@@ -149,12 +148,12 @@ const ProposalSelectionTable = {
                 });
 
                 if (response.ok) {
-                    alert(`Bulk ${actionType} successful.`);
+                    create_message(`Successfully submitted ${this.selectedCount} proposals for ${actionType}.`, 'success');
                     this.clearAllSelection();
                     this.fetchRules(this.currentPage);
                 }
             } catch (err) {
-                alert("An error occurred during bulk processing.");
+                create_message("An error occurred during bulk processing.", 'error');
             } finally {
                 this.loading = false;
             }

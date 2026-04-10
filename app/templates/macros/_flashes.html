@@ -8,9 +8,19 @@
 'danger': 'fas fa-xmark',
 'info': 'fas fa-circle-info'
 } %}
+{% set parts = msg.split('||') %}
+{% set msg_text = parts[0] %}
+{% set msg_link = parts[1] if parts|length > 1 else None %}
 <div class="rz-flash rz-flash--{{ variant }}" data-duration="4000">
     <i class="{{ icons.get(variant, 'fas fa-bell') }} rz-flash__icon"></i>
-    <div class="rz-flash__body">{{ msg }}</div>
+    <div class="rz-flash__body">
+        {{ msg_text }}
+        {% if msg_link %}
+        <a href="{{ msg_link }}" class="rz-flash__link ms-1">
+            Click here <i class="fas fa-arrow-right ms-1" style="font-size: 0.7rem;"></i>
+        </a>
+        {% endif %}
+    </div>
     <button type="button" class="rz-flash__close" aria-label="Close">
         <i class="fas fa-xmark"></i>
     </button>

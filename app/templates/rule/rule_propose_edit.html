@@ -2,588 +2,129 @@
 {% block head %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/proposal.css') }}">
 {% endblock %}
+
 {% block content %}
 <div class="container mt-4" id="main-container" v-cloak>
-    <div class="mb-4 border-bottom pb-3">
-        <h2 class="fw-bold mb-1 text-center text-primary">Rule Change Proposals</h2>
-        <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
-        <p class="text-muted mt-2">
-            Manage and review proposed edits to existing rules. Accept or reject changes, view proposal history, and
-            participate in discussions to ensure the quality and accuracy of our rule repository.
+
+    <div class="mb-5 text-center">
+        <h2 class="fw-bold text-primary mb-2">
+            <i class="fa-solid fa-code-branch me-2"></i>Rule Change Proposals
+        </h2>
+        <div class="mx-auto mb-3" style="width: 50px; height: 4px; background: var(--bs-primary); border-radius: 10px;">
+        </div>
+        <p class="text-muted mx-auto" style="max-width: 600px;">
+            Manage and review proposed edits to existing rules.
         </p>
     </div>
 
-
-    <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist">
+    <ul class="nav nav-underline justify-content-center w-100 mb-4" role="tablist">
         <li class="nav-item flex-fill text-center">
-            <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab"
-                aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
-                Manage Proposals
+            <a class="nav-link active fw-bold px-4" data-bs-toggle="tab" href="#pane-all" role="tab"
+                style="color: var(--text-color);">
+                <i class="fas fa-list me-2"></i>All Proposals
+                <span v-if="pendingCount > 0" class="badge rounded-pill ms-1"
+                    style="font-size: 0.6rem; background: #dc3545; color: white; vertical-align: top; margin-top: 2px;">
+                    [[ pendingCount ]]
+                </span>
             </a>
         </li>
         <li class="nav-item flex-fill text-center">
-            <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab"
-                aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
-                Proposal History
-            </a>
-        </li>
-        <li class="nav-item flex-fill text-center">
-            <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab"
-                aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
-                Discussions
+            <a class="nav-link fw-bold px-4" data-bs-toggle="tab" href="#pane-mine" role="tab"
+                style="color: var(--text-color);">
+                <i class="fas fa-user me-2"></i>My Submissions
             </a>
         </li>
     </ul>
 
+    <div class="tab-content">
 
-
-    <div class="tab-content" id="exampleTabsContent">
-        <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
-            <div class="card card-body shadow-sm">
-                <proposal-selection-table submit-endpoint="/rule/votre_route_bulk_action"
-                    csrf-token="{{ csrf_token() }}">
-                </proposal-selection-table>
-            </div>
-        </div>
-        <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
-            <div class="card card-body shadow-sm" id="main-container">
-
-                <div class="accordion" id="rulesAccordion">
-                    <template v-if="rules_list && rules_list.length > 0">
-                        <div class="accordion-item mb-3 shadow-sm" v-for="(rule, index) in rules_list" :key="rule.id">
-
-                            <h2 class="accordion-header" :id="'heading' + rule.id">
-                                <button class="accordion-button collapsed py-3" type="button" data-bs-toggle="modal"
-                                    data-bs-target="#fullscreenDiffModal" @click="loadDiffInModal(rule)">
-
-                                    <div class="d-flex w-100 align-items-center">
-                                        <div style="min-width: 50px;">
-                                            <strong>[[ index + 1 ]].</strong>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3 text-start">
-                                            <span class="fw-bold">[[ rule.rule_name ]]</span>
-                                        </div>
-
-                                        <div class="me-3">
-                                            <span :class="{
-                                        'badge bg-secondary': rule.status === 'pending',
-                                        'badge bg-success': rule.status === 'accepted',
-                                        'badge bg-danger': rule.status === 'rejected'
-                                    }">
-                                                [[ rule.status ]]
-                                            </span>
-                                        </div>
-
-                                        <div class="me-3 text-muted d-none d-md-block" style="min-width: 150px;">
-                                            Proposed by: <strong>[[ rule.user_name ]]</strong>
-                                        </div>
-                                    </div>
-                                </button>
-                            </h2>
-
-                            <div class="d-flex flex-wrap gap-2 justify-content-end p-2 bg-light border-top">
-                                <a :href="'/rule/proposal_content_discuss?id=' + rule.id"
-                                    class="btn btn-secondary btn-sm d-inline-flex align-items-center">
-                                    <i class="fas fa-comments me-1"></i> Discuss
-                                </a>
-                                <a :href="`/rule/detail_rule/` + rule.rule_id" class="btn btn-primary btn-sm"
-                                    title="View more details">
-                                    <i class="fas fa-eye me-1"></i> See Details
-                                </a>
-                            </div>
-
-                        </div>
-                    </template>
-
-                    <div v-else class="alert alert-secondary text-center mt-3">
-                        No proposed edits found.
-                    </div>
-
-                </div>
-
-                <div v-if="rules_list && rules_list.length > 10" class="mt-3 d-flex justify-content-center">
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination">
-                            <li class="page-item" :class="{ disabled: current_page_old === 1 }">
-                                <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old - 1)">
-                                    <i class="fas fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="page-item" v-for="pageOld in visiblePagesOld" :key="pageOld"
-                                :class="{ active: current_page_old === pageOld, disabled: pageOld === '...' }">
-                                <a v-if="pageOld !== '...'" class="page-link" href="#"
-                                    @click.prevent="fetchOldRules(pageOld)">[[ pageOld ]]</a>
-                                <span v-else class="page-link">...</span>
-                            </li>
-                            <li class="page-item" :class="{ disabled: current_page_old === total_pages_old }">
-                                <a class="page-link" href="#" @click.prevent="fetchOldRules(current_page_old + 1)">
-                                    Next <i class="fas fa-arrow-right"></i>
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
-
+        <!-- ── Tab 1 : Pending ── -->
+        <div class="tab-pane fade show active" id="pane-all" role="tabpanel">
+            <div class="card card-body shadow-sm border-0">
+                <proposal-history-table :csrf-token="'{{ csrf_token() }}'"
+                    api-endpoint="/rule/get_rules_propose_edit_history_page" submit-endpoint="/rule/manage_proposals"
+                    :show-manage="true" @view-diff="loadDiffInModal" @decision-made="fetchPendingCount">
+                </proposal-history-table>
             </div>
         </div>
 
-        <div class="modal fade" id="fullscreenDiffModal" tabindex="-1" aria-labelledby="diffModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="diffModalLabel">Changes for Rule: [[ selectedRuleName ]]</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-0">
-                        <div class="table-responsive">
-                            <div id="modalDiffContainer"></div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </div>
+        <!-- ── My submissions ── -->
+        <div class="tab-pane fade" id="pane-mine" role="tabpanel">
+            <div class="card card-body shadow-sm border-0">
+                <proposal-history-table :csrf-token="'{{ csrf_token() }}'" api-endpoint="/rule/get_my_proposals"
+                    :show-manage="false" @view-diff="loadDiffInModal">
+                </proposal-history-table>
             </div>
         </div>
-        <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
-            <div class="card card-body shadow-sm" id="main-container">
-                <div class="mt-3">
-                    <h5 class="mb-3">Your Discussions</h5>
 
-                    <div v-if="discuss_list.length === 0" class="alert alert-secondary">
-                        You haven't participated in any discussions yet.
-                    </div>
+    </div>
 
-                    <div v-else>
-                        <div v-for="proposal in discuss_list" :key="proposal.id" class="card mb-3 shadow-sm">
-
-                            <div class="card-body">
-                                <h5 class="card-title">
-                                    <i class="fas fa-comments me-2 "></i>
-                                    [[ proposal.rule_name || 'Untitled Rule' ]]
-                                    <span v-if="proposal.user_id === currentUserId" class="badge bg-primary ms-2">
-                                        You submitted this request
-                                    </span>
-
-                                    <span v-else class="badge bg-success ms-2">
-                                        You participated in this discussion
-                                    </span>
-                                </h5>
-
-                                <p class="card-text text-muted mb-2">
-                                    <strong>Status:</strong> [[ proposal.status ]] <br>
-                                    <strong>Submitted by:</strong> [[ proposal.user_name ]] <br>
-                                    <strong>Date:</strong> [[ proposal.timestamp ]]
-                                </p>
-
-                                <p class="card-text">
-                                    <strong>Message:</strong><br>
-                                    [[ proposal.message || 'No message provided.' ]]
-                                </p>
-
-                                <a class="btn btn-outline-primary btn-sm mt-2"
-                                    :href="'/rule/proposal_content_discuss?id=' + proposal.id">
-                                    View Proposal
-                                </a>
-                            </div>
-                        </div>
-
-                        <!-- Pagination Controls -->
-                        <template v-if="discuss_list && discuss_list.length > 10">
-                            <nav aria-label="Page navigation" class="mt-3 d-flex justify-content-center">
-                                <ul class="pagination">
-                                    <li class="page-item" :class="{ disabled: total_page_discuss === 1 }">
-                                        <a class="page-link" href="#"
-                                            @click.prevent="fetchDiscussPart(current_page_discuss - 1)">
-                                            <i class="fas fa-arrow-left"></i> Previous
-                                        </a>
-                                    </li>
-                                    <li class="page-item" v-for="pageDiscuss in visiblePagesDiscuss" :key="pageDiscuss"
-                                        :class="{ active: current_page_discuss === pageDiscuss, disabled: pageDiscuss === '...' }">
-                                        <a v-if="pageDiscuss !== '...'" class="page-link" href="#"
-                                            @click.prevent="fetchDiscussPart(pageDiscuss)">[[ pageDiscuss ]]</a>
-                                        <span v-else class="page-link">...</span>
-                                    </li>
-                                    <li class="page-item" :class="{ disabled: total_page_discuss === total_pages_old }">
-                                        <a class="page-link" href="#"
-                                            @click.prevent="fetchDiscussPart(current_page_discuss + 1)">
-                                            Next <i class="fas fa-arrow-right"></i>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </nav>
-                        </template>
-                    </div>
+    <!-- Diff Modal -->
+    <div class="modal fade" id="fullscreenDiffModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-code-branch me-2 text-primary"></i>
+                        Changes for: [[ selectedRuleName ]]
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="modalDiffContainer"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
+</div>
 {% endblock %}
 
 {% block script %}
-
 <script type="module">
-    const { createApp, ref, computed, nextTick } = Vue;
-    import { message_list, create_message } from '/static/js/toaster.js';
+    const { createApp, ref, nextTick } = Vue;
+    import { message_list } from '/static/js/toaster.js';
     import { renderDiff } from "/static/js/diff_macro.js";
-    import ProposalSelectionTable from '/static/js/rule/proposal/proposalSelectionTable.js';
+    import ProposalHistoryTable from '/static/js/rule/proposal/ProposalHistoryTable.js';
+
     createApp({
         delimiters: ['[[', ']]'],
         components: {
-            'proposal-selection-table': ProposalSelectionTable
+            'proposal-history-table': ProposalHistoryTable,
         },
         setup() {
-            // get the current user id with script var 
-            const currentUserId = parseInt('{{ current_user.id }}');
-
-            /******************************************Rules_listes_pending******************************************************/
-
-            const rules_pendings_list = ref([]);
-            const total_pages_pending = ref(1);
-            const current_page = ref(1);
-
             const renderedDiffs = new Set();
-
-            /**         
-             *          ###############################
-             *          #   Fetch the pending rules   #
-             *          ###############################
-             * */
-
-            async function fetchRules(page) {
-                const res = await fetch('/rule/get_rules_propose_edit_page?page=' + page);
-                if (res) {
-                    const data = await res.json();
-                    if (data) {
-                        rules_pendings_list.value = data.rules_pendings_list;
-                        total_pages_pending.value = data.total_pages_pending;
-                        current_page.value = page;
-                    }
-
-                }
-            }
-
-            //fetchRules(1);
-
             const selectedRuleName = ref('');
 
+            const pendingCount = ref(0);
+
+            async function fetchPendingCount() {
+                const res = await fetch('/rule/get_rules_propose_edit_page?page=1');
+                if (res.ok) {
+                    const data = await res.json();
+                    pendingCount.value = data.total_count || 0;
+                }
+            }
+            fetchPendingCount();
+
             async function loadDiffInModal(rule) {
-                const containerId = 'modalDiffContainer';
-                const hasRendered = renderedDiffs.has(rule.id);
-
                 selectedRuleName.value = rule.rule_name;
-
-                if (hasRendered) {
-                    return;
-                }
-
+                if (renderedDiffs.has(rule.id)) return;
                 await nextTick(() => {
                     renderDiff(
                         rule.old_content.trim(),
                         rule.proposed_content.trim(),
-                        containerId,
+                        'modalDiffContainer',
                         "oneText"
                     );
                     renderedDiffs.add(rule.id);
                 });
             }
 
-            async function renderDiffOnExpand(rule) {
-                if (renderedDiffs.has(rule.id)) {
-                    return;
-                }
-
-                await nextTick(() => {
-                    const diffContainerId = 'diffContainer_' + rule.id;
-                    renderDiff(
-                        rule.old_content,
-                        rule.proposed_content,
-                        diffContainerId,
-                        "oneText"
-                    );
-
-                    renderedDiffs.add(rule.id);
-                });
-            }
-
-            /**         
-             *          ###############################
-             *          #   Fetch the pending rules   #
-             *          ###############################
-             * */
-
-            const selectedRuleNamePending = ref('');
-            const renderedDiffsPending = new Set();
-
-            async function loadDiffInModalPending(rule) {
-                const containerId = 'modalDiffContainerPending';
-                const hasRendered = renderedDiffsPending.has(rule.id);
-
-                selectedRuleNamePending.value = rule.rule_name;
-
-                if (hasRendered) return;
-
-                await nextTick(() => {
-                    renderDiff(
-                        rule.old_content.trim(),
-                        rule.proposed_content.trim(),
-                        containerId,
-                        "oneText"
-                    );
-                    renderedDiffsPending.add(rule.id);
-                });
-            }
-            async function renderDiffOnExpandPending(rule) {
-                if (renderedDiffsPending.has(rule.id)) return;
-
-                await nextTick(() => {
-                    const diffContainerId = 'diffContainerPending_' + rule.id;
-                    renderDiff(
-                        rule.old_content,
-                        rule.proposed_content,
-                        diffContainerId,
-                        "oneText"
-                    );
-                    renderedDiffsPending.add(rule.id);
-                });
-            }
-
-
-
-
-
-            /**         
-             *          #########################################
-             *          #   validate or not the pending rules   #
-             *          #########################################
-             * */
-
-            async function handleDecision(ruleProposalId, decision, ruleId, index) {
-                const res = await fetch(`/rule/validate_proposal?ruleId=${ruleId}&decision=${decision}&ruleproposalId=${ruleProposalId}`);
-                const result = await res.json();
-                if (res.status === 200) {
-
-                    rules_pendings_list.value.splice(index, 1);
-                    if (rules_pendings_list.value.length === 0 && current_page.value > 1) {
-                        fetchRules(current_page.value - 1);
-                    } else {
-                        fetchRules(current_page.value);
-                    }
-                }
-                create_message(result.message, result.toast_class);
-            }
-
-            /**         
-             *          #############################
-             *          #   color lines for changes  #
-             *          #############################
-             * */
-
-            function getOldContentLines(content) {
-                return content.split('\n');
-            }
-
-            function getProposedContentLines(content) {
-                return content.split('\n');
-            }
-
-            function isLineNew(line, oldContent) {
-                const normalizedLine = line.trim();
-                const normalizedOldContent = oldContent.split('\n').map(l => l.trim());
-
-                return !normalizedOldContent.includes(normalizedLine);
-            }
-
-            function isLineDeleted(line, proposedContent) {
-                const normalizedLine = line.trim();
-                const normalizedProposedContent = proposedContent.split('\n').map(l => l.trim());
-
-                return !normalizedProposedContent.includes(normalizedLine);
-            }
-
-            function isLineIdentical(line, content) {
-                const normalizedLine = line.trim();
-                const normalizedContent = content.split('\n').map(l => l.trim());
-
-                return normalizedContent.includes(normalizedLine);
-            }
-
-
-
-
-            /**         
-             *          #############################
-             *          #   page for pending rules  #
-             *          #############################
-             * */
-
-            const visiblePages = computed(() => {
-                const pages = []
-                const total = total_pages_pending.value
-                const current = current_page.value
-                if (total <= 7) {
-                    for (let i = 1; i <= total; i++) pages.push(i)
-                } else {
-                    if (current <= 4) {
-                        pages.push(1, 2, 3, 4, 5, '...', total)
-                    } else if (current >= total - 3) {
-                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-                    } else {
-                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
-                    }
-                }
-                return pages
-            })
-
-
-
-
-
-            /*********************************Rules_listes_accept_or_rejected_(history)*******************************************/
-
-            const rules_list = ref([]);
-            const total_pages_old = ref(1);
-            const current_page_old = ref(1);
-
-            /**         
-             *          ###############################
-             *          #   Fetch the history rules   #
-             *          ###############################
-             * */
-
-            async function fetchOldRules(page) {
-                const res = await fetch('/rule/get_rules_propose_edit_history_page?page=' + page);
-                if (res) {
-                    const data = await res.json();
-                    if (data) {
-                        rules_list.value = data.rules_list;
-                        total_pages_old.value = data.total_pages_old;
-                        current_page_old.value = page;
-                    }
-
-                }
-            }
-
-            fetchOldRules(1)
-
-            /**         
-             *          ###############################
-             *          #   page for history rules    #
-             *          ###############################
-             * */
-
-            const visiblePagesOld = computed(() => {
-                const pages = []
-                const total = total_pages_old.value
-                const current = current_page_old.value
-                if (total <= 7) {
-                    for (let i = 1; i <= total; i++) pages.push(i)
-                } else {
-                    if (current <= 4) {
-                        pages.push(1, 2, 3, 4, 5, '...', total)
-                    } else if (current >= total - 3) {
-                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-                    } else {
-                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
-                    }
-                }
-                return pages
-            })
-
-            /******************************************Discuss_section_for_proposal_edit*******************************************/
-
-            const discuss_list = ref([]);
-            const total_page_discuss = ref(1);
-            const current_page_discuss = ref(1);
-            /**         
-             *          ############################################
-             *          #   Fetch the discuss where user part of   #
-             *          ############################################
-             * */
-
-            async function fetchDiscussPart(page) {
-                const res = await fetch('/rule/get_discuss_part_from?page=' + page);
-                if (res) {
-                    const data = await res.json();
-                    if (data) {
-                        discuss_list.value = data.discuss_list;
-                        total_page_discuss.value = data.total_page_discuss;
-                        current_page_discuss.value = page;
-                    }
-                }
-            }
-
-            fetchDiscussPart(1)
-            /**         
-             *          ###############################
-             *          #   page for discuss rules    #
-             *          ###############################
-             * */
-
-            const visiblePagesDiscuss = computed(() => {
-                const pages = []
-                const total = total_page_discuss.value
-                const current = current_page_discuss.value
-                if (total <= 7) {
-                    for (let i = 1; i <= total; i++) pages.push(i)
-                } else {
-                    if (current <= 4) {
-                        pages.push(1, 2, 3, 4, 5, '...', total)
-                    } else if (current >= total - 3) {
-                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-                    } else {
-                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
-                    }
-                }
-                return pages
-            })
-
-
-
-            return {
-                message_list,
-                currentUserId,
-
-                // pending section
-                rules_pendings_list,
-                total_pages_pending,
-                current_page,
-                visiblePages,
-                fetchRules,
-                handleDecision,
-                getOldContentLines,
-                getProposedContentLines,
-                isLineNew,
-                isLineDeleted,
-                isLineIdentical,
-
-                // history section
-                rules_list,
-                total_pages_old,
-                current_page_old,
-                fetchOldRules,
-                visiblePagesOld,
-
-                // discuss section
-                discuss_list,
-                fetchDiscussPart,
-                total_page_discuss,
-                //uniqueDiscussList,
-                visiblePagesDiscuss,
-
-                renderDiffOnExpand,
-                loadDiffInModal,
-                selectedRuleName,
-
-                loadDiffInModalPending,
-                renderDiffOnExpandPending,
-                selectedRuleNamePending,
-                ProposalSelectionTable
-
-            };
+            return { message_list, selectedRuleName, loadDiffInModal, pendingCount, fetchPendingCount };
         }
     }).mount('#main-container');
 </script>

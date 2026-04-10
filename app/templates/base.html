@@ -54,7 +54,12 @@
                 <template v-for="msg in message_list" :key="msg.id">
                     <div :id="`rz-toast-${msg.id}`" :class="`rz-toast rz-toast--${msg.variant}`" role="alert">
                         <i :class="msg.icon" class="rz-toast__icon"></i>
-                        <div class="rz-toast__body">[[msg.message]]</div>
+                        <div class="rz-toast__body">
+                            [[msg.message]]
+                            <a v-if="msg.link" :href="msg.link" class="rz-toast__link ms-1">
+                                Click here <i class="fas fa-arrow-right ms-1" style="font-size: 0.7rem;"></i>
+                            </a>
+                        </div>
                         <button class="rz-toast__close" type="button" aria-label="Fermer">
                             <i class="fas fa-xmark"></i>
                         </button>

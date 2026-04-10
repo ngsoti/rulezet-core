@@ -819,13 +819,13 @@ def get_rules_page_favorite(page, id_user, search=None, author=None, sort_by=Non
 def propose_edit_core(form , user_id) -> bool:
     """create an issue for a rule"""
     if not form or not user_id:
-        return False
+        return False , None
     rule_id = form.get("rule_id")
     if not rule_id:
-        return False
+        return False , None
     rule = get_rule(rule_id)
     if not rule:
-        return False
+        return False , None
     
     proposed_content = form.get("proposed_content") or rule.to_string or "No content provided"
     message = form.get("message") or "No message provided"
@@ -848,7 +848,82 @@ def propose_edit_core(form , user_id) -> bool:
     )
     db.session.add(new_proposal)
     db.session.commit()
-    return True
+    return True , new_proposal.id
+
+
+def bulk_manage_proposals(action: str, mode: str, selected_ids: list, excluded_ids: list, reviewed_by_id: int) -> dict:
+    """Bulk accept or reject proposals"""
+    import datetime
+
+    try:
+        if mode == "all":
+            query = RuleEditProposal.query.filter_by(status="pending")
+            if excluded_ids:
+                query = query.filter(~RuleEditProposal.id.in_(excluded_ids))
+            proposals = query.all()
+        else:
+            proposals = RuleEditProposal.query.filter(
+                RuleEditProposal.id.in_(selected_ids),
+                RuleEditProposal.status == "pending"
+            ).all()
+
+        if not proposals:
+            return {"success": False, "message": "No proposals found."}
+
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        count = 0
+
+        for proposal in proposals:
+            # check permission: only rule owner or admin
+            rule = get_rule(proposal.rule_id)
+            if not rule:
+                continue
+            
+            proposal.status = "accepted" if action == "accept" else "rejected"
+            proposal.reviewed_by_id = reviewed_by_id
+            proposal.reviewed_at = now
+
+            if action == "accept":
+                # update the rule content
+                rule.to_string = proposal.proposed_content
+                db.session.add(rule)
+
+                # contribution
+                create_contribution(proposal.user_id, proposal.id)
+
+                # history
+                result = {
+                    "id": rule.id,
+                    "title": rule.title,
+                    "success": True,
+                    "message": "accepted",
+                    "new_content": proposal.proposed_content,
+                    "old_content": proposal.old_content,
+                    "manual_submit": True,
+                }
+                create_rule_history(result)
+
+                # gamification
+                gamification = AccountModel.get_or_create_gamification_profile(proposal.user_id)
+                if gamification:
+                    AccountModel.update_propose_edit_gamification(gamification.id, "add_one_to_accepted")
+            else:
+                # gamification
+                gamification = AccountModel.get_or_create_gamification_profile(proposal.user_id)
+                if gamification:
+                    AccountModel.update_propose_edit_gamification(gamification.id, "add_one_to_rejected")
+
+            db.session.add(proposal)
+            count += 1
+
+        db.session.commit()
+        action_label = "accepted" if action == "accept" else "rejected"
+        return {"success": True, "message": f"{count} proposal(s) {action_label} successfully."}
+
+    except Exception as e:
+        db.session.rollback()
+        return {"success": False, "message": f"Error: {str(e)}"}
+
 
 def calculate_diff_score(old_content, new_content) -> float:
     from rapidfuzz import fuzz
@@ -921,24 +996,83 @@ def get_all_rule_proposal_user_id(user_id) -> RuleEditProposal:
     """Get all the rule edit porposal where the current user has part of """
     return RuleEditProposal.query.filter(RuleEditProposal.user_id == user_id).all()
 
-def get_all_rules_edit_propose_user_part_from_page(page, user_id, per_page=30)-> RuleEditProposal:
-        """Get all the rule edit porposal where the current user has part of """
+def get_my_proposals_page(page: int, user_id: int, search: str = '', status: str = ''):
+    query = RuleEditProposal.query.filter_by(user_id=user_id)
+    if search:
+        query = query.join(Rule, RuleEditProposal.rule_id == Rule.id).filter(
+            db.or_(
+                Rule.title.ilike(f'%{search}%'),
+                RuleEditProposal.message.ilike(f'%{search}%')
+            )
+        )
+    if status:
+        query = query.filter(RuleEditProposal.status == status)
+    return query.order_by(RuleEditProposal.timestamp.desc()).paginate(page=page, per_page=10, error_out=False)
 
-        commented_ids = db.session.query(RuleEditComment.proposal_id)\
-            .filter(RuleEditComment.user_id == user_id)\
-            .distinct()
 
-        pagination = RuleEditProposal.query\
-            .filter(
-                or_(
-                    RuleEditProposal.user_id == user_id,
-                    RuleEditProposal.id.in_(commented_ids)
-                )
-            )\
-            .order_by(RuleEditProposal.timestamp.desc())\
-            .paginate(page=page, per_page=per_page, error_out=False)
+def get_rules_propose_edit_page(page: int, user_id: int, is_admin: bool = False):
+    """Pending proposals — admin sees all, owner sees only proposals on their rules"""
+    query = RuleEditProposal.query.filter_by(status='pending')
+    if not is_admin:
+        owned_rule_ids = db.session.query(Rule.id).filter_by(user_id=user_id)
+        query = query.filter(RuleEditProposal.rule_id.in_(owned_rule_ids))
+    return query.order_by(RuleEditProposal.timestamp.desc()).paginate(page=page, per_page=10, error_out=False)
+def get_all_rules_edit_propose_user_part_from_page(page: int, user_id: int, search: str = '', status: str = '') -> list:
+    """Get all proposals where the user participated (submitted or commented)"""
 
-        return pagination
+    # proposals submitted by the user
+    submitted_ids = db.session.query(RuleEditProposal.id).filter_by(user_id=user_id)
+
+    # proposals where the user commented
+    commented_ids = db.session.query(RuleEditComment.proposal_id).filter_by(user_id=user_id)
+
+    query = RuleEditProposal.query.filter(
+        db.or_(
+            RuleEditProposal.id.in_(submitted_ids),
+            RuleEditProposal.id.in_(commented_ids)
+        )
+    )
+
+    if search:
+        query = query.join(Rule, RuleEditProposal.rule_id == Rule.id).filter(
+            db.or_(
+                Rule.title.ilike(f'%{search}%'),
+                RuleEditProposal.message.ilike(f'%{search}%')
+            )
+        )
+
+    if status:
+        query = query.filter(RuleEditProposal.status == status)
+
+    return query.order_by(RuleEditProposal.timestamp.desc()).paginate(page=page, per_page=10, error_out=False)
+
+def get_rules_propose_edit_history_page(page: int, search: str = '', status: str = '',
+                                         user_id: int = None, is_admin: bool = False):
+    query = RuleEditProposal.query.filter(
+        RuleEditProposal.status.in_(['accepted', 'rejected', 'pending'])
+    )
+
+    # filter by ownership unless admin
+    if not is_admin and user_id:
+        owned_rule_ids = db.session.query(Rule.id).filter_by(user_id=user_id)
+        query = query.filter(RuleEditProposal.rule_id.in_(owned_rule_ids))
+
+    if search:
+        query = query.join(Rule, RuleEditProposal.rule_id == Rule.id).filter(
+            db.or_(
+                Rule.title.ilike(f'%{search}%'),
+                RuleEditProposal.message.ilike(f'%{search}%')
+            )
+        )
+
+    if status:
+        query = query.filter(RuleEditProposal.status == status)
+
+    total_pending = query.filter(RuleEditProposal.status == 'pending').count()
+
+    return query.order_by(RuleEditProposal.timestamp.desc()).paginate(
+        page=page, per_page=10, error_out=False
+    ), total_pending
 
 # Update
 

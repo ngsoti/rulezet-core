@@ -14,95 +14,210 @@
         </p>
     </div>
 
-    <rule-filter-bar ref="filterBar" :user-id="user_id" :auto-fetch="true" api-endpoint="/rule/get_rules_page_filter"
-        :current-user-is-authenticated="'{{current_user.is_authenticated}}'" @update:results="onRulesUpdated"
-        @loading="search_is_loading = $event" :csrf-token="'{{ csrf_token() }}'">
-    </rule-filter-bar>
+    <ul class="nav nav-underline justify-content-center w-100 mb-4" id="workspaceTabs" role="tablist">
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link active fw-bold px-4" id="owner-tab" data-bs-toggle="tab" href="#owner-pane" role="tab"
+                aria-controls="owner-pane" aria-selected="true" style="color: var(--text-color);">
+                <i class="fas fa-user me-2"></i>My Rules
+            </a>
+        </li>
+        <li class="nav-item flex-fill text-center">
+            <a class="nav-link fw-bold px-4" id="favorite-tab" data-bs-toggle="tab" href="#favorite-pane" role="tab"
+                aria-controls="favorite-pane" aria-selected="false" style="color: var(--text-color);"
+                @click="onFavoriteTabClick">
+                <i class="fas fa-star me-2"></i>My Favorites
+            </a>
+        </li>
+    </ul>
 
-    <div v-if="selectedRules.length > 0" class="bulk-action-bar shadow-lg animate slideInUp">
-        <div class="d-flex align-items-center justify-content-between bg-danger text-white p-3 rounded-4 mb-4">
-            <div class="ms-2">
-                <i class="fa-solid fa-circle-check me-2"></i>
-                <strong>[[ selectedRules.length ]]</strong> rules selected
-            </div>
-            <button class="btn btn-light btn-sm fw-bold rounded-pill px-4" @click="deleteSelectedRules">
-                <i class="fa-solid fa-trash-can me-2 text-danger"></i>Delete Selected
-            </button>
-        </div>
-    </div>
+    <div class="tab-content" id="workspaceTabsContent">
 
-    <div class="results-wrapper">
-        <template v-if="search_is_loading">
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-                <p class="text-muted mt-3">Loading your rules...</p>
-            </div>
-        </template>
+        <!-- Owner Pane -->
+        <div class="tab-pane fade show active" id="owner-pane" role="tabpanel" aria-labelledby="owner-tab">
+            <div class="card border-0 shadow-lg p-3 mb-4" style="border-radius: 12px;">
+                <rule-filter-bar ref="filterBar" :user-id="user_id" :auto-fetch="true"
+                    api-endpoint="/rule/get_rules_page_filter"
+                    :current-user-is-authenticated="'{{current_user.is_authenticated}}'"
+                    @update:results="onRulesUpdated" @loading="search_is_loading = $event"
+                    :csrf-token="'{{ csrf_token() }}'">
+                </rule-filter-bar>
 
-        <template v-else-if="rules_list && rules_list.length > 0">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="small text-muted">Showing [[ rules_list.length ]] of [[ total_rules_liste ]] rules</span>
-                <pagination-component :current-page="current_page" :total-pages="total_pages"
-                    @change-page="changePage"></pagination-component>
-            </div>
-
-            <div class="rules-container">
-                <div v-for="(rule, index) in rules_list" :key="rule.id"
-                    class="rule-card-modern d-flex align-items-start p-3 mb-3" @click="detailRule(rule.id)">
-
-                    <div class="me-3 pt-1" @click.stop>
-                        <div class="custom-checkbox">
-                            <input type="checkbox" :value="rule.id" v-model="selectedRules" :id="'check-'+rule.id">
-                            <label :for="'check-'+rule.id"></label>
+                <div v-if="selectedRules.length > 0" class="bulk-action-bar shadow-lg animate slideInUp">
+                    <div
+                        class="d-flex align-items-center justify-content-between bg-danger text-white p-3 rounded-4 mb-4">
+                        <div class="ms-2">
+                            <i class="fa-solid fa-circle-check me-2"></i>
+                            <strong>[[ selectedRules.length ]]</strong> rules selected
                         </div>
+                        <button class="btn btn-light btn-sm fw-bold rounded-pill px-4" @click="deleteSelectedRules">
+                            <i class="fa-solid fa-trash-can me-2 text-danger"></i>Delete Selected
+                        </button>
                     </div>
+                </div>
 
-                    <div class="flex-grow-1 min-width-0">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <h6 class="fw-bold mb-1 rule-title text-truncate">[[ rule.title ]]</h6>
-                            <div class="d-flex gap-2" @click.stop>
-                                <a :href="'/rule/edit_rule/' + rule.id" class="btn-action edit" title="Edit">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </a>
-                                <button class="btn-action delete" @click="confirmDelete(rule)" title="Delete">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                                <button class="btn-action favorite" @click="favorite(rule.id)"
-                                    :title="rule.is_favorited ? 'Unstar' : 'Star'">
-                                    <i class="fa-solid fa-star" :class="{'text-warning': rule.is_favorited}"></i>
-                                </button>
+                <div class="results-wrapper">
+                    <template v-if="search_is_loading">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            </div>
+                            <p class="text-muted mt-3">Loading your rules...</p>
+                        </div>
+                    </template>
+
+                    <template v-else-if="rules_list && rules_list.length > 0">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="small text-muted">Showing [[ rules_list.length ]] of [[ total_rules_liste ]]
+                                rules</span>
+                            <pagination-component :current-page="current_page" :total-pages="total_pages"
+                                @change-page="changePage"></pagination-component>
+                        </div>
+
+                        <div class="rules-container">
+                            <div v-for="(rule, index) in rules_list" :key="rule.id"
+                                class="rule-card-modern d-flex align-items-start p-3 mb-3" @click="detailRule(rule.id)">
+
+                                <div class="me-3 pt-1" @click.stop>
+                                    <div class="custom-checkbox">
+                                        <input type="checkbox" :value="rule.id" v-model="selectedRules"
+                                            :id="'check-'+rule.id">
+                                        <label :for="'check-'+rule.id"></label>
+                                    </div>
+                                </div>
+
+                                <div class="flex-grow-1 min-width-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="fw-bold mb-1 rule-title text-truncate">[[ rule.title ]]</h6>
+                                        <div class="d-flex gap-2" @click.stop>
+                                            <a :href="'/rule/edit_rule/' + rule.id" class="btn-action edit"
+                                                title="Edit">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </a>
+                                            <button class="btn-action delete" @click="confirmDelete(rule)"
+                                                title="Delete">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                            <button class="btn-action favorite" @click="favorite(rule.id)"
+                                                :title="rule.is_favorited ? 'Unstar' : 'Star'">
+                                                <i class="fa-solid fa-star"
+                                                    :class="{'text-warning': rule.is_favorited}"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <p class="rule-description small mb-2 text-truncate-2">[[ rule.description ]]</p>
+
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <span class="badge-custom format">[[ rule.format ]]</span>
+                                        <span class="badge-custom license" v-if="rule.license">[[ rule.license ]]</span>
+                                        <div @click.stop class="d-inline-block ms-2">
+                                            <vulnerability-displays-list object-type="rule" :object-id="rule.id"
+                                                :max-visible="3">
+                                            </vulnerability-displays-list>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <p class="rule-description small mb-2 text-truncate-2">[[ rule.description ]]</p>
+                        <pagination-component :current-page="current_page" :total-pages="total_pages"
+                            @change-page="changePage"></pagination-component>
+                    </template>
 
-                        <div class="d-flex flex-wrap align-items-center gap-2">
-                            <span class="badge-custom format">[[ rule.format ]]</span>
-                            <span class="badge-custom license" v-if="rule.license">[[ rule.license ]]</span>
-                            <div @click.stop class="d-inline-block ms-2">
-                                <vulnerability-displays-list object-type="rule" :object-id="rule.id" :max-visible="3">
-                                </vulnerability-displays-list>
-                            </div>
-                        </div>
+                    <div v-else class="text-center py-5 rounded-4 bg-light-subtle border border-dashed">
+                        <i class="fa-solid fa-folder-open fa-3x mb-3 text-muted opacity-50"></i>
+                        <h5 class="fw-bold">No rules found</h5>
+                        <p class="text-muted">You haven't created any rules matching these criteria yet.</p>
+                        <a href="/rule/create_rule" class="btn btn-primary rounded-pill px-4 mt-2">
+                            <i class="fa-solid fa-plus me-2"></i>Create your first rule
+                        </a>
                     </div>
                 </div>
             </div>
-
-            <pagination-component :current-page="current_page" :total-pages="total_pages"
-                @change-page="changePage"></pagination-component>
-        </template>
-
-        <div v-else class="text-center py-5 rounded-4 bg-light-subtle border border-dashed">
-            <i class="fa-solid fa-folder-open fa-3x mb-3 text-muted opacity-50"></i>
-            <h5 class="fw-bold">No rules found</h5>
-            <p class="text-muted">You haven't created any rules matching these criteria yet.</p>
-            <a href="/rule/create_rule" class="btn btn-primary rounded-pill px-4 mt-2">
-                <i class="fa-solid fa-plus me-2"></i>Create your first rule
-            </a>
         </div>
+
+        <!-- Favorite Pane -->
+        <div class="tab-pane fade" id="favorite-pane" role="tabpanel" aria-labelledby="favorite-tab">
+            <div class="card border-0 shadow-lg p-3 mb-4" style="border-radius: 12px;">
+
+                <rule-filter-bar ref="favFilterBar" :auto-fetch="false"
+                    api-endpoint="/account/favorite/get_rules_page_favorite"
+                    :current-user-is-authenticated="'{{current_user.is_authenticated}}'"
+                    @update:results="onFavRulesUpdated" @loading="fav_is_loading = $event"
+                    :csrf-token="'{{ csrf_token() }}'">
+                </rule-filter-bar>
+
+                <div class="results-wrapper mt-2">
+                    <template v-if="fav_is_loading">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            </div>
+                            <p class="text-muted mt-3">Loading your favorites...</p>
+                        </div>
+                    </template>
+
+                    <template v-else-if="fav_rules_list && fav_rules_list.length > 0">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="small text-muted">Showing [[ fav_rules_list.length ]] of [[ fav_total_rules ]]
+                                favorites</span>
+                            <pagination-component :current-page="fav_current_page" :total-pages="fav_total_pages"
+                                @change-page="changeFavPage"></pagination-component>
+                        </div>
+
+                        <div class="rules-container">
+                            <div v-for="rule in fav_rules_list" :key="rule.id"
+                                class="rule-card-modern d-flex align-items-start p-3 mb-3" @click="detailRule(rule.id)">
+
+                                <div class="flex-grow-1 min-width-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="fw-bold mb-1 rule-title text-truncate">[[ rule.title ]]</h6>
+                                        <div class="d-flex gap-2" @click.stop>
+                                            <a :href="'/rule/detail_rule/' + rule.id" class="btn-action edit"
+                                                title="View">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </a>
+                                            <button class="btn-action favorite" @click.stop="favToggle(rule)"
+                                                :title="rule.is_favorited ? 'Unstar' : 'Star'">
+                                                <i class="fa-solid fa-star"
+                                                    :class="{'text-warning': rule.is_favorited}"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <p class="rule-description small mb-2 text-truncate-2">[[ rule.description ]]</p>
+
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <span class="badge-custom format">[[ rule.format ]]</span>
+                                        <span class="badge-custom license" v-if="rule.license">[[ rule.license ]]</span>
+                                        <div @click.stop class="d-inline-block ms-2">
+                                            <vulnerability-displays-list object-type="rule" :object-id="rule.id"
+                                                :max-visible="3">
+                                            </vulnerability-displays-list>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <pagination-component :current-page="fav_current_page" :total-pages="fav_total_pages"
+                            @change-page="changeFavPage"></pagination-component>
+                    </template>
+
+                    <div v-else class="text-center py-5 rounded-4 bg-light-subtle border border-dashed">
+                        <i class="fa-solid fa-star fa-3x mb-3 text-muted opacity-50"></i>
+                        <h5 class="fw-bold">No favorites yet</h5>
+                        <p class="text-muted">Star rules you like to find them here quickly.</p>
+                        <a href="/rule/list" class="btn btn-primary rounded-pill px-4 mt-2">
+                            <i class="fa-solid fa-search me-2"></i>Browse Rules
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
+<!-- Delete modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -120,12 +235,11 @@
     </div>
 </div>
 
-
 {% endblock %}
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, onMounted } = Vue
+    const { createApp, ref } = Vue
     import { create_message, message_list } from '/static/js/toaster.js'
     import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
     import RuleFilterBar from '/static/js/rule/ruleFilterBar.js';
@@ -140,6 +254,9 @@
         },
         setup() {
             const csrf_token = '{{ csrf_token() }}';
+            const user_id = parseInt('{{ current_user.id }}');
+
+            // ── My Rules ──────────────────────────────────────────────
             const rules_list = ref([]);
             const total_rules_liste = ref(0);
             const current_page = ref(1);
@@ -148,16 +265,12 @@
             const filterBar = ref(null);
             const selectedRules = ref([]);
             const ruleToDelete = ref(null);
-            const user_id = parseInt('{{ current_user.id}}');
-
-
 
             const onRulesUpdated = (results) => {
                 rules_list.value = results.rules.rule || [];
                 total_pages.value = results.total_pages || 1;
                 current_page.value = results.current_page || 1;
                 total_rules_liste.value = results.total_rules || 0;
-
                 search_is_loading.value = false;
             };
 
@@ -168,28 +281,24 @@
                 }
             };
 
-            const detailRule = (id) => {
-                window.location.href = `/rule/detail_rule/${id}`;
-            };
+            const detailRule = (id) => { window.location.href = `/rule/detail_rule/${id}`; };
 
             const confirmDelete = (rule) => {
                 ruleToDelete.value = rule;
-                const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-                modal.show();
+                new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
             };
 
             const executeDelete = async () => {
                 const res = await fetch(`/rule/delete_rule?id=${ruleToDelete.value.id}`);
                 if (res.ok) {
                     rules_list.value = rules_list.value.filter(r => r.id !== ruleToDelete.value.id);
-                    create_message("Rule deleted successfully", "success");
+                    create_message("Rule deleted successfully", "success-subtle");
                     bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
                 }
             };
 
             const deleteSelectedRules = async () => {
                 if (!confirm(`Delete ${selectedRules.value.length} rules?`)) return;
-
                 const res = await fetch('/rule/delete_rule_list', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf_token },
@@ -213,13 +322,62 @@
                 create_message(data.message, data.toast_class);
             };
 
+            // ── Favorites ─────────────────────────────────────────────
+            const fav_rules_list = ref([]);
+            const fav_total_rules = ref(0);
+            const fav_current_page = ref(1);
+            const fav_total_pages = ref(1);
+            const fav_is_loading = ref(false);
+            const favFilterBar = ref(null);
+            const favLoaded = ref(false);
+
+            const onFavRulesUpdated = (results) => {
+                fav_rules_list.value = results.rules.rule || results.rules || [];
+                fav_total_pages.value = results.total_pages || 1;
+                fav_current_page.value = results.current_page || 1;
+                fav_total_rules.value = results.total_rules || 0;
+                fav_is_loading.value = false;
+            };
+
+            const changeFavPage = (page) => {
+                if (favFilterBar.value) {
+                    favFilterBar.value.fetchRules(page);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            };
+
+            // lazy load: only fetch favorites when tab is first opened
+            const onFavoriteTabClick = () => {
+                if (!favLoaded.value && favFilterBar.value) {
+                    favFilterBar.value.fetchRules(1);
+                    favLoaded.value = true;
+                }
+            };
+
+            const favToggle = async (rule) => {
+                const res = await fetch(`/rule/favorite/${rule.id}`);
+                const data = await res.json();
+                if (res.ok) {
+                    rule.is_favorited = data.is_favorited;
+                    if (!rule.is_favorited) {
+                        fav_rules_list.value = fav_rules_list.value.filter(r => r.id !== rule.id);
+                    }
+                }
+                create_message(data.message, data.toast_class);
+            };
+
             return {
+                // my rules
                 rules_list, total_rules_liste, current_page, total_pages,
                 search_is_loading, filterBar, selectedRules, ruleToDelete,
                 onRulesUpdated, changePage, detailRule, confirmDelete,
-                executeDelete, deleteSelectedRules, favorite, message_list,
-                user_id, search_is_loading
-
+                executeDelete, deleteSelectedRules, favorite, user_id,
+                // favorites
+                fav_rules_list, fav_total_rules, fav_current_page, fav_total_pages,
+                fav_is_loading, favFilterBar, onFavRulesUpdated, changeFavPage,
+                onFavoriteTabClick, favToggle,
+                // shared
+                message_list,
             }
         }
     }).mount('#main-container')
