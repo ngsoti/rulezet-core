@@ -999,62 +999,100 @@ def delete_comment_discuss(comment_id, user_id) -> bool:
 #   Vote section   #
 ####################
 
-# CRUD
-
-# Read
-
-def has_already_vote(rule_id, user_id) -> bool:
-    """Test if an user has ever vote"""
-    vote =  RuleVote.query.filter_by(rule_id=rule_id, user_id=user_id).first()
+def has_already_vote(rule_id, user_id):
+    """Return (already_voted: bool, vote_type: str|None)"""
+    vote = RuleVote.query.filter_by(rule_id=rule_id, user_id=user_id).first()
     if vote:
-        return True , vote.vote_type
-    return False , None
+        return True, vote.vote_type
+    return False, None
 
-def has_voted(vote,rule_id , id) -> bool:
-    """Set a vote"""
-    user_id = id or current_user.id
-    vote = RuleVote(rule_id=rule_id, user_id=user_id, vote_type=vote)
-    db.session.add(vote)    
+def process_vote(rule_id, user_id, vote_type):
+    """
+    Handle a vote in a single DB round-trip + single commit.
+    Returns (vote_up, vote_down, like_delta, dislike_delta).
+    """
+    rule = get_rule(rule_id)
+    if not rule:
+        return None
+
+    existing_vote = RuleVote.query.filter_by(rule_id=rule_id, user_id=user_id).first()
+
+    like_delta = 0
+    dislike_delta = 0
+
+    if vote_type == 'up':
+        if existing_vote is None:
+            rule.vote_up += 1
+            db.session.add(RuleVote(rule_id=rule_id, user_id=user_id, vote_type='up'))
+            like_delta = 1
+        elif existing_vote.vote_type == 'up':
+            rule.vote_up -= 1
+            db.session.delete(existing_vote)
+            like_delta = -1
+        else:
+            # switch down → up
+            rule.vote_up += 1
+            rule.vote_down -= 1
+            existing_vote.vote_type = 'up'
+            like_delta = 1
+            dislike_delta = -1
+
+    elif vote_type == 'down':
+        if existing_vote is None:
+            rule.vote_down += 1
+            db.session.add(RuleVote(rule_id=rule_id, user_id=user_id, vote_type='down'))
+            dislike_delta = 1
+        elif existing_vote.vote_type == 'down':
+            rule.vote_down -= 1
+            db.session.delete(existing_vote)
+            dislike_delta = -1
+        else:
+            # switch up → down
+            rule.vote_down += 1
+            rule.vote_up -= 1
+            existing_vote.vote_type = 'down'
+            dislike_delta = 1
+            like_delta = -1
+
     db.session.commit()
-    return True
+    return rule.vote_up, rule.vote_down, like_delta, dislike_delta
 
-# Update
 
+# Legacy helpers — still used elsewhere
 def increment_up(id) -> None:
-    """Increment the like section"""
     rule = get_rule(id)
-    rule.vote_up = rule.vote_up + 1
+    rule.vote_up += 1
     db.session.commit()
 
 def decrement_up(id) -> None:
-    """Increment the dislike section"""
     rule = get_rule(id)
-    rule.vote_down = rule.vote_down + 1
+    rule.vote_down += 1
     db.session.commit()
 
 def remove_one_to_increment_up(id) -> None:
-    """Decrement the dislike section"""
     rule = get_rule(id)
-    rule.vote_up = rule.vote_up - 1
+    rule.vote_up -= 1
     db.session.commit()
 
 def remove_one_to_decrement_up(id) -> None:
-    """Decrement the dislike section"""
     rule = get_rule(id)
-    rule.vote_down = rule.vote_down - 1
+    rule.vote_down -= 1
     db.session.commit()
 
-# Remove
+def has_voted(vote, rule_id, id) -> bool:
+    user_id = id or current_user.id
+    db.session.add(RuleVote(rule_id=rule_id, user_id=user_id, vote_type=vote))
+    db.session.commit()
+    return True
 
-def remove_has_voted(vote, rule_id , id) -> bool:
-    """Remove a vote"""
+def remove_has_voted(vote, rule_id, id) -> bool:
     user_id = id or current_user.id
     existing_vote = RuleVote.query.filter_by(rule_id=rule_id, user_id=user_id, vote_type=vote).first()
     if existing_vote:
         db.session.delete(existing_vote)
         db.session.commit()
-        return True 
-    return False 
+        return True
+    return False
 
 #############
 #   Filter  #

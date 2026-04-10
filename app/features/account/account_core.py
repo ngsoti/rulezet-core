@@ -2,7 +2,7 @@ import datetime , random
 from datetime import timezone, timedelta 
 from typing import  Tuple
 from flask_login import current_user
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from flask_mail import Message
 from app import mail
 
@@ -212,24 +212,27 @@ def get_user_rules(user_id: int) -> list:
 def get_user_votes_summary(user_id: int) -> dict:
     """
     Return the total vote_up and vote_down from all rules and bundles created by the user.
+    Uses SQL SUM — never loads full objects into memory.
     """
-    rules = get_user_rules(user_id)
-    rules_upvotes = sum(r.vote_up or 0 for r in rules)
-    rules_downvotes = sum(r.vote_down or 0 for r in rules)
 
-    bundles = Bundle.query.filter_by(user_id=user_id).all()
-    bundles_upvotes = sum(b.vote_up or 0 for b in bundles)
-    bundles_downvotes = sum(b.vote_down or 0 for b in bundles)
+    r = db.session.query(
+        func.coalesce(func.sum(Rule.vote_up), 0),
+        func.coalesce(func.sum(Rule.vote_down), 0)
+    ).filter(Rule.user_id == user_id).one()
+
+    b = db.session.query(
+        func.coalesce(func.sum(Bundle.vote_up), 0),
+        func.coalesce(func.sum(Bundle.vote_down), 0)
+    ).filter(Bundle.user_id == user_id).one()
 
     return {
-        "total_upvotes": rules_upvotes + bundles_upvotes,
-        "total_downvotes": rules_downvotes + bundles_downvotes,
-        "rules_upvotes": rules_upvotes,
-        "rules_downvotes": rules_downvotes,
-        "bundles_upvotes": bundles_upvotes,
-        "bundles_downvotes": bundles_downvotes,
+        "total_upvotes":     r[0] + b[0],
+        "total_downvotes":   r[1] + b[1],
+        "rules_upvotes":     r[0],
+        "rules_downvotes":   r[1],
+        "bundles_upvotes":   b[0],
+        "bundles_downvotes": b[1],
     }
-
 def get_user_rule_formats(user_id: int) -> list:
     """Return the list of unique formats used by the user in their rules."""
     rules = get_user_rules(user_id)
@@ -551,6 +554,35 @@ def update_rules_suggestion_gamification(gamification_id: int, user_id: int) -> 
 def get_gamification_by_id(gamification_id: int) -> Gamification:
     return Gamification.query.get(gamification_id)
 
+
+def apply_vote_gamification(voter_gamif_id, rule_owner_id, like_delta, dislike_delta):
+    """
+    Update gamification for voter and rule owner in a single commit.
+    like_delta / dislike_delta: -1, 0, or +1
+    """
+    try:
+        voter_gamif = get_gamification_by_id(voter_gamif_id)
+        if voter_gamif:
+            voter_gamif.rules_liked    = max(0, (voter_gamif.rules_liked    or 0) + like_delta)
+            voter_gamif.rules_disliked = max(0, (voter_gamif.rules_disliked or 0) + dislike_delta)
+
+        owner_gamif = Gamification.query.filter_by(user_id=rule_owner_id).first()
+        if not owner_gamif:
+            owner_gamif = Gamification(user_id=rule_owner_id, uuid=str(uuid.uuid4()))
+            db.session.add(owner_gamif)
+
+        total_rules = RuleModel.get_count_rules_by_user_id(rule_owner_id)
+        owner_gamif.rules_owned = total_rules
+
+        votes = get_user_votes_summary(rule_owner_id)
+        popular_score = max(0, votes['total_upvotes'] - votes['total_downvotes'])
+        owner_gamif.rules_popular_score = popular_score
+
+        db.session.commit()
+        return True
+    except Exception:
+        db.session.rollback()
+        return False
 
 #-----------
 #   Like

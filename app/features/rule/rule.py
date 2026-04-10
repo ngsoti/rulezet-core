@@ -267,74 +267,29 @@ def get_current_user() -> jsonify:
 @login_required
 def vote_rule() -> jsonify:
     """Update the vote up or down"""
-    rule_id = request.args.get('id', 1 , int)
-    vote_type = request.args.get('vote_type', 2 , str)
+    rule_id = request.args.get('id', 1, int)
+    vote_type = request.args.get('vote_type', '', str)
+
+    if vote_type not in ('up', 'down'):
+        return jsonify({"message": "Invalid vote type"}), 400
+
+    result = RuleModel.process_vote(rule_id, current_user.id, vote_type)
+    if result is None:
+        return jsonify({"message": "Rule not found"}), 404
+
+    vote_up, vote_down, like_delta, dislike_delta = result
+
+    voter_gamif = AccountModel.get_or_create_gamification_profile(current_user.id)
     rule = RuleModel.get_rule(rule_id)
-    if rule:
-        alreadyVote , already_vote_type= RuleModel.has_already_vote(rule_id, current_user.id)
-        # update the gameifcation section
-        profil_game_user = AccountModel.get_or_create_gamification_profile(current_user.id)
-        if profil_game_user == None:
-            return jsonify({"message": "Error to update the gameifcation section"}), 500
-        
-        if vote_type == 'up':  
-            if alreadyVote == False:
-                RuleModel.increment_up(rule_id)
-                RuleModel.has_voted('up',rule_id, current_user.id)
+    if voter_gamif and rule:
+        AccountModel.apply_vote_gamification(voter_gamif.id, rule.user_id, like_delta, dislike_delta)
 
-                _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_like")
-
-            elif already_vote_type == 'up':
-                RuleModel.remove_one_to_increment_up(rule_id)
-                RuleModel.remove_has_voted('up',rule_id, current_user.id)
-
-                _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_like")
-            elif already_vote_type == 'down':
-                RuleModel.increment_up(rule_id) # +1 to up
-                RuleModel.remove_one_to_decrement_up(rule_id) # -1 to down
-                RuleModel.remove_has_voted('down',rule_id, current_user.id)
-                RuleModel.has_voted('up',rule_id, current_user.id)
-
-                _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_like")
-                _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_dislike")
-
-        elif vote_type == 'down':
-            if alreadyVote == False:
-                RuleModel.decrement_up(rule_id)
-                RuleModel.has_voted('down',rule_id, current_user.id)
-
-                _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_dislike")
-            elif already_vote_type == 'down':
-                RuleModel.remove_one_to_decrement_up(rule_id)
-                RuleModel.remove_has_voted('down',rule_id, current_user.id)
-
-                _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_dislike")
-            elif already_vote_type == 'up':
-                RuleModel.decrement_up(rule_id) # +1 to down
-                RuleModel.remove_one_to_increment_up(rule_id) # -1 to up
-                RuleModel.remove_has_voted('up',rule_id , current_user.id)
-                RuleModel.has_voted('down',rule_id, current_user.id)
-
-                _ = AccountModel.update_like_gamification(profil_game_user.id, "add_one_to_dislike")
-                _ = AccountModel.update_like_gamification(profil_game_user.id, "remove_one_to_like")
-        else:
-            return jsonify({"message": "Invalid vote type"}), 400
-       
-         # update the gamefication section
-
-        profil_game_user_ = AccountModel.get_or_create_gamification_profile(rule.user_id)
-        if profil_game_user_ == None:
-            return jsonify({"message": "Error to update the gameifcation section"}), 500
-        
-        _ = AccountModel.update_rules_owned_gamification(profil_game_user_.id, rule.user_id)
-
-        return jsonify({
-            'vote_up': rule.vote_up,
-            'vote_down': rule.vote_down,
-            'message': 'Vote updated successfully',
-            'toast_class': 'success-subtle'
-        }), 200
-    return jsonify({"message": "Rule not found"}), 404
+    return jsonify({
+        'vote_up': vote_up,
+        'vote_down': vote_down,
+        'message': 'Vote updated successfully',
+        'toast_class': 'success-subtle'
+    }), 200
 
 
 
