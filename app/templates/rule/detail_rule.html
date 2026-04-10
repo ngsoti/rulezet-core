@@ -343,16 +343,16 @@
                                         {% endif %}
                                         <li><button class="dropdown-item small" @click="download_rule('json')"><i
                                                     class="fas fa-code me-2 opacity-50"></i>Download JSON</button></li>
-
-                                        <li><button class="dropdown-item small" @click="download_rule('stix')"><i
-                                                    class="fas fa-street-view me-2 opacity-50"></i>Download
-                                                STIX</button></li>
                                         <template v-if="rule_stix">
-                                            <li><button class="dropdown-item small" @click="download_rule('all')"><i
-                                                        class="fas fa-download me-2 opacity-50"></i>Download
-                                                    All</button>
-                                            </li>
+                                            <li><button class="dropdown-item small" @click="download_rule('stix')"><i
+                                                        class="fas fa-street-view me-2 opacity-50"></i>Download
+                                                    STIX</button></li>
                                         </template>
+                                        <li><button class="dropdown-item small" @click="download_rule('all')"><i
+                                                    class="fas fa-download me-2 opacity-50"></i>Download
+                                                All</button>
+                                        </li>
+
                                     </ul>
                                 </div>
 
