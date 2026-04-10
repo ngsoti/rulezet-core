@@ -514,9 +514,7 @@ def detail_rule(rule_id)-> render_template:
         return render_template("404.html")
     rule_misp = content_convert_to_misp_object(rule_id)
 
-    # if rule_misp:
-    #     rule_stix = convert_misp_to_stix(rule_misp)
-    #     rule_stix = json.dumps(rule_stix, indent=4)
+
     rule_stix = None
     if not rule_misp:
         rule_misp = None
@@ -641,8 +639,7 @@ def get_rule_each_format():
     rule_misp_object = content_convert_to_misp_object(rule_id)
 
 
-    if rule_misp_object:
-        rule_stix = convert_misp_to_stix(rule_misp_object)
+
 
     return_dict = {
         "success": True,
@@ -655,7 +652,7 @@ def get_rule_each_format():
 
     if rule_misp_object and rule_json:
         return_dict["formats"]["misp"] = json.loads(rule_misp_object)
-        return_dict["formats"]["stix"] = json.loads(rule_stix) if isinstance(rule_stix, str) else rule_stix
+        return_dict["formats"]["stix"] = None
     elif rule_json:
         return_dict["formats"]["misp"] = "No MISP object for the format"
     else:
