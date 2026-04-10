@@ -172,7 +172,6 @@ def create_nse_misp_object(rule) -> MISPObject:
             type='text'
         )
 
-    print(rule.to_string)
 
     if rule.title:
         misp_object.add_attribute(
@@ -308,7 +307,7 @@ def convert_misp_to_stix(misp_object: json) -> dict | None:
             "https://cti-transmute.org/api/convert/misp_to_stix",
             json=misp_object,
             headers={"Content-Type": "application/json"},
-            timeout=10
+            timeout=30
         )
         response.raise_for_status()
 

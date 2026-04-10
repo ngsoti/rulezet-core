@@ -190,7 +190,6 @@ def update_or_clone_repo(repo_url: str) -> str | None:
         parts = repo_url.rstrip("/").replace(".git", "").split("/")
         owner, repo = parts[-2], parts[-1]
     except Exception:
-        print("Invalid repo URL format.")
         return None
 
     base_dir = "Rules_Github"
@@ -203,7 +202,6 @@ def update_or_clone_repo(repo_url: str) -> str | None:
         else:
             subprocess.run(["git", "-C", local_repo_path, "pull"], check=True)
     except Exception as e:
-        print(f"Git error: {e}")
         return None
 
     return local_repo_path

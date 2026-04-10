@@ -45,7 +45,6 @@ def create_tag(form_data, created_by):
         db.session.commit()
         return tag
     except Exception as e:
-        print(f"Error creating tag: {e}")
         return None
     
 
@@ -174,7 +173,6 @@ def edit_tag(form_data, tag_id):
         db.session.commit()
         return True, "Tag successfully updated."
     except Exception as e:
-        print(f"Error updating tag: {e}")
         return False, None
 
 MISP_TAXONOMIES_PATH = "app/modules/misp-taxonomies"
@@ -220,7 +218,7 @@ def list_all_misp_taxonomies_meta(args):
                 })
 
             except Exception as e:
-                print(f"[ERROR] Failed to load taxonomy {json_file}: {e}")
+                continue
 
     # 🔍 Recherche
     search_term = args.get("search", "").lower()
@@ -268,7 +266,7 @@ def add_tags_from_misp_taxonomy(uuid_from_misp, created_by):
                     taxonomy_path = json_file
                     break
             except Exception as e:
-                print(f"[ERROR] {json_file}: {e}")
+                continue
         if taxonomy_path:
             break
 

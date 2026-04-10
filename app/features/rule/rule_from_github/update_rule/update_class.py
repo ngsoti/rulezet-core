@@ -96,7 +96,6 @@ class Update_class:
             success = git_pull_repo(repo_dir)
 
             if not success:
-                print("Error pulling repo")
                 return
 
 
@@ -135,8 +134,6 @@ class Update_class:
                     if source_url not in rules_by_source:
                         rules_by_source[source_url] = []
                     rules_by_source[source_url].append(r)
-                else:
-                    print(f"Rule ID {r.id} has no source URL, skipping.")
             
             # Initialize the list of rules we need to check
             self.rules_to_process = [
@@ -151,7 +148,6 @@ class Update_class:
                     repo_dir, exists = clone_or_access_repo(source_url)
                     git_pull_repo(repo_dir)
                 except Exception as e:
-                    print(f"Error cloning or pulling repo {source_url}: {e}, skipping rules in this repo.")
                     continue
 
 
@@ -167,7 +163,6 @@ class Update_class:
                             break
                     
                     if not rule_type_instance:
-                        print(f"No RuleType handler found for format: {rule_obj.format} of rule ID {rule_obj.id}, skipping.")
                         continue
                     
                     cp += 1
@@ -325,7 +320,6 @@ class Update_class:
                         name = metadata.get("title") or metadata.get("name")
                         if not name:
                             # Skip if a name/title cannot be extracted for logging
-                            print("No name or title found in rule:", work[2])
                             continue
 
 
@@ -339,7 +333,6 @@ class Update_class:
 
                         # we have parse a rule and we want to found if it is already in Rulezet
                         existing_rule , message = RuleModel.get_rule_from_a_github(name , work[2], self.repo_sources, _original_uuid)
-                        print(f"Processing rule: {name}, found in Rulezet: {existing_rule is not None}, message: {message}")
                        
                         if validation_result.ok:
                             # Case 1: Rule is VALID (either an update or a completely new rule)
@@ -416,8 +409,7 @@ class Update_class:
                                     
                                     # Safety: Remove rule from the list of rules to process if it somehow matched a title 
                                     self.remove_processed_rule(name)
-                                else:
-                                    print("Error to get the rule:", message)
+
 
                         else:
                             # Case 2: Rule is INVALID (Log as Update Status OR New Invalid Rule)
@@ -491,8 +483,7 @@ class Update_class:
                                     
                                     # Remove rule from the list of rules to process (as it was found in the repo but is invalid)
                                     self.remove_processed_rule(name)
-                                else:
-                                    print("Error to get the rule:", msg)
+
                 else:
                     # by rule: work = (cp, rule_id, repo_dir, rule_type_instance, rule_title)
                     
@@ -526,7 +517,7 @@ class Update_class:
                             if find_success:
                                 rule_text_in_repo = found_rule_text
                          except Exception as e:
-                             print(f"Error retrieving raw rule text for history, ID {rule_id}: {e}")
+                            continue
                     
                     # --- Create History (if an update or failure to find in repo) ---
                     history_id = None

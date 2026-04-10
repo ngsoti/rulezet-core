@@ -209,7 +209,6 @@ class Similarity_class:
 
                     self.jobs.task_done()
                 except Exception as e:
-                    print(f"Process Error: {e}")
                     if not self.jobs.empty(): self.jobs.task_done()
         return True
 

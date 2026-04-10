@@ -161,18 +161,14 @@ def valider_repo_github(repo_url: str) -> bool:
     try:
         parsed = urlparse(repo_url)
         if parsed.scheme not in ("http", "https"):
-            print("Invalid scheme")
             return False
         if parsed.netloc != "github.com":
-            print("Invalid netloc")
             return False
         path_parts = [p for p in parsed.path.split('/') if p]
         if len(path_parts) < 2:
-            print("Invalid path")
             return False
         return True
     except Exception as e:
-        print(e)
         return False
 
 def get_licst_license() -> list:
