@@ -883,7 +883,7 @@
 <script type="module">
     const bundle_id = document.getElementById('bundle-info').dataset.bundleId;
     const { createApp, ref, onMounted, nextTick, computed } = Vue;
-    import { message_list, create_message, display_toast } from '/static/js/toaster.js';
+    import { message_list, create_message } from '/static/js/toaster.js';
     import { emodji_picker } from '/static/emodji/emodji_picker.js';
     import TagDisplay from '/static/js/tags/tagDisplay.js';
     import VulnerabilityDisplay from '/static/js/vulnerability/vulnerabilityDisplay.js';
@@ -1072,7 +1072,7 @@
                     modal.hide();
                     window.location.href = `/bundle/list`;
                 } else {
-                    display_toast(res)
+                    create_message(res.message, res.toast_class);
                 }
             }
 
@@ -1084,7 +1084,7 @@
                 if (await res.status == 200) {
                     bundle.value.access = !bundle.value.access
                 }
-                display_toast(res)
+                create_message(res.message, res.toast_class);
             }
 
             async function saveNewDescription(association_id, item) {
@@ -1101,7 +1101,7 @@
                         var modal = bootstrap.Modal.getInstance(myModalEl)
                         modal.hide();
                     }
-                    display_toast(res)
+                    create_message(res.message, res.toast_class);
                 }
             }
 
@@ -1125,7 +1125,7 @@
                     await create_message("Bundle download with success", "success-subtle");
 
                 } else {
-                    display_toast(res);
+                    create_message(res.message, res.toast_class);
                 }
             }
 
@@ -1150,7 +1150,7 @@
                     await create_message("Bundle structure download with success", "success-subtle");
 
                 } else {
-                    display_toast(res);
+                    create_message(res.message, res.toast_class);
                 }
             }
 

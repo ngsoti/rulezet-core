@@ -3,133 +3,148 @@
 
 {% block content %}
 {% if current_user.is_admin() %}
-    <div class="container my-4" id="main-container">
-        <div class="mb-4 border-bottom pb-3">
-                <h2 class="mb-3 text-center text-primary fw-bold">
-                    Reported Rules Management
-                    <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
-                </h2>
-                <p class="text-muted    mt-2">
-                    Manage and review rules that have been reported by users. View details of each report, including the reason for reporting and the content of the rule. Take appropriate actions such as deleting reports or removing problematic rules from the repository.
-                </p>
-        </div>
+<div class="container my-4" id="main-container">
+    <div class="mb-4 border-bottom pb-3">
+        <h2 class="mb-3 text-center text-primary fw-bold">
+            Reported Rules Management
+            <div class="mx-auto" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+        </h2>
+        <p class="text-muted    mt-2">
+            Manage and review rules that have been reported by users. View details of each report, including the reason
+            for reporting and the content of the rule. Take appropriate actions such as deleting reports or removing
+            problematic rules from the repository.
+        </p>
+    </div>
 
-        <div v-if="rules_reported && rules_reported.length > 0">
-            <div class="card mb-3" v-for="(rep , index) in rules_reported" :key="rep.id">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong>Rule:</strong> [[ rep.rule_name ]] (ID: [[ rep.rule_id ]])<br>
-                        <strong>Reported by:</strong> [[ rep.user_name ]] (User ID: [[ rep.user_id ]])
-                    </div>
-                    <span class="text-muted">[[ rep.created_at ]]</span>
+    <div v-if="rules_reported && rules_reported.length > 0">
+        <div class="card mb-3" v-for="(rep , index) in rules_reported" :key="rep.id">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Rule:</strong> [[ rep.rule_name ]] (ID: [[ rep.rule_id ]])<br>
+                    <strong>Reported by:</strong> [[ rep.user_name ]] (User ID: [[ rep.user_id ]])
                 </div>
-                <div class="card-body">
-                    <p><strong>Reason:</strong> [[ rep.reason ]]</p>
-                    <p><strong>Message:</strong><br> [[ rep.message || 'No message provided.' ]]</p>
-                    <p>
-                        <strong>Owner of the rule:</strong>
-                        <a :href="'/account/detail_user/' + rep.user_id" title="View more about this user" class="m-2">
-                            [[ rep.rule_user_owner ]]
-                        </a>
-                    </p>
+                <span class="text-muted">[[ rep.created_at ]]</span>
+            </div>
+            <div class="card-body">
+                <p><strong>Reason:</strong> [[ rep.reason ]]</p>
+                <p><strong>Message:</strong><br> [[ rep.message || 'No message provided.' ]]</p>
+                <p>
+                    <strong>Owner of the rule:</strong>
+                    <a :href="'/account/detail_user/' + rep.user_id" title="View more about this user" class="m-2">
+                        [[ rep.rule_user_owner ]]
+                    </a>
+                </p>
 
-                    
 
-                    <div class="mt-3">
-                        <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="collapse" :data-bs-target="`#ruleContent${rep.id}`" aria-expanded="false" :aria-controls="`ruleContent${rep.id}`">
-                            <i class="fas fa-code"></i> Show Rule Preview
-                        </button>
 
-                        <div class="collapse mt-2" :id="`ruleContent${rep.id}`">
-                            <div class="bg-light p-3 rounded border">
-                                <strong>Rule Preview:</strong><br>
-                                <code style="white-space: pre-wrap;">[[ rep.content ]]</code>
-                            </div>
+                <div class="mt-3">
+                    <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="collapse"
+                        :data-bs-target="`#ruleContent${rep.id}`" aria-expanded="false"
+                        :aria-controls="`ruleContent${rep.id}`">
+                        <i class="fas fa-code"></i> Show Rule Preview
+                    </button>
+
+                    <div class="collapse mt-2" :id="`ruleContent${rep.id}`">
+                        <div class="bg-light p-3 rounded border">
+                            <strong>Rule Preview:</strong><br>
+                            <code style="white-space: pre-wrap;">[[ rep.content ]]</code>
                         </div>
                     </div>
+                </div>
 
-                    <div class="mt-3 d-flex flex-wrap gap-2">
-                        <a class="btn btn-primary btn-sm d-flex align-items-center" :href="`/rule/detail_rule/${rep.rule_id}`" title="View the complete rule">
-                            <i class="fas fa-eye me-2"></i> View Rule
-                        </a>
+                <div class="mt-3 d-flex flex-wrap gap-2">
+                    <a class="btn btn-primary btn-sm d-flex align-items-center"
+                        :href="`/rule/detail_rule/${rep.rule_id}`" title="View the complete rule">
+                        <i class="fas fa-eye me-2"></i> View Rule
+                    </a>
 
-                        <!-- <button @click="deleteReport(rep.rule_id, index)" title="Remove this report" class="btn btn-outline-danger btn-sm d-flex align-items-center">
+                    <!-- <button @click="deleteReport(rep.rule_id, index)" title="Remove this report" class="btn btn-outline-danger btn-sm d-flex align-items-center">
                             <i class="fas fa-flag me-2"></i> Delete Report
                         </button> -->
 
 
-                        <button type="button" title="Remove this report" class="btn btn-danger btn-sm d-flex align-items-center" data-bs-toggle="modal" :data-bs-target="'#delete_repport_modal_'+rep.id">
-                            <i class="fa-solid fa-trash fa-fw"></i>Delete Report
-                        </button>
-                        <div class="modal fade" :id="'delete_repport_modal_'+rep.id" tabindex="-1" aria-labelledby="delete_repport_modal" aria-hidden="true">
-                            <div class="modal-dialog modal-sm">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h1 class="modal-title fs-5 text-truncate" style=" max-width: 200px;" id="delete_repport_modal">
-                                            Delete [[rep.rule_name]]?
-                                        </h1>
-                                        <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                        <button class="btn btn-danger" @click="deleteReport(rep.id, index)">
-                                            <i class="fa-solid fa-trash"></i> Confirm
-                                        </button>
-                                    </div>
+                    <button type="button" title="Remove this report"
+                        class="btn btn-danger btn-sm d-flex align-items-center" data-bs-toggle="modal"
+                        :data-bs-target="'#delete_repport_modal_'+rep.id">
+                        <i class="fa-solid fa-trash fa-fw"></i>Delete Report
+                    </button>
+                    <div class="modal fade" :id="'delete_repport_modal_'+rep.id" tabindex="-1"
+                        aria-labelledby="delete_repport_modal" aria-hidden="true">
+                        <div class="modal-dialog modal-sm">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5 text-truncate" style=" max-width: 200px;"
+                                        id="delete_repport_modal">
+                                        Delete [[rep.rule_name]]?
+                                    </h1>
+                                    <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
-                            </div>
-                        </div>
-
-
-                        <button type="button" title="Permanently delete this rule" class="btn btn-warning btn-sm d-flex align-items-center" data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+rep.rule_id">
-                            <i class="fa-solid fa-trash fa-fw"></i> Delete Rule
-                        </button>
-                        <div class="modal fade" :id="'delete_rule_modal_'+rep.rule_id" tabindex="-1" aria-labelledby="delete_rule_modal" aria-hidden="true">
-                            <div class="modal-dialog modal-sm">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h1 class="modal-title fs-5 text-truncate" style=" max-width: 200px;" id="delete_rule_modal">
-                                            Delete [[ rep.rule_name]] ?
-                                        </h1>
-                                        <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                        <button class="btn btn-danger" @click="deleteRule(rep.rule_id, index)">
-                                            <i class="fa-solid fa-trash"></i> Confirm
-                                        </button>
-                                    </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Close</button>
+                                    <button class="btn btn-danger" @click="deleteReport(rep.id, index)">
+                                        <i class="fa-solid fa-trash"></i> Confirm
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+
+                    <button type="button" title="Permanently delete this rule"
+                        class="btn btn-warning btn-sm d-flex align-items-center" data-bs-toggle="modal"
+                        :data-bs-target="'#delete_rule_modal_'+rep.rule_id">
+                        <i class="fa-solid fa-trash fa-fw"></i> Delete Rule
+                    </button>
+                    <div class="modal fade" :id="'delete_rule_modal_'+rep.rule_id" tabindex="-1"
+                        aria-labelledby="delete_rule_modal" aria-hidden="true">
+                        <div class="modal-dialog modal-sm">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5 text-truncate" style=" max-width: 200px;"
+                                        id="delete_rule_modal">
+                                        Delete [[ rep.rule_name]] ?
+                                    </h1>
+                                    <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Close</button>
+                                    <button class="btn btn-danger" @click="deleteRule(rep.rule_id, index)">
+                                        <i class="fa-solid fa-trash"></i> Confirm
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
             </div>
         </div>
-
-        <div v-else class="alert alert-info">
-            No rules have been reported yet.
-        </div>
-
     </div>
 
+    <div v-else class="alert alert-info">
+        No rules have been reported yet.
+    </div>
+
+</div>
+
 {% else %}
-    <script>
-        window.location.href = "{{ url_for('account.acces_denied') }}";
-    </script>
+<script>
+    window.location.href = "{{ url_for('account.acces_denied') }}";
+</script>
 {% endif %}
 {% endblock %}
 
 {% block script %}
 <script type="module">
-const { createApp, ref, computed } = Vue;
-import { display_toast,   message_list , create_message} from '/static/js/toaster.js';
+    const { createApp, ref, computed } = Vue;
+    import { message_list, create_message } from '/static/js/toaster.js';
 
-createApp({
-    delimiters: ['[[', ']]'],
-    setup() {
-        /*###################################_Show_the_rule_reported_#############################*/
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            /*###################################_Show_the_rule_reported_#############################*/
             const rules_reported = ref()
             const total_page = ref()
             const current_page = ref()
@@ -138,15 +153,15 @@ createApp({
              *          #   show repport   #
              *          ####################
              * */
-        
+
             async function fetchRuleReported(page) {
                 const params = new URLSearchParams({
                     page
                 })
                 const res = await fetch('/rule/get_rules_reported?' + params.toString())
-                if(await res.status == 200){ 
+                if (await res.status == 200) {
                     const data = await res.json()
-                    if(data.success){
+                    if (data.success) {
                         rules_reported.value = data.rule
                         total_page.value = data.total_pages
                         current_page.value = page
@@ -168,11 +183,11 @@ createApp({
                 const params = new URLSearchParams({
                     id
                 })
-                const res = await fetch('/rule/delete_rule?'+ params.toString())
+                const res = await fetch('/rule/delete_rule?' + params.toString())
                 const data = await res.json();
-                if(await res.status == 200){   
+                if (await res.status == 200) {
                     if (data.success) {
-                        var myModalEl = document.getElementById('delete_rule_modal_'+id);
+                        var myModalEl = document.getElementById('delete_rule_modal_' + id);
                         var modal = bootstrap.Modal.getInstance(myModalEl)
                         modal.hide();
                         //rules_reported.value.splice(index, 1);
@@ -196,11 +211,11 @@ createApp({
                 const params = new URLSearchParams({
                     id
                 })
-                const res = await fetch('/rule/delete_report?'+ params.toString())
+                const res = await fetch('/rule/delete_report?' + params.toString())
                 const data = await res.json();
-                if(await res.status == 200){
-                    
-                    var myModalEl = document.getElementById('delete_repport_modal_'+id);
+                if (await res.status == 200) {
+
+                    var myModalEl = document.getElementById('delete_repport_modal_' + id);
                     var modal = bootstrap.Modal.getInstance(myModalEl)
                     modal.hide();
 
@@ -217,15 +232,15 @@ createApp({
                 create_message(data.message, data.toast_class);
             }
 
-            
-        
-        return {
-            message_list,
-            rules_reported,
-            deleteRule,
-            deleteReport
-        };
-    }
-}).mount('#main-container');
+
+
+            return {
+                message_list,
+                rules_reported,
+                deleteRule,
+                deleteReport
+            };
+        }
+    }).mount('#main-container');
 </script>
 {% endblock %}

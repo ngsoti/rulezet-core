@@ -603,7 +603,7 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, onMounted, watch, nextTick, computed } = Vue;
-    import { message_list, create_message, display_toast } from '/static/js/toaster.js';
+    import { message_list, create_message } from '/static/js/toaster.js';
     createApp({
         delimiters: ['[[', ']]'],
         setup() {

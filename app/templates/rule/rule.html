@@ -463,7 +463,7 @@
 
 
       const { createApp, ref, onMounted } = Vue;
-      import { message_list, display_toast } from '/static/js/toaster.js';
+      import { message_lists, create_message } from '/static/js/toaster.js';
       import VulnerabilityInput from '/static/js/vulnerability/vulnerabilityInput.js';
       import CodeMirrorEditor from '/static/js/codeMirror/codeMirrorEditor.js';
       import TagInput from '/static/js/tags/tagInput.js';
@@ -536,7 +536,7 @@
 
                                     window.location.href = "/rule/import_loading/" + loc["session_uuid"]
                               } else {
-                                    display_toast(res, true)
+                                    create_message((await res.json()).message, (await res.json()).toast_class);
                               }
                         } else {
                               $("#github-url-error").text("Need to give an url")
@@ -573,7 +573,7 @@
                               let loc = await res.json();
                               window.location.href = "/rule/import_loading/" + loc["session_uuid"];
                         } else {
-                              display_toast(res, true);
+                              create_message((await res.json()).message, (await res.json()).toast_class);
                         }
 
                         is_loading_zip.value = false;

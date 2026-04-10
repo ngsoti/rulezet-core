@@ -163,7 +163,7 @@
 <script type="module">
 
     const { createApp, ref, onMounted } = Vue;
-    import { message_list, display_toast } from '/static/js/toaster.js';
+    import { message_list, create_message } from '/static/js/toaster.js';
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -189,7 +189,7 @@
                     info_session.value = data
 
                 } else {
-                    display_toast(res)
+                    create_message((await res.json()).message, (await res.json()).toast_class)
                 }
                 data_is_loading.value = true
             }

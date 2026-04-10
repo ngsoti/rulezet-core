@@ -383,7 +383,7 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, onMounted, computed } = Vue;
-    import { message_list, display_toast, create_message } from '/static/js/toaster.js';
+    import { message_list, create_message } from '/static/js/toaster.js';
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -400,7 +400,7 @@
                     const data = await res.json()
                     info_session.value = data
                 } else {
-                    display_toast(res)
+                    create_message((await res.json()).message, (await res.json()).toast_class)
                 }
             }
 
@@ -501,7 +501,7 @@
                     total_new_rules.value = data.total_rules || 0
                     current_page_new_rules.value = page
                 } else {
-                    display_toast(res)
+                    create_message((await res.json()).message, (await res.json()).toast_class)
                 }
             }
             const visiblePagesNewRules = computed(() => {
@@ -548,7 +548,7 @@
                     total_rules.value = data.total_rules || 0
                     current_page_rules.value = page
                 } else {
-                    display_toast(res)
+                    create_message((await res.json()).message, (await res.json()).toast_class)
                 }
             }
             const visiblePagesRules = computed(() => {

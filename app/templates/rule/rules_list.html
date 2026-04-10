@@ -236,7 +236,7 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, computed, onMounted } = Vue
-    import { display_toast, message_list, create_message } from '/static/js/toaster.js'
+    import { message_list, create_message } from '/static/js/toaster.js'
     import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
     import RuleFilterBar from '/static/js/rule/ruleFilterBar.js';
     import PaginationComponent from '/static/js/rule/paginationComponent.js';
@@ -304,7 +304,7 @@
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     if (modal) modal.hide();
                 }
-                display_toast(res);
+                create_message(res.message, res.toast_class);
             }
 
             async function vote(voteType, ruleId) {

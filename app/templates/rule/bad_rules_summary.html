@@ -139,7 +139,7 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, computed } = Vue
-    import { message_list, create_message, display_toast } from '/static/js/toaster.js'
+    import { message_list, create_message } from '/static/js/toaster.js'
     import BadRuleFilterBar from '/static/js/rule/bad/badRuleFilter.js';
     import PaginationComponent from '/static/js/rule/paginationComponent.js';
 
@@ -188,7 +188,7 @@
                     rules_list.value = []
                     total_rules.value = 0
                 }
-                display_toast(res)
+                create_message('All invalid rules have been deleted.', 'success-subtle')
             }
 
             async function confirmDeleteAll() {

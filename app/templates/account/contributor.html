@@ -3,7 +3,7 @@
 {% block content %}
 <div id="main-container" class="container mt-4" v-cloak>
 
-    <h2 class="fw-bold mb-1 text-center ">
+    <h2 class="fw-bold mb-1 text-center text-primary">
         <i class="fas fa-trophy me-2"></i> Contributor Leaderboard
     </h2>
     <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
@@ -527,7 +527,7 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, computed, onMounted } = Vue
-    import { display_toast, message_list, create_message } from '/static/js/toaster.js'
+    import { message_list, create_message } from '/static/js/toaster.js'
 
     // --- CONSTANTS ---
     const LEVEL_THRESHOLDS = {
@@ -654,7 +654,7 @@
 
                 } catch (error) {
                     console.error("API Fetch Error:", error)
-                    display_toast('Error fetching leaderboard data.', 'danger')
+                    create_message('Error fetching leaderboard data.', 'danger-subtle')
                     return []
                 }
             }
@@ -688,8 +688,7 @@
                     userStats.value = data.user_stats
 
                 } catch (error) {
-                    console.error("API Fetch Error (My Stats):", error)
-                    display_toast('Error fetching your contribution data.', 'danger')
+                    create_message('Error fetching your contribution data.', 'danger-subtle')
                 }
             }
 

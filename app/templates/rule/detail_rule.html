@@ -907,7 +907,7 @@
 
 <script type="module">
     const { createApp, ref, onMounted, nextTick, watch } = Vue;
-    import { message_list, create_message, display_toast } from '/static/js/toaster.js';
+    import { message_list, create_message } from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
 
     function highlightJSON() {
@@ -1254,7 +1254,7 @@
                     modal.hide();
                     window.location.href = `/rule/rules_list`;
                 }
-                //display_toast(res)
+
 
             }
 
@@ -1288,7 +1288,7 @@
                     var modal = bootstrap.Modal.getInstance(myModalEle)
                     modal.hide();
                 }
-                display_toast(response)
+                create_message(response.message, response.toast_class);
             }
 
 
@@ -1368,7 +1368,7 @@
                         comments_list.value.splice(index, 1);
                     }
                 }
-                display_toast(res)
+                create_message('Comment deleted successfully.', 'success-subtle');
             }
 
 

@@ -390,7 +390,7 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, computed } = Vue
-    import { message_list, display_toast, create_message } from '/static/js/toaster.js'
+    import { message_list, create_message } from '/static/js/toaster.js'
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -435,7 +435,7 @@
                     running_sessions.value = data.import_sessions
                     running_sessions_update.value = data.update_sessions
                 } else {
-                    display_toast(res)
+                    create_message((await res.json()).message, (await res.json()).toast_class)
                 }
             }
             fetchSessionRunning()
