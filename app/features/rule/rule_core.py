@@ -113,6 +113,9 @@ def add_rule_core(form_dict, user) -> tuple[bool, str] | tuple[Rule, str]:
     except Exception as e:
         return False, e
 
+def get_rule_by_uuid(uuid):
+    return Rule.query.filter_by(uuid=uuid).first()
+
 def get_rule_by_content(content):
     if not content:
         return None

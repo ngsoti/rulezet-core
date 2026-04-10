@@ -142,6 +142,20 @@ def detail(bundle_id) :
     else:
         return render_template("404.html"), 404
     
+@bundle_blueprint.route("/detail/<string:bundle_uuid>", methods=['GET' , 'POST'])
+def detail_uuid(bundle_uuid) :     
+    """Go to detail of a bundle"""    
+    bundle = BundleModel.get_bundle_by_uuid(bundle_uuid)
+    if bundle: 
+        if bundle.access or current_user.is_admin() or current_user.id == bundle.user_id:
+            # add one to the wiew
+            success = BundleModel.add_view(bundle.id)
+            return render_template("bundle/detail_bundle.html", bundle_id=bundle.id)
+        else:
+            return render_template("access_denied.html"),403
+    else:
+        return render_template("404.html"), 404
+    
 
 @bundle_blueprint.route("/get_all_rule", methods=['GET'])
 def get_all_rule() :     

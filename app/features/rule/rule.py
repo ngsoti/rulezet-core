@@ -506,6 +506,28 @@ def get_current_rule() -> jsonify:
         return {"rule": rule.to_json()}
     return {"message": "No Rule"}, 404
 
+@rule_blueprint.route("/detail_rule/<string:rule_uuid>", methods=['GET'])
+def detail_rule_by_uuid(rule_uuid):
+    """Get the detail of a rule by its UUID"""
+    # remove invalide space
+    rule_uuid = rule_uuid.replace(" ", "")
+
+    rule = RuleModel.get_rule_by_uuid(rule_uuid)
+    if not rule:
+        return render_template("404.html")
+    rule_misp = content_convert_to_misp_object(rule.id)
+    if not rule_misp:
+        return 
+
+    rule_to_json = json.dumps(rule.to_json_detail(), indent=4)
+
+    if not rule_to_json:
+        rule_to_json = "No json format for this rule"
+    if rule:
+        return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp=rule_misp, rule_to_json=rule_to_json, )
+    return render_template("404.html")
+
+
 @rule_blueprint.route("/detail_rule/<int:rule_id>", methods=['GET'])
 def detail_rule(rule_id)-> render_template:
     """Get the detail of the current rule"""
@@ -513,19 +535,15 @@ def detail_rule(rule_id)-> render_template:
     if not rule:
         return render_template("404.html")
     rule_misp = content_convert_to_misp_object(rule_id)
-
-
-    rule_stix = None
     if not rule_misp:
-        rule_misp = None
-        rule_stix = None
-    if not rule_stix:
-        rule_stix = None
+        return 
+
     rule_to_json = json.dumps(rule.to_json_detail(), indent=4)
+
     if not rule_to_json:
         rule_to_json = "No json format for this rule"
     if rule:
-        return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp=rule_misp, rule_to_json=rule_to_json, rule_stix=rule_stix)
+        return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp=rule_misp, rule_to_json=rule_to_json, )
     return render_template("404.html")
 
 
