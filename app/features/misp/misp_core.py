@@ -307,12 +307,13 @@ def convert_misp_to_stix(misp_object: json) -> dict | None:
             "https://cti-transmute.org/api/convert/misp_to_stix",
             json=misp_object,
             headers={"Content-Type": "application/json"},
-            timeout=30
+            timeout=10
         )
         response.raise_for_status()
 
         return response.json()
     except requests.RequestException as e:
+        print(f"Error converting MISP object to STIX: {e}")
         return None
     
 
