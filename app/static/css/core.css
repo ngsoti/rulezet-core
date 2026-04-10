@@ -1847,3 +1847,38 @@ body.dark-mode .d2h-code-side-line del          { background-color: var(--bg-dif
 .select2-container--default .select2-selection--single .select2-selection__placeholder   { color: #888 !important; }
 .select2-container--default .select2-results > .select2-results__options                 { background-color: #121212 !important; color: #eee !important; }
 .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable { background-color: #333 !important; color: #eee !important; }
+
+
+
+/* ── Theme toggle pill ───────────────────────────────────────── */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 20px;
+  padding: 3px;
+  gap: 0;
+  cursor: pointer;
+}
+
+.theme-toggle__option {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: .72rem;
+  font-weight: 500;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.45);
+  transition: all .2s;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.theme-toggle__option.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
