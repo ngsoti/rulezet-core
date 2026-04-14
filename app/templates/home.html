@@ -21,13 +21,15 @@
                         style="font-size:medium ; vertical-align: middle; text-decoration: underline;">
                         <i class="fa-solid fa-question-circle text-muted"></i> Why choose Rulezet?
                     </a>
-                    : Explore the latest community-contributed detection rules. Stay ahead of threats with real-time
+                    <br>
+                    Explore the latest community-contributed detection rules. Stay ahead of threats with
+                    real-time
                     updates.
                 </p>
             </div>
             <div class="row g-4 mb-5">
                 <div class="col-md-4 ">
-                    <div class="p-4 rounded-4  border-start border-primary border-4 shadow-sm h-100 card-security-premium"
+                    <div class="p-4 rounded-4  border-start border-primary border-4 shadow-sm h-100 "
                         style="background-color: var(--card-bg-color);">
                         <div class="d-flex align-items-center mb-3">
                             <div class="icon-shape bg-primary-subtle text-primary rounded-circle p-2 me-3">
@@ -37,14 +39,15 @@
                         </div>
                         <p class="small text-muted mb-3">Browse our curated database of YARA, Sigma, and other rules
                             shared by security experts worldwide.</p>
-                        <a href="/rule/rules_list" class="text-primary text-decoration-none small fw-bold">
+                        <!-- on hover underline-->
+                        <a href="/rule/rules_list" class="text-primary text-decoration-none small fw-bold underline">
                             View full catalog <i class="fa-solid fa-arrow-right ms-1"></i>
                         </a>
                     </div>
                 </div>
 
                 <div class="col-md-4">
-                    <div class="p-4 rounded-4  border-start border-success border-4 shadow-sm h-100 card-security-premium"
+                    <div class="p-4 rounded-4  border-start border-success border-4 shadow-sm h-100 "
                         style="background-color: var(--card-bg-color);">
                         <div class="d-flex align-items-center mb-3">
                             <div class="icon-shape bg-success-subtle text-success rounded-circle p-2 me-3">
@@ -54,14 +57,14 @@
                         </div>
                         <p class="small text-muted mb-3">Join the defense community! Upload your own detection assets to
                             help others track emerging threats.</p>
-                        <a href="/rule/create_rule" class="text-success text-decoration-none small fw-bold">
+                        <a href="/rule/create_rule" class="text-success text-decoration-none small fw-bold underline">
                             Submit an asset <i class="fa-solid fa-arrow-right ms-1"></i>
                         </a>
                     </div>
                 </div>
 
                 <div class="col-md-4">
-                    <div class="p-4 rounded-4  border-start border-warning border-4 shadow-sm h-100 card-security-premium"
+                    <div class="p-4 rounded-4  border-start border-warning border-4 shadow-sm h-100 "
                         style="background-color: var(--card-bg-color);">
                         <div class="d-flex align-items-center mb-3">
                             <div class="icon-shape bg-warning-subtle text-warning rounded-circle p-2 me-3">
@@ -72,7 +75,7 @@
                         <p class="small text-muted mb-3">Organize your detection assets into bundles for easy sharing
                             and management.
                         </p>
-                        <a href="/bundle/list" class="text-warning text-decoration-none small fw-bold">
+                        <a href="/bundle/list" class="text-warning text-decoration-none small fw-bold underline">
                             Go to bundles <i class="fa-solid fa-arrow-right ms-1"></i>
                         </a>
                     </div>
@@ -92,8 +95,8 @@
         <div class="row g-4">
             <template v-if="rules_list.length > 0">
                 <div class="col-xl-4 col-md-6" v-for="(rule, index) in rules_list" :key="rule.uuid">
-                    <div class="card h-100 shadow-sm transition-hover border-0 card-security-premium"
-                        style="cursor: pointer; position: relative; overflow: hidden; border-radius: 12px;">
+                    <div class="card h-100 shadow-sm  border-0 "
+                        style="position: relative; overflow: hidden; border-radius: 12px;">
 
                         <div class=" premium-accent-line"></div>
 

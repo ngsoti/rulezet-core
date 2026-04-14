@@ -165,6 +165,8 @@ def create_nse_misp_object(rule) -> MISPObject:
 
     misp_object['meta-category'] = "network"
 
+    misp_object.uuid = rule.uuid
+
     if rule.to_string:
         misp_object.add_attribute(
             'nse', 

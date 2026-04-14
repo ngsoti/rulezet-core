@@ -1613,7 +1613,7 @@ textarea:focus {
 
 /* Link with indent-on-hover */
 .custom-rule-link { transition: all 0.2s ease-in-out; }
-.custom-rule-link:hover { color: #0d6efd !important; padding-left: 20px !important; }
+.custom-rule-link:hover { color: #0d6efd !important; padding-left: 20px !important;  text-decoration: underline !important; }
 
 /* Chevron rotation */
 .fa-chevron-right       { transition: transform 0.2s ease; font-size: 0.7rem; }
@@ -1881,4 +1881,11 @@ body.dark-mode .d2h-code-side-line del          { background-color: var(--bg-dif
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.underline:hover {
+    text-decoration: underline !important;
+    text-decoration-color: #0d6efd;
+    text-underline-offset: 3px;
+    letter-spacing: 0.3px;
 }
