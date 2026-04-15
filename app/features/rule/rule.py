@@ -1821,6 +1821,12 @@ def get_rules_format() -> dict:
         return {"success": True, "formats": formats, "length": len(formats)}, 200
     return {"message": "No formats"}, 404
 
+@rule_blueprint.route("/get_last_cve_rules", methods=['GET'])
+def get_last_cve_rules() -> dict:
+    rules = RuleModel.get_last_cve_rules()
+    if rules:
+        return {"success": True, "rules": [r.to_json() for r in rules], "length": len(rules)}, 200
+    return {"message": "No rules with CVE found"}, 404
 
 @rule_blueprint.route("/admin/manage_format_rule", methods=["GET", "POST"])
 @login_required

@@ -1798,6 +1798,18 @@ def get_all_rule_format():
 
     return result
 
+def get_last_cve_rules(limit: int = 12) -> list:
+    """Retourne les dernières règles ayant au moins un CVE associé."""
+    return (
+        Rule.query
+        .filter(
+            Rule.cve_id.isnot(None),
+            ~Rule.cve_id.in_(['', '[]', 'null', '[""]'])
+        )
+        .order_by(Rule.last_modif.desc())
+        .limit(limit)
+        .all()
+    )
 def get_all_rule_format_with_count():
     """Return formats as dicts with rule count — for API use only."""
     from sqlalchemy import func

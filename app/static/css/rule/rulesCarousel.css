@@ -1,17 +1,14 @@
 /* =====================================================
-   Carousel wrapper — rulezet
-   Flèches gauche/droite au niveau des cartes.
-   Compatible Bootstrap 5 dark/light (data-bs-theme)
+   RulesCarousel — rulezet
+   Bootstrap 5 dark/light mode natif (data-bs-theme)
    ===================================================== */
 
-/* ---------- Wrapper avec flèches ---------- */
 .carousel-rules-wrapper {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-/* Les flèches ne rétrécissent pas */
 .carousel-arrow {
     flex-shrink: 0;
     width: 38px;
@@ -28,21 +25,10 @@
     transition: background 0.15s, transform 0.1s, opacity 0.15s;
     padding: 0;
 }
+.carousel-arrow:hover:not(:disabled) { background: var(--bs-secondary-bg, #e9ecef); }
+.carousel-arrow:active:not(:disabled) { transform: scale(0.93); }
+.carousel-arrow:disabled { opacity: 0.25; cursor: not-allowed; }
 
-.carousel-arrow:hover:not(:disabled) {
-    background: var(--bs-secondary-bg, #e9ecef);
-}
-
-.carousel-arrow:active:not(:disabled) {
-    transform: scale(0.93);
-}
-
-.carousel-arrow:disabled {
-    opacity: 0.25;
-    cursor: not-allowed;
-}
-
-/* ---------- Outer : prend tout l'espace restant ---------- */
 .carousel-rules-outer {
     flex: 1;
     min-width: 0;
@@ -52,13 +38,11 @@
     padding: 4px 0 8px;
 }
 
-/* Fades sur les bords */
 .carousel-rules-outer::before,
 .carousel-rules-outer::after {
     content: '';
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: 0; bottom: 0;
     width: 40px;
     z-index: 10;
     pointer-events: none;
@@ -75,7 +59,6 @@
 .carousel-rules-outer.at-start::before { opacity: 0; }
 .carousel-rules-outer.at-end::after    { opacity: 0; }
 
-/* ---------- Track ---------- */
 .carousel-rules-track {
     display: flex;
     gap: 1.5rem;
@@ -84,11 +67,8 @@
     cursor: grab;
     user-select: none;
 }
-.carousel-rules-track:active {
-    cursor: grabbing;
-}
+.carousel-rules-track:active { cursor: grabbing; }
 
-/* ---------- Items ---------- */
 .carousel-item-wrap {
     flex: 0 0 calc(33.333% - 1rem);
     min-width: calc(33.333% - 1rem);
@@ -100,23 +80,12 @@
         min-width: calc(50% - 0.75rem);
     }
 }
-
 @media (max-width: 575px) {
-    .carousel-item-wrap {
-        flex: 0 0 100%;
-        min-width: 100%;
-    }
-    .carousel-rules-wrapper {
-        gap: 8px;
-    }
-    .carousel-arrow {
-        width: 32px;
-        height: 32px;
-        font-size: 11px;
-    }
+    .carousel-item-wrap { flex: 0 0 100%; min-width: 100%; }
+    .carousel-rules-wrapper { gap: 8px; }
+    .carousel-arrow { width: 32px; height: 32px; font-size: 11px; }
 }
 
-/* ---------- Dots ---------- */
 .carousel-rules-dots {
     display: flex;
     justify-content: center;
@@ -124,19 +93,15 @@
     margin-top: 1rem;
     flex-wrap: wrap;
 }
-
 .carousel-rules-dot {
-    width: 7px;
-    height: 7px;
+    width: 7px; height: 7px;
     border-radius: 50%;
-    border: none;
-    padding: 0;
+    border: none; padding: 0;
     background: var(--bs-border-color, #dee2e6);
     cursor: pointer;
     transition: all 0.22s ease;
     flex-shrink: 0;
 }
-
 .carousel-rules-dot.active {
     width: 22px;
     border-radius: 4px;
