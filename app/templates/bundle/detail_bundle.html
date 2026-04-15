@@ -169,6 +169,9 @@
                                             <i class="fas fa-folder-open me-2"></i> Download Structure ZIP
                                         </button>
                                     </li>
+                                    <!-- download_misp -->
+                                    <li><button class="dropdown-item rounded-2" @click="DownloadMISP">
+                                            <i class="fas fa-file-zipper me-2"></i> Download MISP Event</button></li>
 
                                 </ul>
                             </div>
@@ -1129,6 +1132,42 @@
                 }
             }
 
+            // async function DownloadMISP() {
+            //     const params = new URLSearchParams({ bundle_id });
+            //     const res = await fetch('/bundle/download_misp?' + params.toString());
+            //     const data = await res.json();
+
+            //     if (res.status === 200) {
+            //         const eventJson = JSON.parse(data.event);
+            //         const blob = new Blob([JSON.stringify(eventJson, null, 4)], { type: 'application/json' });
+            //         const url = window.URL.createObjectURL(blob);
+            //         window.open(url, '_blank');
+            //     }
+
+            //     create_message(data.message, data.toast_class);
+            // }
+
+            async function DownloadMISP() {
+                const params = new URLSearchParams({ bundle_id });
+                const res = await fetch('/bundle/download_misp?' + params.toString());
+
+                if (res.status === 200) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${bundle.value.name}_misp_event.json`; // ← .json pas .zip
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    create_message("MISP event downloaded successfully", "success-subtle");
+                } else {
+                    const data = await res.json();
+                    create_message(data.message, data.toast_class);
+                }
+            }
+
 
             async function DownloadBundleStructure() {
                 const params = new URLSearchParams({ bundle_id });
@@ -1476,7 +1515,7 @@
                 // tags
                 displayTags, loadingDisplayTags, fetchBundleTags, loadingDisplayVulnerabilities, displayVulnerabilities, fetchBundleVulnerabilities,
 
-                currentPage, totalPages, changePage, visiblePages
+                currentPage, totalPages, changePage, visiblePages, DownloadMISP
             };
         }
     }).mount('#main-containers');

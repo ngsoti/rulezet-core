@@ -28,7 +28,7 @@ class AddNewRuleForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         formats_rules_list = RuleModel.get_all_rule_format()
-        self.format.choices = [(f.name, f.name) for f in formats_rules_list]
+        self.format.choices = [(f['name'], f['name']) for f in formats_rules_list]
 
     def validate_title(self, field):
         existing_rule = Rule.query.filter_by(title=field.data).first()

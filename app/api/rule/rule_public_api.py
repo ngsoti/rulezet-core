@@ -10,7 +10,7 @@ from flask_restx import Resource, Namespace
 from app.api.utils.rule_validation import *
 
 from app.core.utils import utils
-from app.features.misp.misp_object import get_rule_misp_object
+from app.features.misp.rule.misp_object import get_rule_misp_object
 from ...features.rule import rule_core as RuleModel
 from ...features.account import account_core as AccountModel
 from flask_restx import Namespace, Resource
@@ -291,6 +291,8 @@ class ConvertMISP(Resource):
         def convert_rule(rule_id: int) -> Optional[dict]:
             try:
                 misp_json = get_rule_misp_object(rule_id)
+                # load the JSON string into a Python dictionary
+                misp_json = json.loads(misp_json)
                 return misp_json
             except Exception:
                 return None

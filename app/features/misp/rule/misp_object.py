@@ -1,11 +1,47 @@
 # create a misp object for rule rulezet-metadata + relationship with rule-object
 import json
 from pymisp import MISPEvent, MISPObject
-from ..rule import rule_core as RuleModel
+from ...rule import rule_core as RuleModel
 
-#################################################
-#   MISP object : rulezet-metadata              #
-#################################################
+#############################################
+#   Get rule in MISP Object or MISP Event   #
+#############################################
+
+def get_rule_misp_object(rule_id: int):
+    event = get_rule_misp_object_base(rule_id)
+    event = json.loads(event.to_json())
+    return {key: value for key, value in event.items() if key == "Object"}
+
+def get_rule_misp_event(rule_id: int):
+    rule_ = RuleModel.get_rule(rule_id)
+    if not rule_:
+        return None
+    event = get_rule_misp_object_base(rule_id)
+    event.info = f"Rule {rule_id} - {rule_.title}"
+
+    rule_object = event.objects[1] 
+
+    if rule_.cve_id:
+        vuln_list = json.loads(rule_.cve_id)
+
+        for value in vuln_list:
+            attribute =  event.add_attribute('vulnerability', value)
+            rule_object.add_reference(attribute.uuid, 'related-to')
+
+    tags = RuleModel.get_tags_for_rule(rule_id)
+    if tags:
+        for tag in tags:
+            if tag.external_id:
+                event.add_tag(**{'name': tag.name, 'uuid': tag.external_id})
+                continue
+            event.add_tag(tag.name)
+
+    return json.loads(event.to_json())
+
+
+#######################################
+#   MISP object : rulezet-metadata    #
+#######################################
 
 def create_rulezet_metadata_misp_object(rule_id: int) -> MISPObject:
     """
@@ -15,7 +51,6 @@ def create_rulezet_metadata_misp_object(rule_id: int) -> MISPObject:
 
     rule = RuleModel.get_rule(rule_id)
     if not rule:
-        print(f"Rule with ID {rule_id} not found.")
         return None
 
     # Required fields
@@ -80,9 +115,9 @@ def create_rulezet_metadata_misp_object(rule_id: int) -> MISPObject:
     return misp_object
 
 
-#################################################################
-#   Rulezet base object with metadata + content + relationship  #
-#################################################################
+############################
+#   Rulezet  relationship  #
+############################
 
 
 def get_rule_misp_object_base(rule_id: int):
@@ -96,46 +131,9 @@ def get_rule_misp_object_base(rule_id: int):
 
     return event
 
-
-
-
-
-
-
-def get_rule_misp_object(rule_id: int):
-    event = get_rule_misp_object_base(rule_id)
-    event = json.loads(event.to_json())
-    return {key: value for key, value in event.items() if key == "Object"}
-
-def get_rule_misp_event(rule_id: int):
-    rule_ = RuleModel.get_rule(rule_id)
-    if not rule_:
-        return None
-    event = get_rule_misp_object_base(rule_id)
-    event.info = f"Rule {rule_id} - {rule_.title}"
-
-    rule_object = event.objects[1] 
-
-    if rule_.cve_id:
-        # convert string to list
-        vuln_list = json.loads(rule_.cve_id)
-
-
-        for value in vuln_list:
-            attribute =  event.add_attribute('vulnerability', value)
-            rule_object.add_reference(attribute.uuid, 'related-to')
-
-    tags = RuleModel.get_tags_for_rule(rule_id)
-    if tags:
-        for tag in tags:
-            if tag.external_id:
-                event.add_tag(**{'name': tag.name, 'uuid': tag.external_id})
-                continue
-            event.add_tag(tag.name)
-
-
-
-    return json.loads(event.to_json())
+####################################
+#   Rulezet base object  content   #
+####################################
 
 
 def content_convert_to_misp_object(rule_id: int) -> MISPObject | None:

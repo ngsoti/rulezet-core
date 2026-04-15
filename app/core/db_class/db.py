@@ -324,6 +324,15 @@ class FormatRule(db.Model):
             "can_be_execute": self.can_be_execute,
             "number_of_rule_with_this_format": self.get_count_rule_with_this_format()
         }
+    
+    def to_json_light(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "creation_date": self.creation_date.strftime('%Y-%m-%d %H:%M'),
+            "user_id": self.user_id,
+            "can_be_execute": self.can_be_execute,
+        }
 
 
 

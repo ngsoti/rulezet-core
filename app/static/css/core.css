@@ -530,16 +530,7 @@ body.modal-open .custom-rule-link {
 .card-watermark-detail { right: 45px; top: 10px; font-size: 18rem; }
 
 /* Hover zoom utility */
-.on-hover-zoom {
-  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
-  border-radius: 0.5rem;
-}
 
-.on-hover-zoom:hover {
-  transform: translateY(-5px) scale(1.05);
-  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15);
-  cursor: pointer;
-}
 
 /* Similar rules card */
 .similar-rule-card {

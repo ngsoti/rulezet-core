@@ -1,16 +1,15 @@
 import base64
 import io
 import json
-import threading
 import zipfile
 import os
 import tempfile
-from flask import current_app, request, send_file
+from flask import  request, send_file
 from math import ceil
 from urllib.parse import urlparse
 from datetime import datetime,  timezone
 
-from app.features.misp.misp_object import content_convert_to_misp_object, get_rule_misp_event, get_rule_misp_event, get_rule_misp_object
+from app.features.misp.rule.misp_object import content_convert_to_misp_object, get_rule_misp_event, get_rule_misp_event, get_rule_misp_object
 from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm
 from app.core.utils.utils import  bump_version, form_to_dict, generate_side_by_side_diff_html
 
@@ -1816,14 +1815,10 @@ def replace_format_rule():
 
 
 @rule_blueprint.route("/get_rules_formats", methods=['GET'])
-def get_rules_format()-> dict:
-    """Get the rules formats"""
+def get_rules_format() -> dict:
     formats = RuleModel.get_all_rule_format()
     if formats:
-        return {"success": True,
-                "formats": [format.to_json() for format in formats],
-                "length": len(formats)
-            }, 200
+        return {"success": True, "formats": formats, "length": len(formats)}, 200
     return {"message": "No formats"}, 404
 
 

@@ -1770,13 +1770,52 @@ def get_update_pending():
 
 def get_all_rule_format():
     """Return all rule formats sorted alphabetically, excluding 'no format'."""
-    return (
+    from sqlalchemy import func
+    
+    # Compte toutes les rules par format en une seule requête
+    counts = dict(
+        db.session.query(
+            func.lower(func.trim(Rule.format)),
+            func.count(Rule.id)
+        )
+        .group_by(func.lower(func.trim(Rule.format)))
+        .all()
+    )
+
+    formats = (
         FormatRule.query
-        .filter(FormatRule.name.ilike('%'))  
         .filter(FormatRule.name != 'no format')
         .order_by(FormatRule.name.asc())
         .all()
     )
+
+    # Injecte le count sans refaire de requête
+    result = []
+    for fmt in formats:
+        data = fmt.to_json_light()  # sans le count
+        data['number_of_rule_with_this_format'] = counts.get(fmt.name.lower(), 0)
+        result.append(data)
+
+    return result
+
+def get_all_rule_format_with_count():
+    """Return formats as dicts with rule count — for API use only."""
+    from sqlalchemy import func
+    counts = dict(
+        db.session.query(
+            func.lower(func.trim(Rule.format)),
+            func.count(Rule.id)
+        )
+        .group_by(func.lower(func.trim(Rule.format)))
+        .all()
+    )
+    formats = get_all_rule_format()
+    result = []
+    for fmt in formats:
+        data = fmt.to_json_light()
+        data['number_of_rule_with_this_format'] = counts.get(fmt.name.lower(), 0)
+        result.append(data)
+    return result
 
 
 def get_all_rule_format_page(page):

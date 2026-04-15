@@ -3,6 +3,7 @@ from flask_login import current_user, login_required
 
 from app.features.bundle.bundle_form import AddNewBundleForm, EditBundleForm
 from app.core.utils.utils import form_to_dict
+from app.features.misp.bundle.misp_object import get_bundle_misp_event
 from . import bundle_core as BundleModel
 from ..rule import rule_core as RuleModel
 from ..account import account_core as AccountModel
@@ -639,6 +640,41 @@ def download_bundle_structure():
         mimetype='application/zip'
     )
 
+@bundle_blueprint.route('/download_misp', methods=['GET'])
+def download_bundle_misp():
+    bundle_id = request.args.get("bundle_id", type=int)
+    if not bundle_id:
+        return {"success": False, "message": "Missing bundle_id", "toast_class": "danger-subtle"}, 400
+
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle:
+        return {"success": False, "message": "Bundle not found", "toast_class": "danger-subtle"}, 400
+
+    if not bundle.access and (not current_user.is_authenticated or (current_user.id != bundle.user_id and not current_user.is_admin())):
+        return {"success": False, "message": "Unauthorized access", "toast_class": "danger"}, 401
+
+    event_json = get_bundle_misp_event(bundle_id)
+    if not event_json:
+        return {"success": False, "message": "Failed to generate MISP event", "toast_class": "danger-subtle"}, 500
+
+    safe_name = "".join([c for c in bundle.name if c.isalnum() or c in (' ', '_')]).strip().replace(' ', '_')
+
+    # # return a json 
+    # json_= json.dumps(event_json, indent=4)
+
+    # # return the content too 
+    # return {
+    #     "message": "MISP event generated successfully",
+    #     "event":  json_,
+    #     "success": True,
+    #     "toast_class": "success-subtle"
+    # }, 200
+    return send_file(
+        io.BytesIO(json.dumps(event_json, indent=4).encode('utf-8')),
+        as_attachment=True,
+        download_name=f"{safe_name}_misp_event.json",
+        mimetype='application/json'
+    )
 ################################
 #   Rule part of the bundle    #
 ################################

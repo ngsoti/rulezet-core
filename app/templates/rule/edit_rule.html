@@ -1,4 +1,18 @@
 {% extends 'base.html' %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/idea.min.css">
+
+<link rel="stylesheet" id="hljs-theme-light"
+    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css">
+<link rel="stylesheet" id="hljs-theme-dark"
+    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css" disabled>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+{% endblock %}
 {% import 'macros/form_macros.html' as f %}
 
 {% block content %}
@@ -230,5 +244,23 @@
             }
         },
     }).mount('#main-container');
+</script>
+<script>
+    function applyCodeMirrorTheme() {
+        const isDark = document.body.classList.contains('dark-mode');
+        // Met à jour tous les éditeurs CodeMirror actifs
+        document.querySelectorAll('.CodeMirror').forEach(cm => {
+            if (cm.CodeMirror) {
+                cm.CodeMirror.setOption('theme', isDark ? 'dracula' : 'idea');
+            }
+        });
+    }
+
+    // Applique au chargement
+    applyCodeMirrorTheme();
+
+    // Observe les changements de classe sur body (toggle dark mode)
+    const observer = new MutationObserver(() => applyCodeMirrorTheme());
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 </script>
 {% endblock %}
