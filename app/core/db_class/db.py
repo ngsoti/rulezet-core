@@ -105,7 +105,7 @@ class Rule(db.Model):
     vote_up = db.Column(db.Integer)
     vote_down = db.Column(db.Integer)
     to_string = db.Column(db.String)
-    cve_id = db.Column(db.Text , nullable=True)
+    cve_id = db.Column(db.String , nullable=True)
 
     github_path = db.Column(db.String , nullable=True)
 

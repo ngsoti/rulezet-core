@@ -242,11 +242,19 @@
                                             <i class="fas fa-code"></i> JSON
                                         </button>
                                     </li>
-                                    {% if rule_misp %}
+                                    {% if rule_misp_object %}
                                     <li class="nav-item" role="presentation">
-                                        <button class="nav-link small fw-bold py-2 border-0" id="misp-tab"
-                                            data-bs-toggle="tab" data-bs-target="#misp" type="button" role="tab">
+                                        <button class="nav-link small fw-bold py-2 border-0" id="misp_object-tab"
+                                            data-bs-toggle="tab" data-bs-target="#misp_object" type="button" role="tab">
                                             <i class="fas fa-project-diagram"></i> MISP Object
+                                        </button>
+                                    </li>
+                                    {% endif %}
+                                    {% if rule_misp_event %}
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link small fw-bold py-2 border-0" id="misp_event-tab"
+                                            data-bs-toggle="tab" data-bs-target="#misp_event" type="button" role="tab">
+                                            <i class="fas fa-project-diagram"></i> MISP Event
                                         </button>
                                     </li>
                                     {% endif %}
@@ -262,14 +270,7 @@
 
                                 </ul>
 
-                                <div v-if="rule_format_is_loading"
-                                    class="d-flex align-items-center justify-content-center p-5"
-                                    style="background-color: var(--bg-color);">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                </div>
-                                <div v-else class="tab-content" id="ruleTabsContent">
+                                <div class="tab-content" id="ruleTabsContent">
                                     <div class="tab-pane fade show active" id="normal" role="tabpanel">
                                         <div class="position-relative">
                                             <button
@@ -280,7 +281,7 @@
                                                 <span class="small fw-bold">Copy</span>
                                             </button>
                                             <pre class="custom-pre m-0 p-3"
-                                                style="max-height: 600px; overflow-y: auto;"><code class="javascript">[[ currentRule.to_string ]]</code></pre>
+                                                style="max-height: 600px; overflow-y: auto;"><code class="javascript" >[[ currentRule.to_string ]]</code></pre>
                                         </div>
                                     </div>
                                     <div class="tab-pane fade" id="json" role="tabpanel">
@@ -295,17 +296,33 @@
                                                 style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_to_json}}"></code></pre>
                                         </div>
                                     </div>
-                                    {% if rule_misp %}
-                                    <div class="tab-pane fade" id="misp" role="tabpanel">
+                                    {% if rule_misp_object %}
+                                    <div class="tab-pane fade" id="misp_object" role="tabpanel">
                                         <div class="position-relative">
                                             <button
                                                 class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm position-absolute top-0 end-0 m-2"
-                                                @click="copyContent('misp')" title="Copy content" style="z-index: 10;">
+                                                @click="copyContent('misp_object')" title="Copy content"
+                                                style="z-index: 10;">
                                                 <i class="fas fa-copy me-1"></i>
                                                 <span class="small fw-bold">Copy</span>
                                             </button>
                                             <pre class="custom-pre m-0 p-3"
-                                                style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_misp}}"></code></pre>
+                                                style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_misp_object}}"></code></pre>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% if rule_misp_event %}
+                                    <div class="tab-pane fade" id="misp_event" role="tabpanel">
+                                        <div class="position-relative">
+                                            <button
+                                                class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm position-absolute top-0 end-0 m-2"
+                                                @click="copyContent('misp_event')" title="Copy content"
+                                                style="z-index: 10;">
+                                                <i class="fas fa-copy me-1"></i>
+                                                <span class="small fw-bold">Copy</span>
+                                            </button>
+                                            <pre class="custom-pre m-0 p-3"
+                                                style="max-height: 600px; overflow-y: auto;"><code class="json" v-text="{{rule_misp_event}}"></code></pre>
                                         </div>
                                     </div>
                                     {% endif %}
@@ -362,10 +379,15 @@
                                         <li><button class="dropdown-item small" @click="download_rule('txt')"><i
                                                     class="fas fa-file-alt me-2 opacity-50"></i>Download Rule</button>
                                         </li>
-                                        {% if rule_misp %}
+                                        {% if rule_misp_object %}
                                         <li><button class="dropdown-item small" @click="download_rule('misp')"><i
-                                                    class="fas fa-project-diagram me-2 opacity-50"></i>Download
-                                                MISP</button></li>
+                                                    class="fas fa-project-diagram me-2 opacity-50"></i>Download MISP
+                                                Object</button></li>
+                                        {% endif %}
+                                        {% if rule_misp_event %}
+                                        <li><button class="dropdown-item small" @click="download_rule('misp_event')"><i
+                                                    class="fas fa-project-diagram me-2 opacity-50"></i>Download MISP
+                                                Event</button></li>
                                         {% endif %}
                                         <li><button class="dropdown-item small" @click="download_rule('json')"><i
                                                     class="fas fa-code me-2 opacity-50"></i>Download JSON</button></li>
@@ -977,7 +999,6 @@
             const handleSimilarRulesFound = ref(false);
             async function init() {
                 detail_page_1_is_loading.value = false
-                get_rule_in_each_format(rule_id)
                 await Promise.all([
                     checkIfUserIsConnected(),
                     getCurrentRuleHistoryCount(),
@@ -1072,33 +1093,6 @@
              * ############################################
              * 
              * */
-
-
-            const rule_format = ref({ normal: '', json: '', misp: '', stix: '' })
-            const rule_format_is_loading = ref(true)
-            watch(rule_format_is_loading, async (newVal) => {
-                if (newVal === false) {
-                    await nextTick();
-                    document.querySelectorAll('pre code').forEach(block => {
-                        block.removeAttribute('data-highlighted');
-                        hljs.highlightElement(block);
-                    });
-                }
-            });
-
-
-            async function get_rule_in_each_format(rule_id) {
-                rule_format_is_loading.value = true
-                const params = new URLSearchParams({ rule_id })
-                const res = await fetch(`/rule/get_rule_each_format?` + params.toString())
-
-                if (res.ok) {
-                    const data = await res.json()
-                    rule_format.value = data.formats
-                }
-
-                rule_format_is_loading.value = false
-            }
 
             const current_user_is_admin = ref()
             const current_user_is_connected = ref(false)
@@ -1600,7 +1594,6 @@
                 SimilarRulesDisplay,
                 refreshSimilarRules,
                 handleSimilarRulesFound,
-                rule_format_is_loading,
                 rule_stix,
                 copyContent
 

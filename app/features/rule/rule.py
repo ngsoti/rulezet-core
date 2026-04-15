@@ -9,11 +9,13 @@ from flask import current_app, request, send_file
 from math import ceil
 from urllib.parse import urlparse
 from datetime import datetime,  timezone
+
+from app.features.misp.misp_object import content_convert_to_misp_object, get_rule_misp_event, get_rule_misp_event, get_rule_misp_object
 from .rule_form import AddNewRuleForm, CreateFormatRuleForm, EditRuleForm
 from app.core.utils.utils import  bump_version, form_to_dict, generate_side_by_side_diff_html
 
 from app.features.account.account_core import add_favorite, remove_favorite
-from app.features.misp.misp_core import content_convert_to_misp_object, convert_misp_to_stix
+from app.features.misp.misp_core import  convert_misp_to_stix
 from app.features.rule.rule_format.main_format import  parse_rule_by_format, process_and_import_fixed_rule, verify_syntax_rule_by_format
 from app.features.rule.rule_format.utils_format.utils_import_update import clone_or_access_repo, fill_all_void_field, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
 
@@ -534,24 +536,32 @@ def detail_rule(rule_id)-> render_template:
     rule = RuleModel.get_rule(rule_id)
     if not rule:
         return render_template("404.html")
-    rule_misp = content_convert_to_misp_object(rule_id)
-    if not rule_misp:
-        return 
+    
+    rule_misp_object = get_rule_misp_object(rule_id)
+
+    if not rule_misp_object:
+        rule_misp_object = None
+
+    rule_misp_event = get_rule_misp_event(rule_id)
+    if not rule_misp_event:
+        rule_misp_event = None
 
     rule_to_json = json.dumps(rule.to_json_detail(), indent=4)
 
     if not rule_to_json:
         rule_to_json = "No json format for this rule"
     if rule:
-        return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp=rule_misp, rule_to_json=rule_to_json, )
+        return render_template("rule/detail_rule.html", rule=rule, rule_content=rule.to_string, rule_misp_object=rule_misp_object, rule_misp_event=rule_misp_event, rule_to_json=rule_to_json, )
     return render_template("404.html")
 
 
 @rule_blueprint.route("/get_stix/<int:rule_id>")
 def get_stix(rule_id):
-    rule_misp = content_convert_to_misp_object(rule_id)
+    rule_misp = get_rule_misp_event(rule_id)
     if not rule_misp:
         return jsonify({"stix": None})
+    
+    # rule_misp_json = json.loads(rule_misp) 
     rule_stix = convert_misp_to_stix(rule_misp)
     return jsonify({"stix": json.dumps(rule_stix, indent=4) if rule_stix else None})
 
@@ -572,18 +582,29 @@ def download_rule_unified() -> Response:
             content = rule.to_string
             extention = rule.get_extension()
             filename = f"{rule.title}.{extention}"
+
         elif fmt == 'json':
             content = json.dumps(rule.to_json_detail(), indent=2)
             filename = f"{rule.title}.json"
+
         elif fmt == 'misp':
-            object_json = content_convert_to_misp_object(rule_id)
+            object_json = get_rule_misp_object(rule_id)
             if not object_json:
                 error_mesg = f"Format {rule.format} not found on MISP"
             else:
-                content = json.dumps(json.loads(object_json), indent=2)
+                content = json.dumps(object_json, indent=2)
                 filename = f"{rule.title}_misp_object.json"
+
+        elif fmt == 'misp_event':
+            object_json = get_rule_misp_event(rule_id)
+            if not object_json:
+                error_mesg = f"Format {rule.format} not found on MISP"
+            else:
+                content = json.dumps(object_json, indent=2)
+                filename = f"{rule.title}_misp_event.json"
+
         elif fmt == 'stix':
-            misp_raw = content_convert_to_misp_object(rule_id)
+            misp_raw = get_rule_misp_object(rule_id)
             object_json = convert_misp_to_stix(misp_raw)
             if not object_json:
                 error_mesg = f"Format {rule.format} not found on STIX"
@@ -591,6 +612,7 @@ def download_rule_unified() -> Response:
                 stix_data = json.loads(object_json) if isinstance(object_json, str) else object_json
                 content = json.dumps(stix_data, indent=2)
                 filename = f"{rule.title}_stix_object.json"
+
         elif fmt == 'all':
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
@@ -598,18 +620,28 @@ def download_rule_unified() -> Response:
                     zip_file.writestr(f"{rule.title}.txt", rule.to_string)
                 except Exception as e:
                     zip_file.writestr("errors.txt", f"TXT error: {str(e)}\n")
+
                 try:
                     zip_file.writestr(f"{rule.title}.json", json.dumps(rule.to_json_detail(), indent=2))
                 except Exception as e:
                     zip_file.writestr("errors.txt", f"JSON error: {str(e)}\n")
+
                 try:
-                    misp_raw = content_convert_to_misp_object(rule_id)
-                    if misp_raw:
-                        zip_file.writestr(f"{rule.title}_misp_object.json", json.dumps(json.loads(misp_raw), indent=2))
+                    misp_object_raw = get_rule_misp_object(rule_id)
+                    if misp_object_raw:
+                        zip_file.writestr(f"{rule.title}_misp_object.json", json.dumps(misp_object_raw, indent=2))
                 except Exception:
                     pass
+
                 try:
-                    misp_raw = content_convert_to_misp_object(rule_id)
+                    misp_event_raw = get_rule_misp_event(rule_id)
+                    if misp_event_raw:
+                        zip_file.writestr(f"{rule.title}_misp_event.json", json.dumps(misp_event_raw, indent=2))
+                except Exception:
+                    pass
+
+                try:
+                    misp_raw = get_rule_misp_object(rule_id)
                     if misp_raw:
                         stix_raw = convert_misp_to_stix(misp_raw)
                         if stix_raw:
@@ -617,19 +649,24 @@ def download_rule_unified() -> Response:
                             zip_file.writestr(f"{rule.title}_stix_object.json", json.dumps(stix_data, indent=2))
                 except Exception:
                     pass
+
             zip_buffer.seek(0)
             content = base64.b64encode(zip_buffer.read()).decode('utf-8')
             filename = f"{rule.title}_all_formats.zip"
+
         else:
             error_mesg = f"Unknown format: {fmt}"
+
     except Exception as e:
         error_mesg = f"Failed to prepare download: {str(e)}"
+
     if error_mesg:
         return jsonify({
             "message": error_mesg,
             "success": False,
             "toast_class": "danger-subtle",
         })
+
     return jsonify({
         "message": f"Rule {rule.title} ready for download",
         "success": True,
@@ -639,45 +676,6 @@ def download_rule_unified() -> Response:
         "encoding": "base64" if fmt == 'all' else "plain",
     })
 
-
-@rule_blueprint.route("/get_rule_each_format", methods=["GET"])
-def get_rule_each_format():
-    """Return a rule in multiple export formats (Normal, JSON, MISP)."""
-
-    rule_id = request.args.get("rule_id", type=int)
-    rule = RuleModel.get_rule(rule_id)
-
-    if not rule:
-        return jsonify({
-            "message": f"No rule found with id={rule_id}",
-            "success": False
-        }), 404
-
-    rule_json = rule.to_json()
-    rule_misp_object = content_convert_to_misp_object(rule_id)
-
-
-
-
-    return_dict = {
-        "success": True,
-        "rule_id": rule_id,
-        "formats": {
-            "normal": rule.to_string,
-            "json": rule_json,
-        }
-    }
-
-    if rule_misp_object and rule_json:
-        return_dict["formats"]["misp"] = json.loads(rule_misp_object)
-        return_dict["formats"]["stix"] = None
-    elif rule_json:
-        return_dict["formats"]["misp"] = "No MISP object for the format"
-    else:
-        return_dict["success"] = False
-        return_dict["formats"]["misp"] = "No MISP object for the format"
-    
-    return jsonify(return_dict)
 
 #########################
 #   Favorite section    #

@@ -8,8 +8,9 @@ from flask import request, url_for
 from flask_restx import Resource, Namespace
 
 from app.api.utils.rule_validation import *
-from app.features.misp.misp_core import content_convert_to_misp_object
+
 from app.core.utils import utils
+from app.features.misp.misp_object import get_rule_misp_object
 from ...features.rule import rule_core as RuleModel
 from ...features.account import account_core as AccountModel
 from flask_restx import Namespace, Resource
@@ -289,7 +290,7 @@ class ConvertMISP(Resource):
 
         def convert_rule(rule_id: int) -> Optional[dict]:
             try:
-                misp_json = content_convert_to_misp_object(rule_id)
+                misp_json = get_rule_misp_object(rule_id)
                 return misp_json
             except Exception:
                 return None
