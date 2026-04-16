@@ -148,14 +148,15 @@ const RuleFilterBar = {
     template: `
     <div class="filter-container">
         <div class="d-inline-flex gap-1 mb-3">
-            <button class="btn btn-primary rounded-pill px-3 shadow-sm" 
-                    type="button" 
-                    data-bs-toggle="collapse" 
-                    data-bs-target="#collapseFilter" 
-                    aria-expanded="false" 
-                    aria-controls="collapseFilter">
-                <i class="fas fa-filter me-2"></i>Filter Rules <i class="fas fa-chevron-down"></i>
+            <button class="btn btn-sm d-inline-flex align-items-center gap-2 px-3"
+                    style="background:var(--light-bg-color); border:1px solid var(--border-color); border-radius:20px; font-size:.75rem; color:var(--subtle-text-color);"
+                    data-bs-toggle="collapse" data-bs-target="#collapseFilter">
+                <i class="fas fa-sliders" style="font-size:.7rem;"></i> Filter 
+                <i class="fa-solid fa-chevron-down ms-auto" style="font-size:.7rem;"></i>
             </button>
+           <a  class="btn btn-sm d-inline-flex align-items-center gap-2 px-3"  style="background:var(--light-bg-color); border:1px solid var(--border-color); border-radius:20px; font-size:.75rem; color:var(--subtle-text-color);"
+                           href="/rule/create_rule"><i class="fa-solid fa-file-circle-plus"></i> Add Rules</a>
+            
         </div>
 
         <div class="collapse show" id="collapseFilter">
