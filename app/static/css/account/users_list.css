@@ -484,3 +484,14 @@ body.dark-mode .pagination-sm .page-item.active .page-link {
         min-width: 120px;
     }
 }
+
+.blurred {
+    filter: blur(5px);
+    user-select: none;
+    transition: filter 0.2s ease;
+    cursor: pointer;
+}
+
+.blurred:hover {
+    filter: blur(3px);
+}

@@ -57,7 +57,13 @@
                 <thead>
                     <tr>
                         <th class="col-user">User</th>
-                        <th class="col-email">Email</th>
+                        <th class="col-email">
+                            Email
+                            <button class="btn btn-xs btn-outline-secondary ms-2" @click="toggleBlur"
+                                title="Toggle blur">
+                                <i :class="blurEnabled ? 'fas fa-eye' : 'fas fa-eye-slash'" style="font-size:11px;"></i>
+                            </button>
+                        </th>
                         <th class="col-role">Role</th>
                         <th class="col-status">Status</th>
                         <th class="col-verified">Verified</th>
@@ -68,13 +74,21 @@
                     <tr v-for="(user, index) in users_list" :key="user.id"
                         :class="{ 'current-user': {{current_user.id}} == user.id }">
                         <td class="col-user">
-                            <strong>[[ user.first_name ]] [[ user.last_name || '' ]]</strong>
-                            <template v-if="{{current_user.id}} == user.id">
-                                <span class="badge bg-info text-dark ms-1" style="font-size: 0.65rem;">YOU</span>
-                            </template>
+                            <span :class="{ 'blurred': blurEnabled && !revealedUsers.has(user.id) }"
+                                @click="toggleReveal(user.id)" style="cursor:pointer;"
+                                :title="blurEnabled && !revealedUsers.has(user.id) ? 'Click to reveal' : ''">
+                                <strong>[[ user.first_name ]] [[ user.last_name || '' ]]</strong>
+                                <template v-if="{{current_user.id}} == user.id">
+                                    <span class="badge bg-info text-dark ms-1" style="font-size: 0.65rem;">YOU</span>
+                                </template>
+                            </span>
                         </td>
                         <td class="col-email">
-                            <small>[[ user.email ]]</small>
+                            <span :class="{ 'blurred': blurEnabled && !revealedUsers.has(user.id) }"
+                                @click="toggleReveal(user.id)" style="cursor:pointer;"
+                                :title="blurEnabled && !revealedUsers.has(user.id) ? 'Click to reveal' : ''">
+                                <small>[[ user.email ]]</small>
+                            </span>
                         </td>
                         <td class="col-role">
                             <template v-if="user.admin">
@@ -267,6 +281,23 @@
                 await fetchUsers(1)
             }
 
+
+            const blurEnabled = ref(true)
+            const revealedUsers = ref(new Set())
+
+            function toggleBlur() {
+                blurEnabled.value = !blurEnabled.value
+                revealedUsers.value = new Set()   // reset les révélations individuelles
+            }
+
+            function toggleReveal(userId) {
+                if (!blurEnabled.value) return
+                const s = new Set(revealedUsers.value)
+                if (s.has(userId)) s.delete(userId)
+                else s.add(userId)
+                revealedUsers.value = s
+            }
+
             return {
                 message_list,
                 total_users,
@@ -281,7 +312,11 @@
                 current_page,
                 onSearchInput,
                 onEnterKey,
-                changePage
+                changePage,
+                blurEnabled,
+                revealedUsers,
+                toggleBlur,
+                toggleReveal,
             };
         }
     }).mount('#main-container');

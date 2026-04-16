@@ -1,17 +1,19 @@
 {% extends 'base.html' %}
 {% block head %}
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/account/user_detail.css') }}">
 {% endblock %}
+
 {% block content %}
-<div>
+<div id="main-container" v-cloak>
+
     <div v-if="isLoading" class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
         <div class="spinner-border text-primary" role="status"></div>
         <span class="ms-2">Loading...</span>
     </div>
 
-    <div v-else class="container my-5" id="main-container" v-cloak>
+    <div v-else class="container my-5">
+
         <!-- Header Section -->
         <div class="mb-5 header-section text-center">
             <div class="position-relative d-inline-block mb-3">
@@ -36,8 +38,8 @@
             <div class="mx-auto mt-3 bg-primary opacity-25" style="width: 60px; height: 4px; border-radius: 2px;"></div>
         </div>
 
-
-        <ul class="nav nav-underline justify-content-center w-100 mb-3" id="user_detail" role="tablist">
+        <!-- Tabs -->
+        <ul class="nav nav-underline justify-content-center w-100 mb-3" role="tablist">
             <li class="nav-item flex-fill text-center">
                 <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab"
                     aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">
@@ -45,84 +47,71 @@
                 </a>
             </li>
             <li class="nav-item flex-fill text-center">
-                <a class="nav-link " id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab"
-                    aria-controls="chap2-pane" aria-selected="true" style="color: var(--text-color);">
+                <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab"
+                    aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">
                     Contributions
                 </a>
             </li>
             <li class="nav-item flex-fill text-center">
-                <a class="nav-link " id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab"
-                    aria-controls="chap3-pane" aria-selected="true" style="color: var(--text-color);">
+                <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab"
+                    aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">
                     Rules Owned
                 </a>
             </li>
         </ul>
-        <div class="tab-content" id="user_detail">
+
+        <div class="tab-content">
+
+            <!-- ── Tab 1 : Global Info ── -->
             <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
                 <div class="User-detail-global-info">
-                    <!-- Avatar Section -->
+
+                    <!-- Avatar -->
                     <div class="avatar-container">
                         <div class="user-avatar">
                             {{ user.first_name[0] + user.last_name[0] }}
                         </div>
                         <div class="avatar-info">
                             <div class="avatar-name">{{ user.username }}</div>
-                            {% if user.id == current_user.id %}
-                            <div class="avatar-email">
-                                {{ user.email }}
-                            </div>
-                            {% endif %}
+
                         </div>
                     </div>
 
                     <!-- Main Info Grid -->
                     <div class="global-info-grid">
-                        <!-- First Name -->
                         <div class="info-item">
                             <label class="info-item-label">First Name</label>
                             <div class="info-item-value">{{ user.first_name }}</div>
                         </div>
-
-                        <!-- Last Name -->
                         <div class="info-item">
                             <label class="info-item-label">Last Name</label>
                             <div class="info-item-value">{{ user.last_name }}</div>
                         </div>
-
-                        <!-- ID -->
                         <div class="info-item">
                             <label class="info-item-label">User ID</label>
                             <div class="info-item-value">#{{ user.id }}</div>
                         </div>
-
-                        <!-- Verified Status -->
                         <div class="info-item">
                             <label class="info-item-label">Verification</label>
                             {% if user.is_verified %}
                             <div class="info-badge badge-verified">
-                                <i class="fas fa-check-circle"></i>
-                                Verified
+                                <i class="fas fa-check-circle"></i> Verified
                             </div>
                             {% else %}
                             <div class="info-badge badge-unverified">
-                                <i class="fas fa-clock"></i>
-                                Unverified
+                                <i class="fas fa-clock"></i> Unverified
                             </div>
                             {% endif %}
                         </div>
-
-                        <!-- Admin Status -->
                         <div class="info-item">
                             <label class="info-item-label">Status</label>
                             {% if user.is_admin %}
                             <div class="info-badge badge-admin">
-                                <i class="fas fa-crown"></i>
-                                Administrator
+                                <i class="fas fa-crown"></i> Administrator
                             </div>
                             {% else %}
-                            <div v-else class="info-badge">
-                                <i class="fas fa-user"></i>
-                                User
+                            <div class="info-badge">
+                                <i class="fas fa-user"></i> User
                             </div>
                             {% endif %}
                         </div>
@@ -131,43 +120,62 @@
                     <!-- Admin Only Section -->
                     {% if current_user.is_admin() %}
                     <div class="admin-only-info">
-                        <div class="info-section-header">
+                        <div class="info-section-header d-flex align-items-center gap-2">
                             <i class="fas fa-lock"></i>
-                            <h3>Administrator Information</h3>
+                            <h3 class="mb-0">Administrator Information</h3>
                             <span class="admin-only-label">Admins Only</span>
+                            <!-- Toggle global blur -->
+                            <button class="btn btn-sm btn-outline-secondary ms-auto"
+                                style="font-size:0.75rem; padding:3px 10px; border-radius:20px;"
+                                @click="toggleAdminBlur">
+                                <i :class="adminBlurEnabled ? 'fas fa-eye-slash' : 'fas fa-eye'" class="me-1"></i>
+                                [[ adminBlurEnabled ? 'Reveal all' : 'Hide all' ]]
+                            </button>
                         </div>
 
                         <div class="global-info-grid" style="margin-top: 0;">
-                            <!-- Email (Admin Only) -->
+
+                            <!-- Email -->
                             <div class="info-item">
                                 <label class="info-item-label">Email Address</label>
-                                <div class="info-item-value">{{ user.email }}</div>
+                                <div :class="['info-item-value', adminBlurEnabled && !revealedFields.has('email') ? 'admin-sensitive' : '']"
+                                    @click="toggleRevealField('email')"
+                                    :title="adminBlurEnabled && !revealedFields.has('email') ? 'Click to reveal' : ''"
+                                    :style="adminBlurEnabled && !revealedFields.has('email') ? 'cursor:pointer' : ''">
+                                    {{ user.email }}
+                                </div>
                             </div>
 
-                            <!-- Connection Status (Admin Only) -->
+                            <!-- Connection Status -->
                             <div class="info-item">
                                 <label class="info-item-label">Connection Status</label>
-                                {% if user.is_connected %}
-                                <div class="info-badge badge-connected">
-                                    <i class="fas fa-circle"></i>
-                                    Connected
+                                <div :class="adminBlurEnabled && !revealedFields.has('status') ? 'admin-sensitive' : ''"
+                                    @click="toggleRevealField('status')"
+                                    :title="adminBlurEnabled && !revealedFields.has('status') ? 'Click to reveal' : ''"
+                                    :style="adminBlurEnabled && !revealedFields.has('status') ? 'cursor:pointer' : ''">
+                                    {% if user.is_connected %}
+                                    <div class="info-badge badge-connected">
+                                        <i class="fas fa-circle"></i> Connected
+                                    </div>
+                                    {% else %}
+                                    <div class="info-badge badge-disconnected">
+                                        <i class="fas fa-circle"></i> Disconnected
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                {% else %}
-                                <div class="info-badge badge-disconnected">
-                                    <i class="fas fa-circle"></i>
-                                    Disconnected
-                                </div>
-                                {% endif %}
                             </div>
-
 
                         </div>
                     </div>
                     {% endif %}
-                    <user-activity-stats-component :user-id="1" api-endpoint="/account/user_activity_stats/{{user.id}}">
+
+                    <user-activity-stats-component :user-id="1"
+                        api-endpoint="/account/user_activity_stats/{{ user.id }}">
                     </user-activity-stats-component>
                 </div>
             </div>
+
+            <!-- ── Tab 2 : Contributions ── -->
             <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
                 <div class="User-detail-contribution-info">
                     <user-contribution-stats-component :user-id="{{ user.id }}"></user-contribution-stats-component>
@@ -177,49 +185,71 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ── Tab 3 : Rules Owned ── -->
             <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
                 <div class="User-detail-rule-info">
-                    <user-rules-management-component :user-id="{{user.id}}" :view-only="true"
+                    <user-rules-management-component :user-id="{{ user.id }}" :view-only="true"
                         :csrf-token="'{{ csrf_token() }}'"
                         :current-user-is-authenticated="'{{ current_user.is_authenticated }}'">
                     </user-rules-management-component>
                 </div>
             </div>
+
         </div>
-        {% endblock %}
+    </div>
+</div>
+{% endblock %}
 
 
-        {% block script %}
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script type="module">
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="module">
+    const { createApp, ref } = Vue;
+    import { message_list, create_message } from '/static/js/toaster.js';
+    import UserContributionStatsComponent from '/static/js/account/UserContributionStatsComponent.js';
+    import UserRulesManagementComponent from '/static/js/rule/ruleFetchTable.js';
+    import UserActivityStatsComponent from '/static/js/account/UserActivityStatsComponent.js';
+    import UserProposalsComponent from '/static/js/account/UserProposalsComponent.js';
 
-            const { createApp, ref, onMounted, watch, nextTick, computed } = Vue;
-            import { message_list, create_message } from '/static/js/toaster.js';
-            import UserContributionStatsComponent from '/static/js/account/UserContributionStatsComponent.js';
-            import UserRulesManagementComponent from '/static/js/rule/ruleFetchTable.js';
-            import UserActivityStatsComponent from '/static/js/account/UserActivityStatsComponent.js';
-            import UserProposalsComponent from '/static/js/account/UserProposalsComponent.js';
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: {
+            UserContributionStatsComponent,
+            UserRulesManagementComponent,
+            UserActivityStatsComponent,
+            UserProposalsComponent
+        },
+        setup() {
+            const isLoading = ref(false)
 
+            /* ── Admin blur state ── */
+            const adminBlurEnabled = ref(true)
+            const revealedFields = ref(new Set())
 
-            createApp({
-                delimiters: ['[[', ']]'],
-                components: {
-                    UserContributionStatsComponent,
-                    UserRulesManagementComponent,
-                    UserActivityStatsComponent,
-                    UserProposalsComponent
-                },
-                setup() {
-                    const isLoading = ref(false);
+            function toggleAdminBlur() {
+                adminBlurEnabled.value = !adminBlurEnabled.value
+                /* Reset individual reveals when hiding everything again */
+                revealedFields.value = new Set()
+            }
 
+            function toggleRevealField(fieldKey) {
+                if (!adminBlurEnabled.value) return
+                const s = new Set(revealedFields.value)
+                if (s.has(fieldKey)) s.delete(fieldKey)
+                else s.add(fieldKey)
+                revealedFields.value = s
+            }
 
-
-                    return {
-                        message_list,
-                        isLoading,
-
-                    };
-                }
-            }).mount('#main-container');
-        </script>
-        {% endblock %}
+            return {
+                message_list,
+                isLoading,
+                adminBlurEnabled,
+                revealedFields,
+                toggleAdminBlur,
+                toggleRevealField,
+            }
+        }
+    }).mount('#main-container')
+</script>
+{% endblock %}

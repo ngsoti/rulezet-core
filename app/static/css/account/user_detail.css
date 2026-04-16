@@ -406,3 +406,19 @@ body.dark-mode .user-rules-management-component .column-filter-options {
     background-color: rgba(13, 110, 253, 0.04);
     border-bottom-color: #444;
 }
+
+.admin-sensitive {
+    filter: blur(5px);
+    user-select: none;
+    transition: filter 0.2s ease;
+    cursor: pointer;
+}
+
+.admin-sensitive:hover {
+    filter: blur(3px);
+}
+
+.admin-sensitive.revealed {
+    filter: none;
+    cursor: default;
+}
