@@ -104,7 +104,7 @@ class EditRuleForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         formats_rules_list = RuleModel.get_all_rule_format()
-        self.format.choices = [(f.name, f.name) for f in formats_rules_list]
+        self.format.choices = [(f['name'], f['name']) for f in formats_rules_list]
 
 class CreateFormatRuleForm(FlaskForm):
     """Form to create a new rule format"""
