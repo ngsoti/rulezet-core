@@ -2,6 +2,7 @@ import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDis
 import TagsDisplaysList from '/static/js/tags/tagsDisplaysList.js'
 
 const { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } = Vue
+import { message_list, create_message } from '/static/js/toaster.js'
 
 const RulesCarousel = {
     name: 'RulesCarousel',
@@ -46,7 +47,6 @@ const RulesCarousel = {
         <template v-else-if="rules_list.length > 0">
             <div class="carousel-rules-wrapper">
 
-                <!-- Flèche gauche -->
                 <button class="carousel-arrow"
                         @click="carouselSlide(-1)"
                         :disabled="carouselIndex === 0"
@@ -345,6 +345,7 @@ const RulesCarousel = {
                 const rule = rules_list.value.find(r => r.id === ruleId)
                 if (rule) rule.is_favorited = data.is_favorited
             }
+            create_message(data.message, data.toast_class, false, null, '/rule/owner_rules')
         }
 
         function animateClick(event) {
@@ -373,7 +374,6 @@ const RulesCarousel = {
             return new Date(dateStr).toLocaleDateString()
         }
 
-        /* re-fetch si la route change */
         watch(() => props.route, fetchRules)
 
         onMounted(() => fetchRules())
