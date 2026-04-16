@@ -4,7 +4,6 @@ import requests
 
 def convert_misp_to_stix(misp_object: json) -> dict | None:
     """Converts a MISP object to STIX via the cti-transmute.org API."""
-    print("Converting MISP object to STIX...")
     try:
         response = requests.post(
             "https://cti-transmute.org/api/convert/misp_to_stix",

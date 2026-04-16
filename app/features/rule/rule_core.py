@@ -10,6 +10,7 @@ import uuid
 import datetime
 from typing import List
 import zipfile
+import requests
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app, jsonify, send_file
 from flask_login import current_user
@@ -1770,9 +1771,6 @@ def get_update_pending():
 
 def get_all_rule_format():
     """Return all rule formats sorted alphabetically, excluding 'no format'."""
-    from sqlalchemy import func
-    
-    # Compte toutes les rules par format en une seule requête
     counts = dict(
         db.session.query(
             func.lower(func.trim(Rule.format)),
@@ -1789,27 +1787,52 @@ def get_all_rule_format():
         .all()
     )
 
-    # Injecte le count sans refaire de requête
     result = []
     for fmt in formats:
-        data = fmt.to_json_light()  # sans le count
+        data = fmt.to_json_light()  
         data['number_of_rule_with_this_format'] = counts.get(fmt.name.lower(), 0)
         result.append(data)
 
     return result
 
+# def get_last_cve_rules(limit: int = 12) -> list:
+#    
+#     return (
+#         Rule.query
+#         .filter(
+#             Rule.cve_id.isnot(None),
+#             ~Rule.cve_id.in_(['', '[]', 'null', '[""]'])
+#         )
+#         .order_by(Rule.last_modif.desc())
+#         .limit(limit)
+#         .all()
+#     )
+
+
 def get_last_cve_rules(limit: int = 12) -> list:
-    """Retourne les dernières règles ayant au moins un CVE associé."""
-    return (
+
+    def extract_max_cve_year(rule):
+        if not rule.cve_id:
+            return 0
+        years = re.findall(r'CVE-(\d{4})-', rule.cve_id, re.IGNORECASE)
+        return max((int(y) for y in years), default=0)
+
+    rules = (
         Rule.query
         .filter(
             Rule.cve_id.isnot(None),
             ~Rule.cve_id.in_(['', '[]', 'null', '[""]'])
         )
-        .order_by(Rule.last_modif.desc())
-        .limit(limit)
         .all()
     )
+
+    rules.sort(
+        key=lambda r: (extract_max_cve_year(r), r.last_modif or datetime.datetime.min),
+        reverse=True
+    )
+
+    return rules[:limit]
+
 def get_all_rule_format_with_count():
     """Return formats as dicts with rule count — for API use only."""
     from sqlalchemy import func

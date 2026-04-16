@@ -82,12 +82,8 @@
                 </div>
             </div>
 
-            <hr class="opacity-10 mb-5 anim">
+            <hr class="opacity-10 mb-5 mt-5">
 
-            <!-- ════════════════════════════════════════
-                 Carousel 1 — dernières règles ajoutées
-                 Utilisation : juste la prop "route"
-                 ════════════════════════════════════════ -->
             <div class="d-flex align-items-center justify-content-between mb-4">
                 <h4 class="fw-bold mb-0">Recently Added <span class="text-primary">Intelligence</span></h4>
                 <p class="text-muted small mb-0 d-none d-lg-block">Review the latest 12 assets updated by the community.
@@ -98,19 +94,7 @@
                 :current-user-is-admin="current_user_is_admin" :current-user-is-connected="current_user_is_connected">
             </rules-carousel>
 
-            <div class="text-center mt-5 mb-4">
-                <a href="/rule/rules_list" class="btn btn-more-rules px-4 py-2 rounded-pill fw-bold">
-                    <span>See more rules</span>
-                    <i class="fa-solid fa-arrow-right ms-2 transition-arrow"></i>
-                </a>
-            </div>
-
-            <hr class="opacity-10 mb-5">
-
-            <!-- ════════════════════════════════════════
-                 Carousel 2 — règles liées aux CVE
-                 Même composant, route différente
-                 ════════════════════════════════════════ -->
+            <hr class="opacity-10 mb-5 mt-5">
             <div class="d-flex align-items-center justify-content-between mb-4">
                 <h4 class="fw-bold mb-0">Recently CVE <span class="text-primary">reports</span></h4>
                 <p class="text-muted small mb-0 d-none d-lg-block">Review the latest 12 assets connected with CVE.</p>
@@ -120,14 +104,15 @@
                 :current-user-is-admin="current_user_is_admin" :current-user-is-connected="current_user_is_connected">
             </rules-carousel>
 
+
+
             <div class="text-center mt-5 mb-4">
-                <a href="/rule/rules_list?filter=cve" class="btn btn-more-rules px-4 py-2 rounded-pill fw-bold">
-                    <span>See more CVE rules</span>
+                <a href="/rule/rules_list" class="btn btn-more-rules px-4 py-2 rounded-pill fw-bold">
+                    <span>See more rules</span>
                     <i class="fa-solid fa-arrow-right ms-2 transition-arrow"></i>
                 </a>
             </div>
 
-    </template>
     </template>
 
     <template v-else>

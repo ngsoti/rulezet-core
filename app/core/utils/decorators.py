@@ -14,10 +14,6 @@ def verification_required():
             if request.path.startswith("/api/"):
                 if not verif_api_key(request.headers): 
                     abort(403)
-                else:
-                    print("[DEBUG] API key is valid")
-            else:
-                print("[DEBUG] Non-API path, skipping API key check")
 
             return f(*args, **kwargs)
 

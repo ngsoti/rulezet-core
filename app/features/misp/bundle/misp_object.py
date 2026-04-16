@@ -108,7 +108,6 @@ def create_bundle_misp_object(bundle_id: int) -> MISPObject | None:
     """
     bundle = BundleModel.get_bundle_by_id(bundle_id)
     if not bundle:
-        print(f"Bundle with ID {bundle_id} not found.")
         return None
 
     misp_object = MISPObject(name='rulezet-bundle', ignore_warning=False)
