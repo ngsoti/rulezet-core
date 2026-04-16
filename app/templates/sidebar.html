@@ -20,14 +20,15 @@
                      <i class="fa-solid fa-box fa-fw me-1 text-primary"></i> Bundle
                   </a>
                   <ul class="dropdown-menu border-0 shadow-lg animate slideIn" aria-labelledby="bundleDropdown">
+                     <li><a href="/bundle/list"
+                           class="dropdown-item py-2 {% if request.path == '/bundle/list' %}active{% endif %}"><i
+                              class="fa-solid fa-rocket "></i> Explore Bundles</a></li>
                      {% if current_user.is_authenticated %}
                      <li><a href="/bundle/create"
                            class="dropdown-item py-2 {% if request.path == '/bundle/create' %}active{% endif %}"><i
-                              class=" fa-solid fa-calendar-plus fa-fw me-2 text-muted"></i>Create Bundle</a></li>
+                              class="fa-solid fa-folder-plus"></i> Create Bundles</a></li>
                      {% endif %}
-                     <li><a href="/bundle/list"
-                           class="dropdown-item py-2 {% if request.path == '/bundle/list' %}active{% endif %}"><i
-                              class="fa-solid fa-clipboard-list fa-fw me-2 text-muted"></i>View Bundles</a></li>
+
                   </ul>
                </li>
 
@@ -38,23 +39,25 @@
                   </a>
                   <ul class="dropdown-menu border-0 shadow-lg animate slideIn" aria-labelledby="rulesDropdown">
                      <li><a class="dropdown-item py-2 {% if request.path == '/rule/rules_list' %}active{% endif %}"
-                           href="/rule/rules_list"><i class="fa-solid fa-list fa-fw me-2 text-muted"></i>View Rules </a>
+                           href="/rule/rules_list"><i class="fa-solid fa-rocket"></i> Explore Rules </a>
                      </li>
+                     <li><a class="dropdown-item py-2 {% if request.path == '/rule/create_rule' %}active{% endif %}"
+                           href="/rule/create_rule"><i class="fa-solid fa-file-circle-plus"></i> Add Rules</a></li>
                      {% if current_user.is_authenticated %}
                      <li>
                         <a class="dropdown-item py-2 position-relative d-flex justify-content-between align-items-center {% if request.path == '/rule/rule_propose_edit' %}active{% endif %}"
                            href="/rule/rule_propose_edit">
-                           <span><i class="fa-solid fa-lightbulb fa-fw me-2 text-muted"></i>Rule Proposal</span>
+                           <span><i class="fa-solid fa-lightbulb fa-fw"></i> Proposal Rules</span>
                            <template v-if="changes_to_validate > 0">
                               <span class="badge rounded-pill bg-danger ms-2">[[ changes_to_validate ]]</span>
                            </template>
                         </a>
                      </li>
+
                      <li><a class="dropdown-item py-2 {% if request.path == '/rule/bad_rules_summary' %}active{% endif %}"
                            href="/rule/bad_rules_summary"><i class="fa-solid fa-tags fa-fw me-2 text-muted"></i>Bad
                            Rules</a></li>
-                     <li><a class="dropdown-item py-2 {% if request.path == '/rule/create_rule' %}active{% endif %}"
-                           href="/rule/create_rule"><i class="fas fa-hammer fa-fw me-2 text-muted"></i>Add Rule</a></li>
+
                      {% if not current_user.is_admin() %}
                      <li>
                         <a href="/admin/request"
