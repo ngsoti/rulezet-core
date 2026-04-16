@@ -45,7 +45,6 @@
                         <a href="/rule/rules_list?format=nova"><span class="fmt-tag">Nova</span></a>
                     </div>
 
-
                     <div class="d-flex gap-3 mt-4 flex-wrap">
                         <a href="{{ url_for('rule.rules_list') }}" class="btn-why-primary">
                             <i class="fa-solid fa-rocket"></i> Explore rules
@@ -123,6 +122,165 @@
     </div>
 
     <hr class="why-hr" />
+
+    <!-- ═══════════════════════════════════════
+       WHAT IS A DETECTION RULE?
+  ═══════════════════════════════════════ -->
+    <section class="py-5">
+        <div class="container">
+            <p class="section-eyebrow">
+                <i class="fa-solid fa-book-open me-1"></i> Foundations
+            </p>
+            <h2 class="section-heading">What is a detection rule?</h2>
+            <p class="section-sub">
+                A detection rule is a piece of logic that describes a threat, an attack pattern, or a suspicious
+                behaviour &mdash; so that security tools can automatically identify it in logs, files, or network
+                traffic.
+            </p>
+
+            <div class="row g-4 mb-5">
+                <div class="col-md-4 anim-up d1">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq"><i class="fa-solid fa-crosshairs"></i></div>
+                        <div>
+                            <h6>A precise pattern</h6>
+                            <p>Rules describe exactly what to look for — a string in a binary, a sequence of syscalls,
+                                a network signature, or a log pattern — without ambiguity.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 anim-up d2">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq"><i class="fa-solid fa-bolt"></i></div>
+                        <div>
+                            <h6>An automated response</h6>
+                            <p>Once deployed, rules run continuously. When a match is found, your SIEM, EDR, or IDS
+                                fires an alert — no human needs to watch the logs manually.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 anim-up d3">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq"><i class="fa-solid fa-recycle"></i></div>
+                        <div>
+                            <h6>A reusable asset</h6>
+                            <p>A well-written rule can be shared across teams, organisations, and tools. One
+                                researcher's
+                                insight becomes everyone's defence.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formats explained -->
+            <h3 class="section-heading" style="font-size:1.35rem;">Supported formats on Rulezet</h3>
+            <p class="section-sub mb-4">
+                Each format targets a specific tool or use case. Rulezet supports all of them in one place.
+            </p>
+
+            <div class="row g-3">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq" style="background:rgba(var(--bs-primary-rgb),.1)">
+                            <i class="fa-solid fa-file-code"></i>
+                        </div>
+                        <div>
+                            <h6><span class="fmt-tag me-1">YARA</span></h6>
+                            <p class="mb-0">Pattern-matching for files and memory. The standard for malware hunting and
+                                forensics.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq" style="background:rgba(var(--bs-success-rgb),.1)">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                        <div>
+                            <h6><span class="fmt-tag me-1">Sigma</span></h6>
+                            <p class="mb-0">Generic log detection rules, translatable to Splunk, Elastic, QRadar and
+                                more.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq" style="background:rgba(var(--bs-warning-rgb),.1)">
+                            <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                        <div>
+                            <h6><span class="fmt-tag me-1">Suricata</span></h6>
+                            <p class="mb-0">Network intrusion detection. Inspects traffic in real time on your
+                                perimeter.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq" style="background:rgba(var(--bs-info-rgb),.1)">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <div>
+                            <h6><span class="fmt-tag me-1">Zeek</span></h6>
+                            <p class="mb-0">Network analysis framework. Generates rich structured logs for deep traffic
+                                inspection.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq" style="background:rgba(var(--bs-danger-rgb),.1)">
+                            <i class="fa-solid fa-shield-virus"></i>
+                        </div>
+                        <div>
+                            <h6><span class="fmt-tag me-1">Wazuh</span></h6>
+                            <p class="mb-0">Host-based intrusion detection. Monitors endpoints, files, and system
+                                events.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq" style="background:rgba(var(--bs-secondary-rgb),.1)">
+                            <i class="fa-solid fa-terminal"></i>
+                        </div>
+                        <div>
+                            <h6><span class="fmt-tag me-1">NSE</span></h6>
+                            <p class="mb-0">Nmap Scripting Engine scripts for active reconnaissance and vulnerability
+                                scanning.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq" style="background:rgba(var(--bs-primary-rgb),.08)">
+                            <i class="fa-solid fa-server"></i>
+                        </div>
+                        <div>
+                            <h6><span class="fmt-tag me-1">CRS</span></h6>
+                            <p class="mb-0">OWASP Core Rule Set for web application firewalls. Protects against OWASP
+                                Top 10.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="feature-why h-100">
+                        <div class="feature-icon-sq" style="background:rgba(var(--bs-success-rgb),.08)">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        <div>
+                            <h6><span class="fmt-tag me-1">Nova</span></h6>
+                            <p class="mb-0">Prompt-injection detection rules for LLM-based systems and AI pipelines.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="why-hr" />
+
 
     <!-- ═══════════════════════════════════════
        PROFILES — who is it for?
