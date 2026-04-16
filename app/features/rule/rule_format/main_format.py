@@ -254,6 +254,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
     }
 
     metadata = rule_instance.parse_metadata(rule_content, info, validation_result)
+    metadata["github_path"] = github_path
 
     if not validation_result.ok:
         BadRuleModel.save_invalid_rule(
@@ -262,7 +263,6 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
             rule_type=format_name,
             error=validation_result.errors,
             user=user,
-            github_path=github_path
         )
         return False, "Invalid rule", None
 

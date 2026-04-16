@@ -66,6 +66,8 @@ def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
     db.session.add(new_invalid_rule)
     db.session.commit()
 
+    return new_invalid_rule.id
+
 def save_invalid_rule_from_new_rule(new_rule_obj: 'NewRule', user: 'User', github_path: str) -> Tuple[Optional['InvalidRuleModel'], Optional[str]]:
     """
     Creates or retrieves an InvalidRuleModel object from NewRule data, using global db session.
