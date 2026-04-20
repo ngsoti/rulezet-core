@@ -83,25 +83,25 @@ def owner_request() -> redirect:
         # one rule
         rule_id = request.args.get('rule_id')
         if not rule_id:
-            return {"success": False, "message": "No rule with this id!" , "toast_class" : "danger"}, 200
+            return {"success": False, "message": "No rule with this id!" , "toast_class" : "danger-subtle"}, 200
         rule = RuleModel.get_rule(rule_id)
         if current_user.id != rule.user_id:
             request_ = AccountModel.create_request(rule_id=rule_id, source="")
             if request_:
-                return {"success": True, "message": "Ownership request submitted successfully !" , "toast_class" : "success"}, 200
-        return {"success": False, "message": "You can create a request for your own rule !" , "toast_class" : "danger"}, 200
+                return {"success": True, "message": "Ownership request submitted successfully !" , "toast_class" : "success-subtle"}, 200
+        return {"success": False, "message": "You can create a request for your own rule !" , "toast_class" : "danger-subtle"}, 200
     elif choice == 2:
         # with source
         source = request.args.get('source')
         if not source:
-            return {"success": False, "message": "No Source given !" , "toast_class" : "danger"}, 200
+            return {"success": False, "message": "No Source given !" , "toast_class" : "danger-subtle"}, 200
         rules = RuleModel.get_rule_by_source(source)
         if not rules:
-            return {"success": False, "message": "No rule with this source!" , "toast_class" : "danger"}, 200
+            return {"success": False, "message": "No rule with this source!" , "toast_class" : "danger-subtle"}, 200
         AccountModel.create_request(rule_id=None, source=source)
-        return {"success": True, "message": "Ownership request submitted successfully !" , "toast_class" : "success"}, 200
+        return {"success": True, "message": "Ownership request submitted successfully !" , "toast_class" : "success-subtle"}, 200
     else:
-        return {"success": False, "message": "Error system" , "toast_class" : "danger"}, 500
+        return {"success": False, "message": "Error system" , "toast_class" : "danger-subtle"}, 500
 
     
 

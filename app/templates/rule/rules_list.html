@@ -55,9 +55,13 @@
                 </div>
 
                 <div class="position-absolute top-0 end-0 mt-3 me-3 d-flex gap-2 z-index-2">
-                    <span v-if="parseInt('{{current_user.id}}') == rule.user_id || current_user_is_admin"
-                        class="badge bg-success shadow-sm pt-1" title="You are the owner">
+                    <span v-if="parseInt('{{current_user.id}}') == rule.user_id" class="badge bg-success shadow-sm pt-1"
+                        title="You are the owner">
                         <i class="fa-solid fa-crown me-1"></i> OWNER
+                    </span>
+                    <span v-if="current_user_is_admin" class="badge bg-warning   shadow-sm pt-1"
+                        title="You are an admin, you have all the rights on this rule">
+                        <i class="fa-solid fa-crown me-1"></i> ADMIN
                     </span>
                     <span class="badge rounded-pill bg-dark pt-1 shadow-sm">[[ rule.format.toUpperCase() ]]</span>
                 </div>

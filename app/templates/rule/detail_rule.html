@@ -79,9 +79,15 @@
                     </div>
 
                     <div class="position-absolute top-0 end-0 mt-3 me-3 d-flex gap-2 z-index-2">
-                        {% if current_user.id == rule.user_id or current_user.is_admin() %}
+                        {% if current_user.id == rule.user_id %}
                         <span class="badge bg-success shadow-sm pt-1" title="You are the owner">
                             <i class="fa-solid fa-crown me-1"></i> OWNER
+                        </span>
+                        {% endif %}
+                        {% if current_user.is_admin() %}
+                        <span class="badge bg-warning   shadow-sm pt-1"
+                            title="You are an admin, you have all the rights on this rule">
+                            <i class="fa-solid fa-crown me-1"></i> ADMIN
                         </span>
                         {% endif %}
                         <span class="badge rounded-pill bg-dark pt-1 shadow-sm">[[ currentRule.format.toUpperCase()
@@ -1330,12 +1336,14 @@
                     choice
                 })
                 const response = await fetch('/owner_request?' + params.toString())
+                const data = await response.json();
                 if (await response.status == 200) {
                     var myModalEle = document.getElementById('ownershipModal' + "{{ rule.id }}");
                     var modal = bootstrap.Modal.getInstance(myModalEle)
                     modal.hide();
                 }
-                create_message(response.message, response.toast_class);
+
+                create_message(data.message, data.toast_class);
             }
 
 
