@@ -9,7 +9,8 @@ Standalone functions for validating rule search parameters, pagination, and veri
 
 from typing import Any, Tuple, Type
 
-from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType
+from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType, load_all_rule_formats
+
 
 
 # --------------------------
@@ -63,9 +64,8 @@ def verify_rule_format(rule_format: str) -> None:
     Verify that the given rule format exists in RuleType subclasses.
     Raises ValueError if not found.
     """
+    load_all_rule_formats()
     if rule_format:
-       
-
         rule_format_lower = rule_format.strip().lower()
         for cls in RuleType.__subclasses__():
             try:
@@ -74,7 +74,7 @@ def verify_rule_format(rule_format: str) -> None:
                 cls_format = getattr(instance, "format", None)
                 if cls_format and cls_format.lower() == rule_format_lower:
                     return  # valid format
-            except Exception:
+            except Exception as e:
                 continue
 
         raise ValueError(f"Format is not supported.")

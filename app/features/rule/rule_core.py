@@ -1316,6 +1316,7 @@ def filter_rules(search=None, search_field="all", author=None, sort_by=None, rul
 
     if author:
         query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
+
     if rule_type:
         query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))  
         

@@ -22,14 +22,15 @@ import app.features.rule.rule_format.available_format as available_formats
 
 
 def load_all_rule_formats():
-    """Import dynamically all available rule format classes except the default one."""
     for module_info in pkgutil.iter_modules(available_formats.__path__):
         module_name = module_info.name
         if module_name.lower() in ["default_format", "base_format", "__init__"]:
             continue
-
         full_name = f"{available_formats.__name__}.{module_name}"
-        importlib.import_module(full_name)
+        try:
+            importlib.import_module(full_name)
+        except Exception as e:
+            print(f"Failed to import {full_name}: {e}")
 
 @dataclass
 class ValidationResult:

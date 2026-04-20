@@ -203,11 +203,8 @@ class SearchRule(Resource):
             verify_rule_format(rule_type)
         except ValueError as e:
             return {"error": str(e)}, 400
-
-
         # Filter rules
-        query = RuleModel.filter_rules(search, author, sort_by, rule_type)
-
+        query = RuleModel.filter_rules(search=search,author=author,sort_by=sort_by, rule_type=rule_type)
         # Serialize results
         results = [
             {
