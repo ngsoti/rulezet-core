@@ -54,13 +54,13 @@ class YaraRule(RuleType):
                 try:
                     temp_compile_text = current_rule_text
                     
-                    def escape_internal_quotes(match):
-                        prefix = match.group(1) 
-                        content = match.group(2) 
+                    # def escape_internal_quotes(match):
+                    #     prefix = match.group(1) 
+                    #     content = match.group(2) 
 
-                        escaped_content = content.replace('"', '\\"')
-                        return f'{prefix}"{escaped_content}"'
-                    temp_compile_text = re.sub(r'(\$\w+\s*=\s*)"(.*)"', escape_internal_quotes, temp_compile_text)
+                    #     escaped_content = content.replace('"', '\\"')
+                    #     return f'{prefix}"{escaped_content}"'
+                    # temp_compile_text = re.sub(r'(\$\w+\s*=\s*)"(.*)"', escape_internal_quotes, temp_compile_text)
 
                     yara.compile(source=temp_compile_text, externals=externals)
                     
