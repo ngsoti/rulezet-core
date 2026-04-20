@@ -45,8 +45,14 @@ const RuleExportAction = {
             currentView.value = 'main';
         };
 
+        const uuid = Vue.ref('');
+        const handleUuid = (value) => {
+            uuid.value = value; 
+        };
+
         const onBundleCompleted = () => {
-            create_message('Export completed!', 'success-subtle');
+            console.log('uuid', uuid.value);
+            create_message('Export completed!', 'success-subtle', false, null,'/bundle/detail/' + uuid.value);
             resetView();
             const modalEl = document.getElementById('exportActionModal');
             const modal = bootstrap.Modal.getInstance(modalEl);
@@ -97,6 +103,8 @@ const RuleExportAction = {
             MAX_LIMIT,
             currentFilters,
             onBundleCompleted,
+            uuid,
+            handleUuid,
             message_list,
             current_user_is_authenticated
         };
@@ -188,6 +196,7 @@ const RuleExportAction = {
                                         @processing="(val) => isProcessing = val"
                                         @completed="onBundleCompleted"
                                         :csrf="csrfToken"
+                                        @uuid="handleUuid"
                                     />
                                 </div>
                             </template>

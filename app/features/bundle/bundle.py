@@ -95,14 +95,14 @@ def delete() :
         if success_:
             return {"success": True, 
                     "message": "Bundle deleted !", 
-                    "toast_class" : "success"}, 200
+                    "toast_class" : "success-subtle"}, 200
         return {"success": False, 
                     "message": "Deleted fail  !", 
-                    "toast_class" : "danger"}, 500
+                    "toast_class" : "danger-subtle"}, 500
     else:
         return {"success": False, 
                 "message": "You don't have the permission to do that !", 
-                "toast_class" : "danger"}, 401
+                "toast_class" : "danger-subtle"}, 401
     
 
 @bundle_blueprint.route("/edit/<int:bundle_id>", methods=['GET' , 'POST'])
@@ -118,7 +118,7 @@ def edit(bundle_id) :
             form_dict['vulnerabilities'] = v_data
             
             BundleModel.update_bundle(bundle_id , form_dict )
-            flash("Bundle modified with success!", "success")
+            flash("Bundle modified with success!", "success-subtle")
             return redirect(request.referrer or '/')
         else:
             form.description.data = bundle.description
@@ -1003,4 +1003,85 @@ def get_bundle_page():
             "has_prev": pagination.has_prev
         },
         "structure": structure
+    }, 200
+
+@bundle_blueprint.route("/bundle/add-single-rule", methods=['POST'])
+@login_required
+def add_single_rule_to_bundle():
+    """
+    Ajoute une règle unique à un bundle existant ou en crée un nouveau.
+    
+    Body JSON attendu :
+    {
+        "rule_id": int,
+        "existing_bundle_id": int | null,
+        "new_bundle_name": str,
+        "new_bundle_description": str,
+        "is_public": bool
+    }
+    """
+    data = request.get_json()
+    if not data:
+        return {"success": False, "message": "Missing JSON body", "toast_class": "danger-subtle"}, 400
+
+    rule_id = data.get("rule_id")
+    existing_bundle_id = data.get("existing_bundle_id")
+    new_bundle_name = data.get("new_bundle_name", "").strip()
+    new_bundle_description = data.get("new_bundle_description", "").strip()
+    is_public = data.get("is_public", True)
+
+    # --- Validation de base ---
+    if not rule_id:
+        return {"success": False, "message": "Missing rule_id", "toast_class": "danger-subtle"}, 400
+
+    rule = RuleModel.get_rule_by_id(rule_id)
+    if not rule:
+        return {"success": False, "message": f"Rule {rule_id} not found", "toast_class": "danger-subtle"}, 404
+
+    if not existing_bundle_id and not new_bundle_name:
+        return {
+            "success": False,
+            "message": "Provide either an existing_bundle_id or a new_bundle_name",
+            "toast_class": "danger-subtle"
+        }, 400
+
+    # --- Mode : bundle existant ---
+    if existing_bundle_id:
+        bundle = BundleModel.get_bundle_by_id(existing_bundle_id)
+        if not bundle:
+            return {"success": False, "message": "Bundle not found", "toast_class": "danger-subtle"}, 404
+
+        if bundle.user_id != current_user.id and not current_user.is_admin():
+            return {"success": False, "message": "You don't have permission to edit this bundle", "toast_class": "danger-subtle"}, 403
+
+        success = BundleModel.add_rule_to_bundle(existing_bundle_id, rule_id, "")
+        if not success:
+            return {"success": False, "message": "Failed to add rule to bundle", "toast_class": "danger-subtle"}, 500
+
+        return {
+            "success": True,
+            "message": f"Rule added to bundle \"{bundle.name}\"",
+            "toast_class": "success-subtle",
+            "uuid": bundle.uuid
+        }, 200
+
+    # --- Mode : nouveau bundle ---
+    form_dict = {
+        "name": new_bundle_name,
+        "description": new_bundle_description,
+        "public": is_public
+    }
+    new_bundle = BundleModel.create_bundle(form_dict, current_user)
+    if not new_bundle:
+        return {"success": False, "message": "Failed to create bundle", "toast_class": "danger-subtle"}, 500
+
+    success = BundleModel.add_rule_to_bundle(new_bundle.id, rule_id, "")
+    if not success:
+        return {"success": False, "message": "Bundle created but failed to add rule", "toast_class": "warning-subtle"}, 500
+
+    return {
+        "success": True,
+        "message": f"Bundle \"{new_bundle.name}\" created and rule added",
+        "toast_class": "success-subtle",
+        "uuid": new_bundle.uuid
     }, 200

@@ -565,25 +565,32 @@
 
                                                             <div class="flex-grow-1 min-w-0">
                                                                 <div
-                                                                    class="d-flex justify-content-between align-items-start">
-                                                                    <h6 class="fw-bold text-dark mb-1 text-truncate">
-                                                                        [[ bundle.name.slice(0, 10) ]]
+                                                                    class="d-flex justify-content-between align-items-start gap-2">
+                                                                    <h6 class="fw-bold text-dark mb-1"
+                                                                        style="word-break: break-word;">
+                                                                        [[ bundle.name ]]
                                                                     </h6>
-                                                                    <span class="badge bg-dark rounded-pill"
+                                                                    <span
+                                                                        class="badge bg-dark rounded-pill flex-shrink-0"
                                                                         style="font-size: 0.65rem;">
                                                                         [[ bundle.number_of_rules ]] Rules
                                                                     </span>
                                                                 </div>
 
-                                                                <p class="text-muted small mb-2 text-truncate-2"
-                                                                    style="font-size: 0.8rem; line-height: 1.2; height: 2.4em;">
-                                                                    [[ bundle.description.slice(0, 10) ]]
+                                                                <p class="text-muted small mb-2" style="font-size: 0.8rem; 
+                                                                    line-height: 1.4; 
+                                                                    display: -webkit-box; 
+                                                                    -webkit-line-clamp: 3; 
+                                                                    -webkit-box-orient: vertical; 
+                                                                    overflow: hidden; 
+                                                                    word-break: break-word;">
+                                                                    [[ bundle.description ]]
                                                                 </p>
 
                                                                 <div
-                                                                    class="d-flex align-items-center justify-content-between mt-auto">
+                                                                    class="d-flex align-items-center justify-content-between mt-2">
                                                                     <div class="d-flex align-items-center gap-2">
-                                                                        <div class="avatar-circle-xs"
+                                                                        <div class="avatar-circle-xs d-flex align-items-center justify-content-center bg-light border rounded-circle"
                                                                             style="width: 20px; height: 20px; font-size: 0.6rem;">
                                                                             [[ (bundle.author || 'A')[0].toUpperCase()
                                                                             ]]
@@ -592,12 +599,13 @@
                                                                             style="font-size: 0.7rem;">[[ bundle.author
                                                                             ]]</small>
                                                                     </div>
-                                                                    <div class="d-flex gap-1">
+                                                                    <div
+                                                                        class="d-flex gap-1 flex-wrap justify-content-end">
                                                                         <span
                                                                             v-for="format in bundle.list_of_format_of_rules"
                                                                             :key="format"
                                                                             class="badge bg-outline-secondary border text-uppercase"
-                                                                            style="font-size: 0.6rem; color: #6c757d;">
+                                                                            style="font-size: 0.6rem; color: #6c757d; padding: 2px 5px;">
                                                                             [[ format ]]
                                                                         </span>
                                                                     </div>
@@ -1595,7 +1603,7 @@
                 refreshSimilarRules,
                 handleSimilarRulesFound,
                 rule_stix,
-                copyContent
+                copyContent,
 
             };
         }

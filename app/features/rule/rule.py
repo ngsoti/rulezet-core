@@ -2925,7 +2925,8 @@ def bundle_from_filters():
         source=filters.get("sources", []),
         user_id=filters.get("user_id"),
         license=filters.get("licenses", []),
-        tags=filters.get("tags", [])
+        tags=filters.get("tags", []),
+        exact_match=filters.get("exact_match", False)
     )
     rules_objects = query.all()
 
@@ -3195,3 +3196,5 @@ def similarity():
         })
 
     return {"success": True, "rules": formatted_rules}, 200
+
+
