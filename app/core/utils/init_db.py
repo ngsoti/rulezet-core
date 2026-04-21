@@ -30,15 +30,18 @@ def show_admin_first_connection(admin , raw_password):
 #############################
 
 def create_admin():
-    # Admin user
+    existing = User.query.filter_by(email="admin@admin.admin").first()
+    if existing:
+        return existing, None
+
     raw_password = generate_api_key()
     user = User(
         first_name="admin",
         last_name="admin",
         email="admin@admin.admin",
-        password= raw_password,  #"admin",
+        password= raw_password,
         admin=True,
-        api_key = generate_api_key(), #for test  "admin_api_key",
+        api_key = generate_api_key(),
         is_verified=True
     )
     db.session.add(user)
@@ -46,6 +49,10 @@ def create_admin():
     return user , raw_password
 
 def create_default_user():
+    existing = User.query.filter_by(email="default@default.default").first()
+    if existing:
+        return existing
+
     user = User(
         first_name="no editor",
         last_name="no editor",
@@ -151,4 +158,3 @@ def create_rule_test():
         )
         db.session.add(rule)
         db.session.commit()
-
