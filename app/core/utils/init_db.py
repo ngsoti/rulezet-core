@@ -30,23 +30,26 @@ def show_admin_first_connection(admin , raw_password):
 #############################
 
 def create_admin():
+    raw_password = generate_api_key()
+    
     existing = User.query.filter_by(email="admin@admin.admin").first()
     if existing:
-        return existing, None
+        existing.set_password(raw_password)  # reset le mot de passe
+        db.session.commit()
+        return existing, raw_password
 
-    raw_password = generate_api_key()
     user = User(
         first_name="admin",
         last_name="admin",
         email="admin@admin.admin",
-        password= raw_password,
+        password=raw_password,
         admin=True,
-        api_key = generate_api_key(),
+        api_key=generate_api_key(),
         is_verified=True
     )
     db.session.add(user)
     db.session.commit()
-    return user , raw_password
+    return user, raw_password
 
 def create_default_user():
     existing = User.query.filter_by(email="default@default.default").first()
