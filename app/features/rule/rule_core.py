@@ -2591,6 +2591,10 @@ def delete_all_rule_by_url(urls):
         db.session.query(RuleEditProposal).filter(RuleEditProposal.rule_id.in_(rule_ids)).delete(synchronize_session=False)
         db.session.query(RuleFavoriteUser).filter(RuleFavoriteUser.rule_id.in_(rule_ids)).delete(synchronize_session=False)
 
+        db.session.query(RequestOwnerRule).filter(RequestOwnerRule.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        db.session.query(RuleTagAssociation).filter(RuleTagAssociation.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        db.session.query(RepportRule).filter(RepportRule.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+
         deleted_count = Rule.query.filter(Rule.id.in_(rule_ids)).delete(synchronize_session=False)
 
         for url in target_urls:
