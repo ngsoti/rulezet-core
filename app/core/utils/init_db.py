@@ -34,9 +34,11 @@ def create_admin():
     
     existing = User.query.filter_by(email="admin@admin.admin").first()
     if existing:
-        existing.set_password(raw_password)  # reset le mot de passe
+        # delete the existing admin
+        db.session.delete(existing)
         db.session.commit()
-        return existing, raw_password
+    if not raw_password:
+        raw_password = "admin"
 
     user = User(
         first_name="admin",
