@@ -91,7 +91,7 @@ const RulesCarousel = {
                                     <div class="mb-3 pe-5">
                                         <h5 class="fw-bold mb-1">
                                             <a :href="'/rule/detail_rule/' + rule.id"
-                                               class="fw-bold h5 mb-4 border-start border-primary border-4 ps-3 custom-rule-link"
+                                               class="fw-bold h5 mb-4 border-start border-primary border-4 ps-3 "
                                                title="See more about this rule">
                                                 [[ rule.title ]]
                                             </a>

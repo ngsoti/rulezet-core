@@ -1603,7 +1603,7 @@ textarea:focus {
 .transition-all          { transition: all 0.3s ease; }
 
 /* Link with indent-on-hover */
-.custom-rule-link { transition: all 0.2s ease-in-out; }
+
 .custom-rule-link:hover { color: #0d6efd !important; padding-left: 20px !important;  text-decoration: underline !important; }
 
 /* Chevron rotation */
