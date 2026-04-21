@@ -169,7 +169,7 @@
                                             <small class="text-truncate">
                                                 <template
                                                     v-if="currentRule.source && currentRule.source.startsWith('http')">
-                                                    <a :href="currentRule.source" target="_blank"
+                                                    <a :href="currentRule.source" rel="noreferrer" target="_blank"
                                                         class="text-primary text-decoration-none">
                                                         [[ currentRule.source ]]
                                                     </a>
