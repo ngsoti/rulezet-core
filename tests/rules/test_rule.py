@@ -258,6 +258,35 @@ level: informational
 
     assert response.status_code == 200
 
+
+def test_create_invalid_sigma_rule(client):
+    data = {
+        "title": "Sigma Rule Invalid",
+        "version": "1.0",
+        "format": "sigma",
+        "license": "GPL",
+        "to_string": """
+title: Dangling detection
+id: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    EventID: 4624
+  unused:
+    EventID: 9999
+  condition: selection
+level: high
+""",
+        "description": "Sigma rule with a dangling (unreferenced) detection",
+        "source": "UnitTest"
+    }
+    response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 400
+    json_data = response.get_json()
+    assert json_data["message"].startswith("Invalid rule")
+
 # ----------------------------------------
 # Tests DELETE Rule
 # ----------------------------------------
