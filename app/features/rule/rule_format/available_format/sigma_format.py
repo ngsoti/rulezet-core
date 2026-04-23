@@ -1,12 +1,50 @@
 from typing import Dict, Any, List, Optional
 from app.features.rule.rule_core import get_rule
 from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
+import inspect
 import os
 import yaml
 import json
 from jsonschema import validate, ValidationError
 
+from sigma.collection import SigmaCollection
+from sigma.validation import SigmaValidator
+from sigma.validators.base import SigmaRuleValidator, SigmaValidationIssueSeverity
+import sigma.validators.core.condition as _sigma_condition
+import sigma.validators.core.logsources as _sigma_logsources
+import sigma.validators.core.metadata as _sigma_metadata
+import sigma.validators.core.modifiers as _sigma_modifiers
+import sigma.validators.core.tags as _sigma_tags
+import sigma.validators.core.values as _sigma_values
+
 from app.core.utils.utils import detect_cve
+
+
+def _collect_sigma_validators() -> list:
+    """Collect all concrete SigmaRuleValidator subclasses from the core validators."""
+    validators = []
+    seen = set()
+    for mod in [
+        _sigma_condition,
+        _sigma_logsources,
+        _sigma_metadata,
+        _sigma_modifiers,
+        _sigma_tags,
+        _sigma_values,
+    ]:
+        for _name, cls in inspect.getmembers(mod, inspect.isclass):
+            if (
+                issubclass(cls, SigmaRuleValidator)
+                and cls is not SigmaRuleValidator
+                and not inspect.isabstract(cls)
+                and cls not in seen
+            ):
+                seen.add(cls)
+                validators.append(cls)
+    return validators
+
+
+_SIGMA_VALIDATORS = _collect_sigma_validators()
 
 
 ##################
@@ -40,7 +78,8 @@ class SigmaRule(RuleType):
     ##############################
     def validate(self, content: str, **kwargs) -> ValidationResult:
         """
-        Validate a Sigma rule (YAML) against the JSON schema.
+        Validate a Sigma rule (YAML) against the JSON schema, then run full
+        pySigma validation.
         Does NOT modify or re-dump YAML → preserves quotes.
         """
         try:
@@ -58,15 +97,36 @@ class SigmaRule(RuleType):
             rule_json_obj = json.loads(rule_json_str)
             validate(instance=rule_json_obj, schema=self.schema)
 
-            return ValidationResult(
-                ok=True,
-                normalized_content=content
-            )
-
         except ValidationError as ve:
             return ValidationResult(ok=False, errors=[ve.message], normalized_content=content)
         except Exception as e:
             return ValidationResult(ok=False, errors=[str(e)], normalized_content=content)
+
+        # pySigma parsing — any exception is a hard validation failure
+        try:
+            sigma_collection = SigmaCollection.from_yaml(content)
+        except Exception as e:
+            return ValidationResult(ok=False, errors=[str(e)], normalized_content=content)
+
+        # pySigma semantic validation — report high-severity issues
+        try:
+            validator = SigmaValidator(validators=_SIGMA_VALIDATORS)
+            issues = validator.validate_rules(sigma_collection)
+            high_errors = [
+                str(issue)
+                for issue in issues
+                if issue.severity == SigmaValidationIssueSeverity.HIGH
+            ]
+        except Exception as e:
+            return ValidationResult(ok=False, errors=[str(e)], normalized_content=content)
+
+        if high_errors:
+            return ValidationResult(ok=False, errors=high_errors, normalized_content=content)
+
+        return ValidationResult(
+            ok=True,
+            normalized_content=content
+        )
 
     ##############################
     #       META PARSING         #
