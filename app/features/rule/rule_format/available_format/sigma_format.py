@@ -6,6 +6,11 @@ import yaml
 import json
 from jsonschema import validate, ValidationError
 
+from sigma.collection import SigmaCollection
+from sigma.validation import SigmaValidator
+from sigma.validators.base import SigmaValidationIssueSeverity
+from sigma.validators.core import validators as _sigma_validators
+
 from app.core.utils.utils import detect_cve
 
 
@@ -40,7 +45,8 @@ class SigmaRule(RuleType):
     ##############################
     def validate(self, content: str, **kwargs) -> ValidationResult:
         """
-        Validate a Sigma rule (YAML) against the JSON schema.
+        Validate a Sigma rule (YAML) against the JSON schema, then run full
+        pySigma validation.
         Does NOT modify or re-dump YAML → preserves quotes.
         """
         try:
@@ -58,15 +64,36 @@ class SigmaRule(RuleType):
             rule_json_obj = json.loads(rule_json_str)
             validate(instance=rule_json_obj, schema=self.schema)
 
-            return ValidationResult(
-                ok=True,
-                normalized_content=content
-            )
-
         except ValidationError as ve:
             return ValidationResult(ok=False, errors=[ve.message], normalized_content=content)
         except Exception as e:
             return ValidationResult(ok=False, errors=[str(e)], normalized_content=content)
+
+        # pySigma parsing — any exception is a hard validation failure
+        try:
+            sigma_collection = SigmaCollection.from_yaml(content)
+        except Exception as e:
+            return ValidationResult(ok=False, errors=[str(e)], normalized_content=content)
+
+        # pySigma semantic validation — report high-severity issues
+        try:
+            validator = SigmaValidator(validators=_sigma_validators.values())
+            issues = validator.validate_rules(sigma_collection)
+            high_errors = [
+                str(issue)
+                for issue in issues
+                if issue.severity == SigmaValidationIssueSeverity.HIGH
+            ]
+        except Exception as e:
+            return ValidationResult(ok=False, errors=[str(e)], normalized_content=content)
+
+        if high_errors:
+            return ValidationResult(ok=False, errors=high_errors, normalized_content=content)
+
+        return ValidationResult(
+            ok=True,
+            normalized_content=content
+        )
 
     ##############################
     #       META PARSING         #
