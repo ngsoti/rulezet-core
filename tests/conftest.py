@@ -5,7 +5,7 @@ import os
 sys.path.append(os.getcwd())
 
 from app import create_app, db
-from app.utils.init_db import create_admin_test, create_default_user, create_rule_test, create_user_test
+from app.core.utils.init_db import create_admin_test, create_default_user, create_rule_test, create_user_test
 import pytest
 
 @pytest.fixture

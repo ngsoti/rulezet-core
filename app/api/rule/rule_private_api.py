@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------------------------------------------- #
 
 import asyncio
+import json
 from flask_restx import Resource, Namespace
 
 from app.api.utils.rule_validation import *
@@ -120,7 +121,7 @@ class CreateRule(Resource):
         data = request.get_json(silent=True) or request.args.to_dict()
 
         # Required fields
-        required_fields = ["title", "format", "to_string"]
+        required_fields = ["title", "format", "to_string", "version", "license"]
 
         missing_fields = [f for f in required_fields if not data.get(f) or not str(data.get(f)).strip()]
         if missing_fields:
@@ -130,21 +131,24 @@ class CreateRule(Resource):
 
 
         cve_id = data.get("cve_id")
-        matches = [] 
-        
+        matches = []
+
         if cve_id:
-            valid, matches = utils.detect_cve(str(cve_id).strip())
+            valid, matches_json = utils.detect_cve(str(cve_id).strip())
             if not valid:
                 return {"message": "Invalid CVE ID format or not recognized"}, 400
+            matches = json.loads(matches_json)
+            if not matches:
+                return {"message": "Invalid CVE ID format: no recognized vulnerability patterns found"}, 400
 
         form_dict = {
             'title': title,
             'format': data.get("format").strip(),
             'description': (data.get("description") or "").strip() or "No description provided",
-            'version': (data.get("version") or "1.0.0").strip(),
+            'version': data.get("version").strip(),
             'source': (data.get("source") or f"{user.first_name}, {user.last_name}").strip(),
             'to_string': data.get("to_string").strip(),
-            'license': (data.get("license") or "MIT").strip(),
+            'license': data.get("license").strip(),
             'original_uuid': data.get("original_uuid") or None,
             'author': user.first_name,
             'vulnerabilities': matches if matches else '[]'
@@ -158,8 +162,11 @@ class CreateRule(Resource):
         verif, msg = RuleModel.add_rule_core(form_dict, user)
         if isinstance(verif, Rule):
             return {"message": msg, "rule": verif.to_json()}, 200
-        
-        return {"message": msg}, 400
+
+        if "already exists" in str(msg):
+            return {"message": str(msg)}, 409
+
+        return {"message": str(msg)}, 400
 
         
          
