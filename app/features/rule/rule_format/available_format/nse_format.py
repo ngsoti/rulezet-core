@@ -48,7 +48,7 @@ class NseRule(RuleType):
     def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
         title = "unknown"
         
-        filepath = info.get("github_path") or info.get("filepath") 
+        filepath = info.get("github_path") or info.get("filepath")
         if filepath:
             if info.get("filepath"):
                 title = os.path.splitext(os.path.basename(filepath))[0].split("/")[-1]

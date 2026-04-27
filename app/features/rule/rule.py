@@ -2584,7 +2584,7 @@ def add_new_rule():
     if not s:
         return jsonify({"success": False, "message": "Error while updating rule", "toast_class": "danger-subtle"}), 500
         
-    success, message, imported_object = parse_rule_by_format(content, current_user, format, source_info) 
+    success, message, imported_object = parse_rule_by_format(content, current_user, format, source_info, github_path=temp_rule.github_path) 
     
     if success:
         profil_game_user_ = AccountModel.get_or_create_gamification_profile(imported_object.user_id)

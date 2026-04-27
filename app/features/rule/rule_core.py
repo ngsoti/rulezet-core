@@ -3,6 +3,7 @@ import io
 import json
 from collections import Counter
 import math
+import os
 import re
 import threading
 from typing import Any, Dict, List, Optional, Tuple
@@ -143,26 +144,26 @@ def get_rule_by_content(content):
 def rule_exists(Metadata: dict) -> tuple[bool, int]:
     """
     Check if a rule already exists.
-    - If no original_uuid is provided: check by title.
-    - If original_uuid is provided: check by original_uuid.
+    - If a valid original_uuid is provided: check by original_uuid.
+    - If not: check by content.
     """
+    EMPTY_UUID_VALUES = {"none", "null", "unknown", "n/a", "na", ""}
 
     original_uuid = str(Metadata.get("original_uuid") or "").strip()
-    if original_uuid.lower() == "none" or original_uuid.lower() == "null" or original_uuid.lower() == "unknown":
-        original_uuid = ""
-    else:
-        # get the rule by original_uuid
+
+    if original_uuid.lower() not in EMPTY_UUID_VALUES:
         existing_rule = Rule.query.filter_by(original_uuid=original_uuid).first()
-        if existing_rule != None:
+        if existing_rule:
             return True, existing_rule.id
-    
+        return False, None
 
     to_string = Metadata.get("to_string", "").strip()
+    if not to_string:
+        return False, None
 
-    existing_rule_by_content = get_rule_by_content(to_string)
-        
-    if existing_rule_by_content != None:
-        return True, existing_rule_by_content.id
+    existing_rule = get_rule_by_content(to_string)
+    if existing_rule:
+        return True, existing_rule.id
 
     return False, None
 
@@ -552,34 +553,38 @@ def get_rule_by_title(title) -> Rule | None:
     return Rule.query.filter_by(title=title).first()
 
 def get_rule_from_a_github(title, filepath_in_the_repo, repo_source, original_uuid) -> tuple[Rule | None, str]:
-    """
-    Retrieve a rule by title, repository source, and filepath in the repo.
-    """
-
     clean_uuid = str(original_uuid).strip().lower()
-
-
     forbidden = ["none", "null", "unknown", "n/a", "undefined", ""]
+
     if original_uuid and clean_uuid not in forbidden:
         rule = Rule.query.filter_by(original_uuid=original_uuid).first()
         if rule:
             return rule, "Rule found in Rulezet with this original_uuid"
 
-    query = Rule.query.filter(
-        Rule.title == title,
-        Rule.source == repo_source
-    )
+    # check by github_path first — most reliable for NSE/formats without uuid
+    if filepath_in_the_repo:
+        # normalize: use only the filename as fallback
+        normalized = os.path.basename(filepath_in_the_repo)
+        rule = Rule.query.filter(
+            Rule.source == repo_source
+        ).filter(
+            db.or_(
+                Rule.github_path == filepath_in_the_repo,
+                Rule.github_path == normalized,
+                Rule.github_path.like(f"%{normalized}")
+            )
+        ).first()
+        if rule:
+            return rule, "Rule found in Rulezet with this github_path"
 
+    # check by title + source
+    query = Rule.query.filter(Rule.title == title, Rule.source == repo_source)
     count_title = query.count()
-   
 
     if count_title == 0:
-        
         return None, "[new rule]"
-
     if count_title == 1:
         rule = query.first()
-       
         if rule.github_path != filepath_in_the_repo:
             return None, "[new rule]"
         return rule, "Rule found in Rulezet with this title"
@@ -587,19 +592,11 @@ def get_rule_from_a_github(title, filepath_in_the_repo, repo_source, original_uu
     query_path = query.filter(Rule.github_path == filepath_in_the_repo)
     count_path = query_path.count()
 
-   
-
     if count_path == 1:
-        rule = query_path.first()
-       
-        return rule, "Rule found in Rulezet with this title and this github_path"
-
+        return query_path.first(), "Rule found in Rulezet with this title and this github_path"
     if count_path > 1:
-       
-        return None, "Impossible to find the real rule multiple rules found with this title and this github_path)"
-        
+        return None, "Impossible to find the real rule — multiple rules found"
 
-    # add like new rule 
     return None, "[new rule]"
 
 

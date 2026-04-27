@@ -251,6 +251,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
         "author": getattr(user, "first_name", "Unknown"),
         "repo_url": url_repo or None,
         "source": current_user.first_name + current_user.last_name or "Unknown",
+        "filepath": github_path, 
     }
 
     metadata = rule_instance.parse_metadata(rule_content, info, validation_result)
@@ -269,7 +270,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
     exists, rule_id = RuleModel.rule_exists(metadata)
     if exists == True:
         rule = RuleModel.get_rule(rule_id)
-        return False, "Rule already exists", rule
+        return False, "Rule already exists with id " + str(rule_id) + ".", rule
 
     if github_path:
         metadata["github_path"] = github_path
