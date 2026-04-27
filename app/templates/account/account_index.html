@@ -123,8 +123,13 @@
     </div>
 
     <!-- Actions -->
-    <div class="text-end mt-2 mb-5">
-        <a class="btn btn-outline-success" href="{{ url_for('account.edit_user') }}">
+    <div class="text-end mt-2 mb-5 d-flex justify-content-end gap-2">
+        <a class="btn btn-outline-primary" href="/account/detail_user/{{ current_user.id }}"
+            title="View detailed account information">
+            <i class="fas fa-chart-bar me-2"></i>Stats
+        </a>
+        <a class="btn btn-outline-success" href="{{ url_for('account.edit_user') }}"
+            title="Edit your profile information">
             <i class="fas fa-edit me-2"></i>Edit Profile
         </a>
     </div>
