@@ -428,10 +428,10 @@ const GitHubSelectionTable = {
                                                         <div>
                                                             <div class="d-flex align-items-center">
                                                                 <button class="btn btn-sm btn-outline-success border-0 rounded-circle me-1" 
-                                                                        @click="updateSingleRepo(item.url)" 
-                                                                        :disabled="isActionLoading"
+                                                                        @click="updateSingleRepo(item)" 
+                                                                        :disabled="item.isUpdating"
                                                                         title="Check for updates">
-                                                                    <i class="fas fa-sync-alt" :class="{'fa-spin': isActionLoading}"></i>
+                                                                    <i class="fas fa-sync-alt" :class="{'fa-spin': item.isUpdating}"></i>
                                                                 </button>
                                                                 <a v-if="item.last_update.url_updated" 
                                                                     :href="item.last_update.url_updated" 
