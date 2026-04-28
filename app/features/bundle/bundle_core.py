@@ -122,33 +122,31 @@ def  get_association_by_id(association_id: int) -> Bundle | None:
     :return: Bundle instance or None if not found.
     """
     return BundleRuleAssociation.query.get(association_id)
-def get_all_bundles_page(page: int, search: str | None, own: bool, tag_ids: list[int] | None = None, vulnerabilities: list[str] | None = None) -> dict:
-    query = Bundle.query    
+def get_all_bundles_page(page: int, search: str | None, own: bool, tag_names: list[str] | None = None, vulnerabilities: list[str] | None = None):
+    query = Bundle.query
 
     if search:
         like_pattern = f"%{search}%"
         query = query.filter(or_(Bundle.name.ilike(like_pattern), Bundle.description.ilike(like_pattern)))
 
-
-    if tag_ids:
-        query = query.join(BundleTagAssociation).filter(BundleTagAssociation.tag_id.in_(tag_ids)).distinct()
+    if tag_names:
+        query = query.join(BundleTagAssociation).join(Tag)\
+                     .filter(Tag.name.in_(tag_names))\
+                     .distinct()
 
     if vulnerabilities:
         vuln_filters = []
         for v in vulnerabilities:
             search_pattern = '%"' + v + '"%'
             vuln_filters.append(Bundle.vulnerability_identifiers.ilike(search_pattern))
-        
         query = query.filter(or_(*vuln_filters))
 
-    if own and current_user.is_authenticated:   
+    if own and current_user.is_authenticated:
         query = query.filter_by(user_id=current_user.id)
 
     if current_user.is_authenticated:
         if not current_user.is_admin():
-            query = query.filter(
-                or_(Bundle.access.is_(True), Bundle.user_id == current_user.id)
-            )
+            query = query.filter(or_(Bundle.access.is_(True), Bundle.user_id == current_user.id))
     else:
         query = query.filter_by(access=True)
 

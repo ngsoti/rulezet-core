@@ -62,8 +62,9 @@ def get_all_bundles():
     search = request.args.get('search', type=str)
     
     # Existing Tags Logic
-    tag_ids_raw = request.args.get('tag_ids', type=str) 
-    tag_id_list = [int(tid) for tid in tag_ids_raw.split(',') if tid.strip()] if tag_ids_raw else []
+    # dans la route
+    tag_names_raw = request.args.get('tag_ids', type=str)
+    tag_name_list = [t.strip() for t in tag_names_raw.split(',') if t.strip()] if tag_names_raw else []
 
     # New Vulnerability Logic
     vuln_raw = request.args.get('vulnerabilities', type=str)
@@ -72,7 +73,7 @@ def get_all_bundles():
     own = True if own == '1' else False 
 
     # Pass vuln_list to the model method
-    bundles_pagination = BundleModel.get_all_bundles_page(page, search, own, tag_id_list, vuln_list)
+    bundles_pagination = BundleModel.get_all_bundles_page(page, search, own, tag_name_list, vuln_list)
     
     return {
         "bundle_list_": [r.to_json() for r in bundles_pagination.items],
