@@ -119,7 +119,7 @@ def edit(bundle_id) :
             form_dict['vulnerabilities'] = v_data
             
             BundleModel.update_bundle(bundle_id , form_dict )
-            flash("Bundle modified with success!", "success-subtle")
+            flash("Bundle modified with success!", "success")
             return redirect(request.referrer or '/')
         else:
             form.description.data = bundle.description
