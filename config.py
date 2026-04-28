@@ -38,6 +38,7 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
+    SECRET_KEY = "testing-secret-key-do-not-use-in-production"
     SQLALCHEMY_DATABASE_URI = "sqlite:///rulezet-test.sqlite"
     WTF_CSRF_ENABLED = False
 

@@ -34,8 +34,9 @@ if [ "$1" ]; then
         -d | --delete_db )          delete_db;
                                         ;;
         -t | --test )               test;
+                                        ;;
     esac
-    shift
+    exit $?
 else
 	launch
 fi

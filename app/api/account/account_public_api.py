@@ -65,7 +65,9 @@ class Register(Resource):
             'last_name': data.get("last_name"),
         }
 
-        user = AccountModel.add_user_core(form_dict)
+        user, success = AccountModel.add_user_core(form_dict)
+        if not success:
+            return {"message": f"Registration failed: {user}"}, 500
         return {"message": "User registered successfully",
                 "X-API-KEY": user.api_key
                 }, 201

@@ -95,7 +95,7 @@ class SearchRulePage(Resource):
             return {"error": str(e)}, 400
 
         # Query filtered rules
-        query = RuleModel.filter_rules(search, author, sort_by, rule_type)
+        query = RuleModel.filter_rules(search=search, author=author, sort_by=sort_by, rule_type=rule_type)
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
         # Prepare base arguments (keep filters but remove pagination)
@@ -283,7 +283,7 @@ class ConvertMISP(Resource):
         except ValueError as e:
             return {"error": str(e)}, 400
 
-        query = RuleModel.filter_rules(search, author, sort_by, rule_type)
+        query = RuleModel.filter_rules(search=search, author=author, sort_by=sort_by, rule_type=rule_type)
 
         def convert_rule(rule_id: int) -> Optional[dict]:
             try:
