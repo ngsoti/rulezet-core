@@ -13,20 +13,12 @@ const CodeMirrorEditor = {
       
         const cleanValue = (val) => {
             if (!val) return '';
-            let cleaned = val;
-          
-            if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-                cleaned = cleaned.substring(1, cleaned.length - 1);
-            }
-            
-           
-            return cleaned.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\'/g, "'");
+            return val;
         };
 
         Vue.onMounted(() => {
             if (textareaRef.value) {
                 const initialContent = cleanValue(props.modelValue);
-                console.log(initialContent);
                 textareaRef.value.value = initialContent;
 
                 editor = CodeMirror.fromTextArea(textareaRef.value, {

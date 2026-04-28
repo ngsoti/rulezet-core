@@ -308,7 +308,10 @@ def edit_rule(rule_id) -> render_template:
 
 
         if form.validate_on_submit():
+            
             form_dict = form_to_dict(form)
+           
+            form_dict['to_string'] = form_dict['to_string'].replace('\r\n', '\n').replace('\r', '\n')
             rule_dict = fill_all_void_field(form_dict)
            
             
@@ -321,6 +324,7 @@ def edit_rule(rule_id) -> render_template:
 
             
             # create an history for the rule
+            
             if rule.to_string.strip() != form_dict['to_string'].strip():
                 if rule_dict["version"] == rule.version:
                     rule_dict["version"] = bump_version(rule_dict["version"])
