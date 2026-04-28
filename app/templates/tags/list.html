@@ -34,6 +34,12 @@
                     Add New Tags
                 </a>
             </li>
+            <li class="nav-item flex-fill text-center">
+                <a class="nav-link" id="galaxy-tab" data-bs-toggle="tab" href="#galaxy-pane" role="tab"
+                    aria-controls="galaxy-pane" aria-selected="false" style="color: var(--text-color);">
+                    Add MISP Galaxies
+                </a>
+            </li>
         </ul>
 
         <div class="tab-content" id="exampleTabsContent">
@@ -151,10 +157,9 @@
                                             </span>
                                             <span class="tag-right" :style="{ backgroundColor: tag.color }"
                                                 :title="tag.name">
-                                                <span style="color: black;">
+                                                <span :style="{ color: getTextColor(tag.color) }">
                                                     [[ tag.name ]]
                                                 </span>
-
                                             </span>
                                         </span>
                                     </td>
@@ -341,6 +346,14 @@
                                                         <p class="text-muted mb-4">
                                                             [[ tag.description || 'No description' ]]
                                                         </p>
+                                                        <template v-if="tag.galaxy_meta">
+                                                            <div class="mb-4 p-3 rounded-3">
+                                                                <h6 class="fw-semibold">Galaxy Metadata</h6>
+                                                                <pre class="bg-light p-2 rounded"
+                                                                    style="font-size: 0.875em; max-height: 200px; overflow: auto;">[[ tag.galaxy_meta ]]</pre>
+                                                            </div>
+
+                                                        </template>
 
                                                         <div class="row g-3">
 
@@ -594,7 +607,105 @@
                     </div>
                 </div>
             </div>
+            <div class="tab-pane fade" id="galaxy-pane" role="tabpanel" aria-labelledby="galaxy-tab">
+                <div class="card card-body shadow-sm">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text border-end-0">
+                                    <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                                </span>
+                                <input type="text" v-model="searchQueryGalaxy" @keyup.enter="onEnterKeyGalaxy"
+                                    class="form-control rounded-end-pill border-start-0"
+                                    placeholder="Search by keywords..." @input="onSearchInputGalaxy">
+                            </div>
+                        </div>
+                        <div class="mb-3 mt-3 text-center">
+                            <span class="badge rounded-pill bg-light text-dark px-3 py-2 shadow-sm">
+                                <i class="fa-solid fa-atom me-2 text-primary"></i>
+                                <strong>[[ total_tags_galaxy ]]</strong> galaxies found
+                            </span>
+                        </div>
+                    </div>
 
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Galaxy</th>
+                                    <th>Description</th>
+                                    <th>Clusters</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="galaxy in tags_galaxy" :key="galaxy.uuid">
+                                    <td>
+                                        <span class="tag-split shadow-sm">
+                                            <span class="tag-left">
+                                                <i class="fa fa-atom"></i>
+                                            </span>
+                                            <span class="tag-right" style="background-color: #8b5cf6;"
+                                                :title="galaxy.name">
+                                                <span :style="{ color: getTextColor('#8b5cf6') }">
+                                                    [[ galaxy.name ]]
+                                                </span>
+                                            </span>
+                                        </span>
+                                    </td>
+                                    <td>[[ galaxy.description ]]</td>
+                                    <td>
+                                        <span class="badge bg-secondary">[[ galaxy.count ]] clusters</span>
+                                    </td>
+                                    <td>
+                                        <template v-if="loadingByUuidGalaxy[galaxy.uuid]">
+                                            <button class="btn btn-sm btn-success" disabled>
+                                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                Adding...
+                                            </button>
+                                        </template>
+                                        <template v-else>
+                                            <button class="btn btn-sm btn-success" @click="addGalaxy(galaxy.uuid)">
+                                                <i class="fa-solid fa-plus"></i> Add
+                                            </button>
+                                        </template>
+                                    </td>
+                                </tr>
+                                <tr v-if="total_tags_galaxy === 0">
+                                    <td colspan="4" class="text-center text-muted py-4">No galaxies found</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <template v-if="total_pages_galaxy > 1">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination justify-content-center mt-3">
+                                    <li class="page-item" :class="{ disabled: current_page_galaxy === 1 }">
+                                        <button class="page-link"
+                                            @click="current_page_galaxy > 1 && fetchTagsGalaxy(current_page_galaxy - 1)">
+                                            <i class="fa-solid fa-angle-left"></i>
+                                        </button>
+                                    </li>
+                                    <li class="page-item" v-for="page in visiblePagesGalaxy"
+                                        :class="{ active: page === current_page_galaxy, disabled: page === '...' }">
+                                        <button class="page-link" v-if="page !== '...'" @click="fetchTagsGalaxy(page)">
+                                            [[ page ]]
+                                        </button>
+                                        <span class="page-link" v-else>...</span>
+                                    </li>
+                                    <li class="page-item"
+                                        :class="{ disabled: current_page_galaxy === total_pages_galaxy }">
+                                        <button class="page-link"
+                                            @click="current_page_galaxy < total_pages_galaxy && fetchTagsGalaxy(current_page_galaxy + 1)">
+                                            <i class="fa-solid fa-angle-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </template>
+                    </div>
+                </div>
+            </div>
         </div>
     </template>
 </div>
@@ -620,6 +731,7 @@
                 await Promise.all([
                     fetchTags(1),
                     fetchTagsMisp(1),
+                    fetchTagsGalaxy(1)
                 ])
                 detail_page_1_is_loading.value = true
 
@@ -870,6 +982,76 @@
             }
 
 
+            // galaxy
+
+            // tab 3 - galaxies
+            const tags_galaxy = ref([])
+            const total_tags_galaxy = ref(0)
+            const total_pages_galaxy = ref(1)
+            const current_page_galaxy = ref(1)
+            const searchQueryGalaxy = ref('')
+            const loadingByUuidGalaxy = ref({})
+
+            async function fetchTagsGalaxy(page) {
+                const params = new URLSearchParams({ page, search: searchQueryGalaxy.value })
+                const res = await fetch('/tags/get_tags_galaxy?' + params.toString())
+                const data = await res.json()
+                if (res.status === 200) {
+                    tags_galaxy.value = data.tags
+                    total_tags_galaxy.value = data.total_tags
+                    total_pages_galaxy.value = data.total_pages
+                    current_page_galaxy.value = page
+                }
+            }
+            async function onSearchInputGalaxy() {
+                if (searchQueryGalaxy.value.trim() === "") await fetchTagsGalaxy(1)
+            }
+            async function onEnterKeyGalaxy() {
+                if (event.key === 'Enter') await fetchTagsGalaxy(1)
+            }
+            const visiblePagesGalaxy = computed(() => {
+                const pages = []
+                const total = total_pages_galaxy.value
+                const current = current_page_galaxy.value
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i)
+                } else {
+                    if (current <= 4) pages.push(1, 2, 3, 4, 5, '...', total)
+                    else if (current >= total - 3) pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
+                    else pages.push(1, '...', current - 1, current, current + 1, '...', total)
+                }
+                return pages
+            })
+            async function addGalaxy(uuid) {
+                loadingByUuidGalaxy.value[uuid] = true
+                try {
+                    const params = new URLSearchParams({ uuid })
+                    const res = await fetch('/tags/add_tags_galaxy?' + params.toString())
+                    const data = await res.json()
+                    if (res.status === 200) {
+                        await fetchTags(1)
+                        await fetchTagsGalaxy(1)
+                    }
+                    create_message(data.message, data.toast_class)
+                } catch (err) {
+                    create_message("Error while adding galaxy", "danger-subtle")
+                } finally {
+                    loadingByUuidGalaxy.value[uuid] = false
+                }
+            }
+
+
+            function getTextColor(hexColor) {
+                if (!hexColor) return '#000000'
+                const hex = hexColor.replace('#', '')
+                const r = parseInt(hex.substring(0, 2), 16)
+                const g = parseInt(hex.substring(2, 4), 16)
+                const b = parseInt(hex.substring(4, 6), 16)
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+                return luminance > 0.5 ? '#000000' : '#ffffff'
+            }
+
+
             return {
 
                 message_list,
@@ -906,7 +1088,10 @@
                 visiblePagesMisp,
                 addTag,
                 loadingByUuid,
-
+                fetchTagsGalaxy, tags_galaxy, total_tags_galaxy, current_page_galaxy,
+                total_pages_galaxy, searchQueryGalaxy, onEnterKeyGalaxy, onSearchInputGalaxy,
+                visiblePagesGalaxy, addGalaxy, loadingByUuidGalaxy,
+                getTextColor
             };
         }
     }).mount('#main-container');

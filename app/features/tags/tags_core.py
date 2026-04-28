@@ -452,3 +452,148 @@ def get_all_tags_by_type(args):
         query = query.order_by(Tag.created_at.asc())
 
     return query.all()
+
+#####################
+#   MISP GALAXIES   #
+#####################
+
+MISP_GALAXIES_PATH = "app/modules/misp-galaxy"
+
+def list_all_misp_galaxies_meta(args):
+    """List galaxy metadata, excluding galaxies already imported in DB."""
+    galaxies = []
+    galaxies_path = Path(MISP_GALAXIES_PATH) / "galaxies"
+    clusters_path = Path(MISP_GALAXIES_PATH) / "clusters"
+
+    existing_galaxies = get_all_galaxies_in_db()
+
+    for galaxy_file in sorted(galaxies_path.glob("*.json")):
+        try:
+            with open(galaxy_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            galaxy_type = data.get("type")
+            if not galaxy_type or galaxy_type in existing_galaxies:
+                continue
+
+            # same filename exists in clusters/ and contains the values
+            cluster_file = clusters_path / galaxy_file.name
+            cluster_count = 0
+            if cluster_file.exists():
+                with open(cluster_file, "r", encoding="utf-8") as f:
+                    cluster_data = json.load(f)
+                cluster_count = len(cluster_data.get("values", []))
+
+            galaxies.append({
+                "name": data.get("name"),
+                "type": galaxy_type,
+                "description": data.get("description"),
+                "uuid": data.get("uuid"),
+                "version": data.get("version"),
+                "count": cluster_count
+            })
+        except Exception:
+            continue
+
+    search_term = args.get("search", "").lower()
+    if search_term:
+        galaxies = [
+            g for g in galaxies
+            if search_term in (g["name"] or "").lower()
+            or search_term in (g["description"] or "").lower()
+            or search_term in (g["type"] or "").lower()
+        ]
+
+    page = int(args.get("page", 1))
+    per_page = 20
+    total = len(galaxies)
+    total_pages = math.ceil(total / per_page)
+    start = (page - 1) * per_page
+
+    return {
+        "items": galaxies[start:start + per_page],
+        "page": page,
+        "pages": total_pages,
+        "total": total
+    }
+def add_tags_from_misp_galaxy(uuid_from_misp, created_by):
+    """Import all clusters of a galaxy as Tags with source='Galaxy'."""
+    if not uuid_from_misp:
+        return None, "Missing UUID"
+
+    galaxies_path = Path(MISP_GALAXIES_PATH) / "galaxies"
+    clusters_path = Path(MISP_GALAXIES_PATH) / "clusters"
+
+    galaxy_data = None
+    matched_filename = None
+    for galaxy_file in galaxies_path.glob("*.json"):
+        try:
+            with open(galaxy_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if data.get("uuid") == uuid_from_misp:
+                galaxy_data = data
+                matched_filename = galaxy_file.name
+                break
+        except Exception:
+            continue
+
+    if not galaxy_data or not matched_filename:
+        return None, "Galaxy not found"
+
+    galaxy_type = galaxy_data.get("type", "unknown")
+
+    existing_galaxies = get_all_galaxies_in_db()
+    if galaxy_type in existing_galaxies:
+        return True, "Galaxy already in DB"
+
+    cluster_file = clusters_path / matched_filename
+    if not cluster_file.exists():
+        return None, "Cluster file not found"
+
+    with open(cluster_file, "r", encoding="utf-8") as f:
+        cluster_data = json.load(f)
+
+    tags_added = 0
+    for cluster in cluster_data.get("values", []):
+        value = cluster.get("value")
+        if not value:
+            continue
+
+        tag_name = f'misp-galaxy:{galaxy_type}="{value}"'
+        if Tag.query.filter_by(name=tag_name).first():
+            continue
+
+        db.session.add(Tag(
+            name=tag_name,
+            description=cluster.get("description", ""),
+            color="#8b5cf6",
+            icon="fa-atom",
+            uuid=str(uuid.uuid4()),
+            created_by=created_by.id,
+            is_active=True,
+            is_approved_by_admin=True,
+            visibility="public",
+            created_at=datetime.datetime.now(datetime.timezone.utc),
+            updated_at=datetime.datetime.now(datetime.timezone.utc),
+            external_id=cluster.get("uuid"),
+            source="Galaxy",
+            galaxy_meta=cluster.get("meta")
+        ))
+        tags_added += 1
+
+    if tags_added:
+        db.session.commit()
+        return True, f"Added {tags_added} clusters."
+
+    return None, "No clusters were added."
+
+
+def get_all_galaxies_in_db():
+    """Return galaxy types already imported (e.g. 'threat-actor', 'malware')."""
+    galaxy_types = set()
+    for tag in Tag.query.filter_by(source="Galaxy", is_active=True).all():
+        # tag name format: misp-galaxy:threat-actor="APT28"
+        if tag.name.startswith("misp-galaxy:") and "=" in tag.name:
+            galaxy_type = tag.name.split(":", 1)[1].split("=", 1)[0]
+            galaxy_types.add(galaxy_type)
+    return galaxy_types

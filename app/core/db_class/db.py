@@ -869,6 +869,9 @@ class Tag(db.Model):
     icon = db.Column(db.String(50), nullable=True) # fontawesome icon name
     source = db.Column(db.String(255), nullable=True) # Taxonomy or Manuel or Other
 
+    # Metadata for galxie (galaxie -> tag with galaxie_meta not null)
+    galaxy_meta = db.Column(db.JSON, nullable=True)
+
     # Relationships
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -892,7 +895,9 @@ class Tag(db.Model):
             "created_by_user_id": self.created_by,
             "created_by_user_name": self.user.first_name if self.user else None,
             "is_approved_by_admin": self.is_approved_by_admin,
-            "external_id": self.external_id
+            "external_id": self.external_id,
+            "source": self.source,
+            "galaxy_meta": self.galaxy_meta if self.galaxy_meta else None
         }
 
 class CommentBundle(db.Model):

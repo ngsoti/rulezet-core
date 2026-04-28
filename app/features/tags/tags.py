@@ -226,3 +226,29 @@ def get_all_tags_by_type():
         tags_lists = [tag.to_json() for tag in tags]
     
     return {"status": "success", "tags": tags_lists, "total_tags": len(tags)}, 200
+
+
+#####################
+#   MISP GALAXIES   #
+#####################
+
+@tags_blueprint.route("/get_tags_galaxy")
+@login_required
+def get_tags_galaxy():
+    result = tags_core.list_all_misp_galaxies_meta(request.args)
+    return jsonify({
+        "tags": result["items"],
+        "total_tags": result["total"],
+        "total_pages": result["pages"],
+        "current_page": result["page"]
+    })
+
+
+@tags_blueprint.route("/add_tags_galaxy")
+@login_required
+def add_tags_galaxy():
+    uuid_param = request.args.get("uuid")
+    success, message = tags_core.add_tags_from_misp_galaxy(uuid_param, current_user)
+    if success:
+        return jsonify({"message": message, "toast_class": "success-subtle"})
+    return jsonify({"message": message, "toast_class": "danger-subtle"}), 400
