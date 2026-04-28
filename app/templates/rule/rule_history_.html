@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container-fluid mt-4 pb-5" id="main-container">
-    <div v-if="rules_list_history" v-cloak class="row g-4">
+<div class="container-fluid mt-4 pb-5" v-cloak id="main-container">
+    <div v-if="rules_list_history" class="row g-4">
 
         <div class="col-md-4 col-xl-3">
             <div class="card border-0 shadow-sm sticky-top"
@@ -141,14 +141,29 @@
                                     'Inspecting single version' ]]</span>
                             </div>
                         </div>
-                        <div class="btn-group shadow-sm">
-                            <button class="btn btn-sm btn-light border px-3" @click="resetView">
-                                <i class="fas fa-sync-alt me-1"></i> Reset
-                            </button>
-                            <button class="btn btn-sm btn-indigo-solid px-4" @click="compare"
-                                :disabled="!slotA || !slotB">
-                                <i class="fas fa-bolt me-1"></i> Generate Diff
-                            </button>
+                        <div class="d-flex align-items-center gap-2">
+
+                            <!-- Lock toggle -->
+                            <template v-if="rules_list_history.length > 0 && rules_list_history[0].rule_id">
+                                <button @click="toggleLock"
+                                    class="btn btn-sm shadow-sm d-flex align-items-center gap-1 px-3"
+                                    :class="is_lock ? 'btn-warning text-dark border-warning' : 'btn-outline-secondary'"
+                                    :title="is_lock ? 'Rule locked ( if there is update from the source repository, this rule will not be updated) — click to unlock' : 'Rule unlocked ( if there is update from the source repository, this rule will be updated) — click to lock'">
+                                    <i class="fas" :class="is_lock ? 'fa-lock' : 'fa-lock-open'"></i>
+                                    <span class="x-small fw-bold">[[ is_lock ? 'Locked' : 'Unlocked' ]]</span>
+                                </button>
+                            </template>
+
+
+                            <div class="btn-group shadow-sm">
+                                <button class="btn btn-sm btn-light border px-3" @click="resetView">
+                                    <i class="fas fa-sync-alt me-1"></i> Reset
+                                </button>
+                                <button class="btn btn-sm btn-indigo-solid px-4" @click="compare"
+                                    :disabled="!slotA || !slotB">
+                                    <i class="fas fa-bolt me-1"></i> Generate Diff
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -193,6 +208,7 @@
 <script type="module">
     const { createApp, ref, computed, nextTick } = Vue;
     import { renderDiff } from "/static/js/diff_macro.js";
+    import { message_list, create_message } from '/static/js/toaster.js';
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -305,12 +321,33 @@
 
             fetchRules(1);
 
+
+            const is_lock = ref(false)
+            async function is_the_rule_lock(rule_id) {
+                const res = await fetch('/rule/is_lock_for_update?rule_id=' + rule_id);
+                const data = await res.json();
+                is_lock.value = data.is_locked;
+            }
+
+            is_the_rule_lock("{{ rule_id }}")
+
+            async function toggleLock() {
+                const new_state = !is_lock.value;
+                const res = await fetch(`/rule/update_lock/{{ rule_id }}?manuel_submit=${new_state}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    is_lock.value = data.is_locked;
+                    create_message(data.message, data.toast_class);
+                }
+            }
+
             return {
                 rules_list_history, current_page, total_pages, per_page,
                 searchQuery, isDescending, filteredHistory, latestId,
                 slotA, slotB, contentLoaded, viewMode, noChangeDetected,
                 fetchRules, toggleSort, selectSlot, isSelected, isItemInSlot, resetView, compare, viewSolo, getRandomColor,
-
+                is_lock, toggleLock,
+                message_list
             }
         }
     }).mount('#main-container');

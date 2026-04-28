@@ -366,6 +366,24 @@ def edit_rule(rule_id) -> render_template:
     else:
         return render_template("access_denied.html")
     
+
+@rule_blueprint.route("/is_lock_for_update", methods=['GET'])
+def is_lock_for_update()-> render_template:
+    """If the rule has a history with manual submit as last update, return true to explain that the rule is locked for update"""
+    rule_id = request.args.get('rule_id', type=int)
+    if not rule_id:
+        return jsonify({"message": "Missing rule_id", "is_locked": False}), 400
+    is_locked = RuleModel.was_last_history_manuel(rule_id)
+    return jsonify({"is_locked": is_locked}), 200
+
+@rule_blueprint.route("/update_lock/<int:rule_id>", methods=['GET'])
+def update_lock(rule_id):
+    """Update the lock status of the rule's last history entry."""
+    manuel_submit = request.args.get('manuel_submit', 'false').lower() == 'true'  # string → bool
+    is_locked = RuleModel.manage_history_rule(rule_id, manuel_submit)
+    return jsonify({"is_locked": is_locked, "message": "Rule lock status updated successfully", "toast_class": "success-subtle"})
+
+
 #################
 #   Rule info   #
 #################

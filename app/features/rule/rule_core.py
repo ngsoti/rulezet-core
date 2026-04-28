@@ -1713,8 +1713,7 @@ def create_rule_history(data: dict) -> bool:
 
 def was_last_history_manuel(rule_id):
     """
-    Retourne True si le dernier history a manuel_submit == True,
-    False sinon ou s'il n'y a aucun history.
+    Return True if the last history entry for the given rule_id was a manual submission, False otherwise.
     """
     history_rule = RuleUpdateHistory.query.filter_by(rule_id=rule_id)\
                                           .order_by(RuleUpdateHistory.id.desc())\
@@ -1723,6 +1722,17 @@ def was_last_history_manuel(rule_id):
         return True
     return False
 
+def manage_history_rule(rule_id: int, manual_submit: bool) -> bool:
+    """Set the manual_submit flag on the last history entry for the given rule."""
+    history_rule = RuleUpdateHistory.query.filter_by(rule_id=rule_id)\
+                                          .order_by(RuleUpdateHistory.id.desc())\
+                                          .first()
+    if not history_rule:
+        return False
+
+    history_rule.manuel_submit = manual_submit
+    db.session.commit()
+    return history_rule.manuel_submit
 
 def get_history_rule_by_id(history_id):
     """Return an history for a rule by id"""
