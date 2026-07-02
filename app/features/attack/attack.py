@@ -28,20 +28,29 @@ def stats():
 
 @attack_blueprint.route('/techniques/usage')
 def techniques_usage():
-    """Techniques that are actually associated with at least one rule, with counts.
-    Used by the RuleList ATT&CK filter dropdown."""
-    from ...core.db_class.db import RuleAttackAssociation, AttackTechnique
+    """Techniques associated with at least one rule matching every currently
+    active RuleList filter (format, tags, sources, licenses, CVEs, author...),
+    with counts scoped to that filtered set. Used by the RuleList ATT&CK
+    filter dropdown — this is what keeps its counts accurate as other
+    filters are applied (e.g. picking format=suricata)."""
+    from ...core.db_class.db import RuleAttackAssociation, AttackTechnique, Rule
     from app import db
-    from sqlalchemy import func, cast, Text
+    from sqlalchemy import func
+    from app.features.rule import rule_core as RuleModel
+
+    filters = RuleModel.parse_facet_filters(request.args, exclude=['attacks'])
+    base_ids = RuleModel.filter_rules(**filters).order_by(None).with_entities(Rule.id).subquery()
+
     rows = (
         db.session.query(
             AttackTechnique.technique_id,
             AttackTechnique.name,
-            func.count(RuleAttackAssociation.id).label('count'),
+            func.count(func.distinct(RuleAttackAssociation.rule_id)).label('count'),
         )
         .join(RuleAttackAssociation, RuleAttackAssociation.technique_id == AttackTechnique.technique_id)
+        .filter(RuleAttackAssociation.rule_id.in_(db.session.query(base_ids)))
         .group_by(AttackTechnique.technique_id, AttackTechnique.name)
-        .order_by(func.count(RuleAttackAssociation.id).desc())
+        .order_by(func.count(func.distinct(RuleAttackAssociation.rule_id)).desc())
         .all()
     )
     # Fetch tactic_keys separately to avoid GROUP BY on JSON column

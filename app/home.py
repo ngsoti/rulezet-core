@@ -57,11 +57,13 @@ def home() -> render_template:
     total_rules   = Rule.query.filter_by(is_deleted=False).count()
     total_bundles = Bundle.query.count()
     total_attacks = AttackTechnique.query.count()
+    rule_formats  = RuleModel.get_all_rule_format()
     return render_template("home.html",
         show_import_hint=show_import_hint,
         total_rules=total_rules,
         total_bundles=total_bundles,
         total_attacks=total_attacks,
+        rule_formats=rule_formats,
     )
 
 @home_blueprint.route("/home_charts/<tab>")

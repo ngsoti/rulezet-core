@@ -296,6 +296,7 @@ export default {
                             api-endpoint="/rule/get_rules_sources_usage"
                             placeholder="Filter sources…"
                             :userId="numericUserId"
+                            :filter-context="facetContextParams"
                             @change="onFilterChange">
                         </multi-source-filter>
                     </div>
@@ -309,6 +310,7 @@ export default {
                             placeholder="CVE, GHSA…"
                             :user-id="numericUserId"
                             :source-rules="source || ''"
+                            :filter-context="facetContextParams"
                             @change="onFilterChange">
                         </multi-vulnerability-filter>
                     </div>
@@ -319,6 +321,7 @@ export default {
                         </span>
                         <multi-attack-filter v-model="selectedAttacks"
                             placeholder="T1059, Command…"
+                            :filter-context="facetContextParams"
                             @change="onFilterChange">
                         </multi-attack-filter>
                     </div>
@@ -332,6 +335,7 @@ export default {
                             placeholder="Filter licenses…"
                             :user-id="numericUserId"
                             :source-rules="source || ''"
+                            :filter-context="facetContextParams"
                             @change="onFilterChange">
                         </multi-license-filter>
                     </div>
@@ -345,6 +349,7 @@ export default {
                             placeholder="Filter tags…"
                             :user-id="numericUserId"
                             target-type="rule"
+                            :filter-context="facetContextParams"
                             @change="onFilterChange">
                         </multi-tag-filter>
                     </div>
@@ -356,6 +361,7 @@ export default {
                         <multi-person-filter v-model="personFilter"
                             :user-id="numericUserId"
                             :source-rules="source || ''"
+                            :filter-context="facetContextParams"
                             @change="onPersonFilterChange">
                         </multi-person-filter>
                     </div>
@@ -1777,6 +1783,32 @@ export default {
             return Array.isArray(strings) ? strings.length : null
         }
 
+        // ── Faceted filter context ──────────────────────────────────────────
+        // Every sidebar count widget (tags, sources, licenses, CVEs, ATT&CK,
+        // author/editor) needs to know about every OTHER currently active
+        // filter, so its own counts stay scoped to what's actually visible —
+        // otherwise picking format=suricata wouldn't narrow the ATT&CK counts.
+        // The backend excludes each widget's own dimension from this context
+        // server-side (see parse_facet_filters), so we can safely send the
+        // exact same string to all of them.
+        const facetContextParams = computed(() => {
+            const p = new URLSearchParams()
+            if (ruleType.value)               p.set('rule_type', ruleType.value)
+            if (search.value.trim())          p.set('search', search.value.trim())
+            if (searchField.value !== 'all')  p.set('search_field', searchField.value)
+            if (exactMatch.value)             p.set('exact_match', 'true')
+            if (selectedTags.value.length)     p.set('tags', selectedTags.value.join(','))
+            if (selectedSources.value.length)  p.set('sources', selectedSources.value.join(','))
+            if (selectedLicenses.value.length) p.set('licenses', selectedLicenses.value.join(','))
+            if (selectedVulns.value.length)    p.set('vulnerabilities', selectedVulns.value.join(','))
+            if (selectedAttacks.value.length)  p.set('attacks', selectedAttacks.value.join(','))
+            if (personFilter.value.values.length) {
+                const pKey = personFilter.value.mode === 'editor' ? 'editors' : 'authors'
+                p.set(pKey, personFilter.value.values.join(','))
+            }
+            return p.toString()
+        })
+
         // ── Export bar ────────────────────────────────────────────────────
         const hasActiveFilters = computed(() =>
             search.value.trim() !== '' ||
@@ -1864,7 +1896,7 @@ export default {
             // Status
             statusIcon, statusLabel, canChangeStatus, cycleStatus,
             // Export
-            hasActiveFilters, exportRuleIds, showExportBar, exportTotalRules,
+            hasActiveFilters, exportRuleIds, showExportBar, exportTotalRules, facetContextParams,
             exportActionView,
         }
     },

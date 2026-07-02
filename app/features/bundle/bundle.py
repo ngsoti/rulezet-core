@@ -1083,7 +1083,7 @@ def get_bundle_page():
         "structure": structure
     }, 200
 
-@bundle_blueprint.route("/bundle/add-single-rule", methods=['POST'])
+@bundle_blueprint.route("/add-single-rule", methods=['POST'])
 @login_required
 def add_single_rule_to_bundle():
     data = request.get_json()
@@ -1099,7 +1099,7 @@ def add_single_rule_to_bundle():
     if not rule_id:
         return {"success": False, "message": "Missing rule_id", "toast_class": "danger-subtle"}, 400
 
-    rule = RuleModel.get_rule_by_id(rule_id)
+    rule = RuleModel.get_rule(rule_id)
     if not rule:
         return {"success": False, "message": f"Rule {rule_id} not found", "toast_class": "danger-subtle"}, 404
 
@@ -1110,6 +1110,9 @@ def add_single_rule_to_bundle():
             "toast_class": "danger-subtle"
         }, 400
 
+    # This only resolves/creates the target bundle — it deliberately does NOT
+    # add the rule to it. The user places it manually from the rule library
+    # in the structure editor.
     if existing_bundle_id:
         bundle = BundleModel.get_bundle_by_id(existing_bundle_id)
         if not bundle:
@@ -1118,22 +1121,13 @@ def add_single_rule_to_bundle():
         if bundle.user_id != current_user.id and not current_user.is_admin():
             return {"success": False, "message": "You don't have permission to edit this bundle", "toast_class": "danger-subtle"}, 403
 
-        success = BundleModel.add_rule_to_bundle(existing_bundle_id, rule_id, "")
-        if not success:
-            return {"success": False, "message": "Failed to add rule to bundle", "toast_class": "danger-subtle"}, 500
-
-        log_activity(
-            "bundle.rule_added",
-            f"Added rule id={rule_id} to bundle '{bundle.name}' (id={existing_bundle_id})",
-            target_type="bundle", target_id=existing_bundle_id, target_uuid=bundle.uuid,
-            extra={"rule_id": rule_id, "bundle_id": existing_bundle_id},
-            is_public=False,
-        )
         return {
             "success": True,
-            "message": f"Rule added to bundle \"{bundle.name}\"",
+            "message": f"Bundle \"{bundle.name}\" ready",
             "toast_class": "success-subtle",
-            "uuid": bundle.uuid
+            "uuid": bundle.uuid,
+            "id": bundle.id,
+            "rule_ids": [rule_id]
         }, 200
 
     form_dict = {
@@ -1145,22 +1139,20 @@ def add_single_rule_to_bundle():
     if not new_bundle:
         return {"success": False, "message": "Failed to create bundle", "toast_class": "danger-subtle"}, 500
 
-    success = BundleModel.add_rule_to_bundle(new_bundle.id, rule_id, "")
-    if not success:
-        return {"success": False, "message": "Bundle created but failed to add rule", "toast_class": "warning-subtle"}, 500
-
     log_activity(
         "bundle.create",
-        f"Created bundle '{new_bundle.name}' and added rule id={rule_id}",
+        f"Created bundle '{new_bundle.name}'",
         target_type="bundle", target_id=new_bundle.id, target_uuid=new_bundle.uuid,
-        extra={"rule_id": rule_id, "bundle_name": new_bundle.name},
+        extra={"bundle_name": new_bundle.name},
         is_public=True,
     )
     return {
         "success": True,
-        "message": f"Bundle \"{new_bundle.name}\" created and rule added",
+        "message": f"Bundle \"{new_bundle.name}\" created",
         "toast_class": "success-subtle",
-        "uuid": new_bundle.uuid
+        "uuid": new_bundle.uuid,
+        "id": new_bundle.id,
+        "rule_ids": [rule_id]
     }, 200
 
 

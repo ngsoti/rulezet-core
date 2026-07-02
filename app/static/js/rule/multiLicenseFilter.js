@@ -4,7 +4,10 @@ const MultiLicenseFilter = {
         placeholder: { type: String, default: 'Filter by licenses...' },
         apiEndpoint: { type: String, default: '/rule/get_rules_licenses_usage' },
         userId: { type: Number, default: null },
-        sourceRules: { type: String, default: '' }
+        sourceRules: { type: String, default: '' },
+        // Query string of every OTHER currently active RuleList filter — keeps
+        // these counts scoped to what's actually visible.
+        filterContext: { type: String, default: '' },
     },
     emits: ['update:modelValue', 'change'],
     delimiters: ['[[', ']]'],
@@ -23,13 +26,13 @@ const MultiLicenseFilter = {
             isLoading.value = true;
             try {
                 let url = props.apiEndpoint;
-                const params = new URLSearchParams();
-                
+                const params = new URLSearchParams(props.filterContext);
+
                 if (props.userId !== null && !isNaN(props.userId)) {
                     params.append('user_id', props.userId.toString());
                 }
 
-                if (props.sourceRules) {
+                if (props.sourceRules && !params.has('sources')) {
                     params.append('sources', props.sourceRules);
                 }
 
@@ -41,6 +44,12 @@ const MultiLicenseFilter = {
                 if (response.ok) {
                     const data = await response.json();
                     list_licenses.value = Array.isArray(data) ? data : (data.licenses || []);
+                    // The active drill-down folder may no longer exist in the
+                    // refreshed (re-filtered) list — drop back to the folder view
+                    // instead of pointing at stale/undefined data.
+                    if (activePrefix.value && !groupedLicenses.value[activePrefix.value]) {
+                        activePrefix.value = null;
+                    }
                 }
             } catch (e) {
                 console.error("Error loading filter licenses", e);
@@ -52,6 +61,7 @@ const MultiLicenseFilter = {
         Vue.watch(() => props.sourceRules, () => {
             fetchLicenses();
         });
+        Vue.watch(() => props.filterContext, fetchLicenses);
 
         const groupedLicenses = Vue.computed(() => {
             const groups = {};
@@ -194,11 +204,11 @@ const MultiLicenseFilter = {
                 <div v-else class="animate__animated animate__fadeInUpSmall">
                     <div class="px-2 mb-2 d-flex justify-content-between align-items-center border-bottom pb-2">
                         <small class="fw-black text-info text-uppercase">[[ activePrefix ]] Family</small>
-                        <small class="small" style="color: var(--text-color)">[[ groupedLicenses[activePrefix].length ]] items</small>
+                        <small class="small" style="color: var(--text-color)">[[ (groupedLicenses[activePrefix] || []).length ]] items</small>
                     </div>
-                    
+
                     <div class="d-flex flex-column gap-2 mt-2">
-                        <div v-for="l in groupedLicenses[activePrefix]" :key="l.name" 
+                        <div v-for="l in (groupedLicenses[activePrefix] || [])" :key="l.name"
                              @click="toggleLicense(l.name)" 
                              class="p-2 rounded-3 border d-flex align-items-center justify-content-between tag-item-hover"
                              :class="selectedNames.includes(l.name) ? 'border-primary bg-primary-subtle' : ''"

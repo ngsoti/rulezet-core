@@ -1345,10 +1345,50 @@ def process_vote(rule_id, user_id, vote_type):
 #   Filter  #
 #############
 
-def filter_rules(search=None, search_field="all", author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None, source=None, user_id=None, license=None, tags: list[str] | None = None, exact_match=False, editor_names: list[str] | None = None, bundle_id=None, attacks: list[str] | None = None, status=None, workspace_uuid=None, exclude_workspace_uuid=None) -> Rule:
+def parse_facet_filters(args, exclude=()) -> dict:
+    """Build filter_rules() kwargs from Flask's request.args — this is what
+    lets every sidebar facet (tags, sources, licenses, CVEs, ATT&CK,
+    authors/editors) stay scoped to the rules matching every OTHER currently
+    active filter, instead of counting across the whole table.
+
+    `exclude` names the dimension a given facet endpoint is itself counting
+    (e.g. 'tags' for the tags endpoint) — that dimension's own filter must
+    never be applied to its own count, or picking one value would hide every
+    other value in the same dropdown.
+    """
+    def _csv(key):
+        v = (args.get(key) or '').strip()
+        return [x.strip() for x in v.split(',') if x.strip()] or None
+
+    ids_csv = _csv('ids')
+
+    filters = {
+        'search':          args.get('search') or None,
+        'search_field':    args.get('search_field') or 'all',
+        'exact_match':     args.get('exact_match') == 'true',
+        'rule_type':       args.get('rule_type') or None,
+        'source':          _csv('sources'),
+        'license':         _csv('licenses'),
+        'tags':            _csv('tags'),
+        'vulnerabilities': _csv('vulnerabilities'),
+        'attacks':         _csv('attacks'),
+        'author':          _csv('authors'),
+        'editor_names':    _csv('editors'),
+        'user_id':         args.get('user_id', type=int),
+        'ids':             [int(i) for i in ids_csv if i.isdigit()] if ids_csv else None,
+    }
+    for key in exclude:
+        filters[key] = None
+    return filters
+
+
+def filter_rules(search=None, search_field="all", author=None, sort_by=None, rule_type=None, vulnerabilities: list[str] | None = None, source=None, user_id=None, license=None, tags: list[str] | None = None, exact_match=False, editor_names: list[str] | None = None, bundle_id=None, attacks: list[str] | None = None, status=None, workspace_uuid=None, exclude_workspace_uuid=None, ids: list[int] | None = None) -> Rule:
     """Filter the rules with specific field targeting"""
     query = _active()
-    
+
+    if ids:
+        query = query.filter(Rule.id.in_(ids))
+
     if search:
         search = search.strip()
 
@@ -2284,6 +2324,7 @@ def get_rules_data_table(page=1, per_page=10, search=None, sort=None,
         status=status,
         workspace_uuid=workspace_uuid,
         exclude_workspace_uuid=exclude_workspace_uuid,
+        ids=ids,
     )
 
     if ids:
@@ -3098,33 +3139,22 @@ def delete_updater_history(id):
         db.session.rollback()
         return False, f"Updater history not deleted: {e}"
     
-def get_rules_vulnerabilities_usage(user_id=None, source_url=None):
+def get_rules_vulnerabilities_usage(filters: dict = None):
     """
-    Retrieves and counts vulnerability identifiers from Rules.
-    If user_id is provided, only rules belonging to that user are counted.
+    Retrieves and counts vulnerability identifiers from rules matching every
+    OTHER currently active filter (see parse_facet_filters — 'vulnerabilities'
+    must already be excluded from `filters`).
     """
+    base_ids = filter_rules(**(filters or {})).order_by(None).with_entities(Rule.id).subquery()
 
     query = db.session.query(Rule.cve_id).filter(
+        Rule.id.in_(db.session.query(base_ids)),
         Rule.cve_id.isnot(None),
         Rule.cve_id != '',
         Rule.cve_id != '[]'
     )
 
-    if user_id:
-        query = query.filter(Rule.user_id == user_id)
-    if source_url:
-        query = query.filter(Rule.source == source_url)
-
-    elif current_user.is_authenticated:
-        if not current_user.is_admin() and hasattr(Rule, 'access'):
-            query = query.filter(
-                or_(Rule.access.is_(True), Rule.user_id == current_user.id)
-            )
-    elif hasattr(Rule, 'access'):
-        query = query.filter(Rule.access.is_(True))
-
     all_rules_vulns = query.all()
-    
 
     vulnerability_counter = Counter()
     for (raw_json,) in all_rules_vulns:
@@ -3201,87 +3231,79 @@ def get_vulnerabilities_for_rule(rule_id: int):
     
 
 
-def get_sources_usage_with_filter(search_term, user_id=None):
+def get_sources_usage_with_filter(search_term, filters: dict = None):
     """
-    Groups rules by source and counts them.
-    Filters by search term (ILIKE) and optionally by creator's user_id.
+    Groups rules by source and counts them, scoped to rules matching every
+    OTHER currently active filter ('source' must already be excluded from
+    `filters` — see parse_facet_filters). `search_term` filters the source
+    names themselves (the dropdown's own search box), independent of that.
     """
+    base_ids = filter_rules(**(filters or {})).order_by(None).with_entities(Rule.id).subquery()
 
     query = db.session.query(
-        Rule.source.label('source'), 
+        Rule.source.label('source'),
         func.count(Rule.id).label('count')
-    ).filter(Rule.source != None, Rule.source != '')
-
+    ).filter(Rule.id.in_(db.session.query(base_ids)), Rule.source != None, Rule.source != '')
 
     if search_term:
         query = query.filter(Rule.source.ilike(f'%{search_term}%'))
 
-    if user_id:
-        query = query.filter(Rule.user_id == user_id)
-
     return query.group_by(Rule.source).order_by(func.count(Rule.id).desc()).all()
 
-def get_licenses_usage_with_filter(search_query, user_id=None, source_scope=None):
+def get_licenses_usage_with_filter(search_query, filters: dict = None):
     """
-    Groups rules by license and counts them.
-    Filters by search term (ILIKE), creator's user_id, and source scope.
+    Groups rules by license and counts them, scoped to rules matching every
+    OTHER currently active filter ('license' must already be excluded from
+    `filters`).
     """
+    base_ids = filter_rules(**(filters or {})).order_by(None).with_entities(Rule.id).subquery()
 
-    # Base query: count occurrences of each license string
     query = db.session.query(
         Rule.license.label('license'),
         func.count(Rule.id).label('count')
-    ).filter(Rule.license != None, Rule.license != '', Rule.license != '[]',
-             Rule.is_deleted == False)
+    ).filter(Rule.id.in_(db.session.query(base_ids)),
+             Rule.license != None, Rule.license != '', Rule.license != '[]')
 
-    # Filter by search term
     if search_query:
         query = query.filter(Rule.license.ilike(f'%{search_query}%'))
 
-    # Filter by specific user
-    if user_id:
-        query = query.filter(Rule.user_id == user_id)
-
-    # Filter by source scope (GitHub, GitLab, etc.)
-    if source_scope:
-        query = query.filter(Rule.source == source_scope)
-
-    # Return grouped results ordered by the most frequent license
     return query.group_by(Rule.license).order_by(func.count(Rule.id).desc()).all()
 
 
-def get_authors_usage_with_filter(search_query=None, user_id=None, source_scope=None):
-    """Distinct rule authors with usage counts, optionally filtered."""
+def get_authors_usage_with_filter(search_query=None, filters: dict = None):
+    """Distinct rule authors with usage counts, scoped to rules matching every
+    OTHER currently active filter ('author' must already be excluded from
+    `filters`)."""
+    base_ids = filter_rules(**(filters or {})).order_by(None).with_entities(Rule.id).subquery()
+
     query = db.session.query(
         Rule.author.label('author'),
         func.count(Rule.id).label('count')
-    ).filter(Rule.author.isnot(None), Rule.author != '', Rule.author != 'Unknown',
-             Rule.is_deleted == False)
+    ).filter(Rule.id.in_(db.session.query(base_ids)),
+             Rule.author.isnot(None), Rule.author != '', Rule.author != 'Unknown')
 
     if search_query:
         query = query.filter(Rule.author.ilike(f'%{search_query}%'))
-    if user_id:
-        query = query.filter(Rule.user_id == user_id)
-    if source_scope:
-        query = query.filter(Rule.source == source_scope)
 
     return query.group_by(Rule.author).order_by(func.count(Rule.id).desc()).all()
 
 
-def get_editors_usage_with_filter(search_query=None, source_scope=None):
-    """Distinct Rulezet editors (uploaders) with usage counts."""
+def get_editors_usage_with_filter(search_query=None, filters: dict = None):
+    """Distinct Rulezet editors (uploaders) with usage counts, scoped to rules
+    matching every OTHER currently active filter ('editor_names' must already
+    be excluded from `filters`)."""
+    base_ids = filter_rules(**(filters or {})).order_by(None).with_entities(Rule.id).subquery()
+
     editor_col = func.coalesce(User.username, func.concat(User.first_name, ' ', User.last_name))
     query = (db.session.query(
         editor_col.label('name'),
         func.count(Rule.id).label('count')
     )
     .join(User, User.id == Rule.user_id)
-    .filter(Rule.is_deleted == False))
+    .filter(Rule.id.in_(db.session.query(base_ids))))
 
     if search_query:
         query = query.filter(editor_col.ilike(f'%{search_query}%'))
-    if source_scope:
-        query = query.filter(Rule.source == source_scope)
 
     return query.group_by(editor_col).order_by(func.count(Rule.id).desc()).all()
 
@@ -3351,25 +3373,26 @@ def get_tags_for_rules_batch(rule_ids: List[int]) -> dict:
     return result
 
 
-def get_all_used_tags_with_counts():
+def get_all_used_tags_with_counts(filters: dict = None):
     """
-    Returns tags with their usage count.
+    Returns tags with their usage count, scoped to rules matching every OTHER
+    currently active filter ('tags' must already be excluded from `filters`
+    — see parse_facet_filters).
     """
-   
+    base_ids = filter_rules(**(filters or {})).order_by(None).with_entities(Rule.id).subquery()
+
     query = (
         db.session.query(
-            Tag, 
-            func.count(RuleTagAssociation.id).label('usage_count')
+            Tag,
+            func.count(func.distinct(RuleTagAssociation.rule_id)).label('usage_count')
         )
         .join(RuleTagAssociation, Tag.id == RuleTagAssociation.tag_id)
-        .join(Rule, Rule.id == RuleTagAssociation.rule_id)
-        .filter(Tag.is_active.is_(True)) 
+        .filter(Tag.is_active.is_(True))
+        .filter(RuleTagAssociation.rule_id.in_(db.session.query(base_ids)))
     )
 
-   
     if current_user.is_authenticated:
         if not current_user.is_admin():
-            
             query = query.filter(
                 or_(
                     Tag.visibility.ilike('public'),
@@ -3385,12 +3408,12 @@ def get_all_used_tags_with_counts():
 
     results = (
         query.group_by(Tag.id)
-        .order_by(func.count(RuleTagAssociation.id).desc(), Tag.name.asc())
+        .order_by(func.count(func.distinct(RuleTagAssociation.rule_id)).desc(), Tag.name.asc())
         .all()
     )
 
     tags_list = []
-    for tag_obj, count in results: 
+    for tag_obj, count in results:
         tag_data = tag_obj.to_json()
         tag_data['usage_count'] = count
         tags_list.append(tag_data)

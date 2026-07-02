@@ -6,6 +6,9 @@ const MultiTagFilter = {
         placeholder: { type: String, default: 'Filter by tags…' },
         apiEndpoint: { type: String, default: '/bundle/get_all_tags_usage' },
         showNamespace: { type: Boolean, default: true },
+        // Query string of every OTHER currently active RuleList filter — keeps
+        // these counts scoped to what's actually visible.
+        filterContext: { type: String, default: '' },
     },
     emits: ['update:modelValue', 'change'],
     delimiters: ['[[', ']]'],
@@ -51,24 +54,11 @@ const MultiTagFilter = {
             if (val && val.length > 0) selectedTagNames.value = [...val];
         });
 
-        // async function fetchTags() {
-        //     isLoading.value = true;
-        //     try {
-        //         const res = await fetch(props.apiEndpoint);
-        //         if (res.ok) {
-        //             const data = await res.json();
-        //             listTags.value = data.tags || [];
-        //         }
-        //     } catch (e) {
-        //         console.error('MultiTagFilter fetch error:', e);
-        //     } finally {
-        //         isLoading.value = false;
-        //     }
-        // }
         async function fetchTags() {
             isLoading.value = true;
             try {
-                const res = await fetch(props.apiEndpoint);
+                const url = props.filterContext ? `${props.apiEndpoint}?${props.filterContext}` : props.apiEndpoint;
+                const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
                     listTags.value = data.tags || [];
@@ -126,6 +116,7 @@ const MultiTagFilter = {
         }
 
         Vue.onMounted(fetchTags);
+        Vue.watch(() => props.filterContext, fetchTags);
 
         return {
             listTags, tagSearchQuery, selectedTagNames, activeNamespace, activeSource, isLoading,
@@ -154,7 +145,8 @@ const MultiTagFilter = {
                         <span :style="{ color: getTextColor(tag.color || '#6c757d') }" class="me-2" style="font-size:0.75rem">
                             [[ tagLabel(tag.name) ]]
                         </span>
-                        <i class="fa-solid fa-circle-xmark opacity-75 ms-1" @click.stop="toggleTag(tag.name)" style="cursor:pointer"></i>
+                        <i class="fa-solid fa-circle-xmark opacity-75 ms-1" @click.stop="toggleTag(tag.name)"
+                           :style="{ color: getTextColor(tag.color || '#6c757d'), cursor: 'pointer' }"></i>
                     </span>
                 </span>
                 <i class="fa-solid fa-chevron-down ms-auto me-1 text-muted small"></i>

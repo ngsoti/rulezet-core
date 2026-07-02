@@ -53,6 +53,9 @@ const MultiAttackFilter = {
         modelValue:  { type: Array,  default: () => [] },
         placeholder: { type: String, default: 'Filter by ATT&CK technique…' },
         apiEndpoint: { type: String, default: '/attack/techniques/usage' },
+        // Query string of every OTHER currently active RuleList filter — keeps
+        // these counts scoped to what's actually visible.
+        filterContext: { type: String, default: '' },
     },
     emits: ['update:modelValue', 'change'],
     delimiters: ['[[', ']]'],
@@ -71,7 +74,8 @@ const MultiAttackFilter = {
         async function fetchTechniques() {
             loading.value = true;
             try {
-                const res  = await fetch(props.apiEndpoint);
+                const url = props.filterContext ? `${props.apiEndpoint}?${props.filterContext}` : props.apiEndpoint;
+                const res  = await fetch(url);
                 const data = await res.json();
                 allTechniques.value = data.techniques || [];
 
@@ -89,6 +93,7 @@ const MultiAttackFilter = {
             finally  { loading.value = false; }
         }
         onMounted(fetchTechniques);
+        watch(() => props.filterContext, fetchTechniques);
 
         // Ordered tactic list for folder view
         const tacticList = computed(() => {

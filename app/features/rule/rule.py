@@ -3336,7 +3336,8 @@ def rules_data_table():
     single_author = request.args.get('author', None, type=str)
     author_filter = authors_list or ([single_author] if single_author else None)
 
-    ids_filter = request.args.getlist('ids[]', type=int) or None
+    ids_csv = _csv_arg('ids')
+    ids = [int(i) for i in ids_csv if i.isdigit()] if ids_csv else None
 
     pagination = RuleModel.get_rules_data_table(
         page=request.args.get('page', 1, type=int),
@@ -3359,7 +3360,7 @@ def rules_data_table():
         status=request.args.get('status', None, type=str),
         workspace_uuid=request.args.get('workspace_uuid', None, type=str),
         exclude_workspace_uuid=request.args.get('exclude_workspace_uuid', None, type=str),
-        ids=ids_filter,
+        ids=ids,
     )
 
     rule_ids = [r.id for r in pagination.items]
@@ -3763,16 +3764,14 @@ def get_rules_page_filter_bundle() -> jsonify:
 @rule_blueprint.route("/get_all_rules_vulnerabilities_usage", methods=['GET'])
 def get_all_rules_vulnerabilities_usage():
     try:
-
-        user_id = request.args.get('user_id', type=int)
-        source_url = request.args.get('sources', type=str)
-        vulnerabilities = RuleModel.get_rules_vulnerabilities_usage(user_id=user_id, source_url=source_url)
+        filters = RuleModel.parse_facet_filters(request.args, exclude=['vulnerabilities'])
+        vulnerabilities = RuleModel.get_rules_vulnerabilities_usage(filters=filters)
         return jsonify({
             "success": True,
             "vulnerabilities": vulnerabilities
         })
     except Exception as e:
-      
+
         return jsonify({"success": False, "message": str(e)}), 500
     
 
@@ -3800,55 +3799,44 @@ def test():
 
 @rule_blueprint.route('/get_rules_sources_usage')
 def get_rules_sources_usage():
-    """Returns the list of sources, filtered by user_id if provided."""
-    user_id = request.args.get('user_id', type=int) 
+    """Returns the list of sources, scoped to rules matching every other active filter."""
     search_query = request.args.get('q', '').strip()
+    filters = RuleModel.parse_facet_filters(request.args, exclude=['source'])
 
-    sources = RuleModel.get_sources_usage_with_filter(search_query, user_id)
-    
+    sources = RuleModel.get_sources_usage_with_filter(search_query, filters=filters)
+
     return jsonify([{"name": s.source, "count": s.count} for s in sources])
 
 @rule_blueprint.route('/get_rules_licenses_usage')
 def get_rules_licenses_usage():
-    """Returns the list of licenses, filtered by user_id, search query, and source scope."""
-    user_id = request.args.get('user_id', type=int) 
+    """Returns the list of licenses, scoped to rules matching every other active filter."""
     search_query = request.args.get('q', '').strip()
-    source_scope = request.args.get('sources', '').strip()
-    
-    licenses = RuleModel.get_licenses_usage_with_filter(
-        search_query=search_query, 
-        user_id=user_id, 
-        source_scope=source_scope
-    )
-    
+    filters = RuleModel.parse_facet_filters(request.args, exclude=['license'])
+
+    licenses = RuleModel.get_licenses_usage_with_filter(search_query, filters=filters)
+
     return jsonify([{"name": s.license, "count": s.count} for s in licenses])
 
 
 @rule_blueprint.route('/get_rules_authors_usage')
 def get_rules_authors_usage():
-    """Returns distinct rule authors with their rule count."""
-    user_id      = request.args.get('user_id', type=int)
+    """Returns distinct rule authors with their rule count, scoped to rules
+    matching every other active filter."""
     search_query = request.args.get('q', '').strip()
-    source_scope = request.args.get('sources', '').strip()
+    filters = RuleModel.parse_facet_filters(request.args, exclude=['author'])
 
-    authors = RuleModel.get_authors_usage_with_filter(
-        search_query=search_query,
-        user_id=user_id,
-        source_scope=source_scope,
-    )
+    authors = RuleModel.get_authors_usage_with_filter(search_query=search_query, filters=filters)
     return jsonify([{"name": a.author, "count": a.count} for a in authors])
 
 
 @rule_blueprint.route('/get_rules_editors_usage')
 def get_rules_editors_usage():
-    """Returns distinct Rulezet editors (uploaders) with their rule count."""
+    """Returns distinct Rulezet editors (uploaders) with their rule count,
+    scoped to rules matching every other active filter."""
     search_query = request.args.get('q', '').strip()
-    source_scope = request.args.get('sources', '').strip()
+    filters = RuleModel.parse_facet_filters(request.args, exclude=['editor_names'])
 
-    editors = RuleModel.get_editors_usage_with_filter(
-        search_query=search_query,
-        source_scope=source_scope,
-    )
+    editors = RuleModel.get_editors_usage_with_filter(search_query=search_query, filters=filters)
     return jsonify([{"name": e.name, "count": e.count} for e in editors])
 
 
@@ -3871,7 +3859,8 @@ def get_tags(rule_id):
 @rule_blueprint.route('/get_all_tags_usage')
 def get_all_tags_usage():
     try:
-        tags = RuleModel.get_all_used_tags_with_counts()
+        filters = RuleModel.parse_facet_filters(request.args, exclude=['tags'])
+        tags = RuleModel.get_all_used_tags_with_counts(filters=filters)
         return jsonify({
             "success": True,
             "tags": tags
@@ -4034,14 +4023,19 @@ def bundle_from_filters():
 
     rule_ids = [r.id for r in rules_objects]
 
+    # This only resolves/creates the target bundle — it deliberately does NOT
+    # add the matched rules to it. The user places them manually (drag or
+    # "Add") from the rule library in the structure editor; auto-adding used
+    # to dump everything into an "Unsorted" folder the user never asked for.
     try:
         existing_id = data.get('existing_bundle_id')
 
         if existing_id:
-            success, msg = BundleModel.add_rules_to_bundle(existing_id, rule_ids)
-            if not success:
-                return jsonify({"message": msg}), 500
             bundle = BundleModel.get_bundle_by_id(existing_id)
+            if not bundle:
+                return jsonify({"message": "Bundle not found"}), 404
+            if bundle.user_id != current_user.id and not current_user.is_admin():
+                return jsonify({"message": "You don't have permission to edit this bundle"}), 403
         else:
             dict_form = {
                 "name": data.get('new_bundle_name'),
@@ -4049,17 +4043,15 @@ def bundle_from_filters():
                 "public": data.get('is_public', True)
             }
             bundle = BundleModel.create_bundle(dict_form, current_user)
-            if bundle:
-                success, msg = BundleModel.add_rules_to_bundle(bundle.id, rule_ids)
-                if not success:
-                    return jsonify({"message": msg}), 500
-            else:
+            if not bundle:
                 return jsonify({"message": "Failed to create bundle"}), 500
 
         return jsonify({
-            "success": True, 
-            "message": "Bundle processed successfully", 
-            "uuid": bundle.uuid
+            "success": True,
+            "message": "Bundle processed successfully",
+            "uuid": bundle.uuid,
+            "id": bundle.id,
+            "rule_ids": rule_ids
         }), 200
 
     except Exception as e:

@@ -10,7 +10,7 @@ const RuleBundleManager = {
         // Mode "explicit selection" — liste d'IDs sélectionnés manuellement
         ruleIds: { type: Array, default: null }
     },
-    emits: ['processing', 'completed', 'error', 'uuid'],
+    emits: ['processing', 'completed', 'error', 'bundle-id', 'rule-ids'],
     delimiters: ['[[', ']]'],
     setup(props, { emit }) {
         const userBundles = Vue.ref([]);
@@ -56,7 +56,7 @@ const RuleBundleManager = {
             if (props.ruleId) {
                 // single-rule mode
                 payload  = { ...base, rule_id: props.ruleId };
-                endpoint = '/rule/bundle/add-single-rule';
+                endpoint = '/bundle/add-single-rule';
             } else if (props.ruleIds && props.ruleIds.length) {
                 // explicit multi-selection mode — send IDs, not filters
                 payload  = { ...base, ids: props.ruleIds };
@@ -79,7 +79,11 @@ const RuleBundleManager = {
 
                 if (response.ok) {
                     const data = await response.json();
-                    emit('uuid', data.uuid);
+                    emit('bundle-id', data.id);
+                    // Snapshot of exactly the rules that matched at this moment —
+                    // used to pin the "Organize Bundle" rule library so it doesn't
+                    // keep growing/shrinking as the platform's rule set changes.
+                    emit('rule-ids', data.rule_ids || null);
                     emit('completed');
                 } else {
                     const err = await response.json();

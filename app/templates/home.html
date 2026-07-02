@@ -284,14 +284,9 @@
                     </div>
 
                     <div class="hero-formats">
-                        <span class="hero-fmt-pill">YARA</span>
-                        <span class="hero-fmt-pill">Sigma</span>
-                        <span class="hero-fmt-pill">Suricata</span>
-                        <span class="hero-fmt-pill">Zeek</span>
-                        <span class="hero-fmt-pill">CRS</span>
-                        <span class="hero-fmt-pill">Nova</span>
-                        <span class="hero-fmt-pill">Wazuh</span>
-                        <span class="hero-fmt-pill">ATR</span>
+                        {% for fmt in rule_formats %}
+                        <a href="/rule/rules_list?rule_type={{ fmt.name | urlencode }}" class="hero-fmt-pill">{{ fmt.name | upper }}</a>
+                        {% endfor %}
                         <a href="/why_choose_rulezet" class="hero-fmt-pill" style="opacity:.55;">+ more</a>
                     </div>
                 </div>

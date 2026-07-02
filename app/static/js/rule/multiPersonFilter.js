@@ -16,6 +16,9 @@ const MultiPersonFilter = {
         editorEndpoint: { type: String, default: '/rule/get_rules_editors_usage' },
         userId: { type: Number, default: null },
         sourceRules: { type: String, default: '' },
+        // Query string of every OTHER currently active RuleList filter — keeps
+        // these counts scoped to what's actually visible.
+        filterContext: { type: String, default: '' },
     },
     emits: ['update:modelValue', 'change'],
     delimiters: ['[[', ']]'],
@@ -38,9 +41,9 @@ const MultiPersonFilter = {
             list.value = []
             try {
                 const endpoint = mode.value === 'editor' ? props.editorEndpoint : props.authorEndpoint
-                const params = new URLSearchParams()
+                const params = new URLSearchParams(props.filterContext)
                 if (props.userId) params.append('user_id', props.userId)
-                if (props.sourceRules) params.append('sources', props.sourceRules)
+                if (props.sourceRules && !params.has('sources')) params.append('sources', props.sourceRules)
                 const url = endpoint + (params.toString() ? '?' + params.toString() : '')
                 const res = await fetch(url)
                 if (res.ok) list.value = await res.json()
@@ -59,6 +62,7 @@ const MultiPersonFilter = {
         })
 
         Vue.watch(() => props.sourceRules, fetchList)
+        Vue.watch(() => props.filterContext, fetchList)
 
         const filteredList = Vue.computed(() => {
             const q = search.value.toLowerCase()

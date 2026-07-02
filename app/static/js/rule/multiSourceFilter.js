@@ -4,6 +4,10 @@ const MultiSourceFilter = {
         placeholder: { type: String, default: 'Filter by sources...' },
         apiEndpoint: { type: String, default: '/rule/get_rules_sources_usage' },
         userId: { type: Number, default: null },
+        // Query string of every OTHER currently active RuleList filter (format,
+        // tags, licenses, CVEs, ATT&CK, author/editor) — keeps these counts
+        // scoped to what's actually visible instead of the whole rule table.
+        filterContext: { type: String, default: '' },
     },
     emits: ['update:modelValue', 'change'],
     delimiters: ['[[', ']]'],
@@ -19,19 +23,25 @@ const MultiSourceFilter = {
         }, { deep: true });
 
         const fetchSources = async () => {
-            isLoading.ref = true;
+            isLoading.value = true;
             try {
                 let url = props.apiEndpoint;
+                const params = new URLSearchParams(props.filterContext);
                 if (props.userId !== null && !isNaN(props.userId)) {
-                    const params = new URLSearchParams();
                     params.append('user_id', props.userId.toString());
-                    url += `?${params.toString()}`;
                 }
+                if (params.toString()) url += `?${params.toString()}`;
 
                 const response = await fetch(url);
                 if (response.ok) {
                     const data = await response.json();
                     list_sources.value = Array.isArray(data) ? data : (data.sources || []);
+                    // The active drill-down folder may no longer exist in the
+                    // refreshed (re-filtered) list — drop back to the folder view
+                    // instead of pointing at stale/undefined data.
+                    if (activePrefix.value && !groupedSources.value[activePrefix.value]) {
+                        activePrefix.value = null;
+                    }
                 }
             } finally {
                 isLoading.value = false;
@@ -85,6 +95,7 @@ const MultiSourceFilter = {
         };
 
         Vue.onMounted(fetchSources);
+        Vue.watch(() => props.filterContext, fetchSources);
 
         return {
             searchCtx, groupedSources, selectedNames, activePrefix, list_sources,
@@ -180,11 +191,11 @@ const MultiSourceFilter = {
                 <div v-else class="animate__animated animate__fadeInUpSmall">
                     <div class="px-2 mb-2 d-flex justify-content-between align-items-center border-bottom pb-2">
                         <small class="fw-black text-primary text-uppercase">[[ activePrefix ]] Sources</small>
-                        <small class=" small" style="color: var(--text-color)">[[ groupedSources[activePrefix].length ]] items</small>
+                        <small class=" small" style="color: var(--text-color)">[[ (groupedSources[activePrefix] || []).length ]] items</small>
                     </div>
-                    
+
                     <div class="d-flex flex-column gap-2 mt-2">
-                        <div v-for="s in groupedSources[activePrefix]" :key="s.name" 
+                        <div v-for="s in (groupedSources[activePrefix] || [])" :key="s.name"
                              @click="toggleSource(s.name)" 
                              class="p-2 rounded-3 border d-flex align-items-center justify-content-between tag-item-hover"
                              :class="selectedNames.includes(s.name) ? 'border-primary bg-primary-subtle' : ''"

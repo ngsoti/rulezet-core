@@ -255,9 +255,9 @@ def add_rule_to_bundle(bundle_id: int, rule_id: int , description: str) -> bool:
     :param rule_id: ID of the rule to add.
     :return: Bool
     """
-    if not bundle_id or not rule_id or not description:
+    if not bundle_id or not rule_id:
         return False
-    
+
     # Ensure bundle and rule exist
     bundle = get_bundle_by_id(bundle_id)
     if not bundle:
@@ -792,44 +792,53 @@ def update_bundle_from_structure(bundle_id, structure):
 
 def update_bundle_from_rule_id_into_structure(bundle_id):
     """
-    Update the UI structure to include all rules associated with the bundle.
+    Ensure every rule in BundleRuleAssociation has a matching BundleNode,
+    without touching the existing folder structure. Rules that don't have a
+    node yet are appended into an "Unsorted" root folder (created on demand);
+    existing folders and nodes are left untouched.
     """
     try:
-
         bundle = Bundle.query.get(bundle_id)
         if not bundle:
             return False, "Bundle not found"
 
         bundle_rules = BundleRuleAssociation.query.filter_by(bundle_id=bundle_id).all()
-        
-        BundleNode.query.filter_by(bundle_id=bundle_id).delete()
-        db.session.commit()
 
+        existing_node_rule_ids = {
+            rid for (rid,) in db.session.query(BundleNode.rule_id)
+                .filter(BundleNode.bundle_id == bundle_id, BundleNode.rule_id.isnot(None))
+        }
+        missing_rules = [r for r in bundle_rules if r.rule_id not in existing_node_rule_ids]
 
-        folder = BundleNode(
-            bundle_id=bundle_id,
-            parent_id=None,
-            name=bundle.name,
-            node_type="folder",
-            rule_id=None,
-            custom_content=None
-        )
-        db.session.add(folder)
-        db.session.commit()
-        folder_id = folder.id
+        if not missing_rules:
+            return True, "Structure already up to date"
 
-        for rule in bundle_rules:
-            rule_node = BundleNode(
+        unsorted = BundleNode.query.filter_by(
+            bundle_id=bundle_id, parent_id=None, node_type="folder", name="Unsorted"
+        ).first()
+        if not unsorted:
+            unsorted = BundleNode(
                 bundle_id=bundle_id,
-                parent_id=folder_id,
-                name=rule.rule.title,
-                node_type="file",
-                rule_id=rule.rule_id,
+                parent_id=None,
+                name="Unsorted",
+                node_type="folder",
+                rule_id=None,
                 custom_content=None
             )
-            db.session.add(rule_node)
+            db.session.add(unsorted)
+            db.session.flush()
+
+        for rule_assoc in missing_rules:
+            db.session.add(BundleNode(
+                bundle_id=bundle_id,
+                parent_id=unsorted.id,
+                name=rule_assoc.rule.title,
+                node_type="file",
+                rule_id=rule_assoc.rule_id,
+                custom_content=None
+            ))
         db.session.commit()
-        return True, "Structure updated successfully" 
+        return True, "Structure updated successfully"
 
     except Exception as e:
         db.session.rollback()

@@ -17,6 +17,12 @@
  *   showFilters     Boolean  default true
  *   initialPerPage  Number   default 12
  *   hiddenFilters   Array    default []
+ *   pinnedIds       Array    default null — when set, the pool is locked to
+ *                            exactly these rule ids (e.g. the set that
+ *                            matched the filters/selection at the moment the
+ *                            user chose "Add to Bundle"); the filter bar can
+ *                            still narrow WITHIN that pool but never fetches
+ *                            outside of it.
  *
  * Emits:
  *   add-rules(rules[])  — array of full rule objects to add
@@ -29,6 +35,8 @@ import MultiSourceFilter         from '/static/js/rule/multiSourceFilter.js'
 import MultiLicenseFilter        from '/static/js/rule/multiLicenseFilter.js'
 import MultiPersonFilter         from '/static/js/rule/multiPersonFilter.js'
 import MultiTagFilter            from '/static/js/tags/multiTagFIlter.js'
+import MultiAttackFilter         from '/static/js/attack/multiAttackFilter.js'
+import AttackDisplayList         from '/static/js/attack/attackDisplayList.js'
 import TagsDisplaysList          from '/static/js/tags/tagsDisplaysList.js'
 import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js'
 import UserChip                  from '/static/js/components/UserChip.js'
@@ -44,6 +52,8 @@ export default {
         MultiSourceFilter,
         MultiLicenseFilter,
         MultiTagFilter,
+        MultiAttackFilter,
+        AttackDisplayList,
         MultiPersonFilter,
         TagsDisplaysList,
         VulnerabilityDisplaysList,
@@ -57,6 +67,7 @@ export default {
         hiddenFilters:  { type: Array,   default: () => [] },
         currentUserId:  { type: Number,  default: null },
         excludeIds:     { type: Object,  default: null },  // Set of rule IDs already in the bundle
+        pinnedIds:      { type: Array,   default: null },
     },
 
     emits: ['add-rules', 'preview-rule'],
@@ -145,7 +156,7 @@ export default {
                 </div>
 
                 <span class="text-muted small ms-1" v-if="!loading">
-                    <strong>{{ total }}</strong> rule<span v-if="total !== 1">s</span>
+                    <strong>{{ displayTotal }}</strong> rule<span v-if="displayTotal !== 1">s</span>
                 </span>
             </div>
         </div>
@@ -171,18 +182,21 @@ export default {
                     <multi-source-filter v-model="selectedSources"
                         api-endpoint="/rule/get_rules_sources_usage"
                         placeholder="Sources…"
+                        :filter-context="filterContext"
                         @change="onFilterChange" />
                 </div>
                 <div v-if="!isHidden('vulnerabilities')" class="brs-fp-multi-item">
                     <multi-vulnerability-filter v-model="selectedVulns"
                         api-endpoint="/rule/get_all_rules_vulnerabilities_usage"
                         placeholder="CVE…"
+                        :filter-context="filterContext"
                         @change="onFilterChange" />
                 </div>
                 <div v-if="!isHidden('licenses')" class="brs-fp-multi-item">
                     <multi-license-filter v-model="selectedLicenses"
                         api-endpoint="/rule/get_rules_licenses_usage"
                         placeholder="Licenses…"
+                        :filter-context="filterContext"
                         @change="onFilterChange" />
                 </div>
                 <div v-if="!isHidden('tags')" class="brs-fp-multi-item">
@@ -190,6 +204,13 @@ export default {
                         api-endpoint="/rule/get_all_tags_usage"
                         placeholder="Tags…"
                         target-type="rule"
+                        :filter-context="filterContext"
+                        @change="onFilterChange" />
+                </div>
+                <div v-if="!isHidden('attacks')" class="brs-fp-multi-item">
+                    <multi-attack-filter v-model="selectedAttacks"
+                        placeholder="T1059, Command…"
+                        :filter-context="filterContext"
                         @change="onFilterChange" />
                 </div>
                 <div v-if="!isHidden('person')" class="brs-fp-multi-item">
@@ -298,6 +319,7 @@ export default {
                                 </th>
                                 <th v-if="visibleCols.has('tags')" style="width:140px;">Tags</th>
                                 <th v-if="visibleCols.has('cves')" style="width:110px;">CVEs</th>
+                                <th v-if="visibleCols.has('attacks')" style="width:140px;">ATT&amp;CK</th>
                                 <th style="width:80px;">Actions</th>
                             </tr>
                         </thead>
@@ -349,6 +371,9 @@ export default {
                                     </div>
                                     <span v-else class="text-muted" style="font-size:.65rem;">—</span>
                                 </td>
+                                <td v-if="visibleCols.has('attacks')" @click.stop style="max-width:140px;">
+                                    <attack-display-list :initial-attacks="rule.attacks" :max-visible="2" />
+                                </td>
                                 <td @click.stop>
                                     <div class="d-flex gap-1">
                                         <button class="brs-add-btn" title="Add to bundle"
@@ -377,7 +402,7 @@ export default {
                     <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}</option>
                 </select>
             </div>
-            <pagination-component :current-page="page" :total-pages="totalPages" @change-page="goToPage" />
+            <pagination-component :current-page="page" :total-pages="displayTotalPages" @change-page="goToPage" />
             <div class="brs-footer-info">{{ footerInfo }}</div>
         </div>
 
@@ -436,10 +461,35 @@ export default {
         const selectedSources = ref([])
         const selectedLicenses = ref([])
         const selectedVulns   = ref([])
+        const selectedAttacks = ref([])
         const personFilter    = ref({ mode: 'author', values: [] })
         const rulesFormats    = ref([])
         const filtersOpen     = ref(false)
         const mineOnly        = ref(false)
+
+        // Every OTHER active filter, as a query string — passed to each
+        // multi-filter component so its counts stay scoped to what's
+        // actually reachable (same faceted-filter system as ruleList.js).
+        // When pinnedIds is set, it's folded in too so facet counts never
+        // include rules outside the locked pool.
+        const filterContext = computed(() => {
+            const p = new URLSearchParams()
+            if (ruleType.value)                p.set('rule_type', ruleType.value)
+            if (search.value.trim())           p.set('search', search.value.trim())
+            if (searchField.value !== 'all')   p.set('search_field', searchField.value)
+            if (exactMatch.value)              p.set('exact_match', 'true')
+            if (selectedTags.value.length)     p.set('tags', selectedTags.value.join(','))
+            if (selectedSources.value.length)  p.set('sources', selectedSources.value.join(','))
+            if (selectedLicenses.value.length) p.set('licenses', selectedLicenses.value.join(','))
+            if (selectedVulns.value.length)    p.set('vulnerabilities', selectedVulns.value.join(','))
+            if (selectedAttacks.value.length)  p.set('attacks', selectedAttacks.value.join(','))
+            if (personFilter.value.values.length) {
+                const pKey = personFilter.value.mode === 'editor' ? 'editors' : 'authors'
+                p.set(pKey, personFilter.value.values.join(','))
+            }
+            if (props.pinnedIds && props.pinnedIds.length) p.set('ids', props.pinnedIds.join(','))
+            return p.toString()
+        })
 
         // ── Column picker ─────────────────────────────────────────
         const allColumns = [
@@ -448,6 +498,7 @@ export default {
             { key: 'creation_date', label: 'Created' },
             { key: 'tags',          label: 'Tags'    },
             { key: 'cves',          label: 'CVEs'    },
+            { key: 'attacks',       label: 'ATT&CK'  },
         ]
         const visibleCols  = reactive(new Set(['format', 'editor', 'creation_date']))
         const colPickerOpen = ref(false)
@@ -491,6 +542,7 @@ export default {
             selectedSources.value.length +
             selectedLicenses.value.length +
             selectedVulns.value.length +
+            selectedAttacks.value.length +
             personFilter.value.values.length
         )
 
@@ -585,11 +637,13 @@ export default {
                 if (selectedTags.value.length)      params.set('tags', selectedTags.value.join(','))
                 if (selectedSources.value.length)   params.set('sources', selectedSources.value.join(','))
                 if (selectedLicenses.value.length)  params.set('licenses', selectedLicenses.value.join(','))
-                if (selectedVulns.value.length)     params.set('vulnerabilities', selectedVulns.value.join(','))
+                if (selectedVulns.value.length)      params.set('vulnerabilities', selectedVulns.value.join(','))
+                if (selectedAttacks.value.length)   params.set('attacks', selectedAttacks.value.join(','))
                 if (personFilter.value.values.length) {
                     const k = personFilter.value.mode === 'editor' ? 'editors' : 'authors'
                     params.set(k, personFilter.value.values.join(','))
                 }
+                if (props.pinnedIds && props.pinnedIds.length) params.set('ids', props.pinnedIds.join(','))
                 const sep = props.fetchUrl.includes('?') ? '&' : '?'
                 const res = await fetch(`${props.fetchUrl}${sep}${params}`)
                 if (!res.ok) return
@@ -634,6 +688,7 @@ export default {
             selectedSources.value  = []
             selectedLicenses.value = []
             selectedVulns.value    = []
+            selectedAttacks.value  = []
             personFilter.value     = { mode: 'author', values: [] }
             onFilterChange()
         }
@@ -644,11 +699,40 @@ export default {
         function setView(v) { viewMode.value = v; page.value = 1; fetchData() }
 
         // ── Computed ───────────────────────────────────────────────
+        // When pinned to a snapshot, the server's `total` always reflects
+        // the full snapshot size — subtract whatever has already been
+        // placed (excludeIds) so the counter actually counts down as the
+        // user adds rules, instead of staying stuck at the original count.
+        const displayTotal = computed(() => {
+            if (!props.pinnedIds || !props.pinnedIds.length) return total.value
+            const excludedInPool = props.excludeIds
+                ? props.pinnedIds.filter(id => props.excludeIds.has(id)).length
+                : 0
+            return Math.max(0, props.pinnedIds.length - excludedInPool)
+        })
+
+        // Same idea for pagination: a page that only had already-placed
+        // rules on it must not still be offered as a page to click into.
+        const displayTotalPages = computed(() => {
+            if (!props.pinnedIds || !props.pinnedIds.length) return totalPages.value
+            return Math.max(1, Math.ceil(displayTotal.value / perPage.value))
+        })
+
+        // If the excluded rules just took the current page out of range
+        // (e.g. everything on page 2 got added), fall back to the last
+        // remaining page instead of showing an empty/invalid one.
+        watch(displayTotalPages, (dtp) => {
+            if (props.pinnedIds && props.pinnedIds.length && page.value > dtp) {
+                page.value = dtp
+                fetchData()
+            }
+        })
+
         const footerInfo = computed(() => {
-            if (total.value === 0) return 'No results'
+            if (displayTotal.value === 0) return 'No results'
             const start = (page.value - 1) * perPage.value + 1
-            const end   = Math.min(page.value * perPage.value, total.value)
-            return `${start}–${end} of ${total.value}`
+            const end   = Math.min(page.value * perPage.value, displayTotal.value)
+            return `${start}–${end} of ${displayTotal.value}`
         })
 
         // ── Date helpers ───────────────────────────────────────────
@@ -678,8 +762,14 @@ export default {
         watch(() => props.excludeIds, (newIds, oldIds) => {
             if (!newIds) return
             const anyRemoved = oldIds?.size && [...oldIds].some(id => !newIds.has(id))
-            if (anyRemoved) {
-                fetchData()  // bring back rules that were removed from the bundle
+            // Pinned mode is paginated over a small, fixed pool: pruning the
+            // current page's already-loaded items locally leaves the page
+            // stuck showing fewer rows than it should (e.g. add 20 of 21 in
+            // one bulk action and the last one never gets fetched in to
+            // backfill the page). Just refetch — the pool is small, so the
+            // extra request is cheap and it keeps the page always correct.
+            if (anyRemoved || (props.pinnedIds && props.pinnedIds.length)) {
+                fetchData()
             } else {
                 items.value = items.value.filter(r => !newIds.has(r.id))
             }
@@ -691,14 +781,14 @@ export default {
             search, searchField, exactMatch, ruleType, filtersOpen, mineOnly,
             sortField, sortDir, toggleSort, sortIcon,
             allColumns, visibleCols, colPickerOpen, toggleCol,
-            selectedTags, selectedSources, selectedLicenses, selectedVulns, personFilter,
-            rulesFormats, activeFilterCount,
+            selectedTags, selectedSources, selectedLicenses, selectedVulns, selectedAttacks, personFilter,
+            rulesFormats, activeFilterCount, filterContext,
             selectedIds, allOnPageSelected,
             isHidden, isSelected, toggleSelect, togglePageSelection, clearSelection,
             addSingleRule, addSelected, onCardClick,
             onDragStart, onDragEnd, onFilterChange, onSearchInput, clearSearch, resetFilters,
             goToPage, setView, fetchData,
-            footerInfo, fromNow, formatDate,
+            footerInfo, fromNow, formatDate, displayTotal, displayTotalPages,
         }
     },
 }

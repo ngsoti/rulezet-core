@@ -87,6 +87,62 @@
     padding: 8px 6px;
 }
 
+/* Bulk action bar — Ctrl/Cmd+click multi-selection */
+.bse-bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: rgba(255, 193, 7, .1);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.bse-bulk-count {
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-right: 4px;
+}
+
+.bse-bulk-hint {
+    font-weight: 400;
+    font-size: .7rem;
+    color: var(--subtle-text-color);
+}
+
+.bse-bulk-btn {
+    display: flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--text-color);
+    font-size: .72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .12s;
+}
+
+.bse-bulk-btn:hover { background: #0d6efd; color: #fff; border-color: #0d6efd; }
+
+.bse-bulk-btn--danger:hover { background: #dc3545; border-color: #dc3545; }
+.bse-bulk-btn--armed, .bse-bulk-btn--armed:hover {
+    background: #dc3545;
+    color: #fff;
+    border-color: #dc3545;
+    animation: bse-armed-pulse 1s ease-in-out infinite;
+}
+
+.bse-bulk-btn--ghost {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    justify-content: center;
+    margin-left: auto;
+}
+
 /* Drag handle on tree nodes */
 .bse-node-drag-handle {
     display: flex;
@@ -138,6 +194,14 @@
     border-style: dashed !important;
 }
 
+/* Multi-selection (Ctrl/Cmd+click) — distinct from the single preview
+   selection so both states stay visually unambiguous when combined. */
+.bse-node-row--multi {
+    background: rgba(255, 193, 7, .16) !important;
+    border-color: rgba(255, 193, 7, .5) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 193, 7, .5);
+}
+
 .bse-node-name {
     flex: 1;
     font-size: .8rem;
@@ -149,6 +213,58 @@
     margin: 0 6px;
 }
 
+.bse-node-name-input {
+    flex: 1;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--text-color);
+    background: var(--card-bg-color);
+    border: 1px solid #0d6efd;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin: 0 4px 0 6px;
+    min-width: 0;
+}
+.bse-node-name-input:focus { outline: none; box-shadow: 0 0 0 2px rgba(13,110,253,.2); }
+
+.bse-node-ext-lock {
+    font-size: .72rem;
+    color: var(--subtle-text-color);
+    margin-right: 4px;
+    flex-shrink: 0;
+}
+
+/* Inline creation panel (folder / file) — replaces the old modal */
+.bse-create-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: rgba(13, 110, 253, .06);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.bse-create-input {
+    flex: 1;
+    font-size: .78rem;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--text-color);
+}
+.bse-create-input:focus { outline: none; border-color: #0d6efd; }
+
+.bse-create-select {
+    font-size: .75rem;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--text-color);
+}
+
 .bse-node-actions {
     display: none;
     gap: 2px;
@@ -156,8 +272,18 @@
 }
 
 .bse-node-row:hover .bse-node-actions,
-.bse-node-row--selected .bse-node-actions {
+.bse-node-row--selected .bse-node-actions,
+.bse-node-actions--force {
     display: flex;
+    align-items: center;
+}
+
+.bse-armed-hint {
+    font-size: .65rem;
+    font-weight: 700;
+    color: #dc3545;
+    white-space: nowrap;
+    margin-right: 2px;
 }
 
 .bse-node-btn {
@@ -178,6 +304,18 @@
 .bse-node-btn:hover { color: var(--text-color); background: var(--border-color); }
 .bse-node-btn--danger:hover { color: #dc3545; background: #fde8ea; }
 .bse-node-btn--success:hover { color: #198754; background: #d1e7dd; }
+
+/* Armed delete state — first click primes removal, second click confirms */
+.bse-node-btn--armed,
+.bse-node-btn--armed:hover {
+    color: #fff;
+    background: #dc3545;
+    animation: bse-armed-pulse 1s ease-in-out infinite;
+}
+@keyframes bse-armed-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,.5); }
+    50%      { box-shadow: 0 0 0 4px rgba(220,53,69,0); }
+}
 
 /* Preview panel */
 .bse-preview-card {
