@@ -107,20 +107,22 @@
                </li>
                {% endif %}
 
-               <!-- ── Blog ── -->
-               <li class="nav-item">
-                  <a class="nav-link custom-nav-link fw-bold {% if request.path.startswith('/blog') %}active{% endif %}"
-                     href="/blog/">
-                     <i class="fa-solid fa-newspaper fa-fw me-1 text-primary"></i>Blog
+               <!-- ── Community ── -->
+               <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle custom-nav-link fw-bold {% if request.path.startswith('/blog') or request.path.startswith('/platform') or request.path.startswith('/community') or request.path == '/account/contributor' %}active{% endif %}"
+                     href="#" role="button" data-bs-toggle="dropdown">
+                     <i class="fa-solid fa-users fa-fw me-1 text-primary"></i>Community
                   </a>
-               </li>
-
-                <!-- ── Insights ── -->
-               <li class="nav-item">
-                  <a class="nav-link custom-nav-link fw-bold {% if request.path.startswith('/platform') %}active{% endif %}"
-                     href="/platform/insights">
-                     <i class="fa-solid fa-chart-pie fa-fw me-1 text-primary"></i>Insights
-                  </a>
+                  <ul class="dropdown-menu">
+                     <li><a class="dropdown-item {% if request.path.startswith('/blog') %}active{% endif %}"
+                           href="/blog/"><i class="fa-solid fa-newspaper fa-fw me-2"></i>Blog</a></li>
+                     <li><a class="dropdown-item {% if request.path == '/platform/insights' %}active{% endif %}"
+                           href="/platform/insights"><i class="fa-solid fa-chart-pie fa-fw me-2"></i>Insights</a></li>
+                     <li><a class="dropdown-item {% if request.path == '/account/contributor' %}active{% endif %}"
+                           href="/account/contributor"><i class="fa-solid fa-user-group fa-fw me-2"></i>Contributors</a></li>
+                     <li><a class="dropdown-item {% if request.path == '/community/comments' %}active{% endif %}"
+                           href="/community/comments"><i class="fa-solid fa-comments fa-fw me-2"></i>Comments Hub</a></li>
+                  </ul>
                </li>
 
                <!-- ── Admin (dropdown, admin only) ── -->
@@ -271,8 +273,6 @@
                            <i class="fa-solid fa-tasks me-2"></i>My Jobs</a></li>
                      <li><a href="/notifications/" class="dropdown-item">
                            <i class="fa-solid fa-bell me-2"></i>Notifications</a></li>
-                     <li><a href="/account/contributor" class="dropdown-item">
-                           <i class="fa-solid fa-user-group fa-fw me-2"></i>Contributors</a></li>
                      <li><a href="/settings" class="dropdown-item">
                            <i class="fa-solid fa-sliders me-2"></i>Settings</a></li>
                      <li><hr class="dropdown-divider"></li>

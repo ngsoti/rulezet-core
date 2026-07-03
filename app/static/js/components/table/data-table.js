@@ -27,9 +27,12 @@
  *   send(ids)     — mode='select' confirm
  *
  * Slots:
- *   #cell-{key}="{ item, value }"  — custom cell render
- *   #card-body="{ item }"          — custom card body
+ *   #cell-{key}="{ item, value, search, highlight }"  — custom cell render
+ *   #card-title="{ item, search, highlight }"         — custom card header title
+ *   #card-body="{ item, search, highlight }"          — custom card body
  *   #expand="{ item }"             — content of expanded row
+ *   #toolbar-start                 — extra controls, left of the view toggle
+ *   #below-toolbar                 — extra content spanning below the toolbar row
  *
  * Exposed method:
  *   fetchData()   — re-fetch current page (call via template ref)
@@ -96,6 +99,8 @@ export default {
                 </div>
 
                 <div class="dt-toolbar-right">
+                    <slot name="toolbar-start"></slot>
+
                     <!-- View toggle -->
                     <div class="dt-view-toggle" title="Switch view">
                         <button
@@ -157,6 +162,9 @@ export default {
                     </button>
                 </div>
             </div>
+
+            <!-- Extra content below the toolbar, e.g. a collapsible filter panel -->
+            <slot name="below-toolbar"></slot>
 
             <!-- Select-all-pages banner -->
             <div v-if="showSelectAllBanner" class="dt-select-all-banner">
@@ -264,7 +272,9 @@ export default {
                                         v-if="$slots['cell-' + col.key]"
                                         :name="'cell-' + col.key"
                                         :item="item"
-                                        :value="item[col.key]">
+                                        :value="item[col.key]"
+                                        :search="search"
+                                        :highlight="highlight">
                                     </slot>
                                     <!-- Default rendering -->
                                     <template v-else>
@@ -368,11 +378,13 @@ export default {
                             class="dt-checkbox dt-card-checkbox"
                             :checked="isSelected(item)"
                             @change="toggleItem(item)" />
-                        <span class="dt-card-title" v-html="highlight(item[columns[0]?.key] ?? item.id)"></span>
+                        <slot name="card-title" :item="item" :search="search" :highlight="highlight">
+                            <span class="dt-card-title" v-html="highlight(item[columns[0]?.key] ?? item.id)"></span>
+                        </slot>
                     </div>
 
                     <div class="dt-card-body">
-                        <slot name="card-body" :item="item">
+                        <slot name="card-body" :item="item" :search="search" :highlight="highlight">
                             <!-- Default: show first 3 non-first columns -->
                             <div
                                 v-for="col in columns.slice(1, 4)"

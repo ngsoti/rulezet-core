@@ -51,23 +51,18 @@ def _can_edit(comment):
 
 def _comment_context_link(comment):
     """Best-effort deep link back to the comment, for the GitHub issue body."""
+    from app.features.community.community_core import comment_deep_link, object_context_path
+
     base = (os.environ.get('INSTANCE_PUBLIC_URL') or request.url_root).rstrip('/')
 
-    if comment.object_type == 'rule':
-        path = f'/rule/detail_rule/{comment.object_id}?comment={comment.id}'
-    elif comment.object_type == 'bundle':
-        path = f'/bundle/detail/{comment.object_id}?comment={comment.id}'
-    elif comment.object_type == 'proposal':
-        path = f'/rule/proposal_content_discuss?id={comment.object_id}&comment={comment.id}'
-    elif comment.object_type == 'blog_post':
+    blog_slug = None
+    if comment.object_type == 'blog_post':
         from app.core.db_class.db import BlogPost
         blog_post = BlogPost.query.get(comment.object_id)
-        slug = blog_post.uuid if blog_post else comment.object_id
-        path = f'/blog/post/{slug}?comment={comment.id}'
-    else:
-        path = '/'
+        blog_slug = blog_post.uuid if blog_post else None
 
-    return f'{base}{path}'
+    path = object_context_path(comment.object_type, comment.object_id, blog_slug=blog_slug)
+    return f'{base}{comment_deep_link(path, comment.id)}'
 
 
 # ── List / Create ──────────────────────────────────────────────────────────────
@@ -231,6 +226,37 @@ class CommentList(Resource):
             print(f"[comment_api] notification error: {_e}")
 
         return {'message': 'Comment posted', 'comment': comment.to_json(current_user_id=current_user.id)}, 201
+
+
+# ── Cross-object hub ───────────────────────────────────────────────────────────
+
+@comment_ns.route('/hub')
+class CommentHub(Resource):
+
+    def get(self):
+        """Comments grouped by commented object (rule/bundle/proposal/blog_post), paginated on the groups."""
+        if not current_user.is_authenticated:
+            return {'message': 'Login required'}, 401
+
+        from app.features.community.community_core import get_comment_hub_groups
+
+        scope = request.args.get('scope', 'main').strip()
+        if scope not in ('main', 'all'):
+            scope = 'main'
+
+        return get_comment_hub_groups(
+            user=current_user,
+            scope=scope,
+            search=request.args.get('search', '').strip(),
+            date_from=request.args.get('date_from', '').strip(),
+            date_to=request.args.get('date_to', '').strip(),
+            sort=request.args.get('sort', 'last_activity').strip(),
+            direction=request.args.get('dir', 'desc').strip(),
+            mine=request.args.get('mine', '').strip() in ('1', 'true'),
+            min_comments=max(request.args.get('min_comments', 0, type=int) or 0, 0),
+            page=request.args.get('page', 1, type=int),
+            per_page=min(request.args.get('per_page', 20, type=int), _PER_PAGE_MAX),
+        )
 
 
 # ── Single comment ─────────────────────────────────────────────────────────────

@@ -1,0 +1,275 @@
+/* ── Comments Hub ─────────────────────────────────────────────────────────────
+   Page chrome (toolbar, filter panel, table, footer) comes from the shared
+   RuleList family styles: css/rule/ruleList.css + css/components/dataTable.css.
+   Only hub-specific pieces live here. */
+
+.chub-group {
+    position: relative;
+    overflow: hidden;
+    background: var(--card-bg-color);
+    border-radius: 12px;
+    transition: box-shadow .18s ease;
+}
+.chub-group:hover {
+    box-shadow: 0 .5rem 1.2rem rgba(13, 110, 253, .12) !important;
+}
+.chub-group--open {
+    box-shadow: 0 .5rem 1.4rem rgba(13, 110, 253, .14) !important;
+}
+
+.chub-group__header {
+    cursor: pointer;
+    user-select: none;
+}
+.chub-group__header:focus-visible {
+    outline: 2px solid rgba(13, 110, 253, .5);
+    outline-offset: -2px;
+    border-radius: inherit;
+}
+
+.chub-group__body {
+    border-top: 1px solid var(--border-color);
+    padding-top: .75rem;
+}
+
+/* ── Scope switch (filter panel) ── */
+.chub-scope-switch {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    margin-bottom: 0;
+    padding: .3rem .5rem .3rem 2.6rem;
+}
+.chub-scope-switch .form-check-label {
+    font-size: .82rem;
+    color: var(--text-color);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.chub-scope-switch .form-check-input {
+    cursor: pointer;
+}
+
+/* ── Object type icon ── */
+.chub-type-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .95rem;
+    background: rgba(13, 110, 253, .1);
+    color: #0d6efd;
+}
+.chub-type-icon--sm {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    font-size: .75rem;
+}
+.chub-type-icon--bundle {
+    background: rgba(13, 202, 240, .12);
+    color: #0aa2c0;
+}
+.chub-type-icon--proposal {
+    background: rgba(111, 66, 193, .12);
+    color: #6f42c1;
+}
+.chub-type-icon--blog_post {
+    background: rgba(25, 135, 84, .12);
+    color: #198754;
+}
+
+/* ── Title + meta ── */
+.chub-title {
+    font-weight: 600;
+    font-size: .92rem;
+    color: var(--text-color);
+    text-decoration: none;
+    max-width: 100%;
+    display: inline-block;
+    vertical-align: bottom;
+}
+.chub-title:hover {
+    color: #0d6efd;
+    text-decoration: underline;
+}
+
+.chub-meta {
+    font-size: .74rem;
+    color: var(--subtle-text-color);
+    margin-top: 2px;
+}
+
+/* ── Badges ── */
+.chub-badge {
+    font-size: .64rem;
+    font-weight: 600;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    padding: .28em .6em;
+    border-radius: 50rem;
+    background: rgba(13, 110, 253, .1);
+    color: #0d6efd;
+    border: 1px solid rgba(13, 110, 253, .2);
+}
+.chub-badge--bundle {
+    background: rgba(13, 202, 240, .12);
+    color: #0aa2c0;
+    border-color: rgba(13, 202, 240, .25);
+}
+.chub-badge--blog_post {
+    background: rgba(25, 135, 84, .12);
+    color: #198754;
+    border-color: rgba(25, 135, 84, .25);
+}
+.chub-badge--proposal {
+    background: rgba(111, 66, 193, .12);
+    color: #6f42c1;
+    border-color: rgba(111, 66, 193, .25);
+    text-transform: none;
+    letter-spacing: normal;
+}
+.chub-badge--private {
+    background: rgba(220, 53, 69, .1);
+    color: #dc3545;
+    border-color: rgba(220, 53, 69, .25);
+}
+
+/* ── Comment count pill ── */
+.chub-count {
+    background: var(--light-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    font-size: .74rem;
+    font-weight: 600;
+    padding: .38em .75em;
+}
+
+/* ── Embedded CommentThread preview (table expand) ── */
+.chub-preview-wrap {
+    background: var(--light-bg-color);
+}
+
+/* ── Category picker (rule w/ both plain comments and proposal discussions) ── */
+.chub-category-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+}
+.chub-category-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .35rem .7rem;
+    border-radius: 50rem;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--subtle-text-color);
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease, color .12s ease;
+}
+.chub-category-chip:hover {
+    color: var(--text-color);
+    border-color: #0d6efd;
+}
+.chub-category-chip.is-active {
+    background: rgba(13, 110, 253, .1);
+    border-color: rgba(13, 110, 253, .35);
+    color: #0d6efd;
+}
+.chub-category-chip__count {
+    background: rgba(0, 0, 0, .08);
+    border-radius: 50rem;
+    padding: .05rem .45rem;
+    font-size: .68rem;
+}
+.chub-category-chip.is-active .chub-category-chip__count {
+    background: rgba(13, 110, 253, .18);
+}
+
+/* ── Embedded CommentThread preview (card accordion) ── */
+.chub-card-preview {
+    border-top: 1px solid var(--border-color);
+}
+
+/* ── Labeled action buttons (card view): "Preview comments" / "Open thread" ──
+   dt-action-btn is a fixed 28x28 icon-only square (built for the table's
+   view/edit/delete icon row) — it clips text, so these get their own pill style. */
+.chub-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .35rem .75rem;
+    border-radius: 50rem;
+    border: 1px solid var(--border-color);
+    background: var(--light-bg-color);
+    color: var(--text-color);
+    font-size: .78rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+.chub-action-btn:hover {
+    background: var(--card-bg-color);
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+.chub-action-btn--expand.is-expanded {
+    background: rgba(13, 110, 253, .1);
+    border-color: rgba(13, 110, 253, .3);
+    color: #0d6efd;
+}
+.chub-expand-chevron {
+    transition: transform .18s ease;
+}
+.chub-action-btn--expand.is-expanded .chub-expand-chevron {
+    transform: rotate(180deg);
+}
+
+/* ── Participant avatar stack ── */
+.chub-participants {
+    display: flex;
+    align-items: center;
+}
+.chub-participant {
+    display: inline-flex;
+    margin-left: -8px;
+    border-radius: 50%;
+    border: 2px solid var(--card-bg-color);
+}
+.chub-participant:first-child {
+    margin-left: 0;
+}
+.chub-participant--more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    margin-left: -8px;
+    border-radius: 50%;
+    border: 2px solid var(--card-bg-color);
+    background: var(--light-bg-color);
+    color: var(--subtle-text-color);
+    font-size: .64rem;
+    font-weight: 700;
+}
+
+/* ── Card grid: cap at 4 per row so cards get more breathing room ── */
+.chub-wrapper .dt-card-grid {
+    grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 1400px) {
+    .chub-wrapper .dt-card-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 992px) {
+    .chub-wrapper .dt-card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+    .chub-wrapper .dt-card-grid { grid-template-columns: 1fr; }
+}

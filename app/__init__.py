@@ -55,6 +55,7 @@ def create_app(start_worker=True):
     from app.features.attack.attack import attack_blueprint
     from app.features.workspace.workspace import workspace_blueprint
     from app.features.blog.blog import blog_blueprint
+    from app.features.community.community import community_blueprint
     from app.features.rule_tester.rule_tester import rule_tester_blueprint
 
     app.register_blueprint(home_blueprint, url_prefix="/")
@@ -69,6 +70,7 @@ def create_app(start_worker=True):
     app.register_blueprint(attack_blueprint, url_prefix='/attack')
     app.register_blueprint(workspace_blueprint, url_prefix='/workspace')
     app.register_blueprint(blog_blueprint, url_prefix='/blog')
+    app.register_blueprint(community_blueprint, url_prefix='/community')
     app.register_blueprint(rule_tester_blueprint)
 
     from app.api.api import api_blueprint

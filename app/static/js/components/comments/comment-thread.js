@@ -421,6 +421,10 @@ const CommentThread = {
         canModerate: { type: Boolean, default: false },
         currentUserId: { type: Number, default: 0 },
         csrfToken: { type: String, default: '' },
+        // Preview embedding (e.g. Comments Hub): cap the first page size and
+        // disable the infinite-scroll sentinel so only perPage comments render.
+        perPage: { type: Number, default: 20 },
+        autoLoad: { type: Boolean, default: true },
     },
     setup(props) {
         const comments = ref([])
@@ -441,7 +445,7 @@ const CommentThread = {
             }
             loading.value = true
             const res = await apiFetch(
-                `/api/comments/?object_type=${props.objectType}&object_id=${props.objectId}&page=${page.value}&per_page=20`
+                `/api/comments/?object_type=${props.objectType}&object_id=${props.objectId}&page=${page.value}&per_page=${props.perPage}`
             )
             if (res.ok) {
                 const d = await res.json()
@@ -474,6 +478,7 @@ const CommentThread = {
         }
 
         function setupSentinel() {
+            if (!props.autoLoad) return
             if (!sentinelRef.value) return
             const observer = new IntersectionObserver((entries) => {
                 if (entries[0].isIntersecting && hasNext.value && !loading.value) {

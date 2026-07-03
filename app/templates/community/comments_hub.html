@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Comments Hub — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/comment-thread.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/community/comments-hub.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4" id="comments-hub-app" v-cloak>
+
+  <!-- Banner -->
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-comments banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-2">
+      <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">Comments Hub</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="banner-icon"><i class="fa-solid fa-comments"></i></div>
+      <div><h2 class="fw-bold mb-1">Comments Hub</h2><div class="banner-accent"></div></div>
+    </div>
+    <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+      Every discussion on the platform in one place — comments on rules, bundles, blog posts
+      and suggested edits, grouped by the object they belong to.
+    </p>
+  </div>
+
+  <comments-hub
+    :current-user-id="currentUserId"
+    :current-user-is-admin="isAdmin"
+    csrf-token="{{ csrf_token() }}">
+  </comments-hub>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+import CommentsHub from '/static/js/community/CommentsHub.js'
+
+const { createApp } = Vue
+
+const currentUserId = {{ current_user.id if current_user.is_authenticated else 0 }}
+const isAdmin       = {{ current_user.is_admin() | tojson if current_user.is_authenticated else 'false' }}
+
+createApp({
+  delimiters: ['[[', ']]'],
+  components: { 'comments-hub': CommentsHub },
+  setup() {
+    return { currentUserId, isAdmin }
+  },
+}).mount('#comments-hub-app')
+</script>
+{% endblock %}
