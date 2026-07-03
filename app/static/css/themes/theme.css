@@ -45,6 +45,47 @@ html[data-theme="forest"] body {
     --rule-name-color: #1b6e22;
 }
 
+/* Forest overrides Bootstrap's own "primary" blue with the theme's green —
+   .btn-primary/.btn-outline-primary hardcode their colors in local custom
+   properties (not var(--bs-primary)), so the root token alone wouldn't
+   reach them; both need their own override here. */
+html[data-theme="forest"] {
+    --bs-primary: #1b6e22;
+    --bs-primary-rgb: 27, 110, 34;
+    --bs-primary-text: #144f19;
+    --bs-primary-bg-subtle: #cce6cc;
+    --bs-primary-border-subtle: #9ed2a0;
+}
+html[data-theme="forest"] .btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #1b6e22;
+    --bs-btn-border-color: #1b6e22;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #175e1d;
+    --bs-btn-hover-border-color: #144f19;
+    --bs-btn-focus-shadow-rgb: 27, 110, 34;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #144f19;
+    --bs-btn-active-border-color: #114316;
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: #1b6e22;
+    --bs-btn-disabled-border-color: #1b6e22;
+}
+html[data-theme="forest"] .btn-outline-primary {
+    --bs-btn-color: #1b6e22;
+    --bs-btn-border-color: #1b6e22;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #1b6e22;
+    --bs-btn-hover-border-color: #1b6e22;
+    --bs-btn-focus-shadow-rgb: 27, 110, 34;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #1b6e22;
+    --bs-btn-active-border-color: #1b6e22;
+    --bs-btn-disabled-color: #1b6e22;
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: #1b6e22;
+}
+
 /* ── Midnight — deep blue dark ──────────────────────────────── */
 html[data-theme="midnight"],
 html[data-theme="midnight"] body {
