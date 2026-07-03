@@ -6,11 +6,19 @@
  * if `details` isn't a YARA `full_execution` / `batch_execution` payload.
  */
 import CodeViewer from '/static/js/components/code-viewer.js';
+import PaginationComponent from '/static/js/rule/paginationComponent.js';
+
+// Cap how many raw bytes get spelled out per matched string — a single match
+// can span thousands of bytes, and spacing/ascii-decoding all of them makes
+// one unreadable, page-widening wall of text for no benefit (s.length already
+// shows the true size).
+const MAX_PREVIEW_BYTES = 64;
+const STRINGS_PER_PAGE = 100;
 
 const YaraMatchDetail = {
     name: 'YaraMatchDetail',
     delimiters: ['[[', ']]'],
-    components: { CodeViewer },
+    components: { CodeViewer, PaginationComponent },
     props: {
         details:      { type: Object, default: () => ({}) },
         qualityHints: { type: Array,  default: () => [] },
@@ -19,7 +27,10 @@ const YaraMatchDetail = {
         testInput:    { type: Object, default: null },
     },
     data() {
-        return { openIndex: null };
+        return { openIndex: null, currentPage: 1 };
+    },
+    watch: {
+        details() { this.currentPage = 1; this.openIndex = null; },
     },
     computed: {
         // strings_matched used to be a bare count (older results) — only ever
@@ -27,6 +38,13 @@ const YaraMatchDetail = {
         strings() {
             const sm = this.details.strings_matched;
             return Array.isArray(sm) ? sm : [];
+        },
+        totalPages() {
+            return Math.max(1, Math.ceil(this.strings.length / STRINGS_PER_PAGE));
+        },
+        pagedStrings() {
+            const start = (this.currentPage - 1) * STRINGS_PER_PAGE;
+            return this.strings.slice(start, start + STRINGS_PER_PAGE);
         },
         hasStructuredDetail() {
             return this.strings.length > 0;
@@ -60,7 +78,7 @@ const YaraMatchDetail = {
             if (!this.hasTestInput) return '';
             const { type, value } = this.testInput;
             if (type === 'hex') return this.spacedHex(value.replace(/\s+/g, ''));
-            if (type === 'file_b64') return `[binary file — ${this.inputTotalLength()} bytes]`;
+            if (type === 'file_b64') return `[binary file — ${this.inputTotalLength} bytes]`;
             return value;
         },
     },
@@ -82,6 +100,23 @@ const YaraMatchDetail = {
                 }).join('');
             } catch (e) { return ''; }
         },
+        // Capped variants for the list row — a match can span thousands of
+        // bytes, and spelling all of them out per row is what pushes the
+        // layout wide when many rows render at once. The full compare view
+        // (toggleCompare) still uses the uncapped spacedHex/asciiPreview.
+        isTruncated(hex) {
+            return !!hex && hex.length / 2 > MAX_PREVIEW_BYTES;
+        },
+        spacedHexPreview(hex) {
+            if (!hex) return '';
+            const capped = hex.slice(0, MAX_PREVIEW_BYTES * 2);
+            return this.spacedHex(capped) + (this.isTruncated(hex) ? ' …' : '');
+        },
+        asciiPreviewCapped(hex) {
+            if (!hex) return '';
+            const capped = hex.slice(0, MAX_PREVIEW_BYTES * 2);
+            return this.asciiPreview(capped) + (this.isTruncated(hex) ? '…' : '');
+        },
         stringByteLength(s) {
             return s.length != null ? s.length : (s.value_hex ? s.value_hex.length / 2 : 0);
         },
@@ -97,6 +132,10 @@ const YaraMatchDetail = {
         stringDef(s) {
             return `${s.identifier} = { ${this.spacedHex(s.value_hex)} }`;
         },
+        goToPage(p) {
+            this.currentPage = p;
+            this.openIndex = null;
+        },
     },
     template: `
 <div class="rtr-yara-detail">
@@ -107,9 +146,9 @@ const YaraMatchDetail = {
       <i class="fa-solid fa-magnifying-glass me-1"></i>Matched strings ([[ strings.length ]])
     </div>
     <div class="d-flex flex-column gap-2">
-      <div v-for="(s, i) in strings" :key="i" class="rtr-yara-string">
+      <div v-for="(s, i) in pagedStrings" :key="i" class="rtr-yara-string">
         <div class="d-flex align-items-start gap-2">
-          <code class="rtr-yara-string__def flex-grow-1">[[ s.identifier ]] = { [[ spacedHex(s.value_hex) ]] }</code>
+          <code class="rtr-yara-string__def flex-grow-1">[[ s.identifier ]] = { [[ spacedHexPreview(s.value_hex) ]] }</code>
           <button v-if="hasTestInput" type="button" class="rtr-yara-compare-btn"
                   :class="{ 'rtr-yara-compare-btn--active': openIndex === i }"
                   title="Compare with your input" @click="toggleCompare(i)">
@@ -119,7 +158,7 @@ const YaraMatchDetail = {
         <div class="rtr-yara-string__meta">
           <span><i class="fa-solid fa-location-dot me-1"></i>offset [[ s.offset ]]</span>
           <span v-if="s.length != null">[[ s.length ]] byte[[ s.length===1?'':'s' ]]</span>
-          <span v-if="asciiPreview(s.value_hex)" style="color:var(--subtle-text-color);">"[[ asciiPreview(s.value_hex) ]]"</span>
+          <span v-if="asciiPreviewCapped(s.value_hex)" class="rtr-yara-string__ascii">"[[ asciiPreviewCapped(s.value_hex) ]]"</span>
         </div>
 
         <!-- Side-by-side compare: your input (with this string highlighted in place) vs. the matched pattern -->
@@ -145,6 +184,10 @@ const YaraMatchDetail = {
         </div>
       </div>
     </div>
+    <pagination-component v-if="totalPages > 1" class="mt-2"
+                           :current-page="currentPage" :total-pages="totalPages"
+                           @change-page="goToPage">
+    </pagination-component>
   </div>
 
   <!-- Quality hints -->

@@ -366,33 +366,39 @@ export default {
         const pre_ref = ref(null)
 
         // ── Derived ───────────────────────────────────────────────────
-        const effective_lang = computed(() => detect_language(props.code, props.language))
+        // Content can arrive with \r\n or lone \r line endings (rules ported
+        // from Windows tooling or old malware-sample sets) — split('\n') alone
+        // then treats the whole thing as one giant line. Normalize once, up
+        // front, and read this everywhere instead of props.code directly.
+        const normalized_code = computed(() => String(props.code ?? '').replace(/\r\n?/g, '\n'))
+
+        const effective_lang = computed(() => detect_language(normalized_code.value, props.language))
 
         const line_count = computed(() => {
-            if (!props.code) return 0
-            return String(props.code).split('\n').length
+            if (!normalized_code.value) return 0
+            return normalized_code.value.split('\n').length
         })
 
         // Highlight.js output (raw, no search marks)
         const highlighted_html = computed(() => {
-            if (!hljs_ref.value) return esc(props.code)
+            if (!hljs_ref.value) return esc(normalized_code.value)
             const lang = effective_lang.value
-            if (lang === 'text') return esc(props.code)
+            if (lang === 'text') return esc(normalized_code.value)
             try {
-                const res = hljs_ref.value.highlight(props.code, { language: lang, ignoreIllegals: true })
+                const res = hljs_ref.value.highlight(normalized_code.value, { language: lang, ignoreIllegals: true })
                 return res.value
             } catch {
                 try {
-                    const res = hljs_ref.value.highlightAuto(props.code)
+                    const res = hljs_ref.value.highlightAuto(normalized_code.value)
                     return res.value
                 } catch {
-                    return esc(props.code)
+                    return esc(normalized_code.value)
                 }
             }
         })
 
         // Total matches for current search
-        const total_matches = computed(() => count_matches(props.code, search_term.value))
+        const total_matches = computed(() => count_matches(normalized_code.value, search_term.value))
 
         // Auto-highlighted HTML (extraHighlights only, no interactive search yet)
         const highlighted_with_extras = computed(() => {
@@ -436,7 +442,7 @@ export default {
         // JSON tree lines
         const json_lines = computed(() => {
             if (effective_lang.value !== 'json') return null
-            return build_json_tree(props.code)
+            return build_json_tree(normalized_code.value)
         })
 
         // Visible JSON lines (accounting for collapsed nodes)

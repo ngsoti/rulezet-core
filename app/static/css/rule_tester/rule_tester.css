@@ -555,7 +555,13 @@
   overflow-wrap: anywhere;
 }
 
+.rtr-yara-detail {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 .rtr-yara-string {
+  max-width: 100%;
   padding: .65rem .85rem;
   background: var(--card-bg-color);
   border: 1px solid var(--border-color);
@@ -563,11 +569,13 @@
 }
 .rtr-yara-string__def {
   display: block;
+  min-width: 0;
   font-family: 'Fira Code', 'Courier New', monospace;
   font-size: .88rem;
   font-weight: 600;
   color: var(--text-color);
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 .rtr-yara-string__meta {
   display: flex;
@@ -576,6 +584,11 @@
   margin-top: .35rem;
   font-size: .72rem;
   color: var(--subtle-text-color);
+}
+.rtr-yara-string__ascii {
+  color: var(--subtle-text-color);
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .rtr-yara-compare-btn {

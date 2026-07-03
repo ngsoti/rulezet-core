@@ -708,6 +708,7 @@ export default {
                         :title="rule.title"
                         :initial-search="searchField === 'content' ? search : ''"
                         :extra-highlights="showTestResults ? matchedHighlightTerms(rule) : []"
+                        :word-wrap="true"
                         max-height="380px">
                     </code-viewer>
                     <p v-else class="text-muted text-center py-3 mb-0 small">No content available.</p>
@@ -1123,6 +1124,7 @@ export default {
                                                 :title="rule.title"
                                                 :initial-search="searchField === 'content' ? search : ''"
                                                 :extra-highlights="showTestResults ? matchedHighlightTerms(rule) : []"
+                                                :word-wrap="true"
                                                 max-height="300px">
                                             </code-viewer>
                                             <div v-else
