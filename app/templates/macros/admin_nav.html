@@ -1,5 +1,15 @@
 {% macro admin_nav(active, requests_count=0, reports_count=0, jobs_count=0) %}
 
+<!-- Collapsed by default — admins visit these tools less than the page content itself. -->
+<button class="btn btn-sm dr-nav-toggle mb-2" type="button"
+        data-bs-toggle="collapse" data-bs-target="#adminNavPanel"
+        aria-expanded="false" aria-controls="adminNavPanel">
+    <i class="fa-solid fa-shield-halved me-1"></i>Admin navigation
+    <i class="fa-solid fa-chevron-down ms-1"></i>
+</button>
+
+<div class="collapse" id="adminNavPanel">
+
 <!-- Row 1 — Community -->
 <nav class="dr-nav mb-2">
     <span class="dr-nav__label">Community</span>
@@ -121,5 +131,7 @@
         <span>Server Settings</span>
     </a>
 </nav>
+
+</div><!-- /#adminNavPanel -->
 
 {% endmacro %}

@@ -36,41 +36,28 @@
     {{ anav.admin_nav('settings') }}
 
     <!-- ── Tabs ── -->
-    <ul class="nav nav-underline justify-content-center w-100 mb-4" id="settingsTabs" role="tablist">
-        <li class="nav-item flex-fill text-center">
-            <a class="nav-link active fw-bold px-4" data-bs-toggle="tab" href="#pane-system" role="tab"
-               style="color:var(--text-color);">
-                <i class="fa-solid fa-server me-2"></i>System
+    <div class="d-flex justify-content-start mb-4">
+        <div class="dr-nav" id="settingsTabs" role="tablist">
+            <a class="dr-nav__item active" data-bs-toggle="tab" href="#pane-system" role="tab">
+                <i class="fa-solid fa-server"></i><span>System</span>
             </a>
-        </li>
-        <!-- Libraries tab disabled -->
-        <!-- <li class="nav-item flex-fill text-center">
-            <a class="nav-link fw-bold px-4" data-bs-toggle="tab" href="#pane-packages" role="tab"
-               @click="loadPackages" style="color:var(--text-color);">
-                <i class="fa-solid fa-cubes me-2"></i>Libraries
-                <span v-if="packages.length" class="badge bg-secondary ms-1" style="font-size:.65rem;">[[ packages.length ]]</span>
+            <!-- Libraries tab disabled -->
+            <!-- <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-packages" role="tab" @click="loadPackages">
+                <i class="fa-solid fa-cubes"></i><span>Libraries</span>
+                <span v-if="packages.length" class="dr-nav__badge">[[ packages.length ]]</span>
+            </a> -->
+            <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-submodules" role="tab" @click="loadSubmodules">
+                <i class="fa-brands fa-git-alt"></i><span>Submodules</span>
+                <span v-if="submodules.length" class="dr-nav__badge">[[ submodules.length ]]</span>
             </a>
-        </li> -->
-        <li class="nav-item flex-fill text-center">
-            <a class="nav-link fw-bold px-4" data-bs-toggle="tab" href="#pane-submodules" role="tab"
-               @click="loadSubmodules" style="color:var(--text-color);">
-                <i class="fa-brands fa-git-alt me-2"></i>Submodules
-                <span v-if="submodules.length" class="badge bg-secondary ms-1" style="font-size:.65rem;">[[ submodules.length ]]</span>
+            <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-config" role="tab" @click="loadConfig">
+                <i class="fa-solid fa-gear"></i><span>Configuration</span>
             </a>
-        </li>
-        <li class="nav-item flex-fill text-center">
-            <a class="nav-link fw-bold px-4" data-bs-toggle="tab" href="#pane-config" role="tab"
-               @click="loadConfig" style="color:var(--text-color);">
-                <i class="fa-solid fa-gear me-2"></i>Configuration
+            <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-instance" role="tab" @click="loadInstance">
+                <i class="fa-solid fa-fingerprint"></i><span>Instance</span>
             </a>
-        </li>
-        <li class="nav-item flex-fill text-center">
-            <a class="nav-link fw-bold px-4" data-bs-toggle="tab" href="#pane-instance" role="tab"
-               @click="loadInstance" style="color:var(--text-color);">
-                <i class="fa-solid fa-fingerprint me-2"></i>Instance
-            </a>
-        </li>
-    </ul>
+        </div>
+    </div>
 
     <div class="tab-content" id="settingsTabContent">
 

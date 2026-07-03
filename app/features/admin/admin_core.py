@@ -232,7 +232,7 @@ def get_app_config() -> dict:
             'secret_key_preview': (secret[:4] + '••••••••') if secret else 'not set',
             'secret_key_length': len(secret),
             'github_token_set': bool(github_token),
-            'github_token_preview': (github_token[:4] + '••••••••') if github_token else 'not set',
+            'github_token_preview': '••••••••••••' if github_token else 'not set',
         },
     }
 

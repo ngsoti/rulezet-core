@@ -2884,3 +2884,25 @@ body.dark-mode .table .opacity-50 {
     .dr-nav__item { padding: 9px 13px; }
     .dr-nav__sep { display: none; }
 }
+
+/* ── Admin nav toggle (collapsed by default, see macros/admin_nav.html) ──── */
+.dr-nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--subtle-text-color);
+    font-size: .78rem;
+    font-weight: 600;
+}
+.dr-nav-toggle:hover {
+    color: var(--text-color);
+    background: var(--light-bg-color);
+}
+.dr-nav-toggle .fa-chevron-down {
+    font-size: .68rem;
+    transition: transform .2s ease;
+}
