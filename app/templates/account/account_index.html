@@ -265,34 +265,6 @@
         </div>
     </div>
 
-    <!-- Stats: Following / Followers / Comments -->
-    <div class="ud-kpi-row mb-4">
-        <button type="button" class="ud-kpi-card ud-kpi-card--blue ud-kpi-card--clickable"
-                @click="activeTab='follow'; loadFollow()">
-            <div class="ud-kpi-icon"><i class="fas fa-user-check"></i></div>
-            <div class="ud-kpi-body">
-                <div class="ud-kpi-value">[[ followingList.length ]]</div>
-                <div class="ud-kpi-label">Following</div>
-            </div>
-        </button>
-        <button type="button" class="ud-kpi-card ud-kpi-card--teal ud-kpi-card--clickable"
-                @click="activeTab='follow'; loadFollow()">
-            <div class="ud-kpi-icon"><i class="fas fa-users"></i></div>
-            <div class="ud-kpi-body">
-                <div class="ud-kpi-value">[[ followersList.length ]]</div>
-                <div class="ud-kpi-label">Followers</div>
-            </div>
-        </button>
-        <button type="button" class="ud-kpi-card ud-kpi-card--purple ud-kpi-card--clickable"
-                @click="activeTab='comments'">
-            <div class="ud-kpi-icon"><i class="fa-regular fa-comment"></i></div>
-            <div class="ud-kpi-body">
-                <div class="ud-kpi-value">[[ myCommentCount ]]</div>
-                <div class="ud-kpi-label">Comments</div>
-            </div>
-        </button>
-    </div>
-
     <!-- ── Tabs ── -->
     <div class="dr-nav mb-4">
         <button type="button" class="dr-nav__item" :class="{ active: activeTab==='info' }" @click="activeTab='info'">
