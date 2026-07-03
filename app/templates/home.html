@@ -377,6 +377,10 @@
                         <i class="fa-solid fa-chart-line text-primary me-1" style="font-size:.8rem;"></i>
                         <span style="font-size:.82rem;font-weight:700;color:var(--text-color);">Platform Stats</span>
                         <div class="ms-auto d-flex gap-1 flex-wrap">
+                            <button class="home-stats-tab" :class="{active: chartTab==='total'}"
+                                    @click="switchTab('total')">
+                                <i class="fa-solid fa-arrow-trend-up me-1"></i>Total Rules
+                            </button>
                             <button class="home-stats-tab" :class="{active: chartTab==='timeline'}"
                                     @click="switchTab('timeline')">
                                 <i class="fa-solid fa-chart-area me-1"></i>Timeline
@@ -407,6 +411,10 @@
                     </div>
 
                     <template v-else>
+                        <div v-show="chartTab==='total'" style="padding:.5rem .75rem;">
+                            <chart-viewer v-if="charts.total" :data="charts.total" views="area" height="300px"
+                                @chart-click="goToRuleList"></chart-viewer>
+                        </div>
                         <div v-show="chartTab==='timeline'" style="padding:.5rem .75rem;">
                             <chart-viewer v-if="charts.timeline" :data="charts.timeline" views="area" height="300px"
                                 @chart-click="goToRuleList"></chart-viewer>
@@ -601,7 +609,7 @@
             const feedLoading               = ref(true)
             const charts                    = ref({})
             const chartsLoading             = ref(false)
-            const chartTab                  = ref('timeline')
+            const chartTab                  = ref('total')
 
             async function fetchFeed() {
                 feedLoading.value = true
@@ -669,7 +677,7 @@
             async function init() {
                 is_loading.value = false
                 // Load default tab immediately
-                switchTab('timeline')
+                switchTab('total')
                 fetchFeed()
                 await checkIfUserIsConnected()
                 is_loading.value = true

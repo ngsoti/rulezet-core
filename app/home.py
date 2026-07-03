@@ -74,6 +74,52 @@ def home_charts(tab):
     from app.core.db_class.db import Rule
     from app import db
 
+    if tab == 'total':
+        now = datetime.datetime.utcnow()
+        labels, nice = [], []
+        d = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        for _ in range(6):
+            labels.append(d.strftime('%Y-%m'))
+            d = (d - datetime.timedelta(days=1)).replace(day=1)
+        labels.reverse()
+        for l in labels:
+            try: nice.append(datetime.datetime.strptime(l, '%Y-%m').strftime('%b %Y'))
+            except: nice.append(l)
+
+        window_start = datetime.datetime.strptime(labels[0], '%Y-%m')
+
+        # Net total as of just before the window — every rule ever created,
+        # minus every rule still deleted at that point (restores clear
+        # deleted_at, so a restored rule is naturally not subtracted).
+        baseline_created = Rule.query.filter(Rule.creation_date < window_start).count()
+        baseline_deleted = Rule.query.filter(Rule.deleted_at.isnot(None), Rule.deleted_at < window_start).count()
+        running_total = baseline_created - baseline_deleted
+
+        created_month_expr = (func.to_char(Rule.creation_date, 'YYYY-MM')
+                              if db.engine.dialect.name == 'postgresql'
+                              else func.strftime('%Y-%m', Rule.creation_date))
+        deleted_month_expr = (func.to_char(Rule.deleted_at, 'YYYY-MM')
+                              if db.engine.dialect.name == 'postgresql'
+                              else func.strftime('%Y-%m', Rule.deleted_at))
+
+        created_rows = (db.session.query(created_month_expr.label('m'), func.count(Rule.id))
+                        .filter(Rule.creation_date >= window_start)
+                        .group_by('m').all())
+        created_bucket = {r[0]: r[1] for r in created_rows if r[0]}
+
+        deleted_rows = (db.session.query(deleted_month_expr.label('m'), func.count(Rule.id))
+                        .filter(Rule.deleted_at.isnot(None), Rule.deleted_at >= window_start)
+                        .group_by('m').all())
+        deleted_bucket = {r[0]: r[1] for r in deleted_rows if r[0]}
+
+        values = []
+        for l in labels:
+            running_total += created_bucket.get(l, 0) - deleted_bucket.get(l, 0)
+            values.append(running_total)
+
+        return jsonify({'title': 'Total Rules Over Time', 'subtitle': 'Cumulative — last 6 months',
+                        'categories': nice, 'series': [{'name': 'Total Rules', 'values': values}]})
+
     if tab == 'timeline':
         now = datetime.datetime.utcnow()
         labels, nice = [], []
