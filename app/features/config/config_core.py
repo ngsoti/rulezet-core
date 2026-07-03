@@ -1,10 +1,11 @@
 import os
 import re
+import uuid as uuid_mod
 from datetime import datetime
 from flask import current_app
 from flask_login import current_user
 from ... import db
-from ...core.db_class.db import UserConfig, CustomTheme, THEME_CHOICES, _slugify
+from ...core.db_class.db import UserConfig, CustomTheme, THEME_CHOICES, _slugify, PivotickBackground
 
 
 # CSS variable keys that admins can customise per-theme.
@@ -302,3 +303,63 @@ def delete_custom_theme_core(uuid, user_id):
     except Exception as e:
         db.session.rollback()
         return False, f'Error deleting theme: {e}'
+
+
+# ── PivoTick background gallery (admin uploads, any user can select) ─────────
+
+PIVOTICK_BG_UPLOAD_FOLDER = os.path.join("app", "static", "uploads", "pivotick_backgrounds")
+ALLOWED_PIVOTICK_BG_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+MAX_PIVOTICK_BG_SIZE_MB = 25
+
+
+def list_pivotick_backgrounds():
+    return PivotickBackground.query.order_by(PivotickBackground.created_at.desc()).all()
+
+
+def save_pivotick_background(image_file, name, user_id):
+    if not image_file or not image_file.filename:
+        return None, 'No file provided'
+
+    ext = image_file.filename.rsplit('.', 1)[-1].lower() if '.' in image_file.filename else ''
+    if ext not in ALLOWED_PIVOTICK_BG_EXTENSIONS:
+        return None, f'Unsupported file type. Allowed: {", ".join(sorted(ALLOWED_PIVOTICK_BG_EXTENSIONS))}'
+
+    image_file.seek(0, os.SEEK_END)
+    size_mb = image_file.tell() / (1024 * 1024)
+    image_file.seek(0)
+    if size_mb > MAX_PIVOTICK_BG_SIZE_MB:
+        return None, f'File too large (max {MAX_PIVOTICK_BG_SIZE_MB} MB)'
+
+    try:
+        os.makedirs(PIVOTICK_BG_UPLOAD_FOLDER, exist_ok=True)
+        filename = f"{uuid_mod.uuid4().hex}.{ext}"
+        image_file.save(os.path.join(PIVOTICK_BG_UPLOAD_FOLDER, filename))
+
+        bg = PivotickBackground(
+            uuid=str(uuid_mod.uuid4()),
+            filename=filename,
+            name=(name or '').strip()[:128] or None,
+            uploaded_by=user_id,
+        )
+        db.session.add(bg)
+        db.session.commit()
+        return bg, 'Background uploaded'
+    except Exception as e:
+        db.session.rollback()
+        return None, f'Error uploading background: {e}'
+
+
+def delete_pivotick_background(bg_id):
+    bg = PivotickBackground.query.get(bg_id)
+    if not bg:
+        return False, 'Background not found'
+    try:
+        path = os.path.join(PIVOTICK_BG_UPLOAD_FOLDER, bg.filename)
+        if os.path.isfile(path):
+            os.remove(path)
+        db.session.delete(bg)
+        db.session.commit()
+        return True, 'Background deleted'
+    except Exception as e:
+        db.session.rollback()
+        return False, f'Error deleting background: {e}'

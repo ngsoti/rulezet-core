@@ -770,6 +770,92 @@ body.dark-mode .tsp--default .tsp-toast {
     text-align: center;
 }
 
+/* ── PivoTick graph background preview ─────────────────── */
+.pvtbg-preview {
+    height: 88px;
+    background: #fbfbfc;
+    border-bottom: 1px solid var(--border-color);
+}
+.dark-mode .pvtbg-preview { background: #1e1e20; }
+
+.pvtbg-preview--dots {
+    background-image: radial-gradient(circle, rgba(120,120,130,.35) 1.4px, transparent 1.4px);
+    background-size: 14px 14px;
+}
+.pvtbg-preview--default {
+    background-image:
+        repeating-linear-gradient(0deg,  rgba(120,120,130,.35) 0px, rgba(120,120,130,.35) 1px, transparent 1px, transparent 10px),
+        repeating-linear-gradient(90deg, rgba(120,120,130,.35) 0px, rgba(120,120,130,.35) 1px, transparent 1px, transparent 10px);
+}
+.pvtbg-preview--plain {
+    /* flat — no pattern at all */
+}
+/* Color swatch — actual color is set via inline :style in the Vue template */
+.pvtbg-preview--color {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.pvtbg-preview--color .pvtbg-color-input {
+    width: 32px;
+    height: 32px;
+    border: 2px solid rgba(255,255,255,.8);
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0,0,0,.25);
+    cursor: pointer;
+    padding: 0;
+    background: none;
+}
+/* Image gallery pick — thumbnail is set via inline :style background-image */
+.pvtbg-preview--image {
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,.6);
+    font-size: 1.3rem;
+}
+
+/* ── PivoTick background gallery (Image mode) ──────────── */
+.pvtbg-gallery-item {
+    position: relative;
+    width: 84px;
+    height: 60px;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    background-color: var(--light-bg-color);
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    transition: border-color .15s ease, transform .12s ease;
+    flex-shrink: 0;
+}
+.pvtbg-gallery-item:hover  { border-color: #0d6efd; transform: translateY(-1px); }
+.pvtbg-gallery-item.active {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+.pvtbg-gallery-delete {
+    position: absolute;
+    top: 3px; right: 3px;
+    width: 20px; height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0,0,0,.55);
+    color: #fff;
+    font-size: .65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .12s ease, background .12s ease;
+}
+.pvtbg-gallery-item:hover .pvtbg-gallery-delete { opacity: 1; }
+.pvtbg-gallery-delete:hover { background: #dc3545; }
+
 /* ── JSON theme preview ───────────────────────────────── */
 .json-theme-preview {
     height: 88px;

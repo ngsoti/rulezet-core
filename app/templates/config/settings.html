@@ -389,6 +389,65 @@
                 </div>
             </div>
 
+            <!-- PivoTick graph background -->
+            <div class="card mb-3" id="section-pivotick-bg">
+                <div class="card-body">
+                    <div class="settings-card-header mb-3">
+                        <div class="settings-card-icon"><i class="fas fa-diagram-project"></i></div>
+                        <div>
+                            <h6 class="settings-section-title mb-0">PivoTick graph background</h6>
+                            <p class="text-muted small mb-0">Canvas style behind rule/bundle relationship graphs.</p>
+                        </div>
+                    </div>
+                    <div class="settings-theme-group">
+                        <div v-for="opt in pivotick_bg_options" :key="opt.value"
+                             class="settings-theme-card"
+                             :class="{ active: pivotick_bg === opt.value }"
+                             @click="setPivotickBg(opt.value)">
+                            <div class="pvtbg-preview" :class="'pvtbg-preview--' + opt.value"
+                                 :style="opt.value === 'image' && pivotick_bg_image ? { backgroundImage: 'url(' + pivotick_bg_image + ')' } : {}">
+                                <input v-if="opt.value === 'color'" type="color" class="pvtbg-color-input"
+                                       :value="pivotick_bg_color" @click.stop @input="onPivotickColorInput($event)">
+                                <i v-else-if="opt.value === 'image' && !pivotick_bg_image" class="fas fa-image"></i>
+                            </div>
+                            <div class="settings-theme-label">
+                                <i :class="'fas ' + opt.icon"></i>
+                                <span>[[ opt.label ]]</span>
+                                <i v-if="pivotick_bg === opt.value" class="fas fa-circle-check ms-auto text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Image gallery — shown when "Image" mode is active -->
+                    <div v-if="pivotick_bg === 'image'" class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <p class="settings-sub-label mb-0">Choose a background image</p>
+                            <label v-if="IS_ADMIN" class="btn btn-xs btn-outline-primary" style="font-size:.72rem;padding:3px 10px;cursor:pointer;">
+                                <i class="fas fa-upload me-1"></i>Upload
+                                <input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="onUploadPivotickImage">
+                            </label>
+                        </div>
+                        <div v-if="pivotickBackgroundsLoading" class="text-muted small">Loading…</div>
+                        <div v-else-if="pivotickBackgrounds.length === 0" class="text-muted small">
+                            No background images yet<span v-if="IS_ADMIN"> — upload one above.</span>
+                        </div>
+                        <div v-else class="d-flex flex-wrap gap-2">
+                            <div v-for="bg in pivotickBackgrounds" :key="bg.id"
+                                 class="pvtbg-gallery-item"
+                                 :class="{ active: pivotick_bg_image === bg.url }"
+                                 :style="{ backgroundImage: 'url(' + bg.url + ')' }"
+                                 @click="selectPivotickImage(bg)"
+                                 :title="bg.name">
+                                <button v-if="IS_ADMIN" type="button" class="pvtbg-gallery-delete"
+                                        @click.stop="onDeletePivotickImage(bg)" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Default pagination -->
             <div class="card mb-3" id="section-pagination">
                 <div class="card-body">
@@ -988,6 +1047,136 @@
                 create_message('Code font saved', 'success')
             }
 
+            // ── PivoTick graph background ───────────────────────────────────────
+            // dots/default/plain: pure CSS, attribute-driven (see pivotick-overrides.css).
+            // color/image: same attribute PLUS an inline CSS var carrying the actual
+            // value, since the value itself (a hex color / an image URL) can't live
+            // in a static stylesheet.
+            const pivotick_bg_options = [
+                { value: 'dots',    label: 'Soft dots',  icon: 'fa-circle-dot' },
+                { value: 'default', label: 'Grid lines', icon: 'fa-table-cells' },
+                { value: 'plain',   label: 'Plain',      icon: 'fa-square' },
+                { value: 'color',   label: 'Color',      icon: 'fa-fill-drip' },
+                { value: 'image',   label: 'Image',      icon: 'fa-image' },
+            ]
+            const pivotick_bg       = ref(localStorage.getItem('rz-pivotick-bg') || 'dots')
+            const pivotick_bg_color = ref(localStorage.getItem('rz-pivotick-bg-color') || '#eef1f5')
+            const pivotick_bg_image = ref(localStorage.getItem('rz-pivotick-bg-image') || '')
+
+            function _applyPivotickBg(value) {
+                if (value === 'default') {
+                    document.documentElement.removeAttribute('data-pivotick-bg')
+                } else {
+                    document.documentElement.setAttribute('data-pivotick-bg', value)
+                }
+                if (value === 'color' && pivotick_bg_color.value) {
+                    document.documentElement.style.setProperty('--pvt-bg', pivotick_bg_color.value)
+                } else {
+                    document.documentElement.style.removeProperty('--pvt-bg')
+                }
+                if (value === 'image' && pivotick_bg_image.value) {
+                    document.documentElement.style.setProperty('--pvt-graph-background-image', 'url(' + pivotick_bg_image.value + ')')
+                } else {
+                    document.documentElement.style.removeProperty('--pvt-graph-background-image')
+                }
+            }
+
+            function setPivotickBg(value) {
+                if (value === pivotick_bg.value) {
+                    if (value === 'image') fetchPivotickBackgrounds()
+                    return
+                }
+                pivotick_bg.value = value
+                localStorage.setItem('rz-pivotick-bg', value)
+                _applyPivotickBg(value)
+                if (value === 'image') fetchPivotickBackgrounds()
+                create_message('PivoTick background saved', 'success')
+            }
+
+            function onPivotickColorInput(evt) {
+                const value = evt.target.value
+                pivotick_bg_color.value = value
+                localStorage.setItem('rz-pivotick-bg-color', value)
+                pivotick_bg.value = 'color'
+                localStorage.setItem('rz-pivotick-bg', 'color')
+                _applyPivotickBg('color')
+            }
+
+            // ── Image gallery (admin uploads, any user selects) ─────────────────
+            const pivotickBackgrounds        = ref([])
+            const pivotickBackgroundsLoading = ref(false)
+            let _pivotickBgLoaded = false
+
+            async function fetchPivotickBackgrounds() {
+                if (_pivotickBgLoaded) return
+                _pivotickBgLoaded = true
+                pivotickBackgroundsLoading.value = true
+                try {
+                    const res  = await fetch('/config/pivotick_backgrounds')
+                    const data = await res.json()
+                    pivotickBackgrounds.value = data.backgrounds || []
+                } catch { /* silent */ }
+                pivotickBackgroundsLoading.value = false
+            }
+
+            function selectPivotickImage(bg) {
+                pivotick_bg_image.value = bg.url
+                localStorage.setItem('rz-pivotick-bg-image', bg.url)
+                pivotick_bg.value = 'image'
+                localStorage.setItem('rz-pivotick-bg', 'image')
+                _applyPivotickBg('image')
+                create_message('PivoTick background saved', 'success')
+            }
+
+            async function onUploadPivotickImage(evt) {
+                const file = evt.target.files[0]
+                evt.target.value = ''
+                if (!file) return
+                const csrf = document.getElementById('csrf_token')
+                const form = new FormData()
+                form.append('image', file)
+                form.append('name', file.name.replace(/\.[^.]+$/, ''))
+                try {
+                    const res  = await fetch('/config/pivotick_backgrounds', {
+                        method:  'POST',
+                        headers: { 'X-CSRFToken': csrf ? csrf.value : '' },
+                        body:    form,
+                    })
+                    const data = await res.json()
+                    if (data.success) {
+                        pivotickBackgrounds.value.unshift(data.background)
+                        create_message('Background uploaded', 'success')
+                    } else {
+                        create_message(data.message || 'Upload failed', 'danger')
+                    }
+                } catch (e) { create_message('Network error: ' + e, 'danger') }
+            }
+
+            async function onDeletePivotickImage(bg) {
+                if (!confirm(`Delete background "${bg.name}"? This removes it for everyone using it.`)) return
+                const csrf = document.getElementById('csrf_token')
+                try {
+                    const res  = await fetch(`/config/pivotick_backgrounds/${bg.id}`, {
+                        method:  'DELETE',
+                        headers: { 'X-CSRFToken': csrf ? csrf.value : '' },
+                    })
+                    const data = await res.json()
+                    if (data.success) {
+                        pivotickBackgrounds.value = pivotickBackgrounds.value.filter(b => b.id !== bg.id)
+                        if (pivotick_bg_image.value === bg.url) {
+                            pivotick_bg_image.value = ''
+                            localStorage.removeItem('rz-pivotick-bg-image')
+                            _applyPivotickBg(pivotick_bg.value)
+                        }
+                        create_message('Background deleted', 'success')
+                    } else {
+                        create_message(data.message || 'Delete failed', 'danger')
+                    }
+                } catch (e) { create_message('Network error: ' + e, 'danger') }
+            }
+
+            if (pivotick_bg.value === 'image') fetchPivotickBackgrounds()
+
             // ── Pagination (localStorage only) ────────────────────────────────
             const per_page_card  = ref(Number(localStorage.getItem('rz-per-page-card'))  || 12)
             const per_page_table = ref(Number(localStorage.getItem('rz-per-page-table')) || 25)
@@ -1343,6 +1532,9 @@
                 notif_style, notif_style_saved, notif_style_options, setNotifStyle,
                 list_view, list_view_saved, list_view_options, setListView,
                 code_font, code_font_saved, font_options, setCodeFont,
+                pivotick_bg, pivotick_bg_options, pivotick_bg_color, pivotick_bg_image, setPivotickBg,
+                onPivotickColorInput, pivotickBackgrounds, pivotickBackgroundsLoading,
+                selectPivotickImage, onUploadPivotickImage, onDeletePivotickImage, IS_ADMIN,
                 per_page_card, per_page_table, per_page_saved, setPerPageCard, setPerPageTable,
                 json_theme, json_theme_saved, json_theme_options, setJsonTheme,
                 resetAllSettings,

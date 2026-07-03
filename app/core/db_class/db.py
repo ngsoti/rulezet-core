@@ -1935,6 +1935,36 @@ class LogActionDefinition(db.Model):
         }
 
 
+class PivotickBackground(db.Model):
+    """Admin-uploaded background image for PivoTick graph canvases.
+
+    Uploaded by an admin, but selectable by ANY user on /settings as their
+    personal PivoTick canvas background (choice stored client-side, see
+    rz-pivotick-bg-image in localStorage — this table is just the shared gallery).
+    """
+    __tablename__ = 'pivotick_background'
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid        = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    filename    = db.Column(db.String(256), nullable=False)
+    name        = db.Column(db.String(128), nullable=True)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    created_at  = db.Column(db.DateTime, nullable=False,
+                            default=lambda: datetime.datetime.now(datetime.timezone.utc))
+
+    def get_url(self):
+        return "/static/uploads/pivotick_backgrounds/" + self.filename
+
+    def to_json(self):
+        return {
+            "id":         self.id,
+            "uuid":       self.uuid,
+            "name":       self.name or self.filename,
+            "url":        self.get_url(),
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M'),
+        }
+
+
 class RuleScope(db.Model):
     """One scope declaration per user per rule — captures the environment where a rule works (or not)."""
     __tablename__ = 'rule_scope'

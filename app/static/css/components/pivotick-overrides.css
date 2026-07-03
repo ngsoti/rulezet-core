@@ -1,0 +1,39 @@
+/*
+  pivotick-overrides.css — Configurable PivoTick canvas background.
+  The vendor default is a two-layer repeating-linear-gradient forming a hard
+  square grid (--pvt-graph-background-image, defined at :root in pivotick.css).
+  User picks a style on /settings ("PivoTick graph background") which sets
+  html[data-pivotick-bg] (see base.html's early-apply script). No attribute
+  (or data-pivotick-bg="default") = the vendor's own grid lines, untouched.
+
+  Load this AFTER pivotick.css (and pvt-dark.css) so overrides win the cascade.
+  All variants read --pvt-graph-grid-color, so they automatically follow the
+  active theme (light default or pvt-dark.css's dark value).
+*/
+
+/* ── Dots — soft dot-grid instead of hard lines ─────────────────────────── */
+html[data-pivotick-bg="dots"] {
+    --pvt-graph-background-image:
+        radial-gradient(circle, var(--pvt-graph-grid-color) 1.4px, transparent 1.4px);
+}
+html[data-pivotick-bg="dots"] .pvt-canvas {
+    background-size: 28px 28px;
+    background-position: -1px -1px;
+}
+
+/* ── Plain — flat panel background, no pattern at all ───────────────────── */
+html[data-pivotick-bg="plain"] {
+    --pvt-graph-background-image: none;
+}
+
+/* ── Color — flat custom color, set inline via --pvt-bg override ─────────── */
+html[data-pivotick-bg="color"] {
+    --pvt-graph-background-image: none;
+}
+
+/* ── Image — admin-uploaded picture, set inline via --pvt-graph-background-image ── */
+html[data-pivotick-bg="image"] .pvt-canvas {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}

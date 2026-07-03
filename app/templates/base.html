@@ -80,6 +80,22 @@
         if (s === 'collapsible' && localStorage.getItem('rz-nav-hidden') === '1')
             document.body.classList.add('nav-hidden');
     })();
+    (function(){
+        // PivoTick graph canvas background — 'dots' (soft dot-grid) is the
+        // out-of-the-box improvement over the vendor's harsh line-grid;
+        // 'default' explicitly opts back into the vendor's own grid lines.
+        // 'color'/'image' carry their actual value via an inline CSS var,
+        // since it can't live in a static stylesheet.
+        var p = localStorage.getItem('rz-pivotick-bg') || 'dots';
+        if (p !== 'default') document.documentElement.setAttribute('data-pivotick-bg', p);
+        if (p === 'color') {
+            var c = localStorage.getItem('rz-pivotick-bg-color');
+            if (c) document.documentElement.style.setProperty('--pvt-bg', c);
+        } else if (p === 'image') {
+            var img = localStorage.getItem('rz-pivotick-bg-image');
+            if (img) document.documentElement.style.setProperty('--pvt-graph-background-image', 'url(' + img + ')');
+        }
+    })();
     </script>
 
     {% include 'sidebar.html' %}

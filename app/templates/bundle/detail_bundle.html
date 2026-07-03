@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/pivotick.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/pvt-dark.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/pivotick-overrides.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/report-modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/attack-matrix.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/voter-popover.css') }}">
@@ -356,6 +357,10 @@
                             </div>
                             <button class="btn btn-sm btn-outline-secondary rounded-pill" @click="DownloadMISP" :disabled="!mispJson">
                                 <i class="fas fa-download me-1"></i> Download
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill" @click="toggleGraphFullscreen">
+                                <i class="fa-solid" :class="isGraphFullscreen ? 'fa-compress' : 'fa-expand'"></i>
+                                <span class="ms-1">[[ isGraphFullscreen ? 'Exit fullscreen' : 'Fullscreen' ]]</span>
                             </button>
                         </div>
                         <div class="gap-2 p-3 rounded-3 shadow-sm border" style="background: var(--light-bg-color);">
@@ -919,6 +924,21 @@
                 initBundleGraph('misp-graph-container', JSON.stringify(_mispParsed.value));
             }
 
+            // Fullscreen toggle for the MISP graph canvas
+            const isGraphFullscreen = ref(false);
+            function toggleGraphFullscreen() {
+                const el = document.getElementById('misp-graph-container');
+                if (!el) return;
+                if (!document.fullscreenElement) {
+                    el.requestFullscreen?.();
+                } else {
+                    document.exitFullscreen?.();
+                }
+            }
+            document.addEventListener('fullscreenchange', () => {
+                isGraphFullscreen.value = document.fullscreenElement?.id === 'misp-graph-container';
+            });
+
             onMounted(async () => {
                 await init();
 
@@ -959,6 +979,7 @@
 
                 treeData, fileTreeNodes,
                 selectedFileNode, handleFileTreeSelect, mispJson, mispLoading, mispError, toggleContent,
+                isGraphFullscreen, toggleGraphFullscreen,
 
                 current_user_is_admin,
 
