@@ -24,6 +24,7 @@ from app.features.jobs.job_worker import register_handler
 from app import db
 from app.core.db_class.db import Rule, Tag, RuleTagAssociation, BackgroundJob, BackgroundJobLog, ActivityLog, RequestOwnerRule, User
 from app.features.rule.rule_core import _wipe_rule_children
+from app.core.utils.activity_log import log_activity
 import json as _json
 
 BATCH_SIZE = 2000   # bulk_insert_mappings handles large batches efficiently
@@ -1939,6 +1940,10 @@ def handle_bulk_transfer_ownership(job, app):
     log_job(job,
         f"Done — {transferred} rule(s) transferred to {new_owner.get_username()}.",
         level='success', event='done')
+    log_activity('admin.bulk_transfer_ownership',
+                 f"Manually transferred ownership of {transferred} rule(s) to {new_owner.get_username()} (#{new_owner_id})",
+                 target_type='user', target_id=new_owner_id, target_uuid=getattr(new_owner, 'uuid', None),
+                 extra={'rule_count': transferred, 'filters': filters})
 
 
 # ─── ATT&CK: update catalogue from MITRE ─────────────────────────────────────

@@ -863,6 +863,73 @@ def get_log_actions():
     return jsonify({"actions": actions}), 200
 
 
+##############################
+#   Log Definitions manager  #
+##############################
+
+@home_blueprint.route('/admin/log_definitions_data', methods=['GET'])
+@login_required
+def get_log_definitions_data():
+    if not current_user.is_admin():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    from app.features.admin import log_definitions_core as LogDefModel
+
+    page      = request.args.get('page', 1, type=int)
+    per_page  = min(100, request.args.get('per_page', 20, type=int))
+    search    = request.args.get('search', '', type=str).strip()
+    category  = request.args.get('category', '', type=str).strip()
+    sort_key  = request.args.get('sort', 'action_key', type=str)
+    sort_dir  = request.args.get('dir', 'asc', type=str)
+
+    return jsonify(LogDefModel.list_all_actions(
+        search=search, category=category, sort_key=sort_key, sort_dir=sort_dir,
+        page=page, per_page=per_page,
+    )), 200
+
+
+@home_blueprint.route('/admin/log_definitions/save', methods=['POST'])
+@login_required
+def save_log_definition():
+    if not current_user.is_admin():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    from app.features.admin import log_definitions_core as LogDefModel
+
+    data       = request.get_json() or {}
+    action_key = (data.get('action_key') or '').strip()
+    if not action_key:
+        return jsonify({"success": False, "message": "action_key is required"}), 400
+
+    row = LogDefModel.save_override(
+        action_key = action_key,
+        icon       = data.get('icon'),
+        title      = data.get('title'),
+        is_public  = data.get('is_public'),
+        user_id    = current_user.id,
+    )
+    log_activity('admin.settings_changed', f"Customized log display for action '{action_key}'",
+                 extra={'action_key': action_key})
+    return jsonify({"success": True, "definition": row}), 200
+
+
+@home_blueprint.route('/admin/log_definitions/reset', methods=['POST'])
+@login_required
+def reset_log_definition():
+    if not current_user.is_admin():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    from app.features.admin import log_definitions_core as LogDefModel
+
+    data       = request.get_json() or {}
+    action_key = (data.get('action_key') or '').strip()
+    if not action_key:
+        return jsonify({"success": False, "message": "action_key is required"}), 400
+
+    ok = LogDefModel.reset_override(action_key)
+    return jsonify({"success": ok}), 200
+
+
 ###########################
 #   Admin Settings section #
 ###########################

@@ -161,7 +161,9 @@
             <main class="col ps-md-4 pt-2">
                 {% include 'macros/_flashes.html' %}
                 <!-- Scroll to top -->
-                <button id="scrollToTopBtn" title="Retour en haut"><i class="fa-solid fa-up-long"></i></button>
+                <button id="scrollToTopBtn" title="Scroll to top" aria-label="Back to top">
+                    <i class="fa-solid fa-rocket"></i>
+                </button>
 
                 {% block content %}
                 {% endblock %}
@@ -265,10 +267,14 @@
             const scrollToTopBtn = document.getElementById("scrollToTopBtn");
             if (!scrollToTopBtn) return;
             window.addEventListener("scroll", () => {
-                scrollToTopBtn.style.display = (window.scrollY > 300) ? "flex" : "none";
+                scrollToTopBtn.classList.toggle("is-visible", window.scrollY > 300);
             });
             scrollToTopBtn.addEventListener("click", () => {
+                scrollToTopBtn.classList.remove("is-launching");
+                void scrollToTopBtn.offsetWidth; // restart the launch animation on repeat clicks
+                scrollToTopBtn.classList.add("is-launching");
                 window.scrollTo({ top: 0, behavior: "smooth" });
+                setTimeout(() => scrollToTopBtn.classList.remove("is-launching"), 700);
             });
         });
     </script>

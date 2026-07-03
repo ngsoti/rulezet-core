@@ -1901,6 +1901,40 @@ class ActivityLog(db.Model):
         }
 
 
+class LogActionDefinition(db.Model):
+    """Admin-editable display overrides for activity-log action keys.
+
+    Presence of a row for an action_key means "admin has customized this action's
+    display"; any column left NULL falls back to the hardcoded default in
+    app/features/admin/log_action_defaults.py (see log_definitions_core.py).
+    """
+    __tablename__ = 'log_action_definition'
+
+    id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    action_key    = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    icon          = db.Column(db.String(64), nullable=True)
+    title         = db.Column(db.String(255), nullable=True)
+    is_public     = db.Column(db.Boolean, nullable=True)  # NULL = inherit default
+    category      = db.Column(db.String(32), nullable=True)
+    updated_at    = db.Column(db.DateTime, nullable=False,
+                              default=lambda: datetime.datetime.now(datetime.timezone.utc),
+                              onupdate=lambda: datetime.datetime.now(datetime.timezone.utc))
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+
+    updated_by = db.relationship('User', foreign_keys=[updated_by_id])
+
+    def to_json(self):
+        return {
+            "id":         self.id,
+            "action_key": self.action_key,
+            "icon":       self.icon,
+            "title":      self.title,
+            "is_public":  self.is_public,
+            "category":   self.category,
+            "updated_at": self.updated_at.strftime('%Y-%m-%dT%H:%M:%S') + 'Z' if self.updated_at else None,
+        }
+
+
 class RuleScope(db.Model):
     """One scope declaration per user per rule — captures the environment where a rule works (or not)."""
     __tablename__ = 'rule_scope'

@@ -7,6 +7,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/timeline.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/logs.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/log-definitions.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -33,7 +36,23 @@
     <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">Full audit trail of every action on the platform.</p>
   </div>
 
-  {{ anav.admin_nav('logs') }}
+  <!-- Top-level view switch, with Admin navigation as one more item in the same row -->
+  <div class="dr-nav mb-3">
+    <button type="button" class="dr-nav__item" :class="{ active: viewMode==='logs' }" @click="viewMode='logs'">
+      <i class="fa-solid fa-scroll"></i><span>Activity Logs</span>
+    </button>
+    <button type="button" class="dr-nav__item" :class="{ active: viewMode==='definitions' }" @click="viewMode='definitions'">
+      <i class="fa-solid fa-icons"></i><span>Log Definitions</span>
+    </button>
+    <span class="dr-nav__sep"></span>
+    {{ anav.admin_nav_toggle() }}
+  </div>
+  {{ anav.admin_nav_panel('logs') }}
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       VIEW 1 — Activity Logs (existing table/timeline)
+       ══════════════════════════════════════════════════════════════════ -->
+  <template v-if="viewMode === 'logs'">
 
   <!-- Top bar: stats + view toggle + delete all -->
   <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
@@ -266,6 +285,15 @@
     </div>
   </div>
 
+  </template>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       VIEW 2 — Log Definitions (icon/title/visibility manager)
+       ══════════════════════════════════════════════════════════════════ -->
+  <template v-else-if="viewMode === 'definitions'">
+    <log-definition-manager ref="logDefManagerRef" csrf-token="{{ csrf_token() }}"></log-definition-manager>
+  </template>
+
 </div><!-- /logs-app -->
 {% else %}
 <div class="container my-5 text-center">
@@ -275,22 +303,28 @@
 
 <script type="module">
 import { create_message } from '/static/js/toaster.js'
-import LogTable    from '/static/js/components/log-table.js'
-import Timeline    from '/static/js/components/timeline.js'
-import CodeViewer  from '/static/js/components/code-viewer.js'
+import LogTable            from '/static/js/components/log-table.js'
+import Timeline            from '/static/js/components/timeline.js'
+import CodeViewer          from '/static/js/components/code-viewer.js'
+import LogDefinitionManager from '/static/js/admin/logDefinitionManager.js'
 
 const { createApp, ref, onMounted } = Vue
 
 createApp({
     delimiters: ['[[', ']]'],
-    components: { 'log-table': LogTable, 'timeline': Timeline, 'code-viewer': CodeViewer },
+    components: {
+        'log-table': LogTable, 'timeline': Timeline, 'code-viewer': CodeViewer,
+        'log-definition-manager': LogDefinitionManager,
+    },
     setup() {
 
-        const csrfToken   = document.querySelector('input[name="csrf_token"]')?.value || ''
-        const logTableRef = ref(null)
-        const timelineRef = ref(null)
+        const csrfToken       = document.querySelector('input[name="csrf_token"]')?.value || ''
+        const logTableRef     = ref(null)
+        const timelineRef     = ref(null)
+        const logDefManagerRef = ref(null)
 
         // ── Shared state ──────────────────────────────────────────────────────
+        const viewMode  = ref('logs')
         const view      = ref('table')
         const totalLogs = ref(0)
         const editLog   = ref(null)
@@ -494,7 +528,8 @@ createApp({
         onMounted(() => fetchTotal())
 
         return {
-            csrfToken, logTableRef, timelineRef,
+            csrfToken, logTableRef, timelineRef, logDefManagerRef,
+            viewMode,
             view, totalLogs, editLog, editForm,
             tlItems, tlLoading, tlHasMore, tlCat, tlLevel, tlSearch,
             tlDateFrom, tlDateTo,

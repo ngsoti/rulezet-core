@@ -17,174 +17,14 @@ import uuid as uuid_mod
 from contextlib import suppress
 from typing import Any
 
-# ── Default icons per action ──────────────────────────────────────────────────
-
-_ICONS: dict[str, str] = {
-    "rule.create":         "fa-solid fa-file-shield",
-    "rule.edit":           "fa-solid fa-pen-to-square",
-    "rule.delete":         "fa-solid fa-trash",
-    "rule.bulk_delete":    "fa-solid fa-trash",
-    "rule.vote_up":        "fa-solid fa-thumbs-up",
-    "rule.vote_down":      "fa-solid fa-thumbs-down",
-    "rule.favorite":       "fa-solid fa-heart",
-    "rule.unfavorite":     "fa-regular fa-heart",
-    "rule.download":       "fa-solid fa-download",
-    "bundle.create":       "fa-solid fa-box",
-    "bundle.edit":         "fa-solid fa-pen-to-square",
-    "bundle.delete":       "fa-solid fa-box-open",
-    "comment.add":         "fa-solid fa-comment",
-    "comment.delete":      "fa-solid fa-comment-slash",
-    "bundle_comment.add":  "fa-solid fa-comment",
-    "user.register":       "fa-solid fa-user-plus",
-    "user.login":          "fa-solid fa-right-to-bracket",
-    "user.logout":         "fa-solid fa-right-from-bracket",
-    "user.edit_profile":   "fa-solid fa-user-pen",
-    "tag.create":          "fa-solid fa-tag",
-    "tag.edit":            "fa-solid fa-tag",
-    "tag.delete":          "fa-solid fa-tag",
-    "tag.toggle_visibility": "fa-solid fa-eye",
-    "tag.toggle_status":   "fa-solid fa-toggle-on",
-    "job.create":          "fa-solid fa-gears",
-    "job.cancel":          "fa-solid fa-ban",
-    "job.pause":           "fa-solid fa-pause",
-    "job.resume":          "fa-solid fa-play",
-    "job.delete":          "fa-solid fa-trash",
-    "github.import_started":  "fa-brands fa-github",
-    "github.update_started":  "fa-solid fa-rotate",
-    "github.source_deleted":  "fa-brands fa-github",
-    "admin.update_misp":   "fa-solid fa-rotate",
-    "admin.promote_user":  "fa-solid fa-user-shield",
-    "admin.demote_user":   "fa-solid fa-user",
-    "admin.delete_user":   "fa-solid fa-user-slash",
-    "admin.request_approved": "fa-solid fa-check-circle",
-    "admin.request_rejected": "fa-solid fa-times-circle",
-    "admin.logs_bulk_delete": "fa-solid fa-trash",
-}
-
-# Actions that are public by default
-_PUBLIC_ACTIONS: frozenset[str] = frozenset({
-    "rule.create",
-    "rule.edit",
-    "rule.vote_up",
-    "rule.vote_down",
-    "rule.favorite",
-    "rule.download",
-    "bundle.create",
-    "bundle.edit",
-    "comment.add",
-    "user.register",
-    "tag.create",
-    "github.import_started",
-    "blog.create",
-})
-
-# Human-readable titles for known actions
-_TITLES: dict[str, str] = {
-    "rule.create":              "Rule Created",
-    "rule.edit":                "Rule Edited",
-    "rule.delete":              "Rule Deleted",
-    "rule.bulk_delete":         "Rules Bulk Deleted",
-    "rule.permanent_delete":    "Rule Permanently Deleted",
-    "rule.permanent_delete_bulk": "Rules Permanently Deleted",
-    "rule.restore":             "Rule Restored",
-    "rule.restore_bulk":        "Rules Bulk Restored",
-    "rule.conflict_resolved":   "Trash Conflict Resolved",
-    "rule.vote_up":             "Rule Upvoted",
-    "rule.vote_down":           "Rule Downvoted",
-    "rule.favorite":            "Rule Favorited",
-    "rule.unfavorite":          "Rule Unfavorited",
-    "rule.download":            "Rule Downloaded",
-    "rule.scope_add":           "Environment Scope Added",
-    "rule.scope_update":        "Environment Scope Updated",
-    "rule.scope_delete":        "Environment Scope Removed",
-    "rule.propose_edit":        "Edit Proposal Submitted",
-    "rule.proposal_approved":   "Edit Proposal Approved",
-    "rule.proposal_rejected":   "Edit Proposal Rejected",
-    "rule.bad_rule_edited":     "Invalid Rule Fixed",
-    "rule.bad_rule_deleted":    "Invalid Rule Deleted",
-    "rule.report":              "Rule Reported",
-    "bundle.create":            "Bundle Created",
-    "bundle.edit":              "Bundle Edited",
-    "bundle.delete":            "Bundle Deleted",
-    "bundle.tags_updated":      "Bundle Tags Updated",
-    "bundle.rule_added":        "Rule Added to Bundle",
-    "comment.add":              "Comment Added",
-    "comment.delete":           "Comment Deleted",
-    "bundle_comment.add":       "Bundle Comment Added",
-    "bundle_comment.delete":    "Bundle Comment Deleted",
-    "user.register":            "User Registered",
-    "user.login":               "User Logged In",
-    "user.logout":              "User Logged Out",
-    "user.edit_profile":        "Profile Updated",
-    "user.verified":            "Account Verified",
-    "user.owner_request":       "Ownership Request Submitted",
-    "tag.create":               "Tag Created",
-    "tag.edit":                 "Tag Edited",
-    "tag.delete":               "Tag Deleted",
-    "tag.bulk_delete":          "Tags Bulk Deleted",
-    "tag.family_delete":        "Tag Family Deleted",
-    "tag.toggle_visibility":    "Tag Visibility Toggled",
-    "tag.toggle_status":        "Tag Status Toggled",
-    "job.create":               "Job Created",
-    "job.cancel":               "Job Cancelled",
-    "job.pause":                "Job Paused",
-    "job.resume":               "Job Resumed",
-    "job.delete":               "Job Deleted",
-    "github.import_started":    "GitHub Import Started",
-    "github.update_started":    "GitHub Update Started",
-    "github.source_deleted":    "GitHub Source Deleted",
-    "admin.update_misp":        "MISP Data Updated",
-    "admin.promote_user":       "User Promoted to Admin",
-    "admin.demote_user":        "Admin Rights Removed",
-    "admin.delete_user":        "User Deleted",
-    "admin.request_approved":   "Ownership Request Approved",
-    "admin.request_rejected":   "Ownership Request Rejected",
-    "admin.owner_request":      "Ownership Request Submitted",
-    "admin.logs_bulk_delete":   "Logs Bulk Delete Queued",
-    "admin.submodule_update":   "Submodules Updated",
-    "admin.settings_changed":   "Admin Settings Changed",
-    "admin.test_email_sent":    "Test Email Sent",
-    "admin.instance_init":      "Instance Config Refreshed",
-    "admin.import_tag_families":"Tag Families Imported",
-    "connector.create":         "Connector Created",
-    "connector.update":         "Connector Updated",
-    "connector.delete":         "Connector Deleted",
-    "connector.test_ok":        "Connector Test Passed",
-    "connector.pull_triggered": "Connector Pull Triggered",
-    "connector.pull_done":      "Connector Pull Completed",
-    "admin.replace_format":     "Rule Format Replaced",
-    "admin.delete_reports":     "Reports Bulk Deleted",
-    "api.request":              "API Request",
-    "blog.create":              "Blog Post Published",
-    "blog.edit":                "Blog Post Edited",
-    "blog.delete":              "Blog Post Deleted",
-    "blog.view":                "Blog Post Viewed",
-    "blog.download_pdf":        "Blog Post Downloaded (PDF)",
-    "blog.download_md":         "Blog Post Downloaded (Markdown)",
-    "blog.export":              "Blog Post Exported",
-    "blog.toggle_draft":        "Blog Post Draft Toggled",
-    "blog.toggle_access":       "Blog Post Access Toggled",
-    "blog.create_from_cve":     "Blog Post Generated from CVE",
-}
-
-# Known category prefixes (first segment of action)
-_KNOWN_CATEGORIES = frozenset({
-    'rule', 'bundle', 'bundle_comment', 'user', 'tag', 'job',
-    'github', 'admin', 'comment', 'connector', 'api',
-})
-
-# Prefix to display category mapping
-_CATEGORY_MAP: dict[str, str] = {
-    'bundle_comment': 'comment',
-}
-
-_WARNING_KEYWORDS = (
-    'delete', 'trash', 'demote', 'reject', 'ban', 'bulk_delete', 'logs_bulk_delete',
-    'source_deleted', 'remove_user', 'family_delete',
-)
-_SUCCESS_KEYWORDS = (
-    'create', 'register', 'add', 'approved', 'promote', 'import_started', 'pull_done',
-    'restored', 'verified',
+from app.features.admin.log_action_defaults import (
+    ICONS as _ICONS,
+    PUBLIC_ACTIONS as _PUBLIC_ACTIONS,
+    TITLES as _TITLES,
+    KNOWN_CATEGORIES as _KNOWN_CATEGORIES,
+    CATEGORY_MAP as _CATEGORY_MAP,
+    WARNING_KEYWORDS as _WARNING_KEYWORDS,
+    SUCCESS_KEYWORDS as _SUCCESS_KEYWORDS,
 )
 
 
@@ -288,10 +128,20 @@ def log_activity(
             # Caller-supplied data merged last — wins on key conflicts
             extra = {**base, **(extra or {})} or None
 
-        resolved_public    = is_public if is_public is not None else (action in _PUBLIC_ACTIONS)
-        resolved_icon      = icon if icon is not None else _default_icon(action)
-        resolved_title     = title if title is not None else _auto_title(action)
-        resolved_category  = category if category is not None else _auto_category(action)
+        override = None
+        with suppress(Exception):
+            from app.features.admin.log_definitions_core import get_override
+            override = get_override(action)
+
+        resolved_public    = is_public if is_public is not None else (
+            override['is_public'] if override and override.get('is_public') is not None
+            else (action in _PUBLIC_ACTIONS))
+        resolved_icon      = icon if icon is not None else (
+            (override or {}).get('icon') or _default_icon(action))
+        resolved_title     = title if title is not None else (
+            (override or {}).get('title') or _auto_title(action))
+        resolved_category  = category if category is not None else (
+            (override or {}).get('category') or _auto_category(action))
         resolved_level     = level if level is not None else _auto_level(action)
 
         entry = ActivityLog(

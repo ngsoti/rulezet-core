@@ -1,0 +1,196 @@
+"""
+log_action_defaults.py — Hardcoded fallback display metadata for activity-log actions.
+
+Pulled out of app/core/utils/activity_log.py so admins can override any of this
+per-action via the Log Definitions manager (/admin/logs → "Log Definitions" tab)
+without touching code. These dicts remain the fallback whenever no admin
+override exists for a given action key — see log_definitions_core.py.
+
+To register a brand-new action key: just call log_activity("your.action", ...)
+from the code; it will show up automatically in the Log Definitions manager
+with an auto-generated title/icon, and can be renamed/re-iconed from there.
+"""
+
+from __future__ import annotations
+
+# ── Default icons per action ──────────────────────────────────────────────────
+
+ICONS: dict[str, str] = {
+    "rule.create":         "fa-solid fa-file-shield",
+    "rule.edit":           "fa-solid fa-pen-to-square",
+    "rule.delete":         "fa-solid fa-trash",
+    "rule.bulk_delete":    "fa-solid fa-trash",
+    "rule.permanent_delete":      "fa-solid fa-trash-can",
+    "rule.permanent_delete_bulk": "fa-solid fa-trash-can",
+    "rule.restore":        "fa-solid fa-trash-arrow-up",
+    "rule.restore_bulk":   "fa-solid fa-trash-arrow-up",
+    "rule.vote_up":        "fa-solid fa-thumbs-up",
+    "rule.vote_down":      "fa-solid fa-thumbs-down",
+    "rule.favorite":       "fa-solid fa-heart",
+    "rule.unfavorite":     "fa-regular fa-heart",
+    "rule.download":       "fa-solid fa-download",
+    "bundle.create":       "fa-solid fa-box",
+    "bundle.edit":         "fa-solid fa-pen-to-square",
+    "bundle.delete":       "fa-solid fa-box-open",
+    "comment.add":         "fa-solid fa-comment",
+    "comment.delete":      "fa-solid fa-comment-slash",
+    "bundle_comment.add":  "fa-solid fa-comment",
+    "user.register":       "fa-solid fa-user-plus",
+    "user.login":          "fa-solid fa-right-to-bracket",
+    "user.logout":         "fa-solid fa-right-from-bracket",
+    "user.edit_profile":   "fa-solid fa-user-pen",
+    "tag.create":          "fa-solid fa-tag",
+    "tag.edit":            "fa-solid fa-tag",
+    "tag.delete":          "fa-solid fa-tag",
+    "tag.toggle_visibility": "fa-solid fa-eye",
+    "tag.toggle_status":   "fa-solid fa-toggle-on",
+    "job.create":          "fa-solid fa-gears",
+    "job.cancel":          "fa-solid fa-ban",
+    "job.pause":           "fa-solid fa-pause",
+    "job.resume":          "fa-solid fa-play",
+    "job.delete":          "fa-solid fa-trash",
+    "github.import_started":  "fa-brands fa-github",
+    "github.update_started":  "fa-solid fa-rotate",
+    "github.source_deleted":  "fa-brands fa-github",
+    "admin.update_misp":   "fa-solid fa-rotate",
+    "admin.promote_user":  "fa-solid fa-user-shield",
+    "admin.demote_user":   "fa-solid fa-user",
+    "admin.delete_user":   "fa-solid fa-user-slash",
+    "admin.request_approved": "fa-solid fa-check-circle",
+    "admin.request_rejected": "fa-solid fa-times-circle",
+    "admin.logs_bulk_delete": "fa-solid fa-trash",
+    "admin.bulk_transfer_ownership": "fa-solid fa-right-left",
+    "connector.create":    "fa-solid fa-plug",
+    "connector.update":    "fa-solid fa-plug-circle-check",
+    "connector.delete":    "fa-solid fa-plug-circle-xmark",
+    "connector.test_ok":   "fa-solid fa-circle-check",
+    "connector.pull_triggered": "fa-solid fa-cloud-arrow-down",
+    "connector.pull_done": "fa-solid fa-cloud-arrow-down",
+}
+
+# Actions that are public by default
+PUBLIC_ACTIONS: frozenset[str] = frozenset({
+    "rule.create",
+    "rule.edit",
+    "rule.vote_up",
+    "rule.vote_down",
+    "rule.favorite",
+    "rule.download",
+    "bundle.create",
+    "bundle.edit",
+    "comment.add",
+    "user.register",
+    "tag.create",
+    "github.import_started",
+    "blog.create",
+})
+
+# Human-readable titles for known actions
+TITLES: dict[str, str] = {
+    "rule.create":              "Rule Created",
+    "rule.edit":                "Rule Edited",
+    "rule.delete":              "Rule Deleted",
+    "rule.bulk_delete":         "Rules Bulk Deleted",
+    "rule.permanent_delete":    "Rule Permanently Deleted",
+    "rule.permanent_delete_bulk": "Rules Permanently Deleted",
+    "rule.restore":             "Rule Restored",
+    "rule.restore_bulk":        "Rules Bulk Restored",
+    "rule.conflict_resolved":   "Trash Conflict Resolved",
+    "rule.vote_up":             "Rule Upvoted",
+    "rule.vote_down":           "Rule Downvoted",
+    "rule.favorite":            "Rule Favorited",
+    "rule.unfavorite":          "Rule Unfavorited",
+    "rule.download":            "Rule Downloaded",
+    "rule.scope_add":           "Environment Scope Added",
+    "rule.scope_update":        "Environment Scope Updated",
+    "rule.scope_delete":        "Environment Scope Removed",
+    "rule.propose_edit":        "Edit Proposal Submitted",
+    "rule.proposal_approved":   "Edit Proposal Approved",
+    "rule.proposal_rejected":   "Edit Proposal Rejected",
+    "rule.bad_rule_edited":     "Invalid Rule Fixed",
+    "rule.bad_rule_deleted":    "Invalid Rule Deleted",
+    "rule.report":              "Rule Reported",
+    "bundle.create":            "Bundle Created",
+    "bundle.edit":              "Bundle Edited",
+    "bundle.delete":            "Bundle Deleted",
+    "bundle.tags_updated":      "Bundle Tags Updated",
+    "bundle.rule_added":        "Rule Added to Bundle",
+    "comment.add":              "Comment Added",
+    "comment.delete":           "Comment Deleted",
+    "bundle_comment.add":       "Bundle Comment Added",
+    "bundle_comment.delete":    "Bundle Comment Deleted",
+    "user.register":            "User Registered",
+    "user.login":               "User Logged In",
+    "user.logout":              "User Logged Out",
+    "user.edit_profile":        "Profile Updated",
+    "user.verified":            "Account Verified",
+    "user.owner_request":       "Ownership Request Submitted",
+    "tag.create":               "Tag Created",
+    "tag.edit":                 "Tag Edited",
+    "tag.delete":               "Tag Deleted",
+    "tag.bulk_delete":          "Tags Bulk Deleted",
+    "tag.family_delete":        "Tag Family Deleted",
+    "tag.toggle_visibility":    "Tag Visibility Toggled",
+    "tag.toggle_status":        "Tag Status Toggled",
+    "job.create":               "Job Created",
+    "job.cancel":               "Job Cancelled",
+    "job.pause":                "Job Paused",
+    "job.resume":               "Job Resumed",
+    "job.delete":               "Job Deleted",
+    "github.import_started":    "GitHub Import Started",
+    "github.update_started":    "GitHub Update Started",
+    "github.source_deleted":    "GitHub Source Deleted",
+    "admin.update_misp":        "MISP Data Updated",
+    "admin.promote_user":       "User Promoted to Admin",
+    "admin.demote_user":        "Admin Rights Removed",
+    "admin.delete_user":        "User Deleted",
+    "admin.request_approved":   "Ownership Request Approved",
+    "admin.request_rejected":   "Ownership Request Rejected",
+    "admin.owner_request":      "Ownership Request Submitted",
+    "admin.logs_bulk_delete":   "Logs Bulk Delete Queued",
+    "admin.submodule_update":   "Submodules Updated",
+    "admin.settings_changed":   "Admin Settings Changed",
+    "admin.test_email_sent":    "Test Email Sent",
+    "admin.instance_init":      "Instance Config Refreshed",
+    "admin.import_tag_families":"Tag Families Imported",
+    "admin.bulk_transfer_ownership": "Bulk Ownership Transfer",
+    "connector.create":         "Connector Created",
+    "connector.update":         "Connector Updated",
+    "connector.delete":         "Connector Deleted",
+    "connector.test_ok":        "Connector Test Passed",
+    "connector.pull_triggered": "Connector Pull Triggered",
+    "connector.pull_done":      "Connector Pull Completed",
+    "admin.replace_format":     "Rule Format Replaced",
+    "admin.delete_reports":     "Reports Bulk Deleted",
+    "api.request":              "API Request",
+    "blog.create":              "Blog Post Published",
+    "blog.edit":                "Blog Post Edited",
+    "blog.delete":              "Blog Post Deleted",
+    "blog.view":                "Blog Post Viewed",
+    "blog.download_pdf":        "Blog Post Downloaded (PDF)",
+    "blog.download_md":         "Blog Post Downloaded (Markdown)",
+    "blog.export":              "Blog Post Exported",
+    "blog.toggle_draft":        "Blog Post Draft Toggled",
+    "blog.toggle_access":       "Blog Post Access Toggled",
+    "blog.create_from_cve":     "Blog Post Generated from CVE",
+}
+
+# Known category prefixes (first segment of action)
+KNOWN_CATEGORIES = frozenset({
+    'rule', 'bundle', 'bundle_comment', 'user', 'tag', 'job',
+    'github', 'admin', 'comment', 'connector', 'api',
+})
+
+# Prefix to display category mapping
+CATEGORY_MAP: dict[str, str] = {
+    'bundle_comment': 'comment',
+}
+
+WARNING_KEYWORDS = (
+    'delete', 'trash', 'demote', 'reject', 'ban', 'bulk_delete', 'logs_bulk_delete',
+    'source_deleted', 'remove_user', 'family_delete',
+)
+SUCCESS_KEYWORDS = (
+    'create', 'register', 'add', 'approved', 'promote', 'import_started', 'pull_done',
+    'restore', 'verified',
+)

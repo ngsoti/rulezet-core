@@ -4557,7 +4557,12 @@ def restore_batch(batch_uuid):
 def permanent_delete_rule(rule_id):
     if not current_user.is_admin():
         return jsonify({'success': False}), 403
-    ok = RuleModel.permanent_delete_rule(rule_id)
+    rule = RuleModel.get_rule(rule_id)
+    ok   = RuleModel.permanent_delete_rule(rule_id)
+    if ok:
+        log_activity('rule.permanent_delete',
+                     f"Permanently deleted rule '{rule.title if rule else rule_id}' (id={rule_id})",
+                     target_type='rule', target_id=rule_id, target_uuid=rule.uuid if rule else None)
     return jsonify({'success': ok}), 200 if ok else 404
 
 
