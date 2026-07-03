@@ -549,6 +549,38 @@
                                     on the target repo. Used for GitHub API calls: fetching branches on rule import, and
                                     filing admin-proposed issues from comments.
                                 </div>
+
+                                <button class="btn btn-sm btn-link text-decoration-none px-0 mt-1" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#githubTokenHelp"
+                                        aria-expanded="false" aria-controls="githubTokenHelp" style="font-size:.78rem;">
+                                    <i class="fa-solid fa-circle-question me-1"></i>How do I generate this token?
+                                </button>
+                                <div class="collapse mt-2" id="githubTokenHelp">
+                                    <div class="rounded-3 border p-3" style="background:var(--light-bg-color);font-size:.8rem;">
+                                        <p class="fw-bold mb-1">Why</p>
+                                        <p class="text-muted mb-2">
+                                            This token lets Rulezet call the GitHub API on your behalf: fetching branches
+                                            when importing rules from a repo, and filing issues on
+                                            <code>rulezet/rulezet-core</code> when an admin turns a comment into an issue.
+                                            Without it those two features stay disabled (or rate-limited for the branch lookup).
+                                        </p>
+                                        <p class="fw-bold mb-1">How (recommended — fine-grained token)</p>
+                                        <ol class="text-muted mb-2 ps-3">
+                                            <li>Go to <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>, signed in with an account that has write access to <code>rulezet/rulezet-core</code>.</li>
+                                            <li>Set an <strong>expiration</strong> date — Rulezet automatically alerts every admin if this token expires or gets rejected, so a short expiry is fine.</li>
+                                            <li><strong>Resource owner</strong>: the <code>rulezet</code> organization.</li>
+                                            <li><strong>Repository access</strong>: "Only select repositories" → <code>rulezet-core</code>.</li>
+                                            <li>Under <strong>Permissions → Repository permissions</strong>, set <strong>Issues</strong> to <strong>Read and write</strong>. Leave everything else as "No access".</li>
+                                            <li>Click <strong>Generate token</strong> and copy it — GitHub only shows it once. If the organization restricts fine-grained tokens, an org owner may need to approve the request first.</li>
+                                        </ol>
+                                        <p class="fw-bold mb-1">Simpler alternative — classic token</p>
+                                        <p class="text-muted mb-0">
+                                            If fine-grained tokens are blocked for the org, generate a classic token instead at
+                                            <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">github.com/settings/tokens/new</a>
+                                            with just the <code>repo</code> scope checked. It's broader but needs no org approval.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
