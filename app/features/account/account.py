@@ -700,6 +700,33 @@ def bulk_parse_fields_page():
                            parseable_fields=PARSEABLE_FIELD_KEYS)
 
 
+@account_blueprint.route('/admin/bulk_parse_fields/test_extract', methods=['POST'])
+@login_required
+def bulk_parse_fields_test_extract():
+    """
+    Live preview for the Field Parsing Rules tester: runs the EXACT same
+    extraction function the background job uses (keyword or regex mode,
+    whichever the field is currently configured with), so what you see here
+    is guaranteed to match what the job would extract.
+    """
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'message': 'Admin only'}), 403
+    from app.features.rule.field_parser_core import locate_field_match
+
+    data    = request.get_json(force=True) or {}
+    content = data.get('content', '') or ''
+    field_cfg = {
+        'keywords': data.get('keywords', []),
+        'regex':    data.get('regex', ''),
+    }
+    mode = 'regex' if (field_cfg['regex'] or '').strip() else 'keywords'
+    value, start, end, line_index = locate_field_match(content, field_cfg)
+    return jsonify({
+        'success': True, 'mode': mode, 'value': value,
+        'match_start': start, 'match_end': end, 'line_index': line_index,
+    })
+
+
 @account_blueprint.route('/admin/bulk_parse_fields/trigger', methods=['POST'])
 @login_required
 def bulk_parse_fields_trigger():

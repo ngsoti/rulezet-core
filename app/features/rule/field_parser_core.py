@@ -27,33 +27,43 @@ FIELD_META = {
 }
 
 
-def parse_field_from_content(content: str, field_cfg: dict):
+def locate_field_match(content: str, field_cfg: dict):
     """
-    Extract a field value from rule content using keyword or regex strategy.
-    field_cfg keys: keywords (list[str]), regex (str), overwrite (bool).
-    Returns the extracted string or None.
+    Extract a field value from rule content using keyword or regex strategy,
+    AND report where the match occurred so the admin tester can highlight it.
+    field_cfg keys: keywords (list[str]), regex (str).
+
+    Returns (value, start, end, line_index):
+      - regex mode: start/end are char offsets of the match into `content`, line_index is None.
+      - keyword mode: line_index is the 0-based matching line number, start/end span that whole line.
+      - no match / empty content: (None, None, None, None).
     """
     if not content:
-        return None
+        return None, None, None, None
 
     regex = (field_cfg.get('regex') or '').strip()
     if regex:
         try:
             m = re.search(regex, content, re.IGNORECASE | re.MULTILINE)
-            if m:
-                return (m.group(1) if m.lastindex else m.group(0)).strip()
         except re.error:
-            pass
-        return None
+            return None, None, None, None
+        if not m:
+            return None, None, None, None
+        if m.lastindex:
+            return m.group(1).strip(), m.start(1), m.end(1), None
+        return m.group(0).strip(), m.start(0), m.end(0), None
 
     keywords = [kw.strip().lower() for kw in (field_cfg.get('keywords') or []) if kw.strip()]
     if not keywords:
-        return None
+        return None, None, None, None
 
-    for line in content.splitlines():
+    offset = 0
+    for line_idx, raw_line in enumerate(content.splitlines(keepends=True)):
+        line     = raw_line.rstrip('\r\n')
         stripped = line.strip()
         # skip indented lines (nested YAML blocks like related: - id: ...)
         if line.startswith((' ', '\t')):
+            offset += len(raw_line)
             continue
         for kw in keywords:
             # handles both "key: value" and "key = value" / 'key = "value"'
@@ -62,8 +72,19 @@ def parse_field_from_content(content: str, field_cfg: dict):
             if m:
                 val = m.group(1).strip().strip('"\'|').strip()
                 if val:
-                    return val
-    return None
+                    return val, offset, offset + len(line), line_idx
+        offset += len(raw_line)
+    return None, None, None, None
+
+
+def parse_field_from_content(content: str, field_cfg: dict):
+    """
+    Extract a field value from rule content using keyword or regex strategy.
+    field_cfg keys: keywords (list[str]), regex (str), overwrite (bool).
+    Returns the extracted string or None.
+    """
+    value, _, _, _ = locate_field_match(content, field_cfg)
+    return value
 
 
 def rescan_cve_ids(content: str, existing_cve_raw):

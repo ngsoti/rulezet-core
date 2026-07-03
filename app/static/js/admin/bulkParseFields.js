@@ -6,8 +6,19 @@ import RuleList                  from '/static/js/rule/ruleList.js'
 import TagsDisplaysList          from '/static/js/tags/tagsDisplaysList.js'
 import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js'
 import CodeViewer                from '/static/js/components/code-viewer.js'
+import SmartEditor               from '/static/js/components/smart-editor.js'
 
-const { ref, reactive, computed, onMounted, onUnmounted } = Vue;
+const { ref, reactive, computed, onMounted, onUnmounted, nextTick } = Vue;
+
+// Several actions (opening the tester, running a test, collapsing the editor)
+// change the height of content above/around the click target, which can make
+// the browser shift scroll position. Pin it back to where the user was.
+async function withScrollPreserved(fn) {
+    const y = window.scrollY;
+    await fn();
+    await nextTick();
+    window.scrollTo({ top: y });
+}
 
 const FIELD_COLORS = {
     license:       '#0d6efd',
@@ -45,6 +56,7 @@ const FieldParserUpdater = {
         'tags-displays-list':          TagsDisplaysList,
         'vulnerability-displays-list': VulnerabilityDisplaysList,
         'code-viewer':                 CodeViewer,
+        'smart-editor':                SmartEditor,
     },
     props: {
         csrfToken:      { type: String,  required: true },
@@ -131,6 +143,61 @@ const FieldParserUpdater = {
             props.parseableFields.filter(k => fieldConfigs[k]?.enabled).length
             + (cveRescanEnabled.value ? 1 : 0)
         );
+
+        // ── Extraction tester (per field) ────────────────────────────────────
+        // Runs the EXACT same server-side function the job uses
+        // (parse_field_from_content — keyword mode OR regex mode, whichever
+        // the field is currently configured with), so "does it work?" always
+        // reflects reality instead of a separate/disconnected regex-only preview.
+        const testerOpen     = reactive({});
+        const testContent    = reactive({});
+        const testResult     = reactive({});   // { loading, mode, value, error, matchStart, matchEnd }
+        const testCollapsed  = reactive({});   // true once a test has run — hides the editor, shows the highlighted preview
+
+        function toggleTester(key) {
+            withScrollPreserved(() => { testerOpen[key] = !testerOpen[key]; });
+        }
+
+        function editTest(key) {
+            withScrollPreserved(() => { testCollapsed[key] = false; });
+        }
+
+        // Manual only — triggered solely by the "Run test" buttons (top & bottom
+        // of the editor), never automatically while typing.
+        function runExtractionTest(key) {
+            withScrollPreserved(async () => {
+                const fc = fieldConfigs[key];
+                testResult[key] = { ...(testResult[key] || {}), loading: true, error: false };
+                try {
+                    const res = await fetch('/account/admin/bulk_parse_fields/test_extract', {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': props.csrfToken },
+                        body: JSON.stringify({
+                            content:  testContent[key] || '',
+                            keywords: fc.keywords.split(',').map(k => k.trim()).filter(Boolean),
+                            regex:    fc.regex.trim(),
+                        }),
+                    });
+                    const data = await res.json();
+                    testResult[key] = {
+                        loading: false, error: !data.success, mode: data.mode, value: data.value,
+                        matchStart: data.match_start, matchEnd: data.match_end,
+                    };
+                } catch (e) {
+                    testResult[key] = { loading: false, error: true, mode: null, value: null, matchStart: null, matchEnd: null };
+                }
+                testCollapsed[key] = true;
+            });
+        }
+
+        // Exact matched substring/line, passed to <code-viewer :extra-highlights>
+        // so the preview highlights precisely what the job would have extracted.
+        function matchTerms(key) {
+            const r = testResult[key];
+            if (!r || r.matchStart == null || r.matchEnd == null) return [];
+            const term = (testContent[key] || '').slice(r.matchStart, r.matchEnd);
+            return term ? [term] : [];
+        }
 
         function toggleAll(val) {
             props.parseableFields.forEach(k => { if (fieldConfigs[k]) fieldConfigs[k].enabled = val; });
@@ -326,6 +393,7 @@ const FieldParserUpdater = {
             selectedIds, selectionMode, selectionCount, onSend,
             fieldConfigs, enabledCount, toggleAll,
             cveRescanEnabled,
+            testerOpen, testContent, testResult, testCollapsed, toggleTester, editTest, runExtractionTest, matchTerms,
             savedConfigs, saveConfigName, savingConfig, loadedConfigId,
             saveCurrentConfig, updateCurrentConfig, saveAsNewConfig, clearLoadedConfig, deleteConfig, loadConfig,
             running, jobUuid, jobStatus, jobLogs, jobDone, jobTotal, jobPct,
@@ -354,8 +422,17 @@ const FieldParserUpdater = {
           </div>
         </div>
         <p class="text-muted small mb-3">
-          Détecte chaque champ dans le contenu de la règle ligne par ligne (<code>keyword: value</code> ou <code>keyword = value</code>).
-          Le regex optionnel remplace les keywords (capture group 1). <strong>Overwrite</strong> écrase les valeurs existantes.
+          Two mutually-exclusive extraction modes per field — <strong>only one runs</strong>:
+        </p>
+        <ul class="text-muted small mb-3" style="padding-left:1.2rem;">
+          <li><strong>Keyword mode</strong> (used when Regex is empty): scans the rule content line by line for
+            <code>keyword: value</code> or <code>keyword = value</code> — first match wins. Indented lines are skipped.</li>
+          <li><strong>Regex mode</strong> (used as soon as Regex is filled — keywords are then ignored entirely):
+            your pattern is matched against the full content; capture group 1 is used if present, otherwise the whole match.</li>
+        </ul>
+        <p class="text-muted small mb-3">
+          <strong>Overwrite</strong> replaces a value the rule already has; otherwise existing values are left untouched.
+          Click <strong>Test</strong> on a field to paste a sample rule and see exactly what would be extracted.
         </p>
 
         <div class="d-flex flex-column gap-2">
@@ -380,19 +457,93 @@ const FieldParserUpdater = {
             </div>
 
             <template v-if="fieldConfigs[key]?.enabled">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="small fw-semibold" style="color:var(--subtle-text-color);">
+                  <span :class="fieldConfigs[key].regex.trim() ? 'text-primary' : ''">
+                    <i class="fa-solid" :class="fieldConfigs[key].regex.trim() ? 'fa-code' : 'fa-list'"></i>
+                    [[ fieldConfigs[key].regex.trim() ? 'Regex mode' : 'Keyword mode' ]]
+                  </span>
+                  <span class="opacity-50 ms-1">
+                    — [[ fieldConfigs[key].regex.trim() ? 'the regex below is used, keywords are ignored' : 'fill Regex to switch to regex mode' ]]
+                  </span>
+                </span>
+                <button type="button" class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 8px;"
+                        @click="toggleTester(key)">
+                  <i class="fa-solid fa-flask me-1"></i>[[ testerOpen[key] ? 'Hide tester' : 'Test' ]]
+                </button>
+              </div>
+
               <div class="mb-2">
                 <label class="form-label mb-1" style="font-size:.72rem;color:var(--subtle-text-color);text-transform:uppercase;letter-spacing:.04em;">
-                  Keywords <span class="opacity-50">(comma-separated)</span>
+                  Keywords <span class="opacity-50">(comma-separated — used when Regex is empty)</span>
                 </label>
                 <input type="text" class="form-control form-control-sm"
                        v-model="fieldConfigs[key].keywords" placeholder="license, licenses, credit">
               </div>
               <div>
                 <label class="form-label mb-1" style="font-size:.72rem;color:var(--subtle-text-color);text-transform:uppercase;letter-spacing:.04em;">
-                  Regex <span class="opacity-50">(optional — overrides keywords)</span>
+                  Regex <span class="opacity-50">(optional — overrides keywords, capture group 1)</span>
                 </label>
                 <input type="text" class="form-control form-control-sm font-monospace"
                        v-model="fieldConfigs[key].regex" placeholder='(?i)license[:\\s]+(.+)'>
+              </div>
+
+              <!-- Unified tester: runs the exact same extraction the job would run — manual only -->
+              <div v-if="testerOpen[key]" class="mt-2 p-2 rounded-3" style="background:var(--card-bg-color);border:1px solid var(--border-color);">
+
+                <!-- ═══ EDITING: shown until "Run test" is clicked ═══ -->
+                <template v-if="!testCollapsed[key]">
+                  <div class="d-flex align-items-center justify-content-between mb-1">
+                    <label class="form-label mb-0" style="font-size:.72rem;color:var(--subtle-text-color);text-transform:uppercase;letter-spacing:.04em;">
+                      Paste sample rule content
+                    </label>
+                    <button type="button" class="btn btn-xs btn-primary" style="font-size:.7rem;padding:2px 10px;"
+                            @click="runExtractionTest(key)">
+                      <span v-if="testResult[key]?.loading" class="spinner-border spinner-border-sm me-1"></span>
+                      <i v-else class="fa-solid fa-play me-1"></i>Run test
+                    </button>
+                  </div>
+
+                  <smart-editor v-model="testContent[key]" mode="code" language="text"
+                                min-height="110px" max-height="220px"
+                                placeholder="Paste a rule (or just the relevant lines) here…">
+                  </smart-editor>
+
+                  <div class="d-flex justify-content-end mt-2">
+                    <button type="button" class="btn btn-xs btn-primary" style="font-size:.7rem;padding:2px 10px;"
+                            @click="runExtractionTest(key)">
+                      <span v-if="testResult[key]?.loading" class="spinner-border spinner-border-sm me-1"></span>
+                      <i v-else class="fa-solid fa-play me-1"></i>Run test
+                    </button>
+                  </div>
+                </template>
+
+                <!-- ═══ RESULT: shown once a test has run — editor collapsed ═══ -->
+                <template v-else>
+                  <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                    <template v-if="testResult[key]">
+                      <span v-if="testResult[key].error" class="badge rounded-pill bg-danger-subtle text-danger">
+                        Error
+                      </span>
+                      <span v-else-if="testResult[key].value" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">
+                        <i class="fa-solid fa-check me-1"></i>Match ([[ testResult[key].mode ]]): "[[ testResult[key].value ]]"
+                      </span>
+                      <span v-else class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle">
+                        <i class="fa-solid fa-xmark me-1"></i>No match ([[ testResult[key].mode ]] mode)
+                      </span>
+                    </template>
+                    <button type="button" class="btn btn-xs btn-outline-secondary" style="font-size:.7rem;padding:2px 10px;"
+                            @click="editTest(key)">
+                      <i class="fa-solid fa-pen me-1"></i>Edit
+                    </button>
+                  </div>
+
+                  <!-- Highlighted preview — the matched line/part lit up via CodeViewer's extraHighlights -->
+                  <code-viewer v-if="testContent[key]" :code="testContent[key]" language="text" max-height="220px"
+                               :show-lines="true" :foldable="false"
+                               :extra-highlights="matchTerms(key)">
+                  </code-viewer>
+                </template>
               </div>
             </template>
           </div>
