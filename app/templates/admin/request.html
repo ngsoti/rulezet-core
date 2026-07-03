@@ -5,6 +5,9 @@
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/account/user-picker.css') }}">
 <style>
 [v-cloak] { display: none; }
 .req-tab {
@@ -47,7 +50,24 @@
         </p>
     </div>
 
-    {{ anav.admin_nav('requests') }}
+    <!-- Top-level view switch, with Admin navigation as one more item in the same row -->
+    <div class="dr-nav mb-3">
+        <button type="button" class="dr-nav__item" :class="{ active: viewMode==='requests' }" @click="viewMode='requests'">
+            <i class="fa-solid fa-inbox"></i><span>Requests</span>
+            <span v-if="pendingTotal > 0" class="dr-nav__badge">[[ pendingTotal ]]</span>
+        </button>
+        <button type="button" class="dr-nav__item" :class="{ active: viewMode==='manual' }" @click="viewMode='manual'">
+            <i class="fa-solid fa-user-shield"></i><span>Manual Ownership</span>
+        </button>
+        <span class="dr-nav__sep"></span>
+        {{ anav.admin_nav_toggle() }}
+    </div>
+    {{ anav.admin_nav_panel('requests') }}
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         VIEW 1 — Requests (existing pending/history/mine review flow)
+         ══════════════════════════════════════════════════════════════════ -->
+    <template v-if="viewMode==='requests'">
 
     <!-- Stats pills -->
     <div class="d-flex gap-2 flex-wrap mb-3">
@@ -211,6 +231,129 @@
         </div>
     </div>
 
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         VIEW 2 — Manual Ownership: pick rules via RuleList (select mode),
+         pick a target user, transfer in the background.
+         ══════════════════════════════════════════════════════════════════ -->
+    <template v-else>
+
+        <div class="row g-4">
+
+            <!-- LEFT: rule selection -->
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm rounded-3 mb-3">
+                    <div class="card-body p-3">
+                        <p class="text-muted mb-3" style="font-size:.85rem;">
+                            <i class="fa-solid fa-circle-info me-1"></i>
+                            Filter and select rules, then click <strong>Confirm</strong> below the table
+                            to lock in your pick.
+                        </p>
+                        <rule-list
+                            ref="ownershipRuleListRef"
+                            mode="select"
+                            default-view="table"
+                            :sync-url="false"
+                            :show-export="false"
+                            :show-create="false"
+                            :current-user-id="currentUserId"
+                            :current-user-is-admin="isAdmin"
+                            :current-user-is-authenticated="true"
+                            @send="handleOwnershipSend">
+                        </rule-list>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: target user + launch -->
+            <div class="col-lg-5">
+
+                <!-- User picker -->
+                <div class="card border-0 shadow-sm rounded-3 mb-3">
+                    <div class="card-body p-3">
+                        <h6 class="fw-bold mb-3" style="color:var(--text-color);">
+                            <i class="fa-solid fa-user-plus me-2 text-primary"></i>New Owner
+                        </h6>
+                        <user-picker v-model="targetUser"></user-picker>
+                    </div>
+                </div>
+
+                <!-- Launch -->
+                <div class="card border-0 shadow-sm rounded-3 mb-3">
+                    <div class="card-body p-3">
+                        <h6 class="fw-bold mb-3" style="color:var(--text-color);">
+                            <i class="fa-solid fa-play me-2 text-success"></i>Transfer Ownership
+                        </h6>
+
+                        <div class="rounded-3 p-3 mb-3 small"
+                             style="background:var(--light-bg-color);color:var(--subtle-text-color);">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span><i class="fa-solid fa-shield-halved me-2"></i>Rules selected</span>
+                                <strong style="color:var(--text-color);">
+                                    <template v-if="!ownershipSelection">0</template>
+                                    <template v-else-if="ownershipSelection.count === null">All matching</template>
+                                    <template v-else>[[ ownershipSelection.count.toLocaleString() ]]</template>
+                                    <span v-if="ownershipSelection && ownershipSelection.count !== null" class="text-muted fw-normal">
+                                        ([[ ownershipSelection.mode === 'all' ? 'all matching' : 'manual pick' ]])
+                                    </span>
+                                </strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span><i class="fa-solid fa-user me-2"></i>New owner</span>
+                                <strong style="color:var(--text-color);">
+                                    [[ targetUser ? targetUser.username : '—' ]]
+                                </strong>
+                            </div>
+                        </div>
+
+                        <div v-if="!ownershipSelection || ownershipSelection.count === 0"
+                             class="alert alert-warning border-0 py-2 small mb-2">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                            No rules selected yet — pick rules on the left, then click Confirm.
+                        </div>
+                        <div v-else-if="!targetUser"
+                             class="alert alert-warning border-0 py-2 small mb-2">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                            Choose a new owner above.
+                        </div>
+
+                        <button class="btn btn-primary w-100 fw-bold rounded-pill"
+                                @click="launchOwnershipJob"
+                                :disabled="launchingOwnership || !targetUser || !ownershipSelection || ownershipSelection.count === 0">
+                            <span v-if="launchingOwnership" class="spinner-border spinner-border-sm me-2"></span>
+                            <i v-else class="fa-solid fa-right-left me-2"></i>
+                            Transfer ownership
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active job tracker -->
+                <div v-if="ownershipJobUuid" class="card border-0 shadow-sm rounded-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="fw-bold mb-0" style="color:var(--text-color);">
+                                <i class="fa-solid fa-tasks me-2 text-primary"></i>Current Job
+                            </h6>
+                            <a :href="'/jobs/detail/' + ownershipJobUuid"
+                               class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>View details
+                            </a>
+                        </div>
+                        <job-tracker
+                            :job-uuid="ownershipJobUuid"
+                            @done="onOwnershipJobDone"
+                            @failed="onOwnershipJobFailed"
+                            @deleted="ownershipJobUuid = null">
+                        </job-tracker>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </template>
+
 </div>
 {% endblock %}
 
@@ -219,16 +362,103 @@
 const { createApp, ref, computed } = Vue;
 import { create_message } from '/static/js/toaster.js';
 import UserChip from '/static/js/components/UserChip.js';
+import RuleList from '/static/js/rule/ruleList.js';
+import UserPicker from '/static/js/account/UserPicker.js';
+import JobTracker from '/static/js/jobs/JobTracker.js';
+
+const currentUserId = {{ current_user.id if current_user.is_authenticated else 'null' }};
+const isAdmin        = {{ current_user.is_admin() | tojson if current_user.is_authenticated else 'false' }};
 
 createApp({
     delimiters: ['[[', ']]'],
-    components: { UserChip },
+    components: {
+        UserChip,
+        'rule-list':    RuleList,
+        'user-picker':  UserPicker,
+        'job-tracker':  JobTracker,
+    },
     setup() {
         const loading  = ref(false);
         const activeTab = ref('pending');
         const search   = ref('');
         const perPage  = ref(20);
         const page     = ref(1);
+
+        // ── View switch ─────────────────────────────────────────────────────
+        const viewMode = ref('requests'); // 'requests' | 'manual'
+
+        // ── Manual Ownership ────────────────────────────────────────────────
+        const ownershipRuleListRef = ref(null);
+        const ownershipSelection   = ref(null); // { mode: 'all'|'partial', selected_ids, filters, count }
+        const targetUser           = ref(null);
+        const launchingOwnership   = ref(false);
+        const ownershipJobUuid     = ref(null);
+
+        // RuleList's @send emits (ids, filters) — ids is either 'ALL' or an array.
+        function handleOwnershipSend(ids, filters = {}) {
+            const isAll = ids === 'ALL';
+            ownershipSelection.value = {
+                mode:         isAll ? 'all' : 'partial',
+                selected_ids: isAll ? [] : Array.from(ids),
+                filters:      filters || {},
+                count:        isAll ? null : (Array.isArray(ids) ? ids.length : 0),
+            };
+            if (isAll) {
+                create_message('Selection locked to "all rules matching the current filters" — exact count is resolved when the job starts.', 'info-subtle');
+            } else {
+                create_message(`${ownershipSelection.value.count} rule(s) selected.`, 'success-subtle');
+            }
+        }
+
+        async function launchOwnershipJob() {
+            if (launchingOwnership.value || !targetUser.value || !ownershipSelection.value) return;
+            if (ownershipSelection.value.mode === 'partial' && ownershipSelection.value.count === 0) return;
+
+            launchingOwnership.value = true;
+            const sel = ownershipSelection.value;
+            const filtersPayload = sel.mode === 'all'
+                ? { ...sel.filters }
+                : { rule_ids: sel.selected_ids };
+
+            const label = sel.mode === 'all'
+                ? `Transfer ownership of all matching rules to ${targetUser.value.username}`
+                : `Transfer ownership of ${sel.count} rule(s) to ${targetUser.value.username}`;
+
+            try {
+                const res  = await fetch('/jobs/create', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                    body: JSON.stringify({
+                        job_type: 'bulk_transfer_ownership',
+                        payload: {
+                            new_owner_id: targetUser.value.id,
+                            filters:      filtersPayload,
+                        },
+                        label,
+                    }),
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    ownershipJobUuid.value = data.job.uuid;
+                    create_message('Job queued! Transferring ownership in the background…', 'success-subtle');
+                } else {
+                    create_message(data.error || 'Failed to create job.', 'danger-subtle');
+                }
+            } catch {
+                create_message('Network error.', 'danger-subtle');
+            } finally {
+                launchingOwnership.value = false;
+            }
+        }
+
+        function onOwnershipJobDone(job) {
+            create_message(`Done! ${job.done.toLocaleString()} rule(s) transferred.`, 'success-subtle');
+            ownershipSelection.value = null;
+            targetUser.value = null;
+        }
+        function onOwnershipJobFailed(job) {
+            create_message(`Job failed: ${job.error}`, 'danger-subtle');
+        }
 
         const pendingItems       = ref([]);
         const historyItems       = ref([]);
@@ -352,6 +582,12 @@ createApp({
             currentItems, filteredItems, pagedItems,
             totalPages, visiblePages, pendingTotal, processTotal,
             switchTab, goPage, reload, navigate,
+            currentUserId, isAdmin,
+            viewMode,
+            ownershipRuleListRef, ownershipSelection, targetUser,
+            launchingOwnership, ownershipJobUuid,
+            handleOwnershipSend, launchOwnershipJob,
+            onOwnershipJobDone, onOwnershipJobFailed,
         };
     }
 }).mount('#req-app');

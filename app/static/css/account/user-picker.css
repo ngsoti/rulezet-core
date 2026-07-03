@@ -1,0 +1,109 @@
+/* ── UserPicker component ────────────────────────────────────────────────── */
+.user-picker {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+}
+
+.user-picker__selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6rem;
+    padding: .6rem .8rem;
+    border-radius: 10px;
+    background: rgba(13, 110, 253, .08);
+    border: 1px solid rgba(13, 110, 253, .25);
+}
+
+.user-picker__clear {
+    border: none;
+    background: transparent;
+    color: var(--subtle-text-color);
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.user-picker__clear:hover { color: #dc3545; }
+
+.user-picker__search {
+    position: relative;
+}
+.user-picker__search i {
+    position: absolute;
+    left: .7rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--subtle-text-color);
+    font-size: .78rem;
+    pointer-events: none;
+}
+.user-picker__search input {
+    width: 100%;
+    padding: .45rem .7rem .45rem 2rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--light-bg-color);
+    color: var(--text-color);
+    font-size: .82rem;
+    outline: none;
+    transition: border-color .15s ease;
+}
+.user-picker__search input:focus {
+    border-color: #0d6efd;
+}
+
+.user-picker__list {
+    max-height: 260px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-picker__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: .45rem .6rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background .12s ease;
+}
+.user-picker__row:hover {
+    background: var(--light-bg-color);
+}
+
+.user-picker__admin-badge {
+    font-size: .62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    background: rgba(220, 53, 69, .1);
+    color: #dc3545;
+    flex-shrink: 0;
+}
+
+.user-picker__empty {
+    text-align: center;
+    padding: 1.5rem 0;
+    color: var(--subtle-text-color);
+    font-size: .82rem;
+}
+.user-picker__empty i {
+    display: block;
+    font-size: 1.3rem;
+    opacity: .35;
+}
+
+.user-picker__pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+}

@@ -22,7 +22,7 @@ from pathlib import Path
 
 from app.features.jobs.job_worker import register_handler
 from app import db
-from app.core.db_class.db import Rule, Tag, RuleTagAssociation, BackgroundJob, BackgroundJobLog, ActivityLog, RequestOwnerRule
+from app.core.db_class.db import Rule, Tag, RuleTagAssociation, BackgroundJob, BackgroundJobLog, ActivityLog, RequestOwnerRule, User
 from app.features.rule.rule_core import _wipe_rule_children
 import json as _json
 
@@ -1830,6 +1830,115 @@ def handle_ownership_transfer_bulk(job, app):
         log_job(job, f"Notification error: {_e}", level='warning')
 
     log_job(job, f"Done — {transferred} rule(s) transferred.", level='success', event='done')
+
+
+# ─── bulk_transfer_ownership (admin manual grant, no formal request) ──────────
+
+@register_handler('bulk_transfer_ownership')
+def handle_bulk_transfer_ownership(job, app):
+    """
+    Admin-initiated ownership transfer — picks rules directly via the
+    RuleList selector (no RequestOwnerRule involved), grants ownership to an
+    arbitrary target user.
+
+    Payload:
+        new_owner_id : int   — user to become the new owner
+        filters      : dict  — same shape _build_rule_query expects
+                                ({'rule_ids': [...]} for a manual pick, or
+                                filter criteria for "all matching")
+    """
+    payload      = job.payload or {}
+    new_owner_id = payload.get('new_owner_id')
+    filters      = payload.get('filters', {})
+    offset       = payload.get('_resume_offset', 0)
+
+    if not new_owner_id:
+        raise ValueError("No new_owner_id provided.")
+
+    new_owner = User.query.get(new_owner_id)
+    if not new_owner:
+        raise ValueError(f"Target user #{new_owner_id} not found.")
+
+    rule_query = _build_rule_query(filters)
+
+    if job.total == 0:
+        job.total = rule_query.count()
+        db.session.commit()
+        log_job(job,
+            f"Job started — granting ownership of {job.total} rule(s) to "
+            f"{new_owner.get_username()} (#{new_owner_id}).",
+            level='info', event='started')
+    elif offset > 0:
+        log_job(job,
+            f"Resuming from offset {offset} ({offset}/{job.total} already processed, "
+            f"{job.progress_pct}% done)",
+            level='info', event='resumed')
+
+    if job.total == 0:
+        log_job(job, "No rules matched the filters — nothing to do.", level='warning', event='done')
+        return
+
+    batch_num   = 0
+    transferred = 0
+
+    while True:
+        if _is_cancelled(job):
+            log_job(job,
+                f"Job cancelled at offset {offset} ({job.progress_pct}% done — "
+                f"{transferred} rule(s) transferred so far).",
+                level='warning', event='cancelled')
+            return
+        if _should_pause(job):
+            _save_offset(job, offset)
+            db.session.commit()
+            log_job(job,
+                f"Job paused at offset {offset} ({job.progress_pct}% done). Click Resume to continue.",
+                level='info', event='paused')
+            return
+
+        batch_ids = [
+            r[0] for r in
+            rule_query.with_entities(Rule.id).offset(offset).limit(OWNERSHIP_BATCH).all()
+        ]
+        if not batch_ids:
+            break
+
+        Rule.query.filter(Rule.id.in_(batch_ids)).update(
+            {"user_id": new_owner_id}, synchronize_session=False
+        )
+
+        # A rule reassigned by an admin shouldn't leave a stale pending claim
+        # for the OLD owner sitting in the requests queue.
+        RequestOwnerRule.query.filter(
+            RequestOwnerRule.rule_id.in_(batch_ids),
+            RequestOwnerRule.status == 'pending',
+        ).update(
+            {"status": "rejected", "user_id_to_send": new_owner_id},
+            synchronize_session=False,
+        )
+
+        db.session.commit()
+        transferred += len(batch_ids)
+        offset      += len(batch_ids)
+        batch_num   += 1
+        job.done     = transferred
+        _save_offset(job, offset)
+        db.session.commit()
+
+        if batch_num % LOG_EVERY == 0:
+            log_job(job,
+                f"Progress: {job.done}/{job.total} rules ({job.progress_pct}%) transferred.",
+                level='info', event='progress')
+
+    try:
+        from app.features.notification.notification_core import notify_ownership_granted
+        notify_ownership_granted(new_owner_id, transferred)
+    except Exception as _e:
+        log_job(job, f"Notification error: {_e}", level='warning')
+
+    log_job(job,
+        f"Done — {transferred} rule(s) transferred to {new_owner.get_username()}.",
+        level='success', event='done')
 
 
 # ─── ATT&CK: update catalogue from MITRE ─────────────────────────────────────

@@ -121,7 +121,11 @@ const JobTracker = {
             if (confirmMsg && !confirm(confirmMsg)) return;
             acting.value = action;
             try {
-                const res = await fetch(`/jobs/${action}/${props.jobUuid}`, { method: 'POST' });
+                const csrfToken = document.getElementById('csrf_token')?.value || '';
+                const res = await fetch(`/jobs/${action}/${props.jobUuid}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                });
                 const data = await res.json();
                 if (res.ok) {
                     if (action === 'delete') {

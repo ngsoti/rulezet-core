@@ -1660,7 +1660,21 @@ export default {
 
         function emitSend() {
             const ids = allPagesSelected.value ? 'ALL' : Array.from(selectedIds)
-            const filters = { format: ruleType.value || null }
+            // Full active filter set — not just format — so "select all matching"
+            // actually scopes to what's on screen (search/tags/sources/etc.),
+            // not every rule in the database. `format` is kept (not renamed to
+            // rule_type) for consumers already reading filters.format.
+            // Mirrors _build_rule_query's accepted field names.
+            const filters = {
+                format:          ruleType.value || null,
+                search:          search.value.trim() || null,
+                search_field:    searchField.value !== 'all' ? searchField.value : null,
+                exact_match:     exactMatch.value || null,
+                sources:         selectedSources.value.length  ? selectedSources.value.join(',')  : null,
+                licenses:        selectedLicenses.value.length ? selectedLicenses.value.join(',') : null,
+                vulnerabilities: selectedVulns.value.length    ? selectedVulns.value.join(',')    : null,
+                tags:            selectedTags.value.length     ? selectedTags.value.join(',')     : null,
+            }
             emit('send', ids, filters)
         }
 

@@ -687,6 +687,24 @@ def notify_ownership_decision(ownership_request, approved, rule_title=None):
         print(f"[notification_core] notify_ownership_decision error: {e}")
 
 
+def notify_ownership_granted(new_owner_id, rule_count):
+    """
+    Notify a user that an admin manually granted them ownership of some
+    rules — the manual/bulk counterpart to notify_ownership_decision, which
+    only fires for the formal claim-a-rule request flow.
+    """
+    try:
+        create_notification(
+            user_id    = new_owner_id,
+            notif_type = 'ownership_approved',
+            title      = 'You were granted rule ownership',
+            body       = f'An admin made you the owner of {rule_count} rule(s).',
+            link       = '/rule/owner_rules',
+        )
+    except Exception as e:
+        print(f"[notification_core] notify_ownership_granted error: {e}")
+
+
 def delete_all_notifications(user_id):
     """Hard-delete every notification row for this user."""
     try:
