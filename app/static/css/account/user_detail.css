@@ -15,7 +15,7 @@
     position: absolute;
     inset: 0;
     height: 90px;
-    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 60%, #6f42c1 100%);
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
     opacity: .12;
     pointer-events: none;
 }
@@ -50,7 +50,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #0d6efd, #6f42c1);
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
     color: #fff;
     font-size: 2rem;
     font-weight: 700;
