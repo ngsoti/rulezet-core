@@ -425,7 +425,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
 
                                 <!-- GitHub source -->
                                 <a v-if="currentRule.github_path"
-                                   :href="currentRule.source.replace(/\.git$/, '') + '/blob/HEAD/' + currentRule.github_path"
+                                   :href="githubBlobUrl(currentRule)"
                                    target="_blank" rel="noopener noreferrer"
                                    class="btn btn-sm rounded-pill px-3"
                                    style="background:transparent; border:1px solid var(--border-color); color:var(--subtle-text-color);"
@@ -862,6 +862,22 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
             const csrf_token = '{{ csrf_token() }}';
             const userVote = ref({{ current_user_vote | tojson }});
 
+            // github_path is sometimes stored as the LOCAL clone path
+            // (app/rule_from_github/Rules_Github/<owner>/<repo[--branch]>/<path>)
+            // instead of the path relative to the repo root — strip that prefix
+            // here so the "View on GitHub" link always points at a real file.
+            function githubBlobUrl(rule) {
+                if (!rule || !rule.github_path || !rule.source) return null;
+                let path = rule.github_path;
+                const marker = 'Rules_Github/';
+                const idx = path.indexOf(marker);
+                if (idx !== -1) {
+                    const rest = path.slice(idx + marker.length).split('/');
+                    path = rest.slice(2).join('/'); // drop <owner>/<repo[--branch]> segments
+                }
+                return rule.source.replace(/\.git$/, '') + '/blob/HEAD/' + path;
+            }
+
             // ── Server-side data passed via window.__ vars ──────────────
 
             const ruleJsonData   = ref(window.__rule_json   || '');  // already a JSON string from json.dumps
@@ -1259,6 +1275,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                 bundleListRule,
                 Ownership,
                 favorite,
+                githubBlobUrl,
                 current_user_is_admin,
                 message_list,
                 fetchCurrentUser,
