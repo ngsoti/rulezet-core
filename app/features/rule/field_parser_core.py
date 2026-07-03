@@ -2,9 +2,11 @@
 Bulk field parser — extracts metadata from rule content and updates Rule fields.
 Used by the admin bulk parse page and the bulk_parse_fields background job.
 """
+import json
 import re
 from app import db
 from app.core.db_class.db import FieldParserConfig
+from app.core.utils.utils import detect_cve
 
 # Fields that can be parsed from rule content. Order matters for with_entities queries.
 PARSEABLE_FIELD_KEYS = ['license', 'author', 'original_uuid', 'description', 'version', 'title']
@@ -62,6 +64,36 @@ def parse_field_from_content(content: str, field_cfg: dict):
                 if val:
                     return val
     return None
+
+
+def rescan_cve_ids(content: str, existing_cve_raw):
+    """
+    Re-scan rule content for CVE/vulnerability identifiers and MERGE them into
+    the rule's existing list — additive only, never removes or duplicates an
+    already-associated identifier.
+
+    Returns (changed: bool, new_cve_json: str | None). new_cve_json is only
+    set when changed is True.
+    """
+    existing = []
+    if existing_cve_raw:
+        try:
+            parsed = json.loads(existing_cve_raw) if isinstance(existing_cve_raw, str) else existing_cve_raw
+            if isinstance(parsed, list):
+                existing = [v.strip() for v in parsed if isinstance(v, str) and v.strip()]
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    _, found_json = detect_cve(content)
+    try:
+        found = json.loads(found_json) if found_json else []
+    except (json.JSONDecodeError, TypeError):
+        found = []
+
+    merged = sorted(set(existing) | set(found))
+    if merged == sorted(existing):
+        return False, None
+    return True, json.dumps(merged)
 
 
 # ── Config CRUD ─────────────────────────────────────────────────────────────

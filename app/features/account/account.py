@@ -710,19 +710,20 @@ def bulk_parse_fields_trigger():
     rule_ids      = data.get('rule_ids', 'ALL')
     fields_config = data.get('fields_config', {})
     format_filter = (data.get('format_filter') or '').strip() or None
-    if not fields_config:
-        return jsonify({'success': False, 'message': 'No fields configured'}), 400
+    rescan_cve    = bool(data.get('rescan_cve'))
     enabled = [k for k, v in fields_config.items() if v.get('enabled')]
-    if not enabled:
+    if not enabled and not rescan_cve:
         return jsonify({'success': False, 'message': 'No fields enabled'}), 400
     count = len(rule_ids) if isinstance(rule_ids, list) else (format_filter or 'ALL')
+    label_bits = list(enabled) + (['cve/vulnerability'] if rescan_cve else [])
     job = create_job(
         job_type='bulk_parse_fields',
-        label=f'Bulk parse fields ({", ".join(enabled)})',
-        payload={'rule_ids': rule_ids, 'format_filter': format_filter, 'fields_config': fields_config},
+        label=f'Bulk parse fields ({", ".join(label_bits)})',
+        payload={'rule_ids': rule_ids, 'format_filter': format_filter,
+                 'fields_config': fields_config, 'rescan_cve': rescan_cve},
         created_by=current_user.id,
     )
-    log_activity('admin.bulk_parse_fields', f'Triggered bulk field parse for {count} rules, fields: {", ".join(enabled)}',
+    log_activity('admin.bulk_parse_fields', f'Triggered bulk field parse for {count} rules, fields: {", ".join(label_bits)}',
                  target_type='job', target_id=job.id)
     return jsonify({'success': True, 'job_uuid': job.uuid})
 

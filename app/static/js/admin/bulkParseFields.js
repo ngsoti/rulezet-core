@@ -120,12 +120,21 @@ const FieldParserUpdater = {
             return out;
         }
 
+        // ── CVE / vulnerability re-scan ──────────────────────────────────────
+        // Not keyword/regex-based like the other fields: scans the FULL rule
+        // content with the same detect_cve() pattern used at rule creation, and
+        // MERGES any newly found identifiers into the existing list — it never
+        // overwrites or removes a CVE a rule already has.
+        const cveRescanEnabled = ref(false);
+
         const enabledCount = computed(() =>
             props.parseableFields.filter(k => fieldConfigs[k]?.enabled).length
+            + (cveRescanEnabled.value ? 1 : 0)
         );
 
         function toggleAll(val) {
             props.parseableFields.forEach(k => { if (fieldConfigs[k]) fieldConfigs[k].enabled = val; });
+            cveRescanEnabled.value = val;
         }
 
         // ── Saved configs ─────────────────────────────────────────────────
@@ -284,6 +293,7 @@ const FieldParserUpdater = {
                 rule_ids:      selectionMode.value === 'ALL' ? 'ALL' : selectedIds.value,
                 format_filter: selectionMode.value === 'ALL' ? (formatFilter.value || null) : null,
                 fields_config: buildPayloadConfig(),
+                rescan_cve:    cveRescanEnabled.value,
             };
 
             try {
@@ -307,11 +317,15 @@ const FieldParserUpdater = {
 
         // JSON preview
         const showJson = ref(false);
-        const jsonPreview = computed(() => JSON.stringify(buildPayloadConfig(), null, 2));
+        const jsonPreview = computed(() => JSON.stringify(
+            { ...buildPayloadConfig(), cve_vulnerability: { enabled: cveRescanEnabled.value, mode: 'merge, never overwrite' } },
+            null, 2
+        ));
 
         return {
             selectedIds, selectionMode, selectionCount, onSend,
             fieldConfigs, enabledCount, toggleAll,
+            cveRescanEnabled,
             savedConfigs, saveConfigName, savingConfig, loadedConfigId,
             saveCurrentConfig, updateCurrentConfig, saveAsNewConfig, clearLoadedConfig, deleteConfig, loadConfig,
             running, jobUuid, jobStatus, jobLogs, jobDone, jobTotal, jobPct,
@@ -381,6 +395,29 @@ const FieldParserUpdater = {
                        v-model="fieldConfigs[key].regex" placeholder='(?i)license[:\\s]+(.+)'>
               </div>
             </template>
+          </div>
+
+          <!-- CVE / Vulnerability re-scan — not keyword/regex based, always scans full content -->
+          <div class="rounded-3 border p-3"
+               :style="{ borderColor: cveRescanEnabled ? '#dc354555' : 'var(--border-color)', background: cveRescanEnabled ? '#dc354508' : 'var(--light-bg-color)' }">
+            <div class="d-flex align-items-center gap-2">
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="toggle_cve"
+                       v-model="cveRescanEnabled" style="cursor:pointer;">
+              </div>
+              <label for="toggle_cve" class="fw-semibold mb-0 d-flex align-items-center gap-2" style="cursor:pointer;font-size:.9rem;color:var(--text-color);">
+                <i class="fa-solid fa-shield-virus" style="color:#dc3545;"></i>
+                CVE / Vulnerability
+              </label>
+              <span class="ms-auto badge rounded-pill" style="background:#dc354522;color:#dc3545;border:1px solid #dc354544;font-size:.68rem;">
+                merge only — never overwrites
+              </span>
+            </div>
+            <p class="text-muted small mb-0 mt-2" style="font-size:.78rem;">
+              Re-scans the <strong>entire rule content</strong> (not just description) for CVE/GHSA/PYSEC/…
+              identifiers. Any newly found id is <strong>added</strong> to the rule's existing vulnerability list —
+              identifiers already associated are kept as-is and never duplicated or removed.
+            </p>
           </div>
         </div>
 

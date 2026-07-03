@@ -2081,39 +2081,47 @@ def handle_bulk_parse_fields(job, app):
     Parse rule content and update metadata fields (license, author, original_uuid, etc.)
     based on keyword/regex config provided in the job payload.
     """
-    from app.features.rule.field_parser_core import parse_field_from_content, PARSEABLE_FIELD_KEYS
+    from app.features.rule.field_parser_core import parse_field_from_content, rescan_cve_ids, PARSEABLE_FIELD_KEYS
 
     payload       = job.payload or {}
     rule_ids      = payload.get('rule_ids', 'ALL')
     format_filter = payload.get('format_filter') or None
     fields_config = payload.get('fields_config', {})
+    rescan_cve    = bool(payload.get('rescan_cve'))
     offset        = payload.get('_resume_offset', 0)
 
     enabled_fields = [k for k, v in fields_config.items() if v.get('enabled')]
-    if not enabled_fields:
+    if not enabled_fields and not rescan_cve:
         log_job(job, 'No fields enabled — nothing to do.', level='warning', event='done')
         job.done = job.total or 0
         db.session.commit()
         return
 
-    # with_entities column order: id, to_string, license, author, original_uuid, description, version, title
-    FIELD_IDX = {k: i + 2 for i, k in enumerate(PARSEABLE_FIELD_KEYS)}
+    # with_entities column order: id, to_string, license, author, original_uuid, description, version, title, cve_id
+    FIELD_IDX  = {k: i + 2 for i, k in enumerate(PARSEABLE_FIELD_KEYS)}
+    CVE_IDX    = 2 + len(PARSEABLE_FIELD_KEYS)
 
-    q = Rule.query.filter(Rule.is_deleted == False)
+    # Deterministic order is required: this job UPDATES the very rows it pages
+    # through via OFFSET/LIMIT, and OFFSET pagination without a stable ORDER BY
+    # can silently skip or re-show rows as the table is mutated mid-scan —
+    # rows skipped this way looked like "new" CVEs again on the next full run.
+    q = Rule.query.filter(Rule.is_deleted == False).order_by(Rule.id.asc())
     if rule_ids != 'ALL':
         q = q.filter(Rule.id.in_(rule_ids))
     elif format_filter:
         q = q.filter(Rule.format == format_filter)
 
+    label_bits = list(enabled_fields) + (['cve/vulnerability'] if rescan_cve else [])
     if job.total == 0:
         job.total = q.count()
         db.session.commit()
-        log_job(job, f'Starting — {job.total} rules to process, fields: {", ".join(enabled_fields)}.',
+        log_job(job, f'Starting — {job.total} rules to process, fields: {", ".join(label_bits)}.',
                 level='info', event='start')
     else:
         log_job(job, f'Resuming from offset {offset}.', level='info', event='resume')
 
     total_updated = 0
+    total_cve_added = 0
     batch_num     = 0
 
     while True:
@@ -2128,6 +2136,7 @@ def handle_bulk_parse_fields(job, app):
                 Rule.id, Rule.to_string,
                 Rule.license, Rule.author, Rule.original_uuid,
                 Rule.description, Rule.version, Rule.title,
+                Rule.cve_id,
             )
             .offset(offset)
             .limit(FIELD_PARSE_BATCH)
@@ -2154,6 +2163,12 @@ def handle_bulk_parse_fields(job, app):
                 if new_val:
                     updates[field_key] = new_val
 
+            if rescan_cve:
+                changed, new_cve_json = rescan_cve_ids(content, row[CVE_IDX])
+                if changed:
+                    updates['cve_id'] = new_cve_json
+                    total_cve_added += 1
+
             if updates:
                 Rule.query.filter(Rule.id == rule_id).update(updates)
                 total_updated += 1
@@ -2166,11 +2181,15 @@ def handle_bulk_parse_fields(job, app):
 
         batch_num += 1
         if batch_num % FIELD_PARSE_LOG_EVERY == 0:
-            log_job(job, f'{offset}/{job.total} rules processed, {total_updated} rules updated.',
-                    level='info', event='progress')
+            msg = f'{offset}/{job.total} rules processed, {total_updated} rules updated'
+            if rescan_cve:
+                msg += f' ({total_cve_added} with new CVE/vulnerability ids)'
+            log_job(job, msg + '.', level='info', event='progress')
 
-    log_job(job, f'Done — {offset} rules processed, {total_updated} rules updated.',
-            level='success', event='done')
+    done_msg = f'Done — {offset} rules processed, {total_updated} rules updated'
+    if rescan_cve:
+        done_msg += f', {total_cve_added} rule(s) got new CVE/vulnerability ids merged in'
+    log_job(job, done_msg + '.', level='success', event='done')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
