@@ -799,7 +799,7 @@
             };
 
             const stats = computed(() => [
-                { label: 'Rules', value: rules.value.length, icon: 'fa-solid fa-file-shield', color: 'text-primary' },
+                { label: 'Rules', value: totalRules.value, icon: 'fa-solid fa-file-shield', color: 'text-primary' },
                 { label: 'Views', value: bundle.value?.view_count || 0, icon: 'fa-solid fa-eye', color: 'text-secondary' },
                 { label: 'Downloads', value: bundle.value?.download_count || 0, icon: 'fa-solid fa-download', color: 'text-success' },
                 { label: 'Score', value: (bundle.value?.vote_up || 0) - (bundle.value?.vote_down || 0), icon: 'fa-solid fa-star', color: 'text-warning' }
