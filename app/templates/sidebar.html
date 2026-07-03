@@ -131,79 +131,82 @@
                      <i class="fa-solid fa-shield-halved fa-fw me-1 text-danger"></i>Admin
                   </a>
                   <div class="dropdown-menu dropdown-menu-end admin-mega-menu">
+                     <div class="row g-3">
 
-                     <!-- Community -->
-                     <nav class="dr-nav">
-                        <span class="dr-nav__label">Community</span>
-                        <a href="/account/admin/all_users" class="dr-nav__item {% if request.path == '/account/admin/all_users' %}active{% endif %}">
-                           <i class="fa-solid fa-users"></i><span>Users</span>
-                        </a>
-                        <a href="/admin/request" class="dr-nav__item {% if request.path == '/admin/request' %}active{% endif %}">
-                           <i class="fa-solid fa-envelope"></i><span>Requests</span>
-                           <span v-if="requests_to_validate > 0" class="dr-nav__badge">[[ requests_to_validate ]]</span>
-                        </a>
-                        <a href="/report/admin" class="dr-nav__item {% if request.path.startswith('/report/admin') %}active{% endif %}">
-                           <i class="fa-solid fa-triangle-exclamation"></i><span>Reports</span>
-                           <span v-if="reports_to_check > 0" class="dr-nav__badge">[[ reports_to_check ]]</span>
-                        </a>
-                     </nav>
+                        <!-- Community -->
+                        <div class="col-4">
+                           <div class="dr-nav-col__title">Community</div>
+                           <div class="dr-nav-col">
+                              <a href="/account/admin/all_users" class="dr-nav__item {% if request.path == '/account/admin/all_users' %}active{% endif %}">
+                                 <i class="fa-solid fa-users"></i><span>Users</span>
+                              </a>
+                              <a href="/admin/request" class="dr-nav__item {% if request.path == '/admin/request' %}active{% endif %}">
+                                 <i class="fa-solid fa-envelope"></i><span>Requests</span>
+                                 <span v-if="requests_to_validate > 0" class="dr-nav__badge">[[ requests_to_validate ]]</span>
+                              </a>
+                              <a href="/report/admin" class="dr-nav__item {% if request.path.startswith('/report/admin') %}active{% endif %}">
+                                 <i class="fa-solid fa-triangle-exclamation"></i><span>Reports</span>
+                                 <span v-if="reports_to_check > 0" class="dr-nav__badge">[[ reports_to_check ]]</span>
+                              </a>
+                              <a href="/blog/admin/" class="dr-nav__item {% if request.path.startswith('/blog/admin') %}active{% endif %}">
+                                 <i class="fa-solid fa-newspaper"></i><span>Blog</span>
+                              </a>
+                           </div>
+                        </div>
 
-                     <!-- Content -->
-                     <nav class="dr-nav">
-                        <span class="dr-nav__label">Content</span>
-                        <a href="/rule/admin/manage_format_rule" class="dr-nav__item {% if request.path == '/rule/admin/manage_format_rule' %}active{% endif %}">
-                           <i class="fa-solid fa-file-code"></i><span>Formats</span>
-                        </a>
-                        <a href="/tags/admin/list" class="dr-nav__item {% if request.path.startswith('/tags/admin/list') %}active{% endif %}">
-                           <i class="fa-solid fa-tag"></i><span>Tags</span>
-                        </a>
-                        <a href="/attack/admin/list" class="dr-nav__item {% if request.path.startswith('/attack/admin') %}active{% endif %}">
-                           <i class="fa-solid fa-crosshairs"></i><span>ATT&amp;CK</span>
-                        </a>
-                        <a href="/admin/similar_rules" class="dr-nav__item {% if request.path == '/admin/similar_rules' %}active{% endif %}">
-                           <i class="fa-solid fa-code-compare"></i><span>Duplicates</span>
-                        </a>
-                        <a href="/rule/trash" class="dr-nav__item {% if request.path == '/rule/trash' %}active{% endif %}">
-                           <i class="fa-solid fa-trash-can-arrow-up"></i><span>Trash</span>
-                        </a>
-                        <a href="/rule/bulk_tag" class="dr-nav__item {% if request.path == '/rule/bulk_tag' %}active{% endif %}">
-                           <i class="fa-solid fa-tags"></i><span>Bulk Tag</span>
-                        </a>
-                        <a href="/account/admin/bulk_parse_fields" class="dr-nav__item {% if request.path == '/account/admin/bulk_parse_fields' %}active{% endif %}">
-                           <i class="fa-solid fa-wand-magic-sparkles"></i><span>Field Parser</span>
-                        </a>
-                        <a href="/blog/admin/" class="dr-nav__item {% if request.path.startswith('/blog/admin') %}active{% endif %}">
-                           <i class="fa-solid fa-newspaper"></i><span>Blog</span>
-                        </a>
-                     </nav>
+                        <!-- Content -->
+                        <div class="col-4">
+                           <div class="dr-nav-col__title">Content</div>
+                           <div class="dr-nav-col">
+                              <a href="/rule/admin/manage_format_rule" class="dr-nav__item {% if request.path == '/rule/admin/manage_format_rule' %}active{% endif %}">
+                                 <i class="fa-solid fa-file-code"></i><span>Formats</span>
+                              </a>
+                              <a href="/tags/admin/list" class="dr-nav__item {% if request.path.startswith('/tags/admin/list') %}active{% endif %}">
+                                 <i class="fa-solid fa-tag"></i><span>Tags</span>
+                              </a>
+                              <a href="/attack/admin/list" class="dr-nav__item {% if request.path.startswith('/attack/admin') %}active{% endif %}">
+                                 <i class="fa-solid fa-crosshairs"></i><span>ATT&amp;CK</span>
+                              </a>
+                              <a href="/admin/similar_rules" class="dr-nav__item {% if request.path == '/admin/similar_rules' %}active{% endif %}">
+                                 <i class="fa-solid fa-code-compare"></i><span>Duplicates</span>
+                              </a>
+                              <a href="/rule/trash" class="dr-nav__item {% if request.path == '/rule/trash' %}active{% endif %}">
+                                 <i class="fa-solid fa-trash-can-arrow-up"></i><span>Trash</span>
+                              </a>
+                              <a href="/rule/bulk_tag" class="dr-nav__item {% if request.path == '/rule/bulk_tag' %}active{% endif %}">
+                                 <i class="fa-solid fa-tags"></i><span>Bulk Tag</span>
+                              </a>
+                              <a href="/account/admin/bulk_parse_fields" class="dr-nav__item {% if request.path == '/account/admin/bulk_parse_fields' %}active{% endif %}">
+                                 <i class="fa-solid fa-wand-magic-sparkles"></i><span>Field Parser</span>
+                              </a>
+                           </div>
+                        </div>
 
-                     <!-- System -->
-                     <nav class="dr-nav">
-                        <span class="dr-nav__label">System</span>
-                        <a href="/connector/list" class="dr-nav__item {% if request.path.startswith('/connector') %}active{% endif %}">
-                           <i class="fa-solid fa-plug"></i><span>Connectors</span>
-                        </a>
-                        <a href="/admin/jobs/list" class="dr-nav__item {% if request.path.startswith('/admin/jobs') or request.path.startswith('/jobs') %}active{% endif %}">
-                           <i class="fa-solid fa-gears"></i><span>Jobs</span>
-                        </a>
-                        <a href="/admin/logs" class="dr-nav__item {% if request.path == '/admin/logs' %}active{% endif %}">
-                           <i class="fa-solid fa-list-ul"></i><span>Logs</span>
-                        </a>
-                        <a href="/admin/settings" class="dr-nav__item {% if request.path == '/admin/settings' %}active{% endif %}">
-                           <i class="fa-solid fa-sliders"></i><span>Server Settings</span>
-                        </a>
-                     </nav>
+                        <!-- System -->
+                        <div class="col-4">
+                           <div class="dr-nav-col__title">System</div>
+                           <div class="dr-nav-col">
+                              <a href="/connector/list" class="dr-nav__item {% if request.path.startswith('/connector') %}active{% endif %}">
+                                 <i class="fa-solid fa-plug"></i><span>Connectors</span>
+                              </a>
+                              <a href="/admin/jobs/list" class="dr-nav__item {% if request.path.startswith('/admin/jobs') or request.path.startswith('/jobs') %}active{% endif %}">
+                                 <i class="fa-solid fa-gears"></i><span>Jobs</span>
+                              </a>
+                              <a href="/admin/logs" class="dr-nav__item {% if request.path == '/admin/logs' %}active{% endif %}">
+                                 <i class="fa-solid fa-list-ul"></i><span>Logs</span>
+                              </a>
+                              <a href="/admin/settings" class="dr-nav__item {% if request.path == '/admin/settings' %}active{% endif %}">
+                                 <i class="fa-solid fa-sliders"></i><span>Server Settings</span>
+                              </a>
+                              {% if config.IS_OFFICIAL_INSTANCE %}
+                              <a href="/account/admin/instances" class="dr-nav__item {% if request.path == '/account/admin/instances' %}active{% endif %}">
+                                 <i class="fa-solid fa-earth-americas"></i><span>Instances</span>
+                              </a>
+                              {% endif %}
+                           </div>
+                        </div>
 
-                     {% if config.IS_OFFICIAL_INSTANCE %}
-                     <!-- Federation (rulezet.org only) -->
-                     <nav class="dr-nav">
-                        <span class="dr-nav__label">Federation</span>
-                        <a href="/account/admin/instances" class="dr-nav__item {% if request.path == '/account/admin/instances' %}active{% endif %}">
-                           <i class="fa-solid fa-earth-americas"></i><span>Instances</span>
-                        </a>
-                     </nav>
-                     {% endif %}
-
+                     </div>
                   </div>
                </li>
                {% endif %}

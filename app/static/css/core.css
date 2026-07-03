@@ -2885,24 +2885,37 @@ body.dark-mode .table .opacity-50 {
     .dr-nav__sep { display: none; }
 }
 
-/* ── Admin nav toggle (collapsed by default, see macros/admin_nav.html) ──── */
+/* ── Admin nav toggle (collapsed by default, see macros/admin_nav.html) ────
+   Sits inline as a dr-nav__item so it reads as "one more tab" next to a
+   page's own tabs, with a dashed border to still mark it as a toggle. */
 .dr-nav-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 7px 14px;
-    border-radius: 10px;
-    border: 1px solid var(--border-color);
-    background: var(--card-bg-color);
-    color: var(--subtle-text-color);
-    font-size: .78rem;
-    font-weight: 600;
-}
-.dr-nav-toggle:hover {
-    color: var(--text-color);
-    background: var(--light-bg-color);
+    border: 1px dashed var(--border-color);
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
 }
 .dr-nav-toggle .fa-chevron-down {
     font-size: .68rem;
     transition: transform .2s ease;
+}
+
+/* ── Admin mega-menu columns (navbar Admin dropdown) ──────────────────────── */
+.dr-nav-col__title {
+    font-size: .64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--subtle-text-color);
+    opacity: .55;
+    padding: 0 6px;
+    margin-bottom: 6px;
+    white-space: nowrap;
+}
+.dr-nav-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.dr-nav-col .dr-nav__item {
+    width: 100%;
 }

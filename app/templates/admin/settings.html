@@ -33,31 +33,30 @@
         </p>
     </div>
 
-    {{ anav.admin_nav('settings') }}
-
-    <!-- ── Tabs ── -->
-    <div class="d-flex justify-content-start mb-4">
-        <div class="dr-nav" id="settingsTabs" role="tablist">
-            <a class="dr-nav__item active" data-bs-toggle="tab" href="#pane-system" role="tab">
-                <i class="fa-solid fa-server"></i><span>System</span>
-            </a>
-            <!-- Libraries tab disabled -->
-            <!-- <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-packages" role="tab" @click="loadPackages">
-                <i class="fa-solid fa-cubes"></i><span>Libraries</span>
-                <span v-if="packages.length" class="dr-nav__badge">[[ packages.length ]]</span>
-            </a> -->
-            <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-submodules" role="tab" @click="loadSubmodules">
-                <i class="fa-brands fa-git-alt"></i><span>Submodules</span>
-                <span v-if="submodules.length" class="dr-nav__badge">[[ submodules.length ]]</span>
-            </a>
-            <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-config" role="tab" @click="loadConfig">
-                <i class="fa-solid fa-gear"></i><span>Configuration</span>
-            </a>
-            <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-instance" role="tab" @click="loadInstance">
-                <i class="fa-solid fa-fingerprint"></i><span>Instance</span>
-            </a>
-        </div>
+    <!-- ── Tabs, with Admin navigation as one more item in the same row ── -->
+    <div class="dr-nav mb-4" id="settingsTabs" role="tablist">
+        <a class="dr-nav__item active" data-bs-toggle="tab" href="#pane-system" role="tab">
+            <i class="fa-solid fa-server"></i><span>System</span>
+        </a>
+        <!-- Libraries tab disabled -->
+        <!-- <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-packages" role="tab" @click="loadPackages">
+            <i class="fa-solid fa-cubes"></i><span>Libraries</span>
+            <span v-if="packages.length" class="dr-nav__badge">[[ packages.length ]]</span>
+        </a> -->
+        <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-submodules" role="tab" @click="loadSubmodules">
+            <i class="fa-brands fa-git-alt"></i><span>Submodules</span>
+            <span v-if="submodules.length" class="dr-nav__badge">[[ submodules.length ]]</span>
+        </a>
+        <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-config" role="tab" @click="loadConfig">
+            <i class="fa-solid fa-gear"></i><span>Configuration</span>
+        </a>
+        <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-instance" role="tab" @click="loadInstance">
+            <i class="fa-solid fa-fingerprint"></i><span>Instance</span>
+        </a>
+        <span class="dr-nav__sep"></span>
+        {{ anav.admin_nav_toggle() }}
     </div>
+    {{ anav.admin_nav_panel('settings') }}
 
     <div class="tab-content" id="settingsTabContent">
 
@@ -1305,6 +1304,7 @@ createApp({
         }
 
         loadSystem()
+        loadSubmodules()
 
         return {
             system, systemLoading,

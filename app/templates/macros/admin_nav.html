@@ -1,13 +1,14 @@
-{% macro admin_nav(active, requests_count=0, reports_count=0, jobs_count=0) %}
-
-<!-- Collapsed by default — admins visit these tools less than the page content itself. -->
-<button class="btn btn-sm dr-nav-toggle mb-2" type="button"
+{% macro admin_nav_toggle() %}
+<!-- Collapsed by default — styled to sit inline with a page's own tabs, like one more of them. -->
+<button class="dr-nav__item dr-nav-toggle" type="button"
         data-bs-toggle="collapse" data-bs-target="#adminNavPanel"
         aria-expanded="false" aria-controls="adminNavPanel">
-    <i class="fa-solid fa-shield-halved me-1"></i>Admin navigation
-    <i class="fa-solid fa-chevron-down ms-1"></i>
+    <i class="fa-solid fa-shield-halved"></i><span>Admin navigation</span>
+    <i class="fa-solid fa-chevron-down"></i>
 </button>
+{% endmacro %}
 
+{% macro admin_nav_panel(active, requests_count=0, reports_count=0, jobs_count=0) %}
 <div class="collapse" id="adminNavPanel">
 
 <!-- Row 1 — Community -->
@@ -36,6 +37,12 @@
         {% if reports_count > 0 %}
         <span class="dr-nav__badge">{{ reports_count }}</span>
         {% endif %}
+    </a>
+
+    <a href="/blog/admin/"
+       class="dr-nav__item {% if active == 'blog' %}active{% endif %}">
+        <i class="fa-solid fa-newspaper"></i>
+        <span>Blog</span>
     </a>
 </nav>
 
@@ -84,12 +91,6 @@
         <i class="fa-solid fa-wand-magic-sparkles"></i>
         <span>Field Parser</span>
     </a>
-
-    <a href="/blog/admin/"
-       class="dr-nav__item {% if active == 'blog' %}active{% endif %}">
-        <i class="fa-solid fa-newspaper"></i>
-        <span>Blog</span>
-    </a>
 </nav>
 
 <!-- Row 3 — System -->
@@ -106,8 +107,9 @@
        class="dr-nav__item {% if active == 'jobs' %}active{% endif %}">
         <i class="fa-solid fa-gears"></i>
         <span>Jobs</span>
-        {% if jobs_count > 0 %}
-        <span class="dr-nav__badge">{{ jobs_count }}</span>
+        {% set _jobs_running = jobs_count if jobs_count > 0 else admin_jobs_running_count() %}
+        {% if _jobs_running > 0 %}
+        <span class="dr-nav__badge">{{ _jobs_running }}</span>
         {% endif %}
     </a>
 
@@ -133,5 +135,9 @@
 </nav>
 
 </div><!-- /#adminNavPanel -->
+{% endmacro %}
 
+{% macro admin_nav(active, requests_count=0, reports_count=0, jobs_count=0) %}
+<div class="dr-nav mb-2">{{ admin_nav_toggle() }}</div>
+{{ admin_nav_panel(active, requests_count, reports_count, jobs_count) }}
 {% endmacro %}

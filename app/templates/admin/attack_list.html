@@ -31,7 +31,26 @@
         </p>
     </div>
 
-    {{ anav.admin_nav('attack') }}
+    <!-- Tabs, with Admin navigation as one more item in the same row -->
+    <div class="dr-nav mb-3" role="tablist">
+        <a class="dr-nav__item active" data-bs-toggle="tab" href="#pane-techniques" role="tab">
+            <i class="fa-solid fa-crosshairs"></i><span>Techniques</span>
+            <span class="dr-nav__badge" style="background:#6c757d;">[[ total ]]</span>
+        </a>
+        <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-update" role="tab">
+            <i class="fa-solid fa-bolt"></i><span>Update &amp; Parse</span>
+        </a>
+        <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-analytics" role="tab" @click="loadAnalytics">
+            <i class="fa-solid fa-chart-bar"></i><span>Analytics</span>
+        </a>
+        <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-gaps" role="tab" @click="loadGaps">
+            <i class="fa-solid fa-triangle-exclamation"></i><span>Coverage Gaps</span>
+            <span v-if="gapTotal > 0" class="dr-nav__badge" style="background:#ffc107;color:#000;">[[ gapTotal ]]</span>
+        </a>
+        <span class="dr-nav__sep"></span>
+        {{ anav.admin_nav_toggle() }}
+    </div>
+    {{ anav.admin_nav_panel('attack') }}
 
     <!-- KPI row -->
     <div class="row g-3 mb-4">
@@ -60,33 +79,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Tabs -->
-    <ul class="nav nav-underline mb-3 align-items-center" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active d-flex align-items-center gap-1" data-bs-toggle="tab" href="#pane-techniques" style="color:var(--text-color);">
-                <i class="fa-solid fa-crosshairs"></i>
-                Techniques
-                <span class="badge bg-secondary rounded-pill ms-1">[[ total ]]</span>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link d-flex align-items-center gap-1" data-bs-toggle="tab" href="#pane-update" style="color:var(--text-color);">
-                <i class="fa-solid fa-bolt"></i>Update &amp; Parse
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link d-flex align-items-center gap-1" data-bs-toggle="tab" href="#pane-analytics" style="color:var(--text-color);" @click="loadAnalytics">
-                <i class="fa-solid fa-chart-bar"></i>Analytics
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link d-flex align-items-center gap-1" data-bs-toggle="tab" href="#pane-gaps" style="color:var(--text-color);" @click="loadGaps">
-                <i class="fa-solid fa-triangle-exclamation"></i>Coverage Gaps
-                <span v-if="gapTotal > 0" class="badge bg-warning-subtle text-warning rounded-pill ms-1" style="font-size:.65rem;">[[ gapTotal ]]</span>
-            </a>
-        </li>
-    </ul>
 
     <div class="tab-content">
 
@@ -562,7 +554,7 @@
             }
 
             async function loadAll() {
-                await Promise.all([loadTechniques(), loadStats()]);
+                await Promise.all([loadTechniques(), loadStats(), loadGaps()]);
             }
 
             function goToPage(p) {

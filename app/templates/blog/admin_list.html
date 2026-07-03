@@ -58,171 +58,160 @@
         </div>
     </div>
 
-    <!-- 2-col layout: admin nav + content -->
-    <div class="row g-4">
+    <!-- Admin nav (collapsed by default) — full width, above the content -->
+    {{ admin_nav('blog') }}
 
-        <!-- Sidebar nav -->
-        <div class="col-12 col-md-3 col-lg-2">
-            {{ admin_nav('blog') }}
+    <!-- Stats row — all 5 cards on one line -->
+    <div class="row row-cols-2 row-cols-md-5 g-3 mb-4">
+        <div class="col">
+            <div class="card border-0 shadow-sm rounded-3 text-center p-3">
+                <div class="fw-bold fs-4 text-primary">[[ stats.total ]]</div>
+                <div class="text-muted" style="font-size:.8rem;">Total Posts</div>
+            </div>
         </div>
-
-        <!-- Main content -->
-        <div class="col-12 col-md-9 col-lg-10">
-
-            <!-- Stats row -->
-            <div class="row g-3 mb-4">
-                <div class="col-6 col-md-3">
-                    <div class="card border-0 shadow-sm rounded-3 text-center p-3">
-                        <div class="fw-bold fs-4 text-primary">[[ stats.total ]]</div>
-                        <div class="text-muted" style="font-size:.8rem;">Total Posts</div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="card border-0 shadow-sm rounded-3 text-center p-3">
-                        <div class="fw-bold fs-4 text-success">[[ stats.public ]]</div>
-                        <div class="text-muted" style="font-size:.8rem;">Public</div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="card border-0 shadow-sm rounded-3 text-center p-3">
-                        <div class="fw-bold fs-4 text-danger">[[ stats.private ]]</div>
-                        <div class="text-muted" style="font-size:.8rem;">Private</div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="card border-0 shadow-sm rounded-3 text-center p-3">
-                        <div class="fw-bold fs-4 text-warning">[[ stats.draft ]]</div>
-                        <div class="text-muted" style="font-size:.8rem;">Drafts</div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="card border-0 shadow-sm rounded-3 text-center p-3">
-                        <div class="fw-bold fs-4 text-info">[[ stats.views ]]</div>
-                        <div class="text-muted" style="font-size:.8rem;">Total Views</div>
-                    </div>
-                </div>
+        <div class="col">
+            <div class="card border-0 shadow-sm rounded-3 text-center p-3">
+                <div class="fw-bold fs-4 text-success">[[ stats.public ]]</div>
+                <div class="text-muted" style="font-size:.8rem;">Public</div>
             </div>
-
-            <!-- Filters -->
-            <div class="card border-0 shadow-sm rounded-3 mb-3">
-                <div class="card-body p-3 d-flex align-items-center gap-3 flex-wrap">
-                    <div class="input-group" style="max-width:300px;">
-                        <span class="input-group-text border-0" style="background:var(--light-bg-color);">
-                            <i class="fa-solid fa-magnifying-glass text-muted"></i>
-                        </span>
-                        <input type="text" class="form-control border-0"
-                               style="background:var(--light-bg-color);color:var(--text-color);"
-                               placeholder="Search posts…"
-                               v-model="searchQuery" @input="debouncedSearch">
-                    </div>
-                    <select class="form-select border-0 w-auto"
-                            style="background:var(--light-bg-color);color:var(--text-color);"
-                            v-model="filterStatus" @change="onFilterChange">
-                        <option value="">All posts</option>
-                        <option value="public">Public only</option>
-                        <option value="private">Private only</option>
-                        <option value="draft">Drafts only</option>
-                    </select>
-                    <span class="text-muted ms-auto" style="font-size:.85rem;">
-                        [[ totalPosts ]] post<template v-if="totalPosts !== 1">s</template>
-                    </span>
-                </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 shadow-sm rounded-3 text-center p-3">
+                <div class="fw-bold fs-4 text-danger">[[ stats.private ]]</div>
+                <div class="text-muted" style="font-size:.8rem;">Private</div>
             </div>
-
-            <!-- Posts table -->
-            <div class="card border-0 shadow-sm rounded-3">
-                <div class="card-body p-0">
-                    <div v-if="isLoading" class="d-flex justify-content-center align-items-center py-5">
-                        <div class="spinner-border text-primary" role="status"></div>
-                    </div>
-                    <div v-else-if="posts.length === 0" class="text-center py-5 text-muted">
-                        <i class="fa-solid fa-newspaper fa-3x mb-3 opacity-25"></i>
-                        <p class="mb-0">No posts yet. <a href="/blog/admin/create" class="text-primary">Create one.</a></p>
-                    </div>
-                    <div v-else class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle" style="color:var(--text-color);">
-                            <thead style="font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--subtle-text-color);border-bottom:2px solid var(--border-color);">
-                                <tr>
-                                    <th class="ps-4 py-3">Title</th>
-                                    <th class="py-3">Status</th>
-                                    <th class="py-3 d-none d-md-table-cell">Tags</th>
-                                    <th class="py-3 d-none d-lg-table-cell">Views</th>
-                                    <th class="py-3 d-none d-lg-table-cell">Created</th>
-                                    <th class="py-3 pe-4 text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="post in posts" :key="post.uuid" class="blog-admin-row">
-                                    <td class="ps-4 py-3">
-                                        <div class="fw-semibold" style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                            <a :href="'/blog/post/' + post.uuid" class="text-decoration-none" style="color:var(--text-color);">[[ post.title ]]</a>
-                                        </div>
-                                        <div class="text-muted" style="font-size:.78rem;margin-top:2px;">[[ post.slug ]]</div>
-                                    </td>
-                                    <td class="py-3">
-                                        <span v-if="post.is_draft" class="badge rounded-pill px-3 bg-warning text-dark">
-                                            <i class="fa-solid fa-file-lines me-1"></i>Draft
-                                        </span>
-                                        <span v-else :class="['badge rounded-pill px-3', post.is_public ? 'blog-status-public' : 'blog-status-private']">
-                                            [[ post.is_public ? 'Public' : 'Private' ]]
-                                        </span>
-                                    </td>
-                                    <td class="py-3 d-none d-md-table-cell">
-                                        <div class="d-flex flex-wrap gap-1" style="max-width:160px;">
-                                            <span v-for="tag in (post.tag_names || []).slice(0,2)" :key="tag" class="blog-tag">[[ tag ]]</span>
-                                            <span v-if="(post.tag_names||[]).length > 2" class="blog-tag">+[[ post.tag_names.length - 2 ]]</span>
-                                            <span v-if="!(post.tag_names||[]).length" class="text-muted" style="font-size:.78rem;">—</span>
-                                        </div>
-                                    </td>
-                                    <td class="py-3 d-none d-lg-table-cell text-muted">[[ post.view_count || 0 ]]</td>
-                                    <td class="py-3 d-none d-lg-table-cell text-muted" style="font-size:.85rem;">[[ post.created_at ]]</td>
-                                    <td class="py-3 pe-4 text-end">
-                                        <div class="d-flex gap-1 justify-content-end flex-wrap">
-                                            <a :href="'/blog/admin/edit/' + post.uuid"
-                                               class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                                <i class="fa-solid fa-pen-to-square me-1"></i>Edit
-                                            </a>
-                                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3"
-                                                    @click="toggleAccess(post)"
-                                                    :disabled="togglingId === post.uuid || post.is_draft">
-                                                <i :class="['fa-solid me-1', post.is_public ? 'fa-eye-slash' : 'fa-eye']"></i>
-                                                [[ post.is_public ? 'Unpublish' : 'Publish' ]]
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
-                                                    @click="confirmDelete(post)">
-                                                <i class="fa-solid fa-trash-can me-1"></i>Delete
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 shadow-sm rounded-3 text-center p-3">
+                <div class="fw-bold fs-4 text-warning">[[ stats.draft ]]</div>
+                <div class="text-muted" style="font-size:.8rem;">Drafts</div>
             </div>
-
-            <!-- Pagination -->
-            <nav v-if="totalPages > 1" class="d-flex justify-content-center mt-4">
-                <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item" :class="{disabled: currentPage === 1}">
-                        <button class="page-link" @click="goToPage(currentPage - 1)">
-                            <i class="fa-solid fa-chevron-left"></i>
-                        </button>
-                    </li>
-                    <li v-for="p in paginationRange" :key="p"
-                        class="page-item" :class="{active: p === currentPage, disabled: p === '…'}">
-                        <button class="page-link" @click="typeof p === 'number' && goToPage(p)">[[ p ]]</button>
-                    </li>
-                    <li class="page-item" :class="{disabled: currentPage === totalPages}">
-                        <button class="page-link" @click="goToPage(currentPage + 1)">
-                            <i class="fa-solid fa-chevron-right"></i>
-                        </button>
-                    </li>
-                </ul>
-            </nav>
-
+        </div>
+        <div class="col">
+            <div class="card border-0 shadow-sm rounded-3 text-center p-3">
+                <div class="fw-bold fs-4 text-info">[[ stats.views ]]</div>
+                <div class="text-muted" style="font-size:.8rem;">Total Views</div>
+            </div>
         </div>
     </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm rounded-3 mb-3">
+        <div class="card-body p-3 d-flex align-items-center gap-3 flex-wrap">
+            <div class="input-group" style="max-width:300px;">
+                <span class="input-group-text border-0" style="background:var(--light-bg-color);">
+                    <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-0"
+                       style="background:var(--light-bg-color);color:var(--text-color);"
+                       placeholder="Search posts…"
+                       v-model="searchQuery" @input="debouncedSearch">
+            </div>
+            <select class="form-select border-0 w-auto"
+                    style="background:var(--light-bg-color);color:var(--text-color);"
+                    v-model="filterStatus" @change="onFilterChange">
+                <option value="">All posts</option>
+                <option value="public">Public only</option>
+                <option value="private">Private only</option>
+                <option value="draft">Drafts only</option>
+            </select>
+            <span class="text-muted ms-auto" style="font-size:.85rem;">
+                [[ totalPosts ]] post<template v-if="totalPosts !== 1">s</template>
+            </span>
+        </div>
+    </div>
+
+    <!-- Posts table -->
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-0">
+            <div v-if="isLoading" class="d-flex justify-content-center align-items-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+            </div>
+            <div v-else-if="posts.length === 0" class="text-center py-5 text-muted">
+                <i class="fa-solid fa-newspaper fa-3x mb-3 opacity-25"></i>
+                <p class="mb-0">No posts yet. <a href="/blog/admin/create" class="text-primary">Create one.</a></p>
+            </div>
+            <div v-else class="table-responsive">
+                <table class="table table-hover mb-0 align-middle" style="color:var(--text-color);">
+                    <thead style="font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--subtle-text-color);border-bottom:2px solid var(--border-color);">
+                        <tr>
+                            <th class="ps-4 py-3">Title</th>
+                            <th class="py-3">Status</th>
+                            <th class="py-3 d-none d-md-table-cell">Tags</th>
+                            <th class="py-3 d-none d-lg-table-cell">Views</th>
+                            <th class="py-3 d-none d-lg-table-cell">Created</th>
+                            <th class="py-3 pe-4 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="post in posts" :key="post.uuid" class="blog-admin-row">
+                            <td class="ps-4 py-3">
+                                <div class="fw-semibold" style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                    <a :href="'/blog/post/' + post.uuid" class="text-decoration-none" style="color:var(--text-color);">[[ post.title ]]</a>
+                                </div>
+                                <div class="text-muted" style="font-size:.78rem;margin-top:2px;">[[ post.slug ]]</div>
+                            </td>
+                            <td class="py-3">
+                                <span v-if="post.is_draft" class="badge rounded-pill px-3 bg-warning text-dark">
+                                    <i class="fa-solid fa-file-lines me-1"></i>Draft
+                                </span>
+                                <span v-else :class="['badge rounded-pill px-3', post.is_public ? 'blog-status-public' : 'blog-status-private']">
+                                    [[ post.is_public ? 'Public' : 'Private' ]]
+                                </span>
+                            </td>
+                            <td class="py-3 d-none d-md-table-cell">
+                                <div class="d-flex flex-wrap gap-1" style="max-width:160px;">
+                                    <span v-for="tag in (post.tag_names || []).slice(0,2)" :key="tag" class="blog-tag">[[ tag ]]</span>
+                                    <span v-if="(post.tag_names||[]).length > 2" class="blog-tag">+[[ post.tag_names.length - 2 ]]</span>
+                                    <span v-if="!(post.tag_names||[]).length" class="text-muted" style="font-size:.78rem;">—</span>
+                                </div>
+                            </td>
+                            <td class="py-3 d-none d-lg-table-cell text-muted">[[ post.view_count || 0 ]]</td>
+                            <td class="py-3 d-none d-lg-table-cell text-muted" style="font-size:.85rem;">[[ post.created_at ]]</td>
+                            <td class="py-3 pe-4 text-end">
+                                <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                    <a :href="'/blog/admin/edit/' + post.uuid"
+                                       class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                        <i class="fa-solid fa-pen-to-square me-1"></i>Edit
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                            @click="toggleAccess(post)"
+                                            :disabled="togglingId === post.uuid || post.is_draft">
+                                        <i :class="['fa-solid me-1', post.is_public ? 'fa-eye-slash' : 'fa-eye']"></i>
+                                        [[ post.is_public ? 'Unpublish' : 'Publish' ]]
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                            @click="confirmDelete(post)">
+                                        <i class="fa-solid fa-trash-can me-1"></i>Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <nav v-if="totalPages > 1" class="d-flex justify-content-center mt-4">
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item" :class="{disabled: currentPage === 1}">
+                <button class="page-link" @click="goToPage(currentPage - 1)">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+            </li>
+            <li v-for="p in paginationRange" :key="p"
+                class="page-item" :class="{active: p === currentPage, disabled: p === '…'}">
+                <button class="page-link" @click="typeof p === 'number' && goToPage(p)">[[ p ]]</button>
+            </li>
+            <li class="page-item" :class="{disabled: currentPage === totalPages}">
+                <button class="page-link" @click="goToPage(currentPage + 1)">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </li>
+        </ul>
+    </nav>
 
     <!-- ── Create from Vulnerability modal ─────────────────────────────────── -->
     <div class="modal fade" id="cvePostModal" tabindex="-1" aria-hidden="true">

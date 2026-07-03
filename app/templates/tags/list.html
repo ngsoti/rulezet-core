@@ -27,8 +27,6 @@
         </p>
     </div>
 
-    {{ anav.admin_nav('tags') }}
-
     <div v-if="!ready" class="text-center py-5">
         <div class="spinner-border text-primary mb-3" role="status"></div>
         <p class="text-muted small">Loading tags…</p>
@@ -36,39 +34,30 @@
 
     <template v-else>
 
-        <!-- Tabs -->
-       <ul class="nav nav-underline mb-3 align-items-center" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link active d-flex align-items-center gap-1" data-bs-toggle="tab" href="#pane-tags" style="color: var(--text-color)">
-                    <i class="fas fa-tags"></i>
-                    Available Tags
-                    <span class="badge bg-secondary rounded-pill ms-1">[[ totalTags ]]</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link d-flex align-items-center gap-1" data-bs-toggle="tab" href="#pane-taxonomy" style="color: var(--text-color)">
-                    <i class="fas fa-list"></i>Add Taxonomies
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link d-flex align-items-center gap-1" data-bs-toggle="tab" href="#pane-galaxy" style="color: var(--text-color)">
-                    <i class="fas fa-atom"></i>Add Galaxies
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link d-flex align-items-center gap-1" data-bs-toggle="tab" href="#pane-update" style="color: var(--text-color)">
-                    <i class="fas fa-rotate me-1"></i>Update MISP
-                </a>
-            </li>
+        <!-- Tabs, with Admin navigation as one more item in the same row -->
+        <div class="dr-nav mb-3" role="tablist">
+            <a class="dr-nav__item active" data-bs-toggle="tab" href="#pane-tags" role="tab">
+                <i class="fas fa-tags"></i><span>Available Tags</span>
+                <span class="dr-nav__badge" style="background:#6c757d;">[[ totalTags ]]</span>
+            </a>
+            <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-taxonomy" role="tab">
+                <i class="fas fa-list"></i><span>Add Taxonomies</span>
+            </a>
+            <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-galaxy" role="tab">
+                <i class="fas fa-atom"></i><span>Add Galaxies</span>
+            </a>
+            <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-update" role="tab">
+                <i class="fas fa-rotate"></i><span>Update MISP</span>
+            </a>
+            <span class="dr-nav__sep"></span>
+            {{ anav.admin_nav_toggle() }}
 
-            <!-- spacer -->
-            <li class="nav-item ms-auto">
-                <button class="btn btn-primary shadow-sm fw-bold rounded-pill px-4"
-                        data-bs-toggle="modal" data-bs-target="#add_tag_modal_">
-                    <i class="fas fa-plus me-2"></i>Add New Tag
-                </button>
-            </li>
-        </ul>
+            <button class="btn btn-primary btn-sm shadow-sm fw-bold rounded-pill px-4 ms-auto"
+                    data-bs-toggle="modal" data-bs-target="#add_tag_modal_">
+                <i class="fas fa-plus me-2"></i>Add New Tag
+            </button>
+        </div>
+        {{ anav.admin_nav_panel('tags') }}
 
         <tag-create-modal @tag-created="handleRefreshList" csrf="{{ csrf_token() }}"></tag-create-modal>
 

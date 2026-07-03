@@ -129,6 +129,23 @@ def create_app(start_worker=True):
             'is_official': current_app.config.get('IS_OFFICIAL_INSTANCE', False),
         }
 
+    def admin_jobs_running_count():
+        """Count of pending/running background jobs — used for the Jobs badge
+        on the admin nav panel (macros/admin_nav.html), available to every
+        template regardless of import context."""
+        from flask_login import current_user as _cu
+        if not (_cu.is_authenticated and _cu.is_admin()):
+            return 0
+        try:
+            from app.core.db_class.db import BackgroundJob
+            return BackgroundJob.query.filter(
+                BackgroundJob.status.in_(('pending', 'running'))
+            ).count()
+        except Exception:
+            return 0
+
+    app.jinja_env.globals['admin_jobs_running_count'] = admin_jobs_running_count
+
     @app.errorhandler(403)
     def forbidden(e):
         # API consumers and fetch() calls get JSON; browsers get the page

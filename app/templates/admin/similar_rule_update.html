@@ -35,19 +35,21 @@
             </p>
         </div>
 
-        {{ anav.admin_nav('similar') }}
-
-        <ul class="nav nav-underline justify-content-center w-100 mb-4" id="updateTabs" role="tablist">
-            <li class="nav-item flex-fill text-center"><a class="nav-link active" data-bs-toggle="tab"
-                    href="#global-pane">Global Similarity</a></li>
-            <li class="nav-item flex-fill text-center"><a class="nav-link" data-bs-toggle="tab"
-                    href="#filtered-pane">Udpated Rules Similarity</a></li>
-            <li class="nav-item flex-fill text-center"><a class="nav-link" data-bs-toggle="tab"
-                    href="#history-pane">History<span class="badge bg-danger rounded-pill ms-1"
-                        v-cloak>[[running_sessions.length]]</span></a>
-
-            </li>
-        </ul>
+        <div class="dr-nav mb-4" id="updateTabs" role="tablist">
+            <a class="dr-nav__item active" data-bs-toggle="tab" href="#global-pane" role="tab">
+                <i class="fa-solid fa-globe"></i><span>Global Similarity</span>
+            </a>
+            <a class="dr-nav__item" data-bs-toggle="tab" href="#filtered-pane" role="tab">
+                <i class="fa-solid fa-filter"></i><span>Updated Rules Similarity</span>
+            </a>
+            <a class="dr-nav__item" data-bs-toggle="tab" href="#history-pane" role="tab">
+                <i class="fa-solid fa-clock-rotate-left"></i><span>History</span>
+                <span v-if="running_sessions.length" class="dr-nav__badge" v-cloak>[[ running_sessions.length ]]</span>
+            </a>
+            <span class="dr-nav__sep"></span>
+            {{ anav.admin_nav_toggle() }}
+        </div>
+        {{ anav.admin_nav_panel('similar') }}
 
         <div class="tab-content" id="updateTabsContent">
             <!-- Global Similarity -->

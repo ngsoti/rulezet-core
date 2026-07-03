@@ -202,7 +202,7 @@ export default {
                     <!-- Content card -->
                     <div class="tl-content">
                         <!-- Header row: title + badges + chevron + delete -->
-                        <div class="tl-header" @click.stop="toggle(item.uuid)">
+                        <div class="tl-header" @click.stop="toggle(item.uuid); $emit('select', item)">
                             <span class="tl-title">{{ item.title }}</span>
                             <div class="tl-badges">
                                 <span class="tl-cat-badge">
