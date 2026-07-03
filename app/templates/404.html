@@ -19,7 +19,8 @@
 
         <p class="error-desc">
             The page you're looking for doesn't exist or has been moved.
-            Double-check the URL or head back to a safe place.
+            Double-check the URL or head back to a safe place<button
+                type="button" class="err-egg-trigger" id="errEggTrigger" tabindex="-1" aria-hidden="true">.</button>
         </p>
 
         <div class="error-actions">
@@ -36,5 +37,23 @@
         </div>
 
     </div>
+
+    <!-- If you found the button, well spotted. -->
+    <div class="err-egg" id="errEgg" aria-hidden="true">
+        <span class="err-egg-ball">⚽</span>
+    </div>
 </div>
+
+<script>
+(function () {
+    var btn = document.getElementById('errEggTrigger');
+    var egg = document.getElementById('errEgg');
+    if (!btn || !egg) return;
+    btn.addEventListener('click', function () {
+        egg.classList.remove('is-kicking');
+        void egg.offsetWidth; // restart the CSS animation on every click
+        egg.classList.add('is-kicking');
+    });
+})();
+</script>
 {% endblock %}

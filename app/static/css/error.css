@@ -79,6 +79,7 @@
 
 /* ── Big code ───────────────────────────────────────── */
 .error-code {
+    position: relative;
     font-size: clamp(4.5rem, 14vw, 7.5rem);
     font-weight: 900;
     line-height: 1;
@@ -117,4 +118,56 @@ body.dark-mode .error-code,
     gap: 0.65rem;
     justify-content: center;
     flex-wrap: wrap;
+}
+
+/* ── Easter egg — hidden trigger ───────────────────────
+   The final period of the error-desc sentence doubles as the button —
+   looks and reads exactly like normal punctuation. Click it to kick a
+   football across the bottom of the screen. */
+.err-egg-trigger {
+    padding: 0 0 0 .1em;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    cursor: text;
+}
+
+.err-egg {
+    position: fixed;
+    left: 0;
+    bottom: 14px;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.err-egg.is-kicking {
+    animation: eggBallPath 4.5s cubic-bezier(.36,.07,.19,.97) 1;
+}
+
+.err-egg-ball {
+    display: inline-block;
+    font-size: 2.4rem;
+    line-height: 1;
+    filter: drop-shadow(0 6px 6px rgba(0,0,0,.25));
+}
+
+@keyframes eggBallPath {
+    0%   { opacity: 0; transform: translate(-10vw, 0) rotate(0deg); }
+    6%   { opacity: 1; }
+    28%  { transform: translate(38vw, 0) rotate(360deg); }
+    36%  { transform: translate(46vw, -46px) rotate(430deg); }
+    44%  { transform: translate(54vw, 0) rotate(500deg); }
+    50%  { transform: translate(60vw, -20px) rotate(540deg); }
+    56%  { transform: translate(66vw, 0) rotate(580deg); }
+    60%  { transform: translate(69vw, -8px) rotate(600deg); }
+    64%  { transform: translate(72vw, 0) rotate(620deg); }
+    84%  { opacity: 1; transform: translate(72vw, 0) rotate(620deg); }
+    100% { opacity: 0; transform: translate(112vw, 0) rotate(980deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .err-egg.is-kicking { animation: none; }
 }
