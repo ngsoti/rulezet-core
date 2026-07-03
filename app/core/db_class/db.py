@@ -2236,6 +2236,11 @@ class UnifiedComment(db.Model):
     deleted_at  = db.Column(db.DateTime, nullable=True)
     deleted_by  = db.Column(db.Integer, nullable=True)
 
+    # Set when an admin turns this comment into an issue on the official
+    # rulezet-core GitHub repo — keeps the button from filing duplicates.
+    github_issue_url    = db.Column(db.String(500), nullable=True)
+    github_issue_number = db.Column(db.Integer, nullable=True)
+
     created_at  = db.Column(db.DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc), nullable=False)
     updated_at  = db.Column(db.DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc), onupdate=lambda: datetime.datetime.now(datetime.timezone.utc))
     created_by  = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True, index=True)
@@ -2318,6 +2323,8 @@ class UnifiedComment(db.Model):
             'user_reaction': user_reaction,
             'author':        author_dict,
             'is_admin':      author.is_admin() if author else False,
+            'github_issue_url':    self.github_issue_url,
+            'github_issue_number': self.github_issue_number,
         }
 
 

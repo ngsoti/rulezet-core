@@ -519,6 +519,37 @@
                                 <div class="config-row__key">Key Length</div>
                                 <div class="config-row__value">[[ config.app.secret_key_length ]] characters</div>
                             </div>
+
+                            <!-- GitHub Token -->
+                            <div class="config-row">
+                                <div class="config-row__key">GitHub Token</div>
+                                <div class="config-row__value">
+                                    <span class="config-secret">[[ config.app.github_token_preview ]]</span>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill ms-2 px-2 py-0" @click="editingGithubToken = !editingGithubToken" style="font-size:.72rem;">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div v-if="editingGithubToken" class="pb-2">
+                                <div class="env-edit-form flex-wrap gap-2">
+                                    <input type="text" v-model="githubTokenNew" class="form-control form-control-sm rounded-pill flex-grow-1"
+                                           placeholder="ghp_…" style="font-family:monospace;font-size:.78rem;">
+                                    <button class="btn btn-sm btn-success rounded-pill px-3"
+                                            @click="saveEnvKey('GITHUB_TOKEN', githubTokenNew)" :disabled="!githubTokenNew">
+                                        <i class="fa-solid fa-check me-1"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-2"
+                                            @click="editingGithubToken=false; githubTokenNew=''">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                                <div class="text-muted small mt-1">
+                                    <i class="fa-solid fa-circle-info me-1"></i>
+                                    Personal access token with <code>repo</code> (or fine-grained "Issues: read/write") rights
+                                    on the target repo. Used for GitHub API calls: fetching branches on rule import, and
+                                    filing admin-proposed issues from comments.
+                                </div>
+                            </div>
                         </div>
 
                     </div>
@@ -1017,6 +1048,8 @@ createApp({
         const mailUserNew       = ref('')
         const editingMailPort   = ref(false)
         const mailPortNew       = ref('')
+        const editingGithubToken = ref(false)
+        const githubTokenNew     = ref('')
 
         // Test email
         const testEmailRecipient = ref('')
@@ -1195,6 +1228,7 @@ createApp({
                 if (key === 'MAIL_SERVER')   { editingMailServer.value = false; mailServerNew.value = '' }
                 if (key === 'MAIL_USERNAME') { editingMailUser.value = false; mailUserNew.value = '' }
                 if (key === 'MAIL_PORT')     { editingMailPort.value = false; mailPortNew.value = '' }
+                if (key === 'GITHUB_TOKEN')  { editingGithubToken.value = false; githubTokenNew.value = '' }
                 configLoaded.value = false
                 loadConfig()
             }
@@ -1267,6 +1301,7 @@ createApp({
             editingMailServer, mailServerNew,
             editingMailUser, mailUserNew,
             editingMailPort, mailPortNew,
+            editingGithubToken, githubTokenNew,
             saveEnvKey,
             testEmailRecipient, testEmailSending, testEmailResult, sendTestEmail,
             instance, instanceLoading, instanceInitSaving, loadInstance, initInstance, copyText,

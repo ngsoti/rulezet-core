@@ -10,8 +10,10 @@ Endpoints (all under /api/comments):
   POST   /<uuid>/react             toggle like / dislike
 """
 import datetime
+import os
 import uuid as _uuid_mod
 
+import requests
 from flask import request
 from flask_login import current_user
 from flask_restx import Namespace, Resource, fields
@@ -24,6 +26,10 @@ comment_ns = Namespace('comments', description='Unified comment thread API')
 
 _VALID_OBJECT_TYPES = {'rule', 'bundle', 'proposal', 'blog_post'}
 _PER_PAGE_MAX = 50
+
+# Official rulezet-core repo — admin-proposed issues from comments always land here,
+# regardless of which instance filed them.
+_GITHUB_ISSUE_REPO = 'rulezet/rulezet-core'
 
 
 def _get_or_404(uuid):
@@ -41,6 +47,27 @@ def _can_edit(comment):
     if not current_user.is_authenticated:
         return False
     return comment.created_by == current_user.id or _can_moderate()
+
+
+def _comment_context_link(comment):
+    """Best-effort deep link back to the comment, for the GitHub issue body."""
+    base = (os.environ.get('INSTANCE_PUBLIC_URL') or request.url_root).rstrip('/')
+
+    if comment.object_type == 'rule':
+        path = f'/rule/detail_rule/{comment.object_id}?comment={comment.id}'
+    elif comment.object_type == 'bundle':
+        path = f'/bundle/detail/{comment.object_id}?comment={comment.id}'
+    elif comment.object_type == 'proposal':
+        path = f'/rule/proposal_content_discuss?id={comment.object_id}&comment={comment.id}'
+    elif comment.object_type == 'blog_post':
+        from app.core.db_class.db import BlogPost
+        blog_post = BlogPost.query.get(comment.object_id)
+        slug = blog_post.uuid if blog_post else comment.object_id
+        path = f'/blog/post/{slug}?comment={comment.id}'
+    else:
+        path = '/'
+
+    return f'{base}{path}'
 
 
 # ── List / Create ──────────────────────────────────────────────────────────────
@@ -407,3 +434,80 @@ class CommentReact(Resource):
             'dislike_count': dislike_count,
             'user_reaction': new_rxn.reaction if new_rxn else None,
         }
+
+
+# ── Create GitHub issue (admin only) ────────────────────────────────────────────
+
+@comment_ns.route('/<string:uuid>/create_issue')
+class CommentCreateIssue(Resource):
+
+    def post(self, uuid):
+        """Turn a comment into an issue on the official rulezet-core GitHub repo (admin only)."""
+        if not _can_moderate():
+            return {'message': 'Admin required'}, 403
+
+        comment = _get_or_404(uuid)
+        if not comment.is_active:
+            return {'message': 'Cannot create an issue from a deleted comment'}, 400
+        if comment.github_issue_url:
+            return {'message': 'An issue was already created for this comment',
+                    'issue_url': comment.github_issue_url}, 400
+
+        token = os.environ.get('GITHUB_TOKEN')
+        if not token:
+            return {'message': 'GITHUB_TOKEN is not configured on this instance (Admin → Settings)'}, 400
+
+        excerpt = ' '.join(comment.content.split())
+        if len(excerpt) > 80:
+            excerpt = excerpt[:77] + '...'
+        title = f'[Admin Proposed] {excerpt}'
+
+        author = comment.author
+        author_name = author.get_username() if author else 'unknown user'
+
+        body = (
+            f'**Proposed by admin {current_user.get_username()}, filed from a comment on the platform.**\n\n'
+            f'> {comment.content}\n\n'
+            f'---\n'
+            f'- Original comment author: {author_name}\n'
+            f'- Context: {comment.object_type} #{comment.object_id}\n'
+            f'- Comment link: {_comment_context_link(comment)}\n'
+        )
+
+        data   = request.get_json(silent=True) or {}
+        labels = data.get('labels') or ['admin-proposed']
+
+        try:
+            res = requests.post(
+                f'https://api.github.com/repos/{_GITHUB_ISSUE_REPO}/issues',
+                headers={
+                    'Authorization': f'Bearer {token}',
+                    'Accept': 'application/vnd.github+json',
+                },
+                json={'title': title, 'body': body, 'labels': labels},
+                timeout=10,
+            )
+        except requests.RequestException as exc:
+            return {'message': f'Network error contacting GitHub: {exc}'}, 502
+
+        if res.status_code not in (200, 201):
+            return {'message': f'GitHub API error ({res.status_code}): {res.text[:300]}'}, 502
+
+        issue = res.json()
+        comment.github_issue_url    = issue.get('html_url')
+        comment.github_issue_number = issue.get('number')
+        db.session.commit()
+
+        log_activity(
+            "comment.create_github_issue",
+            f"Filed GitHub issue #{issue.get('number')} from comment uuid={comment.uuid}",
+            target_type="comment", target_id=comment.id,
+            extra={"issue_url": issue.get('html_url')},
+            is_public=False,
+        )
+
+        return {
+            'message':      'GitHub issue created',
+            'issue_url':    issue.get('html_url'),
+            'issue_number': issue.get('number'),
+        }, 201

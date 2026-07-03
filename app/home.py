@@ -951,6 +951,10 @@ def admin_settings_update_env():
                 current_app.config[key] = value.lower() == 'true'
             else:
                 current_app.config[key] = value
+            # Keys read straight from os.environ (e.g. GITHUB_TOKEN in the
+            # GitHub API helpers) need the process env updated too, not just
+            # current_app.config, or "applied immediately" would be a lie.
+            os.environ[key] = value
         log_activity(
             'admin.settings_changed',
             f"Updated {key} via admin settings",

@@ -211,6 +211,7 @@ def get_app_config() -> dict:
     cfg = current_app.config
     secret = cfg.get('SECRET_KEY') or ''
     mail_pwd = cfg.get('MAIL_PASSWORD') or ''
+    github_token = os.environ.get('GITHUB_TOKEN') or ''
     return {
         'mail': {
             'server': cfg.get('MAIL_SERVER', ''),
@@ -230,6 +231,8 @@ def get_app_config() -> dict:
             'secret_key_set': bool(secret),
             'secret_key_preview': (secret[:4] + '••••••••') if secret else 'not set',
             'secret_key_length': len(secret),
+            'github_token_set': bool(github_token),
+            'github_token_preview': (github_token[:4] + '••••••••') if github_token else 'not set',
         },
     }
 

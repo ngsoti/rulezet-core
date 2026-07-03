@@ -259,6 +259,28 @@ label,
   background-color: lightgray;
 }
 
+/* ── Admin mega-menu (navbar) ─────────────────────────────────────────────── */
+/* Wide multi-row panel of dr-nav chip groups, instead of one long vertical
+   list — the admin dropdown outgrew a single column a while ago. */
+.admin-mega-menu {
+  width: 620px;
+  max-width: calc(100vw - 2rem);
+  padding: 1rem;
+}
+.admin-mega-menu .dr-nav {
+  margin-bottom: .6rem;
+  box-shadow: none;
+  background: var(--light-bg-color);
+}
+.admin-mega-menu .dr-nav:last-child {
+  margin-bottom: 0;
+}
+@media (max-width: 700px) {
+  .admin-mega-menu {
+    width: 92vw;
+  }
+}
+
 .avatar-circle {
   width: 32px;
   height: 32px;

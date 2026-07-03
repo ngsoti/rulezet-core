@@ -65,6 +65,9 @@ const CommentItem = {
         const isDeleted = ref(props.comment.is_deleted || false)
         const content = ref(props.comment.content)
         const isPublic = ref(props.comment.is_public)
+        const githubIssueUrl = ref(props.comment.github_issue_url || null)
+        const githubIssueNumber = ref(props.comment.github_issue_number || null)
+        const creatingIssue = ref(false)
 
         const canEdit = computed(() =>
             !isDeleted.value && (
@@ -183,6 +186,22 @@ const CommentItem = {
             }
         }
 
+        async function createGithubIssue() {
+            if (creatingIssue.value || githubIssueUrl.value) return
+            if (!confirm('File this comment as a new issue on the official rulezet-core GitHub repo?')) return
+            creatingIssue.value = true
+            const res = await apiFetch(`/api/comments/${props.comment.uuid}/create_issue`, 'POST', {})
+            const d = await res.json()
+            if (res.ok) {
+                githubIssueUrl.value = d.issue_url
+                githubIssueNumber.value = d.issue_number
+                create_message(d.message, TOAST.SUCCESS)
+            } else {
+                create_message(d.message || 'Failed to create issue', TOAST.ERROR)
+            }
+            creatingIssue.value = false
+        }
+
         async function doReact(reaction) {
             const res = await apiFetch(`/api/comments/${props.comment.uuid}/react`, 'POST', { reaction })
             const d = await res.json()
@@ -233,9 +252,10 @@ const CommentItem = {
             replies, repliesTotal, repliesLoaded, repliesLoading,
             likeCount, dislikeCount, userReaction,
             isDeleted, content, isPublic,
+            githubIssueUrl, githubIssueNumber, creatingIssue,
             canEdit, canDelete, canRestore, hasMoreReplies,
             loadReplies, submitReply, submitEdit, doDelete, doHardDelete, doRestore, doReact,
-            startEdit, fmt_date,
+            createGithubIssue, startEdit, fmt_date,
         }
     },
     template: `
@@ -305,6 +325,16 @@ const CommentItem = {
         <button v-if="canModerate" class="cm-action-btn" style="color:#dc3545;" @click="doHardDelete"
                 title="Permanently delete this comment and all its replies">
             <i class="fas fa-skull"></i> Hard delete
+        </button>
+        <a v-if="canModerate && githubIssueUrl" class="cm-action-btn" style="color:#6f42c1;"
+           :href="githubIssueUrl" target="_blank" rel="noopener" title="View the filed GitHub issue">
+            <i class="fab fa-github"></i> Issue #[[ githubIssueNumber ]]
+        </a>
+        <button v-else-if="canModerate && !isDeleted" class="cm-action-btn" style="color:#6f42c1;"
+                :disabled="creatingIssue" @click="createGithubIssue"
+                title="File this comment as an issue on the official rulezet-core GitHub repo">
+            <i v-if="creatingIssue" class="fas fa-spinner fa-spin"></i>
+            <i v-else class="fab fa-github"></i> [[ creatingIssue ? 'Filing…' : 'Create issue' ]]
         </button>
         <report-modal v-if="currentUserId && !isDeleted && currentUserId !== comment.created_by"
             object-type="comment"
