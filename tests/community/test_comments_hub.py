@@ -267,3 +267,34 @@ def test_soft_deleted_comments_never_surface(app, client):
     data = r.get_json()
     assert _group(data, "rule", rule_id) is None
     assert "deleted-comment-content" not in r.get_data(as_text=True)
+
+
+# ── Account page "My comments" tab ──────────────────────────────────────────────
+
+def test_account_page_renders_with_comments_tab(client):
+    login_user(client)
+    r = client.get("/account/")
+    assert r.status_code == 200
+    html = r.get_data(as_text=True)
+    assert "comments-hub" in html
+    assert "force-mine-only" in html
+    assert "ud-info-grid" in html
+    assert "ud-profile-hero" in html
+
+
+def test_my_comment_count_endpoint(app, client):
+    with app.app_context():
+        user = User.query.filter_by(email="t@t.t").first()
+        rule = Rule.query.filter_by(title="test").first()
+        _make_comment("rule", rule.id, user.id, content="counted")
+        _make_comment("rule", rule.id, user.id, content="deleted", is_active=False)
+
+    login_user(client)
+    r = client.get("/api/comments/my_count")
+    assert r.status_code == 200
+    assert r.get_json()["count"] == 1
+
+
+def test_my_comment_count_requires_login(client):
+    r = client.get("/api/comments/my_count")
+    assert r.status_code == 401

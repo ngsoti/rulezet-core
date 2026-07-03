@@ -259,6 +259,20 @@ class CommentHub(Resource):
         )
 
 
+@comment_ns.route('/my_count')
+class CommentMyCount(Resource):
+
+    def get(self):
+        """Total active comments authored by the current user — badge on the account page."""
+        if not current_user.is_authenticated:
+            return {'message': 'Login required'}, 401
+
+        count = UnifiedComment.query.filter_by(
+            created_by=current_user.id, is_active=True
+        ).count()
+        return {'count': count}
+
+
 # ── Single comment ─────────────────────────────────────────────────────────────
 
 @comment_ns.route('/<string:uuid>')

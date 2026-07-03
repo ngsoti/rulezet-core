@@ -212,7 +212,7 @@ export default {
                         <label class="form-check-label" for="chubIncludeReplies">Include replies</label>
                     </div>
 
-                    <div class="form-check form-switch chub-scope-switch" title="Only threads where you posted at least one comment">
+                    <div v-if="!forceMineOnly" class="form-check form-switch chub-scope-switch" title="Only threads where you posted at least one comment">
                         <input class="form-check-input" type="checkbox" id="chubMineOnly" role="switch"
                                v-model="mineOnly">
                         <label class="form-check-label" for="chubMineOnly">Mine only</label>

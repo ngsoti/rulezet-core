@@ -2,30 +2,12 @@
 {% block title %}My Account — Rulezet{% endblock %}
 {% block head %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/account/user_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/comment-thread.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/community/comments-hub.css') }}">
 <style>
-/* ── Profile page top tabs (Profile / Community) ─────────────── */
-.profile-tabs {
-    display: flex;
-    gap: 4px;
-    border-bottom: 2px solid var(--border-color, #dee2e6);
-    margin-bottom: 24px;
-}
-.profile-tab {
-    padding: 10px 22px;
-    font-size: .87rem;
-    font-weight: 600;
-    color: var(--subtle-text-color);
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    cursor: pointer;
-    transition: color .15s, border-color .15s;
-    border-radius: 6px 6px 0 0;
-}
-.profile-tab:hover { color: #0d6efd; }
-.profile-tab.active { color: #0d6efd; border-bottom-color: #0d6efd; }
-
 /* ── Follow card (inherits detail_rule card look) ─────────────── */
 .follow-card {
     position: relative;
@@ -205,220 +187,298 @@
         </ol>
     </nav>
 
-    <!-- Header -->
-    <div class="mb-5 header-section text-center">
-        <div class="position-relative d-inline-block mb-3">
-            {% if current_user.profile_picture %}
-                <img src="{{ current_user.get_avatar_url() }}"
-                     class="rounded-circle shadow-sm border border-2 border-primary"
-                     style="width:120px;height:120px;object-fit:cover;">
-            {% else %}
-                <div class="rounded-circle shadow-sm d-flex align-items-center justify-content-center bg-light border border-2 border-primary"
-                    style="width:120px;height:120px;font-size:2.5rem;font-weight:600;color:#0d6efd;">
-                    {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
+    <!-- ── Profile hero card (same pattern as account/detail_user.html) ── -->
+    <div class="ud-profile-hero mb-4">
+        <div class="ud-profile-hero-bg"></div>
+        <div class="ud-profile-hero-body">
+
+            <!-- Avatar -->
+            <div class="ud-profile-avatar-wrap">
+                {% if current_user.profile_picture %}
+                    <img src="{{ current_user.get_avatar_url() }}" class="ud-profile-avatar" alt="{{ current_user.get_username() }}">
+                {% else %}
+                    <div class="ud-profile-avatar ud-profile-avatar--initials">
+                        {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
+                    </div>
+                {% endif %}
+                {% if current_user.is_connected %}
+                <span class="ud-profile-online-dot" title="Online"></span>
+                {% endif %}
+            </div>
+
+            <!-- Identity -->
+            <div class="ud-profile-identity">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h2 class="ud-profile-name mb-0">{{ current_user.get_username() }}</h2>
+                    {% if current_user.is_admin() %}
+                    <span class="ud-profile-badge ud-profile-badge--admin">
+                        <i class="fas fa-crown me-1"></i>Admin
+                    </span>
+                    {% endif %}
+                    {% if current_user.is_verified %}
+                    <span class="ud-profile-badge ud-profile-badge--verified">
+                        <i class="fas fa-circle-check me-1"></i>Verified
+                    </span>
+                    {% endif %}
                 </div>
-            {% endif %}
-            {% if current_user.is_connected %}
-            <span class="position-absolute bottom-0 end-0 p-2 bg-success border border-2 border-white rounded-circle"
-                  title="Online" style="margin-bottom:5px;margin-right:5px;"></span>
-            {% endif %}
-        </div>
+                {% if current_user.bio %}
+                <p class="ud-profile-bio">{{ current_user.bio }}</p>
+                {% endif %}
 
-        <h1 class="mb-1 text-primary fw-bold text-uppercase" style="letter-spacing:2px;">
-            {{ current_user.get_username() }}
-        </h1>
-
-        {% if current_user.bio %}
-        <p class="text-muted mb-2" style="max-width:500px;margin:0 auto;">{{ current_user.bio }}</p>
-        {% endif %}
-
-        <div class="d-flex justify-content-center align-items-center gap-3 mt-1 flex-wrap">
-            {% if current_user.location %}
-            <span class="text-muted small">
-                <i class="fa-solid fa-location-dot me-1"></i>{{ current_user.location }}
-            </span>
-            {% endif %}
-            {% if current_user.website_url %}
-            <a href="{{ current_user.website_url }}" target="_blank" rel="noopener"
-               class="text-muted small text-decoration-none">
-                <i class="fa-solid fa-globe me-1"></i>Website
-            </a>
-            {% endif %}
-            {% if current_user.github_url %}
-            <a href="{{ current_user.github_url }}" target="_blank" rel="noopener"
-               class="text-muted small text-decoration-none">
-                <i class="fa-brands fa-github me-1"></i>GitHub
-            </a>
-            {% endif %}
-            {% if current_user.twitter_url %}
-            <a href="{{ current_user.twitter_url }}" target="_blank" rel="noopener"
-               class="text-muted small text-decoration-none">
-                <i class="fa-brands fa-x me-1"></i>Twitter
-            </a>
-            {% endif %}
-        </div>
-
-        <!-- Follow counts -->
-        <div class="d-flex justify-content-center gap-4 mt-3">
-            <div class="text-center" style="cursor:pointer;" @click="activeTab='follow'">
-                <div class="fw-bold fs-5 text-primary">[[ followingList.length ]]</div>
-                <div class="text-muted" style="font-size:.78rem;">Following</div>
+                <!-- Social links -->
+                {% if current_user.website_url or current_user.github_url or current_user.twitter_url or current_user.location %}
+                <div class="ud-profile-links">
+                    {% if current_user.location %}
+                    <span class="ud-profile-link">
+                        <i class="fas fa-location-dot"></i>{{ current_user.location }}
+                    </span>
+                    {% endif %}
+                    {% if current_user.website_url %}
+                    <a href="{{ current_user.website_url }}" target="_blank" rel="noopener" class="ud-profile-link ud-profile-link--clickable">
+                        <i class="fas fa-globe"></i>{{ current_user.website_url }}
+                    </a>
+                    {% endif %}
+                    {% if current_user.github_url %}
+                    <a href="{{ current_user.github_url }}" target="_blank" rel="noopener" class="ud-profile-link ud-profile-link--clickable">
+                        <i class="fab fa-github"></i>{{ current_user.github_url }}
+                    </a>
+                    {% endif %}
+                    {% if current_user.twitter_url %}
+                    <a href="{{ current_user.twitter_url }}" target="_blank" rel="noopener" class="ud-profile-link ud-profile-link--clickable">
+                        <i class="fab fa-x-twitter"></i>{{ current_user.twitter_url }}
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
-            <div class="text-center" style="cursor:pointer;" @click="activeTab='follow'">
-                <div class="fw-bold fs-5 text-primary">[[ followersList.length ]]</div>
-                <div class="text-muted" style="font-size:.78rem;">Followers</div>
-            </div>
-        </div>
 
-        <div class="mx-auto mt-3 bg-primary opacity-25" style="width:60px;height:4px;border-radius:2px;"></div>
+            <!-- Edit Profile: same slot the Follow button occupies on someone else's profile -->
+            <div class="ud-profile-follow">
+                <a class="btn btn-sm btn-primary rounded-pill px-3" href="{{ url_for('account.edit_user') }}">
+                    <i class="fas fa-pen me-2"></i>Edit Profile
+                </a>
+                <a class="ud-follow-count text-decoration-none" href="/account/detail_user/{{ current_user.id }}">
+                    <i class="fas fa-chart-bar me-1"></i>Full stats
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Stats: Following / Followers / Comments -->
+    <div class="ud-kpi-row mb-4">
+        <button type="button" class="ud-kpi-card ud-kpi-card--blue ud-kpi-card--clickable"
+                @click="activeTab='follow'; loadFollow()">
+            <div class="ud-kpi-icon"><i class="fas fa-user-check"></i></div>
+            <div class="ud-kpi-body">
+                <div class="ud-kpi-value">[[ followingList.length ]]</div>
+                <div class="ud-kpi-label">Following</div>
+            </div>
+        </button>
+        <button type="button" class="ud-kpi-card ud-kpi-card--teal ud-kpi-card--clickable"
+                @click="activeTab='follow'; loadFollow()">
+            <div class="ud-kpi-icon"><i class="fas fa-users"></i></div>
+            <div class="ud-kpi-body">
+                <div class="ud-kpi-value">[[ followersList.length ]]</div>
+                <div class="ud-kpi-label">Followers</div>
+            </div>
+        </button>
+        <button type="button" class="ud-kpi-card ud-kpi-card--purple ud-kpi-card--clickable"
+                @click="activeTab='comments'">
+            <div class="ud-kpi-icon"><i class="fa-regular fa-comment"></i></div>
+            <div class="ud-kpi-body">
+                <div class="ud-kpi-value">[[ myCommentCount ]]</div>
+                <div class="ud-kpi-label">Comments</div>
+            </div>
+        </button>
     </div>
 
     <!-- ── Tabs ── -->
-    <div class="profile-tabs">
-        <button class="profile-tab" :class="{active: activeTab==='info'}"   @click="activeTab='info'">
-            <i class="fa-solid fa-circle-user me-2"></i>Profile
+    <div class="dr-nav mb-4">
+        <button type="button" class="dr-nav__item" :class="{ active: activeTab==='info' }" @click="activeTab='info'">
+            <i class="fa-solid fa-circle-user"></i><span>Profile</span>
         </button>
-        <button class="profile-tab" :class="{active: activeTab==='follow'}" @click="activeTab='follow'; loadFollow()">
-            <i class="fa-solid fa-users me-2"></i>Community
-            <span v-if="followersList.length + followingList.length > 0"
-                  class="badge rounded-pill bg-primary ms-2"
-                  style="font-size:.6rem;padding:2px 6px;">
+        <button type="button" class="dr-nav__item" :class="{ active: activeTab==='follow' }" @click="activeTab='follow'; loadFollow()">
+            <i class="fa-solid fa-users"></i><span>Community</span>
+            <span v-if="followersList.length + followingList.length > 0" class="dr-nav__badge">
                 [[ followersList.length + followingList.length ]]
             </span>
+        </button>
+        <button type="button" class="dr-nav__item" :class="{ active: activeTab==='comments' }" @click="activeTab='comments'">
+            <i class="fa-regular fa-comment"></i><span>Comments</span>
+            <span v-if="myCommentCount > 0" class="dr-nav__badge">[[ myCommentCount ]]</span>
         </button>
     </div>
 
     <!-- ── Tab 1 : Profile info ── -->
     <div v-show="activeTab==='info'">
 
-        <div class="User-detail-global-info">
+        <!-- ── Identity details ── -->
+        <div class="ud-section-header mb-3">
+            <i class="fas fa-id-card ud-section-icon"></i>
+            <div>
+                <div class="ud-section-title">Profile Details</div>
+                <div class="ud-section-sub">Account information and membership data</div>
+            </div>
+        </div>
 
-            <div class="avatar-container">
-                <div class="user-avatar" style="overflow:hidden;">
-                    {% if current_user.profile_picture %}
-                        <img src="{{ current_user.get_avatar_url() }}"
-                             style="width:100%;height:100%;object-fit:cover;">
-                    {% else %}
-                        {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
-                    {% endif %}
+        <div class="ud-info-grid mb-4">
+            <div class="ud-info-cell">
+                <div class="ud-info-cell-icon" style="background:rgba(13,110,253,.1);color:#0d6efd;">
+                    <i class="fas fa-user"></i>
                 </div>
-                <div class="avatar-info">
-                    <div class="avatar-name">{{ current_user.get_username() }}</div>
-                    <div class="avatar-email">{{ current_user.email }}</div>
+                <div class="ud-info-cell-body">
+                    <div class="ud-info-cell-label">First Name</div>
+                    <div class="ud-info-cell-value">{{ current_user.first_name }}</div>
                 </div>
             </div>
-
-            <div class="global-info-grid">
-                <div class="info-item">
-                    <label class="info-item-label">First Name</label>
-                    <div class="info-item-value">{{ current_user.first_name }}</div>
+            <div class="ud-info-cell">
+                <div class="ud-info-cell-icon" style="background:rgba(13,110,253,.1);color:#0d6efd;">
+                    <i class="fas fa-user"></i>
                 </div>
-                <div class="info-item">
-                    <label class="info-item-label">Last Name</label>
-                    <div class="info-item-value">{{ current_user.last_name }}</div>
+                <div class="ud-info-cell-body">
+                    <div class="ud-info-cell-label">Last Name</div>
+                    <div class="ud-info-cell-value">{{ current_user.last_name }}</div>
                 </div>
-                <div class="info-item">
-                    <label class="info-item-label">Username</label>
-                    <div class="info-item-value">
-                        {{ current_user.username if current_user.username else '—' }}
-                    </div>
+            </div>
+            <div class="ud-info-cell">
+                <div class="ud-info-cell-icon" style="background:rgba(111,66,193,.1);color:#6f42c1;">
+                    <i class="fas fa-at"></i>
                 </div>
-                <div class="info-item">
-                    <label class="info-item-label">User ID</label>
-                    <div class="info-item-value font-monospace">#{{ current_user.id }}</div>
+                <div class="ud-info-cell-body">
+                    <div class="ud-info-cell-label">Username</div>
+                    <div class="ud-info-cell-value">{{ current_user.username if current_user.username else '—' }}</div>
                 </div>
-                <div class="info-item">
-                    <label class="info-item-label">Member since</label>
-                    <div class="info-item-value">
+            </div>
+            <div class="ud-info-cell">
+                <div class="ud-info-cell-icon" style="background:rgba(108,117,125,.1);color:#6c757d;">
+                    <i class="fas fa-hashtag"></i>
+                </div>
+                <div class="ud-info-cell-body">
+                    <div class="ud-info-cell-label">User ID</div>
+                    <div class="ud-info-cell-value">#{{ current_user.id }}</div>
+                </div>
+            </div>
+            <div class="ud-info-cell">
+                <div class="ud-info-cell-icon" style="background:rgba(25,135,84,.1);color:#198754;">
+                    <i class="fas fa-calendar-plus"></i>
+                </div>
+                <div class="ud-info-cell-body">
+                    <div class="ud-info-cell-label">Member since</div>
+                    <div class="ud-info-cell-value">
                         {{ current_user.created_at.strftime('%B %d, %Y') if current_user.created_at else '—' }}
                     </div>
                 </div>
-                <div class="info-item">
-                    <label class="info-item-label">Last seen</label>
-                    <div class="info-item-value">
+            </div>
+            <div class="ud-info-cell">
+                <div class="ud-info-cell-icon" style="background:rgba(13,202,240,.1);color:#0dcaf0;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="ud-info-cell-body">
+                    <div class="ud-info-cell-label">Last seen</div>
+                    <div class="ud-info-cell-value">
                         {{ current_user.last_seen.strftime('%Y-%m-%d %H:%M') if current_user.last_seen else '—' }}
                     </div>
                 </div>
-                <div class="info-item">
-                    <label class="info-item-label">Verification</label>
-                    {% if current_user.is_verified %}
-                    <div class="info-badge badge-verified">
-                        <i class="fas fa-check-circle"></i> Verified
-                    </div>
-                    {% else %}
-                    <div class="info-badge badge-unverified">
-                        <i class="fas fa-clock"></i> Pending
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="info-item">
-                    <label class="info-item-label">Role</label>
-                    {% if current_user.is_admin() %}
-                    <div class="info-badge badge-admin">
-                        <i class="fas fa-crown"></i> Administrator
-                    </div>
-                    {% else %}
-                    <div class="info-badge">
-                        <i class="fas fa-user"></i> User
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="info-item">
-                    <label class="info-item-label">Email Address</label>
-                    <div class="info-item-value">{{ current_user.email }}</div>
-                </div>
-                {% if current_user.location %}
-                <div class="info-item">
-                    <label class="info-item-label">Location</label>
-                    <div class="info-item-value">
-                        <i class="fa-solid fa-location-dot me-1 text-muted"></i>{{ current_user.location }}
-                    </div>
-                </div>
-                {% endif %}
             </div>
-
-            <!-- API Key -->
-            <div class="info-section-header mt-3">
-                <i class="fas fa-key"></i>
-                <h3>API Access</h3>
+            <div class="ud-info-cell">
+                <div class="ud-info-cell-icon" style="background:rgba({% if current_user.is_verified %}25,135,84{% else %}255,193,7{% endif %},.12);color:{% if current_user.is_verified %}#198754{% else %}#d4a700{% endif %};">
+                    <i class="fas fa-{% if current_user.is_verified %}circle-check{% else %}hourglass-half{% endif %}"></i>
+                </div>
+                <div class="ud-info-cell-body">
+                    <div class="ud-info-cell-label">Verification</div>
+                    <div class="ud-info-cell-value">
+                        {% if current_user.is_verified %}
+                        <span class="ud-profile-badge ud-profile-badge--verified">
+                            <i class="fas fa-circle-check me-1"></i>Verified
+                        </span>
+                        {% else %}
+                        <span class="ud-profile-badge ud-profile-badge--pending">
+                            <i class="fas fa-hourglass-half me-1"></i>Unverified
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            {% if current_user.api_key %}
-            <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                <code id="api-key" class="api-key blurred flex-grow-1 p-2 rounded"
-                    style="background:var(--code-bg-color);font-size:.85rem;word-break:break-all;">
-                    {{ current_user.api_key }}
-                </code>
-                <button id="toggle-api-key" type="button" class="btn btn-sm btn-outline-secondary blur-btn"
-                    title="Show/Hide" data-visible="false">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-primary"
-                    onclick="navigator.clipboard.writeText('{{ current_user.api_key }}').then(() => window.create_message('API key copied!', 'success-subtle'))"
-                    title="Copy">
-                    <i class="fas fa-copy"></i>
-                </button>
+            <div class="ud-info-cell">
+                <div class="ud-info-cell-icon" style="background:rgba({% if current_user.is_admin() %}220,53,69{% else %}13,110,253{% endif %},.1);color:{% if current_user.is_admin() %}#dc3545{% else %}#0d6efd{% endif %};">
+                    <i class="fas fa-{% if current_user.is_admin() %}crown{% else %}user{% endif %}"></i>
+                </div>
+                <div class="ud-info-cell-body">
+                    <div class="ud-info-cell-label">Role</div>
+                    <div class="ud-info-cell-value">
+                        {% if current_user.is_admin() %}
+                        <span class="ud-profile-badge ud-profile-badge--admin">
+                            <i class="fas fa-crown me-1"></i>Administrator
+                        </span>
+                        {% else %}
+                        <span class="ud-profile-badge ud-profile-badge--user">
+                            <i class="fas fa-user me-1"></i>User
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            <small class="text-muted">
-                Use the <code>X-API-KEY</code> header —
-                <a href="http://rulezet.org/api/" target="_blank">API docs
-                    <i class="fas fa-arrow-up-right-from-square ms-1" style="font-size:.7rem;"></i>
-                </a>
-            </small>
-            {% else %}
-            <p class="text-muted mb-0"><i class="fas fa-ban me-2"></i>No API key generated yet.</p>
+            <div class="ud-info-cell">
+                <div class="ud-info-cell-icon" style="background:rgba(13,110,253,.1);color:#0d6efd;">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="ud-info-cell-body">
+                    <div class="ud-info-cell-label">Email Address</div>
+                    <div class="ud-info-cell-value">{{ current_user.email }}</div>
+                </div>
+            </div>
+            {% if current_user.location %}
+            <div class="ud-info-cell">
+                <div class="ud-info-cell-icon" style="background:rgba(220,53,69,.1);color:#dc3545;">
+                    <i class="fas fa-location-dot"></i>
+                </div>
+                <div class="ud-info-cell-body">
+                    <div class="ud-info-cell-label">Location</div>
+                    <div class="ud-info-cell-value">{{ current_user.location }}</div>
+                </div>
+            </div>
             {% endif %}
         </div>
 
-        <div class="text-end mt-2 mb-5 d-flex justify-content-end gap-2">
-            <a class="btn btn-outline-primary" href="/account/detail_user/{{ current_user.id }}"
-                title="View detailed account information">
-                <i class="fas fa-chart-bar me-2"></i>Stats
-            </a>
-            <a class="btn btn-outline-success" href="{{ url_for('account.edit_user') }}"
-                title="Edit your profile information">
-                <i class="fas fa-edit me-2"></i>Edit Profile
-            </a>
+        <!-- ── API access ── -->
+        <div class="ud-section-header mb-3">
+            <i class="fas fa-key ud-section-icon"></i>
+            <div>
+                <div class="ud-section-title">API Access</div>
+                <div class="ud-section-sub">Your personal key for the Rulezet REST API</div>
+            </div>
         </div>
+        <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-body p-4">
+                {% if current_user.api_key %}
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                    <code id="api-key" class="api-key blurred flex-grow-1 p-2 rounded"
+                        style="background:var(--code-bg-color);font-size:.85rem;word-break:break-all;">
+                        {{ current_user.api_key }}
+                    </code>
+                    <button id="toggle-api-key" type="button" class="btn btn-sm btn-outline-secondary blur-btn"
+                        title="Show/Hide" data-visible="false">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary"
+                        onclick="navigator.clipboard.writeText('{{ current_user.api_key }}').then(() => window.create_message('API key copied!', 'success-subtle'))"
+                        title="Copy">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <small class="text-muted">
+                    Use the <code>X-API-KEY</code> header —
+                    <a href="http://rulezet.org/api/" target="_blank">API docs
+                        <i class="fas fa-arrow-up-right-from-square ms-1" style="font-size:.7rem;"></i>
+                    </a>
+                </small>
+                {% else %}
+                <p class="text-muted mb-0"><i class="fas fa-ban me-2"></i>No API key generated yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
 
     <!-- ── Tab 2 : Community ── -->
@@ -557,6 +617,16 @@
 
     </div>
 
+    <!-- ── Tab 3 : My comments ── -->
+    <div v-show="activeTab==='comments'">
+        <comments-hub
+            :current-user-id="{{ current_user.id }}"
+            :current-user-is-admin="{{ current_user.is_admin() | tojson }}"
+            csrf-token="{{ csrf_token() }}"
+            :force-mine-only="true">
+        </comments-hub>
+    </div>
+
 </div>
 {% endblock %}
 
@@ -565,21 +635,23 @@
     const { createApp, ref, computed, onMounted } = Vue
     import { message_list, create_message } from '/static/js/toaster.js'
     import UserChip from '/static/js/components/UserChip.js'
+    import CommentsHub from '/static/js/community/CommentsHub.js'
     window.create_message = create_message
 
     function csrf() { return document.getElementById('csrf_token')?.value || '' }
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { 'user-chip': UserChip },
+        components: { 'user-chip': UserChip, 'comments-hub': CommentsHub },
         setup() {
-            const activeTab     = ref('info')
-            const loadingFollow = ref(false)
-            const followLoaded  = ref(false)
-            const followingList = ref([])
-            const followersList = ref([])
-            const followView    = ref('following')   // 'following' | 'followers'
-            const followSearch  = ref('')
+            const activeTab      = ref('info')
+            const loadingFollow  = ref(false)
+            const followLoaded   = ref(false)
+            const followingList  = ref([])
+            const followersList  = ref([])
+            const followView     = ref('following')   // 'following' | 'followers'
+            const followSearch   = ref('')
+            const myCommentCount = ref(0)
 
             // ── Filtered computed ─────────────────────────────────
             const filteredFollowing = computed(() => {
@@ -630,8 +702,16 @@
                 }
             }
 
+            async function loadMyCommentCount() {
+                try {
+                    const res = await fetch('/api/comments/my_count')
+                    if (res.ok) myCommentCount.value = (await res.json()).count || 0
+                } catch {}
+            }
+
             onMounted(() => {
                 loadFollow()   // pre-load so header counts appear immediately
+                loadMyCommentCount()
             })
 
             return {
@@ -640,6 +720,7 @@
                 followingList, followersList,
                 followView, followSearch,
                 filteredFollowing, filteredFollowers,
+                myCommentCount,
                 loadFollow, unfollow,
             }
         }

@@ -729,6 +729,15 @@ body.dark-mode .user-rules-management-component .column-filter-options {
 .ud-kpi-card--purple .ud-kpi-icon { background: rgba(111,66,193,.12); color: #6f42c1; }
 .ud-kpi-card--orange .ud-kpi-icon { background: rgba(253,126,20,.12); color: #fd7e14; }
 
+/* Grid for a row of ud-kpi-card, e.g. own-profile stats under the hero */
+.ud-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: .85rem;
+}
+/* Reset browser <button> chrome while keeping .ud-kpi-card's own border/background */
+.ud-kpi-card--clickable { cursor: pointer; text-align: left; width: 100%; font: inherit; }
+
 /* ── Section headers ────────────────────────────────────────── */
 .ud-section-header {
     display: flex;

@@ -2833,6 +2833,14 @@ body.dark-mode .table .opacity-50 {
     white-space: nowrap;
     transition: background .14s ease, color .14s ease;
 }
+/* Some tab bars use <button> instead of <a> (Vue-only tab switches with no
+   real href to go to) — strip the browser button chrome so it matches. */
+button.dr-nav__item {
+    border: none;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+}
 .dr-nav__item:hover {
     background: var(--light-bg-color);
     color: var(--text-color);
