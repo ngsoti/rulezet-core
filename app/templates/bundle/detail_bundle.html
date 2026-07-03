@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/pvt-dark.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/report-modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/attack-matrix.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/voter-popover.css') }}">
 
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/rule/base/detail_rule.css') }}">
 <style>
@@ -155,18 +156,22 @@
                 <div class="row g-3 mb-3 mt-3">
                     <div class="d-flex justify-content-between align-items-center pt-4 border-top flex-wrap gap-3">
                         <div class="btn-group shadow-sm border rounded-pill overflow-hidden ">
-                            <button @click="vote('up', bundle.id); animateClick($event)"
-                                class="btn btn-sm px-3 border-0 border-end border-light shadow-none btn-animate home-btn"
-                                :class="bundleUserVote === 'up' ? 'rl-vote-btn--active-up' : ''"
-                                title="Vote up">
-                                <i class="fas fa-thumbs-up me-1"></i> [[ bundle.vote_up ]]
-                            </button>
-                            <button @click="vote('down', bundle.id); animateClick($event)"
-                                class="btn btn-sm px-3 border-0 shadow-none btn-animate home-btn"
-                                :class="bundleUserVote === 'down' ? 'rl-vote-btn--active-down' : ''"
-                                title="Vote down">
-                                <i class="fas fa-thumbs-down me-1"></i> [[ bundle.vote_down ]]
-                            </button>
+                            <voter-popover :fetch-url="'/bundle/voters?bundleId=' + bundle.id + '&voteType=up'" label="Liked by">
+                                <button @click="vote('up', bundle.id); animateClick($event)"
+                                    class="btn btn-sm px-3 border-0 border-end border-light shadow-none btn-animate home-btn"
+                                    :class="bundleUserVote === 'up' ? 'rl-vote-btn--active-up' : ''"
+                                    title="Vote up">
+                                    <i class="fas fa-thumbs-up me-1"></i> [[ bundle.vote_up ]]
+                                </button>
+                            </voter-popover>
+                            <voter-popover :fetch-url="'/bundle/voters?bundleId=' + bundle.id + '&voteType=down'" label="Disliked by">
+                                <button @click="vote('down', bundle.id); animateClick($event)"
+                                    class="btn btn-sm px-3 border-0 shadow-none btn-animate home-btn"
+                                    :class="bundleUserVote === 'down' ? 'rl-vote-btn--active-down' : ''"
+                                    title="Vote down">
+                                    <i class="fas fa-thumbs-down me-1"></i> [[ bundle.vote_down ]]
+                                </button>
+                            </voter-popover>
                         </div>
 
                         <div class="d-flex gap-2">
@@ -452,6 +457,7 @@
     import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
     import ReportModal from '/static/js/components/ReportModal.js';
     import AttackMatrix from '/static/js/components/attack-matrix.js';
+    import VoterPopover from '/static/js/components/VoterPopover.js';
 
     const csrfToken = '{{ csrf_token() }}';
 
@@ -470,6 +476,7 @@
             'vulnerability-displays-list': VulnerabilityDisplaysList,
             'report-modal': ReportModal,
             'attack-matrix': AttackMatrix,
+            'voter-popover': VoterPopover,
         },
         setup() {
             /**

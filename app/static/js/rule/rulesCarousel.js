@@ -2,6 +2,7 @@ import UserChip from '/static/js/components/UserChip.js'
 import AttackDisplayList from '/static/js/attack/attackDisplayList.js'
 import SingleTagDisplay from '/static/js/tags/singleTagDisplay.js'
 import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js'
+import VoterPopover from '/static/js/components/VoterPopover.js'
 
 const { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } = Vue
 import { message_list, create_message } from '/static/js/toaster.js'
@@ -15,6 +16,7 @@ const RulesCarousel = {
         'attack-display-list': AttackDisplayList,
         'single-tag-display': SingleTagDisplay,
         'vulnerability-displays-list': VulnerabilityDisplaysList,
+        'voter-popover': VoterPopover,
     },
 
     props: {
@@ -152,18 +154,22 @@ const RulesCarousel = {
 
                                     <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto bg-transparent">
                                         <div class="btn-group shadow-sm border rounded-pill overflow-hidden">
-                                            <button @click="doVote('up', rule.id); animateClick($event)"
-                                                    class="btn btn-sm px-3 border-0 border-end border-light shadow-none btn-animate home-btn"
-                                                    :class="rule.user_vote === 'up' ? 'carousel-vote-active-up' : ''"
-                                                    title="Like this rule">
-                                                <i class="fas fa-thumbs-up me-1"></i> [[ rule.vote_up ]]
-                                            </button>
-                                            <button @click="doVote('down', rule.id); animateClick($event)"
-                                                    class="btn btn-sm px-3 border-0 shadow-none btn-animate home-btn"
-                                                    :class="rule.user_vote === 'down' ? 'carousel-vote-active-down' : ''"
-                                                    title="Dislike this rule">
-                                                <i class="fas fa-thumbs-down me-1"></i> [[ rule.vote_down ]]
-                                            </button>
+                                            <voter-popover :fetch-url="'/rule/voters/' + rule.id + '?type=up'" label="Liked by">
+                                                <button @click="doVote('up', rule.id); animateClick($event)"
+                                                        class="btn btn-sm px-3 border-0 border-end border-light shadow-none btn-animate home-btn"
+                                                        :class="rule.user_vote === 'up' ? 'carousel-vote-active-up' : ''"
+                                                        title="Like this rule">
+                                                    <i class="fas fa-thumbs-up me-1"></i> [[ rule.vote_up ]]
+                                                </button>
+                                            </voter-popover>
+                                            <voter-popover :fetch-url="'/rule/voters/' + rule.id + '?type=down'" label="Disliked by">
+                                                <button @click="doVote('down', rule.id); animateClick($event)"
+                                                        class="btn btn-sm px-3 border-0 shadow-none btn-animate home-btn"
+                                                        :class="rule.user_vote === 'down' ? 'carousel-vote-active-down' : ''"
+                                                        title="Dislike this rule">
+                                                    <i class="fas fa-thumbs-down me-1"></i> [[ rule.vote_down ]]
+                                                </button>
+                                            </voter-popover>
                                         </div>
 
                                         <div class="d-flex gap-2">

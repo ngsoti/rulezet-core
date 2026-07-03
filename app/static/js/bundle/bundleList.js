@@ -54,6 +54,7 @@ import UserChip                 from '/static/js/components/UserChip.js'
 import CodeViewer               from '/static/js/components/code-viewer.js'
 import { create_message }       from '/static/js/toaster.js'
 import ReportModal              from '/static/js/components/ReportModal.js'
+import VoterPopover             from '/static/js/components/VoterPopover.js'
 
 const { ref, reactive, computed, watch, onMounted, onUnmounted } = Vue
 
@@ -71,6 +72,7 @@ export default {
         UserChip,
         CodeViewer,
         ReportModal,
+        VoterPopover,
     },
 
     props: {
@@ -462,18 +464,22 @@ export default {
 
                         <!-- Votes -->
                         <div class="btn-group shadow-sm border rounded-pill overflow-hidden">
-                            <button @click="handleVote('up', bundle)"
-                                    class="btn btn-sm px-3 border-0 border-end border-light shadow-none btn-animate home-btn"
-                                    :class="{ 'rl-vote-disabled': !canVote, 'rl-vote-btn--active-up': bundle.user_vote === 'up' }"
-                                    :title="canVote ? 'Upvote' : 'Login to vote'">
-                                <i class="fas fa-thumbs-up me-1"></i>{{ bundle.vote_up }}
-                            </button>
-                            <button @click="handleVote('down', bundle)"
-                                    class="btn btn-sm px-3 border-0 shadow-none btn-animate home-btn"
-                                    :class="{ 'rl-vote-disabled': !canVote, 'rl-vote-btn--active-down': bundle.user_vote === 'down' }"
-                                    :title="canVote ? 'Downvote' : 'Login to vote'">
-                                <i class="fas fa-thumbs-down me-1"></i>{{ bundle.vote_down }}
-                            </button>
+                            <voter-popover :fetch-url="'/bundle/voters?bundleId=' + bundle.id + '&voteType=up'" label="Liked by">
+                                <button @click="handleVote('up', bundle)"
+                                        class="btn btn-sm px-3 border-0 border-end border-light shadow-none btn-animate home-btn"
+                                        :class="{ 'rl-vote-disabled': !canVote, 'rl-vote-btn--active-up': bundle.user_vote === 'up' }"
+                                        :title="canVote ? 'Upvote' : 'Login to vote'">
+                                    <i class="fas fa-thumbs-up me-1"></i>{{ bundle.vote_up }}
+                                </button>
+                            </voter-popover>
+                            <voter-popover :fetch-url="'/bundle/voters?bundleId=' + bundle.id + '&voteType=down'" label="Disliked by">
+                                <button @click="handleVote('down', bundle)"
+                                        class="btn btn-sm px-3 border-0 shadow-none btn-animate home-btn"
+                                        :class="{ 'rl-vote-disabled': !canVote, 'rl-vote-btn--active-down': bundle.user_vote === 'down' }"
+                                        :title="canVote ? 'Downvote' : 'Login to vote'">
+                                    <i class="fas fa-thumbs-down me-1"></i>{{ bundle.vote_down }}
+                                </button>
+                            </voter-popover>
                         </div>
 
                         <div class="d-flex gap-2 align-items-center">
@@ -751,18 +757,22 @@ export default {
 
                             <td v-show="colVisible.votes" class="dt-td">
                                 <div class="rl-vote-row">
-                                    <button class="rl-vote-btn rl-vote-btn--up"
-                                            :class="{ 'rl-vote-disabled': !canVote, 'rl-vote-btn--active-up': bundle.user_vote === 'up' }"
-                                            @click.stop="handleVote('up', bundle)">
-                                        <i class="fas fa-thumbs-up"></i>
-                                        <span>{{ bundle.vote_up }}</span>
-                                    </button>
-                                    <button class="rl-vote-btn rl-vote-btn--down"
-                                            :class="{ 'rl-vote-disabled': !canVote, 'rl-vote-btn--active-down': bundle.user_vote === 'down' }"
-                                            @click.stop="handleVote('down', bundle)">
-                                        <i class="fas fa-thumbs-down"></i>
-                                        <span>{{ bundle.vote_down }}</span>
-                                    </button>
+                                    <voter-popover :fetch-url="'/bundle/voters?bundleId=' + bundle.id + '&voteType=up'" label="Liked by">
+                                        <button class="rl-vote-btn rl-vote-btn--up"
+                                                :class="{ 'rl-vote-disabled': !canVote, 'rl-vote-btn--active-up': bundle.user_vote === 'up' }"
+                                                @click.stop="handleVote('up', bundle)">
+                                            <i class="fas fa-thumbs-up"></i>
+                                            <span>{{ bundle.vote_up }}</span>
+                                        </button>
+                                    </voter-popover>
+                                    <voter-popover :fetch-url="'/bundle/voters?bundleId=' + bundle.id + '&voteType=down'" label="Disliked by">
+                                        <button class="rl-vote-btn rl-vote-btn--down"
+                                                :class="{ 'rl-vote-disabled': !canVote, 'rl-vote-btn--active-down': bundle.user_vote === 'down' }"
+                                                @click.stop="handleVote('down', bundle)">
+                                            <i class="fas fa-thumbs-down"></i>
+                                            <span>{{ bundle.vote_down }}</span>
+                                        </button>
+                                    </voter-popover>
                                 </div>
                             </td>
 

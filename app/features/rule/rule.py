@@ -329,6 +329,32 @@ def vote_rule() -> jsonify:
     }), 200
 
 
+VOTERS_PREVIEW_CAP = 50
+
+@rule_blueprint.route('/voters/<int:rule_id>', methods=['GET'])
+def rule_voters(rule_id):
+    """List the users who voted up/down on a rule (hover popover)."""
+    vote_type = request.args.get('type', 'up')
+    if vote_type not in ('up', 'down'):
+        return jsonify({"message": "Invalid vote type"}), 400
+
+    rule = RuleModel.get_rule(rule_id)
+    if not rule:
+        return jsonify({"message": "Rule not found"}), 404
+
+    from app.core.db_class.db import RuleVote as _RuleVote
+    q = (_RuleVote.query.filter_by(rule_id=rule_id, vote_type=vote_type)
+         .order_by(_RuleVote.created_at.desc()))
+    total = q.count()
+    users = [{
+        'id':       v.user.id,
+        'username': v.user.get_username(),
+        'avatar':   v.user.get_avatar_url(),
+    } for v in q.limit(VOTERS_PREVIEW_CAP).all() if v.user]
+
+    return jsonify({'users': users, 'total': total}), 200
+
+
 
 @rule_blueprint.route("/edit_rule/<int:rule_id>", methods=['GET' , 'POST'])
 @login_required

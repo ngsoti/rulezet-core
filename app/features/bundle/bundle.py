@@ -550,6 +550,36 @@ def evaluate():
         "user_vote": user_vote
     }), 200
 
+
+BUNDLE_VOTERS_PREVIEW_CAP = 50
+
+@bundle_blueprint.route('/voters', methods=['GET'])
+def bundle_voters():
+    """List the users who voted up/down on a bundle (hover popover)."""
+    bundle_id = request.args.get('bundleId', type=int)
+    vote_type = request.args.get('voteType', type=str)
+    if not bundle_id or vote_type not in ('up', 'down'):
+        return jsonify({"message": "Invalid parameters"}), 400
+
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle:
+        return jsonify({"message": "Bundle not found"}), 404
+    if not bundle.access and (not current_user.is_authenticated or
+                              (current_user.id != bundle.user_id and not current_user.is_admin())):
+        return jsonify({"message": "You don't have the permission to view this bundle"}), 401
+
+    from app.core.db_class.db import BundleVote as _BV
+    q = (_BV.query.filter_by(bundle_id=bundle_id, vote_type=vote_type)
+         .order_by(_BV.created_at.desc()))
+    total = q.count()
+    users = [{
+        'id':       v.user.id,
+        'username': v.user.get_username(),
+        'avatar':   v.user.get_avatar_url(),
+    } for v in q.limit(BUNDLE_VOTERS_PREVIEW_CAP).all() if v.user]
+
+    return jsonify({'users': users, 'total': total}), 200
+
 #########################
 #   Download section    #
 #########################

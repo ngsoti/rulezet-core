@@ -476,6 +476,32 @@ class CommentReact(Resource):
         }
 
 
+REACTORS_PREVIEW_CAP = 50
+
+@comment_ns.route('/<string:uuid>/reactors')
+class CommentReactors(Resource):
+
+    def get(self, uuid):
+        """List the users who liked/disliked a comment (hover popover)."""
+        reaction = request.args.get('type', 'like')
+        if reaction not in ('like', 'dislike'):
+            return {'message': 'type must be "like" or "dislike"'}, 400
+
+        comment = _get_or_404(uuid)
+
+        q = (UnifiedCommentReaction.query
+             .filter_by(comment_id=comment.id, reaction=reaction)
+             .order_by(UnifiedCommentReaction.created_at.desc()))
+        total = q.count()
+        users = [{
+            'id':       r.user.id,
+            'username': r.user.get_username(),
+            'avatar':   r.user.get_avatar_url(),
+        } for r in q.limit(REACTORS_PREVIEW_CAP).all() if r.user]
+
+        return {'users': users, 'total': total}
+
+
 # ── Create GitHub issue (admin only) ────────────────────────────────────────────
 
 @comment_ns.route('/<string:uuid>/create_issue')

@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/graph-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/report-modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/attack-display.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/voter-popover.css') }}">
 
 <script>
 window.__rule_json   = {{ rule_to_json | tojson | safe }};
@@ -365,18 +366,22 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
 
                                 <!-- Votes -->
                                 <div class="btn-group rounded-pill overflow-hidden" style="border:1px solid var(--border-color);">
-                                    <button @click="vote('up', currentRule.id); animateClick($event)"
-                                            class="btn btn-sm px-3 border-0 border-end shadow-none btn-animate"
-                                            :class="userVote === 'up' ? 'vote-btn-active-up' : 'vote-btn-neutral'"
-                                            title="Vote up">
-                                        <i class="fas fa-thumbs-up me-1"></i>[[ currentRule.vote_up ]]
-                                    </button>
-                                    <button @click="vote('down', currentRule.id); animateClick($event)"
-                                            class="btn btn-sm px-3 border-0 shadow-none btn-animate"
-                                            :class="userVote === 'down' ? 'vote-btn-active-down' : 'vote-btn-neutral'"
-                                            title="Vote down">
-                                        <i class="fas fa-thumbs-down me-1"></i>[[ currentRule.vote_down ]]
-                                    </button>
+                                    <voter-popover :fetch-url="'/rule/voters/' + currentRule.id + '?type=up'" label="Liked by">
+                                        <button @click="vote('up', currentRule.id); animateClick($event)"
+                                                class="btn btn-sm px-3 border-0 border-end shadow-none btn-animate"
+                                                :class="userVote === 'up' ? 'vote-btn-active-up' : 'vote-btn-neutral'"
+                                                title="Vote up">
+                                            <i class="fas fa-thumbs-up me-1"></i>[[ currentRule.vote_up ]]
+                                        </button>
+                                    </voter-popover>
+                                    <voter-popover :fetch-url="'/rule/voters/' + currentRule.id + '?type=down'" label="Disliked by">
+                                        <button @click="vote('down', currentRule.id); animateClick($event)"
+                                                class="btn btn-sm px-3 border-0 shadow-none btn-animate"
+                                                :class="userVote === 'down' ? 'vote-btn-active-down' : 'vote-btn-neutral'"
+                                                title="Vote down">
+                                            <i class="fas fa-thumbs-down me-1"></i>[[ currentRule.vote_down ]]
+                                        </button>
+                                    </voter-popover>
                                 </div>
 
                                 <!-- Favorite -->
@@ -830,6 +835,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
     import { initBundleGraph } from '/static/js/bundle/bundleMispGraph.js';
     import ReportModal from '/static/js/components/ReportModal.js';
     import AttackDisplay from '/static/js/components/AttackDisplay.js';
+    import VoterPopover from '/static/js/components/VoterPopover.js';
 
 
     createApp({
@@ -842,6 +848,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
             'comment-thread': CommentThread,
             'report-modal': ReportModal,
             'attack-display': AttackDisplay,
+            'voter-popover': VoterPopover,
         },
         setup() {
             /**

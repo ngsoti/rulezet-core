@@ -10,6 +10,7 @@ import { apiFetch } from '/static/js/constants.js'
 import { create_message } from '/static/js/toaster.js'
 import UserChip from '/static/js/components/UserChip.js'
 import ReportModal from '/static/js/components/ReportModal.js'
+import VoterPopover from '/static/js/components/VoterPopover.js'
 
 const TOAST = { SUCCESS: 'success', WARNING: 'warning', ERROR: 'danger', INFO: 'info' }
 
@@ -296,18 +297,22 @@ const CommentItem = {
     <div class="cm-body">[[ content ]]</div>
 
     <div v-if="!showEditForm" class="cm-actions">
-        <button class="cm-react-btn"
-                :class="{ 'cm-react-btn--active cm-react-btn--like': userReaction === 'like' }"
-                @click="doReact('like')"
-                :disabled="!currentUserId">
-            <i class="fas fa-thumbs-up"></i> [[ likeCount ]]
-        </button>
-        <button class="cm-react-btn"
-                :class="{ 'cm-react-btn--active cm-react-btn--dislike': userReaction === 'dislike' }"
-                @click="doReact('dislike')"
-                :disabled="!currentUserId">
-            <i class="fas fa-thumbs-down"></i> [[ dislikeCount ]]
-        </button>
+        <voter-popover :fetch-url="'/api/comments/' + comment.uuid + '/reactors?type=like'" label="Liked by">
+            <button class="cm-react-btn"
+                    :class="{ 'cm-react-btn--active cm-react-btn--like': userReaction === 'like' }"
+                    @click="doReact('like')"
+                    :disabled="!currentUserId">
+                <i class="fas fa-thumbs-up"></i> [[ likeCount ]]
+            </button>
+        </voter-popover>
+        <voter-popover :fetch-url="'/api/comments/' + comment.uuid + '/reactors?type=dislike'" label="Disliked by">
+            <button class="cm-react-btn"
+                    :class="{ 'cm-react-btn--active cm-react-btn--dislike': userReaction === 'dislike' }"
+                    @click="doReact('dislike')"
+                    :disabled="!currentUserId">
+                <i class="fas fa-thumbs-down"></i> [[ dislikeCount ]]
+            </button>
+        </voter-popover>
 
         <button v-if="canCreate && !isDeleted" class="cm-action-btn"
                 @click="showReplyForm = !showReplyForm">
@@ -403,8 +408,8 @@ const CommentItem = {
     `,
 }
 
-// Self-referential for recursion (also includes UserChip and ReportModal)
-CommentItem.components = { CommentItem, UserChip, ReportModal }
+// Self-referential for recursion (also includes UserChip, ReportModal and VoterPopover)
+CommentItem.components = { CommentItem, UserChip, ReportModal, VoterPopover }
 
 // ── CommentThread ──────────────────────────────────────────────────────────
 
