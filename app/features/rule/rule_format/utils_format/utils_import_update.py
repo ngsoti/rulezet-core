@@ -118,6 +118,13 @@ def get_github_branches(repo_url: str) -> tuple[list[str], str | None]:
         headers['Authorization'] = f'Bearer {token}'
     try:
         res = requests.get(api_url, headers=headers, timeout=8)
+        if res.status_code == 401 and token:
+            from app.features.notification.notification_core import notify_admins_github_token_invalid
+            notify_admins_github_token_invalid(
+                'The configured GITHUB_TOKEN was rejected (401 Bad credentials) while fetching '
+                'branches for a GitHub import. GitHub-backed features are down until it is replaced.'
+            )
+            return [], "GITHUB_TOKEN is invalid or expired — all admins have been alerted."
         if res.status_code == 403:
             return [], "GitHub API rate limit exceeded. Add a GITHUB_TOKEN to .env to increase the limit."
         if res.status_code == 404:

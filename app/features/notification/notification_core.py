@@ -58,6 +58,7 @@ _TYPE_ICON = {
     'ownership_approved':      'fa-solid fa-user-check',
     'ownership_rejected':      'fa-solid fa-user-xmark',
     'blog_published':          'fa-solid fa-newspaper',
+    'github_token_invalid':    'fa-solid fa-key',
 }
 
 
@@ -292,6 +293,48 @@ def notify_admins_report_created(report, rule, reporter):
     except Exception as e:
         db.session.rollback()
         print(f"[notification_core] notify_admins_report_created error: {e}")
+
+
+def notify_admins_github_token_invalid(reason=None):
+    """
+    Alert all admins that GITHUB_TOKEN was rejected by the GitHub API, so
+    GitHub-backed features (issue filing, branch lookups) are broken until
+    someone sets a fresh one in Server Settings.
+
+    De-duplicated: skips if an alert of this type already went out in the
+    last 24h, so a burst of failed calls doesn't spam every admin's bell.
+    """
+    try:
+        recent_cutoff = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
+        already_sent = Notification.query.filter(
+            Notification.notif_type == 'github_token_invalid',
+            Notification.created_at >= recent_cutoff,
+        ).first()
+        if already_sent:
+            return
+
+        admin_ids = _get_all_admin_ids()
+        if not admin_ids:
+            return
+
+        notifs = []
+        for uid in admin_ids:
+            notifs.append(Notification(
+                user_id    = uid,
+                notif_type = 'github_token_invalid',
+                title      = 'GitHub token is invalid or expired',
+                body       = reason or ('GITHUB_TOKEN was rejected by the GitHub API. '
+                                         'Set a new one in Server Settings to restore GitHub features.'),
+                link       = '/admin/settings',
+                icon       = _TYPE_ICON['github_token_invalid'],
+                is_read    = False,
+                created_at = datetime.datetime.utcnow(),
+            ))
+        db.session.add_all(notifs)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"[notification_core] notify_admins_github_token_invalid error: {e}")
 
 
 def notify_admins_session_started(user, session_type, session_uuid, label, link):

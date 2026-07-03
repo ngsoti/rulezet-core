@@ -490,6 +490,15 @@ class CommentCreateIssue(Resource):
         except requests.RequestException as exc:
             return {'message': f'Network error contacting GitHub: {exc}'}, 502
 
+        if res.status_code == 401:
+            from app.features.notification.notification_core import notify_admins_github_token_invalid
+            notify_admins_github_token_invalid(
+                'The configured GITHUB_TOKEN was rejected (401 Bad credentials) while filing '
+                'an issue from a comment. GitHub-backed features are down until it is replaced.'
+            )
+            return {'message': 'GITHUB_TOKEN is invalid or expired — all admins have been alerted. '
+                                'Set a new token in Server Settings.'}, 502
+
         if res.status_code not in (200, 201):
             return {'message': f'GitHub API error ({res.status_code}): {res.text[:300]}'}, 502
 

@@ -6,7 +6,7 @@ Tests for the "turn a comment into a GitHub issue" admin action
 import os
 from unittest.mock import patch, MagicMock
 
-from app.core.db_class.db import Rule, User
+from app.core.db_class.db import Notification, Rule, User
 
 
 def login_admin(client):
@@ -107,3 +107,34 @@ def test_create_issue_success_and_duplicate_guard(app, client):
             assert r2.status_code == 400
             assert r2.get_json()["issue_url"].endswith("/issues/42")
             mock_post_2.assert_not_called()
+
+
+def test_create_issue_invalid_token_alerts_admins(app, client):
+    with app.app_context():
+        rule = Rule.query.filter_by(title="test").first()
+        rule_id = rule.id
+        admin = User.query.filter_by(email="admin@admin.admin").first()
+        admin_id = admin.id
+
+    login_user(client)
+    comment_uuid = _post_comment(client, rule_id)
+
+    login_admin(client)
+    with patch.dict(os.environ, {"GITHUB_TOKEN": "dead-token"}):
+        with patch("app.api.comment.comment_api.requests.post",
+                    return_value=_github_response(status_code=401)):
+            r = client.post(f"/api/comments/{comment_uuid}/create_issue")
+    assert r.status_code == 502
+    assert "invalid or expired" in r.get_json()["message"]
+
+    with app.app_context():
+        notif = Notification.query.filter_by(
+            user_id=admin_id, notif_type="github_token_invalid"
+        ).first()
+        assert notif is not None
+        assert notif.link == "/admin/settings"
+
+        # Comment must NOT have been marked as having an issue
+        from app.core.db_class.db import UnifiedComment
+        c = UnifiedComment.query.filter_by(uuid=comment_uuid).first()
+        assert c.github_issue_url is None
