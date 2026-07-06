@@ -67,6 +67,10 @@ ICONS: dict[str, str] = {
     "connector.test_ok":   "fa-solid fa-circle-check",
     "connector.pull_triggered": "fa-solid fa-cloud-arrow-down",
     "connector.pull_done": "fa-solid fa-cloud-arrow-down",
+    "blog.create":         "fa-solid fa-newspaper",
+    "blog.edit":           "fa-solid fa-pen-fancy",
+    "blog.delete":         "fa-solid fa-trash",
+    "blog.create_from_cve": "fa-solid fa-newspaper",
 }
 
 # Actions that are public by default

@@ -940,7 +940,13 @@ def notify_blog_published(post):
     """Notify all authenticated users (except the author) when a blog post is published.
     Respects pref_blog_published (default True). Only fires when post becomes
     is_draft=False AND is_public=True for the first time.
+
+    Guards on post.is_public/is_draft itself (not just the caller's transition
+    check) so a private or draft post can never trigger notifications even if
+    a future call site forgets to gate on that first.
     """
+    if not post.is_public or post.is_draft:
+        return
     from app.core.db_class.db import User
     try:
         users = User.query.filter(User.id != post.user_id).all()

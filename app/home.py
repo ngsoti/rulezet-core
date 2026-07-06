@@ -855,6 +855,11 @@ def activity_feed():
             b = (Bundle.query.filter_by(uuid=extra['bundle_uuid']).first() if extra.get('bundle_uuid')
                  else Bundle.query.get(extra['bundle_id']) if extra.get('bundle_id') else None)
             return b is not None and b.access
+        if tt == 'blog_post':
+            from app.core.db_class.db import BlogPost
+            p = (BlogPost.query.filter_by(uuid=log.target_uuid).first() if log.target_uuid
+                 else BlogPost.query.get(log.target_id) if log.target_id else None)
+            return p is not None and p.is_public and not p.is_draft
         return True  # user, tag, job, github — always visible
 
     # Fetch a larger batch to absorb entries whose target became private/deleted
