@@ -548,7 +548,11 @@
 
             const ruleListUrl = computed(() => {
                 if (!post.value.rule_ids || !post.value.rule_ids.length) return ''
-                return '/rule/data_table?' + post.value.rule_ids.map(id => `ids[]=${id}`).join('&')
+                // /rule/data_table expects a single comma-separated "ids" param
+                // (unlike /bundle/data_table below, which expects ids[] repeated) —
+                // sending ids[] here made the backend silently ignore the filter
+                // and return every rule instead of just this post's CVE matches.
+                return '/rule/data_table?ids=' + post.value.rule_ids.join(',')
             })
 
             const bundleListUrl = computed(() => {
