@@ -43,6 +43,12 @@ def inject_requests_to_validate() -> jsonify:
 def why():
     return render_template("why.html")
 
+
+@home_blueprint.route("/starfield")
+def starfield():
+    """Hidden easter egg — a small space game. Not linked from any nav/sitemap."""
+    return render_template("starfield.html")
+
 @home_blueprint.route("/")
 def home() -> render_template:
     """Go to home page"""

@@ -318,4 +318,4 @@ Rulezet is co-funded by [CIRCL](https://www.circl.lu/) and by the European Union
 
 ## Inspiration
 
-This project is inspired by [Ptit Crolle](https://github.com/DavidCruciani/ptit-crolle), extended with a modern UI, collaborative features, and full integration capabilities.
+This project is inspired by [Flask launchpad](https://github.com/ecrou-exact/flask-launchpad), extended with a modern UI, collaborative features, and full integration capabilities.
