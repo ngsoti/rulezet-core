@@ -53,11 +53,14 @@
 
                      {% if current_user.is_authenticated %}
                      <li><hr class="dropdown-divider"></li>
+                     {# Rule Tester temporarily suspended — remove this {% if False %} guard to re-enable #}
+                     {% if False %}
                      <li><a class="dropdown-item {% if request.path == '/rule_tester/bulk' %}active{% endif %}"
                            href="/rule_tester/bulk">
                            <i class="fa-solid fa-flask-vial fa-fw me-2"></i>Rule Tester
                         </a>
                      </li>
+                     {% endif %}
                      <li>
                         <a class="dropdown-item d-flex justify-content-between align-items-center {% if request.path == '/rule/rule_propose_edit' %}active{% endif %}"
                            href="/rule/rule_propose_edit">
