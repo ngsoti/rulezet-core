@@ -33,5 +33,6 @@ faiss-cpu
 rapidfuzz
 dotenv
 pySigma
+pyatr
 weasyprint
 markdown
