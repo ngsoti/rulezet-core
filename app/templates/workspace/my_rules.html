@@ -69,6 +69,9 @@
                             </span>
                         </div>
                     </div>
+                    <p v-if="showAll" class="text-muted mb-1" style="font-size:.75rem;">
+                        <i class="fa-solid fa-user me-1"></i>[[ ws.owner_name || 'Unknown' ]]
+                    </p>
                     <p v-if="ws.description" class="wsgc-desc">[[ ws.description ]]</p>
                     <p v-else class="wsgc-desc fst-italic">No description.</p>
                 </div>
@@ -163,7 +166,7 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, onMounted } = Vue
+    const { createApp, ref, watch, onMounted } = Vue
     import IconPicker from '/static/js/tags/utils/iconPicker.js'
     import { create_message } from '/static/js/toaster.js'
 
@@ -180,12 +183,15 @@
 
             async function loadWorkspaces() {
                 try {
-                    const res = await fetch('/workspace/list')
+                    const url = showAll.value ? '/workspace/list?scope=all' : '/workspace/list'
+                    const res = await fetch(url)
                     workspaces.value = await res.json()
                 } catch {
                     create_message('Failed to load workspaces', 'danger')
                 }
             }
+
+            watch(showAll, loadWorkspaces)
 
             function goToWorkspace(ws) {
                 window.location.href = `/workspace/${ws.uuid}/detail`

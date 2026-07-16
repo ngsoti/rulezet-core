@@ -32,7 +32,10 @@ def my_rules():
 @workspace_blueprint.route('/list')
 @login_required
 def list_workspaces():
-    workspaces = WsModel.get_user_workspaces(current_user.id)
+    if request.args.get('scope') == 'all' and current_user.is_admin():
+        workspaces = WsModel.get_all_workspaces()
+    else:
+        workspaces = WsModel.get_user_workspaces(current_user.id)
     return jsonify([ws.to_json() for ws in workspaces])
 
 

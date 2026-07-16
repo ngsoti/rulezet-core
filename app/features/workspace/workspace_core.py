@@ -8,6 +8,11 @@ def get_user_workspaces(user_id: int) -> list:
     return Workspace.query.filter_by(user_id=user_id).order_by(Workspace.name).all()
 
 
+def get_all_workspaces() -> list:
+    """Every workspace on the instance, regardless of owner — admin-only view."""
+    return Workspace.query.order_by(Workspace.name).all()
+
+
 def get_workspace_by_uuid(uuid_str: str):
     return Workspace.query.filter_by(uuid=uuid_str).first()
 

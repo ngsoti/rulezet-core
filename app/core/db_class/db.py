@@ -2717,7 +2717,7 @@ class Workspace(db.Model):
             'url':         self.url,
             'cves':        self.cves_list,
             'user_id':     self.user_id,
-            'owner_name':  self.owner.username if self.owner else None,
+            'owner_name':  self.owner.get_username() if self.owner else None,
             'rule_count':  self.rule_count(),
             'created_at':  self.created_at.strftime('%Y-%m-%d') if self.created_at else None,
             'updated_at':  self.updated_at.strftime('%Y-%m-%d %H:%M') if self.updated_at else None,
