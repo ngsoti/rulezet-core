@@ -597,21 +597,17 @@ def get_current_rule() -> jsonify:
 
 @rule_blueprint.route("/get_related_rules", methods=['GET'])
 def get_related_rules() -> jsonify:
-    """Get up to `limit` (5/10/15) other rule ids sharing this rule's source (or author),
-    for the detail page overview's <rule-list> widget (which fetches the actual rule data)."""
+    """Check whether this rule has other rules sharing its source (or author), for
+    the detail page's Related Rules widget — the widget itself fetches the actual
+    paginated rule data via /rule/data_table?sources=... / ?authors=..."""
     rule_id = request.args.get('rule_id', type=int)
     if not rule_id:
         return {"message": "No rule id provided"}, 400
-    limit = request.args.get('limit', 5, type=int)
-    if limit not in (5, 10, 15):
-        limit = 5
     rule = RuleModel.get_rule(rule_id)
     if not rule:
         return {"message": "No Rule"}, 404
-    related, matched_field, total_count = RuleModel.get_related_rules(rule, limit=limit)
-    matched_value = (rule.source if matched_field == 'source' else rule.author) if matched_field else None
+    matched_field, matched_value, total_count = RuleModel.get_related_rules_meta(rule)
     return {
-        "rule_ids": [r.id for r in related],
         "matched_field": matched_field,
         "matched_value": matched_value,
         "total_count": total_count,

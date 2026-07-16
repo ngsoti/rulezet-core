@@ -85,6 +85,11 @@ export default {
         defaultView:        { type: String,           default: 'card' },
         fetchUrl:           { type: String,           default: '/rule/data_table' },
         source:             { type: String,           default: null },
+        // Pins the sidebar facet counts (tags/ATT&CK/vulnerabilities/licenses/person)
+        // to a fixed author, the same way `source` already pins them to a fixed
+        // source. Only used when there's no source to pin by (e.g. a rule with no
+        // known source but a known author). No effect on any other page.
+        authorContext:      { type: String,           default: '' },
         userId:             { type: [Number, String], default: null },
         currentUserId:      { type: [Number, String], default: null },
         currentUserIsAdmin: { type: Boolean,          default: false },
@@ -1207,8 +1212,11 @@ export default {
         const _cardDefault = props.initialPerPage === 12
             ? (Number(localStorage.getItem('rz-per-page-card')) || 12)
             : props.initialPerPage
-        const cardPerPage  = ref(Number(_p('per_page', String(_cardDefault))) || _cardDefault)
-        const tablePerPage = ref(Number(localStorage.getItem('rz-per-page-table')) || 25)
+        const cardPerPage   = ref(Number(_p('per_page', String(_cardDefault))) || _cardDefault)
+        const _tableDefault = props.initialPerPage === 12
+            ? (Number(localStorage.getItem('rz-per-page-table')) || 25)
+            : props.initialPerPage
+        const tablePerPage  = ref(_tableDefault)
         const sortKey      = ref(_p('sort', ''))
         const sortDir      = ref(_p('dir', 'asc'))
 
@@ -1815,12 +1823,15 @@ export default {
             if (exactMatch.value)             p.set('exact_match', 'true')
             if (selectedTags.value.length)     p.set('tags', selectedTags.value.join(','))
             if (selectedSources.value.length)  p.set('sources', selectedSources.value.join(','))
+            else if (props.source)             p.set('sources', props.source)
             if (selectedLicenses.value.length) p.set('licenses', selectedLicenses.value.join(','))
             if (selectedVulns.value.length)    p.set('vulnerabilities', selectedVulns.value.join(','))
             if (selectedAttacks.value.length)  p.set('attacks', selectedAttacks.value.join(','))
             if (personFilter.value.values.length) {
                 const pKey = personFilter.value.mode === 'editor' ? 'editors' : 'authors'
                 p.set(pKey, personFilter.value.values.join(','))
+            } else if (props.authorContext) {
+                p.set('authors', props.authorContext)
             }
             return p.toString()
         })

@@ -78,15 +78,19 @@ const SingleTagDisplay = {
             hideTimer = setTimeout(() => { showTooltip.value = false; }, 120);
         }
 
+        function goToTagRules() {
+            window.location.href = `/rule/rules_list?tags=${encodeURIComponent(props.tag.name)}`;
+        }
+
         return {
             getTextColor, mapIcon, label,
             wrapperEl, showTooltip, tooltipStyle,
-            onEnter, onLeave, onTooltipEnter, onTooltipLeave,
+            onEnter, onLeave, onTooltipEnter, onTooltipLeave, goToTagRules,
         };
     },
     template: `
         <div class="tag-wrapper d-inline-block" ref="wrapperEl" @mouseenter="onEnter" @mouseleave="onLeave">
-            <span class="tag-split shadow-sm on-hover-zoom">
+            <span class="tag-split shadow-sm on-hover-zoom" style="cursor:pointer" @click="goToTagRules" title="View all rules with this tag">
                 <span class="tag-left" v-html="mapIcon(tag.icon)"></span>
                 <span class="tag-right" :style="{ backgroundColor: tag.color || '#6c757d' }" :title="tag.name">
                     <span :style="{ color: getTextColor(tag.color || '#6c757d') }" class="fw-bold">

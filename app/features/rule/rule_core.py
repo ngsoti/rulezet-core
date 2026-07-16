@@ -791,25 +791,23 @@ def get_rule_by_source(source_) -> str:
     """Return all active (non-deleted) rules from the source."""
     return _active().filter(Rule.source == source_).all()
 
-def get_related_rules(rule, limit=3):
-    """Return up to `limit` other active rules sharing this rule's source, falling
-    back to its author when the source doesn't match anything else.
-    Returns (rules, matched_field, total_count) — matched_field is 'source', 'author'
-    or None; total_count is the full count of matching rules (not capped by limit)."""
+def get_related_rules_meta(rule):
+    """Check whether other active rules share this rule's source, falling back to
+    its author when the source doesn't match anything else.
+    Returns (matched_field, matched_value, total_count) — matched_field is 'source',
+    'author' or None. Uses the same substring (ILIKE) matching as filter_rules()/
+    get_rules_data_table() so total_count matches what /rule/data_table will
+    paginate over when the detail page points its <rule-list> widget at it."""
     base = _active().filter(Rule.id != rule.id)
     if rule.source:
-        source_query = base.filter(Rule.source == rule.source)
-        total = source_query.count()
+        total = base.filter(Rule.source.ilike(f"%{rule.source}%")).count()
         if total:
-            related = source_query.order_by(Rule.creation_date.desc()).limit(limit).all()
-            return related, 'source', total
+            return 'source', rule.source, total
     if rule.author:
-        author_query = base.filter(Rule.author == rule.author)
-        total = author_query.count()
+        total = base.filter(Rule.author.ilike(f"%{rule.author}%")).count()
         if total:
-            related = author_query.order_by(Rule.creation_date.desc()).limit(limit).all()
-            return related, 'author', total
-    return [], None, 0
+            return 'author', rule.author, total
+    return None, None, 0
 
 def get_rule_id_by_title(title) -> int:
     """Return the rule ID from the title"""

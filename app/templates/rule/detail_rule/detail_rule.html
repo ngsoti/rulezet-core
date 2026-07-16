@@ -11,9 +11,6 @@
 .vote-btn-active-up   { background: #198754 !important; color: #fff !important; }
 .vote-btn-active-down { background: #dc3545 !important; color: #fff !important; }
 .vote-btn-neutral     { background: transparent; color: var(--text-color); }
-/* Related Rules widget: pure read-only table, no toolbar/search/filters/pagination chrome */
-.related-rules-widget .rl-toolbar,
-.related-rules-widget .rl-footer { display: none; }
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
@@ -661,39 +658,31 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                             </small>
                                         </span>
                                     </div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <select v-model="relatedRulesLimit" @change="onRelatedLimitChange"
-                                            class="form-select form-select-sm py-1"
-                                            style="width:auto; font-size:.75rem;"
-                                            aria-label="Number of related rules to show">
-                                            <option :value="5">Show 5</option>
-                                            <option :value="10">Show 10</option>
-                                            <option :value="15">Show 15</option>
-                                        </select>
-                                        <a v-if="relatedRulesListUrl()" :href="relatedRulesListUrl()"
-                                            class="badge rounded-pill px-3 text-decoration-none"
-                                            style="background:var(--light-bg-color); color:var(--subtle-text-color); border:1px solid var(--border-color); font-size:.75rem;">
-                                            View all <i class="fas fa-arrow-right ms-1"></i>
-                                        </a>
-                                    </div>
+                                    <a v-if="relatedRulesListUrl()" :href="relatedRulesListUrl()"
+                                        class="badge rounded-pill px-3 text-decoration-none"
+                                        title="Redirects to the main rule search, pre-filtered on this same source/author"
+                                        style="background:var(--light-bg-color); color:var(--subtle-text-color); border:1px solid var(--border-color); font-size:.75rem;">
+                                        View all <i class="fas fa-arrow-right ms-1"></i>
+                                    </a>
                                 </div>
 
-                                <div class="related-rules-widget">
-                                    <rule-list
-                                        :key="relatedRulesFetchUrl"
-                                        mode="read"
-                                        default-view="table"
-                                        :fetch-url="relatedRulesFetchUrl"
-                                        :sync-url="false"
-                                        :show-filters="false"
-                                        :show-export="false"
-                                        :show-create="false"
-                                        :current-user-id="{{ current_user.id if current_user.is_authenticated else 0 }}"
-                                        :current-user-is-admin="{{ current_user.is_admin() | tojson }}"
-                                        :current-user-is-authenticated="{{ current_user.is_authenticated | tojson }}"
-                                        csrf-token="{{ csrf_token() }}">
-                                    </rule-list>
-                                </div>
+                                <rule-list
+                                    mode="read"
+                                    default-view="table"
+                                    :fetch-url="relatedRulesFetchUrl"
+                                    :initial-per-page="10"
+                                    :source="relatedSourceContext"
+                                    :author-context="relatedAuthorContext"
+                                    :sync-url="false"
+                                    :show-filters="true"
+                                    :hidden-filters="relatedHiddenFilters"
+                                    :show-export="false"
+                                    :show-create="false"
+                                    :current-user-id="{{ current_user.id if current_user.is_authenticated else 0 }}"
+                                    :current-user-is-admin="{{ current_user.is_admin() | tojson }}"
+                                    :current-user-is-authenticated="{{ current_user.is_authenticated | tojson }}"
+                                    csrf-token="{{ csrf_token() }}">
+                                </rule-list>
                             </div>
                         </div>
 
@@ -1098,31 +1087,39 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                 }
             }
 
-            const relatedRuleIds    = ref([])
             const relatedMatchField = ref(null)
             const relatedMatchValue = ref(null)
             const relatedTotalCount = ref(0)
-            const relatedRulesLimit = ref(5)
             async function fetchRelatedRules() {
-                const response = await fetch('/rule/get_related_rules?rule_id=' + rule_id + '&limit=' + relatedRulesLimit.value)
+                const response = await fetch('/rule/get_related_rules?rule_id=' + rule_id)
                 if (response.ok) {
                     const data = await response.json();
-                    relatedRuleIds.value    = data.rule_ids || [];
                     relatedMatchField.value = data.matched_field || null;
                     relatedMatchValue.value = data.matched_value || null;
                     relatedTotalCount.value = data.total_count || 0;
                 }
             }
-            const relatedRulesFetchUrl = computed(() =>
-                relatedRuleIds.value.length ? '/rule/data_table?ids=' + relatedRuleIds.value.join(',') : ''
+            const relatedRulesFetchUrl = computed(() => {
+                if (!relatedMatchField.value || !relatedMatchValue.value) return ''
+                const param = relatedMatchField.value === 'source' ? 'sources' : 'authors'
+                return `/rule/data_table?${param}=${encodeURIComponent(relatedMatchValue.value)}`
+            })
+            // Pins the Vulnerabilities/ATT&CK/Licenses/Tags/Author suggestion
+            // lists to whichever dimension this widget matched on, so they only
+            // ever offer values that actually occur among these related rules.
+            const relatedSourceContext = computed(() =>
+                relatedMatchField.value === 'source' ? relatedMatchValue.value : ''
+            )
+            const relatedAuthorContext = computed(() =>
+                relatedMatchField.value === 'author' ? relatedMatchValue.value : ''
+            )
+            const relatedHiddenFilters = computed(() =>
+                relatedMatchField.value === 'author' ? ['person'] : []
             )
             function relatedRulesListUrl() {
                 if (!relatedMatchField.value || !relatedMatchValue.value) return ''
                 const param = relatedMatchField.value === 'source' ? 'sources' : 'authors'
                 return `/rule/rules_list?${param}=${encodeURIComponent(relatedMatchValue.value)}`
-            }
-            function onRelatedLimitChange() {
-                fetchRelatedRules()
             }
 
             const currentRule = ref([])
@@ -1376,14 +1373,14 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
             return {
                 getRandomColor,
                 bundleListRule,
-                relatedRuleIds,
                 relatedMatchField,
                 relatedMatchValue,
                 relatedTotalCount,
-                relatedRulesLimit,
                 relatedRulesFetchUrl,
+                relatedSourceContext,
+                relatedAuthorContext,
+                relatedHiddenFilters,
                 relatedRulesListUrl,
-                onRelatedLimitChange,
                 Ownership,
                 favorite,
                 githubBlobUrl,
