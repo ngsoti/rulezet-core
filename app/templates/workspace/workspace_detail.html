@@ -800,11 +800,11 @@
     </div>
 
     <!-- ── ADD RULES MODAL ───────────────────────────────
-         Big, movable, resizable window — same pattern as the rule list's own
-         "Export/Bundle" action's in-modal structure editor (drag by header,
-         resize by the bottom-right handle). Hosts <bundle-rule-selector>
-         (the same rule-picker used to add rules to a bundle), scoped to
-         exclude rules already in this workspace. ─────────────────────── -->
+         Big, movable, resizable window (same drag-header / resize-handle
+         pattern as the rule list's own "Export/Bundle" action's in-modal
+         structure editor) — hosts a plain <rule-list mode="select"> rule
+         picker (checkbox multi-select + "Confirm" bar), scoped to exclude
+         rules already in this workspace. ─────────────────────── -->
     <div class="modal fade" id="addRulesModal" tabindex="-1" aria-hidden="true" style="z-index:2000;">
         <div class="modal-dialog"
              :style="'position:fixed;margin:0;max-width:none;top:' + addRulesWin.top + 'px;left:' + addRulesWin.left + 'px;width:' + addRulesWin.width + 'px;height:' + addRulesWin.height + 'px;'">
@@ -817,21 +817,29 @@
                         </div>
                         <div>
                             <h5 class="fw-bold mb-0">Add Rules to Workspace</h5>
-                            <p class="text-muted mb-0" style="font-size:.8rem;">Pick or drag rules in — rules already in this workspace aren't shown</p>
+                            <p class="text-muted mb-0" style="font-size:.8rem;">Select from your rules, then click Confirm — rules already in this workspace aren't shown</p>
                         </div>
                         <i class="fa-solid fa-up-down-left-right text-muted ms-2 opacity-50" title="Drag to move" style="font-size:.75rem;"></i>
                     </div>
                     <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-3 flex-grow-1" style="overflow:auto;">
-                    <bundle-rule-selector
+                    <rule-list
                         v-if="showAddRules"
+                        ref="addRulesListRef"
+                        mode="select"
+                        :sync-url="false"
                         :fetch-url="`/rule/data_table?exclude_workspace_uuid=${wsUuid}`"
-                        :initial-per-page="12"
+                        :user-id="currentUserId"
                         :current-user-id="currentUserId"
-                        :exclude-ids="addedThisSessionIds"
-                        @add-rules="onRulesPicked">
-                    </bundle-rule-selector>
+                        :current-user-is-admin="isAdmin"
+                        :current-user-is-authenticated="true"
+                        :csrf-token="csrfToken"
+                        :hidden-columns="['editor', 'votes']"
+                        default-view="table"
+                        :initial-per-page="15"
+                        @send="onRulesPicked">
+                    </rule-list>
                 </div>
                 <div class="position-absolute" style="right:2px;bottom:2px;width:16px;height:16px;cursor:nwse-resize;z-index:5;"
                      title="Drag to resize" @mousedown="startAddRulesResize">
@@ -846,7 +854,7 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, computed, watch, onMounted } = Vue
+    const { createApp, ref, computed, watch, onMounted, nextTick } = Vue
     import RuleList     from '/static/js/rule/ruleList.js'
     import SmartEditor  from '/static/js/components/smart-editor.js'
     import IconPicker   from '/static/js/tags/utils/iconPicker.js'
@@ -1175,9 +1183,10 @@
                 _quickEditModal.hide()
             }
 
-            // ── Add Rules modal (big, movable, resizable — like "Add to Bundle") ──
-            const showAddRules       = ref(false)
-            const addedThisSessionIds = ref(new Set())
+            // ── Add Rules modal (big, movable, resizable window; plain rule-list
+            //    checkbox picker inside — same modal shell as "Add to Bundle") ──
+            const showAddRules   = ref(false)
+            const addRulesListRef = ref(null)
             let _addRulesModal = null
 
             const winMargin  = 40
@@ -1242,15 +1251,19 @@
             }
 
             function openAddRules() {
-                addedThisSessionIds.value = new Set()
                 resetAddRulesWindowGeometry()
                 showAddRules.value = true
                 _addRulesModal.show()
+                // If the modal was just closed and reopened before its close
+                // transition finished, `showAddRules` never toggled back to
+                // false in between — the picker's <rule-list> stays mounted
+                // with its pre-add data instead of remounting fresh. Forcing
+                // a fetch here covers both cases (fresh mount or stale one).
+                nextTick(() => addRulesListRef.value?.fetchData())
             }
 
-            async function onRulesPicked(rules) {
-                const ids = (rules || []).map(r => r.id)
-                if (!ids.length) return
+            async function onRulesPicked(ids) {
+                if (!ids || !ids.length) return
                 try {
                     const csrf = document.getElementById('csrf_token')?.value || csrfToken
                     const r = await fetch(`/workspace/${wsUuid}/rules`, {
@@ -1260,12 +1273,17 @@
                     })
                     const data = await r.json()
                     if (data.success) {
-                        const updated = new Set(addedThisSessionIds.value)
-                        ids.forEach(id => updated.add(id))
-                        addedThisSessionIds.value = updated
                         create_message(`${data.added} rule${data.added !== 1 ? 's' : ''} added`, 'success')
                         ruleListRef.value?.fetchData()
                         loadKpis()
+                        // Unmount the picker right now, synchronously — don't wait for
+                        // Bootstrap's hidden.bs.modal event (only fires once the close
+                        // animation finishes). Otherwise a fast reopen can land before
+                        // that event fires, showAddRules never toggles back to false,
+                        // <rule-list> never remounts, and it keeps showing the rules
+                        // that were just added instead of a fresh, correctly-excluding fetch.
+                        showAddRules.value = false
+                        _addRulesModal.hide()
                     }
                 } catch { create_message('Failed to add rules', 'danger') }
             }
@@ -1744,7 +1762,7 @@
                 kpiCounts, setStatus,
                 bulkActions, onBulkAction, onStatusChange,
                 quickEdit, openQuickEditModal, addCve, removeCve, saveQuickEdit,
-                showAddRules, openAddRules, onRulesPicked, addedThisSessionIds,
+                showAddRules, openAddRules, onRulesPicked, addRulesListRef,
                 addRulesWin, startAddRulesDrag, startAddRulesResize,
                 wsEditForm, openEditModal, saveEditWorkspace, deleteWorkspace,
                 documents, docsLoading, editingDoc, fileNameModal, fileNameInput,
