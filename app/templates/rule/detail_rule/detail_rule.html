@@ -11,8 +11,13 @@
 .vote-btn-active-up   { background: #198754 !important; color: #fff !important; }
 .vote-btn-active-down { background: #dc3545 !important; color: #fff !important; }
 .vote-btn-neutral     { background: transparent; color: var(--text-color); }
+/* Related Rules widget: pure read-only table, no toolbar/search/filters/pagination chrome */
+.related-rules-widget .rl-toolbar,
+.related-rules-widget .rl-footer { display: none; }
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/comment-thread.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/pivotick.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/pivotick-overrides.css') }}">
@@ -147,6 +152,12 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                         <i class="fas fa-balance-scale me-2 text-secondary w-20px"></i>
                                         <small class="text-muted me-2">License:</small>
                                         <small class="fw-medium"> {{ rule.license }} </small>
+                                        {% if rule.license %}
+                                        <a href="/rule/rules_list?licenses={{ rule.license | urlencode }}"
+                                           class="text-muted ms-1" title="See all rules with this license">
+                                            <i class="fas fa-filter" style="font-size:.65rem;"></i>
+                                        </a>
+                                        {% endif %}
                                     </div>
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fas fa-link me-2 text-secondary w-20px"></i>
@@ -171,6 +182,10 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                                     [[ currentRule.source ]]
                                                 </template>
                                             </small>
+                                            <a :href="`/rule/rules_list?sources=${encodeURIComponent(currentRule.source)}`"
+                                               class="text-muted ms-1" title="See all rules from this source">
+                                                <i class="fas fa-filter" style="font-size:.65rem;"></i>
+                                            </a>
                                         </template>
                                     </div>
                                     <div v-if="currentRule.sync_instance_url" class="d-flex align-items-center mb-2">
@@ -188,6 +203,11 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                         <small class="text-muted">Author:</small>
                                         <small v-if="currentRule.author && currentRule.author !== 'Unknown'">[[ currentRule.author ]]</small>
                                         <small v-else class="text-muted">Unknown</small>
+                                        <a v-if="currentRule.author && currentRule.author !== 'Unknown'"
+                                           :href="`/rule/rules_list?authors=${encodeURIComponent(currentRule.author)}`"
+                                           class="text-muted ms-1" title="See all rules from this author">
+                                            <i class="fas fa-filter" style="font-size:.65rem;"></i>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -625,6 +645,58 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                             </template>
                         </div>
 
+                        <!-- Related rules (same source / author) -->
+                        <div v-if="relatedTotalCount > 0" class="mt-3 rounded-4 overflow-hidden border position-relative mb-4" style="background:var(--light-bg-color);">
+                            <div class="contributor-watermark">
+                                <i class="fa-solid fa-share-nodes"></i>
+                            </div>
+                            <div class="p-4 position-relative" style="z-index: 1;">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width:3px; height:14px; background:#0d6efd; border-radius:2px; flex-shrink:0;"></div>
+                                        <span class="fw-bold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--subtle-text-color);">
+                                            <i class="fa-solid fa-share-nodes me-1"></i>Related Rules
+                                            <small class="text-muted text-lowercase fw-normal ms-1" style="letter-spacing:normal;">
+                                                ([[ relatedTotalCount ]] total)
+                                            </small>
+                                        </span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <select v-model="relatedRulesLimit" @change="onRelatedLimitChange"
+                                            class="form-select form-select-sm py-1"
+                                            style="width:auto; font-size:.75rem;"
+                                            aria-label="Number of related rules to show">
+                                            <option :value="5">Show 5</option>
+                                            <option :value="10">Show 10</option>
+                                            <option :value="15">Show 15</option>
+                                        </select>
+                                        <a v-if="relatedRulesListUrl()" :href="relatedRulesListUrl()"
+                                            class="badge rounded-pill px-3 text-decoration-none"
+                                            style="background:var(--light-bg-color); color:var(--subtle-text-color); border:1px solid var(--border-color); font-size:.75rem;">
+                                            View all <i class="fas fa-arrow-right ms-1"></i>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div class="related-rules-widget">
+                                    <rule-list
+                                        :key="relatedRulesFetchUrl"
+                                        mode="read"
+                                        default-view="table"
+                                        :fetch-url="relatedRulesFetchUrl"
+                                        :sync-url="false"
+                                        :show-filters="false"
+                                        :show-export="false"
+                                        :show-create="false"
+                                        :current-user-id="{{ current_user.id if current_user.is_authenticated else 0 }}"
+                                        :current-user-is-admin="{{ current_user.is_admin() | tojson }}"
+                                        :current-user-is-authenticated="{{ current_user.is_authenticated | tojson }}"
+                                        csrf-token="{{ csrf_token() }}">
+                                    </rule-list>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Visualization -->
                         <div class="mt-3 rounded-4 overflow-hidden border position-relative mb-2" style="background:var(--light-bg-color);">
                             <div class="contributor-watermark"><i class="fa-solid fa-diagram-project"></i></div>
@@ -824,7 +896,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
 {% block script %}
 
 <script type="module">
-    const { createApp, ref, onMounted, nextTick, watch } = Vue;
+    const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
     import { message_list, create_message } from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
 
@@ -837,6 +909,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
     import ReportModal from '/static/js/components/ReportModal.js';
     import AttackDisplay from '/static/js/components/AttackDisplay.js';
     import VoterPopover from '/static/js/components/VoterPopover.js';
+    import RuleList from '/static/js/rule/ruleList.js';
 
 
     createApp({
@@ -850,6 +923,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
             'report-modal': ReportModal,
             'attack-display': AttackDisplay,
             'voter-popover': VoterPopover,
+            'rule-list': RuleList,
         },
         setup() {
             /**
@@ -912,6 +986,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                     fetchCurrentRule(),
                     fetchBundleList(),
                     fetchContributor(),
+                    fetchRelatedRules(),
 
                     fetchBundleVulnerabilities(),
                     fetchRuleTags(),
@@ -1021,6 +1096,33 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                     const data = await response.json();
                     bundleListRule.value = data.bundles || [];
                 }
+            }
+
+            const relatedRuleIds    = ref([])
+            const relatedMatchField = ref(null)
+            const relatedMatchValue = ref(null)
+            const relatedTotalCount = ref(0)
+            const relatedRulesLimit = ref(5)
+            async function fetchRelatedRules() {
+                const response = await fetch('/rule/get_related_rules?rule_id=' + rule_id + '&limit=' + relatedRulesLimit.value)
+                if (response.ok) {
+                    const data = await response.json();
+                    relatedRuleIds.value    = data.rule_ids || [];
+                    relatedMatchField.value = data.matched_field || null;
+                    relatedMatchValue.value = data.matched_value || null;
+                    relatedTotalCount.value = data.total_count || 0;
+                }
+            }
+            const relatedRulesFetchUrl = computed(() =>
+                relatedRuleIds.value.length ? '/rule/data_table?ids=' + relatedRuleIds.value.join(',') : ''
+            )
+            function relatedRulesListUrl() {
+                if (!relatedMatchField.value || !relatedMatchValue.value) return ''
+                const param = relatedMatchField.value === 'source' ? 'sources' : 'authors'
+                return `/rule/rules_list?${param}=${encodeURIComponent(relatedMatchValue.value)}`
+            }
+            function onRelatedLimitChange() {
+                fetchRelatedRules()
             }
 
             const currentRule = ref([])
@@ -1274,6 +1376,14 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
             return {
                 getRandomColor,
                 bundleListRule,
+                relatedRuleIds,
+                relatedMatchField,
+                relatedMatchValue,
+                relatedTotalCount,
+                relatedRulesLimit,
+                relatedRulesFetchUrl,
+                relatedRulesListUrl,
+                onRelatedLimitChange,
                 Ownership,
                 favorite,
                 githubBlobUrl,

@@ -791,6 +791,26 @@ def get_rule_by_source(source_) -> str:
     """Return all active (non-deleted) rules from the source."""
     return _active().filter(Rule.source == source_).all()
 
+def get_related_rules(rule, limit=3):
+    """Return up to `limit` other active rules sharing this rule's source, falling
+    back to its author when the source doesn't match anything else.
+    Returns (rules, matched_field, total_count) — matched_field is 'source', 'author'
+    or None; total_count is the full count of matching rules (not capped by limit)."""
+    base = _active().filter(Rule.id != rule.id)
+    if rule.source:
+        source_query = base.filter(Rule.source == rule.source)
+        total = source_query.count()
+        if total:
+            related = source_query.order_by(Rule.creation_date.desc()).limit(limit).all()
+            return related, 'source', total
+    if rule.author:
+        author_query = base.filter(Rule.author == rule.author)
+        total = author_query.count()
+        if total:
+            related = author_query.order_by(Rule.creation_date.desc()).limit(limit).all()
+            return related, 'author', total
+    return [], None, 0
+
 def get_rule_id_by_title(title) -> int:
     """Return the rule ID from the title"""
     rule = Rule.query.filter_by(title=title).first()
