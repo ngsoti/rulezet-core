@@ -436,7 +436,7 @@
                         :key="form.rule_ids.join(',')"
                         mode="read"
                         default-view="table"
-                        :fetch-url="'/rule/data_table?' + form.rule_ids.map(id => 'ids[]=' + id).join('&')"
+                        :fetch-url="'/rule/data_table?ids=' + form.rule_ids.join(',')"
                         :sync-url="false"
                         :show-filters="false"
                         :show-export="false"
@@ -774,8 +774,7 @@
                     const qs = filters.format ? `?format=${encodeURIComponent(filters.format)}` : ''
                     items = await _fetchAllPages(`/rule/data_table${qs}`)
                 } else {
-                    const qs = Array.from(ids).map(id => `ids[]=${id}`).join('&')
-                    items = await _fetchAllPages(`/rule/data_table?${qs}`)
+                    items = await _fetchAllPages(`/rule/data_table?ids=${Array.from(ids).join(',')}`)
                 }
                 const newItems = items.filter(r => !form.value.rule_ids.includes(r.id))
                 if (newItems.length) {
@@ -837,8 +836,7 @@
             // ── Prefill chips on edit ──────────────────────────────────────────
             async function prefillAttached() {
                 if (form.value.rule_ids.length) {
-                    const qs    = form.value.rule_ids.map(id => `ids[]=${id}`).join('&')
-                    const items = await _fetchAllPages(`/rule/data_table?${qs}`)
+                    const items = await _fetchAllPages(`/rule/data_table?ids=${form.value.rule_ids.join(',')}`)
                     selectedRules.value = items.map(r => ({ id: r.id, title: r.title }))
                 }
                 if (form.value.bundle_ids.length) {

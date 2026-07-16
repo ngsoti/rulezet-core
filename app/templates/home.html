@@ -586,6 +586,10 @@
                        : item.extra?.bundle_id   ? `/bundle/detail/${item.extra.bundle_id}` : null
             if (base) return `${base}?comment=${item.target_id}`
         }
+        if (item.target_type === 'blog_post') {
+            if (item.target_uuid) return `/blog/post/${item.target_uuid}`
+            if (item.target_id)   return `/blog/post/${item.target_id}`
+        }
         return null
     }
     function formatTime(ts) {

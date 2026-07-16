@@ -135,12 +135,19 @@ def admin_save():
             post = BlogModel.get_post_by_uuid(post_uuid)
             if not post:
                 return jsonify({'success': False, 'message': 'Post not found.'}), 404
+            was_public_published = post.is_public and not post.is_draft
             post = BlogModel.update_post(post, data)
             log_activity(
                 'blog.edit', f"Edited blog post '{post.title}'",
                 target_type='blog_post', target_id=post.id, target_uuid=post.uuid,
                 is_public=False,
             )
+            # This is the only save path the create/edit form actually uses (the
+            # dedicated toggle endpoints below aren't wired to it), so this is
+            # where a draft->published or private->public transition must be
+            # caught to fire the "new blog post" notification exactly once.
+            if not was_public_published and post.is_public and not post.is_draft:
+                notify_blog_published(post)
             return jsonify({
                 'success': True,
                 'message': 'Post updated.',
@@ -154,6 +161,8 @@ def admin_save():
                 target_type='blog_post', target_id=post.id, target_uuid=post.uuid,
                 is_public=post.is_public and not post.is_draft,
             )
+            if post.is_public and not post.is_draft:
+                notify_blog_published(post)
             return jsonify({
                 'success': True,
                 'message': 'Post created.',
