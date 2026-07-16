@@ -14,6 +14,7 @@ Pause / Cancel support:
 """
 
 import datetime
+import html as _html
 import os
 import subprocess
 import sys
@@ -2348,10 +2349,10 @@ def _render_cve_section(cve_id, parsed, epss_pct=None, rule_count=0, bundle_coun
     prod_str   = ', '.join(f'**{p}**' for p in prod_names) if prod_names else ''
 
     if cna_title:
-        lines.append(f'> {cna_title}\n')
+        lines.append(f'> {_html.escape(cna_title)}\n')
 
     if summary:
-        lines.append(summary + '\n')
+        lines.append(_html.escape(summary) + '\n')
     elif prod_str:
         lines.append(f'{cve_id} is a {sev_lower} vulnerability affecting {prod_str}.\n')
 

@@ -512,6 +512,11 @@
     import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js'
     const { createApp, ref, computed, onMounted, onUnmounted } = Vue
 
+    // Lazy-load DOMPurify to sanitize marked's HTML output before v-html
+    // (blog content can originate from auto-generated CVE data, not just admins)
+    const _purifyMod = await import('/static/js/purify.min.js')
+    const DOMPurify   = _purifyMod.default || window.DOMPurify
+
     const isAuthenticated = {{ current_user.is_authenticated | tojson }}
     const isAdmin         = {{ current_user.is_admin()        | tojson }}
     const currentUserId   = {{ current_user.id if current_user.is_authenticated else 'null' }}
@@ -562,8 +567,8 @@
 
             const renderedContent = computed(() => {
                 if (!post.value.content) return ''
-                if (typeof marked === 'undefined') return `<pre>${post.value.content}</pre>`
-                return marked.parse(post.value.content)
+                if (typeof marked === 'undefined') return DOMPurify.sanitize(`<pre>${post.value.content}</pre>`)
+                return DOMPurify.sanitize(marked.parse(post.value.content))
             })
 
             async function fetchPost() {
