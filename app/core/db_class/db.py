@@ -2341,7 +2341,11 @@ class UnifiedComment(db.Model):
     def dislike_count(self):
         return self.reactions.filter_by(reaction='dislike').count()
 
-    def to_json(self, current_user_id=None):
+    def to_json(self, current_user_id=None, counts=None):
+        """counts: optional {'reply_count', 'like_count', 'dislike_count', 'user_reaction'}
+        pre-computed by the caller (see comment_api.py's _batch_comment_counts) to avoid
+        the 3-4 extra per-instance queries below when serializing a whole page of comments.
+        Falls back to the lazy per-instance computation when not provided."""
         author = self.author
         if author:
             initials = ''
@@ -2359,11 +2363,20 @@ class UnifiedComment(db.Model):
         else:
             author_dict = {'id': None, 'name': 'Deleted user', 'avatar': None, 'initials': '?', 'handle': None}
 
-        user_reaction = None
-        if current_user_id:
-            rxn = self.reactions.filter_by(user_id=current_user_id).first()
-            if rxn:
-                user_reaction = rxn.reaction
+        if counts is not None:
+            reply_count   = counts.get('reply_count', 0)
+            like_count    = counts.get('like_count', 0)
+            dislike_count = counts.get('dislike_count', 0)
+            user_reaction = counts.get('user_reaction')
+        else:
+            reply_count   = self.reply_count
+            like_count    = self.like_count
+            dislike_count = self.dislike_count
+            user_reaction = None
+            if current_user_id:
+                rxn = self.reactions.filter_by(user_id=current_user_id).first()
+                if rxn:
+                    user_reaction = rxn.reaction
 
         return {
             'id':            self.id,
@@ -2381,9 +2394,9 @@ class UnifiedComment(db.Model):
             'is_active':     self.is_active,
             'is_deleted':    not self.is_active,
             'deleted_at':    self.deleted_at.isoformat() if self.deleted_at else None,
-            'reply_count':   self.reply_count,
-            'like_count':    self.like_count,
-            'dislike_count': self.dislike_count,
+            'reply_count':   reply_count,
+            'like_count':    like_count,
+            'dislike_count': dislike_count,
             'user_reaction': user_reaction,
             'author':        author_dict,
             'is_admin':      author.is_admin() if author else False,

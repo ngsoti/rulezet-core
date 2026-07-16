@@ -17,6 +17,7 @@ import requests
 from flask import request
 from flask_login import current_user
 from flask_restx import Namespace, Resource, fields
+from sqlalchemy import func
 
 from app.core.db_class.db import UnifiedComment, UnifiedCommentReaction
 from app.core.utils.activity_log import log_activity
@@ -37,6 +38,55 @@ def _get_or_404(uuid):
     if not c:
         comment_ns.abort(404, 'Comment not found')
     return c
+
+
+def _batch_comment_counts(comment_ids, current_user_id=None):
+    """Pre-compute reply/like/dislike counts + the current user's own reaction
+    for a whole page of comments in a handful of grouped queries, instead of
+    UnifiedComment.to_json() running 3-4 extra queries PER comment."""
+    if not comment_ids:
+        return {}
+
+    reply_counts = dict(
+        db.session.query(UnifiedComment.parent_id, func.count(UnifiedComment.id))
+        .filter(UnifiedComment.parent_id.in_(comment_ids), UnifiedComment.is_active == True)
+        .group_by(UnifiedComment.parent_id)
+        .all()
+    )
+
+    like_counts = {}
+    dislike_counts = {}
+    for cid, reaction, cnt in (
+        db.session.query(UnifiedCommentReaction.comment_id, UnifiedCommentReaction.reaction,
+                          func.count(UnifiedCommentReaction.id))
+        .filter(UnifiedCommentReaction.comment_id.in_(comment_ids))
+        .group_by(UnifiedCommentReaction.comment_id, UnifiedCommentReaction.reaction)
+        .all()
+    ):
+        if reaction == 'like':
+            like_counts[cid] = cnt
+        elif reaction == 'dislike':
+            dislike_counts[cid] = cnt
+
+    user_reactions = {}
+    if current_user_id:
+        user_reactions = {
+            r.comment_id: r.reaction
+            for r in UnifiedCommentReaction.query.filter(
+                UnifiedCommentReaction.comment_id.in_(comment_ids),
+                UnifiedCommentReaction.user_id == current_user_id,
+            ).all()
+        }
+
+    return {
+        cid: {
+            'reply_count':   reply_counts.get(cid, 0),
+            'like_count':    like_counts.get(cid, 0),
+            'dislike_count': dislike_counts.get(cid, 0),
+            'user_reaction': user_reactions.get(cid),
+        }
+        for cid in comment_ids
+    }
 
 
 def _can_moderate():
@@ -90,8 +140,10 @@ class CommentList(Resource):
 
         paginated = q.paginate(page=page, per_page=per_page, error_out=False)
 
+        counts = _batch_comment_counts([c.id for c in paginated.items], uid)
+
         return {
-            'items':    [c.to_json(current_user_id=uid) for c in paginated.items],
+            'items':    [c.to_json(current_user_id=uid, counts=counts.get(c.id)) for c in paginated.items],
             'total':    paginated.total,
             'page':     page,
             'per_page': per_page,
