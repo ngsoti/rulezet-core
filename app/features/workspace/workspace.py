@@ -305,6 +305,91 @@ def bulk_remove_rules(ws_uuid):
     return jsonify({'success': True, 'removed': removed, 'workspace': ws.to_json()})
 
 
+# ── Export as Bundle ─────────────────────────────────────────────────────────
+# The "new vs existing bundle" choice itself is handled client-side by the same
+# <rule-bundle-manager> component the rule list's own "Export/Bundle" action
+# uses (POSTing to the existing /rule/bundle/create-from-filters endpoint with
+# an explicit rule id list). Placing the rules into the bundle's folder
+# structure is then done by the same in-modal Bundle Structure Editor +
+# BundleRuleSelector drag/organize flow as the rule list — this route only
+# marks the bundle as associated with this workspace (link_bundle) or removes
+# that association again (unlink_bundle); it never touches bundle contents.
+
+@workspace_blueprint.route('/<ws_uuid>/rule_ids', methods=['GET'])
+@login_required
+def workspace_rule_ids(ws_uuid):
+    ws = WsModel.get_workspace_by_uuid(ws_uuid)
+    if not ws or (ws.user_id != current_user.id and not current_user.is_admin()):
+        return jsonify({'rule_ids': []})
+    return jsonify({'rule_ids': WsModel.get_workspace_rule_ids(ws)})
+
+
+@workspace_blueprint.route('/<ws_uuid>/link_bundle', methods=['POST'])
+@login_required
+def link_bundle(ws_uuid):
+    ws = WsModel.get_workspace_by_uuid(ws_uuid)
+    if not ws:
+        return jsonify({'success': False}), 404
+    if ws.user_id != current_user.id and not current_user.is_admin():
+        return jsonify({'success': False}), 403
+
+    data = request.get_json(force=True) or {}
+    bundle_id = data.get('bundle_id')
+    if not bundle_id:
+        return jsonify({'success': False, 'message': 'bundle_id is required'}), 400
+
+    from app.features.bundle import bundle_core as BundleModel
+    from app import db
+
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle:
+        return jsonify({'success': False, 'message': 'Bundle not found'}), 404
+    if bundle.user_id != current_user.id and not current_user.is_admin():
+        return jsonify({'success': False, 'message': "You don't have permission to edit this bundle"}), 403
+
+    bundle.source_workspace_id = ws.id
+    db.session.commit()
+
+    log_activity('bundle.create', f"Associated bundle '{bundle.name}' with workspace '{ws.name}'",
+                 target_type='bundle', target_id=bundle.id, target_uuid=bundle.uuid)
+
+    return jsonify({'success': True, 'bundle': bundle.to_json()}), 201
+
+
+@workspace_blueprint.route('/<ws_uuid>/bundles', methods=['GET'])
+@login_required
+def list_workspace_bundles(ws_uuid):
+    ws = WsModel.get_workspace_by_uuid(ws_uuid)
+    if not ws or (ws.user_id != current_user.id and not current_user.is_admin()):
+        return jsonify([])
+    from app.features.bundle import bundle_core as BundleModel
+    bundles = BundleModel.get_bundles_by_workspace(ws.id)
+    return jsonify([b.to_json() for b in bundles])
+
+
+@workspace_blueprint.route('/<ws_uuid>/bundles/<int:bundle_id>', methods=['DELETE'])
+@login_required
+def unlink_bundle(ws_uuid, bundle_id):
+    """Remove the association between a bundle and this workspace — the
+    bundle itself (and its rules) is left untouched."""
+    ws = WsModel.get_workspace_by_uuid(ws_uuid)
+    if not ws:
+        return jsonify({'success': False}), 404
+    if ws.user_id != current_user.id and not current_user.is_admin():
+        return jsonify({'success': False}), 403
+
+    from app.features.bundle import bundle_core as BundleModel
+    from app import db
+
+    bundle = BundleModel.get_bundle_by_id(bundle_id)
+    if not bundle or bundle.source_workspace_id != ws.id:
+        return jsonify({'success': False}), 404
+
+    bundle.source_workspace_id = None
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 # ── Workspace Tags ──────────────────────────────────────────────────────────
 
 @workspace_blueprint.route('/<ws_uuid>/tags', methods=['GET'])

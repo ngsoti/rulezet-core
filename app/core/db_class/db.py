@@ -961,6 +961,9 @@ class Bundle(db.Model):
     connector_id        = db.Column(db.Integer, db.ForeignKey('connector.id', ondelete='SET NULL'), nullable=True, index=True)
     remote_bundle_uuid  = db.Column(db.String(36), nullable=True, index=True)
 
+    # Set when this bundle was generated via a workspace's "Export as Bundle" action.
+    source_workspace_id = db.Column(db.Integer, db.ForeignKey('workspace.id', ondelete='SET NULL'), nullable=True, index=True)
+
     user = db.relationship('User', backref=db.backref('user who create bundle', lazy='dynamic', cascade='all, delete-orphan'))
 
     def get_username_by_id(self):
@@ -992,7 +995,8 @@ class Bundle(db.Model):
             "download_count": self.download_count,
             "uuid": self.uuid,
             "created_by": self.created_by,
-            "vulnerability_identifiers": json.loads(self.vulnerability_identifiers) if self.vulnerability_identifiers else []
+            "vulnerability_identifiers": json.loads(self.vulnerability_identifiers) if self.vulnerability_identifiers else [],
+            "source_workspace_id": self.source_workspace_id,
         }
 
 

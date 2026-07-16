@@ -1,7 +1,7 @@
 import uuid as _uuid
 import datetime
 from ... import db
-from ...core.db_class.db import Workspace, WorkspaceRule
+from ...core.db_class.db import Workspace, WorkspaceRule, Rule
 
 
 def get_user_workspaces(user_id: int) -> list:
@@ -76,3 +76,14 @@ def remove_rule_from_workspace(ws: Workspace, rule_id: int) -> bool:
     ws.updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
     db.session.commit()
     return True
+
+
+def get_workspace_rule_ids(ws: Workspace) -> list:
+    """Active (non-deleted) rule ids currently in a workspace — feeds the
+    "Export as Bundle" action."""
+    return [
+        rid for (rid,) in db.session.query(WorkspaceRule.rule_id)
+        .join(Rule, Rule.id == WorkspaceRule.rule_id)
+        .filter(WorkspaceRule.workspace_id == ws.id, Rule.is_deleted == False)
+        .all()
+    ]

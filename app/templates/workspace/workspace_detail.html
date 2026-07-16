@@ -5,6 +5,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rule/base/detail_rule_nav.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/workspace/workspace_detail.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/smart-editor.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/bundle/bundle-editor.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -216,6 +220,12 @@
             <span>External Links</span>
             <span class="dr-nav__badge" v-if="links.length > 0">[[ links.length ]]</span>
         </button>
+        <button type="button" class="dr-nav__item" :class="{ active: activeTab === 'bundles' }"
+                @click="activeTab = 'bundles'">
+            <i class="fa-solid fa-boxes-stacked"></i>
+            <span>Bundles</span>
+            <span class="dr-nav__badge" v-if="associatedBundles.length > 0">[[ associatedBundles.length ]]</span>
+        </button>
     </nav>
 
     <!-- ══════════════════════════════════════
@@ -251,9 +261,14 @@
                             Rules in this workspace
                             <span v-if="activeStatus" class="badge ms-2" :style="statusBadgeStyle(activeStatus)">[[ activeStatus ]]</span>
                         </span>
-                        <button class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" @click="openAddRules">
-                            <i class="fa-solid fa-plus me-1"></i>Add Rules
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="openExportBundleModal">
+                                <i class="fa-solid fa-layer-group me-1"></i>Export as Bundle
+                            </button>
+                            <button class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" @click="openAddRules">
+                                <i class="fa-solid fa-plus me-1"></i>Add Rules
+                            </button>
+                        </div>
                     </div>
 
                     <rule-list
@@ -455,6 +470,167 @@
         </div>
     </div>
 
+    <!-- ══════════════════════════════════════
+         BUNDLES TAB
+         ══════════════════════════════════════ -->
+    <div v-show="activeTab === 'bundles'">
+        <div class="card border-0 card_detail border-top shadow-lg mb-4 wd-section-card" style="border-radius:12px;">
+            <div class="card-watermark-detail"><i class="fa-solid fa-boxes-stacked"></i></div>
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="fw-semibold text-muted small text-uppercase" style="letter-spacing:.04em;">
+                        <i class="fa-solid fa-boxes-stacked me-1"></i>Bundles exported from this workspace ([[ associatedBundles.length ]])
+                    </span>
+                    <button class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" @click="openExportBundleModal">
+                        <i class="fa-solid fa-plus me-1"></i>Export as Bundle
+                    </button>
+                </div>
+
+                <div v-if="bundlesLoading" class="text-center py-4 text-muted">
+                    <i class="fa-solid fa-circle-notch fa-spin me-2"></i>Loading…
+                </div>
+                <div v-else-if="associatedBundles.length === 0" class="wd-empty-state">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <p>No bundles yet. Export this workspace's rules into a bundle to share or deploy them as a ruleset.</p>
+                </div>
+                <div v-else class="row g-3">
+                    <div class="col-md-6" v-for="bundle in associatedBundles" :key="bundle.id">
+                        <div class="card h-100 border shadow-none hover-shadow transition-all rounded-3 overflow-hidden position-relative">
+                            <button type="button" class="btn btn-sm btn-outline-danger rounded-circle position-absolute"
+                                    style="top:8px; right:8px; width:26px; height:26px; padding:0; z-index:2; font-size:.7rem;"
+                                    title="Remove this bundle from the workspace (the bundle itself is kept)"
+                                    @click.prevent.stop="unlinkBundle(bundle)">
+                                <i class="fa-solid fa-link-slash"></i>
+                            </button>
+                            <a :href="`/bundle/detail/${bundle.id}`" class="text-decoration-none h-100 d-block">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <div class="avatar-circle-sm bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center rounded-circle shadow-sm"
+                                            style="min-width: 42px; height: 42px;">
+                                            <i class="fas fa-layer-group"></i>
+                                        </div>
+                                        <div class="flex-grow-1 min-w-0" style="padding-right:1.75rem;">
+                                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                                <h6 class="fw-bold mb-1" style="word-break: break-word; color:var(--text-color);">
+                                                    [[ bundle.name ]]
+                                                </h6>
+                                                <span class="badge bg-dark rounded-pill flex-shrink-0" style="font-size: 0.65rem;">
+                                                    [[ bundle.number_of_rules ]] Rules
+                                                </span>
+                                            </div>
+                                            <p class="text-muted small mb-2" style="font-size: 0.8rem;
+                                                line-height: 1.4;
+                                                display: -webkit-box;
+                                                -webkit-line-clamp: 3;
+                                                -webkit-box-orient: vertical;
+                                                overflow: hidden;
+                                                word-break: break-word;">
+                                                [[ bundle.description ]]
+                                            </p>
+                                            <div class="d-flex align-items-center justify-content-between mt-2">
+                                                <span v-if="!bundle.access" class="badge rounded-pill" style="background:var(--light-bg-color); color:var(--subtle-text-color); border:1px solid var(--border-color); font-size:.65rem;">
+                                                    <i class="fa-solid fa-lock me-1"></i>Private
+                                                </span>
+                                                <small class="text-muted ms-auto" style="font-size:.7rem;">[[ bundle.created_at ]]</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── EXPORT AS BUNDLE MODAL ───────────────────────── -->
+    <!-- Same two-step flow as the rule list's own Export/Bundle action:
+         1) <rule-bundle-manager> picks a new-or-existing bundle
+         2) the same in-modal Bundle Structure Editor + BundleRuleSelector
+            drag/organize view, pinned to this workspace's rules — the modal
+            grows into the same big movable/resizable window for that step. -->
+    <div class="modal fade" id="exportBundleModal" tabindex="-1" aria-hidden="true" style="z-index:2000;">
+        <div :class="exportView === 'structure' ? 'modal-dialog' : 'modal-dialog modal-dialog-centered'"
+             :style="exportView === 'structure'
+                ? ('position:fixed;margin:0;max-width:none;top:' + exportWin.top + 'px;left:' + exportWin.left + 'px;width:' + exportWin.width + 'px;height:' + exportWin.height + 'px;')
+                : ''">
+            <div class="modal-content border-0 shadow-lg d-flex flex-column"
+                 :style="exportView === 'structure' ? 'border-radius:16px;height:100%;overflow:hidden;' : 'border-radius: 20px;'">
+                <div class="modal-header border-0 pb-0 pt-4 px-4"
+                     :style="exportView === 'structure' ? 'cursor:move;user-select:none;' : ''"
+                     @mousedown="exportView === 'structure' && startExportDrag($event)">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm bg-primary"
+                             style="width:52px; height:52px; color:white; flex-shrink:0;">
+                            <i class="fa-solid fa-layer-group" style="font-size:1.4rem;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">
+                                [[ exportView === 'structure' ? 'Organize Bundle' : 'Export as Bundle' ]]
+                            </h5>
+                            <p class="text-muted small mb-0">
+                                <span v-if="exportView !== 'structure'">[[ kpiCounts.total ]] rule[[ kpiCounts.total !== 1 ? 's' : '' ]] from this workspace</span>
+                                <span v-else>Drag rules from the library into folders</span>
+                            </p>
+                        </div>
+                        <i v-if="exportView === 'structure'" class="fa-solid fa-up-down-left-right text-muted ms-2 opacity-50" title="Drag to move" style="font-size:.75rem;"></i>
+                    </div>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div :class="exportView === 'structure' ? 'modal-body p-3 flex-grow-1' : 'modal-body p-4'"
+                     :style="exportView === 'structure' ? 'overflow:auto;' : ''">
+                    <rule-bundle-manager
+                        v-if="exportView === 'picker'"
+                        :total-rules="kpiCounts.total"
+                        :is-over-limit="kpiCounts.total > 200"
+                        :max-limit="200"
+                        :rule-ids="workspaceRuleIds"
+                        :csrf="csrfToken"
+                        @processing="val => linkingBundle = val"
+                        @bundle-id="id => pendingBundleId = id"
+                        @completed="onBundleManagerCompleted"
+                        @error="msg => create_message(msg, 'danger')">
+                    </rule-bundle-manager>
+                    <div v-if="linkingBundle" class="text-center mt-3">
+                        <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                        <span class="small text-muted fw-bold">PREPARING BUNDLE…</span>
+                    </div>
+
+                    <div v-if="exportView === 'structure' && pendingBundleId">
+                        <bundle-structure-editor
+                            ref="exportStructureEditor"
+                            :bundle-id="pendingBundleId"
+                            :csrf-token="csrfToken"
+                            @tree-ready="onExportTreeReady"
+                            @tree-saved="onExportTreeSaved">
+                            <template #rule-selector>
+                                <bundle-rule-selector v-if="exportStructureReady"
+                                    fetch-url="/rule/data_table"
+                                    :initial-per-page="12"
+                                    :exclude-ids="exportBundleRuleIds"
+                                    :pinned-ids="workspaceRuleIds"
+                                    @add-rules="onExportAddRules"
+                                    @preview-rule="onExportPreviewRule">
+                                </bundle-rule-selector>
+                                <div v-else class="text-center text-muted small py-5">
+                                    <div class="spinner-border spinner-border-sm me-2"></div>
+                                    Loading bundle contents…
+                                </div>
+                            </template>
+                        </bundle-structure-editor>
+                    </div>
+                </div>
+                <div v-if="exportView === 'structure'"
+                     class="position-absolute"
+                     style="right:2px;bottom:2px;width:16px;height:16px;cursor:nwse-resize;z-index:5;"
+                     title="Drag to resize" @mousedown="startExportResize">
+                    <i class="fa-solid fa-up-right-and-down-left-from-center text-muted opacity-50" style="font-size:.7rem;transform:rotate(90deg);"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── FILE NAME MODAL (new / import / rename) ─────── -->
     <div class="modal fade" id="fileNameModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
@@ -623,37 +799,45 @@
         </div>
     </div>
 
-    <!-- ── ADD RULES OFFCANVAS ─────────────────────────── -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="addRulesOffcanvas"
-         style="width:min(900px,92vw);background:var(--bg-color);">
-        <div class="offcanvas-header border-bottom py-3 px-4" style="background:var(--card-bg-color);border-color:var(--border-color) !important;">
-            <div class="d-flex align-items-center gap-3">
-                <div class="bg-primary-subtle p-2 rounded-3">
-                    <i class="fa-solid fa-plus text-primary fs-5"></i>
+    <!-- ── ADD RULES MODAL ───────────────────────────────
+         Big, movable, resizable window — same pattern as the rule list's own
+         "Export/Bundle" action's in-modal structure editor (drag by header,
+         resize by the bottom-right handle). Hosts <bundle-rule-selector>
+         (the same rule-picker used to add rules to a bundle), scoped to
+         exclude rules already in this workspace. ─────────────────────── -->
+    <div class="modal fade" id="addRulesModal" tabindex="-1" aria-hidden="true" style="z-index:2000;">
+        <div class="modal-dialog"
+             :style="'position:fixed;margin:0;max-width:none;top:' + addRulesWin.top + 'px;left:' + addRulesWin.left + 'px;width:' + addRulesWin.width + 'px;height:' + addRulesWin.height + 'px;'">
+            <div class="modal-content border-0 shadow-lg d-flex flex-column" style="border-radius:16px;height:100%;overflow:hidden;">
+                <div class="modal-header border-0 pb-0" style="cursor:move;user-select:none;"
+                     @mousedown="startAddRulesDrag($event)">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary-subtle p-2 rounded-3">
+                            <i class="fa-solid fa-plus text-primary fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Add Rules to Workspace</h5>
+                            <p class="text-muted mb-0" style="font-size:.8rem;">Pick or drag rules in — rules already in this workspace aren't shown</p>
+                        </div>
+                        <i class="fa-solid fa-up-down-left-right text-muted ms-2 opacity-50" title="Drag to move" style="font-size:.75rem;"></i>
+                    </div>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div>
-                    <h5 class="fw-bold mb-0">Add Rules to Workspace</h5>
-                    <p class="text-muted mb-0" style="font-size:.82rem;">Select from your rules, then click Confirm</p>
+                <div class="modal-body p-3 flex-grow-1" style="overflow:auto;">
+                    <bundle-rule-selector
+                        v-if="showAddRules"
+                        :fetch-url="`/rule/data_table?exclude_workspace_uuid=${wsUuid}`"
+                        :initial-per-page="12"
+                        :current-user-id="currentUserId"
+                        :exclude-ids="addedThisSessionIds"
+                        @add-rules="onRulesPicked">
+                    </bundle-rule-selector>
+                </div>
+                <div class="position-absolute" style="right:2px;bottom:2px;width:16px;height:16px;cursor:nwse-resize;z-index:5;"
+                     title="Drag to resize" @mousedown="startAddRulesResize">
+                    <i class="fa-solid fa-up-right-and-down-left-from-center text-muted opacity-50" style="font-size:.7rem;transform:rotate(90deg);"></i>
                 </div>
             </div>
-            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas"></button>
-        </div>
-        <div class="offcanvas-body p-0" style="overflow-y:scroll;">
-            <rule-list
-                v-if="showAddRules"
-                mode="select"
-                :sync-url="false"
-                :fetch-url="`/rule/data_table?exclude_workspace_uuid=${wsUuid}`"
-                :user-id="currentUserId"
-                :current-user-id="currentUserId"
-                :current-user-is-admin="isAdmin"
-                :current-user-is-authenticated="true"
-                :csrf-token="csrfToken"
-                :hidden-columns="['editor', 'votes']"
-                default-view="table"
-                :initial-per-page="15"
-                @send="addRulesToWorkspace"
-            ></rule-list>
         </div>
     </div>
 
@@ -662,18 +846,55 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, computed, onMounted } = Vue
+    const { createApp, ref, computed, watch, onMounted } = Vue
     import RuleList     from '/static/js/rule/ruleList.js'
     import SmartEditor  from '/static/js/components/smart-editor.js'
     import IconPicker   from '/static/js/tags/utils/iconPicker.js'
     import TagInput              from '/static/js/tags/tagInput.js'
     import AttackInput           from '/static/js/attack/attackInput.js'
     import TagDisplay            from '/static/js/tags/tagDisplay.js'
-    import UserChip              from '/static/js/components/UserChip.js'
-    import VulnerabilityInput    from '/static/js/vulnerability/vulnerabilityInput.js'
-    import VulnerabilityDisplay  from '/static/js/vulnerability/vulnerabilityDisplay.js'
-    import AttackDisplay         from '/static/js/attack/attackDisplay.js'
+    import UserChip               from '/static/js/components/UserChip.js'
+    import VulnerabilityInput     from '/static/js/vulnerability/vulnerabilityInput.js'
+    import VulnerabilityDisplay   from '/static/js/vulnerability/vulnerabilityDisplay.js'
+    import AttackDisplay          from '/static/js/attack/attackDisplay.js'
+    import RuleBundleManager      from '/static/js/rule/ruleBundleManager.js'
+    import BundleRuleSelector     from '/static/js/bundle/BundleRuleSelector.js'
     import { create_message } from '/static/js/toaster.js'
+
+    // BundleStructureEditor reads window.vuedraggable / window.Sortable at
+    // import time — load those UMD libs first, lazily, only once the export
+    // modal actually reaches the structure-organizing step (same pattern as
+    // ruleExportAction.js's own "Organize Bundle" step).
+    let _draggableLibsPromise = null
+    function _loadScriptOnce(src) {
+        return new Promise((resolve, reject) => {
+            const existing = document.querySelector(`script[src="${src}"]`)
+            if (existing) {
+                if (existing.dataset.loaded === 'true') return resolve()
+                existing.addEventListener('load', () => resolve())
+                existing.addEventListener('error', reject)
+                return
+            }
+            const s = document.createElement('script')
+            s.src = src
+            s.onload = () => { s.dataset.loaded = 'true'; resolve() }
+            s.onerror = reject
+            document.head.appendChild(s)
+        })
+    }
+    function loadDraggableLibs() {
+        if (window.vuedraggable) return Promise.resolve()
+        if (!_draggableLibsPromise) {
+            _draggableLibsPromise = _loadScriptOnce('/static/js/bundle/jsdelivr_sortablejs.js')
+                .then(() => _loadScriptOnce('/static/js/bundle/jsdelivr_vuedraggable.js'))
+        }
+        return _draggableLibsPromise
+    }
+    const BundleStructureEditor = Vue.defineAsyncComponent(async () => {
+        await loadDraggableLibs()
+        const mod = await import('/static/js/bundle/BundleStructureEditor.js')
+        return mod.default
+    })
 
     const wsUuid        = '{{ workspace.uuid }}'
     const wsName        = '{{ workspace.name | e }}'
@@ -686,7 +907,7 @@
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { RuleList, SmartEditor, IconPicker, TagInput, AttackInput, TagDisplay, UserChip, VulnerabilityInput, VulnerabilityDisplay, AttackDisplay },
+        components: { RuleList, SmartEditor, IconPicker, TagInput, AttackInput, TagDisplay, UserChip, VulnerabilityInput, VulnerabilityDisplay, AttackDisplay, RuleBundleManager, BundleRuleSelector, BundleStructureEditor },
         setup() {
             const wsColorRef = ref(wsColor)
             const wsIconRef  = ref(wsIcon)
@@ -954,17 +1175,82 @@
                 _quickEditModal.hide()
             }
 
-            // ── Add Rules offcanvas ────────────────────────────────────────
-            const showAddRules = ref(false)
-            let _addRulesOffcanvas = null
+            // ── Add Rules modal (big, movable, resizable — like "Add to Bundle") ──
+            const showAddRules       = ref(false)
+            const addedThisSessionIds = ref(new Set())
+            let _addRulesModal = null
 
-            function openAddRules() {
-                showAddRules.value = true
-                _addRulesOffcanvas.show()
+            const winMargin  = 40
+            const addRulesWin = ref({ top: 0, left: 0, width: 0, height: 0 })
+
+            function resetAddRulesWindowGeometry() {
+                const vw = window.innerWidth, vh = window.innerHeight
+                addRulesWin.value = {
+                    width:  Math.max(600, vw - winMargin * 2),
+                    height: Math.max(400, vh - winMargin * 2),
+                    left:   0, top: 0,
+                }
+                addRulesWin.value.left = (vw - addRulesWin.value.width) / 2
+                addRulesWin.value.top  = (vh - addRulesWin.value.height) / 2
             }
 
-            async function addRulesToWorkspace(ids) {
-                if (!ids || ids.length === 0) return
+            let _addRulesDragState = null
+            function startAddRulesDrag(ev) {
+                if (ev.target.closest('button, a, input, select, textarea')) return
+                _addRulesDragState = { startX: ev.clientX, startY: ev.clientY, top: addRulesWin.value.top, left: addRulesWin.value.left }
+                document.addEventListener('mousemove', onAddRulesDrag)
+                document.addEventListener('mouseup', stopAddRulesDrag)
+                ev.preventDefault()
+            }
+            function onAddRulesDrag(ev) {
+                if (!_addRulesDragState) return
+                const vw = window.innerWidth, vh = window.innerHeight
+                addRulesWin.value = {
+                    ...addRulesWin.value,
+                    left: Math.min(Math.max(0, _addRulesDragState.left + (ev.clientX - _addRulesDragState.startX)), vw - 80),
+                    top:  Math.min(Math.max(0, _addRulesDragState.top  + (ev.clientY - _addRulesDragState.startY)), vh - 40),
+                }
+            }
+            function stopAddRulesDrag() {
+                _addRulesDragState = null
+                document.removeEventListener('mousemove', onAddRulesDrag)
+                document.removeEventListener('mouseup', stopAddRulesDrag)
+            }
+
+            let _addRulesResizeState = null
+            function startAddRulesResize(ev) {
+                _addRulesResizeState = { startX: ev.clientX, startY: ev.clientY, width: addRulesWin.value.width, height: addRulesWin.value.height }
+                document.addEventListener('mousemove', onAddRulesResize)
+                document.addEventListener('mouseup', stopAddRulesResize)
+                ev.preventDefault()
+                ev.stopPropagation()
+            }
+            function onAddRulesResize(ev) {
+                if (!_addRulesResizeState) return
+                const maxW = window.innerWidth - addRulesWin.value.left
+                const maxH = window.innerHeight - addRulesWin.value.top
+                addRulesWin.value = {
+                    ...addRulesWin.value,
+                    width:  Math.min(Math.max(480, _addRulesResizeState.width  + (ev.clientX - _addRulesResizeState.startX)), maxW),
+                    height: Math.min(Math.max(360, _addRulesResizeState.height + (ev.clientY - _addRulesResizeState.startY)), maxH),
+                }
+            }
+            function stopAddRulesResize() {
+                _addRulesResizeState = null
+                document.removeEventListener('mousemove', onAddRulesResize)
+                document.removeEventListener('mouseup', stopAddRulesResize)
+            }
+
+            function openAddRules() {
+                addedThisSessionIds.value = new Set()
+                resetAddRulesWindowGeometry()
+                showAddRules.value = true
+                _addRulesModal.show()
+            }
+
+            async function onRulesPicked(rules) {
+                const ids = (rules || []).map(r => r.id)
+                if (!ids.length) return
                 try {
                     const csrf = document.getElementById('csrf_token')?.value || csrfToken
                     const r = await fetch(`/workspace/${wsUuid}/rules`, {
@@ -974,8 +1260,10 @@
                     })
                     const data = await r.json()
                     if (data.success) {
+                        const updated = new Set(addedThisSessionIds.value)
+                        ids.forEach(id => updated.add(id))
+                        addedThisSessionIds.value = updated
                         create_message(`${data.added} rule${data.added !== 1 ? 's' : ''} added`, 'success')
-                        _addRulesOffcanvas.hide()
                         ruleListRef.value?.fetchData()
                         loadKpis()
                     }
@@ -1251,6 +1539,173 @@
                 } catch { create_message('Failed to delete link', 'danger') }
             }
 
+            // ── Bundles (export workspace rules as a bundle) ────────────────
+            // Step 1, bundle pick/create, is delegated to <rule-bundle-manager>
+            // (same component the rule list's own "Export/Bundle" action uses).
+            // Step 2, placing rules into folders, is the same in-modal Bundle
+            // Structure Editor + BundleRuleSelector drag/organize flow, pinned
+            // to this workspace's rule ids so the library never shows rules
+            // outside the workspace.
+            const associatedBundles = ref([])
+            const bundlesLoading    = ref(false)
+            const workspaceRuleIds  = ref([])
+            const exportView       = ref('picker')   // 'picker' | 'structure'
+            const pendingBundleId  = ref(null)
+            const linkingBundle    = ref(false)
+            let _exportBundleModal  = null
+
+            async function fetchAssociatedBundles() {
+                bundlesLoading.value = true
+                try {
+                    const r = await fetch(`/workspace/${wsUuid}/bundles`)
+                    associatedBundles.value = await r.json()
+                } catch {} finally { bundlesLoading.value = false }
+            }
+
+            async function unlinkBundle(bundle) {
+                if (!confirm(`Remove "${bundle.name}" from this workspace? The bundle itself won't be deleted.`)) return
+                try {
+                    const csrf = document.getElementById('csrf_token')?.value || csrfToken
+                    const r = await fetch(`/workspace/${wsUuid}/bundles/${bundle.id}`, {
+                        method: 'DELETE',
+                        headers: { 'X-CSRFToken': csrf },
+                    })
+                    if ((await r.json()).success) {
+                        associatedBundles.value = associatedBundles.value.filter(b => b.id !== bundle.id)
+                        create_message('Bundle removed from workspace', 'success')
+                    }
+                } catch { create_message('Failed to remove bundle', 'danger') }
+            }
+
+            function resetExportView() {
+                exportView.value = 'picker'
+                pendingBundleId.value = null
+                exportBundleRuleIds.value = new Set()
+                exportStructureReady.value = false
+            }
+
+            async function openExportBundleModal() {
+                resetExportView()
+                try {
+                    const r = await fetch(`/workspace/${wsUuid}/rule_ids`)
+                    workspaceRuleIds.value = (await r.json()).rule_ids || []
+                } catch { workspaceRuleIds.value = [] }
+                _exportBundleModal.show()
+            }
+
+            async function onBundleManagerCompleted() {
+                if (!pendingBundleId.value) return
+                linkingBundle.value = true
+                try {
+                    const csrf = document.getElementById('csrf_token')?.value || csrfToken
+                    const r = await fetch(`/workspace/${wsUuid}/link_bundle`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                        body: JSON.stringify({ bundle_id: pendingBundleId.value }),
+                    })
+                    const data = await r.json()
+                    if (data.success) {
+                        associatedBundles.value = associatedBundles.value.filter(b => b.id !== data.bundle.id)
+                        associatedBundles.value.unshift(data.bundle)
+                        exportView.value = 'structure'
+                    } else {
+                        create_message(data.message || 'Failed to export bundle', 'danger')
+                    }
+                } catch { create_message('Failed to export bundle', 'danger') } finally {
+                    linkingBundle.value = false
+                }
+            }
+
+            // ── Export modal: structure editor (same drag/organize flow as
+            // rule list's own "Organize Bundle" step) ──────────────────────
+            const exportStructureEditor = ref(null)
+            const exportBundleRuleIds   = ref(new Set())
+            const exportStructureReady  = ref(false)
+
+            function _setsEqual(a, b) {
+                if (a.size !== b.size) return false
+                for (const x of a) if (!b.has(x)) return false
+                return true
+            }
+            function _updateExportBundleRuleIds(ids) {
+                const next = new Set(ids)
+                if (!_setsEqual(next, exportBundleRuleIds.value)) exportBundleRuleIds.value = next
+            }
+            function onExportTreeReady(ids) {
+                _updateExportBundleRuleIds(ids)
+                exportStructureReady.value = true
+            }
+            function onExportTreeSaved(ids) { if (ids) _updateExportBundleRuleIds(ids) }
+            function onExportAddRules(rules) {
+                if (exportStructureEditor.value) exportStructureEditor.value.addRules(rules)
+                const updated = new Set(exportBundleRuleIds.value)
+                rules.forEach(r => updated.add(r.id))
+                exportBundleRuleIds.value = updated
+            }
+            function onExportPreviewRule(rule) {
+                if (exportStructureEditor.value) exportStructureEditor.value.setPreview(rule)
+            }
+
+            // ── Export modal: floating window (structure view only) ────────
+            const exportWinMargin = 40
+            const exportWin = ref({ top: 0, left: 0, width: 0, height: 0 })
+
+            function resetExportWindowGeometry() {
+                const vw = window.innerWidth, vh = window.innerHeight
+                const width  = Math.max(600, vw - exportWinMargin * 2)
+                const height = Math.max(400, vh - exportWinMargin * 2)
+                exportWin.value = { width, height, left: (vw - width) / 2, top: (vh - height) / 2 }
+            }
+
+            let _exportDragState = null
+            function startExportDrag(ev) {
+                if (ev.target.closest('button, a, input, select, textarea')) return
+                _exportDragState = { startX: ev.clientX, startY: ev.clientY, top: exportWin.value.top, left: exportWin.value.left }
+                document.addEventListener('mousemove', onExportDrag)
+                document.addEventListener('mouseup', stopExportDrag)
+                ev.preventDefault()
+            }
+            function onExportDrag(ev) {
+                if (!_exportDragState) return
+                const vw = window.innerWidth, vh = window.innerHeight
+                exportWin.value = {
+                    ...exportWin.value,
+                    left: Math.min(Math.max(0, _exportDragState.left + (ev.clientX - _exportDragState.startX)), vw - 80),
+                    top:  Math.min(Math.max(0, _exportDragState.top  + (ev.clientY - _exportDragState.startY)), vh - 40),
+                }
+            }
+            function stopExportDrag() {
+                _exportDragState = null
+                document.removeEventListener('mousemove', onExportDrag)
+                document.removeEventListener('mouseup', stopExportDrag)
+            }
+
+            let _exportResizeState = null
+            function startExportResize(ev) {
+                _exportResizeState = { startX: ev.clientX, startY: ev.clientY, width: exportWin.value.width, height: exportWin.value.height }
+                document.addEventListener('mousemove', onExportResize)
+                document.addEventListener('mouseup', stopExportResize)
+                ev.preventDefault()
+                ev.stopPropagation()
+            }
+            function onExportResize(ev) {
+                if (!_exportResizeState) return
+                const maxW = window.innerWidth - exportWin.value.left
+                const maxH = window.innerHeight - exportWin.value.top
+                exportWin.value = {
+                    ...exportWin.value,
+                    width:  Math.min(Math.max(480, _exportResizeState.width  + (ev.clientX - _exportResizeState.startX)), maxW),
+                    height: Math.min(Math.max(360, _exportResizeState.height + (ev.clientY - _exportResizeState.startY)), maxH),
+                }
+            }
+            function stopExportResize() {
+                _exportResizeState = null
+                document.removeEventListener('mousemove', onExportResize)
+                document.removeEventListener('mouseup', stopExportResize)
+            }
+
+            watch(exportView, (v) => { if (v === 'structure') Vue.nextTick(resetExportWindowGeometry) })
+
             // ── Helpers ───────────────────────────────────────────────────
             function statusBadgeStyle(status) {
                 const map = {
@@ -1267,13 +1722,17 @@
                 _quickEditModal     = new bootstrap.Modal(document.getElementById('quickEditModal'))
                 _fileNameModal      = new bootstrap.Modal(document.getElementById('fileNameModal'))
                 _metaEditModal      = new bootstrap.Modal(document.getElementById('metaEditModal'))
-                const addRulesEl    = document.getElementById('addRulesOffcanvas')
-                _addRulesOffcanvas  = new bootstrap.Offcanvas(addRulesEl)
-                addRulesEl.addEventListener('hidden.bs.offcanvas', () => { showAddRules.value = false })
+                const exportBundleEl = document.getElementById('exportBundleModal')
+                _exportBundleModal  = new bootstrap.Modal(exportBundleEl)
+                exportBundleEl.addEventListener('hidden.bs.modal', resetExportView)
+                const addRulesEl    = document.getElementById('addRulesModal')
+                _addRulesModal      = new bootstrap.Modal(addRulesEl)
+                addRulesEl.addEventListener('hidden.bs.modal', () => { showAddRules.value = false })
                 loadKpis()
                 loadWorkspaceMeta()
                 loadDocuments()
                 loadLinks()
+                fetchAssociatedBundles()
             })
 
             return {
@@ -1285,7 +1744,8 @@
                 kpiCounts, setStatus,
                 bulkActions, onBulkAction, onStatusChange,
                 quickEdit, openQuickEditModal, addCve, removeCve, saveQuickEdit,
-                showAddRules, openAddRules, addRulesToWorkspace,
+                showAddRules, openAddRules, onRulesPicked, addedThisSessionIds,
+                addRulesWin, startAddRulesDrag, startAddRulesResize,
                 wsEditForm, openEditModal, saveEditWorkspace, deleteWorkspace,
                 documents, docsLoading, editingDoc, fileNameModal, fileNameInput,
                 saveStatus, scheduleSave,
@@ -1293,6 +1753,12 @@
                 openDocument, saveDocument, closeDocument, deleteDocument,
                 links, linksLoading, newLink,
                 loadLinks, addLink, deleteLink,
+                associatedBundles, bundlesLoading, workspaceRuleIds,
+                exportView, pendingBundleId, linkingBundle,
+                fetchAssociatedBundles, openExportBundleModal, onBundleManagerCompleted, unlinkBundle,
+                exportStructureEditor, exportBundleRuleIds, exportStructureReady,
+                onExportTreeReady, onExportTreeSaved, onExportAddRules, onExportPreviewRule,
+                exportWin, startExportDrag, startExportResize,
                 statusBadgeStyle,
                 currentUserId, isAdmin, csrfToken,
             }
