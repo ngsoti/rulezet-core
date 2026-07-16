@@ -43,6 +43,7 @@ function _resolve_lang(lang) {
 
 let _hljs_p   = null
 let _marked_p = null
+let _purify_p = null
 
 function load_hljs() {
     if (window.hljs)  return Promise.resolve(window.hljs)
@@ -68,6 +69,19 @@ function load_marked() {
         document.head.appendChild(s)
     })
     return _marked_p
+}
+
+function load_purify() {
+    if (window.DOMPurify) return Promise.resolve(window.DOMPurify)
+    if (_purify_p) return _purify_p
+    _purify_p = new Promise((res, rej) => {
+        const s = document.createElement('script')
+        s.src   = '/static/js/purify.min.js'
+        s.onload  = () => res(window.DOMPurify)
+        s.onerror = rej
+        document.head.appendChild(s)
+    })
+    return _purify_p
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -319,6 +333,8 @@ export default {
 
         // ── marked ──────────────────────────────────────────────────────
         function _sanitize_html(html) {
+            if (window.DOMPurify) return window.DOMPurify.sanitize(html)
+            // DOMPurify failed to load — fall back to a minimal strip as last resort
             const tmp = document.createElement('div')
             tmp.innerHTML = html
             tmp.querySelectorAll('script, iframe, object, embed, form').forEach(el => el.remove())
@@ -345,6 +361,7 @@ export default {
             show_preview.value = !show_preview.value
             if (show_preview.value) {
                 if (!window.marked) await load_marked()
+                if (!window.DOMPurify) await load_purify()
                 render_md()
             }
         }
