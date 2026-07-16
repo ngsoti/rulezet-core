@@ -276,7 +276,9 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link small fw-bold py-2 border-0" id="misp_object-tab"
                                             data-bs-toggle="tab" data-bs-target="#misp_object" type="button" role="tab">
-                                            <i class="fas fa-project-diagram"></i> MISP Object
+                                            <img src="{{ url_for('static', filename='custom-icon/misp.svg') }}"
+                                                alt="MISP" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
+                                            MISP Object
                                         </button>
                                     </li>
                                     {% endif %}
@@ -284,7 +286,9 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link small fw-bold py-2 border-0" id="misp_event-tab"
                                             data-bs-toggle="tab" data-bs-target="#misp_event" type="button" role="tab">
-                                            <i class="fas fa-project-diagram"></i> MISP Event
+                                            <img src="{{ url_for('static', filename='custom-icon/misp.svg') }}"
+                                                alt="MISP" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
+                                            MISP Event
                                         </button>
                                     </li>
                                     {% endif %}
@@ -424,17 +428,17 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                     <ul class="dropdown-menu shadow border-0" style="border-radius:12px; background:var(--card-bg-color);">
                                         <li><button class="dropdown-item small" @click="download_rule('txt')" style="color:var(--text-color);"><i class="fas fa-file-alt me-2 opacity-50"></i>Rule file</button></li>
                                         {% if rule_misp_object %}
-                                        <li><button class="dropdown-item small" @click="download_rule('misp')" style="color:var(--text-color);"><i class="fas fa-project-diagram me-2 opacity-50"></i>MISP Object</button></li>
+                                        <li><button class="dropdown-item small" @click="download_rule('misp')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/misp.svg') }}" alt="MISP" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">MISP Object</button></li>
                                         {% endif %}
                                         {% if rule_misp_event %}
-                                        <li><button class="dropdown-item small" @click="download_rule('misp_event')" style="color:var(--text-color);"><i class="fas fa-project-diagram me-2 opacity-50"></i>MISP Event</button></li>
+                                        <li><button class="dropdown-item small" @click="download_rule('misp_event')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/misp.svg') }}" alt="MISP" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">MISP Event</button></li>
                                         {% endif %}
                                         <li><button class="dropdown-item small" @click="download_rule('json')" style="color:var(--text-color);"><i class="fas fa-code me-2 opacity-50"></i>JSON</button></li>
                                         <template v-if="rule_stix">
                                             <li><button class="dropdown-item small" @click="download_rule('stix')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/logo_stix.svg') }}" alt="STIX" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">STIX</button></li>
                                         </template>
                                         <template v-if="['yara', 'sigma'].includes((currentRule.format || '').toLowerCase())">
-                                            <li><button class="dropdown-item small" @click="download_rule('velociraptor')" style="color:var(--text-color);"><i class="fas fa-crow me-2 opacity-50"></i>Velociraptor Artifact</button></li>
+                                            <li><button class="dropdown-item small" @click="download_rule('velociraptor')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/velociraptor-remove-bg.svg') }}" alt="Velociraptor" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">Velociraptor Artifact</button></li>
                                         </template>
                                         <li><hr class="dropdown-divider"></li>
                                         <li><button class="dropdown-item small" @click="download_rule('all')" style="color:var(--text-color);"><i class="fas fa-download me-2 opacity-50"></i>Download all</button></li>
