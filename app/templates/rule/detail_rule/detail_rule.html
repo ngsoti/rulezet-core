@@ -855,18 +855,21 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                     </div>
                 </div>
                 <!-- Comment section -->
-                <div class="mt-5">
-                    <h4 class="fw-bold mb-4 border-start border-primary border-4 ps-3">Community Discussion</h4>
-                    <comment-thread
-                        object-type="rule"
-                        :object-id="{{ rule.id }}"
-                        :can-create="{{ current_user.is_authenticated | tojson }}"
-                        :can-edit-own="{{ current_user.is_authenticated | tojson }}"
-                        :can-delete-own="{{ current_user.is_authenticated | tojson }}"
-                        :can-moderate="{{ current_user.is_admin() | tojson }}"
-                        :current-user-id="{{ current_user.id if current_user.is_authenticated else 0 }}"
-                        csrf-token="{{ csrf_token() }}">
-                    </comment-thread>
+                <div class="card border-0 shadow-sm rounded-3 mt-5 mb-4">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold mb-4 border-start border-primary border-4 ps-3">Community Discussion</h4>
+                        <comment-thread
+                            object-type="rule"
+                            :object-id="{{ rule.id }}"
+                            :can-create="{{ current_user.is_authenticated | tojson }}"
+                            :can-edit-own="{{ current_user.is_authenticated | tojson }}"
+                            :can-delete-own="{{ current_user.is_authenticated | tojson }}"
+                            :can-moderate="{{ current_user.is_admin() | tojson }}"
+                            :current-user-id="{{ current_user.id if current_user.is_authenticated else 0 }}"
+                            :allow-markdown="true"
+                            csrf-token="{{ csrf_token() }}">
+                        </comment-thread>
+                    </div>
                 </div>
             </template>
 

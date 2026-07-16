@@ -349,7 +349,8 @@ export default {
                     :current-user-id="currentUserId"
                     :csrf-token="csrfToken"
                     :per-page="PREVIEW_PER_PAGE"
-                    :auto-load="false">
+                    :auto-load="false"
+                    :allow-markdown="true">
                 </comment-thread>
                 <div class="pt-2">
                     <a :href="ctaLink(item)" class="btn btn-sm btn-primary rounded-pill px-3">
@@ -435,7 +436,8 @@ export default {
                     :current-user-id="currentUserId"
                     :csrf-token="csrfToken"
                     :per-page="PREVIEW_PER_PAGE"
-                    :auto-load="false">
+                    :auto-load="false"
+                    :allow-markdown="true">
                 </comment-thread>
             </div>
         </template>

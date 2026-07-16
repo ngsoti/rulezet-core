@@ -5,7 +5,7 @@
  * Deep-link: pass ?comment=<id> in the URL to auto-scroll, expand ancestors,
  * and highlight the target comment.
  */
-const { ref, computed, onMounted, nextTick } = Vue
+const { ref, computed, watch, onMounted, nextTick } = Vue
 import { apiFetch } from '/static/js/constants.js'
 import { create_message } from '/static/js/toaster.js'
 import UserChip from '/static/js/components/UserChip.js'
@@ -13,6 +13,133 @@ import ReportModal from '/static/js/components/ReportModal.js'
 import VoterPopover from '/static/js/components/VoterPopover.js'
 
 const TOAST = { SUCCESS: 'success', WARNING: 'warning', ERROR: 'danger', INFO: 'info' }
+
+// ── Markdown rendering (only used when allow-markdown is enabled) ──────────
+let _marked = null, _purify = null
+async function getMarked() {
+    if (!_marked) {
+        const m = await import('/static/js/marked.min.js')
+        _marked = m.marked || m.default || window.marked
+    }
+    return _marked
+}
+async function getPurify() {
+    if (!_purify) {
+        const m = await import('/static/js/purify.min.js')
+        _purify = m.default || window.DOMPurify
+    }
+    return _purify
+}
+async function renderMarkdown(text) {
+    if (!text) return ''
+    const mk = await getMarked()
+    const purify = await getPurify()
+    const html = mk.parse ? mk.parse(text) : mk(text)
+    return purify.sanitize(html)
+}
+
+// ── MarkdownComposer ─────────────────────────────────────────────────────────
+// GitHub-style "Write / Preview" tabs above a plain textarea — used by the
+// new-comment, reply and edit forms below when allow-markdown is enabled.
+// Formatting shortcuts (bold/italic/heading/...) sit to the right of the
+// tabs and only show up in Write mode, same idea as SmartEditor's toolbar.
+const MD_ACTIONS = [
+    { id: 'bold',    icon: 'fa-bold',        title: 'Bold'          },
+    { id: 'italic',  icon: 'fa-italic',      title: 'Italic'        },
+    { id: 'h2',      icon: 'fa-heading',     title: 'Heading'       },
+    { id: 'code',    icon: 'fa-terminal',    title: 'Inline code'   },
+    { id: 'link',    icon: 'fa-link',        title: 'Link'          },
+    { id: 'ul',      icon: 'fa-list-ul',     title: 'Bullet list'   },
+    { id: 'ol',      icon: 'fa-list-ol',     title: 'Numbered list' },
+    { id: 'quote',   icon: 'fa-quote-right', title: 'Blockquote'    },
+]
+
+const MarkdownComposer = {
+    name: 'MarkdownComposer',
+    delimiters: ['[[', ']]'],
+    props: {
+        modelValue: { type: String, default: '' },
+        placeholder: { type: String, default: 'Write a comment…' },
+        rows: { type: Number, default: 3 },
+    },
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+        const isPreview = ref(false)
+        const previewHtml = ref('')
+        const taRef = ref(null)
+
+        const value = computed({
+            get: () => props.modelValue,
+            set: v => emit('update:modelValue', v),
+        })
+
+        async function showPreview() {
+            isPreview.value = true
+            previewHtml.value = await renderMarkdown(props.modelValue)
+        }
+
+        function setValue(newVal, cursorStart, cursorEnd = null) {
+            emit('update:modelValue', newVal)
+            nextTick(() => {
+                const ta = taRef.value
+                if (!ta) return
+                ta.focus()
+                ta.selectionStart = cursorStart
+                ta.selectionEnd = cursorEnd ?? cursorStart
+            })
+        }
+
+        function mdAction(id) {
+            const ta = taRef.value
+            if (!ta) return
+            const { selectionStart: s, selectionEnd: e } = ta
+            const val = props.modelValue
+            const sel = val.slice(s, e)
+
+            const WRAP = { bold: ['**', '**'], italic: ['*', '*'], code: ['`', '`'] }
+            const LINE_PREFIX = { h2: '## ', ul: '- ', ol: '1. ', quote: '> ' }
+
+            if (WRAP[id]) {
+                const [o, c] = WRAP[id]
+                const text = sel || 'text'
+                setValue(val.slice(0, s) + o + text + c + val.slice(e), s + o.length, s + o.length + text.length)
+            } else if (LINE_PREFIX[id]) {
+                const pfx = LINE_PREFIX[id]
+                const ls = val.lastIndexOf('\n', s - 1) + 1
+                setValue(val.slice(0, ls) + pfx + val.slice(ls), s + pfx.length)
+            } else if (id === 'link') {
+                const text = sel || 'link text'
+                setValue(val.slice(0, s) + '[' + text + '](url)' + val.slice(e), s + 1, s + 1 + text.length)
+            }
+        }
+
+        return { isPreview, previewHtml, value, showPreview, taRef, mdAction, MD_ACTIONS }
+    },
+    template: `
+    <div class="cm-md-composer">
+        <div class="cm-md-tabs">
+            <button type="button" class="cm-md-tab" :class="{ 'cm-md-tab--active': !isPreview }"
+                    @click="isPreview = false">Write</button>
+            <button type="button" class="cm-md-tab" :class="{ 'cm-md-tab--active': isPreview }"
+                    @click="showPreview">Preview</button>
+            <div class="cm-md-tabs-spacer"></div>
+            <template v-if="!isPreview">
+                <button v-for="a in MD_ACTIONS" :key="a.id" type="button" class="cm-md-tb-btn"
+                        :title="a.title" @click="mdAction(a.id)">
+                    <i :class="'fas ' + a.icon"></i>
+                </button>
+            </template>
+        </div>
+        <textarea v-if="!isPreview" ref="taRef" class="form-control form-control-sm cm-md-textarea" v-model="value"
+                  :rows="rows" :placeholder="placeholder"></textarea>
+        <div v-else class="cm-body-md cm-md-preview-box">
+            <div v-if="previewHtml" v-html="previewHtml"></div>
+            <p v-else class="text-muted small fst-italic mb-0">Nothing to preview.</p>
+        </div>
+        <div class="cm-md-hint"><i class="fab fa-markdown"></i> Styling with Markdown is supported</div>
+    </div>
+    `,
+}
 
 // ── Deep-link shared state ─────────────────────────────────────────────────
 // Populated by CommentThread on mount; read by every CommentItem on mount.
@@ -44,6 +171,8 @@ const CommentItem = {
         canModerate: { type: Boolean, default: false },
         currentUserId: { type: Number, default: 0 },
         csrfToken: { type: String, default: '' },
+        // Off by default — set by the parent CommentThread's own allow-markdown prop.
+        allowMarkdown: { type: Boolean, default: false },
     },
     setup(props) {
         const collapsed = ref(false)
@@ -65,6 +194,7 @@ const CommentItem = {
         const userReaction = ref(props.comment.user_reaction || null)
         const isDeleted = ref(props.comment.is_deleted || false)
         const content = ref(props.comment.content)
+        const renderedContent = ref('')
         const isPublic = ref(props.comment.is_public)
         const githubIssueUrl = ref(props.comment.github_issue_url || null)
         const githubIssueNumber = ref(props.comment.github_issue_number || null)
@@ -83,6 +213,10 @@ const CommentItem = {
             )
         )
         const canRestore = computed(() => props.canModerate && isDeleted.value)
+
+        if (props.allowMarkdown) {
+            watch(content, async (val) => { renderedContent.value = await renderMarkdown(val) }, { immediate: true })
+        }
 
         async function loadReplies(reset = false) {
             if (repliesLoading.value) return
@@ -252,7 +386,7 @@ const CommentItem = {
             replyContent, editContent, submitting, highlighted,
             replies, repliesTotal, repliesLoaded, repliesLoading,
             likeCount, dislikeCount, userReaction,
-            isDeleted, content, isPublic,
+            isDeleted, content, renderedContent, isPublic,
             githubIssueUrl, githubIssueNumber, creatingIssue,
             canEdit, canDelete, canRestore, hasMoreReplies,
             loadReplies, submitReply, submitEdit, doDelete, doHardDelete, doRestore, doReact,
@@ -294,7 +428,8 @@ const CommentItem = {
         </button>
     </div>
 
-    <div class="cm-body">[[ content ]]</div>
+    <div v-if="allowMarkdown" class="cm-body cm-body-md" v-html="renderedContent"></div>
+    <div v-else class="cm-body">[[ content ]]</div>
 
     <div v-if="!showEditForm" class="cm-actions">
         <voter-popover :fetch-url="'/api/comments/' + comment.uuid + '/reactors?type=like'" label="Liked by">
@@ -356,7 +491,8 @@ const CommentItem = {
 
     <!-- Edit form -->
     <div v-if="showEditForm" class="cm-edit-form">
-        <textarea class="form-control form-control-sm" v-model="editContent" rows="3"></textarea>
+        <markdown-composer v-if="allowMarkdown" v-model="editContent"></markdown-composer>
+        <textarea v-else class="form-control form-control-sm" v-model="editContent" rows="3"></textarea>
         <div class="cm-form-actions">
             <button class="btn btn-primary btn-sm" :disabled="submitting" @click="submitEdit">
                 <span v-if="submitting"><i class="fas fa-spinner fa-spin me-1"></i>Saving…</span>
@@ -368,7 +504,8 @@ const CommentItem = {
 
     <!-- Reply form -->
     <div v-if="showReplyForm" class="cm-reply-form">
-        <textarea class="form-control form-control-sm" v-model="replyContent"
+        <markdown-composer v-if="allowMarkdown" v-model="replyContent" placeholder="Write a reply…"></markdown-composer>
+        <textarea v-else class="form-control form-control-sm" v-model="replyContent"
                   rows="3" placeholder="Write a reply…"></textarea>
         <div class="cm-form-actions">
             <button class="btn btn-primary btn-sm" :disabled="submitting || !replyContent.trim()"
@@ -396,7 +533,8 @@ const CommentItem = {
             :can-delete-own="canDeleteOwn"
             :can-moderate="canModerate"
             :current-user-id="currentUserId"
-            :csrf-token="csrfToken" />
+            :csrf-token="csrfToken"
+            :allow-markdown="allowMarkdown" />
 
         <button v-if="hasMoreReplies" class="cm-load-more" @click="loadReplies()"
                 :disabled="repliesLoading">
@@ -408,15 +546,15 @@ const CommentItem = {
     `,
 }
 
-// Self-referential for recursion (also includes UserChip, ReportModal and VoterPopover)
-CommentItem.components = { CommentItem, UserChip, ReportModal, VoterPopover }
+// Self-referential for recursion (also includes UserChip, ReportModal, VoterPopover and MarkdownComposer)
+CommentItem.components = { CommentItem, UserChip, ReportModal, VoterPopover, 'markdown-composer': MarkdownComposer }
 
 // ── CommentThread ──────────────────────────────────────────────────────────
 
 const CommentThread = {
     name: 'CommentThread',
     delimiters: ['[[', ']]'],
-    components: { CommentItem },
+    components: { CommentItem, 'markdown-composer': MarkdownComposer },
     props: {
         objectType: { type: String, required: true },
         objectId: { type: Number, required: true },
@@ -430,6 +568,10 @@ const CommentThread = {
         // disable the infinite-scroll sentinel so only perPage comments render.
         perPage: { type: Number, default: 20 },
         autoLoad: { type: Boolean, default: true },
+        // Off by default — pass true to let commenters write/preview Markdown
+        // (GitHub-style Write/Preview tabs) instead of plain text. Rendered
+        // with marked + DOMPurify.
+        allowMarkdown: { type: Boolean, default: false },
     },
     setup(props) {
         const comments = ref([])
@@ -545,7 +687,8 @@ const CommentThread = {
     <!-- New comment form -->
     <div v-if="canCreate" class="cm-new-form mb-3">
         <p class="cm-new-form-title"><i class="fas fa-comment me-1"></i>Leave a comment</p>
-        <textarea class="form-control form-control-sm mb-2" v-model="newContent"
+        <markdown-composer v-if="allowMarkdown" v-model="newContent" placeholder="Write a comment…"></markdown-composer>
+        <textarea v-else class="form-control form-control-sm mb-2" v-model="newContent"
                   rows="3" placeholder="Write a comment…"></textarea>
         <button class="btn btn-primary btn-sm"
                 :disabled="submitting || !newContent.trim()"
@@ -571,7 +714,8 @@ const CommentThread = {
             :can-delete-own="canDeleteOwn"
             :can-moderate="canModerate"
             :current-user-id="currentUserId"
-            :csrf-token="csrfToken" />
+            :csrf-token="csrfToken"
+            :allow-markdown="allowMarkdown" />
     </div>
 
     <!-- Loading indicator -->

@@ -429,6 +429,7 @@
                 :can-delete-own="{{ current_user.is_authenticated | tojson }}"
                 :can-moderate="{{ current_user.is_admin() | tojson }}"
                 :current-user-id="{{ current_user.id if current_user.is_authenticated else 0 }}"
+                :allow-markdown="true"
                 csrf-token="{{ csrf_token() }}">
             </comment-thread>
         </div>

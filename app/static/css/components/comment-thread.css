@@ -87,6 +87,7 @@
 .cm-item--deleted .cm-body {
     font-style: italic;
     color: var(--cm-text-muted);
+    border-style: dashed;
 }
 
 .cm-item--private {
@@ -189,7 +190,53 @@
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
-    margin-bottom: .6rem;
+    margin: .5rem 0 .7rem;
+    padding: .6rem .8rem;
+    border: 1px solid var(--cm-border);
+    border-radius: var(--cm-radius-sm);
+    background: var(--cm-bg-muted);
+}
+
+/* Rendered Markdown body (allow-markdown="true") — HTML already carries its
+   own block spacing, so pre-wrap would double it up. */
+.cm-body-md {
+    white-space: normal;
+}
+.cm-body-md p { margin: 0 0 .5em; }
+.cm-body-md p:last-child { margin-bottom: 0; }
+.cm-body-md h1, .cm-body-md h2, .cm-body-md h3, .cm-body-md h4 {
+    font-weight: 700;
+    color: var(--cm-text-main);
+    line-height: 1.3;
+    margin: .6em 0 .3em;
+}
+.cm-body-md h1 { font-size: 1.3em; border-bottom: 1px solid var(--cm-border); padding-bottom: .2em; }
+.cm-body-md h2 { font-size: 1.15em; border-bottom: 1px solid var(--cm-border); padding-bottom: .15em; }
+.cm-body-md h3 { font-size: 1.05em; }
+.cm-body-md h4 { font-size: 1em; }
+.cm-body-md ul, .cm-body-md ol { margin: .3em 0; padding-left: 1.4em; }
+.cm-body-md a { color: var(--cm-brand); text-decoration: underline; }
+.cm-body-md code {
+    font-size: .85em;
+    background: var(--cm-bg-card);
+    border: 1px solid var(--cm-border);
+    border-radius: 3px;
+    padding: 1px 4px;
+}
+.cm-body-md pre {
+    background: var(--cm-bg-card);
+    border: 1px solid var(--cm-border);
+    border-radius: var(--cm-radius-sm);
+    padding: 8px 10px;
+    overflow-x: auto;
+    margin: .5em 0;
+}
+.cm-body-md pre code { background: none; border: none; padding: 0; }
+.cm-body-md blockquote {
+    border-left: 3px solid var(--cm-brand-dim);
+    margin: .4em 0;
+    padding: .2em .8em;
+    color: var(--cm-text-muted);
 }
 
 /*---ACTIONS---*/
@@ -285,6 +332,94 @@
 .cm-form-actions {
     display: flex;
     gap: .4rem;
+}
+
+/*---MARKDOWN_COMPOSER---*/
+/* GitHub-style Write/Preview toggle, used inside .cm-new-form/.cm-reply-form/
+   .cm-edit-form in place of a plain textarea when allow-markdown="true". */
+
+.cm-md-composer {
+    display: flex;
+    flex-direction: column;
+}
+
+.cm-md-tabs {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--cm-border);
+    margin-bottom: .4rem;
+}
+
+.cm-md-tabs-spacer {
+    flex: 1;
+}
+
+.cm-md-tb-btn {
+    background: none;
+    border: none;
+    border-radius: var(--cm-radius-sm);
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .74rem;
+    color: var(--cm-text-muted);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+.cm-md-tb-btn:hover {
+    background: var(--cm-bg-muted);
+    color: var(--cm-brand);
+}
+
+.cm-md-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: .3rem .1rem;
+    margin-right: .9rem;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--cm-text-muted);
+    cursor: pointer;
+}
+
+.cm-md-tab--active {
+    color: var(--cm-text-main);
+    border-bottom-color: var(--cm-brand);
+}
+
+.cm-md-textarea {
+    font-size: .84rem;
+    resize: vertical;
+    min-height: 80px;
+    border-color: var(--cm-border);
+    background: var(--cm-bg-card);
+    color: var(--cm-text-main);
+}
+
+.cm-md-textarea:focus {
+    border-color: var(--cm-brand);
+    box-shadow: 0 0 0 2px var(--cm-brand-glow);
+}
+
+.cm-md-preview-box {
+    min-height: 80px;
+    border: 1px solid var(--cm-border);
+    border-radius: var(--cm-radius-sm);
+    padding: .5rem .7rem;
+    background: var(--cm-bg-card);
+}
+
+.cm-md-hint {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .72rem;
+    color: var(--cm-text-muted);
+    margin-top: .35rem;
 }
 
 /*---INDENT---*/
