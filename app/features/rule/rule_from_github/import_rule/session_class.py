@@ -46,14 +46,32 @@ class Session_class:
         rule_instances = [RuleClass() for RuleClass in rule_subclasses]
 
         if os.path.exists(self.repo_dir):
-            for root, dirs, files in os.walk(self.repo_dir):
-                # Skip hidden directories
-                dirs[:] = [d for d in dirs if not d.startswith(('.', '_'))]
+            repo_real = os.path.realpath(self.repo_dir)
+            for root, dirs, files in os.walk(self.repo_dir, followlinks=False):
+                # Skip hidden directories and symlinked directories (a symlinked
+                # directory could otherwise be walked into via its resolved target)
+                dirs[:] = [
+                    d for d in dirs
+                    if not d.startswith(('.', '_'))
+                    and not os.path.islink(os.path.join(root, d))
+                ]
                 for file in files:
                     if file.startswith(('.', '_')):
                         continue
 
                     filepath = os.path.join(root, file)
+
+                    # Reject symlinks outright: a cloned repo can contain a symlink
+                    # (e.g. rule.yar -> /etc/passwd) whose target open() would follow
+                    # transparently, leaking arbitrary filesystem content as a "rule".
+                    if os.path.islink(filepath):
+                        continue
+
+                    # Defense in depth: also reject any path that, once resolved,
+                    # escapes the cloned repo directory (covers symlinked ancestors).
+                    real_filepath = os.path.realpath(filepath)
+                    if real_filepath != repo_real and not real_filepath.startswith(repo_real + os.sep):
+                        continue
 
                     # Collect every format that claims this file by extension
                     candidates = [ri for ri in rule_instances if ri.get_rule_files(file)]
