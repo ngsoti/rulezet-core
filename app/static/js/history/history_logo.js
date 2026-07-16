@@ -125,9 +125,27 @@
     const lbImg     = overlay.querySelector('.lb-img')
     const lbCaption = overlay.querySelector('.lb-caption')
 
-    function openLb(src, alt, caption) {
+    function openLb(src, alt, captionParts) {
         lbImg.src = src; lbImg.alt = alt
-        lbCaption.innerHTML = caption || ''
+
+        lbCaption.textContent = ''
+        if (captionParts && captionParts.title) {
+            const strong = document.createElement('strong')
+            strong.textContent = captionParts.title
+            lbCaption.appendChild(strong)
+
+            if (captionParts.badge) {
+                lbCaption.appendChild(document.createTextNode(' — ' + captionParts.badge))
+            }
+
+            lbCaption.appendChild(document.createElement('br'))
+
+            const span = document.createElement('span')
+            span.style.opacity = '.65'
+            span.textContent = captionParts.period || ''
+            lbCaption.appendChild(span)
+        }
+
         overlay.style.display = 'flex'
         requestAnimationFrame(() => overlay.classList.add('lb-open'))
         document.body.style.overflow = 'hidden'
@@ -161,8 +179,8 @@
 
         if (!img) return
         const caption = title
-            ? `<strong>${title.textContent}</strong>${badge ? ' &mdash; ' + badge.textContent : ''}<br><span style="opacity:.65">${period ? period.textContent : ''}</span>`
-            : ''
+            ? { title: title.textContent, badge: badge ? badge.textContent : '', period: period ? period.textContent : '' }
+            : null
         openLb(img.src, img.alt, caption)
     })
 
