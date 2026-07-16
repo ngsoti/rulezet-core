@@ -2684,8 +2684,12 @@ class Workspace(db.Model):
     def rule_count(self):
         return self.rules_assoc.count()
 
-    def to_json(self):
+    @property
+    def cves_list(self):
         import json as _json
+        return _json.loads(self.cve_id) if self.cve_id else []
+
+    def to_json(self):
         return {
             'id':          self.id,
             'uuid':        self.uuid,
@@ -2694,7 +2698,7 @@ class Workspace(db.Model):
             'icon':        self.icon,
             'color':       self.color,
             'url':         self.url,
-            'cves':        _json.loads(self.cve_id) if self.cve_id else [],
+            'cves':        self.cves_list,
             'user_id':     self.user_id,
             'owner_name':  self.owner.username if self.owner else None,
             'rule_count':  self.rule_count(),

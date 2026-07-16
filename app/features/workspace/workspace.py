@@ -1,9 +1,26 @@
+import re
+
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 from . import workspace_core as WsModel
 from app.core.utils.activity_log import log_activity
 
 workspace_blueprint = Blueprint('workspace', __name__)
+
+# Mirrors the client-side v_pattern in static/js/vulnerability/vulnerabilityInput.js
+VULN_ID_PATTERN = re.compile(
+    r'^(CVE[-\s]\d{4}[-\s]\d{4,7}'
+    r'|GCVE-\d+-\d{4}-\d+'
+    r'|GHSA-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}'
+    r'|PYSEC-\d{4}-\d{2,5}'
+    r'|GSD-\d{4}-\d{4,5}'
+    r'|wid-sec-w-\d{4}-\d{4}'
+    r'|cisco-sa-\d{8}-[a-zA-Z0-9]+'
+    r'|RHSA-\d{4}:\d{4}'
+    r'|msrc_CVE-\d{4}-\d{4,}'
+    r'|CERTFR-\d{4}-[A-Z]{3}-\d{3})$',
+    re.IGNORECASE
+)
 
 
 @workspace_blueprint.route('/my_rules')
@@ -59,7 +76,10 @@ def update_workspace(ws_uuid):
     if 'url' in data:
         ws.url = (data['url'] or '').strip() or None
     if 'cves' in data:
-        ws.cve_id = _json.dumps(data['cves']) if data['cves'] else None
+        cves = data['cves'] or []
+        if not isinstance(cves, list) or not all(isinstance(c, str) and VULN_ID_PATTERN.match(c.strip()) for c in cves):
+            return jsonify({'success': False, 'message': 'Invalid vulnerability identifier format'}), 400
+        ws.cve_id = _json.dumps([c.strip() for c in cves]) if cves else None
     db.session.commit()
     return jsonify({'success': True, 'workspace': ws.to_json()})
 

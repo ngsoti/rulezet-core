@@ -706,7 +706,7 @@
             // ── Workspace metadata (tags / attacks / CVEs / URL) ───────────
             const wsMeta    = ref({
                 url:  '{{ (workspace.url or "") | e }}',
-                cves: {{ workspace.cve_id | safe if workspace.cve_id else '[]' }},
+                cves: {{ workspace.cves_list | tojson }},
             })
             const wsTags    = ref([])
             const wsAttacks = ref([])
