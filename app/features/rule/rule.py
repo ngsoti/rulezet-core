@@ -3405,6 +3405,7 @@ def rules_data_table():
         workspace_uuid=request.args.get('workspace_uuid', None, type=str),
         exclude_workspace_uuid=request.args.get('exclude_workspace_uuid', None, type=str),
         ids=ids,
+        has_cve=request.args.get('has_cve', 'false', type=str) == 'true',
     )
 
     rule_ids = [r.id for r in pagination.items]

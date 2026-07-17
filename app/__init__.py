@@ -57,6 +57,7 @@ def create_app(start_worker=True):
     from app.features.blog.blog import blog_blueprint
     from app.features.community.community import community_blueprint
     from app.features.rule_tester.rule_tester import rule_tester_blueprint
+    from app.features.dashboard.dashboard import dashboard_blueprint
 
     app.register_blueprint(home_blueprint, url_prefix="/")
     app.register_blueprint(account_blueprint, url_prefix="/account")
@@ -72,6 +73,7 @@ def create_app(start_worker=True):
     app.register_blueprint(blog_blueprint, url_prefix='/blog')
     app.register_blueprint(community_blueprint, url_prefix='/community')
     app.register_blueprint(rule_tester_blueprint)
+    app.register_blueprint(dashboard_blueprint, url_prefix='/dashboard')
 
     from app.api.api import api_blueprint
 

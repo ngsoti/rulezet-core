@@ -27,6 +27,9 @@
  *   initialPerPage      Number                                 default:12
  *   hiddenFilters       Array    field keys to hide            default:[]
  *   initialFilters      Object   pre-filled filter values      default:{}
+ *   hasCveOnly          Boolean  pin listing to rules with a CVE (also read from ?has_cve=true)  default:false
+ *   initialSort         String   default sort column when no ?sort in URL    default:''
+ *   initialDir          String   default sort direction                      default:'asc'
  *
  * Events:
  *   create
@@ -122,6 +125,13 @@ export default {
         // Rule UUID to visually highlight + auto-scroll to once loaded (e.g. when
         // arriving from that rule's own Test History via ?rule_uuid=...). Optional.
         highlightUuid:      { type: String,             default: null },
+        // Pins the listing to rules that carry at least one CVE — used by the
+        // dashboard's "Last CVEs" widget. Not exposed as a user-facing filter.
+        hasCveOnly:         { type: Boolean,             default: false },
+        // Default sort column/direction when the URL has none (e.g. embedded
+        // widgets that don't want to touch the page's own URL via syncUrl).
+        initialSort:        { type: String,              default: '' },
+        initialDir:         { type: String,              default: 'asc' },
     },
 
     emits: ['create', 'edit', 'delete', 'vote', 'favorite', 'bulk-action', 'send', 'rule-drag-start', 'rule-drag-end', 'status-change'],
@@ -1217,8 +1227,8 @@ export default {
             ? (Number(localStorage.getItem('rz-per-page-table')) || 25)
             : props.initialPerPage
         const tablePerPage  = ref(_tableDefault)
-        const sortKey      = ref(_p('sort', ''))
-        const sortDir      = ref(_p('dir', 'asc'))
+        const sortKey      = ref(_p('sort', props.initialSort))
+        const sortDir      = ref(_p('dir', props.initialDir))
 
         // Active per-page depends on the current view (set after viewMode is declared)
         const perPage = computed(() =>
@@ -1250,6 +1260,7 @@ export default {
             values: _arr(_url.has('editors') ? 'editors' : 'authors'),
         })
         const scopeMine        = ref(_p('scope') === 'mine')
+        const cveOnly           = ref(props.hasCveOnly || _p('has_cve') === 'true')
         const rulesFormats    = ref([])
 
         // Card sort shorthand (maps to sortKey/sortDir)
@@ -1380,6 +1391,7 @@ export default {
                 if (selectedLicenses.value.length)   params.set('licenses', selectedLicenses.value.join(','))
                 if (selectedVulns.value.length)      params.set('vulnerabilities', selectedVulns.value.join(','))
                 if (selectedAttacks.value.length)    params.set('attacks', selectedAttacks.value.join(','))
+                if (cveOnly.value)                    params.set('has_cve', 'true')
                 if (personFilter.value.values.length) {
                     const pKey = personFilter.value.mode === 'editor' ? 'editors' : 'authors'
                     params.set(pKey, personFilter.value.values.join(','))

@@ -694,28 +694,23 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                         <div class="mt-3 rounded-4 overflow-hidden border position-relative mb-2" style="background:var(--light-bg-color);">
                             <div class="contributor-watermark"><i class="fa-solid fa-diagram-project"></i></div>
                             <div class="p-4 position-relative" style="z-index:1;">
-                                <div class="d-flex align-items-center gap-2 mb-3">
-                                    <div style="width:3px; height:14px; background:#0d6efd; border-radius:2px; flex-shrink:0;"></div>
-                                    <span class="fw-bold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--subtle-text-color);">
-                                        <i class="fa-solid fa-diagram-project me-1"></i>Visualization
-                                    </span>
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width:3px; height:14px; background:#0d6efd; border-radius:2px; flex-shrink:0;"></div>
+                                        <span class="fw-bold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--subtle-text-color);">
+                                            <i class="fa-solid fa-diagram-project me-1"></i>Visualization
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="d-flex  px-2 pt-2" >
+                                        <button @click="refreshVizGraph()" class="btn btn-sm btn-outline-secondary" title="Refresh graph" style="font-size:.75rem;">
+                                            <i class="fa-solid fa-rotate-right me-1"></i>Refresh
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="border rounded-3 overflow-hidden shadow-sm">
-                                    <!-- <ul class="nav nav-tabs nav-fill border-bottom" id="vizTabs" role="tablist">
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link {% if rule_misp_event %}active{% endif %} small fw-bold py-2 border-0" id="viz-graph-tab"
-                                                data-bs-toggle="tab" data-bs-target="#viz-graph" type="button" role="tab">
-                                                <i class="fas fa-share-nodes me-1"></i>Graph
-                                            </button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link {% if not rule_misp_event %}active{% endif %} small fw-bold py-2 border-0"
-                                                data-bs-toggle="tab" data-bs-target="#viz-json" type="button" role="tab">
-                                                <i class="fas fa-code me-1"></i>JSON
-                                            </button>
-                                        </li>
-                                    </ul> -->
+                                    
                                     <ul class="nav nav-tabs nav-fill border-bottom" id="ruleTabs" role="tablist">
                                         <li class="nav-item" role="presentation">
                                             <button class="nav-link active small fw-bold py-2 border-0" id="normal-tab"
@@ -730,23 +725,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                             </button>
                                         </li>
                                     </ul>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                                    
                                     <div class="tab-content">
                                         <div class="tab-pane fade {% if rule_misp_event %}show active{% endif %}" id="viz-graph" role="tabpanel">
                                             {% if rule_misp_event %}
@@ -754,11 +733,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                                 <div class="spinner-border text-primary" role="status"></div>
                                                 <div class="text-muted mt-2 small">Loading graph…</div>
                                             </div>
-                                            <div class="d-flex justify-content-end px-2 pt-2" style="position:relative;z-index:10;">
-                                                <button @click="refreshVizGraph()" class="btn btn-sm btn-outline-secondary" title="Refresh graph" style="font-size:.75rem;">
-                                                    <i class="fa-solid fa-rotate-right me-1"></i>Refresh
-                                                </button>
-                                            </div>
+                                            
                                             <!-- Plain div — Pivotick initialized directly by bundleMispGraph.js -->
                                             <div id="rule-viz-graph-container" style="height:520px;width:100%;"></div>
                                             {% else %}

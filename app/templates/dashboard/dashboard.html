@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Rulezet{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard/jsdelivr_gridstack.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/chart-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/attack-matrix.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard/dashboard.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js" async></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4" id="dashboard-app" v-cloak>
+
+    <!-- Always-visible control bar — stays even when the banner below is hidden -->
+    <div class="d-flex justify-content-end gap-2 mb-2">
+        <button class="btn btn-sm btn-outline-secondary rounded-pill" @click="toggleBanner">
+            <i :class="bannerCollapsed ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-up'" class="me-1"></i>
+            [[ bannerCollapsed ? 'Show header' : 'Hide header' ]]
+        </button>
+        <button class="btn btn-primary rounded-pill px-4 shadow-sm" @click="openAddWidget">
+            <i class="fa-solid fa-plus me-1"></i>Add widget
+        </button>
+    </div>
+
+    <div class="explorer-banner mb-4" v-show="!bannerCollapsed">
+        <i class="fa-solid fa-gauge-high banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Dashboard</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-gauge-high"></i></div>
+            <div><h2 class="fw-bold mb-1">Dashboard</h2><div class="banner-accent"></div></div>
+        </div>
+        <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+            Drag widgets to rearrange, drag their bottom-right corner to resize. Your layout saves automatically.
+        </p>
+    </div>
+
+    <!-- Empty state -->
+    <div v-if="!loadingLayout && widgets.length === 0" class="text-center py-5 text-muted">
+        <i class="fa-solid fa-table-cells" style="font-size:3rem;opacity:.25;display:block;margin-bottom:.75rem;"></i>
+        <p class="mb-2" style="font-size:.95rem;">Your dashboard is empty.</p>
+        <p class="small">Click "Add widget" above to start building it.</p>
+    </div>
+
+    <!-- Grid -->
+    <div class="grid-stack" ref="gridEl">
+        <div v-for="w in widgets" :key="w.id"
+             class="grid-stack-item"
+             :gs-id="w.id" :gs-x="w.x" :gs-y="w.y" :gs-w="w.w" :gs-h="w.h">
+            <div class="grid-stack-item-content">
+                <component :is="componentFor(w.type)" :params="w.params"
+                           @update-params="params => updateWidgetParams(w.id, params)"
+                           @remove="removeWidget(w.id)">
+                </component>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add widget modal -->
+    <div class="modal fade" id="addWidgetModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4" style="background:var(--card-bg-color);">
+                <div class="modal-header border-0 pb-0 pt-4 px-4">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">Add a widget</h5>
+                        <p class="text-muted small mb-0">Pick a widget type — you can configure it afterwards</p>
+                    </div>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-4" v-for="(entry, type) in availableRegistry" :key="type">
+                            <div class="dw-catalog-card" @click="addWidget(type)">
+                                <i :class="'fa-solid ' + entry.icon"></i>
+                                <span>[[ entry.label ]]</span>
+                            </div>
+                        </div>
+                        <div v-if="Object.keys(availableRegistry).length === 0" class="col-12 text-center text-muted py-3">
+                            <i class="fa-solid fa-circle-check opacity-25 d-block mb-2" style="font-size:1.5rem;"></i>
+                            You already have one of every widget.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{{ url_for('static', filename='js/dashboard/jsdelivr_gridstack.js') }}"></script>
+<script type="module">
+    const { createApp, ref, computed, onMounted, nextTick } = Vue
+    import WIDGET_REGISTRY from '/static/js/dashboard/widgetRegistry.js'
+    import { create_message } from '/static/js/toaster.js'
+
+    const csrfToken = '{{ csrf_token() }}'
+    const BANNER_KEY = 'rz-dashboard-banner-collapsed'
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: Object.fromEntries(
+            Object.entries(WIDGET_REGISTRY).map(([type, entry]) => ['widget-' + type, entry.component])
+        ),
+        setup() {
+            const widgets      = ref([])
+            const loadingLayout = ref(true)
+            const gridEl       = ref(null)
+            const registry     = WIDGET_REGISTRY
+            const bannerCollapsed = ref(localStorage.getItem(BANNER_KEY) === '1')
+            let grid           = null
+            let saveTimer      = null
+            let _addWidgetModal = null
+
+            function componentFor(type) {
+                return 'widget-' + (registry[type] ? type : 'kpi')
+            }
+
+            function toggleBanner() {
+                bannerCollapsed.value = !bannerCollapsed.value
+                localStorage.setItem(BANNER_KEY, bannerCollapsed.value ? '1' : '0')
+            }
+
+            // Catalog shown in "Add widget": hides entries flagged `hidden`
+            // (e.g. the legacy raw KPI widget), entries flagged `singleton`
+            // once one is already on the board, and `variants` entries (like
+            // Rule List) once every variant has been placed.
+            const availableRegistry = computed(() => {
+                const out = {}
+                for (const [type, entry] of Object.entries(registry)) {
+                    if (entry.hidden) continue
+                    if (entry.singleton && widgets.value.some(w => w.type === type)) continue
+                    if (entry.variants) {
+                        const used = new Set(
+                            widgets.value.filter(w => w.type === type).map(w => w.params[entry.variantParam])
+                        )
+                        if (entry.variants.every(v => used.has(v))) continue
+                    }
+                    out[type] = entry
+                }
+                return out
+            })
+
+            function nextVariantParams(type, entry) {
+                if (!entry.variants) return { ...entry.defaultParams }
+                const used = new Set(
+                    widgets.value.filter(w => w.type === type).map(w => w.params[entry.variantParam])
+                )
+                const next = entry.variants.find(v => !used.has(v)) || entry.variants[0]
+                return { ...entry.defaultParams, [entry.variantParam]: next }
+            }
+
+            async function loadLayout() {
+                loadingLayout.value = true
+                try {
+                    const res  = await fetch('/dashboard/layout')
+                    const data = await res.json()
+                    widgets.value = data.widgets || []
+                } catch {
+                    create_message('Failed to load dashboard layout', 'danger')
+                } finally {
+                    loadingLayout.value = false
+                }
+            }
+
+            function scheduleSave() {
+                clearTimeout(saveTimer)
+                saveTimer = setTimeout(saveLayout, 600)
+            }
+
+            async function saveLayout() {
+                try {
+                    const csrf = document.getElementById('csrf_token')?.value || csrfToken
+                    await fetch('/dashboard/layout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                        body: JSON.stringify({ widgets: widgets.value }),
+                    })
+                } catch {
+                    create_message('Failed to save dashboard layout', 'danger')
+                }
+            }
+
+            function syncFromGrid() {
+                // Pull every widget up if there's empty space above it (e.g. a
+                // gap left at the top after a drag, resize, or removal) —
+                // compact() re-packs positions in place, then save(false)
+                // reads back the result (positions/sizes only, no content).
+                grid.compact()
+                const saved = grid.save(false)
+                const byId  = new Map(saved.map(s => [s.id, s]))
+                widgets.value = widgets.value.map(w => {
+                    const s = byId.get(w.id)
+                    return s ? { ...w, x: s.x, y: s.y, w: s.w, h: s.h } : w
+                })
+                scheduleSave()
+            }
+
+            function initGrid() {
+                grid = GridStack.init({
+                    cellHeight: 90,
+                    margin: 10,
+                    float: true,
+                    handle: '.dw-widget-header',
+                    resizable: { handles: 'se' },
+                }, gridEl.value)
+
+                grid.on('change', syncFromGrid)
+                // Also compact once on load — covers a saved layout that
+                // already has a gap at the top (e.g. from an older layout).
+                syncFromGrid()
+            }
+
+            function openAddWidget() {
+                _addWidgetModal.show()
+            }
+
+            function addWidget(type) {
+                const entry = registry[type]
+                const id    = 'w-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1000)
+                const w = {
+                    id, type,
+                    x: 0, y: 0, ...entry.defaultSize,
+                    params: nextVariantParams(type, entry),
+                }
+                widgets.value = [...widgets.value, w]
+                _addWidgetModal.hide()
+
+                nextTick(() => {
+                    const el = gridEl.value.querySelector(`[gs-id="${id}"]`)
+                    if (el) grid.makeWidget(el)
+                    syncFromGrid()
+                })
+            }
+
+            function removeWidget(id) {
+                const el = gridEl.value.querySelector(`[gs-id="${id}"]`)
+                if (el && grid) grid.removeWidget(el, false)
+                widgets.value = widgets.value.filter(w => w.id !== id)
+                if (grid) syncFromGrid() // compacts the remaining widgets upward
+            }
+
+            function updateWidgetParams(id, params) {
+                widgets.value = widgets.value.map(w => w.id === id ? { ...w, params } : w)
+                scheduleSave()
+            }
+
+            onMounted(async () => {
+                _addWidgetModal = new bootstrap.Modal(document.getElementById('addWidgetModal'))
+                await loadLayout()
+                await nextTick()
+                initGrid()
+            })
+
+            return {
+                widgets, loadingLayout, gridEl, registry, availableRegistry, bannerCollapsed,
+                componentFor, openAddWidget, addWidget, removeWidget, updateWidgetParams, toggleBanner,
+            }
+        }
+    }).mount('#dashboard-app')
+</script>
+{% endblock %}

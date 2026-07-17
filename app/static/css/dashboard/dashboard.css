@@ -1,0 +1,281 @@
+/* dashboard.css — the dashboard grid + widget chrome.
+   Mirrors the .ud-kpi-card / .ud-chart-card visual language already
+   established in css/account/user_detail.css rather than inventing a new
+   one — same colors, same border/shadow/radius conventions. */
+
+/* ── Grid ───────────────────────────────────────────────────── */
+.grid-stack {
+    background: transparent;
+}
+.grid-stack-item-content {
+    inset: 4px !important; /* small gutter so widget shadows aren't clipped */
+}
+
+/* ── Widget frame ───────────────────────────────────────────── */
+.dw-widget {
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    overflow: hidden;
+}
+
+.dw-widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .6rem .9rem;
+    border-bottom: 1px solid var(--border-color);
+    cursor: move;
+    flex-shrink: 0;
+}
+.dw-widget-title {
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dw-widget-actions {
+    display: flex;
+    gap: .25rem;
+    flex-shrink: 0;
+}
+.dw-widget-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--subtle-text-color);
+    font-size: .75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .12s, color .12s;
+}
+.dw-widget-btn:hover { background: var(--light-bg-color); color: #0d6efd; }
+.dw-widget-btn--danger:hover { color: #dc3545; }
+.dw-widget-btn:disabled { opacity: .5; cursor: default; }
+
+.dw-widget-body {
+    padding: .9rem;
+    overflow: auto;
+    min-height: 0;
+}
+
+.dw-widget-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--card-bg-color);
+    opacity: .9;
+}
+.dw-widget-loading i {
+    font-size: 2.4rem;
+    color: #0d6efd;
+    opacity: .75;
+}
+
+.dw-widget-settings {
+    border-top: 1px solid var(--border-color);
+    background: var(--light-bg-color);
+    padding: .9rem;
+    flex-shrink: 0;
+}
+.dw-widget-settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: .4rem;
+    margin-top: .6rem;
+}
+
+/* ── KPI body ───────────────────────────────────────────────── */
+.dw-kpi {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: 100%;
+}
+.dw-kpi-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+}
+.dw-kpi-value {
+    font-size: 1.7rem; font-weight: 700;
+    line-height: 1.1; color: var(--text-color);
+}
+
+.dw-kpi--blue   .dw-kpi-icon { background: rgba(13,110,253,.12); color: #0d6efd; }
+.dw-kpi--teal   .dw-kpi-icon { background: rgba(13,202,240,.12); color: #0dcaf0; }
+.dw-kpi--green  .dw-kpi-icon { background: rgba(25,135,84,.12);  color: #198754; }
+.dw-kpi--gold   .dw-kpi-icon { background: rgba(255,193,7,.15);  color: #d4a700; }
+.dw-kpi--purple .dw-kpi-icon { background: rgba(111,66,193,.12); color: #6f42c1; }
+.dw-kpi--orange .dw-kpi-icon { background: rgba(253,126,20,.12); color: #fd7e14; }
+
+/* ── Stats row (MISP-style counter strip) ──────────────────────── */
+.dw-statsrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    height: 100%;
+}
+.dw-statsrow-box {
+    flex: 1 1 120px;
+    min-width: 110px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--light-bg-color);
+    padding: .7rem .9rem;
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+}
+.dw-statsrow-box--clickable { cursor: pointer; transition: transform .12s, border-color .12s; }
+.dw-statsrow-box--clickable:hover { transform: translateY(-2px); border-color: #0d6efd; }
+.dw-statsrow-icon {
+    font-size: .8rem;
+    color: var(--subtle-text-color);
+    margin-bottom: .1rem;
+}
+.dw-statsrow-label {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--subtle-text-color);
+}
+.dw-statsrow-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1.15;
+}
+
+/* ── Trending vulnerabilities (proportional horizontal bar list) ─ */
+.dw-barlist {
+    display: flex;
+    flex-direction: column;
+}
+.dw-barlist-row {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .4rem .5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .12s;
+}
+.dw-barlist-row:hover { background: var(--light-bg-color); }
+.dw-barlist-row--alt { background: rgba(13,110,253,.04); }
+.dw-barlist-label {
+    flex: 0 0 auto;
+    min-width: 110px;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+.dw-barlist-track {
+    flex: 1 1 auto;
+    height: 16px;
+    border-radius: 8px;
+    background: rgba(13,110,253,.08);
+    overflow: hidden;
+}
+.dw-barlist-fill {
+    display: block;
+    height: 100%;
+    min-width: 4px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(13,110,253,.35), rgba(13,110,253,.65));
+}
+.dw-barlist-value {
+    flex: 0 0 auto;
+    min-width: 28px;
+    text-align: right;
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+/* ── ATT&CK coverage widget: reuses <attack-matrix> as-is, no custom CSS
+   needed here — its own css/components/attack-matrix.css supplies it. ── */
+
+/* ── Recent activity — mirrors home.html's "Community Activity" feed ── */
+.dw-feed {
+    display: flex;
+    flex-direction: column;
+}
+.dw-feed-row {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    padding: .45rem .4rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .12s;
+}
+.dw-feed-row:hover { background: rgba(13,110,253,.06); }
+.dw-feed-row--no-link { cursor: default; }
+.dw-feed-row--no-link:hover { background: transparent; }
+.dw-feed-bubble {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .68rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.dw-feed-action { font-size: .73rem; color: var(--subtle-text-color); }
+.dw-feed-desc {
+    font-size: .7rem;
+    color: var(--subtle-text-color);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dw-feed-time { font-size: .64rem; color: var(--subtle-text-color); opacity: .65; margin-top: 1px; }
+.dw-feed-uname { font-weight: 600; color: #0d6efd; font-size: .73rem; }
+
+/* ── Embedded <rule-list> "simple mode" (dashboard rule-list widgets) ── */
+.dw-rulelist-embed {
+    margin: -.9rem;
+}
+.dw-rulelist-embed .rl-toolbar,
+.dw-rulelist-embed .rl-footer {
+    display: none;
+}
+
+/* ── Add-widget catalog picker ──────────────────────────────── */
+.dw-catalog-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    padding: 1.5rem 1rem;
+    border-radius: 12px;
+    border: 1px dashed var(--border-color);
+    background: var(--light-bg-color);
+    cursor: pointer;
+    transition: border-color .15s, transform .15s;
+    text-align: center;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+.dw-catalog-card:hover {
+    border-color: #0d6efd;
+    border-style: solid;
+    transform: translateY(-2px);
+}
+.dw-catalog-card i {
+    font-size: 1.6rem;
+    color: #0d6efd;
+}

@@ -248,6 +248,17 @@ export default defineComponent({
         /* ── Watchers ── */
         watch(() => props.data, () => render(), { deep: true });
 
+        // `views` can change after mount (e.g. a settings panel switching a
+        // single chart's type) without the tab bar being there to drive it
+        // via switch_view() — re-sync active_view whenever it falls out of
+        // the current view list, so a prop-only view change still renders.
+        watch(view_list, (list) => {
+            if (!list.includes(active_view.value)) {
+                active_view.value = list[0] || '';
+                nextTick(() => render());
+            }
+        });
+
         /* ── Lifecycle ── */
         onMounted(async () => {
             init_view();

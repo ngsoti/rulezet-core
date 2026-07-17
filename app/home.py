@@ -1214,6 +1214,19 @@ def platform_insights_data():
     total_proposals = RuleEditProposal.query.count()
     total_activity  = ActivityLog.query.count()
 
+    # Distinct CVE ids referenced across all active rules (cve_id is a JSON-
+    # encoded list column) — same parsing convention as /home_charts/top_cve.
+    _cve_set = set()
+    for (_raw,) in db.session.query(Rule.cve_id).filter(
+        Rule.is_deleted == False, Rule.cve_id.isnot(None),
+        Rule.cve_id != '[]', Rule.cve_id != '',
+    ).all():
+        try:
+            _cve_set.update(json.loads(_raw) or [])
+        except Exception:
+            pass
+    total_cves = len(_cve_set)
+
     # ── Monthly helper (Python-side grouping, DB-agnostic) ─────────────
     def monthly(date_col, months=12, extra_filter=None):
         cutoff = now - datetime.timedelta(days=months * 31)
@@ -1358,6 +1371,7 @@ def platform_insights_data():
             'online_users':    online_users,
             'admin_users':     admin_users,
             'total_tags':      total_tags,
+            'total_cves':      total_cves,
             'total_comments':  total_comments,
             'total_votes':     total_votes,
             'total_proposals': total_proposals,

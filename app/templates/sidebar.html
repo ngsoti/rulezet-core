@@ -264,6 +264,8 @@
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end">
                      {% if current_user.is_authenticated %}
+                     <li><a href="/dashboard/" class="dropdown-item {% if request.path.startswith('/dashboard') %}active{% endif %}">
+                           <i class="fa-solid fa-gauge-high me-2"></i>Dashboard</a></li>
                      <li><a href="/account/" class="dropdown-item">
                            <i class="fa-solid fa-user-circle me-2"></i>Profile</a></li>
                      <li><a href="/workspace/my_rules" class="dropdown-item {% if request.path.startswith('/workspace') %}active{% endif %}">
