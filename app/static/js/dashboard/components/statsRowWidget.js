@@ -21,6 +21,7 @@ const DEFAULT_METRICS = [
     { path: 'kpi.total_rules',     label: 'Rules',     icon: 'fa-shield-halved',     href: '/rule/rules_list' },
     { path: 'kpi.total_cves',      label: 'CVEs',       icon: 'fa-bug',               href: '/rule/rules_list?has_cve=true' },
     { path: 'kpi.total_tags',      label: 'Tags',       icon: 'fa-tags' },
+    { path: 'kpi.total_attacks',   label: 'Attacks',    icon: 'fa-crosshairs',        href: '/attack/heatmap' },
     { path: 'kpi.total_bundles',   label: 'Bundles',    icon: 'fa-boxes-stacked',     href: '/bundle/bundles_list' },
     { path: 'kpi.total_users',     label: 'Users',      icon: 'fa-users' },
     { path: 'kpi.total_comments',  label: 'Comments',   icon: 'fa-comments',          href: '/community/comments' },

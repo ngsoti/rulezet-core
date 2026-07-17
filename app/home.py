@@ -1222,7 +1222,7 @@ def platform_insights_data():
     from sqlalchemy import func
     from app.core.db_class.db import (
         Rule, Bundle, User, Tag, Comment, RuleVote,
-        RuleEditProposal, ActivityLog, RuleTagAssociation,
+        RuleEditProposal, ActivityLog, RuleTagAssociation, RuleAttackAssociation,
     )
     from app import db
 
@@ -1240,6 +1240,7 @@ def platform_insights_data():
     total_votes     = RuleVote.query.count()
     total_proposals = RuleEditProposal.query.count()
     total_activity  = ActivityLog.query.count()
+    total_attacks   = RuleAttackAssociation.query.count()
 
     # Distinct CVE ids referenced across all active rules (cve_id is a JSON-
     # encoded list column) — same parsing convention as /home_charts/top_cve.
@@ -1429,6 +1430,7 @@ def platform_insights_data():
             'online_users':    online_users,
             'admin_users':     admin_users,
             'total_tags':      total_tags,
+            'total_attacks':   total_attacks,
             'total_cves':      total_cves,
             'total_comments':  total_comments,
             'total_votes':     total_votes,

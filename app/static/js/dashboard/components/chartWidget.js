@@ -13,6 +13,19 @@ const { ref, watch, onMounted, computed } = Vue
 
 const CHART_VIEWS = ['line', 'area', 'bar', 'bar-h', 'pie', 'donut', 'rose', 'scatter', 'radar', 'heatmap']
 
+// Click-through targets, keyed by dataset path — only wired for datasets
+// with a clean, unambiguous rules_list filter (category label maps 1:1 to a
+// real filter value). Datasets not listed here (time series, percentages,
+// active-vs-deleted, etc.) just aren't clickable — no sensible target exists.
+const CLICK_TARGETS = {
+    'charts.formats':  name => `/rule/rules_list?rule_type=${encodeURIComponent(name.toLowerCase())}`,
+    'charts.top_tags': name => `/rule/rules_list?tags=${encodeURIComponent(name)}`,
+    'charts.attack_top_techniques': name => {
+        const m = /^(T\d+(?:\.\d+)?)/.exec(name || '')
+        return m ? `/rule/rules_list?attacks=${encodeURIComponent(m[1])}` : null
+    },
+}
+
 // Simple one-per-dataset list for this widget's own settings dropdown — free
 // to combine with any chart type here. The curated, multi-view "Add widget"
 // picker cards (dashboard.html) live in chartPresets.js instead.
@@ -70,16 +83,23 @@ const ChartWidget = {
             if (e.target.value) editForm.value.path = e.target.value
         }
 
+        function onChartClick(item) {
+            const target = CLICK_TARGETS[props.params.path]
+            if (!target || !item || !item.name) return
+            const url = target(String(item.name))
+            if (url) window.location.href = url
+        }
+
         watch(() => props.params, () => { editForm.value = { ...props.params }; load() })
 
         onMounted(load)
 
-        return { data, loading, editForm, load, saveSettings, onPresetChange, isPreset, hasData, CHART_VIEWS, CHART_PRESETS }
+        return { data, loading, editForm, load, saveSettings, onPresetChange, onChartClick, isPreset, hasData, CHART_VIEWS, CHART_PRESETS }
     },
     template: `
     <widget-frame :title="data.title || params.path" icon="fa-chart-line" :loading="loading"
                    @reload="load" @remove="$emit('remove')" @save-settings="saveSettings">
-        <chart-viewer v-if="hasData" :data="data" :views="params.view || 'line'" height="100%"></chart-viewer>
+        <chart-viewer v-if="hasData" :data="data" :views="params.view || 'line'" height="100%" @chart-click="onChartClick"></chart-viewer>
         <div v-else class="text-center text-muted small py-4">
             <i class="fa-solid fa-chart-simple opacity-25 d-block mb-2" style="font-size:1.5rem;"></i>
             No data.

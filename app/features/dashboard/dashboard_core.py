@@ -17,24 +17,24 @@ DEFAULT_LAYOUT = {
             'params': {},
         },
         {
-            'id': 'w-activity', 'type': 'activity_feed', 'x': 0, 'y': 2, 'w': 6, 'h': 5,
-            'params': {'limit': 8},
+            'id': 'w-calendar', 'type': 'activity_calendar', 'x': 0, 'y': 2, 'w': 4, 'h': 5,
+            'params': {'period': '3months'},
         },
         {
-            'id': 'w-top-rated', 'type': 'rule_list', 'x': 6, 'y': 2, 'w': 6, 'h': 5,
-            'params': {'variant': 'top_rated', 'limit': 5, 'view': 'card'},
-        },
-        {
-            'id': 'w-tactic-rules', 'type': 'chart', 'x': 0, 'y': 7, 'w': 4, 'h': 5,
-            'params': {'endpoint': '/platform/insights_data', 'path': 'charts.attack_tactic_rules', 'view': 'bar-h'},
-        },
-        {
-            'id': 'w-formats-donut', 'type': 'chart', 'x': 4, 'y': 7, 'w': 4, 'h': 5,
+            'id': 'w-formats-donut', 'type': 'chart', 'x': 4, 'y': 2, 'w': 4, 'h': 5,
             'params': {'endpoint': '/platform/insights_data', 'path': 'charts.formats', 'view': 'donut'},
         },
         {
-            'id': 'w-vulns', 'type': 'trending_vulns', 'x': 8, 'y': 7, 'w': 4, 'h': 5,
+            'id': 'w-activity', 'type': 'activity_feed', 'x': 8, 'y': 2, 'w': 4, 'h': 5,
+            'params': {'limit': 8},
+        },
+        {
+            'id': 'w-vulns', 'type': 'trending_vulns', 'x': 0, 'y': 7, 'w': 4, 'h': 5,
             'params': {'limit': 10},
+        },
+        {
+            'id': 'w-top-rated', 'type': 'rule_list', 'x': 4, 'y': 7, 'w': 8, 'h': 5,
+            'params': {'variant': 'top_rated', 'limit': 5, 'view': 'card'},
         },
         {
             'id': 'w-attack', 'type': 'attack_heatmap', 'x': 0, 'y': 12, 'w': 12, 'h': 9,
