@@ -73,7 +73,7 @@
 
                      {% if not current_user.is_admin() %}
                      <li>
-                        <a href="/admin/request" class="dropdown-item d-flex justify-content-between align-items-center">
+                        <a href="/requests" class="dropdown-item d-flex justify-content-between align-items-center">
                            <span><i class="fa-solid fa-envelope fa-fw me-2"></i>Ownership Requests</span>
                            <span v-if="requests_to_validate > 0" class="badge rounded-pill bg-danger ms-2">[[ requests_to_validate ]]</span>
                         </a>
@@ -145,7 +145,7 @@
                               <a href="/account/admin/all_users" class="dr-nav__item {% if request.path == '/account/admin/all_users' %}active{% endif %}">
                                  <i class="fa-solid fa-users"></i><span>Users</span>
                               </a>
-                              <a href="/admin/request" class="dr-nav__item {% if request.path == '/admin/request' %}active{% endif %}">
+                              <a href="/requests" class="dr-nav__item {% if request.path == '/requests' %}active{% endif %}">
                                  <i class="fa-solid fa-envelope"></i><span>Ownerships</span>
                                  <span v-if="requests_to_validate > 0" class="dr-nav__badge">[[ requests_to_validate ]]</span>
                               </a>

@@ -105,7 +105,7 @@
             <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
                 <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
                 <li class="breadcrumb-item">
-                    <a href="/admin/request" class="text-decoration-none text-muted">Ownership Requests</a>
+                    <a href="/requests" class="text-decoration-none text-muted">Ownership Requests</a>
                 </li>
                 <li class="breadcrumb-item active text-muted" aria-current="page">
                     Request #[[ requestId ]]
@@ -185,7 +185,9 @@
                         </div>
                         <div>
                             <div class="rd-info-label">Current owner</div>
-                            <user-chip :user-id="current_request.user_id_to_send" size="sm"/>
+                            <user-chip :user-id="current_request.user_id_to_send"
+                                       :username="current_request.user_who_owns_rule || ''"
+                                       size="sm"/>
                         </div>
                     </div>
 
@@ -358,6 +360,43 @@
             </div>
         </div>
 
+        <!-- ── Concerned rules (manual admin bulk grant — no single rule/source) ── -->
+        <div class="rd-card" v-else-if="current_request.rule_ids && current_request.rule_ids.length">
+            <div class="rd-card__header">
+                <div class="rd-card__accent" style="background:#6f42c1;"></div>
+                <span class="rd-card__title">
+                    <i class="fa-solid fa-user-shield me-1"></i>
+                    Rules covered by this manual transfer ([[ current_request.rule_ids.length ]])
+                </span>
+            </div>
+            <div class="rd-card__body">
+                <rule-list
+                    mode="read"
+                    default-view="table"
+                    fetch-url="/rule/data_table"
+                    :ids="current_request.rule_ids"
+                    :can-vote="{{ current_user.is_authenticated | tojson }}"
+                    :can-favorite="{{ current_user.is_authenticated | tojson }}"
+                    :current-user-id="{{ current_user.id if current_user.is_authenticated else 'null' }}"
+                    :current-user-is-admin="{{ current_user.is_admin() | tojson }}"
+                    :show-create="false"
+                    :show-filters="false"
+                    :sync-url="false"
+                    :current-user-is-authenticated="{{ current_user.is_authenticated | tojson }}"
+                    :csrf-token="csrfToken">
+                </rule-list>
+            </div>
+        </div>
+
+        <!-- ── Fallback — a manual grant recorded before this rule-level detail
+             existed, nothing to show beyond the summary above ──────────── -->
+        <div v-else class="rd-card">
+            <div class="rd-card__body text-center py-4" style="color:var(--subtle-text-color);">
+                <i class="fa-solid fa-user-shield opacity-25 d-block mb-2" style="font-size:1.5rem;"></i>
+                Admin transfer — no rule-level detail available.
+            </div>
+        </div>
+
     </template>
 
 </div>
@@ -451,7 +490,7 @@ createApp({
                         status === 'approved' ? 'Request approved — ownership transferred' : 'Request rejected',
                         status === 'approved' ? 'success' : 'warning'
                     );
-                    setTimeout(() => { window.location.href = '/admin/request'; }, 900);
+                    setTimeout(() => { window.location.href = '/requests'; }, 900);
                 } else {
                     create_message('Action failed', 'danger');
                 }

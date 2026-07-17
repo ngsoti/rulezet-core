@@ -56,13 +56,17 @@
             <i class="fa-solid fa-inbox"></i><span>Requests</span>
             <span v-if="pendingTotal > 0" class="dr-nav__badge">[[ pendingTotal ]]</span>
         </button>
-        <button type="button" class="dr-nav__item" :class="{ active: viewMode==='manual' }" @click="viewMode='manual'">
+        <button v-if="isAdmin" type="button" class="dr-nav__item" :class="{ active: viewMode==='manual' }" @click="viewMode='manual'">
             <i class="fa-solid fa-user-shield"></i><span>Manual Ownership</span>
         </button>
+        {% if current_user.is_admin() %}
         <span class="dr-nav__sep"></span>
         {{ anav.admin_nav_toggle() }}
+        {% endif %}
     </div>
+    {% if current_user.is_admin() %}
     {{ anav.admin_nav_panel('requests') }}
+    {% endif %}
 
     <!-- ══════════════════════════════════════════════════════════════════
          VIEW 1 — Requests (existing pending/history/mine review flow)
@@ -116,7 +120,7 @@
                 </div>
                 <div class="col-6 col-md-2">
                     <label class="form-label small fw-semibold mb-1" style="color:var(--subtle-text-color);">Per page</label>
-                    <select class="form-select form-select-sm" v-model="perPage"
+                    <select class="form-select form-select-sm" v-model.number="perPage" @change="reload"
                             style="background:var(--card-bg-color);color:var(--text-color);border-color:var(--border-color);">
                         <option :value="20">20</option>
                         <option :value="50">50</option>
@@ -175,6 +179,7 @@
                         <td class="dt-td" @click.stop>
                             <user-chip v-if="req.user_id_to_send"
                                        :user-id="req.user_id_to_send"
+                                       :username="req.user_who_owns_rule || ''"
                                        size="sm"/>
                             <span v-else class="small" style="color:var(--subtle-text-color);">—</span>
                         </td>
@@ -188,7 +193,13 @@
                                   style="font-size:.7rem;background:rgba(25,135,84,.12);color:#146c43;border:1px solid rgba(25,135,84,.25);">
                                 <i class="fa-solid fa-shield-halved me-1"></i>Rule
                             </span>
-                            <span v-else class="small" style="color:var(--subtle-text-color);">—</span>
+                            <!-- Neither rule_id nor rule_source — an admin's manual ownership
+                                 grant (bulk_transfer_ownership), which spans multiple rules
+                                 across possibly-different sources with no single one to name. -->
+                            <span v-else class="badge rounded-pill"
+                                  style="font-size:.7rem;background:rgba(111,66,193,.12);color:#6f42c1;border:1px solid rgba(111,66,193,.25);">
+                                <i class="fa-solid fa-user-shield me-1"></i>Manual
+                            </span>
                         </td>
                         <!-- Status -->
                         <td class="dt-td">
@@ -472,7 +483,7 @@ createApp({
         async function fetchPending(p = 1) {
             loading.value = true;
             try {
-                const res  = await fetch(`/get_requests_page?page=${p}`);
+                const res  = await fetch(`/get_requests_page?page=${p}&per_page=${perPage.value}`);
                 const data = await res.json();
                 if (data.success !== false) {
                     pendingItems.value     = data.pending_requests_list || [];
@@ -486,7 +497,7 @@ createApp({
         async function fetchHistory(p = 1) {
             loading.value = true;
             try {
-                const res  = await fetch(`/get_process_requests_page?page=${p}`);
+                const res  = await fetch(`/get_process_requests_page?page=${p}&per_page=${perPage.value}`);
                 const data = await res.json();
                 if (data.success !== false) {
                     historyItems.value     = data.process_requests_list || [];
@@ -500,7 +511,7 @@ createApp({
         async function fetchMine(p = 1) {
             loading.value = true;
             try {
-                const res  = await fetch(`/get_made_requests_page?page=${p}`);
+                const res  = await fetch(`/get_made_requests_page?page=${p}&per_page=${perPage.value}`);
                 const data = await res.json();
                 if (data.success !== false) {
                     mineItems.value     = data.made_requests_list || [];
@@ -533,10 +544,13 @@ createApp({
             );
         });
 
-        const pagedItems = computed(() => {
-            const s = (page.value - 1) * perPage.value;
-            return filteredItems.value.slice(s, s + perPage.value);
-        });
+        // pagedItems used to re-slice filteredItems by (page-1)*perPage — but
+        // filteredItems is already just ONE backend page (≤20 items fetched
+        // per fetchPending/fetchHistory/fetchMine), so that second slice was
+        // pagination applied twice: page 2 sliced items 20-40 out of an
+        // array that only ever has ≤20 items, which is always empty. The
+        // backend already paginates; just show what it gave us.
+        const pagedItems = computed(() => filteredItems.value);
 
         const visiblePages = computed(() => {
             const total   = totalPages.value;

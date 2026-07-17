@@ -80,6 +80,15 @@ def _save_offset(job, offset):
     job.payload = payload
 
 
+def _append_transferred_ids(job, ids):
+    """Accumulate transferred rule ids in job.payload so they survive a
+    pause/resume cycle (each resume calls the handler fresh, so an in-memory
+    list alone would lose everything gathered before the pause)."""
+    payload = dict(job.payload or {})
+    payload['_transferred_ids'] = payload.get('_transferred_ids', []) + list(ids)
+    job.payload = payload
+
+
 def _build_rule_query(payload):
     """
     Build a Rule query from the filter payload.
@@ -136,9 +145,28 @@ def _build_rule_query(payload):
     if fmt:
         query = query.filter(Rule.format.ilike(f"%{fmt}%"))
 
-    # author
+    # author (single, free-text `Rule.author` field)
     if payload.get('author'):
         query = query.filter(Rule.author.ilike(f"%{payload['author'].lower()}%"))
+
+    # authors (plural, comma-separated — same free-text `Rule.author` field,
+    # sent by ruleList.js's "select all matching" when person_mode='author')
+    if payload.get('authors'):
+        author_list = [a.strip() for a in payload['authors'].split(',') if a.strip()]
+        if author_list:
+            query = query.filter(or_(*[Rule.author.ilike(f"%{a}%") for a in author_list]))
+
+    # editors (comma-separated) — the rule's owning User account (username or
+    # first+last name), not the free-text `author` field. Mirrors filter_rules'
+    # editor_names handling exactly so "select all matching" scopes the same
+    # way the on-screen list did.
+    if payload.get('editors'):
+        editor_list = [e.strip() for e in payload['editors'].split(',') if e.strip()]
+        if editor_list:
+            editor_col = func.coalesce(User.username, func.concat(User.first_name, ' ', User.last_name))
+            query = (query
+                     .join(User, User.id == Rule.user_id)
+                     .filter(or_(*[editor_col.ilike(f"%{e}%") for e in editor_list])))
 
     # user_id
     if payload.get('user_id'):
@@ -1925,12 +1953,15 @@ def handle_bulk_transfer_ownership(job, app):
         batch_num   += 1
         job.done     = transferred
         _save_offset(job, offset)
+        _append_transferred_ids(job, batch_ids)
         db.session.commit()
 
         if batch_num % LOG_EVERY == 0:
             log_job(job,
                 f"Progress: {job.done}/{job.total} rules ({job.progress_pct}%) transferred.",
                 level='info', event='progress')
+
+    all_transferred_ids = (job.payload or {}).get('_transferred_ids', [])
 
     try:
         from app.features.notification.notification_core import notify_ownership_granted
@@ -1945,6 +1976,30 @@ def handle_bulk_transfer_ownership(job, app):
                  f"Manually transferred ownership of {transferred} rule(s) to {new_owner.get_username()} (#{new_owner_id})",
                  target_type='user', target_id=new_owner_id, target_uuid=getattr(new_owner, 'uuid', None),
                  extra={'rule_count': transferred, 'filters': filters})
+
+    # Manual grants bypass the formal request/approval flow entirely, so
+    # without this the History tab would show no record of them at all.
+    # Mirror the shape of a normal request that got approved: the new owner
+    # is the "requester" (user_id) and the admin who granted it is the
+    # approver (user_id_to_send) — same as if the new owner had asked and
+    # the admin had said yes, just recorded after the fact as already
+    # "approved" since the transfer already happened.
+    if transferred > 0:
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        history_entry = RequestOwnerRule(
+            uuid=str(uuid_mod.uuid4()),
+            user_id=new_owner_id,
+            user_id_to_send=job.created_by,
+            title=f"Ownership grant — {transferred} rule(s)",
+            content=(f"{new_owner.get_username()} was granted ownership of {transferred} rule(s) "
+                     f"(manually approved by an administrator)."),
+            status="approved",
+            created_at=now,
+            updated_at=now,
+            rule_ids=all_transferred_ids or None,
+        )
+        db.session.add(history_entry)
+        db.session.commit()
 
 
 # ─── ATT&CK: update catalogue from MITRE ─────────────────────────────────────

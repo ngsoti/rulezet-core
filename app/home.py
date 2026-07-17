@@ -338,10 +338,14 @@ def owner_request() -> redirect:
 
 
 
-@home_blueprint.route("/admin/request", methods=["POST", "GET"])
+@home_blueprint.route("/requests", methods=["POST", "GET"])
 @login_required
 def admin_requests() -> render_template:
-    """Redirect to request section"""
+    """Ownership request queue — every logged-in user tracks their own
+    requests here; the admin nav panel and Manual Ownership tool are
+    gated separately (admin-only) inside the template/data endpoints.
+    Deliberately not under /admin/ — this is a shared page, not an
+    admin-exclusive one."""
     return render_template("admin/request.html")
 
 
@@ -357,10 +361,11 @@ def requests(id) -> render_template:
 def get_requests_page() -> json:
     """Get all the request in a page"""
     page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
     if current_user.is_admin():
-        requests_paginated = AccountModel.get_requests_page(page)
+        requests_paginated = AccountModel.get_requests_page(page, per_page)
     else:
-        requests_paginated = AccountModel.get_requests_page_user(page)
+        requests_paginated = AccountModel.get_requests_page_user(page, per_page)
     total_requests = AccountModel.get_total_requests_to_check_admin()
     if requests_paginated.items:
         requests_list = []
@@ -382,10 +387,11 @@ def get_requests_page() -> json:
 def get_process_requests_page() -> json:
     """Get all the request in a page"""
     page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
     if current_user.is_admin():
-        requests_paginated = AccountModel.get_process_requests_page(page)
+        requests_paginated = AccountModel.get_process_requests_page(page, per_page)
     else:
-        requests_paginated = AccountModel.get_process_requests_page_user(page)
+        requests_paginated = AccountModel.get_process_requests_page_user(page, per_page)
 
     if requests_paginated.items:
         requests_list = []
@@ -496,7 +502,8 @@ def get_all_concerned_rules():
 def get_made_requests_page() -> json:
     """Get all the requests made by the user in a page"""
     page = request.args.get('page', 1, type=int)
-    requests_paginated = AccountModel.get_made_requests_page(page)
+    per_page = request.args.get('per_page', 20, type=int)
+    requests_paginated = AccountModel.get_made_requests_page(page, per_page)
     if requests_paginated:
         return {
             "success": True,

@@ -27,6 +27,7 @@
  *   initialPerPage      Number                                 default:12
  *   hiddenFilters       Array    field keys to hide            default:[]
  *   initialFilters      Object   pre-filled filter values      default:{}
+ *   ids                 String|Array  pin listing to an explicit, fixed set of rule ids  default:null
  *   hasCveOnly          Boolean  pin listing to rules with a CVE (also read from ?has_cve=true)  default:false
  *   initialSort         String   default sort column when no ?sort in URL    default:''
  *   initialDir          String   default sort direction                      default:'asc'
@@ -93,6 +94,11 @@ export default {
         // source. Only used when there's no source to pin by (e.g. a rule with no
         // known source but a known author). No effect on any other page.
         authorContext:      { type: String,           default: '' },
+        // Pins the listing to an explicit, fixed set of rule ids (backend
+        // `/rule/data_table?ids=` support already existed; this just wires
+        // it into the component) — e.g. showing exactly the N rules covered
+        // by one bulk ownership grant, rather than a live filter.
+        ids:                { type: [String, Array],  default: null },
         userId:             { type: [Number, String], default: null },
         currentUserId:      { type: [Number, String], default: null },
         currentUserIsAdmin: { type: Boolean,          default: false },
@@ -1384,6 +1390,7 @@ export default {
                 if (sortKey.value)                   params.set('sort', sortKey.value)
                 if (sortKey.value)                   params.set('dir', sortDir.value)
                 if (props.source)                    params.set('source', props.source)
+                if (props.ids)                        params.set('ids', Array.isArray(props.ids) ? props.ids.join(',') : props.ids)
                 if (numericUserId.value)             params.set('user_id', numericUserId.value)
                 else if (scopeMine.value && numericCurrentUserId.value) params.set('user_id', numericCurrentUserId.value)
                 if (selectedTags.value.length)       params.set('tags', selectedTags.value.join(','))
@@ -1694,6 +1701,10 @@ export default {
                 licenses:        selectedLicenses.value.length ? selectedLicenses.value.join(',') : null,
                 vulnerabilities: selectedVulns.value.length    ? selectedVulns.value.join(',')    : null,
                 tags:            selectedTags.value.length     ? selectedTags.value.join(',')     : null,
+                editors:         personFilter.value.mode === 'editor' && personFilter.value.values.length
+                                     ? personFilter.value.values.join(',') : null,
+                authors:         personFilter.value.mode === 'author' && personFilter.value.values.length
+                                     ? personFilter.value.values.join(',') : null,
             }
             emit('send', ids, filters)
         }

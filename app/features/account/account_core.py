@@ -688,13 +688,17 @@ def create_request(rule_id, source):
         db.session.commit()
         return created_requests
 
-def get_requests_page(page) -> dict:
+def get_requests_page(page, per_page=20) -> dict:
     """Return all requets by page"""
-    return RequestOwnerRule.query.filter(RequestOwnerRule.status == "pending").paginate(page=page, per_page=20, max_per_page=20)
+    return (RequestOwnerRule.query.filter(RequestOwnerRule.status == "pending")
+            .order_by(RequestOwnerRule.created_at.desc())
+            .paginate(page=page, per_page=per_page, max_per_page=100))
 
-def get_process_requests_page(page) -> dict:
+def get_process_requests_page(page, per_page=20) -> dict:
     """Return all process requets by page"""
-    return RequestOwnerRule.query.filter(RequestOwnerRule.status != "pending").paginate(page=page, per_page=20, max_per_page=20)
+    return (RequestOwnerRule.query.filter(RequestOwnerRule.status != "pending")
+            .order_by(RequestOwnerRule.updated_at.desc())
+            .paginate(page=page, per_page=per_page, max_per_page=100))
 
 def update_request_status(request_id, status):
     req = RequestOwnerRule.query.get(request_id)
@@ -717,11 +721,11 @@ def get_all_requests_with_source(_source) -> list:
     """Get all the request with source"""
     return RequestOwnerRule.query.filter(RequestOwnerRule.rule_source == _source , RequestOwnerRule.status == "pending").all()
 
-def get_made_requests_page(page) -> dict:
+def get_made_requests_page(page, per_page=20) -> dict:
     """Return all requests made by the current user, paginated."""
-    return RequestOwnerRule.query.filter(
-        RequestOwnerRule.user_id == current_user.id
-    ).paginate(page=page, per_page=10, max_per_page=10)
+    return (RequestOwnerRule.query.filter(RequestOwnerRule.user_id == current_user.id)
+            .order_by(RequestOwnerRule.created_at.desc())
+            .paginate(page=page, per_page=per_page, max_per_page=100))
 
 def get_total_requests_to_check() -> int:
     """Return the total count of pending requests for rules owned by the current user."""
@@ -730,19 +734,21 @@ def get_total_requests_to_check() -> int:
         RequestOwnerRule.user_id_to_send == current_user.id
     ).count()
 
-def get_requests_page_user(page) -> dict:
+def get_requests_page_user(page, per_page=20) -> dict:
     """Return all 'pending' requests that are relevant to the current user, paginated."""
-    return RequestOwnerRule.query.filter(
+    return (RequestOwnerRule.query.filter(
         RequestOwnerRule.user_id_to_send == current_user.id,
         RequestOwnerRule.status == "pending"
-    ).paginate(page=page, per_page=10, max_per_page=10)
+    ).order_by(RequestOwnerRule.created_at.desc())
+      .paginate(page=page, per_page=per_page, max_per_page=100))
 
-def get_process_requests_page_user(page) -> dict:
+def get_process_requests_page_user(page, per_page=20) -> dict:
     """Return all 'process' requests that are relevant to the current user, paginated."""
-    return RequestOwnerRule.query.filter(
+    return (RequestOwnerRule.query.filter(
         RequestOwnerRule.user_id_to_send == current_user.id,
         RequestOwnerRule.status != "pending"
-    ).paginate(page=page, per_page=10, max_per_page=10)
+    ).order_by(RequestOwnerRule.updated_at.desc())
+      .paginate(page=page, per_page=per_page, max_per_page=100))
 
 def is_the_owner(request_id) -> bool:
     """

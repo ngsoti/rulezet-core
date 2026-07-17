@@ -510,6 +510,13 @@ class RequestOwnerRule(db.Model):
 
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)
     rule_source = db.Column(db.String, nullable=True)
+    # Snapshot of every rule id covered by this entry — only set for manual
+    # bulk ownership grants (bulk_transfer_ownership), which span many rules
+    # across possibly-different sources with no single rule_id/rule_source
+    # to point to, and can't be reconstructed after the fact by filtering
+    # (the rules now belong to the new owner, not whoever "concerned rules"
+    # lookups would otherwise search by).
+    rule_ids = db.Column(db.JSON, nullable=True)
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Request creator
     user_id_to_send = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Owner targeted by the request
@@ -560,6 +567,7 @@ class RequestOwnerRule(db.Model):
             "user_id": self.user_id,
             "user_who_made_request": self.user.first_name if self.user else "Unknown",
             "user_id_to_send": self.user_id_to_send,
+            "user_who_owns_rule": self.user_owner_rule.get_username() if self.user_owner_rule else None,
             "title": self.title,
             "content": self.content,
             "status": self.status,
@@ -567,6 +575,8 @@ class RequestOwnerRule(db.Model):
             "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M'),
             "rule_id": self.rule_id,
             "rule_source": self.rule_source,
+            "rule_ids": self.rule_ids,
+            "rule_count": len(self.rule_ids) if self.rule_ids else None,
         }
 
 
