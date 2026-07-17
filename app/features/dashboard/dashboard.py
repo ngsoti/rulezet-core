@@ -26,3 +26,9 @@ def save_layout():
     if not ok:
         return jsonify({'success': False, 'message': msg}), 400
     return jsonify({'success': True, 'message': msg})
+
+
+@dashboard_blueprint.route('/layout/reset', methods=['POST'])
+@login_required
+def reset_layout():
+    return jsonify(DashboardModel.reset_dashboard_layout())

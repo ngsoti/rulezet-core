@@ -17,28 +17,28 @@ DEFAULT_LAYOUT = {
             'params': {},
         },
         {
-            'id': 'w-attack', 'type': 'attack_heatmap', 'x': 0, 'y': 2, 'w': 12, 'h': 9,
-            'params': {},
+            'id': 'w-activity', 'type': 'activity_feed', 'x': 0, 'y': 2, 'w': 6, 'h': 5,
+            'params': {'limit': 8},
         },
         {
-            'id': 'w-vulns', 'type': 'trending_vulns', 'x': 0, 'y': 11, 'w': 6, 'h': 4,
-            'params': {'limit': 10},
-        },
-        {
-            'id': 'w-rules-chart', 'type': 'chart', 'x': 6, 'y': 11, 'w': 6, 'h': 4,
-            'params': {'endpoint': '/platform/insights_data', 'path': 'charts.rules_over_time', 'view': 'area'},
-        },
-        {
-            'id': 'w-last-rules', 'type': 'rule_list', 'x': 0, 'y': 15, 'w': 6, 'h': 5,
-            'params': {'variant': 'last_rules', 'limit': 5, 'view': 'card'},
-        },
-        {
-            'id': 'w-top-rated', 'type': 'rule_list', 'x': 6, 'y': 15, 'w': 6, 'h': 5,
+            'id': 'w-top-rated', 'type': 'rule_list', 'x': 6, 'y': 2, 'w': 6, 'h': 5,
             'params': {'variant': 'top_rated', 'limit': 5, 'view': 'card'},
         },
         {
-            'id': 'w-activity', 'type': 'activity_feed', 'x': 0, 'y': 20, 'w': 6, 'h': 5,
-            'params': {'limit': 8},
+            'id': 'w-tactic-rules', 'type': 'chart', 'x': 0, 'y': 7, 'w': 4, 'h': 5,
+            'params': {'endpoint': '/platform/insights_data', 'path': 'charts.attack_tactic_rules', 'view': 'bar-h'},
+        },
+        {
+            'id': 'w-formats-donut', 'type': 'chart', 'x': 4, 'y': 7, 'w': 4, 'h': 5,
+            'params': {'endpoint': '/platform/insights_data', 'path': 'charts.formats', 'view': 'donut'},
+        },
+        {
+            'id': 'w-vulns', 'type': 'trending_vulns', 'x': 8, 'y': 7, 'w': 4, 'h': 5,
+            'params': {'limit': 10},
+        },
+        {
+            'id': 'w-attack', 'type': 'attack_heatmap', 'x': 0, 'y': 12, 'w': 12, 'h': 9,
+            'params': {},
         },
     ],
 }
@@ -81,3 +81,14 @@ def save_dashboard_layout(layout: dict) -> tuple:
     config.meta = meta
     db.session.commit()
     return True, 'Layout saved'
+
+
+def reset_dashboard_layout() -> dict:
+    """Discards this user's custom layout, reverting to DEFAULT_LAYOUT."""
+    config = _get_or_create_config()
+    if config and config.meta and 'dashboard_layout' in config.meta:
+        meta = dict(config.meta)
+        del meta['dashboard_layout']
+        config.meta = meta
+        db.session.commit()
+    return DEFAULT_LAYOUT

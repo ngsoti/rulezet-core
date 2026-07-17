@@ -13,11 +13,14 @@
 
     <!-- Always-visible control bar — stays even when the banner below is hidden -->
     <div class="d-flex justify-content-end gap-2 mb-2">
-        <button class="btn btn-sm btn-outline-secondary rounded-pill" @click="toggleBanner">
+        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="toggleBanner">
             <i :class="bannerCollapsed ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-up'" class="me-1"></i>
             [[ bannerCollapsed ? 'Show header' : 'Hide header' ]]
         </button>
-        <button class="btn btn-primary rounded-pill px-4 shadow-sm" @click="openAddWidget">
+        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="confirmRestoreDefault">
+            <i class="fa-solid fa-rotate-left me-1"></i>Restore default
+        </button>
+        <button class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" @click="openAddWidget">
             <i class="fa-solid fa-plus me-1"></i>Add widget
         </button>
     </div>
@@ -401,6 +404,28 @@
                 }
             }
 
+            async function confirmRestoreDefault() {
+                if (!confirm('Restore the default dashboard layout? This replaces all your current widgets.')) return
+                try {
+                    const csrf = document.getElementById('csrf_token')?.value || csrfToken
+                    const res  = await fetch('/dashboard/layout/reset', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrf },
+                    })
+                    const data = await res.json()
+                    // Every widget id changes on reset — tear down the GridStack
+                    // engine (keep the DOM, Vue owns that via the v-for :key
+                    // diff) and reinitialize once the new widgets have rendered.
+                    if (grid) { grid.destroy(false); grid = null }
+                    widgets.value = data.widgets || []
+                    await nextTick()
+                    initGrid()
+                    create_message('Dashboard restored to default', 'success')
+                } catch {
+                    create_message('Failed to restore the default layout', 'danger')
+                }
+            }
+
             function syncFromGrid() {
                 // Pull every widget up if there's empty space above it (e.g. a
                 // gap left at the top after a drag, resize, or removal) —
@@ -476,6 +501,7 @@
             return {
                 widgets, loadingLayout, gridEl, registry, bannerCollapsed,
                 componentFor, openAddWidget, addWidget, removeWidget, updateWidgetParams, toggleBanner,
+                confirmRestoreDefault,
                 catalogView, chartPreviewData, chartPreviewLoading, CATEGORIES,
                 categoryLabel, cardsForCategory, openCategory, showCategories,
                 previewKind, previewSparkRows, previewBarRows, previewHeatCells,
