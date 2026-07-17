@@ -243,6 +243,10 @@ def delete_bundle(bundle_id: int) -> bool:
     bundle = Bundle.query.get(bundle_id)
     if not bundle:
         return False
+    # legacy CommentBundle rows cascade fine via the ORM relationship below;
+    # comment_v2 targets bundles via object_type/object_id, not a real FK,
+    # so it needs an explicit purge.
+    purge_unified_comments('bundle', bundle_id)
     db.session.delete(bundle)
     db.session.commit()
     return True

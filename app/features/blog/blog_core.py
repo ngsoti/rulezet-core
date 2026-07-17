@@ -9,6 +9,7 @@ from ... import db
 from ...core.db_class.db import (
     BlogPost, BlogPostTagAssociation, BlogPostRuleAssociation,
     BlogPostBundleAssociation, BlogPostAttackAssociation, Tag,
+    purge_unified_comments,
 )
 
 
@@ -168,6 +169,7 @@ def delete_post(post_id: int) -> bool:
     if not post:
         return False
     try:
+        purge_unified_comments('blog_post', post_id)
         db.session.delete(post)
         db.session.commit()
         return True

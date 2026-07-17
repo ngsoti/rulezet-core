@@ -228,6 +228,12 @@ def _wipe_rule_children(rule_ids: list) -> None:
     # 9. Edit proposals
     RuleEditProposal.query.filter(RuleEditProposal.rule_id.in_(ids)).delete(synchronize_session=False)
 
+    # 9b. comment_v2 targets rules/proposals via object_type/object_id, not a
+    #     real FK, so it can't cascade automatically — clean it up explicitly.
+    purge_unified_comments('rule', ids)
+    if proposal_ids:
+        purge_unified_comments('proposal', proposal_ids)
+
     # 10. Reports
     RepportRule.query.filter(RepportRule.rule_id.in_(ids)).delete(synchronize_session=False)
 

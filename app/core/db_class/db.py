@@ -2434,6 +2434,29 @@ class UnifiedCommentReaction(db.Model):
     user = db.relationship('User', backref=db.backref('unified_comment_reactions', lazy='dynamic'))
 
 
+def purge_unified_comments(object_type: str, object_ids) -> int:
+    """Bulk-delete comment_v2 rows (and their reactions) for the given object(s).
+
+    object_type/object_id is a polymorphic pseudo-FK, not a real foreign key,
+    so deleting a rule/bundle/proposal/blog_post never cascades here on its
+    own — every hard-delete path for those four types must call this.
+    """
+    ids = list(object_ids) if isinstance(object_ids, (list, tuple, set)) else [object_ids]
+    if not ids:
+        return 0
+    comment_ids = [
+        cid for (cid,) in db.session.query(UnifiedComment.id)
+        .filter(UnifiedComment.object_type == object_type, UnifiedComment.object_id.in_(ids))
+        .all()
+    ]
+    if not comment_ids:
+        return 0
+    UnifiedCommentReaction.query.filter(
+        UnifiedCommentReaction.comment_id.in_(comment_ids)
+    ).delete(synchronize_session=False)
+    return UnifiedComment.query.filter(UnifiedComment.id.in_(comment_ids)).delete(synchronize_session=False)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  User Config & Custom Themes
 # ─────────────────────────────────────────────────────────────────────────────
