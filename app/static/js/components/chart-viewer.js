@@ -19,12 +19,14 @@ const VIEW_META = {
     'bar-h': { label: 'Horiz.', icon: 'fa-chart-bar'     },
     pie:     { label: 'Pie',     icon: 'fa-chart-pie'     },
     donut:   { label: 'Donut',   icon: 'fa-circle-dot'    },
+    rose:    { label: 'Rose',    icon: 'fa-sun'           },
     scatter: { label: 'Scatter', icon: 'fa-braille'       },
     radar:   { label: 'Radar',   icon: 'fa-spider'        },
     funnel:  { label: 'Funnel',  icon: 'fa-filter'        },
     gauge:   { label: 'Gauge',   icon: 'fa-gauge-high'    },
     treemap: { label: 'Treemap', icon: 'fa-table-cells'   },
     heatmap: { label: 'Heatmap', icon: 'fa-border-all'    },
+    calendar:{ label: 'Calendar',icon: 'fa-calendar-days' },
     table:   { label: 'Table',   icon: 'fa-table'         },
 };
 
@@ -39,12 +41,14 @@ async function get_renderer(type) {
         'bar-h': () => import('./charts/chart-bar-h.js'),
         pie:     () => import('./charts/chart-pie.js'),
         donut:   () => import('./charts/chart-donut.js'),
+        rose:    () => import('./charts/chart-rose.js'),
         scatter: () => import('./charts/chart-scatter.js'),
         radar:   () => import('./charts/chart-radar.js'),
         funnel:  () => import('./charts/chart-funnel.js'),
         gauge:   () => import('./charts/chart-gauge.js'),
         treemap: () => import('./charts/chart-treemap.js'),
         heatmap: () => import('./charts/chart-heatmap.js'),
+        calendar:() => import('./charts/chart-calendar.js'),
     };
     if (!map[type]) return null;
     const mod = await map[type]();

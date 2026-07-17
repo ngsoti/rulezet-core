@@ -14,7 +14,7 @@ function getPath(obj, path) {
     return path.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), obj)
 }
 
-const CHART_VIEWS = ['line', 'area', 'bar', 'bar-h', 'pie', 'donut', 'scatter', 'radar', 'heatmap']
+const CHART_VIEWS = ['line', 'area', 'bar', 'bar-h', 'pie', 'donut', 'rose', 'scatter', 'radar', 'heatmap']
 
 // Known dataset presets from /platform/insights_data — kept in sync by hand
 // with the `charts` dict built in app/home.py. Shown as a dropdown so adding
@@ -51,6 +51,7 @@ const ChartWidget = {
         const editForm = ref({ ...props.params })
 
         const isPreset = computed(() => CHART_PRESETS.some(p => p.path === editForm.value.path))
+        const hasData  = computed(() => !!(data.value.categories || data.value.calendar_data))
 
         async function load() {
             loading.value = true
@@ -77,12 +78,12 @@ const ChartWidget = {
 
         onMounted(load)
 
-        return { data, loading, editForm, load, saveSettings, onPresetChange, isPreset, CHART_VIEWS, CHART_PRESETS }
+        return { data, loading, editForm, load, saveSettings, onPresetChange, isPreset, hasData, CHART_VIEWS, CHART_PRESETS }
     },
     template: `
     <widget-frame :title="data.title || params.path" icon="fa-chart-line" :loading="loading"
                    @reload="load" @remove="$emit('remove')" @save-settings="saveSettings">
-        <chart-viewer v-if="data.categories" :data="data" :views="params.view || 'line'" height="100%"></chart-viewer>
+        <chart-viewer v-if="hasData" :data="data" :views="params.view || 'line'" height="100%"></chart-viewer>
         <div v-else class="text-center text-muted small py-4">
             <i class="fa-solid fa-chart-simple opacity-25 d-block mb-2" style="font-size:1.5rem;"></i>
             No data.

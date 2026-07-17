@@ -11,6 +11,8 @@ import TrendingVulnsWidget from './components/trendingVulnsWidget.js'
 import AttackHeatmapWidget from './components/attackHeatmapWidget.js'
 import RuleListWidget      from './components/ruleListWidget.js'
 import ActivityFeedWidget  from './components/activityFeedWidget.js'
+import FormatRaceWidget    from './components/formatRaceWidget.js'
+import ActivityCalendarWidget from './components/activityCalendarWidget.js'
 
 const WIDGET_REGISTRY = {
     stats_row: {
@@ -67,6 +69,22 @@ const WIDGET_REGISTRY = {
         icon: 'fa-clock-rotate-left',
         defaultSize: { w: 6, h: 5 },
         defaultParams: { limit: 8 },
+        singleton: true,
+    },
+    format_race: {
+        component: FormatRaceWidget,
+        label: 'Format Popularity Race',
+        icon: 'fa-flag-checkered',
+        defaultSize: { w: 12, h: 6 },
+        defaultParams: { speed: 'normal' },
+        singleton: true,
+    },
+    activity_calendar: {
+        component: ActivityCalendarWidget,
+        label: 'Activity Calendar',
+        icon: 'fa-calendar-days',
+        defaultSize: { w: 12, h: 5 },
+        defaultParams: { period: 'year' },
         singleton: true,
     },
     // Kept resolvable (so any already-saved layout still renders) but hidden

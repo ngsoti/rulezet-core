@@ -176,6 +176,33 @@ def home_charts(tab):
                         'categories': [c[0] for c in top],
                         'series': [{'name': 'Rules', 'values': [c[1] for c in top]}]})
 
+    if tab == 'activity_calendar':
+        from app.core.db_class.db import ActivityLog
+        period   = request.args.get('period', 'year')
+        days_map = {'month': 30, '3months': 90, 'year': 365}
+        subtitle_map = {'month': 'Last 30 days', '3months': 'Last 3 months', 'year': 'Last 12 months'}
+        days   = days_map.get(period, 365)
+        now    = datetime.datetime.utcnow()
+        cutoff = now - datetime.timedelta(days=days)
+
+        rows = (db.session.query(ActivityLog.created_at)
+                .filter(ActivityLog.created_at >= cutoff).all())
+        bucket = {}
+        for (dt,) in rows:
+            if dt:
+                if isinstance(dt, str):
+                    try: dt = datetime.datetime.fromisoformat(dt)
+                    except Exception: continue
+                key = dt.strftime('%Y-%m-%d')
+                bucket[key] = bucket.get(key, 0) + 1
+
+        return jsonify({
+            'title':         'Platform Activity',
+            'subtitle':      subtitle_map.get(period, 'Last 12 months'),
+            'calendar_data': [[day, count] for day, count in sorted(bucket.items())],
+            'range':         [cutoff.strftime('%Y-%m-%d'), now.strftime('%Y-%m-%d')],
+        })
+
     if tab == 'top_atk':
         from app.core.db_class.db import RuleAttackAssociation
         rows = (db.session.query(RuleAttackAssociation.technique_id,
@@ -1315,6 +1342,37 @@ def platform_insights_data():
     ]
     heatmap_cats = [f'{h:02d}h' for h in range(24)]
 
+    # ── Format popularity race (cumulative rule count per format, by
+    #    month — full history accumulated, last 36 months animated) ──
+    fmt_hist_rows = (db.session.query(Rule.format, Rule.creation_date)
+                     .filter(Rule.is_deleted == False, Rule.creation_date.isnot(None))
+                     .all())
+    fmt_month_counts = defaultdict(lambda: defaultdict(int))
+    for fmt, dt in fmt_hist_rows:
+        if not dt: continue
+        if isinstance(dt, str):
+            try: dt = datetime.datetime.fromisoformat(dt)
+            except: continue
+        fmt_month_counts[dt.strftime('%Y-%m')][fmt or 'unknown'] += 1
+
+    all_months_full = sorted(fmt_month_counts.keys())
+    frame_months    = all_months_full[-36:]
+    fmt_cumulative  = defaultdict(int)
+    race_frames     = []
+    for m in all_months_full:
+        for f, c in fmt_month_counts[m].items():
+            fmt_cumulative[f] += c
+        if m in frame_months:
+            frame_data = sorted(
+                ({'name': f, 'value': v} for f, v in fmt_cumulative.items() if v > 0),
+                key=lambda d: d['value'], reverse=True,
+            )[:10]
+            try:
+                label = datetime.datetime.strptime(m, '%Y-%m').strftime('%b %Y')
+            except Exception:
+                label = m
+            race_frames.append({'month': label, 'data': frame_data})
+
     # ── MITRE ATT&CK coverage ──────────────────────────────────────────
     attack_kpi = {'techniques': 0, 'rules_covered': 0, 'coverage_pct': 0, 'total_assocs': 0}
     attack_charts = {}
@@ -1389,6 +1447,10 @@ def platform_insights_data():
             'rule_health':  {'title': 'Rule Health',  'categories': ['Active', 'Deleted'], 'series': [{'name': 'Rules', 'values': [total_rules, total_deleted]}]},
             'user_roles':   {'title': 'User Roles',   'categories': ['Regular', 'Admins'],  'series': [{'name': 'Users', 'values': [total_users - admin_users, admin_users]}]},
             'heatmap': {'title': 'Activity Heatmap', 'subtitle': 'Last 90 days — hour × day', 'categories': heatmap_cats, 'series': heatmap_series},
+            'format_race': {
+                'title': 'Format Popularity Race', 'subtitle': 'Cumulative rules by format, over time',
+                'frames': race_frames,
+            },
             'attack_top_techniques': attack_charts.get('top_techniques', {}),
             'attack_tactic_coverage': attack_charts.get('tactic_coverage', {}),
             'attack_tactic_rules': attack_charts.get('tactic_rules', {}),
