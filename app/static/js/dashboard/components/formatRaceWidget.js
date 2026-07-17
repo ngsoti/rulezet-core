@@ -83,6 +83,7 @@ const FormatRaceWidget = {
                     },
                     yAxis: {
                         type: 'category', inverse: true, max: 7,
+                        data: frame.data.map(d => d.name),
                         axisLabel: { color: theme.text_main, fontSize: 12, fontWeight: 600 },
                         animationDuration: 300, animationDurationUpdate: 300,
                     },
@@ -116,6 +117,7 @@ const FormatRaceWidget = {
             frameIdx.value += 1
             const frame = frames.value[frameIdx.value]
             chart.setOption({
+                yAxis: { data: frame.data.map(d => d.name) },
                 series: [{ data: seriesData(frame) }],
                 graphic: { elements: [{ style: { text: frame.month } }] },
             })
@@ -143,6 +145,7 @@ const FormatRaceWidget = {
             const frame = frames.value[0]
             if (chart && frame) {
                 chart.setOption({
+                    yAxis: { data: frame.data.map(d => d.name) },
                     series: [{ data: seriesData(frame) }],
                     graphic: { elements: [{ style: { text: frame.month } }] },
                 })

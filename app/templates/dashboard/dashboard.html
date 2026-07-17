@@ -62,28 +62,103 @@
 
     <!-- Add widget modal -->
     <div class="modal fade" id="addWidgetModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content border-0 shadow-lg rounded-4" style="background:var(--card-bg-color);">
                 <div class="modal-header border-0 pb-0 pt-4 px-4">
                     <div>
-                        <h5 class="modal-title fw-bold mb-0">Add a widget</h5>
-                        <p class="text-muted small mb-0">Pick a widget type — you can configure it afterwards</p>
+                        <h5 class="modal-title fw-bold mb-0">
+                            <button v-if="catalogView !== 'categories'" class="dw-modal-back" @click="showCategories" title="Back to categories">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <span v-if="catalogView === 'categories'">Add a widget</span>
+                            <span v-else>[[ categoryLabel(catalogView) ]]</span>
+                        </h5>
+                        <p class="text-muted small mb-0">
+                            <span v-if="catalogView === 'categories'">Pick a category to see what's inside</span>
+                            <span v-else-if="catalogView === 'charts'">Pick a dataset + chart type — added exactly as previewed</span>
+                            <span v-else>Click a card to add it — you can still fine-tune it afterwards</span>
+                        </p>
                     </div>
                     <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <div class="col-md-4" v-for="(entry, type) in availableRegistry" :key="type">
-                            <div class="dw-catalog-card" @click="addWidget(type)">
-                                <i :class="'fa-solid ' + entry.icon"></i>
-                                <span>[[ entry.label ]]</span>
+
+                    <!-- Level 1: categories -->
+                    <div v-if="catalogView === 'categories'" class="row g-3">
+                        <div class="col-md-4" v-for="cat in CATEGORIES" :key="cat.key">
+                            <div class="dw-category-card" @click="openCategory(cat.key)">
+                                <i :class="'fa-solid ' + cat.icon"></i>
+                                <div class="dw-category-body">
+                                    <div class="dw-category-title">
+                                        [[ cat.label ]]
+                                        <span class="dw-category-count">[[ cardsForCategory(cat.key).length ]]</span>
+                                    </div>
+                                    <div class="dw-category-desc">[[ cat.description ]]</div>
+                                </div>
+                                <i class="fa-solid fa-chevron-right dw-category-arrow"></i>
                             </div>
                         </div>
-                        <div v-if="Object.keys(availableRegistry).length === 0" class="col-12 text-center text-muted py-3">
+                    </div>
+
+                    <!-- Level 2: charts — lightweight (non-chart-library) mini previews -->
+                    <div v-else-if="catalogView === 'charts'" class="row g-2">
+                        <div v-if="chartPreviewLoading" class="col-12 text-center text-muted py-5">
+                            <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
+                            <p class="small mb-0">Loading preview data…</p>
+                        </div>
+                        <template v-else>
+                            <div class="col-6 col-lg-3" v-for="card in cardsForCategory('charts')" :key="card.id">
+                                <div class="dw-preset-card" @click="card.add()">
+                                    <div class="dw-preset-preview">
+                                        <div v-if="!card.preset" class="dw-preset-custom">
+                                            <i :class="'fa-solid ' + card.icon"></i>
+                                        </div>
+                                        <div v-else-if="previewKind(card.preset.view) === 'sparkbar'" class="dw-spark">
+                                            <span class="dw-spark-bar" v-for="(r, i) in previewSparkRows(card.preset)" :key="i" :style="{ height: r.pct + '%' }"></span>
+                                        </div>
+                                        <svg v-else-if="previewKind(card.preset.view) === 'curve'" viewBox="0 0 100 40" preserveAspectRatio="none" class="dw-curve-svg">
+                                            <polyline v-if="card.preset.view === 'line'" :points="previewCurvePoints(card.preset)"
+                                                      fill="none" stroke="#0d6efd" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                            <polygon v-else :points="previewAreaPoints(card.preset)" fill="#0d6efd" fill-opacity="0.22" stroke="#0d6efd" stroke-width="2" />
+                                        </svg>
+                                        <div v-else-if="previewKind(card.preset.view) === 'ring'" class="dw-ring-wrap">
+                                            <div class="dw-ring" :style="previewRingStyle(card.preset)"></div>
+                                        </div>
+                                        <div v-else-if="previewKind(card.preset.view) === 'heatgrid'" class="dw-heatgrid">
+                                            <span class="dw-heatgrid-cell" v-for="(v, i) in previewHeatCells(card.preset)" :key="i" :style="{ opacity: (0.12 + v * 0.75).toFixed(2) }"></span>
+                                        </div>
+                                        <div v-else class="dw-mini-barlist">
+                                            <div class="dw-mini-barlist-row" v-for="(r, i) in previewBarRows(card.preset)" :key="i">
+                                                <span class="dw-mini-barlist-label">[[ r.label ]]</span>
+                                                <span class="dw-mini-barlist-track"><span class="dw-mini-barlist-fill" :style="{ width: r.pct + '%' }"></span></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="dw-preset-label"><i :class="'fa-solid ' + card.icon + ' me-1'"></i>[[ card.label ]]</div>
+                                </div>
+                            </div>
+                            <div v-if="cardsForCategory('charts').length === 0" class="col-12 text-center text-muted py-3">
+                                <i class="fa-solid fa-circle-check opacity-25 d-block mb-2" style="font-size:1.5rem;"></i>
+                                Every curated chart is already on your dashboard.
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Level 2: everything else — compact description cards -->
+                    <div v-else class="row g-2">
+                        <div class="col-6 col-lg-3" v-for="card in cardsForCategory(catalogView)" :key="card.id">
+                            <div class="dw-catalog-card" @click="card.add()">
+                                <i :class="'fa-solid ' + card.icon"></i>
+                                <span class="dw-catalog-card-label">[[ card.label ]]</span>
+                                <span class="dw-catalog-card-desc">[[ card.description ]]</span>
+                            </div>
+                        </div>
+                        <div v-if="cardsForCategory(catalogView).length === 0" class="col-12 text-center text-muted py-3">
                             <i class="fa-solid fa-circle-check opacity-25 d-block mb-2" style="font-size:1.5rem;"></i>
-                            You already have one of every widget.
+                            Every widget in this category is already on your dashboard.
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -95,8 +170,9 @@
 {% block script %}
 <script src="{{ url_for('static', filename='js/dashboard/jsdelivr_gridstack.js') }}"></script>
 <script type="module">
-    const { createApp, ref, computed, onMounted, nextTick } = Vue
-    import WIDGET_REGISTRY from '/static/js/dashboard/widgetRegistry.js'
+    const { createApp, ref, onMounted, nextTick } = Vue
+    import WIDGET_REGISTRY, { CATEGORIES, RULE_LIST_VARIANTS } from '/static/js/dashboard/widgetRegistry.js'
+    import { CHART_PRESETS, getPath } from '/static/js/dashboard/chartPresets.js'
     import { create_message } from '/static/js/toaster.js'
 
     const csrfToken = '{{ csrf_token() }}'
@@ -126,33 +202,172 @@
                 localStorage.setItem(BANNER_KEY, bannerCollapsed.value ? '1' : '0')
             }
 
-            // Catalog shown in "Add widget": hides entries flagged `hidden`
-            // (e.g. the legacy raw KPI widget), entries flagged `singleton`
-            // once one is already on the board, and `variants` entries (like
-            // Rule List) once every variant has been placed.
-            const availableRegistry = computed(() => {
-                const out = {}
-                for (const [type, entry] of Object.entries(registry)) {
-                    if (entry.hidden) continue
-                    if (entry.singleton && widgets.value.some(w => w.type === type)) continue
-                    if (entry.variants) {
-                        const used = new Set(
-                            widgets.value.filter(w => w.type === type).map(w => w.params[entry.variantParam])
-                        )
-                        if (entry.variants.every(v => used.has(v))) continue
-                    }
-                    out[type] = entry
-                }
-                return out
-            })
+            // ── "Add widget" catalog: two-level (categories → cards) ──────
+            const catalogView       = ref('categories') // 'categories' | a CATEGORIES key
+            const chartPreviewData  = ref(null)          // lazy-fetched once, reused for every mini chart preview
+            const chartPreviewLoading = ref(false)
 
-            function nextVariantParams(type, entry) {
-                if (!entry.variants) return { ...entry.defaultParams }
-                const used = new Set(
-                    widgets.value.filter(w => w.type === type).map(w => w.params[entry.variantParam])
-                )
-                const next = entry.variants.find(v => !used.has(v)) || entry.variants[0]
-                return { ...entry.defaultParams, [entry.variantParam]: next }
+            function categoryLabel(key) {
+                const c = CATEGORIES.find(c => c.key === key)
+                return c ? c.label : key
+            }
+
+            function isPlaced(type) {
+                return widgets.value.some(w => w.type === type)
+            }
+            function isVariantPlaced(type, variantParam, variant) {
+                return widgets.value.some(w => w.type === type && w.params[variantParam] === variant)
+            }
+            function isChartPresetPlaced(preset) {
+                return widgets.value.some(w => w.type === 'chart' && w.params.path === preset.path && w.params.view === preset.view)
+            }
+
+            // Every card shown for a given category — same function drives
+            // both the subview grid and the level-1 "N available" count, so
+            // the two can never drift out of sync.
+            function cardsForCategory(key) {
+                if (key === 'charts') {
+                    const cards = CHART_PRESETS
+                        .filter(p => !isChartPresetPlaced(p))
+                        .map(p => ({
+                            id: 'chart:' + p.path + ':' + p.view,
+                            icon: p.icon, label: p.label, preset: p,
+                            add: () => addWidget('chart', { endpoint: '/platform/insights_data', path: p.path, view: p.view }),
+                        }))
+                    const custom = registry.chart
+                    cards.push({
+                        id: 'chart:custom', icon: custom.icon, label: 'Custom Chart', preset: null,
+                        add: () => addWidget('chart', { ...custom.defaultParams }),
+                    })
+                    return cards
+                }
+                if (key === 'rules') {
+                    const entry = registry.rule_list
+                    return entry.variants
+                        .filter(v => !isVariantPlaced('rule_list', entry.variantParam, v))
+                        .map(v => {
+                            const meta = RULE_LIST_VARIANTS[v]
+                            return {
+                                id: 'rule_list:' + v, icon: meta.icon, label: meta.label, description: meta.description,
+                                add: () => addWidget('rule_list', { ...entry.defaultParams, [entry.variantParam]: v }),
+                            }
+                        })
+                }
+                return Object.entries(registry)
+                    .filter(([type, entry]) => entry.category === key && !entry.hidden)
+                    .filter(([type, entry]) => !entry.singleton || !isPlaced(type))
+                    .map(([type, entry]) => ({
+                        id: 'type:' + type, icon: entry.icon, label: entry.label, description: entry.description,
+                        add: () => addWidget(type, { ...entry.defaultParams }),
+                    }))
+            }
+
+            async function openCategory(key) {
+                catalogView.value = key
+                if (key === 'charts' && !chartPreviewData.value && !chartPreviewLoading.value) {
+                    chartPreviewLoading.value = true
+                    try {
+                        const res = await fetch('/platform/insights_data')
+                        chartPreviewData.value = await res.json()
+                    } catch {
+                        chartPreviewData.value = {}
+                    } finally {
+                        chartPreviewLoading.value = false
+                    }
+                }
+            }
+
+            function showCategories() {
+                catalogView.value = 'categories'
+            }
+
+            // ── Lightweight preview rendering for the Charts subview — no
+            // chart library involved (no ECharts instances, no dynamic
+            // imports), just plain CSS/SVG shapes built straight from the
+            // cached insights payload. Keeps ~17 simultaneous previews fast
+            // and small instead of spinning up 17 real ECharts canvases —
+            // each preview kind is matched to its actual chart type so a
+            // line/area dataset doesn't look identical to a bar or donut one.
+            const PREVIEW_COLORS = ['#0d6efd', '#6f42c1', '#20c997', '#fd7e14', '#dc3545']
+
+            function previewKind(view) {
+                if (view === 'heatmap') return 'heatgrid'
+                if (view === 'line' || view === 'area') return 'curve'
+                if (view === 'bar') return 'sparkbar'
+                if (view === 'pie' || view === 'donut' || view === 'rose') return 'ring'
+                return 'barlist' // bar-h
+            }
+
+            function previewSeries(preset) {
+                const d    = getPath(chartPreviewData.value, preset.path) || {}
+                const cats = d.categories || []
+                const vals = (d.series && d.series[0] && d.series[0].values) || []
+                return cats.map((c, i) => ({ label: c, value: vals[i] || 0 }))
+            }
+
+            // Bar sparkline (view: bar) — vertical bars, last 12 points.
+            function previewSparkRows(preset) {
+                const rows = previewSeries(preset).slice(-12)
+                const max  = Math.max(1, ...rows.map(r => r.value))
+                return rows.map(r => ({ ...r, pct: Math.max(6, Math.round(r.value / max * 100)) }))
+            }
+
+            // Line/area (view: line/area) — an actual connected curve, via a
+            // tiny inline SVG polyline (line) or closed polygon (area fill).
+            function previewCurvePoints(preset) {
+                const rows = previewSeries(preset).slice(-12)
+                if (!rows.length) return '0,36 100,36'
+                const max    = Math.max(1, ...rows.map(r => r.value))
+                const n      = rows.length
+                const stepX  = n > 1 ? 100 / (n - 1) : 0
+                return rows.map((r, i) => {
+                    const x = Math.round(i * stepX)
+                    const y = 36 - Math.round((r.value / max) * 32)
+                    return `${x},${y}`
+                }).join(' ')
+            }
+            function previewAreaPoints(preset) {
+                const line = previewCurvePoints(preset)
+                const pts  = line.split(' ')
+                const lastX  = pts[pts.length - 1].split(',')[0]
+                const firstX = pts[0].split(',')[0]
+                return `${line} ${lastX},38 ${firstX},38`
+            }
+
+            // Bar-h (view: bar-h) — top 3 ranked label + proportional bar.
+            function previewBarRows(preset) {
+                const sorted = [...previewSeries(preset)].sort((a, b) => b.value - a.value).slice(0, 3)
+                const max    = Math.max(1, ...sorted.map(r => r.value))
+                return sorted.map(r => ({ ...r, pct: Math.round(r.value / max * 100) }))
+            }
+
+            // Pie/donut/rose (proportions) — a conic-gradient ring, top 5 slices.
+            function previewRingStyle(preset) {
+                const rows  = [...previewSeries(preset)].sort((a, b) => b.value - a.value).slice(0, 5)
+                const total = rows.reduce((s, r) => s + r.value, 0) || 1
+                let acc = 0
+                const stops = rows.map((r, i) => {
+                    const start = (acc / total) * 100
+                    acc += r.value
+                    const end = (acc / total) * 100
+                    return `${PREVIEW_COLORS[i % PREVIEW_COLORS.length]} ${start}% ${end}%`
+                })
+                return { background: stops.length ? `conic-gradient(${stops.join(', ')})` : 'var(--border-color)' }
+            }
+
+            // Heatmap (hour × day) — coarse colored cells, no labels.
+            function previewHeatCells(preset) {
+                const d      = getPath(chartPreviewData.value, preset.path) || {}
+                const series = d.series || []
+                const cells  = []
+                series.forEach(s => {
+                    const vals = s.values || []
+                    for (let h = 0; h < vals.length; h += 2) {
+                        cells.push((vals[h] || 0) + (vals[h + 1] || 0))
+                    }
+                })
+                const max = Math.max(1, ...cells)
+                return cells.map(v => v / max)
             }
 
             async function loadLayout() {
@@ -217,16 +432,17 @@
             }
 
             function openAddWidget() {
+                catalogView.value = 'categories'
                 _addWidgetModal.show()
             }
 
-            function addWidget(type) {
+            function addWidget(type, params) {
                 const entry = registry[type]
                 const id    = 'w-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1000)
                 const w = {
                     id, type,
                     x: 0, y: 0, ...entry.defaultSize,
-                    params: nextVariantParams(type, entry),
+                    params: params || { ...entry.defaultParams },
                 }
                 widgets.value = [...widgets.value, w]
                 _addWidgetModal.hide()
@@ -258,8 +474,12 @@
             })
 
             return {
-                widgets, loadingLayout, gridEl, registry, availableRegistry, bannerCollapsed,
+                widgets, loadingLayout, gridEl, registry, bannerCollapsed,
                 componentFor, openAddWidget, addWidget, removeWidget, updateWidgetParams, toggleBanner,
+                catalogView, chartPreviewData, chartPreviewLoading, CATEGORIES,
+                categoryLabel, cardsForCategory, openCategory, showCategories,
+                previewKind, previewSparkRows, previewBarRows, previewHeatCells,
+                previewCurvePoints, previewAreaPoints, previewRingStyle,
             }
         }
     }).mount('#dashboard-app')

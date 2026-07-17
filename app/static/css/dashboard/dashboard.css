@@ -252,23 +252,91 @@
     display: none;
 }
 
-/* ── Add-widget catalog picker ──────────────────────────────── */
+/* ── Add-widget picker: level 1, categories ──────────────────── */
+.dw-modal-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 8px;
+    background: var(--light-bg-color);
+    color: var(--text-color);
+    margin-right: .5rem;
+    cursor: pointer;
+}
+.dw-modal-back:hover { background: rgba(13,110,253,.1); color: #0d6efd; }
+
+.dw-category-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.2rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--light-bg-color);
+    cursor: pointer;
+    transition: border-color .15s, transform .15s;
+    height: 100%;
+}
+.dw-category-card:hover {
+    border-color: #0d6efd;
+    transform: translateY(-2px);
+}
+.dw-category-card > i {
+    font-size: 1.5rem;
+    color: #0d6efd;
+    flex-shrink: 0;
+    width: 32px;
+    text-align: center;
+}
+.dw-category-body { min-width: 0; flex: 1; }
+.dw-category-title {
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+}
+.dw-category-count {
+    font-size: .68rem;
+    font-weight: 700;
+    background: rgba(13,110,253,.12);
+    color: #0d6efd;
+    border-radius: 999px;
+    padding: .05rem .5rem;
+}
+.dw-category-desc {
+    font-size: .76rem;
+    color: var(--subtle-text-color);
+    margin-top: .15rem;
+    line-height: 1.35;
+}
+.dw-category-arrow {
+    color: var(--subtle-text-color);
+    font-size: .8rem;
+    flex-shrink: 0;
+}
+
+/* ── Add-widget picker: level 2, non-chart categories ─────────── */
+/* Compact by design — 4-up on large screens, 2-up on small — since these
+   cards no longer host a real chart instance, just icon + text. */
 .dw-catalog-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: .6rem;
-    padding: 1.5rem 1rem;
-    border-radius: 12px;
+    gap: .35rem;
+    padding: .9rem .7rem;
+    border-radius: 10px;
     border: 1px dashed var(--border-color);
     background: var(--light-bg-color);
     cursor: pointer;
     transition: border-color .15s, transform .15s;
     text-align: center;
-    font-size: .85rem;
-    font-weight: 600;
-    color: var(--text-color);
+    height: 100%;
 }
 .dw-catalog-card:hover {
     border-color: #0d6efd;
@@ -276,8 +344,167 @@
     transform: translateY(-2px);
 }
 .dw-catalog-card i {
-    font-size: 1.6rem;
+    font-size: 1.25rem;
     color: #0d6efd;
+}
+.dw-catalog-card-label {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+.dw-catalog-card-desc {
+    font-size: .68rem;
+    color: var(--subtle-text-color);
+    line-height: 1.3;
+}
+
+/* ── Add-widget picker: level 2, charts ─────────────────────────
+   Lightweight, library-free previews (plain CSS bars/cells) — small,
+   fast, and legible instead of a full ECharts canvas per card. */
+.dw-preset-card {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--light-bg-color);
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color .15s, transform .15s;
+}
+.dw-preset-card:hover {
+    border-color: #0d6efd;
+    transform: translateY(-2px);
+}
+.dw-preset-preview {
+    height: 60px;
+    background: var(--card-bg-color);
+    padding: .4rem .5rem;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+.dw-preset-custom {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.dw-preset-custom i {
+    font-size: 1.4rem;
+    color: #0d6efd;
+    opacity: .5;
+}
+.dw-preset-label {
+    padding: .4rem .55rem;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--text-color);
+    border-top: 1px solid var(--border-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dw-preset-label i { color: #0d6efd; }
+
+/* Sparkline — simple row of bars, last 12 points, no axis/labels */
+.dw-spark {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    width: 100%;
+    height: 100%;
+}
+.dw-spark-bar {
+    flex: 1 1 auto;
+    min-width: 2px;
+    background: #0d6efd;
+    opacity: .65;
+    border-radius: 1px;
+}
+
+/* Line/area curve — a real connected SVG polyline/polygon, not bars */
+.dw-curve-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Pie/donut/rose ring — conic-gradient proportion ring, no chart canvas */
+.dw-ring-wrap {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.dw-ring {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+}
+.dw-ring::after {
+    content: '';
+    position: absolute;
+    inset: 9px;
+    border-radius: 50%;
+    background: var(--card-bg-color);
+}
+
+/* Mini bar-list — top 3 label + proportional bar, no chart canvas */
+.dw-mini-barlist {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+}
+.dw-mini-barlist-row {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    height: 12px;
+    line-height: 12px;
+}
+.dw-mini-barlist-label {
+    flex: 0 0 auto;
+    max-width: 44px;
+    font-size: .58rem;
+    color: var(--subtle-text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dw-mini-barlist-track {
+    flex: 1 1 auto;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(13,110,253,.1);
+    overflow: hidden;
+}
+.dw-mini-barlist-fill {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: 3px;
+    background: #0d6efd;
+}
+
+/* Mini heat grid — coarse colored cells, no labels.
+   grid-auto-rows is required here: with none set, empty <span> cells have
+   no intrinsic content height and the whole grid collapses to ~0px tall. */
+.dw-heatgrid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 1px;
+    width: 100%;
+    height: 100%;
+}
+.dw-heatgrid-cell {
+    background: #0d6efd;
+    border-radius: 1px;
+    min-height: 2px;
 }
 
 /* ── Format popularity race ──────────────────────────────────── */

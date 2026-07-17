@@ -7,19 +7,15 @@
  */
 import WidgetFrame from '../widgetFrame.js'
 import ChartViewer from '/static/js/components/chart-viewer.js'
+import { getPath } from '../chartPresets.js'
 
 const { ref, watch, onMounted, computed } = Vue
 
-function getPath(obj, path) {
-    return path.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), obj)
-}
-
 const CHART_VIEWS = ['line', 'area', 'bar', 'bar-h', 'pie', 'donut', 'rose', 'scatter', 'radar', 'heatmap']
 
-// Known dataset presets from /platform/insights_data — kept in sync by hand
-// with the `charts` dict built in app/home.py. Shown as a dropdown so adding
-// a chart widget doesn't require knowing the raw dot-path by heart; picking
-// "Custom…" falls back to the free-text field for anything not listed yet.
+// Simple one-per-dataset list for this widget's own settings dropdown — free
+// to combine with any chart type here. The curated, multi-view "Add widget"
+// picker cards (dashboard.html) live in chartPresets.js instead.
 const CHART_PRESETS = [
     { path: 'charts.rules_over_time',       label: 'Rules Added (over time)' },
     { path: 'charts.users_over_time',        label: 'New Users (over time)' },
