@@ -956,58 +956,81 @@ def update_rules_owned_gamification(gamification_id , user_id) -> None:
 
 
 
-def get_global_leaderboard_paginated(page: int, per_page: int) -> dict:
+_LEADERBOARD_SORT_COLUMNS = {
+    'total_points':           Gamification.total_points,
+    'suggestions_accepted':   Gamification.suggestions_accepted,
+    'rules_owned':            Gamification.rules_owned,
+    'rules_popular_score':    Gamification.rules_popular_score,
+    'last_contribution_date': Gamification.last_contribution_date,
+}
+
+_ACTIVE_SINCE_DAYS = {'week': 7, 'month': 30, 'year': 365}
+
+
+def get_leaderboard_paginated(page: int, per_page: int, sort_by: str = 'total_points',
+                               direction: str = 'desc', search: str = None,
+                               active_since: str = None) -> dict:
+    """Generic paginated/sortable/searchable Gamification leaderboard — the
+    single source for the Global Ranking, Quality Masters, and Popularity
+    Leaders tables, which just differ by default sort column.
+
+    `rank` is computed with a window function over the FULL sort order
+    before any search/date filtering is applied, so a name search never
+    shifts what number shows next to a contributor — it only changes which
+    rows are visible, never their true position.
     """
-    Retrieves the global leaderboard data, paginated, sorted by total_points.
-    """
-    
-    # Jointure et tri par total_points (descendant)
-    query = Gamification.query.join(User).order_by(Gamification.total_points.desc())
-    
+    col = _LEADERBOARD_SORT_COLUMNS.get(sort_by, Gamification.total_points)
+    order_expr = col.desc() if direction == 'desc' else col.asc()
+
+    ranked = db.session.query(
+        Gamification.id.label('gid'),
+        func.row_number().over(order_by=order_expr).label('rank'),
+    ).subquery()
+
+    query = (
+        db.session.query(Gamification, ranked.c.rank)
+        .join(User)
+        .join(ranked, ranked.c.gid == Gamification.id)
+    )
+
+    if search:
+        pattern = f"%{search}%"
+        query = query.filter(or_(
+            User.first_name.ilike(pattern), User.last_name.ilike(pattern), User.username.ilike(pattern),
+        ))
+
+    if active_since in _ACTIVE_SINCE_DAYS:
+        cutoff = datetime.datetime.utcnow() - timedelta(days=_ACTIVE_SINCE_DAYS[active_since])
+        query = query.filter(Gamification.last_contribution_date >= cutoff)
+
+    query = query.order_by(order_expr)
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    
+
     leaderboard_data = []
-    for stats in pagination.items:
-        leaderboard_data.append({
-            "user_id": stats.user_id,
-            "first_name": stats.user.first_name, 
-            "last_name": stats.user.last_name,
-            "total_points": stats.total_points,
-            "suggestions_accepted": stats.suggestions_accepted,
-            "rules_owned": stats.rules_owned,
-            "rules_popular_score": stats.rules_popular_score,
-        })
-        
-    return {
-        "leaderboard": leaderboard_data,
-        "total_pages": pagination.pages,
-        "current_page": pagination.page,
-        "total_items": pagination.total
-    }
-
-def get_category_leaderboard(sort_by: str, per_page: int) -> list:
-    """
-    Retrieves top N users based on a specific gamification metric.
-    """
-
-    if sort_by not in ['suggestions_accepted', 'rules_popular_score']:
-        return []
-
-    sort_column = getattr(Gamification, sort_by)
-    
-    query = Gamification.query.join(User).order_by(sort_column.desc()).limit(per_page)
-    
-    leaderboard_data = []
-    for stats in query.all():
+    for stats, rank in pagination.items:
         leaderboard_data.append({
             "user_id": stats.user_id,
             "first_name": stats.user.first_name,
             "last_name": stats.user.last_name,
+            "username": stats.user.get_username(),
+            "avatar": stats.user.get_avatar_url(),
+            "rank": rank,
+            "total_points": stats.total_points,
             "suggestions_accepted": stats.suggestions_accepted,
+            "rules_owned": stats.rules_owned,
             "rules_popular_score": stats.rules_popular_score,
+            "last_contribution_date": (
+                stats.last_contribution_date.strftime('%Y-%m-%d') if stats.last_contribution_date else None
+            ),
         })
-        
-    return leaderboard_data
+
+    return {
+        "leaderboard": leaderboard_data,
+        "total_pages": pagination.pages,
+        "current_page": pagination.page,
+        "total_items": pagination.total,
+    }
 
 def get_user_contributions_data(user_id: int) -> dict:
     """

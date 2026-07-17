@@ -5,7 +5,7 @@
  *   user-id   (Number)  — required; used to fetch tooltip data + link target
  *   username  (String)  — display name (shown immediately, no fetch needed)
  *   avatar    (String)  — avatar URL (optional; falls back to initials)
- *   size      (String)  — 'xs' | 'sm' | 'md' (default 'xs')
+ *   size      (String)  — 'xs' | 'sm' | 'md' | 'lg' (default 'xs')
  *   show-name (Boolean) — whether to render the text label (default true)
  *
  * Usage (Vue template):
@@ -48,7 +48,7 @@ const UserChip = defineComponent({
         let hideTimer = null;
         let tooltipEl = null;
 
-        const sizeMap = { xs: 22, sm: 28, md: 36 };
+        const sizeMap = { xs: 22, sm: 28, md: 36, lg: 64 };
         const px = computed(() => sizeMap[props.size] || 22);
 
         const displayName = computed(() => props.username || (tooltipData.value && tooltipData.value.username) || '?');

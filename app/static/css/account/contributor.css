@@ -1,0 +1,135 @@
+/* contributor.css — Contributor Leaderboard page.
+   Clean, single-box panels (no charts, no nested double-bordered boxes) —
+   a flat light-gray header + a borderless table that fills the panel,
+   matching the rule detail page's neutral panel language. */
+
+/* ── Panel (used for every table block on the page) ──────────── */
+.cb-panel {
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.cb-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .6rem;
+    padding: .85rem 1.2rem;
+    background: var(--light-bg-color);
+    border-bottom: 1px solid var(--border-color);
+}
+.cb-panel-title {
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+.cb-panel-title i { color: #0d6efd; margin-right: .5rem; }
+.cb-panel-body { padding: 1.2rem; }
+.cb-panel-footer {
+    padding: .4rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Table sits directly in the panel — no extra border/radius of its own,
+   just a horizontal-scroll safety net on narrow screens. table-layout:fixed
+   is required here — with "auto" the browser was free to dump most of the
+   table's slack width into whichever column it liked, producing huge gaps
+   between columns. Fixed + explicit widths keeps every column tight. */
+.cb-table-scroll { overflow-x: auto; }
+.cb-table-scroll .dt-table { width: 100%; table-layout: fixed; }
+
+.cb-col-rank { width: 64px; }
+.cb-col-user { width: auto; } /* takes whatever's left over — always the flexible column */
+.cb-col-num  { width: 120px; }
+.cb-table--compact .cb-col-rank { width: 54px; }
+.cb-table--compact .cb-col-num  { width: 90px; }
+
+.cb-col-user .user-chip-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* ── Leaderboard rows ───────────────────────────────────────── */
+.cb-rank-badge {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-weight: 700; font-size: .92rem;
+}
+.cb-rank-badge--gold   { color: #d4a700; }
+.cb-rank-badge--silver { color: #9099a2; }
+.cb-rank-badge--bronze { color: #b5651d; }
+
+.cb-you-badge {
+    font-size: .65rem; font-weight: 700;
+    background: #0d6efd; color: #fff;
+    border-radius: 999px; padding: .1rem .5rem;
+    margin-left: .4rem;
+}
+
+/* ── Compact search box inside panel headers ─────────────────── */
+/* .dt-search-input has a global min-width:240px (dataTable.css) meant for
+   full-size rule-list toolbars — it silently overrode these narrower boxes
+   and pushed them past the panel's right edge, clipped by overflow:hidden.
+   min-width:0 here lets our own width actually apply. */
+.cb-search { width: 220px; }
+.cb-search--sm { width: 160px; }
+.cb-search .dt-search-input {
+    background: var(--card-bg-color);
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* ── Podium — animated countdown reveal, 3rd → 2nd → 1st ─────── */
+.cb-podium {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 1.25rem;
+}
+.cb-podium-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .4rem;
+    width: 150px;
+    opacity: 0;
+    animation: cbPodiumReveal .6s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+.cb-podium-medal { font-size: 1.8rem; line-height: 1; }
+.cb-podium-name {
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.cb-podium-points {
+    font-size: .8rem;
+    font-weight: 700;
+    color: #198754;
+}
+.cb-podium-block {
+    width: 100%;
+    border-radius: 10px 10px 0 0;
+    margin-top: .3rem;
+}
+.cb-podium-block--1 { height: 84px; background: linear-gradient(180deg, rgba(212,167,0,.22), rgba(212,167,0,.06)); border-top: 3px solid #d4a700; }
+.cb-podium-block--2 { height: 60px; background: linear-gradient(180deg, rgba(144,153,162,.22), rgba(144,153,162,.06)); border-top: 3px solid #9099a2; }
+.cb-podium-block--3 { height: 42px; background: linear-gradient(180deg, rgba(181,101,29,.22), rgba(181,101,29,.06)); border-top: 3px solid #b5651d; }
+
+@keyframes cbPodiumReveal {
+    from { opacity: 0; transform: translateY(28px) scale(.92); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}

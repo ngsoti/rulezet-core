@@ -571,43 +571,58 @@ def contributor() -> str:
     return render_template("account/contributor.html")
 
 
+_VALID_LEADERBOARD_SORTS = ['total_points', 'suggestions_accepted', 'rules_owned',
+                            'rules_popular_score', 'last_contribution_date']
+_VALID_ACTIVE_SINCE = ['week', 'month', 'year']
+
+
 @account_blueprint.route('/leaderboard/global', methods=['GET'])
 def get_global_leaderboard():
-    """Recup the global leaderboard"""
-    
+    """Recup the global leaderboard — paginated, sortable, searchable by name"""
+
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
-    
-   
-    pagination_data = AccountModel.get_global_leaderboard_paginated(
-        page=page, 
-        per_page=per_page
+    sort_by = request.args.get('sort_by', 'total_points', type=str)
+    direction = request.args.get('dir', 'desc', type=str)
+    search = request.args.get('search', None, type=str)
+    active_since = request.args.get('active_since', None, type=str)
+
+    if sort_by not in _VALID_LEADERBOARD_SORTS:
+        return jsonify({"error": "Invalid sort_by parameter"}), 400
+    if active_since and active_since not in _VALID_ACTIVE_SINCE:
+        return jsonify({"error": "Invalid active_since parameter"}), 400
+
+    pagination_data = AccountModel.get_leaderboard_paginated(
+        page=page, per_page=per_page, sort_by=sort_by, direction=direction,
+        search=search, active_since=active_since,
     )
-   
-        
+
     return jsonify(pagination_data)
 
 
 @account_blueprint.route('/leaderboard/category', methods=['GET'])
 def get_category_leaderboard():
-    """Recup the category leaderboard"""
-    
-    sort_by = request.args.get('sort_by', 'suggestions_accepted', type=str)
-    per_page = request.args.get('per_page', 5, type=int)
-    
-    if sort_by not in ['suggestions_accepted', 'rules_popular_score']:
-        return jsonify({"error": "Invalid sort_by parameter"}), 400
+    """Recup the category leaderboard — same generic paginated/sortable/searchable
+    leaderboard as /leaderboard/global, just with a different default sort column."""
 
-   
-    leaderboard_data = AccountModel.get_category_leaderboard(
-        sort_by=sort_by,
-        per_page=per_page
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 5, type=int)
+    sort_by = request.args.get('sort_by', 'suggestions_accepted', type=str)
+    direction = request.args.get('dir', 'desc', type=str)
+    search = request.args.get('search', None, type=str)
+    active_since = request.args.get('active_since', None, type=str)
+
+    if sort_by not in _VALID_LEADERBOARD_SORTS:
+        return jsonify({"error": "Invalid sort_by parameter"}), 400
+    if active_since and active_since not in _VALID_ACTIVE_SINCE:
+        return jsonify({"error": "Invalid active_since parameter"}), 400
+
+    pagination_data = AccountModel.get_leaderboard_paginated(
+        page=page, per_page=per_page, sort_by=sort_by, direction=direction,
+        search=search, active_since=active_since,
     )
-    
-    
-    return jsonify({
-        "leaderboard": leaderboard_data
-    })
+
+    return jsonify(pagination_data)
 
 
 @account_blueprint.route('/my_contributions', methods=['GET'])
@@ -655,6 +670,9 @@ def get_user_contributions(user_id):
 @login_required
 def refresh():
     """Recup the my contributions"""
+    if not current_user.is_admin():
+        return jsonify({"message": "Admin access required", "success": False, "toast_class": "danger-subtle"}), 403
+
     action = request.args.get('action')
 
     success = AccountModel.refreshData(action)
