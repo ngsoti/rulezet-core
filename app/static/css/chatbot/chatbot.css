@@ -215,13 +215,14 @@
     background: var(--card-bg-color);
     color: var(--text-color);
     border-radius: 14px;
-    padding: .5rem .85rem;
-    font-size: .82rem;
-    line-height: 1.4;
+    padding: .65rem .9rem;
+    font-size: .88rem;
+    line-height: 1.45;
     outline: none;
     resize: none;
     overflow-y: auto;
-    max-height: 140px;
+    min-height: 84px;
+    max-height: 200px;
     font-family: inherit;
 }
 .chatbot-input:focus { border-color: #0d6efd; }

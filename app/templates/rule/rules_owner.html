@@ -152,6 +152,7 @@
     import RuleList                  from '/static/js/rule/ruleList.js'
     import TagsDisplaysList          from '/static/js/tags/tagsDisplaysList.js'
     import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js'
+    import { create_message }        from '/static/js/toaster.js'
 
     const csrfToken   = '{{ csrf_token() }}'
     const currentUserId = {{ current_user.id }}

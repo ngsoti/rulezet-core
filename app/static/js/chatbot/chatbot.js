@@ -46,7 +46,7 @@ const ChatbotWidget = {
             const el = inputEl.value
             if (!el) return
             el.style.height = 'auto'
-            el.style.height = Math.min(el.scrollHeight, 140) + 'px'
+            el.style.height = Math.min(el.scrollHeight, 200) + 'px'
         }
 
         function recallOlder(e) {

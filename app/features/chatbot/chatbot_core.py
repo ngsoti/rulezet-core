@@ -73,7 +73,7 @@ If asked what a detection rule is, or what a specific format does/is for -> acti
 If asked what formats are supported/available/exist (this is NOT search_rules, there is nothing to search for) -> action "chat", answer exactly: """ + ', '.join(sorted(_VALID_FORMATS)) + """.
 
 Pick ONE action, or just chat:
-- create_rule: user wants a NEW rule WRITTEN ("write/create/make/generate a rule..."). Needs title, format (one of: """ + ', '.join(sorted(_VALID_FORMATS)) + """), content. Optional: description.
+- create_rule: user wants a NEW rule WRITTEN ("write/create/make/generate a rule..."). Needs format (one of: """ + ', '.join(sorted(_VALID_FORMATS)) + """) and content. Title is auto-extracted from the rule content itself — never ask for one.
 - create_bundle: needs name. Optional: description.
 - navigate: user wants to GO TO a page. Needs "destination" = EXACTLY one key from this list, nothing else, never a raw URL: """ + ', '.join(sorted(_ROUTES)) + """
 - search_rules: user wants to FIND existing rules ("rules for CVE-X", "rules tagged X") — NOT create_rule unless they said write/create/make/generate. Optional fields (lists unless noted): search (text), rule_type (usually one format, pass through as typed even if misspelled e.g. "ayara" — backend fuzzy-matches it; if the user names SEVERAL formats at once, e.g. "suricata and yara", pass them all as a list ["suricata","yara"] — backend proposes one link per format, the list can only be filtered by one at a time), tags, sources, licenses, vulnerabilities (CVE ids), attacks (ATT&CK ids), authors OR editors, terms (a value with NO field word attached, e.g. "tlp:clear" alone — backend tries it as tag, then CVE, then free text).
@@ -99,7 +99,7 @@ Examples:
 
 Reply with ONLY a single JSON object, no other text, in exactly one of these shapes:
 
-{"action": "create_rule", "params": {"title": "...", "format": "...", "content": "...", "description": "..."}, "reply": "short confirmation message"}
+{"action": "create_rule", "params": {"format": "...", "content": "..."}, "reply": "short confirmation message"}
 {"action": "create_bundle", "params": {"name": "...", "description": "..."}, "reply": "short confirmation message"}
 {"action": "search_rules", "params": {"tags": ["..."], "vulnerabilities": ["CVE-..."], "attacks": ["T..."]}, "reply": "short confirmation message"}
 {"action": "navigate", "params": {"destination": "one_of_the_keys_above"}, "reply": "short confirmation message"}
@@ -144,41 +144,45 @@ def call_ollama(messages: list) -> str:
     return resp.json().get('message', {}).get('content', '')
 
 
-def _create_rule(user, params: dict) -> dict:
-    from app.features.rule import rule_core as RuleModel
-    from app.features.rule.rule_format.main_format import verify_syntax_rule_by_format
+def _looks_like_rule_content(content: str) -> bool:
+    """A hallucinated placeholder ('rule', 'test rule', ...) shouldn't reach
+    the syntax validator and produce a confusing technical error — real rule
+    content is never just one bare word, it always has some structure."""
+    text = content.strip()
+    if len(text) < 15:
+        return False
+    return any(c in text for c in ('{', ':', '\n'))
 
-    title = (params.get('title') or '').strip()
+
+def _create_rule(user, params: dict) -> dict:
+    from app.features.rule.rule_format.main_format import parse_rule_by_format, verify_syntax_rule_by_format
+
     fmt = (params.get('format') or '').strip().lower()
     content = params.get('content') or ''
 
-    if not title or not content:
-        return {"success": False, "reply": "I still need a title and the rule content to create it."}
+    if not content or not _looks_like_rule_content(content):
+        return {"success": False, "reply": "I still need the actual rule content to create it — paste the rule text you'd like me to use."}
     if fmt not in _VALID_FORMATS:
         return {"success": False, "reply": f"'{fmt}' isn't a format Rulezet knows — try one of: {', '.join(sorted(_VALID_FORMATS))}."}
 
-    form_dict = {
-        "title": title,
-        "format": fmt,
-        "license": "unknown",
-        "description": params.get('description') or 'Created via the chatbot.',
-        "source": "chatbot",
-        "author": user.get_username(),
-        "version": "1.0",
-        "to_string": content,
-    }
-
-    # Same syntax check the manual create-rule form runs — a rule that
-    # doesn't parse for its declared format must never be silently created,
-    # and the user needs to actually see *why* it failed.
-    valid, syntax_error = verify_syntax_rule_by_format(form_dict)
+    # Same syntax check the manual create-rule form runs, kept only for a
+    # detailed error message — parse_rule_by_format below re-validates
+    # internally too but only ever reports a generic "Invalid rule" on failure.
+    valid, syntax_error = verify_syntax_rule_by_format({"format": fmt, "to_string": content})
     if not valid:
         return {"success": False, "reply": f"Your content doesn't pass the validator with this error: {syntax_error}"}
 
-    result, message = RuleModel.add_rule_core(form_dict, user)
-    if result is False:
+    # Same parse-and-import path /rule/create_rule's "Parse" tab uses — title
+    # and other metadata are extracted straight from the rule content itself
+    # (e.g. YARA's `rule <name> { ... }` name), so the model never has to
+    # invent a title; duplicate-checking and creation happen in this one call.
+    success, message, rule = parse_rule_by_format(content, user, fmt)
+    if not success:
+        if rule is not None:
+            return {"success": False, "reply": message, "link": f"/rule/detail_rule/{rule.id}"}
         return {"success": False, "reply": f"Couldn't create the rule: {message}"}
-    return {"success": True, "reply": f"Done — created \"{title}\".", "link": f"/rule/detail_rule/{result.id}"}
+
+    return {"success": True, "reply": f"Done — created \"{rule.title}\".", "link": f"/rule/detail_rule/{rule.id}"}
 
 
 def _resolve_format(raw_fmt: str):
@@ -453,14 +457,25 @@ def _dispatch_message(user, history: list, message: str) -> dict:
         # as rule content, producing a confusing syntax-error reply). Only
         # honor create_rule if a creation verb appears somewhere in the recent
         # exchange — checking ONLY the current message broke legitimate
-        # multi-turn flows: once we've asked "I still need a title/content",
-        # the user's next reply is naturally just "title: x, content: y" with
-        # no verb at all, and that must still go through.
+        # multi-turn flows: once we've asked "I still need the rule content",
+        # the user's next reply is naturally just the content itself with no
+        # verb at all, and that must still go through.
         recent_user_text = message + ' ' + ' '.join(
             h.get('content', '') for h in history[-6:] if h.get('role') == 'user'
         )
         if not _CREATE_VERBS_RE.search(recent_user_text):
             return {"action": "ask", "reply": "Sorry, I'm not sure what you'd like me to do — could you rephrase that?", "success": True}
+
+        # The model must extract rule content from what the user actually
+        # typed, never invent it — a "looks rule-shaped" check on the content
+        # alone isn't enough (seen live: fabricated content with a colon/brace
+        # still slipped through and hit the validator). Require it to really
+        # appear, whitespace differences aside, in the user's own recent text.
+        content = params.get('content') or ''
+        normalize = lambda s: ' '.join(s.split())
+        if content and normalize(content) not in normalize(recent_user_text):
+            return {"action": "ask", "reply": "I still need the actual rule content to create it — paste the rule text you'd like me to use.", "success": True}
+
         outcome = _create_rule(user, params)
         return {"action": action, **outcome}
     if action == 'create_bundle':
