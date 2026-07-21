@@ -1949,6 +1949,90 @@ class LogActionDefinition(db.Model):
         }
 
 
+########################################
+#   Chatbot Conversation History       #
+########################################
+
+class ChatbotConversation(db.Model):
+    """One chatbot widget session — groups every message exchanged while it was open
+    so admins can review, on /chatbot/admin/conversations, what the assistant was
+    asked and how it responded."""
+    __tablename__ = 'chatbot_conversation'
+
+    id              = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid            = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    user_id         = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    started_at      = db.Column(db.DateTime, nullable=False,
+                                default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    last_message_at = db.Column(db.DateTime, nullable=False,
+                                default=lambda: datetime.datetime.now(datetime.timezone.utc), index=True)
+    message_count   = db.Column(db.Integer, nullable=False, default=0)
+    # How many assistant replies in this conversation had success=False (a
+    # syntax error, an unresolvable format, etc.) — denormalized so the list
+    # view can flag problem conversations without an extra query per row.
+    error_count     = db.Column(db.Integer, nullable=False, default=0, index=True)
+
+    user     = db.relationship('User', backref=db.backref('chatbot_conversations', lazy='dynamic'))
+    messages = db.relationship('ChatbotMessage', backref='conversation', lazy='dynamic',
+                               order_by='ChatbotMessage.id', cascade='all, delete-orphan')
+
+    def to_json(self):
+        username = "Unknown"
+        avatar = None
+        try:
+            if self.user:
+                username = self.user.get_username()
+                avatar = self.user.get_avatar_url()
+        except Exception:
+            pass
+        return {
+            "id":              self.id,
+            "uuid":            self.uuid,
+            "user_id":         self.user_id,
+            "username":        username,
+            "avatar":          avatar,
+            "started_at":      self.started_at.strftime('%Y-%m-%dT%H:%M:%S') + 'Z',
+            "last_message_at": self.last_message_at.strftime('%Y-%m-%dT%H:%M:%S') + 'Z',
+            "message_count":   self.message_count,
+            "error_count":     self.error_count,
+        }
+
+
+class ChatbotMessage(db.Model):
+    """Single message row — one per user message AND one per assistant reply,
+    so a full back-and-forth transcript can be replayed in order."""
+    __tablename__ = 'chatbot_message'
+
+    id              = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('chatbot_conversation.id', ondelete='CASCADE'),
+                                nullable=False, index=True)
+
+    role    = db.Column(db.String(16), nullable=False)   # "user" | "assistant"
+    content = db.Column(db.Text, nullable=False)
+
+    # assistant-only: which action the model (or a deterministic shortcut) picked,
+    # and whether it succeeded — NULL for user messages
+    action  = db.Column(db.String(32), nullable=True)
+    success = db.Column(db.Boolean, nullable=True)
+
+    # whatever extra payload the reply carried — redirect/link/links
+    meta = db.Column(db.JSON, nullable=True)
+
+    created_at = db.Column(db.DateTime, nullable=False,
+                           default=lambda: datetime.datetime.now(datetime.timezone.utc), index=True)
+
+    def to_json(self):
+        return {
+            "id":         self.id,
+            "role":       self.role,
+            "content":    self.content,
+            "action":     self.action,
+            "success":    self.success,
+            "meta":       self.meta,
+            "created_at": self.created_at.strftime('%Y-%m-%dT%H:%M:%S') + 'Z',
+        }
+
+
 class PivotickBackground(db.Model):
     """Admin-uploaded background image for PivoTick graph canvases.
 

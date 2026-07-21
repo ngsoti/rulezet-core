@@ -23,6 +23,17 @@ class Config:
     INSTANCE_PUBLIC_URL  = os.environ.get('INSTANCE_PUBLIC_URL')   # e.g. https://myinstance.example.com
     IS_OFFICIAL_INSTANCE = os.environ.get('IS_OFFICIAL_INSTANCE', 'false').lower() == 'true'
 
+    # Self-hosted Ollama instance backing the in-app chatbot prototype.
+    # Run one locally with e.g. `ollama serve` (and `ollama pull qwen2.5:1.5b`) —
+    # no API key, no billing, everything stays on this machine.
+    # qwen2.5:1.5b over the 3b version: on CPU-only hardware the 3b model was
+    # taking 30-100+s per reply once the action-dispatch prompt grew to cover
+    # search/navigate/format rules — 1.5b answers in a few seconds instead.
+    # If you have a GPU (or more patience), qwen2.5:3b follows the multi-rule
+    # instructions slightly more reliably; set OLLAMA_MODEL to switch back.
+    OLLAMA_URL   = os.environ.get('OLLAMA_URL', 'http://localhost:11434')
+    OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'qwen2.5:1.5b')
+
     MAIL_SERVER   = os.environ.get('MAIL_SERVER',   'smtp.gmail.com')
     MAIL_PORT     = int(os.environ.get('MAIL_PORT', 587))
     MAIL_USE_TLS  = os.environ.get('MAIL_USE_TLS',  'true').lower() == 'true'
