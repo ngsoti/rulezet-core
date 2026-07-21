@@ -1001,6 +1001,45 @@ def get_rules_page_favorite(page, id_user, search=None, author=None, sort_by=Non
     return query.paginate(page=page, per_page=per_page, error_out=False)
 
 
+##########################
+#   Voted (liked) rule   #
+##########################
+
+def get_rules_page_voted(page, id_user, vote_type=None, search=None, author=None, rule_type=None, per_page=30):
+    """Get paginated rules the user has liked/disliked.
+
+    vote_type: 'up' (liked), 'down' (disliked), or None/'both' for either.
+    """
+    query = _active()\
+        .join(RuleVote, Rule.id == RuleVote.rule_id)\
+        .filter(RuleVote.user_id == id_user)
+
+    if vote_type in ('up', 'down'):
+        query = query.filter(RuleVote.vote_type == vote_type)
+
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                Rule.title.ilike(search_lower),
+                Rule.description.ilike(search_lower),
+                Rule.format.ilike(search_lower),
+                Rule.author.ilike(search_lower),
+                Rule.to_string.ilike(search_lower)
+            )
+        )
+
+    if author:
+        query = query.filter(Rule.author.ilike(f"%{author.lower()}%"))
+
+    if rule_type:
+        query = query.filter(Rule.format.ilike(f"%{rule_type.lower()}%"))
+
+    query = query.order_by(RuleVote.created_at.desc())
+
+    return query.paginate(page=page, per_page=per_page, error_out=False)
+
+
 #########################
 #   Propose edit rule   #
 #########################

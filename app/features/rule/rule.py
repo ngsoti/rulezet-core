@@ -3561,6 +3561,50 @@ def rules_data_table_favorites():
     }), 200
 
 
+@rule_blueprint.route("/data_table_votes", methods=['GET'])
+@login_required
+def rules_data_table_votes():
+    """Liked/disliked rules listing in RuleList format."""
+    per_page   = request.args.get('per_page', 12, type=int)
+    page       = request.args.get('page', 1, type=int)
+    search     = request.args.get('search', None, type=str)
+    vote_type  = request.args.get('vote_type', None, type=str)  # 'up' | 'down' | None (both)
+    pagination = RuleModel.get_rules_page_voted(
+        page, current_user.id,
+        vote_type=vote_type,
+        search=search,
+        per_page=per_page,
+    )
+    rule_ids     = [r.id for r in pagination.items]
+    tags_by_rule = RuleModel.get_tags_for_rules_batch(rule_ids)
+
+    from app.core.db_class.db import RuleVote as _RV
+    votes_map = {}
+    if rule_ids:
+        rows = _RV.query.filter(
+            _RV.rule_id.in_(rule_ids),
+            _RV.user_id == current_user.id
+        ).all()
+        votes_map = {v.rule_id: v.vote_type for v in rows}
+
+    items = []
+    for r in pagination.items:
+        d = r.to_json()
+        d['tags'] = [t.to_json() for t in tags_by_rule.get(r.id, [])]
+        try:
+            cves = json.loads(r.cve_id) if r.cve_id else []
+            d['cves'] = cves if isinstance(cves, list) else []
+        except (ValueError, TypeError):
+            d['cves'] = []
+        d['user_vote'] = votes_map.get(r.id)
+        items.append(d)
+    return jsonify({
+        "items":       items,
+        "total":       pagination.total,
+        "total_pages": pagination.pages,
+    }), 200
+
+
 @rule_blueprint.route("/github_source_stats", methods=['GET'])
 def github_source_stats():
     """Aggregate stats for one GitHub source URL (GitHub dashboard header)."""

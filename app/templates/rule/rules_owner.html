@@ -45,12 +45,21 @@
         </a>
 
         <!-- My Favorites -->
-        <a href="#" 
-           class="dr-nav__item" 
+        <a href="#"
+           class="dr-nav__item"
            :class="activeTab === 'favorites' ? 'active' : ''"
            @click.prevent="activeTab = 'favorites'; favOpened = true">
             <i class="fas fa-star"></i>
             <span>My Favorites</span>
+        </a>
+
+        <!-- My Likes -->
+        <a href="#"
+           class="dr-nav__item"
+           :class="activeTab === 'likes' ? 'active' : ''"
+           @click.prevent="activeTab = 'likes'; likesOpened = true">
+            <i class="fas fa-thumbs-up"></i>
+            <span>My Likes</span>
         </a>
     </nav>
 
@@ -97,12 +106,49 @@
         </rule-list>
     </div>
 
+    <!-- My Likes tab — lazy: only mounted after first click -->
+    <div v-if="likesOpened" v-show="activeTab === 'likes'">
+        <div class="d-flex justify-content-end gap-2 mb-3">
+            <button class="btn btn-sm rounded-pill px-3"
+                    :class="voteFilter === 'up' ? 'btn-primary' : 'btn-outline-secondary'"
+                    @click="voteFilter = 'up'">
+                <i class="fa-solid fa-thumbs-up me-1"></i>Liked
+            </button>
+            <button class="btn btn-sm rounded-pill px-3"
+                    :class="voteFilter === 'down' ? 'btn-primary' : 'btn-outline-secondary'"
+                    @click="voteFilter = 'down'">
+                <i class="fa-solid fa-thumbs-down me-1"></i>Disliked
+            </button>
+            <button class="btn btn-sm rounded-pill px-3"
+                    :class="voteFilter === 'both' ? 'btn-primary' : 'btn-outline-secondary'"
+                    @click="voteFilter = 'both'">
+                <i class="fa-solid fa-list me-1"></i>Both
+            </button>
+        </div>
+        <rule-list
+            :key="'votes-' + voteFilter"
+            mode="manage"
+            default-view="table"
+            :fetch-url="votesFetchUrl"
+            :current-user-id="currentUserId"
+            :current-user-is-admin="isAdmin"
+            :can-vote="true"
+            :can-favorite="true"
+            :current-user-is-authenticated="true"
+            :csrf-token="csrfToken"
+            :bulk-actions="[
+                { key: 'download', label: 'Download',      icon: 'fa-download' },
+                { key: 'bundle',   label: 'Add to bundle', icon: 'fa-layer-group' },
+            ]">
+        </rule-list>
+    </div>
+
 </div>
 {% endblock %}
 
 {% block script %}
 <script type="module">
-    const { createApp, ref } = Vue
+    const { createApp, ref, computed } = Vue
     import RuleList                  from '/static/js/rule/ruleList.js'
     import TagsDisplaysList          from '/static/js/tags/tagsDisplaysList.js'
     import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js'
@@ -119,8 +165,16 @@
             'vulnerability-displays-list': VulnerabilityDisplaysList,
         },
         setup() {
-            const activeTab = ref('rules')
-            const favOpened = ref(false)
+            const activeTab   = ref('rules')
+            const favOpened   = ref(false)
+            const likesOpened = ref(false)
+            const voteFilter  = ref('up')  // 'up' | 'down' | 'both'
+
+            const votesFetchUrl = computed(() =>
+                voteFilter.value === 'both'
+                    ? '/rule/data_table_votes'
+                    : `/rule/data_table_votes?vote_type=${voteFilter.value}`
+            )
 
             function goToAddRule() { window.location.href = '/rule/create_rule' }
 
@@ -139,7 +193,10 @@
                 }
             }
 
-            return { activeTab, favOpened, csrfToken, currentUserId, isAdmin, goToAddRule, handleDelete }
+            return {
+                activeTab, favOpened, likesOpened, voteFilter, votesFetchUrl,
+                csrfToken, currentUserId, isAdmin, goToAddRule, handleDelete,
+            }
         }
     }).mount('#main-container')
 </script>
