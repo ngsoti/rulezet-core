@@ -78,6 +78,13 @@ def resend_verification_code_core(user_id) -> bool:
     """Resend the verification code to the user"""
     user = get_user(user_id)
     if user:
+        # An already-verified account has no legitimate reason to receive a
+        # new code — allowing it lets an unauthenticated caller manufacture a
+        # verification_expiration timestamp for an arbitrary verified user
+        # (one that never had one set), which the /verify/<id> route would
+        # then delete once that timestamp passed. See the guard added there.
+        if user.is_verified:
+            return False, "Account is already verified"
         user.verification_code = str(random.randint(100000, 999999))
         user.verification_expiration = datetime.datetime.now(timezone.utc).replace(tzinfo=None) + TIME_EMAIL_EXPIRATION
         db.session.commit()
@@ -752,27 +759,29 @@ def get_process_requests_page_user(page, per_page=20) -> dict:
 
 def is_the_owner(request_id) -> bool:
     """
-    Return True if the current user is the owner of the request
-    or if they are one of the editors (authors) of the rules from the same source.
+    Return True if the current user is the owner of the single rule this
+    request concerns.
+
+    Source-scoped (bulk, multi-rule) requests are deliberately NOT
+    self-approvable here — `source` is a free-text field any user can set on
+    their own rule at creation time, so "is an editor of a rule with this
+    source" used to mean "typed the same source string on a throwaway rule",
+    letting anyone claim ownership of every rule sharing that source. Bulk
+    transfers by source now always require an admin (both call sites already
+    `or` this with `current_user.is_admin()` — see app/home.py), matching how
+    the Manual Ownership admin tool handles the same kind of bulk transfer.
     """
     request = RequestOwnerRule.query.get(request_id)
     if not request:
         return False
-    
-    if request.rule_source == None:
+
+    if request.rule_source is None:
         rule = RuleModel.get_rule(request.rule_id)
-        if rule.user_id == current_user.id:
+        if rule and rule.user_id == current_user.id:
             return True
-        else:
-            return False
-    else:
-        rules = RuleModel.get_rule_by_source(request.rule_source)
-        editor_list = RuleModel.get_all_editor_from_rules_list(rules)
-
-        if editor_list and current_user.id in editor_list:
-            return True
-
         return False
+
+    return False
 
 def get_total_requests_to_check_admin() -> int:
     """Return the total count of requests with status 'pending'."""

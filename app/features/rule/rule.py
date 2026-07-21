@@ -1501,7 +1501,8 @@ def manage_proposals() -> jsonify:
         mode=mode,
         selected_ids=selected_ids,
         excluded_ids=excluded_ids,
-        reviewed_by_id=current_user.id
+        reviewed_by_id=current_user.id,
+        is_admin=current_user.is_admin(),
     )
 
     if result["success"]:

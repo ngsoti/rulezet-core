@@ -1043,21 +1043,32 @@ def propose_edit_core(form , user_id) -> bool:
     return True , new_proposal.id
 
 
-def bulk_manage_proposals(action: str, mode: str, selected_ids: list, excluded_ids: list, reviewed_by_id: int) -> dict:
-    """Bulk accept or reject proposals"""
+def bulk_manage_proposals(action: str, mode: str, selected_ids: list, excluded_ids: list, reviewed_by_id: int, is_admin: bool = False) -> dict:
+    """Bulk accept or reject proposals.
+
+    Non-admins may only ever affect proposals against rules they own — this
+    is enforced at the query level (not just checked-and-skipped per item)
+    so "mode=all" for a regular user means "all of my rules' pending
+    proposals", never every pending proposal system-wide.
+    """
     import datetime
 
     try:
         if mode == "all":
             query = RuleEditProposal.query.filter_by(status="pending")
+            if not is_admin:
+                query = query.join(Rule, Rule.id == RuleEditProposal.rule_id).filter(Rule.user_id == reviewed_by_id)
             if excluded_ids:
                 query = query.filter(~RuleEditProposal.id.in_(excluded_ids))
             proposals = query.all()
         else:
-            proposals = RuleEditProposal.query.filter(
+            query = RuleEditProposal.query.filter(
                 RuleEditProposal.id.in_(selected_ids),
                 RuleEditProposal.status == "pending"
-            ).all()
+            )
+            if not is_admin:
+                query = query.join(Rule, Rule.id == RuleEditProposal.rule_id).filter(Rule.user_id == reviewed_by_id)
+            proposals = query.all()
 
         if not proposals:
             return {"success": False, "message": "No proposals found."}
@@ -1066,11 +1077,14 @@ def bulk_manage_proposals(action: str, mode: str, selected_ids: list, excluded_i
         count = 0
 
         for proposal in proposals:
-            # check permission: only rule owner or admin
+            # Ownership already enforced above at the query level for
+            # non-admins; this just fetches the rule to update its content.
             rule = get_rule(proposal.rule_id)
             if not rule:
                 continue
-            
+            if not is_admin and rule.user_id != reviewed_by_id:
+                continue
+
             proposal.status = "accepted" if action == "accept" else "rejected"
             proposal.reviewed_by_id = reviewed_by_id
             proposal.reviewed_at = now

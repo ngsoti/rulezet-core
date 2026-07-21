@@ -406,7 +406,7 @@ class ImportRulesFromGithub(Resource):
         if not user:
             return {"success": False, "message": "Unauthorized"}, 403
 
-        if not user.is_admin:
+        if not user.is_admin():
             return {"success": False, "message": "You have to be an admin to import"}, 400
 
         data = request.get_json(silent=True) or request.args.to_dict()

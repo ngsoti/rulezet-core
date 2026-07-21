@@ -701,6 +701,11 @@ def public_file_download(file_uuid):
         abort(404)
 
     as_attachment = request.args.get('download', '0') == '1'
+    # SVG can carry a <script> that a browser will execute when the file is
+    # rendered inline as its own document — never let one of those serve
+    # inline, force a download regardless of the caller's `?download` choice.
+    if bf.mime_type == 'image/svg+xml':
+        as_attachment = True
     return send_file(path, as_attachment=as_attachment, download_name=bf.original_name, mimetype=bf.mime_type)
 
 

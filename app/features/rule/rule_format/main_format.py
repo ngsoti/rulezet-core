@@ -1,11 +1,42 @@
+import os
+
 from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult, load_all_rule_formats
 from .... import db
 from ....core.db_class.db import *
-from app.features.rule.rule_format.available_format import * 
+from app.features.rule.rule_format.available_format import *
 
 from app.features.rule import rule_core as RuleModel
 from app.features.rule.rules_core import bad_rule_core as BadRuleModel
 from flask_login import current_user
+
+
+def _safe_repo_files(repo_dir: str):
+    """Walk repo_dir and yield only files that are safe to read.
+
+    Mirrors the protection already used by the interactive GitHub-import flow
+    (session_class.py): a cloned repository is attacker-controlled content, so
+    a symlink inside it (e.g. rule.yar -> /etc/passwd) must never be followed
+    — open() follows symlinks transparently, which would leak arbitrary
+    filesystem content as if it were a rule. Symlinked files and symlinked
+    directories are both rejected, plus a realpath containment check as
+    defense in depth against a symlinked ancestor directory.
+    """
+    repo_real = os.path.realpath(repo_dir)
+    for root, dirs, files in os.walk(repo_dir, followlinks=False):
+        dirs[:] = [
+            d for d in dirs
+            if not d.startswith(('.', '_')) and not os.path.islink(os.path.join(root, d))
+        ]
+        for file in files:
+            if file.startswith(('.', '_')):
+                continue
+            filepath = os.path.join(root, file)
+            if os.path.islink(filepath):
+                continue
+            real_filepath = os.path.realpath(filepath)
+            if real_filepath != repo_real and not real_filepath.startswith(repo_real + os.sep):
+                continue
+            yield filepath
 
 #############################################################################################
 # Map format -> class                                                                       #
@@ -75,19 +106,26 @@ async def extract_rule_from_repo(repo_dir: str, info: dict, user: User):
     # Get all subclasses of RuleType
     subclasses = RuleType.__subclasses__()
 
-    # __subclasses__() : 
+    # __subclasses__() :
     # Thanks to that methode we can add new format without changing this function
     # The function is able to parse all the formats implemented in the rule_formats folder
     # Just need to add the new class in the rule_formats folder and implement the abstract methods
     # No need to change this function
 
+    # Walk the repo once (symlink-safe — see _safe_repo_files), then let each
+    # format claim the files it recognizes by extension. `get_rule_files` is a
+    # per-file boolean matcher (file.endswith(...)), not a directory walker —
+    # calling it directly with repo_dir here used to silently return False
+    # and crash Process_rules_by_format trying to iterate over it.
+    safe_files = list(_safe_repo_files(repo_dir))
+
     for RuleClass in subclasses:
         rule_instance = RuleClass()
 
-        format_name = rule_instance.format       
-        #class_name = rule_instance.get_class()  
+        format_name = rule_instance.format
+        #class_name = rule_instance.get_class()
 
-        files = rule_instance.get_rule_files(repo_dir)
+        files = [f for f in safe_files if rule_instance.get_rule_files(os.path.basename(f))]
 
         bad, imported_count, skipped_count = Process_rules_by_format(
             files, rule_instance, info, format_name, user

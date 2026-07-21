@@ -131,8 +131,11 @@ def user_mini(user_id):
 @account_blueprint.route("/get_user")
 @login_required
 def get_user() -> jsonify:
-    """Give the user section"""
-    user_id = request.args.get('user_id',type=int)
+    """Give the user section — full record (incl. email/admin status) is only
+    ever returned for yourself or, if you're an admin, anyone."""
+    user_id = request.args.get('user_id', type=int)
+    if user_id != current_user.id and not current_user.is_admin():
+        return jsonify({"success": False, "message": "Forbidden"}), 403
     my_user = AccountModel.get_user(user_id)
     if my_user:
         return jsonify({"success": True, "user": my_user.to_json()})
@@ -142,8 +145,11 @@ def get_user() -> jsonify:
 @account_blueprint.route("/get_user_donne")
 @login_required
 def get_user_donne() -> jsonify:
-    """Return the user activity and metadata."""
+    """Return the user activity and metadata — self or admin only, same
+    reasoning as get_user above (this also exposes email/admin status)."""
     user_id = request.args.get('user_id', type=int)
+    if user_id != current_user.id and not current_user.is_admin():
+        return jsonify({"success": False, "message": "Forbidden"}), 403
     user_data = AccountModel.get_user_data_full(user_id)
     if user_data:
         return jsonify({"success": True, "donne": user_data})
@@ -451,7 +457,12 @@ def verify(user_id):
         return redirect("/account/login")
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    if now > user.verification_expiration:
+    # Never delete an already-verified account just because this stale
+    # timestamp is in the past — verification_expiration only means anything
+    # for an account that's still awaiting its first verification. Without
+    # this guard, anyone could delete an arbitrary verified user by hitting
+    # this route once their (now-irrelevant) original code had expired.
+    if not user.is_verified and user.verification_expiration and now > user.verification_expiration:
         # delete user
         AccountModel.delete_user_core(user_id)
         flash("Code expired. Your account has been deleted. Please register again.", "error")

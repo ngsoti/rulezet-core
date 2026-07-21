@@ -535,6 +535,18 @@ def update_request_bulk() -> jsonify:
     if not (current_user.is_admin() or is_the_owner):
         return jsonify({"success": False, "error": "Forbidden"}), 403
 
+    # Defense in depth: rule_ids comes straight from the client — never trust
+    # it wholesale. Only rules that actually belong to this request's own
+    # scope (its declared source, or its single target rule) may be
+    # transferred, regardless of what else was submitted in the payload.
+    if request_.rule_source is not None:
+        allowed_ids = {r.id for r in RuleModel.get_rule_by_source(request_.rule_source)}
+    else:
+        allowed_ids = {request_.rule_id} if request_.rule_id else set()
+    rule_ids = [rid for rid in rule_ids if rid in allowed_ids]
+    if not rule_ids:
+        return jsonify({"success": False, "error": "No rules in this request match its scope"}), 400
+
     from app.features.jobs.jobs_core import create_job
     job = create_job(
         job_type   = 'ownership_transfer_bulk',
