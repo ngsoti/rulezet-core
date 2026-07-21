@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rulezet — Full Documentation &amp; Report</title>
+  <meta name="description" content="The complete Rulezet documentation: why it exists, every feature explained with concepts and real usage examples, and how the platform is built." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docs/full_documentation.css') }}">
+
+  <!-- Prevent flash of wrong theme before JS runs -->
+  <script>
+    (function(){
+      // Storage access can throw (sandboxed preview iframes, private-browsing
+      // modes, disabled storage) — never let that stop the page from rendering.
+      var t = null;
+      try { t = localStorage.getItem('rz-doc-theme'); } catch (e) {}
+      if (t) { document.documentElement.setAttribute('data-theme', t); }
+      else if (window.matchMedia('(prefers-color-scheme:dark)').matches) { document.documentElement.setAttribute('data-theme','dark'); }
+    })();
+  </script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ══════════════════════════ SIDEBAR ══════════════════════════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Documentation navigation">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-name">Rulezet</span>
+        <span class="sidebar-logo-version">Full Documentation</span>
+      </div>
+    </div>
+
+    <div class="doc-switcher" role="tablist" aria-label="Documentation section">
+      <a href="{{ url_for('docs.quick_start') }}" role="tab" aria-selected="false"><span>Quick Start</span></a>
+      <a href="{{ url_for('docs.full_documentation') }}" class="active" role="tab" aria-selected="true"><span>Full Documentation</span></a>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="Chapters" id="sidebarNav">
+      <!-- ── PART I ── -->
+      <button class="sidebar-part" aria-expanded="true" aria-controls="part1-links">
+        <span class="sidebar-part-label"><span>Part I — Introduction</span></span>
+        <i class="fas fa-chevron-down chev" aria-hidden="true"></i>
+      </button>
+      <div class="sidebar-part-links" id="part1-links">
+        <a class="sidebar-link" href="#ch1" data-section="ch1" data-title="1. Foreword"><span class="sidebar-num">1</span><i class="fas fa-building" aria-hidden="true"></i><span>Foreword — CIRCL &amp; NGSOTI</span></a>
+        <a class="sidebar-link" href="#ch2" data-section="ch2" data-title="2. The Problem"><span class="sidebar-num">2</span><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>The Problem</span></a>
+        <a class="sidebar-link" href="#ch3" data-section="ch3" data-title="3. What Is Rulezet"><span class="sidebar-num">3</span><i class="fas fa-bullseye" aria-hidden="true"></i><span>What Is Rulezet</span></a>
+        <a class="sidebar-link" href="#ch4" data-section="ch4" data-title="4. Audience &amp; How to Read"><span class="sidebar-num">4</span><i class="fas fa-user-group" aria-hidden="true"></i><span>Audience &amp; How to Read</span></a>
+        <a class="sidebar-link" href="#ch5" data-section="ch5" data-title="5. Core Terminology"><span class="sidebar-num">5</span><i class="fas fa-book" aria-hidden="true"></i><span>Core Terminology</span></a>
+      </div>
+
+      <!-- ── PART II ── -->
+      <button class="sidebar-part" aria-expanded="true" aria-controls="part2-links">
+        <span class="sidebar-part-label"><span>Part II — Feature Guide</span></span>
+        <i class="fas fa-chevron-down chev" aria-hidden="true"></i>
+      </button>
+      <div class="sidebar-part-links" id="part2-links">
+        <a class="sidebar-link" href="#ch6" data-section="ch6" data-title="6. Accounts, Roles &amp; Permissions"><span class="sidebar-num">6</span><i class="fas fa-user-shield" aria-hidden="true"></i><span>Accounts &amp; Roles</span></a>
+        <a class="sidebar-link" href="#ch7" data-section="ch7" data-title="7. Rule Management"><span class="sidebar-num">7</span><i class="fas fa-file-shield" aria-hidden="true"></i><span>Rule Management</span></a>
+        <a class="sidebar-link" href="#ch8" data-section="ch8" data-title="8. Validation &amp; Similarity"><span class="sidebar-num">8</span><i class="fas fa-check-double" aria-hidden="true"></i><span>Validation &amp; Similarity</span></a>
+        <a class="sidebar-link" href="#ch9" data-section="ch9" data-title="9. Edit Proposals"><span class="sidebar-num">9</span><i class="fas fa-code-pull-request" aria-hidden="true"></i><span>Edit Proposals</span></a>
+        <a class="sidebar-link" href="#ch10" data-section="ch10" data-title="10. Ownership &amp; Requests"><span class="sidebar-num">10</span><i class="fas fa-right-left" aria-hidden="true"></i><span>Ownership &amp; Requests</span></a>
+        <a class="sidebar-link" href="#ch11" data-section="ch11" data-title="11. Bundles"><span class="sidebar-num">11</span><i class="fas fa-layer-group" aria-hidden="true"></i><span>Bundles</span></a>
+        <a class="sidebar-link" href="#ch12" data-section="ch12" data-title="12. Rule History"><span class="sidebar-num">12</span><i class="fas fa-clock-rotate-left" aria-hidden="true"></i><span>Rule History</span></a>
+        <a class="sidebar-link" href="#ch13" data-section="ch13" data-title="13. Tags &amp; MISP Taxonomies"><span class="sidebar-num">13</span><i class="fas fa-tags" aria-hidden="true"></i><span>Tags &amp; Taxonomies</span></a>
+        <a class="sidebar-link" href="#ch14" data-section="ch14" data-title="14. MITRE ATT&amp;CK Mapping"><span class="sidebar-num">14</span><i class="fas fa-crosshairs" aria-hidden="true"></i><span>ATT&amp;CK Mapping</span></a>
+        <a class="sidebar-link" href="#ch15" data-section="ch15" data-title="15. Community &amp; Moderation"><span class="sidebar-num">15</span><i class="fas fa-comments" aria-hidden="true"></i><span>Community &amp; Moderation</span></a>
+        <a class="sidebar-link" href="#ch16" data-section="ch16" data-title="16. Blog"><span class="sidebar-num">16</span><i class="fas fa-newspaper" aria-hidden="true"></i><span>Blog</span></a>
+        <a class="sidebar-link" href="#ch17" data-section="ch17" data-title="17. Workspaces"><span class="sidebar-num">17</span><i class="fas fa-folder-tree" aria-hidden="true"></i><span>Workspaces</span></a>
+        <a class="sidebar-link" href="#ch18" data-section="ch18" data-title="18. Gamification"><span class="sidebar-num">18</span><i class="fas fa-trophy" aria-hidden="true"></i><span>Gamification</span></a>
+        <a class="sidebar-link" href="#ch19" data-section="ch19" data-title="19. Notifications"><span class="sidebar-num">19</span><i class="fas fa-bell" aria-hidden="true"></i><span>Notifications</span></a>
+        <a class="sidebar-link" href="#ch20" data-section="ch20" data-title="20. Rule Tester"><span class="sidebar-num">20</span><i class="fas fa-flask" aria-hidden="true"></i><span>Rule Tester</span></a>
+        <a class="sidebar-link" href="#ch21" data-section="ch21" data-title="21. Dashboard"><span class="sidebar-num">21</span><i class="fas fa-gauge-high" aria-hidden="true"></i><span>Dashboard</span></a>
+        <a class="sidebar-link" href="#ch22" data-section="ch22" data-title="22. Connectors &amp; Federation"><span class="sidebar-num">22</span><i class="fas fa-network-wired" aria-hidden="true"></i><span>Connectors &amp; Federation</span></a>
+        <a class="sidebar-link" href="#ch23" data-section="ch23" data-title="23. Background Jobs"><span class="sidebar-num">23</span><i class="fas fa-gears" aria-hidden="true"></i><span>Background Jobs</span></a>
+        <a class="sidebar-link" href="#ch24" data-section="ch24" data-title="24. Activity Log"><span class="sidebar-num">24</span><i class="fas fa-list-check" aria-hidden="true"></i><span>Activity Log</span></a>
+        <a class="sidebar-link" href="#ch25" data-section="ch25" data-title="25. Administration"><span class="sidebar-num">25</span><i class="fas fa-user-gear" aria-hidden="true"></i><span>Administration</span></a>
+        <a class="sidebar-link" href="#ch26" data-section="ch26" data-title="26. Public REST API"><span class="sidebar-num">26</span><i class="fas fa-plug" aria-hidden="true"></i><span>Public REST API</span></a>
+      </div>
+
+      <!-- ── PART III ── -->
+      <button class="sidebar-part" aria-expanded="true" aria-controls="part3-links">
+        <span class="sidebar-part-label"><span>Part III — Architecture</span></span>
+        <i class="fas fa-chevron-down chev" aria-hidden="true"></i>
+      </button>
+      <div class="sidebar-part-links" id="part3-links">
+        <a class="sidebar-link" href="#ch27" data-section="ch27" data-title="27. System Architecture"><span class="sidebar-num">27</span><i class="fas fa-sitemap" aria-hidden="true"></i><span>System Architecture</span></a>
+        <a class="sidebar-link" href="#ch28" data-section="ch28" data-title="28. Background Job Engine"><span class="sidebar-num">28</span><i class="fas fa-cogs" aria-hidden="true"></i><span>Job Engine</span></a>
+        <a class="sidebar-link" href="#ch29" data-section="ch29" data-title="29. Rule Format Engine"><span class="sidebar-num">29</span><i class="fas fa-puzzle-piece" aria-hidden="true"></i><span>Format Engine</span></a>
+        <a class="sidebar-link" href="#ch30" data-section="ch30" data-title="30. Frontend Architecture"><span class="sidebar-num">30</span><i class="fas fa-display" aria-hidden="true"></i><span>Frontend Architecture</span></a>
+        <a class="sidebar-link" href="#ch31" data-section="ch31" data-title="31. Conventions to Respect"><span class="sidebar-num">31</span><i class="fas fa-clipboard-check" aria-hidden="true"></i><span>Conventions to Respect</span></a>
+      </div>
+
+      <!-- ── PART IV ── -->
+      <button class="sidebar-part" aria-expanded="true" aria-controls="part4-links">
+        <span class="sidebar-part-label"><span>Part IV — Appendices</span></span>
+        <i class="fas fa-chevron-down chev" aria-hidden="true"></i>
+      </button>
+      <div class="sidebar-part-links" id="part4-links">
+        <a class="sidebar-link" href="#appendix-a" data-section="appendix-a" data-title="A. Glossary"><span class="sidebar-num">A</span><i class="fas fa-book-open" aria-hidden="true"></i><span>Glossary</span></a>
+        <a class="sidebar-link" href="#appendix-b" data-section="appendix-b" data-title="B. Roadmap"><span class="sidebar-num">B</span><i class="fas fa-road" aria-hidden="true"></i><span>Roadmap</span></a>
+        <a class="sidebar-link" href="#appendix-c" data-section="appendix-c" data-title="C. Screenshot Checklist"><span class="sidebar-num">C</span><i class="fas fa-camera-retro" aria-hidden="true"></i><span>Screenshot Checklist</span></a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ══════════════════════════ MAIN ══════════════════════════ -->
+  <div class="main">
+    <header class="topbar" role="banner">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar">
+          <i class="fas fa-bars" aria-hidden="true"></i>
+        </button>
+        <div class="topbar-breadcrumb" aria-label="Breadcrumb">
+          <a href="{{ url_for('docs.quick_start') }}">rulezet</a>
+          <span aria-hidden="true">/</span>
+          <span class="crumb-active" id="crumbActive">Introduction</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="export-wrap">
+          <button class="export-btn" id="exportBtn" aria-haspopup="true" aria-expanded="false">
+            <i class="fas fa-file-export" aria-hidden="true"></i>
+            <span>Export</span>
+          </button>
+          <div class="export-menu" id="exportMenu">
+            <button class="export-item" onclick="exportPrint()">
+              <i class="fas fa-print"></i>
+              <div>
+                <div class="export-item-title">Print / Save as PDF</div>
+                
+                <div class="export-item-sub">Full report, current language, no menus</div>
+                
+              </div>
+            </button>
+            <button class="export-item" onclick="exportMarkdown()">
+              <i class="fas fa-file-lines"></i>
+              <div>
+                <div class="export-item-title">Download as Markdown</div>
+                
+                <div class="export-item-sub">Plain-text report (.md), current language</div>
+                
+              </div>
+            </button>
+          </div>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="content" id="main-content">
+      <div class="content-inner" id="contentInner">
+
+        <!-- ══════════════════ TABLE OF CONTENTS ══════════════════ -->
+        <section id="toc" class="doc-section" style="border-top:none; padding-top:0;">
+          <div class="eyebrow">Contents</div>
+          <h2 class="section-title">Table of Contents</h2>
+          <p class="section-lead">Every chapter in this report, in order — click any entry to jump straight to it.</p>
+
+          <div class="toc-part">
+            <div class="toc-part-title">Part I — Introduction &amp; Context</div>
+            <ol class="toc-list">
+              <li><a href="#ch1"><span class="toc-num">1</span> Foreword — CIRCL &amp; NGSOTI</a></li>
+              <li><a href="#ch2"><span class="toc-num">2</span> The Problem</a></li>
+              <li><a href="#ch3"><span class="toc-num">3</span> What Is Rulezet</a></li>
+              <li><a href="#ch4"><span class="toc-num">4</span> Audience &amp; How to Read</a></li>
+              <li><a href="#ch5"><span class="toc-num">5</span> Core Terminology</a></li>
+            </ol>
+          </div>
+
+          <div class="toc-part">
+            <div class="toc-part-title">Part II — Feature Guide</div>
+            <ol class="toc-list">
+              <li><a href="#ch6"><span class="toc-num">6</span> Accounts, Roles &amp; Permissions</a></li>
+              <li><a href="#ch7"><span class="toc-num">7</span> Rule Management</a></li>
+              <li><a href="#ch8"><span class="toc-num">8</span> Validation &amp; Similarity</a></li>
+              <li><a href="#ch9"><span class="toc-num">9</span> Edit Proposals</a></li>
+              <li><a href="#ch10"><span class="toc-num">10</span> Ownership &amp; Requests</a></li>
+              <li><a href="#ch11"><span class="toc-num">11</span> Bundles</a></li>
+              <li><a href="#ch12"><span class="toc-num">12</span> Rule History</a></li>
+              <li><a href="#ch13"><span class="toc-num">13</span> Tags &amp; MISP Taxonomies</a></li>
+              <li><a href="#ch14"><span class="toc-num">14</span> MITRE ATT&amp;CK Mapping</a></li>
+              <li><a href="#ch15"><span class="toc-num">15</span> Community &amp; Moderation</a></li>
+              <li><a href="#ch16"><span class="toc-num">16</span> Blog</a></li>
+              <li><a href="#ch17"><span class="toc-num">17</span> Workspaces</a></li>
+              <li><a href="#ch18"><span class="toc-num">18</span> Gamification</a></li>
+              <li><a href="#ch19"><span class="toc-num">19</span> Notifications</a></li>
+              <li><a href="#ch20"><span class="toc-num">20</span> Rule Tester</a></li>
+              <li><a href="#ch21"><span class="toc-num">21</span> Dashboard</a></li>
+              <li><a href="#ch22"><span class="toc-num">22</span> Connectors &amp; Federation</a></li>
+              <li><a href="#ch23"><span class="toc-num">23</span> Background Jobs</a></li>
+              <li><a href="#ch24"><span class="toc-num">24</span> Activity Log</a></li>
+              <li><a href="#ch25"><span class="toc-num">25</span> Administration</a></li>
+              <li><a href="#ch26"><span class="toc-num">26</span> Public REST API</a></li>
+            </ol>
+          </div>
+
+          <div class="toc-part">
+            <div class="toc-part-title">Part III — Architecture &amp; Developer Guide</div>
+            <ol class="toc-list">
+              <li><a href="#ch27"><span class="toc-num">27</span> System Architecture</a></li>
+              <li><a href="#ch28"><span class="toc-num">28</span> Background Job Engine</a></li>
+              <li><a href="#ch29"><span class="toc-num">29</span> Rule Format Engine</a></li>
+              <li><a href="#ch30"><span class="toc-num">30</span> Frontend Architecture</a></li>
+              <li><a href="#ch31"><span class="toc-num">31</span> Conventions to Respect</a></li>
+            </ol>
+          </div>
+
+          <div class="toc-part">
+            <div class="toc-part-title">Part IV — Appendices</div>
+            <ol class="toc-list">
+              <li><a href="#appendix-a"><span class="toc-num">A</span> Glossary</a></li>
+              <li><a href="#appendix-b"><span class="toc-num">B</span> Roadmap</a></li>
+              <li><a href="#appendix-c"><span class="toc-num">C</span> Screenshot Checklist</a></li>
+            </ol>
+          </div>
+        </section>
+
+        <div class="part-marker">
+          <span class="part-marker-num">I</span>
+          <span class="part-marker-title"><span>Introduction &amp; Context</span></span>
+          <span class="part-marker-line"></span>
+        </div>
+
+        <!-- ══════════════════ CHAPTER 1 ══════════════════ -->
+        <section id="ch1" class="doc-section" aria-labelledby="ch1-title">
+          <div class="eyebrow"><span class="chapter-num">01</span> · <span>Introduction</span></div>
+          <h2 class="section-title" id="ch1-title">Foreword — About CIRCL and the NGSOTI Project</h2>
+          <p class="section-lead">Before explaining what Rulezet does, it helps to know who built it and why — this isn't a weekend side project, it's a tool built by a national CERT for the community it already serves every day.</p>
+          
+
+          <p class="doc-p">Rulezet is developed at <strong>CIRCL</strong> — the Computer Incident Response Center Luxembourg, the country's governmental CERT. CIRCL's day job is responding to and coordinating the response to computer security incidents affecting Luxembourg, but it's also known well beyond its borders for building and operating open tools the wider security community relies on: MISP (the threat intelligence sharing platform), the MISP taxonomies and galaxy knowledge bases that standardize how threats are described, and Vulnerability Lookup, a fast CVE/vulnerability reference search engine.</p>
+
+          <p class="doc-p">Rulezet was built at CIRCL as part of <strong>NGSOTI</strong>, a project aimed at giving the next generation of SOC analysts and detection engineers better tooling and training. MISP solved the "how do we share threat indicators" problem for the community years ago. Rulezet exists to solve the equivalent problem for detection <em>rules</em> — the YARA signatures, Sigma queries, and Suricata/Zeek scripts that actually do the detecting, which never had an equivalent shared home.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> <span>Why this matters to you as a reader</span></div>
+            <div class="why-panel-body">Knowing Rulezet comes out of an organization that already runs trusted, widely-adopted security infrastructure (MISP) should set your expectations correctly: this is designed with the same "built by practitioners, for practitioners" philosophy, not a generic content-management system repurposed for security data.</div>
+          </div>
+
+          <p class="doc-p">Everything in this documentation — and everything on the live platform — is shared under a <strong>TLP:CLEAR</strong> posture: open, disclosable, meant to be spread. If you're not familiar with Traffic Light Protocol classification, chapter 5 (Core Terminology) explains it — you'll see it again as a default tag on every rule.</p>
+
+          <figure class="shot-media" data-shot-id="shot-1">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-1.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+          <div class="chapter-footnote"><i class="fas fa-arrow-right"></i> <span>Next: the problem this platform was actually built to solve.</span></div>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 2 ══════════════════ -->
+        <section id="ch2" class="doc-section" aria-labelledby="ch2-title">
+          <div class="eyebrow"><span class="chapter-num">02</span> · <span>Introduction</span></div>
+          <h2 class="section-title" id="ch2-title">The Problem — Why Detection Rule Sharing Is Broken</h2>
+          <p class="section-lead">Detection rules are the operational output of threat detection work — and today, they live everywhere except one trustworthy place.</p>
+
+          <p class="doc-p">Ask any detection engineer where "the rules" live and you'll get an uncomfortable answer: scattered across dozens of GitHub repositories, buried in blog post code blocks, pasted into private Slack channels, or sitting in a folder on someone's laptop who left the team eighteen months ago. Every one of those rules represents real analytical work — someone noticed a pattern, wrote logic to catch it, and then had nowhere durable to put it except "wherever was convenient at the time."</p>
+
+          <p class="doc-p">That scattering isn't just untidy, it actively costs security teams detection quality:</p>
+          <ul class="doc-list">
+            <li><strong>No single place to check "has this already been solved?"</strong> — a team burns half a day writing a rule for a technique that a dozen other teams already detect, because there was no shared index to search first.</li>
+            <li><strong>No consistent way to judge if a rule is actually good.</strong> Syntactically valid isn't the same as effective, and a rule copied from a blog post with a silent typo in a field name will pass code review and fail in production, quietly, for months.</li>
+            <li><strong>Format fragmentation compounds everything.</strong> YARA, Sigma, Suricata, Zeek and others all describe detection logic differently — there was no tool that treated them as equally first-class, so teams standardized on whichever format they happened to start with and struggled to reuse anything written for a different one.</li>
+            <li><strong>Ownership evaporates.</strong> A rule written by an analyst who has since left the team becomes an orphan — still running, still generating alerts or silently failing to, with nobody left who remembers why it exists or whether it still should.</li>
+          </ul>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar" aria-hidden="true"><i class="fas fa-user-secret"></i></div>
+            <div>
+              <div class="usecase-role"><span>A concrete failure mode</span></div>
+              <div class="usecase-text">Two SOC teams at the same organization each write a YARA rule for the same malware family within a week of each other — neither knew the other was working on it, because there was no shared, searchable place either would have thought to check first. Weeks later, someone notices the duplication by accident while triaging an alert flood from both rules firing on the same sample.</div>
+            </div>
+          </div>
+
+          <p class="doc-p">Rulezet's answer isn't "yet another paste bin with search." It's a platform that validates a rule's syntax the moment it arrives, flags likely duplicates automatically, tracks who owns what, and puts community review directly into the workflow — so that scattering stops being the default and becomes something you'd have to actively choose instead.</p>
+          <div class="chapter-footnote"><i class="fas fa-arrow-right"></i> <span>Next: what Rulezet actually is, and what it deliberately is not.</span></div>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 3 ══════════════════ -->
+        <section id="ch3" class="doc-section" aria-labelledby="ch3-title">
+          <div class="eyebrow"><span class="chapter-num">03</span> · <span>Introduction</span></div>
+          <h2 class="section-title" id="ch3-title">What Is Rulezet — Vision, Mission, Goals</h2>
+          <p class="section-lead">An open-source, community-driven platform to create, import, validate, discuss, and curate cybersecurity detection rules across multiple formats.</p>
+
+          <p class="doc-p">Rulezet gives detection content the same treatment source code gets from a modern developer platform: version history, peer review, ownership, quality gates, and a search index that actually understands what it's looking at. The four goals that shaped every feature in this report:</p>
+
+          <div class="flow-steps">
+            <div class="flow-step">
+              <div class="flow-num">1</div>
+              <div><div class="flow-title"><span>Simplify rule management and collaborative evaluation</span></div>
+              <div class="flow-desc"><span>One place to create, edit, and review — instead of a rule's lifecycle being spread across a repo, a chat thread, and someone's memory.</span></div></div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-num">2</div>
+              <div><div class="flow-title"><span>Enable collaboration across organizations, not just within one team</span></div>
+              <div class="flow-desc"><span>Public rules and bundles mean the analytical work of one organization can benefit every other one running the same instance or federated with it.</span></div></div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-num">3</div>
+              <div><div class="flow-title"><span>Reduce the chaos of scattered open-source detection content</span></div>
+              <div class="flow-desc"><span>Import from GitHub once, and the rule lives in a structured, searchable, versioned home from then on.</span></div></div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-num">4</div>
+              <div><div class="flow-title"><span>Validate both the syntax and, as far as automatable, the relevance of every rule</span></div>
+              <div class="flow-desc"><span>A broken rule never gets to silently pretend it works — see chapter 8 for exactly how far that guarantee goes.</span></div></div>
+            </div>
+          </div>
+
+          <div class="callout callout-blue">
+            <div class="callout-icon"><i class="fas fa-circle-info"></i></div>
+            <div class="callout-body">
+              <strong><span>What Rulezet is not</span></strong>
+              <span>It is not a SIEM and it does not execute rules against live traffic itself. It is not a replacement for MISP — MISP is for threat indicators (IPs, hashes, domains), Rulezet is for the detection <em>logic</em> that acts on that kind of data. The two are complementary, not competing.</span>
+              
+            </div>
+          </div>
+
+          <h3 class="subsection-title"><i class="fas fa-code"></i> <span>Supported rule formats today</span></h3>
+          <p class="doc-p"><span>YARA, Sigma, Suricata, Zeek, Wazuh, NSE, CRS, Nova, Elastic, and a free-text "no format" fallback for anything else. This list is deliberately not fixed — chapter 29 explains how a new format gets added as a self-contained plug-in, without touching anything else in the platform.</span></p>
+
+          <figure class="shot-media" data-shot-id="shot-2">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-2.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 4 ══════════════════ -->
+        <section id="ch4" class="doc-section" aria-labelledby="ch4-title">
+          <div class="eyebrow"><span class="chapter-num">04</span> · <span>Introduction</span></div>
+          <h2 class="section-title" id="ch4-title">Audience &amp; How to Read This Documentation</h2>
+          <p class="section-lead">This report is long on purpose — here's where to start depending on who you are, so you don't have to read all of it to get value from it.</p>
+
+          <div class="feature-grid">
+            <div class="feature-card">
+              <div class="feature-card-icon icon-blue"><i class="fas fa-user-ninja"></i></div>
+              <div class="feature-card-title">SOC analyst / detection engineer</div>
+              
+              <div class="feature-card-desc">Read Part II end to end. It's written for you first — every chapter opens with the problem before the feature.</div>
+              
+            </div>
+            <div class="feature-card">
+              <div class="feature-card-icon icon-green"><i class="fas fa-user-tie"></i></div>
+              <div class="feature-card-title">Team lead / instance admin</div>
+              
+              <div class="feature-card-desc">Part II, then chapter 25 (Administration) closely, then skim Part III to know what you're responsible for operating.</div>
+              
+            </div>
+            <div class="feature-card">
+              <div class="feature-card-icon icon-purple"><i class="fas fa-code"></i></div>
+              <div class="feature-card-title">Contributor / developer</div>
+              
+              <div class="feature-card-desc">Skim Part II for context, read Part III in full — especially chapters 29 and 31 before opening a pull request.</div>
+              
+            </div>
+            <div class="feature-card">
+              <div class="feature-card-icon icon-teal"><i class="fas fa-network-wired"></i></div>
+              <div class="feature-card-title">Instance-to-instance integrator</div>
+              
+              <div class="feature-card-desc">Chapter 22 (Connectors) plus chapter 27's architecture overview.</div>
+              
+            </div>
+          </div>
+
+          <p class="doc-p"><span>Day to day, this documentation is meant to be browsed as a website with the navigation menu on the left. When you need an offline or formal copy — onboarding a new analyst, sharing with a partner organization evaluating Rulezet — use the <strong>Export</strong> button in the top-right at any time, either as a printable PDF or as a plain Markdown file.</span></p>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 5 ══════════════════ -->
+        <section id="ch5" class="doc-section" aria-labelledby="ch5-title">
+          <div class="eyebrow"><span class="chapter-num">05</span> · <span>Introduction</span></div>
+          <h2 class="section-title" id="ch5-title">Core Terminology &amp; Concepts</h2>
+          <p class="section-lead">A handful of words this report leans on constantly — defined once here, so every later chapter can use them without re-explaining.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th style="width:22%;">Term</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td class="glossary-term">Detection rule</td><td class="glossary-term">Règle de détection</td>
+                  <td colspan="1">A piece of logic, written in a specific format, that flags something as suspicious or malicious when matched against data — a file, a log line, network traffic.</td>
+                  
+                </tr>
+                <tr><td class="glossary-term">Rule format</td><td class="glossary-term">Format de règle</td>
+                  <td>The syntax/engine a rule targets. Different detection surfaces need different tools — YARA reads files, Sigma describes log conditions abstractly, Suricata/Zeek watch network traffic.</td>
+                  
+                </tr>
+                <tr><td class="glossary-term">TLP / PAP</td><td class="glossary-term">TLP / PAP</td>
+                  <td>Traffic Light Protocol / Permissible Actions Protocol — standardized labels (clear, green, amber, red) describing how freely a piece of content can be shared or acted on. Every new rule gets <span class="inline-code">tlp:clear</span> and <span class="inline-code">pap:clear</span> by default.</td>
+                  
+                </tr>
+                <tr><td class="glossary-term"><span>Edit proposal</span></td><td class="glossary-term"></td>
+                  <td>A pull-request-style review mechanism: someone proposes a change to a rule they don't own, the owner reviews a diff and approves or rejects it.</td>
+                  
+                </tr>
+                <tr><td class="glossary-term">Bundle</td><td class="glossary-term">Bundle</td>
+                  <td>A curated, named collection of rules — the detection equivalent of a playlist.</td>
+                  
+                </tr>
+                <tr><td class="glossary-term"><span>Tag / taxonomy / galaxy</span></td><td class="glossary-term"></td>
+                  <td>MISP-standard vocabularies reused for classification. A <em>taxonomy</em> is a structured vocabulary (like TLP); a <em>galaxy</em> is a knowledge base of clusters (threat actors, malware families); a <em>tag</em> is the concrete label attached to a rule, coming from either.</td>
+                  
+                </tr>
+                <tr><td class="glossary-term"><span>ATT&amp;CK technique</span></td><td class="glossary-term"></td>
+                  <td>MITRE's standard framework for describing adversary behavior (e.g. <span class="inline-code">T1068</span>); rules can be mapped to the technique(s) they detect.</td>
+                  
+                </tr>
+                <tr><td class="glossary-term">Ownership</td><td class="glossary-term">Propriété</td>
+                  <td>Every rule has exactly one owning user — the accountable point of contact, and the person (besides an admin) allowed to change or delete it.</td>
+                  
+                </tr>
+                <tr><td class="glossary-term"><span>Instance / connector</span></td><td class="glossary-term"></td>
+                  <td>A "Rulezet instance" is one deployment (e.g. the official rulezet.org). A connector lets one instance pull content from another, or from MISP.</td>
+                  
+                </tr>
+                <tr><td class="glossary-term"><span>Background job</span></td><td class="glossary-term"></td>
+                  <td>Any operation heavy or slow enough to run asynchronously with visible progress instead of blocking a page load.</td>
+                  
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="doc-p"><span>A fuller alphabetical list, including every format acronym used in this report, is in <a href="#appendix-a">Appendix A — Glossary</a>.</span></p>
+        </section>
+
+        <div class="part-marker">
+          <span class="part-marker-num">II</span>
+          <span class="part-marker-title"><span>Feature Guide</span></span>
+          <span class="part-marker-line"></span>
+        </div>
+
+        <!-- ══════════════════ CHAPTER 6 ══════════════════ -->
+        <section id="ch6" class="doc-section" aria-labelledby="ch6-title">
+          <div class="eyebrow"><span class="chapter-num">06</span> · <span>Feature Guide</span></div>
+          <h2 class="section-title" id="ch6-title">Accounts, Roles &amp; Permissions</h2>
+          <p class="section-lead">Any collaborative platform needs to know who is doing what — accountability is what makes community-contributed detection content trustworthy at all.</p>
+          
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">A rule with no accountable owner is a rule nobody will fix when it breaks. Rulezet's entire permission model exists to keep every piece of content traceable to a real, responsible person — while still letting anyone browse and learn from what's public.</div>
+          </div>
+
+          <p class="doc-p">Every visitor to Rulezet falls into exactly one of three tiers, and this three-tier model is the single most important concept to understand before anything else in this report — nearly every later chapter refers back to it instead of re-explaining permissions from scratch.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Tier</th><th>Can do</th><th>Cannot do</th></tr></thead>
+              <tbody>
+                <tr><td><span class="mono-badge">Anonymous</span></td><td>Browse public rules, bundles, and blog posts</td><td>Vote, comment, favorite, create anything</td></tr>
+                <tr><td><span class="mono-badge">Authenticated</span></td><td>Create rules/bundles, vote, comment, propose edits, favorite, request ownership</td><td>Edit or delete another user's resources, access admin tools</td></tr>
+                <tr><td><span class="mono-badge">Admin</span></td><td>Everything, plus moderation, platform administration, and acting on any user's resources</td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="doc-p">Within the "authenticated" tier, one more distinction matters everywhere: <strong>ownership</strong>. Whoever created a rule, bundle, or comment is its owner, and — together with any admin — is the only one who can edit or delete it. This single rule (owner-or-admin, nobody else) is applied identically across every feature in this report; once you've internalized it here, you won't need it re-explained per chapter.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-user-plus"></i></div>
+            <div><div class="usecase-role">New analyst joining a team</div>
+            <div class="usecase-text">Signs up, verifies their email, and immediately has everything needed to start proposing improvements to existing rules — no admin approval required just to participate.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-key"></i></div>
+            <div><div class="usecase-role">Automation-minded team lead</div>
+            <div class="usecase-text">Generates a personal API key from their profile to let an internal pipeline pull the latest public rules automatically (see chapter 26).</div></div>
+          </div>
+
+          <h3 class="subsection-title"><i class="fas fa-list-check"></i> What this feature covers</h3>
+          <ul class="doc-list">
+            <li>Registration, email verification, login, password reset.</li>
+            <li>Profile editing (name, avatar) and a public contributor profile (see chapter 18, Gamification).</li>
+            <li>API key generation and rotation for programmatic access.</li>
+            <li>Notification preferences (chapter 19).</li>
+          </ul>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>A known limit</strong>There is no granular role system between "regular user" and "admin" today — it's intentionally binary. If your organization needs, say, a "moderator who isn't a full admin" tier, that's a gap worth flagging to the team rather than assuming it exists.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-3">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-3.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 7 ══════════════════ -->
+        <section id="ch7" class="doc-section" aria-labelledby="ch7-title">
+          <div class="eyebrow"><span class="chapter-num">07</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch7-title">Rule Management — Create, Import, Version</h2>
+          <p class="section-lead">The rule is the atomic unit of the entire platform. Every other feature in this report exists to make rules easier to find, safer to trust, or better maintained.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">A detection rule that only exists in one person's head or one repo's history is a single point of failure. Making rule creation and import a first-class, validated workflow is what turns "a file someone wrote" into "an asset the team can rely on."</div>
+          </div>
+
+          <p class="doc-p">There are two ways a rule comes into existence on Rulezet, and both end up going through the exact same validation gate (chapter 8 covers that gate in depth):</p>
+
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-num">1</div><div>
+              <div class="flow-title">Manual creation</div>
+              <div class="flow-desc">Fill in the create-rule form — title, format, license, source, description, content — and Rulezet validates it against the chosen format's rules before saving. Two default tags, <span class="inline-code">tlp:clear</span> and <span class="inline-code">pap:clear</span>, are attached automatically so every rule starts from a known, shareable classification.</div>
+            </div></div>
+            <div class="flow-step"><div class="flow-num">2</div><div>
+              <div class="flow-title">GitHub import</div>
+              <div class="flow-desc">Point Rulezet at a repository and it walks the tree, extracts every rule it can find across every format present, and validates each one individually. A rule that fails validation doesn't get silently dropped — it lands in the Bad Rules queue instead (chapter 8), where the person who ran the import can review and fix it.</div>
+            </div></div>
+          </div>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-fire"></i></div>
+            <div><div class="usecase-role">Live incident response</div>
+            <div class="usecase-text">An analyst writes a Suricata rule directly from what they're seeing in an active incident, so it's captured immediately rather than "written up properly later" (and forgotten).</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-cloud-arrow-down"></i></div>
+            <div><div class="usecase-role">Bootstrapping a team's presence</div>
+            <div class="usecase-text">A team imports their entire existing GitHub rule repository in one operation instead of recreating years of work rule by rule.</div></div>
+          </div>
+
+          <h3 class="subsection-title"><i class="fas fa-list-check"></i> What you can do with a rule once it exists</h3>
+          <ul class="doc-list">
+            <li>Edit content, metadata, and associated CVE/vulnerability identifiers (if you own it, or you're an admin).</li>
+            <li>Favorite it and vote it up or down — community signal that factors into how it surfaces in search.</li>
+            <li>View its full detail page: metadata, syntax-highlighted content, edit history, similarity matches, and the comment thread — each of those gets its own chapter later in this Part.</li>
+            <li>Delete it — which, importantly, is a <em>soft</em> delete (see the callout below), never an instant, irreversible removal from a single click.</li>
+          </ul>
+
+          <div class="callout callout-blue">
+            <div class="callout-icon"><i class="fas fa-trash-can"></i></div>
+            <div class="callout-body"><strong>Soft delete, by design</strong>Deleting a rule moves it to a recoverable Trash rather than erasing it outright. Only an admin can permanently purge it from there — a deliberate two-step safety net against an accidental or malicious single-click deletion. See chapter 25 for the admin-side Trash workflow.</div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>An honest limitation</strong>Import quality depends entirely on how the source repository is structured and how confidently the format parser can recognize where one rule ends and the next begins. A messy, non-standard repository layout will import less cleanly than one that follows common conventions — this is a real constraint, not a bug to be fixed away entirely.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-4">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-4.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 8 ══════════════════ -->
+        <section id="ch8" class="doc-section" aria-labelledby="ch8-title">
+          <div class="eyebrow"><span class="chapter-num">08</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch8-title">Rule Validation, Quality &amp; Similarity Detection</h2>
+          <p class="section-lead">This chapter is the safety net — the direct answer to "rules may contain syntax errors, and even valid ones offer no guarantee they're not a duplicate of something that already exists."</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Trusting a rule you didn't write yourself requires some evidence it's at least well-formed and not a redundant copy of one you already have. Automating both checks removes the two easiest, most common ways low-quality content quietly accumulates.</div>
+          </div>
+
+          <p class="doc-p">Two independent mechanisms work together here. <strong>Validation</strong> happens the instant a rule is created or imported — a format-specific parser (chapter 29 explains the mechanism behind this) checks that the content actually parses as valid syntax for its declared format. <strong>Similarity detection</strong> is a separate, on-demand analysis that compares a rule's content against everything else already in the library to flag likely duplicates or near-duplicates for human review.</p>
+
+          <h3 class="subsection-title"><i class="fas fa-ban"></i> When validation fails: the Bad Rules queue</h3>
+          <p class="doc-p">A rule that fails validation is never silently discarded and never silently accepted broken — it's quarantined into a dedicated queue, visible to whoever submitted it (or an admin), with the specific errors that were found. This matters most during a bulk GitHub import: out of, say, forty imported files, three might fail — those three show up for the importer to fix or discard deliberately, instead of vanishing into a log nobody reads.</p>
+
+          <h3 class="subsection-title"><i class="fas fa-clone"></i> When two rules look alike: similarity detection</h3>
+          <p class="doc-p">A similarity scan compares rule content across the library and ranks candidate pairs by how alike they are, surfacing them for a human to decide: genuinely the same rule imported twice, a deliberate variant worth keeping separately, or coincidentally similar and fine as-is. Every rule's detail page also carries its own "similar rules" panel so this isn't only something an admin runs platform-wide — anyone reviewing one rule can immediately see its closest relatives.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-broom"></i></div>
+            <div><div class="usecase-role">Cleaning up after a bulk import</div>
+            <div class="usecase-text">A 500-rule GitHub import completes; three rules land in the Bad Rules queue with clear parser errors, and a similarity scan flags eleven pairs that turn out to be the same detection logic imported from two different upstream repositories.</div></div>
+          </div>
+
+          <div class="callout callout-red">
+            <div class="callout-icon"><i class="fas fa-shield-halved"></i></div>
+            <div class="callout-body"><strong>What this does <em>not</em> guarantee</strong>Validation checks that a rule is well-formed — it does not and cannot tell you the rule actually detects anything real in production. Being explicit about this distinction matters for credibility: "passes validation" means "correct syntax," not "proven effective." If you need that second guarantee, see chapter 20, Rule Tester.</div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>A known limitation</strong>Similarity detection is a heuristic aid, not an authority — expect both false positives (rules flagged as similar that really aren't) and false negatives (genuine duplicates it misses). It exists to focus human review, not replace it.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-5">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-5.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 9 ══════════════════ -->
+        <section id="ch9" class="doc-section" aria-labelledby="ch9-title">
+          <div class="eyebrow"><span class="chapter-num">09</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch9-title">Collaborative Edit Proposals</h2>
+          <p class="section-lead">The pull-request model, applied to detection content — anyone can suggest an improvement to a rule they don't own, without ever needing direct write access to make the suggestion.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Detection rules improve fastest under real scrutiny from people other than the original author — but giving everyone direct edit rights to everyone else's rules would remove accountability entirely. Edit proposals give you both: open contribution <em>and</em> a single accountable approver.</div>
+          </div>
+
+          <p class="doc-p">Any authenticated user who spots something worth changing in a rule — a condition that's too broad, a false-positive-prone pattern, a stale reference — can open an edit proposal: write the change plus a short message explaining why, and submit it for review. From there, a proposal moves through exactly three possible states.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>State</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><span class="mono-badge">pending</span></td><td>Awaiting the owner's (or an admin's) review — nothing has changed on the live rule yet.</td></tr>
+                <tr><td><span class="mono-badge">approved</span></td><td>The change was accepted and applied to the live rule; a history entry records it (chapter 12).</td></tr>
+                <tr><td><span class="mono-badge">rejected</span></td><td>The owner declined the change, ideally with a reason — keeping a transparent record of <em>why</em>, not just a silent no.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="doc-p">The review itself happens against a full side-by-side diff of the current content versus the proposed content, with its own dedicated comment thread underneath for back-and-forth discussion before a decision is made — the same review ergonomics engineers already expect from a code review, applied to a Sigma condition or a YARA string.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-magnifying-glass"></i></div>
+            <div><div class="usecase-role">Spotting a false positive</div>
+            <div class="usecase-text">A user notices a rule fires on legitimate administrative scripts and proposes a narrower condition instead of just leaving a comment that may or may not get acted on.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-file-circle-xmark"></i></div>
+            <div><div class="usecase-role">A transparent rejection</div>
+            <div class="usecase-text">An owner declines a proposal that would have broken detection for a related technique, and records why — so the next person who has the same idea can see it was already considered.</div></div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Something to be aware of</strong>Only one proposal's worth of change is reviewed at a time — if two people propose changes to the same rule concurrently, whichever is approved first will make the other's diff stale. Treat proposals as a serial review queue per rule, not a merge system.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-6">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-6.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 10 ══════════════════ -->
+        <section id="ch10" class="doc-section" aria-labelledby="ch10-title">
+          <div class="eyebrow"><span class="chapter-num">10</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch10-title">Ownership &amp; Transfer Requests</h2>
+          <p class="section-lead">Rules need a responsible owner at all times — this is the formal, auditable mechanism for that responsibility to change hands.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">People leave teams; rules outlive them. Without a deliberate transfer mechanism, ownership either freezes forever (nobody can act on the rule) or gets quietly reassigned with no record of who approved it or why. Neither is acceptable for content other people rely on.</div>
+          </div>
+
+          <p class="doc-p">There are two distinct paths to a change of ownership, and Rulezet is careful to make both show up identically in the audit trail even though they start very differently.</p>
+
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-num">1</div><div>
+              <div class="flow-title">Individual request</div>
+              <div class="flow-desc">A user asks to take over a specific rule — say, one whose original author has left. The current owner (or an admin) approves or rejects the request; a history entry is recorded either way.</div>
+            </div></div>
+            <div class="flow-step"><div class="flow-num">2</div><div>
+              <div class="flow-title">Manual / bulk admin transfer</div>
+              <div class="flow-desc">An admin selects many rules at once — optionally narrowed by a filter — and reassigns them all to a new owner in a single background operation (chapter 23). Because this bypasses the normal request-and-approve flow, Rulezet still auto-creates an "approved" history entry, deliberately framed as if the new owner had requested it and the admin had approved it — so the audit trail reads the same regardless of which path was actually used.</div>
+            </div></div>
+          </div>
+
+          <p class="doc-p">Both regular users and admins share the exact same requests page — a deliberate choice: a regular user tracking their own requests should never see "admin" anywhere in that URL or its layout, because it's a page they use routinely, not an administrative tool they're being let into. What differs is visible content, not the address: a regular user sees their own pending requests, history, and requests made to them; an admin additionally sees a processing queue for everyone else's requests and a Manual Ownership tool for bulk transfers.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-user-clock"></i></div>
+            <div><div class="usecase-role">Contributor stepping in</div>
+            <div class="usecase-text">A long-time contributor requests ownership of a rule whose original author is no longer active, so it has a real accountable owner again.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-people-arrows"></i></div>
+            <div><div class="usecase-role">Team offboarding at scale</div>
+            <div class="usecase-text">An admin reassigns 150 rules from a departing contributor to a team account in one bulk operation, instead of processing 150 individual requests by hand.</div></div>
+          </div>
+
+          <p class="doc-p">A request's detail page shows exactly what's being transferred: a single rule for an individual request, or the full list of rules covered for a bulk manual grant — so "what did this actually affect" is always answerable, never a mystery buried in a count.</p>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Irreversible from the UI</strong>A manual bulk transfer has no built-in "undo" button once it completes — treat the confirmation step before running one as the last checkpoint, not a formality.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-7">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-7.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 11 ══════════════════ -->
+        <section id="ch11" class="doc-section" aria-labelledby="ch11-title">
+          <div class="eyebrow"><span class="chapter-num">11</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch11-title">Bundles — Curated Rule Collections</h2>
+          <p class="section-lead">If a rule is the atom, a bundle is the molecule — how a coherent, shareable "detection pack" gets assembled and distributed as a single thing.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">"Give me every rule relevant to threat actor X" or "here's our team's baseline ruleset" are questions people ask constantly — a bundle turns the answer into a single, linkable, versionable object instead of a list you re-assemble from memory every time.</div>
+          </div>
+
+          <p class="doc-p">A bundle is a named collection of rules that can be organized into folders (not just a flat list) via a drag-and-drop structure editor — useful when a bundle mirrors the layout of a source repository, or when a large bundle benefits from being grouped by technique, log source, or campaign phase. Like rules, bundles get the full community treatment: voting, view/download counts, and comments.</p>
+
+          <p class="doc-p">Access control is the other half of what makes bundles useful: a bundle can be public (anyone can see it) or private (visible only to its owner and admins) — so a "starter kit" can be iterated on privately and published only once it's actually ready.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-box-open"></i></div>
+            <div><div class="usecase-role">Publishing a starter kit</div>
+            <div class="usecase-text">A team assembles every rule relevant to a specific log source into one public bundle so other teams can adopt the whole set in a single action instead of hunting down each rule individually.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-lock"></i></div>
+            <div><div class="usecase-role">Maturing privately first</div>
+            <div class="usecase-text">A bundle stays private while its rules are still being tuned, and is switched to public only once the team is confident enough to stand behind it publicly.</div></div>
+          </div>
+
+          <h3 class="subsection-title"><i class="fas fa-list-check"></i> Capabilities</h3>
+          <ul class="doc-list">
+            <li>Create, edit, and delete a bundle (owner or admin).</li>
+            <li>Add rules individually or via a bulk rule-selector.</li>
+            <li>Arrange rules into a folder-style structure tree.</li>
+            <li>An "official" verified badge, presumably admin-granted, for particularly trusted bundles.</li>
+          </ul>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Worth confirming operationally</strong>If a rule referenced inside a bundle's structure is later permanently removed from the platform entirely, the bundle's folder tree should not be left pointing at a dangling reference — this is exactly the kind of edge case worth testing deliberately rather than assuming away.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-8">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-8.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 12 ══════════════════ -->
+        <section id="ch12" class="doc-section" aria-labelledby="ch12-title">
+          <div class="eyebrow"><span class="chapter-num">12</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch12-title">Rule History &amp; Audit Trail</h2>
+          <p class="section-lead">The place a reader goes to answer "what happened to this rule over time, and who did it" — regardless of which mechanism actually caused the change.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">A rule can change through an accepted edit proposal (chapter 9), a manual admin edit, or an ownership transfer (chapter 10) — three very different mechanisms. Without a unified history view, understanding "why does this rule look different than I remember" would mean checking three separate places.</div>
+          </div>
+
+          <p class="doc-p">Every accepted change to a rule's content or ownership appends an entry to that rule's own History tab: what changed, who did it, and when — with a link back to the originating edit proposal or ownership request where one exists. It's deliberately additive-only: there's no way to edit or delete a past history entry after the fact, because the point of an audit trail is that it can't be quietly rewritten.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-magnifying-glass-chart"></i></div>
+            <div><div class="usecase-role">Investigating a surprise</div>
+            <div class="usecase-text">A user notices a rule's condition looks different from what they remembered importing, and checks History to see it was updated three weeks ago via an approved edit proposal, with a link straight to that proposal's discussion.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-headset"></i></div>
+            <div><div class="usecase-role">Verifying a support claim</div>
+            <div class="usecase-text">Before escalating "I was told ownership was transferred to me but I still can't edit this rule," someone checks History first and confirms — or disproves — that the transfer actually completed.</div></div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-9">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-9.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 13 ══════════════════ -->
+        <section id="ch13" class="doc-section" aria-labelledby="ch13-title">
+          <div class="eyebrow"><span class="chapter-num">13</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch13-title">Tags, MISP Taxonomies &amp; Galaxies</h2>
+          <p class="section-lead">Free-text search only goes so far — a shared vocabulary lets rules be classified consistently across an entire community instead of every team inventing its own labels.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">If every team labels things their own way, "find every TLP:amber rule" or "find every rule tagged to this threat actor" becomes impossible across a shared platform. Reusing MISP's already-standardized vocabularies means Rulezet speaks the same classification language the rest of the community — and MISP itself — already uses.</div>
+          </div>
+
+          <p class="doc-p">Three related but distinct words matter here, and mixing them up is the single most common point of confusion for newcomers:</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Term</th><th>What it is</th><th>Example</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Taxonomy</strong></td><td>A structured vocabulary — a defined set of terms and their meaning.</td><td>TLP (<span class="inline-code">tlp:clear</span>, <span class="inline-code">tlp:amber</span>...)</td></tr>
+                <tr><td><strong>Galaxy</strong></td><td>A knowledge base of "clusters" — richer, curated entities rather than simple labels.</td><td>A specific threat actor or malware family</td></tr>
+                <tr><td><strong>Tag</strong></td><td>The concrete label actually attached to a rule or bundle — it may originate from either a taxonomy or a galaxy cluster.</td><td><span class="inline-code">tlp:clear</span> attached to a specific rule</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="doc-p">Every new rule gets <span class="inline-code">tlp:clear</span> and <span class="inline-code">pap:clear</span> attached automatically the moment it's created — a sensible, shareable default that a user can tighten later if the content warrants a stricter classification.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-filter"></i></div>
+            <div><div class="usecase-role">Filtering by classification</div>
+            <div class="usecase-text">Narrowing the entire rule library down to <span class="inline-code">tlp:amber</span> content only, before deciding what's safe to share with an external partner.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-user-secret"></i></div>
+            <div><div class="usecase-role">Associating with a threat actor</div>
+            <div class="usecase-text">Tagging a rule with a galaxy cluster so it's immediately clear which known adversary group the detection logic relates to.</div></div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Freshness depends on your update cadence</strong>Taxonomy and galaxy data is only as current as the last time it was refreshed on your instance — worth confirming and documenting your own update rhythm for this rather than assuming it's always automatically current.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-10">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-10.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 14 ══════════════════ -->
+        <section id="ch14" class="doc-section" aria-labelledby="ch14-title">
+          <div class="eyebrow"><span class="chapter-num">14</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch14-title">MITRE ATT&amp;CK Mapping</h2>
+          <p class="section-lead">Ties every rule to the industry-standard adversary-behavior framework, so coverage can be reasoned about as a whole — not counted rule by rule by hand.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">"Which techniques do we actually have detections for?" is one of the most common questions a detection team gets asked — by leadership, by auditors, by their own gap-analysis process. Answering it by manually cross-referencing a spreadsheet doesn't scale; a live, computed coverage view does.</div>
+          </div>
+
+          <p class="doc-p">A rule can be linked to one or more ATT&amp;CK techniques (identified by their standard ID, like <span class="inline-code">T1068</span>) either manually, or via an auto-parse pass that attempts to extract technique references directly from a rule's own content — an accelerator for bulk imports, not a substitute for a human glancing over the result.</p>
+
+          <div class="feature-grid">
+            <div class="feature-card"><div class="feature-card-icon icon-amber"><i class="fas fa-table-cells"></i></div><div class="feature-card-title">Interactive matrix</div><div class="feature-card-desc">The full ATT&amp;CK matrix shows which techniques have at least one rule — click any cell to filter straight to those rules.</div></div>
+            <div class="feature-card"><div class="feature-card-icon icon-red"><i class="fas fa-fire"></i></div><div class="feature-card-title">Coverage heatmap</div><div class="feature-card-desc">Color intensity shows rule density per technique, so gaps are visible at a glance instead of requiring a manual count.</div></div>
+            <div class="feature-card"><div class="feature-card-icon icon-blue"><i class="fas fa-layer-group"></i></div><div class="feature-card-title">Per-bundle coverage</div><div class="feature-card-desc">Every bundle carries its own scoped coverage view, so a detection set can be reasoned about as a unit.</div></div>
+            <div class="feature-card"><div class="feature-card-icon icon-green"><i class="fas fa-magnifying-glass"></i></div><div class="feature-card-title">Gap analytics</div><div class="feature-card-desc">A dedicated view surfaces techniques with zero or very few associated rules — the starting point for "what should we write next."</div></div>
+          </div>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-crosshairs"></i></div>
+            <div><div class="usecase-role">Prioritizing new detection work</div>
+            <div class="usecase-text">A detection engineer checks the coverage gap view before deciding what to write next, instead of guessing at what's missing.</div></div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Set expectations correctly</strong>Auto-parsing accuracy depends entirely on how explicitly a rule's own content references technique IDs — treat an auto-parsed mapping as a draft worth a quick human check, not a guaranteed-correct classification.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-11">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-11.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 15 ══════════════════ -->
+        <section id="ch15" class="doc-section" aria-labelledby="ch15-title">
+          <div class="eyebrow"><span class="chapter-num">15</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch15-title">Community Discussion — Comments, Reactions &amp; Moderation</h2>
+          <p class="section-lead">Detection rules get better under scrutiny — this is the mechanism for that scrutiny to happen in the open, attached directly to the content it's actually about.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Feedback that lives in a separate chat channel, disconnected from the rule itself, gets lost the moment the conversation scrolls away. Attaching discussion directly to the rule, bundle, proposal, or blog post it concerns means the context never separates from the content.</div>
+          </div>
+
+          <p class="doc-p">The exact same threaded comment experience — replies, emoji-style reactions — appears in every place discussion can happen: on a rule, on a bundle, inside an edit proposal, and under a blog post. Learning it once means you already know it everywhere. A separate Comment Hub view lets you catch up on everything being discussed right now across the whole platform, instead of hunting object by object for what's new.</p>
+
+          <p class="doc-p">Moderation is deliberately kept separate from ordinary discussion: any comment, rule, or bundle can be reported/flagged by any user, which raises it — privately — into an admin moderation queue for review, resolution, or dismissal. The reported party never sees that a report was filed against them.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-comment-dots"></i></div>
+            <div><div class="usecase-role">From comment to fix</div>
+            <div class="usecase-text">A false positive is reported in a comment thread on a rule, which prompts its owner (or anyone else) to open a formal edit proposal (chapter 9) instead of the feedback just sitting there unresolved.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-gavel"></i></div>
+            <div><div class="usecase-role">Resolving abuse</div>
+            <div class="usecase-text">An admin resolves a flagged comment for abusive content via the moderation queue, without the reporter or the reported user needing to interact directly.</div></div>
+          </div>
+
+          <div class="callout callout-blue">
+            <div class="callout-icon"><i class="fas fa-broom"></i></div>
+            <div class="callout-body"><strong>A data-hygiene guarantee, not an accident</strong>Deleting the underlying rule, bundle, edit proposal, or blog post also removes its entire comment thread — comments are never left orphaned, pointing at content that no longer exists.</div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>A deliberate trade-off</strong>Comments on a deleted object are purged, not archived. If a future audit requirement ever needs deleted-object comments preserved, that would be a conscious policy change, not today's default behavior.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-12">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-12.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 16 ══════════════════ -->
+        <section id="ch16" class="doc-section" aria-labelledby="ch16-title">
+          <div class="eyebrow"><span class="chapter-num">16</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch16-title">Blog &amp; Knowledge Sharing</h2>
+          <p class="section-lead">Rules alone don't carry the "why" — a blog post is where the narrative context a set of rules is responding to actually gets told.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">A rule's code tells you what it matches; it rarely tells you why it exists, what campaign prompted it, or what was learned building it. Pairing narrative writeups with the actual actionable rules — in the same place — means the two never drift apart.</div>
+          </div>
+
+          <p class="doc-p">A post can be drafted privately and iterated on before publishing, and — critically — can directly associate itself with specific rules, bundles, ATT&amp;CK techniques, and CVE identifiers, so the write-up and the actionable content it discusses are one linked unit rather than two things a reader has to reconcile themselves. Readers discuss a post through the exact same comment system used everywhere else (chapter 15).</p>
+
+          <p class="doc-p">As a starting accelerator, a draft post can be generated from a CVE reference automatically — useful as a first pass a human still needs to review and rewrite before publishing, not an autonomous authoring feature.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-newspaper"></i></div>
+            <div><div class="usecase-role">Publishing a CVE writeup</div>
+            <div class="usecase-text">A team documents what they learned building detection for a newly disclosed vulnerability, with the actual rules they wrote attached directly to the post.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-pen"></i></div>
+            <div><div class="usecase-role">Drafting before publishing</div>
+            <div class="usecase-text">A post is iterated on privately across several review passes, and only made public once the team is confident it reflects the finished analysis.</div></div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Human review still required</strong>CVE-based draft generation produces a starting point, not a finished, fact-checked article — publish only after a human has actually read and corrected it.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-13">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-13.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 17 ══════════════════ -->
+        <section id="ch17" class="doc-section" aria-labelledby="ch17-title">
+          <div class="eyebrow"><span class="chapter-num">17</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch17-title">Personal Workspaces</h2>
+          <p class="section-lead">An investigation rarely fits neatly into "one rule" or "one bundle" — a workspace is the flexible scratch space for everything in between.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Forcing every piece of working material into a formal, published bundle before it's ready creates friction that discourages people from organizing their work at all. A workspace is deliberately lower-stakes: a private area to collect things while an investigation is still taking shape.</div>
+          </div>
+
+          <p class="doc-p">A workspace lets you gather a working set of rules alongside freeform notes (documents) and reference links, with a quick KPI panel summarizing what's inside — all without committing to publishing anything. It's the working-notes layer that sits before a bundle, not a replacement for one.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-magnifying-glass"></i></div>
+            <div><div class="usecase-role">Triaging an active incident</div>
+            <div class="usecase-text">Every rule relevant to an ongoing investigation gets collected into one workspace as the picture develops, instead of scattered across browser tabs and a separate notes app.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-note-sticky"></i></div>
+            <div><div class="usecase-role">Keeping notes next to the rules</div>
+            <div class="usecase-text">Investigation notes and external reference links live directly alongside the rules they relate to, instead of in a disconnected document.</div></div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Worth clarifying with your team</strong>Whether a workspace can be promoted directly into a published bundle, or whether that today means manually re-creating the bundle from scratch, is worth confirming — it's a natural next feature request once people start using workspaces heavily.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-14">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-14.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 18 ══════════════════ -->
+        <section id="ch18" class="doc-section" aria-labelledby="ch18-title">
+          <div class="eyebrow"><span class="chapter-num">18</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch18-title">Gamification &amp; Leaderboard</h2>
+          <p class="section-lead">Community platforms live or die on sustained contribution — recognizing effort is the incentive layer that keeps people coming back to review, propose, and own rules.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Reviewing someone else's rule or maintaining ownership of an old one is unglamorous, easy-to-skip work. Making that contribution visible — points, levels, a public leaderboard — gives it the recognition it otherwise wouldn't get, which is what keeps a volunteer-driven platform actually maintained over time.</div>
+          </div>
+
+          <p class="doc-p">Actions across the platform — an edit proposal being accepted, a rule attracting likes, taking on ownership of orphaned content — accumulate into a points total, which maps to a level. A contributor's own profile shows their full breakdown; a global leaderboard (searchable, sortable, paginated) shows how everyone stacks up, with category-specific views for different kinds of contribution.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-chart-line"></i></div>
+            <div><div class="usecase-role">Tracking personal progress</div>
+            <div class="usecase-text">A contributor checks their own level and point breakdown on their profile after a productive week of accepted proposals.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-medal"></i></div>
+            <div><div class="usecase-role">Recognizing top contributors</div>
+            <div class="usecase-text">The global leaderboard highlights the community's most active contributors over a period, giving visible credit for sustained, unglamorous maintenance work.</div></div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>An honest trade-off</strong>Any points system risks rewarding quantity over quality — someone could, in theory, propose many trivial edits to accumulate points. Weighting <em>accepted</em> contributions rather than merely submitted ones is the main safeguard against this, and is worth actively monitoring as the community grows.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-15">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-15.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 19 ══════════════════ -->
+        <section id="ch19" class="doc-section" aria-labelledby="ch19-title">
+          <div class="eyebrow"><span class="chapter-num">19</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch19-title">Notifications</h2>
+          <p class="section-lead">With this many collaborative workflows running at once, users need one place that says "something happened that needs your attention" — instead of having to poll every page just in case.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Edit proposals, ownership requests, comments, reports, and background jobs can all produce something worth knowing about, often for someone who isn't actively looking at that specific page. A single, unified notification layer means nothing important depends on lucky timing.</div>
+          </div>
+
+          <p class="doc-p">Nearly every collaborative action described elsewhere in this report — a proposal submitted or decided, a new comment or reply, a report filed, ownership requested or granted, a long-running job finishing — creates a notification for whoever needs to know: the owner, an admin, a follower. A bell icon shows a live unread count and a short recent list; a full page lists and paginates everything with read/unread state, and a preferences page lets each user control which event types actually notify them.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-bell"></i></div>
+            <div><div class="usecase-role">Immediate awareness</div>
+            <div class="usecase-text">A rule owner gets notified the instant someone proposes an edit to it, instead of discovering the proposal by chance days later.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-user-shield"></i></div>
+            <div><div class="usecase-role">Passive admin awareness</div>
+            <div class="usecase-text">An admin is notified the moment a report is filed, rather than needing to proactively check the moderation queue on a schedule.</div></div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Worth confirming precisely</strong>Whether delivery is in-app only, or also reaches email/another channel, is exactly the kind of detail an evaluator will ask about early — confirm the current channel(s) precisely rather than assuming.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-16">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-16.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 20 ══════════════════ -->
+        <section id="ch20" class="doc-section" aria-labelledby="ch20-title">
+          <div class="eyebrow"><span class="chapter-num">20</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch20-title">Rule Tester</h2>
+          <p class="section-lead">A rule that's syntactically valid isn't necessarily a rule that matches anything real — the Rule Tester is where you find out before you trust it.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Chapter 8 was explicit that syntax validation cannot prove a rule actually detects anything. The Rule Tester is the feature that closes that specific gap — by running a rule against real sample data instead of only checking that it parses.</div>
+          </div>
+
+          <p class="doc-p">Sample data is attached to a rule, the test is run, and matches (or the lack of them) are reviewed with notes kept alongside for future reference. A test can be kept private or shared, and bulk testing lets a larger validation effort run across many rules against a reference dataset at once rather than one at a time.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-vial"></i></div>
+            <div><div class="usecase-role">Confirming a rule actually fires</div>
+            <div class="usecase-text">A new Suricata rule is run against a captured, sample-derived dataset to confirm it actually matches before anyone treats it as trusted, production-ready detection.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-layer-group"></i></div>
+            <div><div class="usecase-role">Bulk-validating an import</div>
+            <div class="usecase-text">An entire freshly-imported rule set is bulk-tested against a reference dataset in one pass, rather than testing each rule by hand.</div></div>
+          </div>
+
+          <div class="callout callout-red">
+            <div class="callout-icon"><i class="fas fa-pause"></i></div>
+            <div class="callout-body"><strong>Currently suspended</strong>This feature is presently disabled in navigation and test history pending re-enablement — this documentation describes it as designed, not as currently reachable in the live UI. Revisit this chapter (and take its screenshots) once it's switched back on.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-17">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-17.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 21 ══════════════════ -->
+        <section id="ch21" class="doc-section" aria-labelledby="ch21-title">
+          <div class="eyebrow"><span class="chapter-num">21</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch21-title">Customizable Dashboard</h2>
+          <p class="section-lead">Different people care about different signals — a manager wants trend charts, an analyst wants a rule list — a fixed homepage can never serve both well.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Rather than guessing at one "right" default view for every user, a widget-based dashboard lets each person build the view that actually matches what they check first every day.</div>
+          </div>
+
+          <p class="doc-p">Widgets — KPI tiles, charts, a rule list, an ATT&amp;CK coverage heatmap, trending vulnerabilities, an activity feed, an activity calendar, a "format race" comparison, and summary stat rows — can be added, removed, resized, and rearranged on a drag-and-drop grid. The layout is saved per user and reloaded automatically next time, with a one-click reset back to the platform default if an experiment doesn't work out.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-mug-hot"></i></div>
+            <div><div class="usecase-role">A personal "morning check"</div>
+            <div class="usecase-text">A user builds a dashboard combining recent activity, trending CVEs, and a KPI row — everything they check first each morning, in one screen.</div></div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Worth documenting per widget</strong>Not every widget refreshes at the same cadence — an activity feed is effectively live, while something like trending vulnerabilities may update on a longer cycle. Setting that expectation per widget avoids someone assuming a widget is stale when it's actually just on a slower refresh schedule.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-18">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-18.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 22 ══════════════════ -->
+        <section id="ch22" class="doc-section" aria-labelledby="ch22-title">
+          <div class="eyebrow"><span class="chapter-num">22</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch22-title">Connectors &amp; Federation</h2>
+          <p class="section-lead">No single Rulezet instance should be an island — connectors let instances share content with each other, so a smaller or private deployment still benefits from a larger community's work.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">A private, internal Rulezet instance shouldn't have to choose between staying private and benefiting from the public community's rules. A connector lets it pull curated content on its own schedule, on its own terms, without giving up isolation.</div>
+          </div>
+
+          <p class="doc-p">An admin configures a connector pointing at another Rulezet instance (or a MISP source), tests connectivity, previews exactly what a pull would bring in, and then runs it — as a trackable background job (chapter 23), not a black-box operation. Every pull is logged in the connector's own history for later audit.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pull mode</th><th>Behavior</th></tr></thead>
+              <tbody>
+                <tr><td><span class="mono-badge">Soft</span></td><td>Skip anything that already exists locally — safe, additive only.</td></tr>
+                <tr><td><span class="mono-badge">Hard</span></td><td>Update existing content in place to match the remote — can overwrite local edits, use deliberately.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="doc-p">Matching between instances is done strictly by a stable UUID, never by title or name — this avoids the obvious failure mode of two unrelated rules that happen to share a name being incorrectly merged.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-tower-broadcast"></i></div>
+            <div><div class="usecase-role">Private instance, public benefit</div>
+            <div class="usecase-text">An internal-only Rulezet deployment periodically pulls curated content from the public rulezet.org instance, staying current without ever exposing its own private content back.</div></div>
+          </div>
+
+          <div class="callout callout-red">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Read before running a hard pull</strong>A hard pull can overwrite local edits to previously-synced content — this is a genuine data-loss risk if the distinction from a soft pull isn't understood before clicking it, not a hypothetical edge case.</div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-circle-info"></i></div>
+            <div class="callout-body"><strong>A structural limit</strong>Content without a stable UUID (rare, but possible for hand-entered content) cannot be matched this way — worth knowing before assuming every piece of content is sync-able.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-19">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-19.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 23 ══════════════════ -->
+        <section id="ch23" class="doc-section" aria-labelledby="ch23-title">
+          <div class="eyebrow"><span class="chapter-num">23</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch23-title">Background Jobs &amp; Async Operations</h2>
+          <p class="section-lead">Several operations across this report — bulk transfers, GitHub imports, similarity scans, connector pulls — are slow by nature. This is what keeps them visible and safe instead of freezing the interface.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">A 500-rule import that blocks the page for several minutes with no feedback looks broken, even when it isn't. Making heavy operations asynchronous — with live progress and the ability to pause — turns "is this stuck?" into "here's exactly where it is."</div>
+          </div>
+
+          <p class="doc-p">Any operation heavy enough to matter runs as a trackable job with a visible status (pending, running, paused, completed, failed, cancelled) instead of tying up a request. A live progress view shows what's happening as it happens, and a structured, timestamped log is attached to every job for troubleshooting after the fact. If the server restarts mid-job, the job is automatically recovered back to a pending state rather than being silently lost.</p>
+
+          <p class="doc-p">Crucially, jobs can be <strong>paused and resumed</strong> without starting over — a large operation doesn't have to run start-to-finish in one sitting, and doesn't lose the work already done if it's interrupted.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-spinner"></i></div>
+            <div><div class="usecase-role">Watching real progress</div>
+            <div class="usecase-text">A 500-rule GitHub import shows live progress instead of a blank, unresponsive screen for several minutes.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-pause"></i></div>
+            <div><div class="usecase-role">Pausing a large operation</div>
+            <div class="usecase-text">A large bulk ownership transfer is paused partway through and resumed later, continuing from where it left off rather than reprocessing rules already handled.</div></div>
+          </div>
+
+          <p class="doc-p">This mechanism underlies operations described throughout this report: bulk tag add/remove, GitHub rule deletion, activity log cleanup, MISP data refresh, trash restore/purge, connector pulls, bulk ownership transfer, ATT&amp;CK data refresh and bulk parsing, bulk field parsing, and CVE-based blog draft generation — each covered in its own chapter; this one is about the shared mechanism they all run on.</p>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>A throughput constraint to plan around</strong>Jobs are processed one at a time by design — a very large bulk operation will queue behind whatever's already running rather than executing in parallel with it. Plan the timing of large operations with this in mind.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-20">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-20.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 24 ══════════════════ -->
+        <section id="ch24" class="doc-section" aria-labelledby="ch24-title">
+          <div class="eyebrow"><span class="chapter-num">24</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch24-title">Activity Log &amp; Audit Trail (Platform-Wide)</h2>
+          <p class="section-lead">Complements the per-rule history from chapter 12 with a platform-wide, cross-feature trail — the answer to "what has been happening on this instance," mainly for admins.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Per-rule history answers "what happened to this one rule." Running an actual platform means also being able to answer "who deleted this bundle" or "what happened around 2pm yesterday" — questions that span features, not just one object.</div>
+          </div>
+
+          <p class="doc-p">Every significant action anywhere on the platform is recorded consistently, and each action type carries configurable metadata — an admin can adjust its visibility and description rather than that being hard-coded — which is what powers a curated, public-facing activity feed alongside the full admin-only log. Old entries can be bulk-purged as a background job (chapter 23) rather than growing forever unchecked.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-search"></i></div>
+            <div><div class="usecase-role">Investigating a deletion</div>
+            <div class="usecase-text">An admin traces exactly who deleted a specific bundle and when, using the full log rather than relying on memory or a lucky Slack message.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-eye"></i></div>
+            <div><div class="usecase-role">Curating the public feed</div>
+            <div class="usecase-text">An admin tunes which action types are visible on the public activity feed versus kept admin-only, balancing transparency with noise.</div></div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Worth documenting for compliance planning</strong>Logs grow indefinitely unless actively purged — confirm and document your instance's actual purge cadence if audit or compliance retention requirements matter to your organization.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-21">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-21.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 25 ══════════════════ -->
+        <section id="ch25" class="doc-section" aria-labelledby="ch25-title">
+          <div class="eyebrow"><span class="chapter-num">25</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch25-title">Administration &amp; Platform Settings</h2>
+          <p class="section-lead">Someone has to run the instance day to day — this is the admin's operational chapter, distinct from the feature-specific admin actions already covered per topic elsewhere in this report.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Every feature chapter mentions its own admin actions in passing. This chapter is where instance-level operation — who can log in, what formats are accepted, whether the instance is backed up — lives on its own, because it's a different job than moderating any single feature.</div>
+          </div>
+
+          <p class="doc-p">Everything here is admin-only, without exception: user management, the rule format catalogue (enabling or disabling formats, and whether a format is treated as "executable"), the Trash (restoring or permanently purging soft-deleted rules, individually or in bulk), system/package/environment configuration, backups, and the instance's own configuration — including the "official instance" flag that enables the daily telemetry phone-home, deliberately true only on the canonical rulezet.org deployment.</p>
+
+          <p class="doc-p">A separate Platform Insights view gives instance-wide usage analytics — distinct from the per-user dashboard in chapter 21, this one is about the health of the whole deployment, not one person's workflow.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-rocket"></i></div>
+            <div><div class="usecase-role">Bringing an instance online</div>
+            <div class="usecase-text">A new deployment's first admin reviews system settings and confirms backups are working before inviting the rest of the team in.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-trash-can-arrow-up"></i></div>
+            <div><div class="usecase-role">Cleaning house</div>
+            <div class="usecase-text">An admin reviews the Trash periodically and permanently purges rules that were soft-deleted long ago and are genuinely no longer needed.</div></div>
+          </div>
+
+          <div class="callout callout-red">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Two genuinely irreversible actions live here</strong>Permanently purging a rule from Trash cannot be undone — the same warning given for every hard-delete path in this report applies here too, consistently, every time it comes up. Editing system/environment configuration from the UI is similarly sensitive; know precisely what fields are exposed this way before changing them.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-22">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-22.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 26 ══════════════════ -->
+        <section id="ch26" class="doc-section" aria-labelledby="ch26-title">
+          <div class="eyebrow"><span class="chapter-num">26</span> · Feature Guide</div>
+          <h2 class="section-title" id="ch26-title">Public REST API</h2>
+          <p class="section-lead">Not every interaction with Rulezet should require clicking through a browser — the API is what lets a team automate rule pulls or build Rulezet into their own tooling.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">A platform that only works through a human clicking buttons can't be part of an automated pipeline. Exposing the same actions the UI offers as a proper API is what makes Rulezet something you can build <em>on</em>, not just visit.</div>
+          </div>
+
+          <p class="doc-p">Authentication is a personal API key (generated from your profile, chapter 6) sent in a request header. Every namespace is documented and directly exercisable through interactive documentation built into the running instance — you can try a real request before writing a single line of integration code.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-arrows-rotate"></i></div>
+            <div><div class="usecase-role">Automated ingestion</div>
+            <div class="usecase-text">An internal detection pipeline pulls the latest public rules on a schedule, without a human ever opening the Rulezet UI.</div></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-robot"></i></div>
+            <div><div class="usecase-role">CI-driven bundle management</div>
+            <div class="usecase-text">A CI process creates and updates bundles automatically as part of a broader release pipeline.</div></div>
+          </div>
+
+          <p class="doc-p">Every action still respects the exact same ownership and admin rules described in chapter 6 — the API is a different door into the platform, not a way around its permission model.</p>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Confirm before integrating</strong>Rate limiting behavior isn't something to assume either way — check the current behavior directly (and the live interactive docs for the current, authoritative list of available endpoints) before building an integration that depends on a particular assumption.</div>
+          </div>
+
+          <figure class="shot-media" data-shot-id="shot-23">
+            <div class="shot-media-frame" tabindex="0" role="button" aria-label="Click to view full size">
+              <img class="shot-media-img" src="{{ url_for('static', filename='image/docs/screenshots/shot-23.png') }}" alt="Screenshot" loading="lazy">
+            </div>
+          </figure>
+        </section>
+
+        <div class="part-marker">
+          <span class="part-marker-num">III</span>
+          <span class="part-marker-title"><span>Architecture &amp; Developer Guide</span></span>
+          <span class="part-marker-line"></span>
+        </div>
+
+        <div class="callout callout-blue" style="margin-bottom:28px;">
+          <div class="callout-icon"><i class="fas fa-circle-info"></i></div>
+          <div class="callout-body"><strong>A different kind of chapter</strong>Part I and II were written for anyone who uses Rulezet. This Part is written for anyone who wants to <em>extend</em> it. It stays deliberately conceptual — ideas, reasoning, and worked examples — rather than a code walkthrough; treat it as the mental model to have in mind before opening the source, not a substitute for reading it.</div>
+        </div>
+
+        <!-- ══════════════════ CHAPTER 27 ══════════════════ -->
+        <section id="ch27" class="doc-section" aria-labelledby="ch27-title">
+          <div class="eyebrow"><span class="chapter-num">27</span> · Architecture</div>
+          <h2 class="section-title" id="ch27-title">System Architecture Overview</h2>
+          <p class="section-lead">The thirty-thousand-foot view every contributor should have before touching anything else described in this Part.</p>
+
+          <p class="doc-p">Rulezet is built as a fairly classical web application: a server that renders pages and handles requests, a relational database holding everything durable, and a lightweight interactive layer in the browser that takes over once a page has loaded — no separate build pipeline stands between writing a page's code and seeing it run. That choice is deliberate: it keeps the barrier to contributing low. Anyone can open a single file, see the page's structure and its interactive behavior together, and understand the whole picture without first learning a separate front-end toolchain.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why this matters</div>
+            <div class="why-panel-body">A platform built by (and for) a security community benefits more from "any contributor can read the whole stack in one sitting" than from squeezing out marginal front-end performance with a heavier toolchain. Simplicity of the stack is treated as a feature, not a limitation.</div>
+          </div>
+
+          <p class="doc-p">Alongside ordinary request/response handling, three things run continuously in the background, all triggered by the same everyday user actions described throughout Part II:</p>
+          <ul class="doc-list">
+            <li><strong>The background job engine</strong> (chapter 28) — anything too slow to do inline becomes a trackable, resumable task instead.</li>
+            <li><strong>The audit trail</strong> (chapter 24) — nearly every meaningful action writes a record as it happens.</li>
+            <li><strong>Notifications</strong> (chapter 19) — the same actions fan out to whoever needs to know about them.</li>
+          </ul>
+
+          <p class="doc-p">A single example ties all three together: an admin runs a bulk ownership transfer (chapter 10). That transfer runs as a background job so the browser stays responsive throughout; each affected rule's ownership change is written to the audit trail as it happens; and the new owner receives a notification the moment it's done. Three chapters, one action — this is the pattern to recognize whenever a new feature is being designed.</p>
+
+          <div class="callout callout-blue">
+            <div class="callout-icon"><i class="fas fa-flask"></i></div>
+            <div class="callout-body"><strong>Three environments, one codebase</strong>The exact same application code runs in three modes — a local development mode, an automated-testing mode (using a disposable, in-memory database so tests never touch real data), and production. Switching between them is a single setting, never a code change.</div>
+          </div>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 28 ══════════════════ -->
+        <section id="ch28" class="doc-section" aria-labelledby="ch28-title">
+          <div class="eyebrow"><span class="chapter-num">28</span> · Architecture</div>
+          <h2 class="section-title" id="ch28-title">The Background Job Engine</h2>
+          <p class="section-lead">The mechanism behind every "this might take a while" operation from chapter 23 — explained for someone who wants to make a brand-new operation work the same way.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Without a shared mechanism, every slow feature would reinvent its own progress tracking, its own pause/resume logic, and its own way of surviving a server restart — inconsistently, and mostly badly. One engine, used everywhere a heavy operation exists, means all of that gets solved once.</div>
+          </div>
+
+          <p class="doc-p">The core idea is simple to state and easy to get wrong in practice: a background operation processes its work in small chunks, and after each chunk it writes down exactly how far it's gotten — a "bookmark." Nothing about its progress is allowed to live only in memory, because the operation might be paused by a user, or the whole server might restart, at any moment between chunks. When it resumes — whether a second later or the next day — it starts by reading its own bookmark and continuing from there, not from the beginning.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-bookmark"></i></div>
+            <div><div class="usecase-role">Worked example</div>
+            <div class="usecase-text">A bulk operation covering several thousand rules works through them in batches of a few hundred at a time. After each batch, it records "the last 300 are done." If someone pauses it after four batches, or the server restarts unexpectedly, resuming reads that bookmark and starts at rule 1,201 — never rule 1.</div></div>
+          </div>
+
+          <h3 class="subsection-title"><i class="fas fa-shoe-prints"></i> Conceptually, adding a new kind of background operation means:</h3>
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-num">1</div><div><div class="flow-title">Describe the work as small, repeatable chunks</div><div class="flow-desc">Not one giant all-or-nothing step — something that can be checkpointed meaningfully partway through.</div></div></div>
+            <div class="flow-step"><div class="flow-num">2</div><div><div class="flow-title">Write a bookmark after every chunk</div><div class="flow-desc">Enough information to resume correctly — an offset, a list of what's already been processed, whatever the operation actually needs to pick back up cleanly.</div></div></div>
+            <div class="flow-step"><div class="flow-num">3</div><div><div class="flow-title">Check periodically whether you've been asked to pause or stop</div><div class="flow-desc">Between chunks is the natural, safe point to check — never partway through one.</div></div></div>
+            <div class="flow-step"><div class="flow-num">4</div><div><div class="flow-title">Let the shared engine handle the rest</div><div class="flow-desc">Status tracking, the live progress view, pause/resume/cancel controls, and restart recovery all come for free once an operation follows this shape — nothing feature-specific needs to be built to get them.</div></div></div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>The single most common mistake</strong>Assuming something survives in memory between a pause and a resume. It doesn't — a resumed operation starts as if freshly launched, with no memory of anything except what was actually written to its bookmark. If it's not in the bookmark, treat it as lost.</div>
+          </div>
+
+          <div class="callout callout-blue">
+            <div class="callout-icon"><i class="fas fa-hourglass-half"></i></div>
+            <div class="callout-body"><strong>One at a time, by design</strong>Operations run strictly one after another rather than in parallel with each other — a deliberate simplicity trade-off. Design new operations with that constraint in mind rather than assuming concurrency with other background work.</div>
+          </div>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 29 ══════════════════ -->
+        <section id="ch29" class="doc-section" aria-labelledby="ch29-title">
+          <div class="eyebrow"><span class="chapter-num">29</span> · Architecture</div>
+          <h2 class="section-title" id="ch29-title">The Rule Format Parsing Engine — How to Add a New Format</h2>
+          <p class="section-lead">How Rulezet treats nine very different detection languages identically everywhere else in the platform — and exactly what's involved in adding a tenth.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">If rule creation, import, validation, and the bad-rule queue each had special-case logic per format, adding a new format would mean touching all of them, carefully, without breaking the others. Instead, every format is an interchangeable plug-in that promises the same small set of answers — the rest of the platform only ever asks those questions, never anything format-specific.</div>
+          </div>
+
+          <p class="doc-p">Concretely, a format only ever needs to answer three questions about a piece of content: <strong>is this valid</strong> for the format (and if not, what exactly is wrong with it), <strong>what metadata does it carry</strong> (title, author, whatever the format naturally exposes), and — only relevant for bulk import — <strong>how do I find individual rules</strong> inside a larger file or repository that might contain many of them. Every existing format (YARA, Sigma, Suricata, Zeek, and the rest) answers those same three questions in its own way; nothing else in the platform needs to know or care how.</p>
+
+          <div class="connector-diagram" style="margin:26px 0;display:flex;align-items:center;gap:0;overflow-x:auto;padding:20px 0;">
+            <div style="border-radius:10px;padding:16px 20px;min-width:150px;text-align:center;flex-shrink:0;border:2px solid var(--accent);background:var(--accent-subtle);">
+              <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;">Rule content</div>
+              <div style="font-size:11px;color:var(--muted);">any format</div>
+            </div>
+            <div style="flex:1;min-width:60px;height:2px;background:linear-gradient(to right, var(--accent), var(--blue));position:relative;"></div>
+            <div style="border-radius:10px;padding:16px 20px;min-width:170px;text-align:center;flex-shrink:0;border:2px solid var(--blue);background:var(--blue-subtle);">
+              <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;">Matching format plug-in</div>
+              <div style="font-size:11px;color:var(--muted);">validate + read metadata</div>
+            </div>
+            <div style="flex:1;min-width:60px;height:2px;background:linear-gradient(to right, var(--blue), var(--green));position:relative;"></div>
+            <div style="border-radius:10px;padding:16px 20px;min-width:170px;text-align:center;flex-shrink:0;border:2px solid var(--green);background:var(--green-subtle);">
+              <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;">Rule created — or Bad Rule</div>
+              <div style="font-size:11px;color:var(--muted);">same pipeline, every format</div>
+            </div>
+          </div>
+
+          <h3 class="subsection-title"><i class="fas fa-shoe-prints"></i> Adding a new format, conceptually</h3>
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-num">1</div><div><div class="flow-title">Define what "valid" means for this format</div><div class="flow-desc">This is the single most important piece — it's what decides whether a submission becomes a real rule or gets quarantined in the Bad Rules queue (chapter 8).</div></div></div>
+            <div class="flow-step"><div class="flow-num">2</div><div><div class="flow-title">Define what metadata to pull out</div><div class="flow-desc">Whatever the format naturally exposes — a title, an author field, a description — so it's searchable and displayed consistently with every other format.</div></div></div>
+            <div class="flow-step"><div class="flow-num">3</div><div><div class="flow-title">Define how to split a bulk file into individual rules</div><div class="flow-desc">Only needed if the format supports many rules per file, and only matters for the GitHub-import path — a format only ever created one rule at a time can implement this minimally.</div></div></div>
+            <div class="flow-step"><div class="flow-num">4</div><div><div class="flow-title">Nothing else changes</div><div class="flow-desc">Rule creation, import, search, the bad-rule queue, and validation error display all already know how to work with any format that answers the three questions above — a new format plugs into all of them automatically.</div></div></div>
+          </div>
+
+          <div class="callout callout-blue">
+            <div class="callout-icon"><i class="fas fa-circle-info"></i></div>
+            <div class="callout-body"><strong>Failing validation is a correct outcome, not an error to avoid</strong>A new format implementation must be comfortable saying "this is not valid" clearly and specifically — that's precisely what routes a bad submission to the Bad Rules queue for human review (chapter 8) instead of it being silently accepted broken, or silently thrown away.</div>
+          </div>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="callout-body"><strong>Keep it self-contained</strong>A format implementation shouldn't depend on anything about the specific request or user submitting it — it should behave the same way regardless of when or how it's called, which is what lets the platform load and reuse every format's logic interchangeably.</div>
+          </div>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 30 ══════════════════ -->
+        <section id="ch30" class="doc-section" aria-labelledby="ch30-title">
+          <div class="eyebrow"><span class="chapter-num">30</span> · Architecture</div>
+          <h2 class="section-title" id="ch30-title">Frontend Architecture &amp; Shared Components</h2>
+          <p class="section-lead">How the interactive layer is organized, and why the same handful of building blocks show up in nearly every chapter of Part II.</p>
+
+          <div class="why-panel">
+            <div class="why-panel-label"><i class="fas fa-circle-question"></i> Why</div>
+            <div class="why-panel-body">Every page is rendered on the server first, so its content and structure exist immediately — then a lightweight interactive layer takes over for anything dynamic: voting, live filtering, in-place editing, charts. Keeping this layer simple and dependency-light (no separate compiled bundle to reason about) is what keeps the whole codebase approachable to a new contributor.</div>
+          </div>
+
+          <p class="doc-p">Rather than every feature reinventing its own version of a code viewer, a diff viewer, a comment thread, or a rule list, a small catalogue of shared building blocks exists and gets reused everywhere the same need comes up. This is why, across this entire report, the same interaction patterns keep reappearing: the comment thread on a rule (chapter 15), on a bundle (chapter 11), and under a blog post (chapter 16) isn't three separate implementations that could quietly drift apart — it's the same one, used three times.</p>
+
+          <div class="usecase-card">
+            <div class="usecase-avatar"><i class="fas fa-recycle"></i></div>
+            <div><div class="usecase-role">Worked example</div>
+            <div class="usecase-text">The same rule-list building block powers the homepage's recent rules, a bundle's rule list, and a workspace's rule list. Adding a new sort option to it once improves all three places at the same time — there's no second or third copy left unfixed.</div></div>
+          </div>
+
+          <div class="feature-grid">
+            <div class="feature-card"><div class="feature-card-icon icon-blue"><i class="fas fa-code"></i></div><div class="feature-card-title">Code &amp; diff viewing</div><div class="feature-card-desc">Shared components render syntax-highlighted rule content and side-by-side diffs consistently wherever a rule's content is shown or compared.</div></div>
+            <div class="feature-card"><div class="feature-card-icon icon-green"><i class="fas fa-comments"></i></div><div class="feature-card-title">Comment thread</div><div class="feature-card-desc">One threaded-comment-with-reactions component, reused across rules, bundles, proposals, and blog posts (chapter 15).</div></div>
+            <div class="feature-card"><div class="feature-card-icon icon-amber"><i class="fas fa-table"></i></div><div class="feature-card-title">Rule &amp; data listings</div><div class="feature-card-desc">A shared list/table building block with built-in search, sort, and filtering, reused for rules, logs, and other tabular data across the platform.</div></div>
+            <div class="feature-card"><div class="feature-card-icon icon-purple"><i class="fas fa-chart-line"></i></div><div class="feature-card-title">Charts &amp; visualizations</div><div class="feature-card-desc">A common charting layer powers the dashboard (chapter 21), Platform Insights, and ATT&amp;CK coverage views alike.</div></div>
+          </div>
+
+          <div class="callout callout-blue">
+            <div class="callout-icon"><i class="fas fa-user-shield"></i></div>
+            <div class="callout-body"><strong>Permissions stay server-authoritative</strong>What a given user is allowed to do — edit, delete, moderate — is always decided on the server and simply handed to the interactive layer to reflect (show or hide a button, for instance). The frontend never independently decides who is allowed to do what; it only displays a decision that's already been made.</div>
+          </div>
+        </section>
+
+        <!-- ══════════════════ CHAPTER 31 ══════════════════ -->
+        <section id="ch31" class="doc-section" aria-labelledby="ch31-title">
+          <div class="eyebrow"><span class="chapter-num">31</span> · Architecture</div>
+          <h2 class="section-title" id="ch31-title">Development Conventions &amp; Use Cases to Respect</h2>
+          <p class="section-lead">A short list of hard rules — each one exists because breaking it caused a real problem before, not as an arbitrary style preference.</p>
+
+          <h3 class="subsection-title"><i class="fas fa-trash-can"></i> Deleted content stays deleted, everywhere</h3>
+          <p class="doc-p">A rule (or bundle, or post) that's been removed must not resurface anywhere it's referenced — search results, listings, the API — and everything attached to it (like its discussion thread) needs to be cleaned up consistently at the same time, not left behind pointing at something that no longer exists. This principle underlies the comment-cleanup guarantee described in chapter 15.</p>
+
+          <h3 class="subsection-title"><i class="fas fa-layer-group"></i> Soft delete before hard delete</h3>
+          <p class="doc-p">Destructive actions get a recoverable, reviewable middle step before anything is truly, permanently gone — the Trash described in chapters 7 and 25. Treat "permanently remove" as a deliberate, separate, admin-only second action, never the direct result of an ordinary delete click.</p>
+
+          <h3 class="subsection-title"><i class="fas fa-user-shield"></i> Ownership and admin rights are the only two ways in</h3>
+          <p class="doc-p">The rule from chapter 6 — only a resource's owner or an admin can change or remove it — applies everywhere a resource can be acted on, without a feature-by-feature exception. A new feature that lets someone act on a resource needs to apply this same check, not invent its own variant.</p>
+
+          <h3 class="subsection-title"><i class="fas fa-door-open"></i> Shared pages gate only their admin-specific parts</h3>
+          <p class="doc-p">A page that both regular users and admins need — like the requests page in chapter 10 — must gate only the pieces that are genuinely admin-only, never the whole page. Locking an entire shared page behind an admin check by mistake is a real regression this project has hit before, and is exactly the kind of thing worth testing deliberately from a non-admin account.</p>
+
+          <h3 class="subsection-title"><i class="fas fa-arrows-rotate"></i> A structural change and its rollout are one action, not two</h3>
+          <p class="doc-p">If how data is organized changes, the operational step that applies that change to the running system must happen at the same time — not "eventually," not "before the next deploy." A structural change that's only half-applied can break the live system the moment anything touches it.</p>
+
+          <h3 class="subsection-title"><i class="fas fa-arrow-down-1-9"></i> Ordered lists need to be told their order</h3>
+          <p class="doc-p">A paginated list with no explicit, deliberate ordering can present newly added items on any page at all, not predictably at the top — a bug that looks like "data is missing" when the data is actually just unpredictably placed. Every list a user pages through needs an intentional order, not an assumed one.</p>
+
+          <h3 class="subsection-title"><i class="fas fa-file-signature"></i> Every meaningful action leaves a trace</h3>
+          <p class="doc-p">Anything worth knowing happened — the kind of thing chapter 24's audit trail exists to answer questions about — needs to be recorded at the moment it happens. A missing record is invisible right up until the moment someone goes looking for an entry that was never made, which is always the worst possible time to discover the gap.</p>
+
+          <div class="callout callout-blue">
+            <div class="callout-icon"><i class="fas fa-circle-info"></i></div>
+            <div class="callout-body"><strong>Treat this chapter as load-bearing</strong>None of the seven principles above are style preferences — each maps to a real, previously-observed failure mode in how this kind of platform breaks when they're skipped. Read this chapter before your first contribution, not after your first incident.</div>
+          </div>
+        </section>
+
+        <div class="part-marker">
+          <span class="part-marker-num">IV</span>
+          <span class="part-marker-title"><span>Appendices</span></span>
+          <span class="part-marker-line"></span>
+        </div>
+
+        <!-- ══════════════════ APPENDIX A ══════════════════ -->
+        <section id="appendix-a" class="doc-section" aria-labelledby="appendix-a-title">
+          <div class="eyebrow"><span class="chapter-num">A</span> · Appendix</div>
+          <h2 class="section-title" id="appendix-a-title">Glossary of Terms &amp; Acronyms</h2>
+          <p class="section-lead">Every acronym and term used across this report, in one place — link back here any time a chapter uses one you don't recognize.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th style="width:16%;">Term</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td class="glossary-term">API</td><td>Application Programming Interface — the way external software talks to Rulezet directly, without a browser (chapter 26).</td></tr>
+                <tr><td class="glossary-term">ATT&amp;CK</td><td>A MITRE framework cataloguing known adversary behaviors as a standard, referenceable set of techniques (chapter 14).</td></tr>
+                <tr><td class="glossary-term">Bundle</td><td>A named, curated collection of rules (chapter 11).</td></tr>
+                <tr><td class="glossary-term">CIRCL</td><td>Computer Incident Response Center Luxembourg — the organization that builds and operates Rulezet (chapter 1).</td></tr>
+                <tr><td class="glossary-term">CRS</td><td>Core Rule Set — a detection rule format used with web application firewalls.</td></tr>
+                <tr><td class="glossary-term">CVE</td><td>Common Vulnerabilities and Exposures — the standard identifier scheme for publicly known vulnerabilities.</td></tr>
+                <tr><td class="glossary-term">Edit proposal</td><td>A pull-request-style suggested change to a rule, reviewed and accepted or rejected by its owner (chapter 9).</td></tr>
+                <tr><td class="glossary-term">Elastic</td><td>A detection rule format associated with the Elastic Stack / Elastic Security.</td></tr>
+                <tr><td class="glossary-term">Galaxy</td><td>A MISP knowledge base of curated clusters — threat actors, malware families, and similar entities (chapter 13).</td></tr>
+                <tr><td class="glossary-term">MISP</td><td>An open-source threat intelligence sharing platform built by CIRCL — Rulezet reuses its tag vocabularies (taxonomies and galaxies) and can connect to it directly (chapters 13, 22).</td></tr>
+                <tr><td class="glossary-term">NGSOTI</td><td>The project under which Rulezet was built at CIRCL, focused on improving tooling and training for the next generation of SOC analysts (chapter 1).</td></tr>
+                <tr><td class="glossary-term">Nova</td><td>A threat-hunting rule format supported by Rulezet.</td></tr>
+                <tr><td class="glossary-term">NSE</td><td>Nmap Scripting Engine — a scripting format for network reconnaissance detection.</td></tr>
+                <tr><td class="glossary-term">Ownership</td><td>The accountable user attached to a rule, bundle, or other resource (chapter 10).</td></tr>
+                <tr><td class="glossary-term">PAP</td><td>Permissible Actions Protocol — a classification describing what actions are allowed on shared content (chapter 5).</td></tr>
+                <tr><td class="glossary-term">Sigma</td><td>A generic, log-source-agnostic detection rule format designed to describe conditions abstractly rather than for one specific tool.</td></tr>
+                <tr><td class="glossary-term">SOC</td><td>Security Operations Center — the team responsible for monitoring and responding to security events.</td></tr>
+                <tr><td class="glossary-term">STIX</td><td>Structured Threat Information Expression — a standard format for representing threat intelligence, used as one of ATT&amp;CK's own data formats.</td></tr>
+                <tr><td class="glossary-term">Suricata</td><td>A network intrusion detection/prevention rule format for inspecting network traffic.</td></tr>
+                <tr><td class="glossary-term">Taxonomy</td><td>A MISP-standard structured vocabulary, such as TLP (chapter 13).</td></tr>
+                <tr><td class="glossary-term">TLP</td><td>Traffic Light Protocol — a classification describing how freely content can be shared (chapter 5).</td></tr>
+                <tr><td class="glossary-term">UUID</td><td>Universally Unique Identifier — a stable identifier used to match the same piece of content across different systems or instances (chapter 22).</td></tr>
+                <tr><td class="glossary-term">Wazuh</td><td>A SIEM platform with its own XML-based detection rule format.</td></tr>
+                <tr><td class="glossary-term">Workspace</td><td>A personal, flexible working area for rules, notes, and links (chapter 17).</td></tr>
+                <tr><td class="glossary-term">YARA</td><td>A pattern-matching rule format primarily used to identify and classify malware samples.</td></tr>
+                <tr><td class="glossary-term">Zeek</td><td>A network traffic analysis framework with its own scripting-based detection format.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ══════════════════ APPENDIX B ══════════════════ -->
+        <section id="appendix-b" class="doc-section" aria-labelledby="appendix-b-title">
+          <div class="eyebrow"><span class="chapter-num">B</span> · Appendix</div>
+          <h2 class="section-title" id="appendix-b-title">Roadmap &amp; Future Directions</h2>
+          <p class="section-lead">Where the platform is headed next — dated deliberately, since a roadmap is the part of any report that goes stale fastest.</p>
+
+          <div class="callout callout-amber">
+            <div class="callout-icon"><i class="fas fa-calendar"></i></div>
+            <div class="callout-body"><strong>As of 2026</strong>Confirm these items are still accurate before relying on this appendix — check with the team for anything time-sensitive.</div>
+          </div>
+
+          <ul class="doc-list">
+            <li><strong>MISP import/export</strong> — the ability to import and export rules and bundles directly to and from MISP, closing the loop between Rulezet's detection-rule focus and MISP's indicator focus.</li>
+            <li><strong>Vulnerability Lookup integration</strong> — linking rules to CIRCL's own Vulnerability Lookup service (<span class="inline-code">vulnerability.circl.lu</span>) for faster, more direct CVE traceability than a plain identifier field.</li>
+          </ul>
+          <p class="doc-p">Both items reflect the same underlying goal: deepening Rulezet's integration with the rest of CIRCL's open tooling ecosystem, rather than growing it as an isolated product.</p>
+        </section>
+
+        <!-- ══════════════════ APPENDIX C ══════════════════ -->
+        <section id="appendix-c" class="doc-section" aria-labelledby="appendix-c-title">
+          <div class="eyebrow"><span class="chapter-num">C</span> · Appendix</div>
+          <h2 class="section-title" id="appendix-c-title">Screenshot &amp; Media Master Checklist</h2>
+          <p class="section-lead">Every "Screenshot to capture" note from this report, aggregated in chapter order — a one-stop shot list for an actual capture session.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th style="width:8%;">Ch.</th><th style="width:26%;">Chapter</th><th>What to capture</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>Foreword</td><td>Homepage hero.</td></tr>
+                <tr><td>3</td><td>What Is Rulezet</td><td>"Recent Rules" card grid on the homepage.</td></tr>
+                <tr><td>6</td><td>Accounts &amp; Roles</td><td>Registration form, login form, profile page with API key section.</td></tr>
+                <tr><td>7</td><td>Rule Management</td><td>Create-rule form, GitHub import flow, a full rule detail page.</td></tr>
+                <tr><td>8</td><td>Validation &amp; Similarity</td><td>Bad Rules queue, a rule's similar-rules panel, admin similarity-scan results.</td></tr>
+                <tr><td>9</td><td>Edit Proposals</td><td>Propose-edit form, diff view, proposal comment thread.</td></tr>
+                <tr><td>10</td><td>Ownership &amp; Requests</td><td>Requests page (user view), requests page (admin view), a bulk-grant request detail page.</td></tr>
+                <tr><td>11</td><td>Bundles</td><td>Bundle list, create/edit form, bundle detail page (rule list + structure tree).</td></tr>
+                <tr><td>12</td><td>Rule History</td><td>A rule's History tab.</td></tr>
+                <tr><td>13</td><td>Tags &amp; Taxonomies</td><td>Tag browser, tag autocomplete on create form, admin taxonomy/galaxy import screen.</td></tr>
+                <tr><td>14</td><td>ATT&amp;CK Mapping</td><td>Heatmap/matrix page, a rule's technique badges, coverage gap analytics.</td></tr>
+                <tr><td>15</td><td>Community &amp; Moderation</td><td>A comment thread with reply + reaction, the Comment Hub, admin moderation queue.</td></tr>
+                <tr><td>16</td><td>Blog</td><td>Blog list, post editor, a published post with attached rules/techniques.</td></tr>
+                <tr><td>17</td><td>Workspaces</td><td>Workspace list, workspace detail (rules + documents + links + KPIs).</td></tr>
+                <tr><td>18</td><td>Gamification</td><td>Global leaderboard, a contributor profile page.</td></tr>
+                <tr><td>19</td><td>Notifications</td><td>Bell dropdown, full notifications page, preferences page.</td></tr>
+                <tr><td>20</td><td>Rule Tester</td><td>Test run screen, test result view, bulk test screen — <em>once re-enabled</em>.</td></tr>
+                <tr><td>21</td><td>Dashboard</td><td>Full dashboard, widget picker, ATT&amp;CK heatmap + activity calendar widgets close-up.</td></tr>
+                <tr><td>22</td><td>Connectors &amp; Federation</td><td>Connector list, create-connector form, pull preview, connector history.</td></tr>
+                <tr><td>23</td><td>Background Jobs</td><td>Job list, job detail mid-run with live log, pause/resume controls.</td></tr>
+                <tr><td>24</td><td>Activity Log</td><td>Admin logs page (search/filter), public activity feed, log definitions screen.</td></tr>
+                <tr><td>25</td><td>Administration</td><td>User management, format management, Trash/purge, backups, system settings, Platform Insights.</td></tr>
+                <tr><td>26</td><td>Public REST API</td><td>Interactive API docs landing page, one expanded example request/response.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="doc-p">Chapters not listed here (Part I's remaining chapters, and all of Part III) are narrative or conceptual and don't need a screenshot.</p>
+        </section>
+
+        <div class="callout callout-green" style="margin-top:40px;">
+          <div class="callout-icon"><i class="fas fa-circle-check"></i></div>
+          <div class="callout-body">
+            <strong>End of report</strong>
+            Use the <strong>Export</strong> button (top-right) at any time to print this as a PDF or download it as a standalone Markdown file — in whichever language is currently selected.
+          </div>
+        </div>
+
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════ FOOTER ══════════════════════════ -->
+<footer class="doc-footer" role="contentinfo">
+  <div class="doc-footer-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-brand">
+          <div class="footer-brand-icon" aria-hidden="true"><i class="fas fa-shield-halved"></i></div>
+          <span class="footer-brand-name">Rulezet</span>
+        </div>
+        <div class="footer-meta">
+          <span>Full documentation &amp; report template &nbsp;&middot;&nbsp; generated 2026 &nbsp;&middot;&nbsp; AGPL-3.0</span>
+          <br>
+          <span>Rulezet is developed at <a href="https://www.circl.lu/" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:underline;">CIRCL</a> (Computer Incident Response Center Luxembourg) as part of the <strong>NGSOTI</strong> project, co-funded by the European Union.</span>
+          
+        </div>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/ngsoti/rulezet-core" class="footer-link" target="_blank" rel="noopener"><i class="fa-brands fa-github" aria-hidden="true"></i>GitHub</a>
+        <a href="https://rulezet.org/" class="footer-link" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>rulezet.org</a>
+        <a href="https://www.circl.lu/" class="footer-link" target="_blank" rel="noopener"><i class="fas fa-building" aria-hidden="true"></i>CIRCL</a>
+        <a href="{{ url_for('docs.quick_start') }}" class="footer-link"><i class="fas fa-book" aria-hidden="true"></i><span>Developer Docs</span></a>
+      </div>
+    </div>
+
+    <div class="footer-cols">
+      <div class="footer-col">
+        <div class="footer-col-title"><span>Introduction</span></div>
+        <a href="#ch1"><span>Foreword</span></a>
+        <a href="#ch2"><span>The Problem</span></a>
+        <a href="#ch3"><span>Vision &amp; Goals</span></a>
+        <a href="#ch5"><span>Terminology</span></a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title"><span>Popular Features</span></div>
+        <a href="#ch7"><span>Rule Management</span></a>
+        <a href="#ch11"><span>Bundles</span></a>
+        <a href="#ch14"><span>ATT&amp;CK Mapping</span></a>
+        <a href="#ch22"><span>Connectors</span></a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title"><span>For Admins</span></div>
+        <a href="#ch25"><span>Administration</span></a>
+        <a href="#ch24"><span>Activity Log</span></a>
+        <a href="#ch23"><span>Background Jobs</span></a>
+        <a href="#ch26"><span>Public API</span></a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title"><span>For Developers</span></div>
+        <a href="#ch27"><span>System Architecture</span></a>
+        <a href="#ch29"><span>Add a Rule Format</span></a>
+        <a href="#ch31"><span>Coding Conventions</span></a>
+        <a href="#appendix-a"><span>Glossary</span></a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>&copy; CIRCL, Luxembourg — this report can be exported (top-right) as a PDF or as a standalone Markdown file at any time.</span>
+      
+      <span><span>Language: </span>EN <i class="fas fa-arrow-right-arrow-left" style="font-size:9px;"></i> FR</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ══════════════════════════ SCREENSHOT LIGHTBOX (shared) ══════════════════════════ -->
+<div class="lightbox" id="shotLightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Full-size screenshot">
+  <button class="lightbox-close" aria-label="Close"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+  <img id="lightboxImg" src="" alt="Screenshot, full size">
+</div>
+
+<!-- ══════════════════════════ BACK TO TOP ══════════════════════════ -->
+<button class="back-to-top" id="backToTop" aria-label="Back to top" title="Back to top">
+  <i class="fas fa-arrow-up" aria-hidden="true"></i>
+</button>
+
+<!-- Scripts -->
+<script src="{{ url_for('static', filename='js/docs/full_documentation.js') }}"></script>
+</body>
+</html>

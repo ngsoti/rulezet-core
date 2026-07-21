@@ -3,6 +3,24 @@
    established in css/account/user_detail.css rather than inventing a new
    one — same colors, same border/shadow/radius conventions. */
 
+/* ── Fullscreen mode ────────────────────────────────────────────
+   Targets the real :fullscreen pseudo-class (the container is put into
+   fullscreen via the Fullscreen API in dashboard.html, not just a CSS
+   "maximize"). Browsers default a fullscreened element to a plain black
+   background with no scrolling — override both so the dashboard fills
+   the screen in the app's own theme and scrolls if the grid is taller
+   than the viewport. */
+#dashboard-app:fullscreen,
+#dashboard-app:-webkit-full-screen {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    overflow-y: auto;
+    background: var(--bg-color);
+}
+
 /* ── Grid ───────────────────────────────────────────────────── */
 .grid-stack {
     background: transparent;

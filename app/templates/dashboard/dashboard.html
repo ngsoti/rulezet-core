@@ -17,6 +17,10 @@
             <i :class="bannerCollapsed ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-up'" class="me-1"></i>
             [[ bannerCollapsed ? 'Show header' : 'Hide header' ]]
         </button>
+        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="toggleFullscreen" title="Fullscreen">
+            <i :class="isFullscreen ? 'fa-solid fa-compress' : 'fa-solid fa-expand'" class="me-1"></i>
+            [[ isFullscreen ? 'Exit fullscreen' : 'Fullscreen' ]]
+        </button>
         <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="confirmRestoreDefault">
             <i class="fa-solid fa-rotate-left me-1"></i>Restore default
         </button>
@@ -192,6 +196,7 @@
             const gridEl       = ref(null)
             const registry     = WIDGET_REGISTRY
             const bannerCollapsed = ref(localStorage.getItem(BANNER_KEY) === '1')
+            const isFullscreen  = ref(false)
             let grid           = null
             let saveTimer      = null
             let _addWidgetModal = null
@@ -203,6 +208,25 @@
             function toggleBanner() {
                 bannerCollapsed.value = !bannerCollapsed.value
                 localStorage.setItem(BANNER_KEY, bannerCollapsed.value ? '1' : '0')
+            }
+
+            // ── Fullscreen mode: uses the real browser Fullscreen API so the
+            // tab/address bar go away too, not just a CSS "maximize" — the
+            // fullscreenchange listener keeps the button in sync even when the
+            // user exits via Esc instead of clicking it again. ──────────────
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    const el = document.getElementById('dashboard-app')
+                    if (el.requestFullscreen) {
+                        el.requestFullscreen().catch(() => create_message('Fullscreen was blocked by the browser', 'warning'))
+                    }
+                } else if (document.exitFullscreen) {
+                    document.exitFullscreen()
+                }
+            }
+
+            function onFullscreenChange() {
+                isFullscreen.value = !!document.fullscreenElement
             }
 
             // ── "Add widget" catalog: two-level (categories → cards) ──────
@@ -493,14 +517,16 @@
 
             onMounted(async () => {
                 _addWidgetModal = new bootstrap.Modal(document.getElementById('addWidgetModal'))
+                document.addEventListener('fullscreenchange', onFullscreenChange)
                 await loadLayout()
                 await nextTick()
                 initGrid()
             })
 
             return {
-                widgets, loadingLayout, gridEl, registry, bannerCollapsed,
+                widgets, loadingLayout, gridEl, registry, bannerCollapsed, isFullscreen,
                 componentFor, openAddWidget, addWidget, removeWidget, updateWidgetParams, toggleBanner,
+                toggleFullscreen,
                 confirmRestoreDefault,
                 catalogView, chartPreviewData, chartPreviewLoading, CATEGORIES,
                 categoryLabel, cardsForCategory, openCategory, showCategories,
