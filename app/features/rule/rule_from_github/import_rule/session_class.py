@@ -6,7 +6,6 @@ from threading import Event, Lock, Thread
 from uuid import uuid4
 
 from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType, load_all_rule_formats
-from app.features.rule.rule_format.utils_format.utils_import_update import delete_existing_repo_folder
 
 from ..... import db
 from .....core.db_class.db import ImporterResult, User
@@ -101,8 +100,20 @@ class Session_class:
                             "imported": 0
                         }
 
-                    job_index += 1
-                    self.jobs.put((job_index, file, filepath, rule_instance))
+                    # Read + split into individual rule texts now (once) so each queue
+                    # item is one RULE, not one file — a file can hold dozens of rules,
+                    # and progress must reflect rules actually processed, not files
+                    # dequeued (dequeuing a file is instant; parsing/validating/writing
+                    # every rule inside it is what takes time).
+                    try:
+                        extracted_rules = rule_instance.extract_rules_from_file(filepath)
+                    except Exception:
+                        continue
+
+                    rel_path = os.path.relpath(filepath, self.repo_dir)
+                    for raw_text in extracted_rules:
+                        job_index += 1
+                        self.jobs.put((job_index, rel_path, rule_instance, raw_text))
 
         self.total = job_index
         app_obj = current_app._get_current_object()
@@ -151,7 +162,6 @@ class Session_class:
                 self.save_info()
             if self in sessions:
                 sessions.remove(self)
-            delete_existing_repo_folder("app/rule_from_github/Rules_Github")
         except Exception:
             pass
         finally:
@@ -169,49 +179,46 @@ class Session_class:
         while not self.jobs.empty():
             try:
                 work = self.jobs.get(timeout=1)
-                filepath = work[2] # Absolute path to the file
-                rule_instance = work[3]
+                rel_path = work[1]      # Path relative to the repo root
+                rule_instance = work[2]
+                raw_text = work[3]
 
+                clean_text = raw_text.strip()
+                if not clean_text or clean_text.startswith('#'):
+                    self.jobs.task_done()
+                    continue
 
+                # ENRICHMENT: Adding the filepath to the info dictionary
+                # This allows the metadata parser to see the 'github_path'
+                enriched_info = {**self.info, "github_path": rel_path}
 
-                extracted_rules = rule_instance.extract_rules_from_file(filepath)
-                
-                for raw_text in extracted_rules:
-                    clean_text = raw_text.strip()
-                    if not clean_text or clean_text.startswith('#'):
-                        continue
+                validation = rule_instance.validate(clean_text)
+                metadata = rule_instance.parse_metadata(clean_text, enriched_info, validation)
+                # add to metadata the enriched info (github_path)
+                metadata["github_path"] = rel_path
+                with loc_app.app_context():
+                    local_user = db.session.merge(user)
 
-                    # ENRICHMENT: Adding the filepath to the info dictionary
-                    # This allows the metadata parser to see the 'github_path'
-                    enriched_info = {**self.info, "github_path": filepath}
-                    
-                    validation = rule_instance.validate(clean_text)
-                    metadata = rule_instance.parse_metadata(clean_text, enriched_info, validation)
-                    # add to metadata the enriched info (github_path)
-                    metadata["github_path"] = filepath # os.path.relpath(filepath, self.repo_dir)
-                    with loc_app.app_context():
-                        local_user = db.session.merge(user)
-                        
-                        if validation.ok:
-                            # metadata now contains 'github_path' for RuleModel.add_rule_core
-                            success, msg = RuleModel.add_rule_core(metadata, local_user)
-                            if success:
-                                self.imported += 1
-                                self.count_per_format[rule_instance.format]["imported"] += 1
-                            else:
-                                self.skipped += 1
-                                self.count_per_format[rule_instance.format]["skipped"] += 1
+                    if validation.ok:
+                        # metadata now contains 'github_path' for RuleModel.add_rule_core
+                        success, msg = RuleModel.add_rule_core(metadata, local_user)
+                        if success:
+                            self.imported += 1
+                            self.count_per_format[rule_instance.format]["imported"] += 1
                         else:
-                            BadRuleModel.save_invalid_rule(
-                                form_dict=metadata,
-                                to_string=clean_text,
-                                rule_type=rule_instance.format,
-                                error=validation.errors,
-                                user=local_user
-                            )
-                            self.bad_rules += 1
-                            self.count_per_format[rule_instance.format]["bad_rule"] += 1
-                
+                            self.skipped += 1
+                            self.count_per_format[rule_instance.format]["skipped"] += 1
+                    else:
+                        BadRuleModel.save_invalid_rule(
+                            form_dict=metadata,
+                            to_string=clean_text,
+                            rule_type=rule_instance.format,
+                            error=validation.errors,
+                            user=local_user
+                        )
+                        self.bad_rules += 1
+                        self.count_per_format[rule_instance.format]["bad_rule"] += 1
+
                 self.jobs.task_done()
             except Exception:
                 self.jobs.task_done()
@@ -235,10 +242,6 @@ class Session_class:
                     self._save_done.set()
             if self in sessions:
                 sessions.remove(self)
-            try:
-                delete_existing_repo_folder("app/rule_from_github/Rules_Github")
-            except Exception:
-                pass
 
         return True
     

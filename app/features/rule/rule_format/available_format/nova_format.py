@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional
 import os
 import re
-from ...rule import get_rule
+from ...rule_core import get_rule
 
 from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 

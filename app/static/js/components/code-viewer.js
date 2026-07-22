@@ -206,9 +206,9 @@ export default {
         // Non-interactive: terms always highlighted, independent of the search box
         // — e.g. the exact byte sequences a rule test matched.
         extraHighlights: { type: Array, default: () => [] },
-        // Start with word-wrap on instead of the default horizontal-scroll view —
-        // useful for one long unbroken line (e.g. a raw hex blob).
-        wordWrap: { type: Boolean, default: false },
+        // Wrap long lines instead of pushing them into horizontal scroll —
+        // on by default everywhere; pass :word-wrap="false" to opt out.
+        wordWrap: { type: Boolean, default: true },
     },
 
     template: `

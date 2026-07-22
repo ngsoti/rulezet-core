@@ -62,19 +62,26 @@ export default defineComponent({
     name: 'ChartViewer',
 
     props: {
-        data:   { type: Object,           default: () => ({}) },
-        views:  { type: [Array, String],  default: 'line'     },
-        detail: { type: Boolean,          default: false       },
-        height: { type: String,           default: '420px'     },
+        data:       { type: Object,           default: () => ({}) },
+        views:      { type: [Array, String],  default: 'line'     },
+        detail:     { type: Boolean,          default: false       },
+        height:     { type: String,           default: '420px'     },
+        // Export-to-PNG button — on by default; turn off for a chart that's
+        // meant to sit as plain content inside another card (no toolbar chrome).
+        exportable: { type: Boolean,          default: true        },
+        // Bare chart: no toolbar/tabs row, no border, no background, no
+        // min-height floor — just the plot, meant to sit directly inside
+        // another card that already provides its own frame/background.
+        minimal:    { type: Boolean,          default: false       },
     },
 
     emits: ['chart-click'],
 
     template: `
-<div class="cv-root" :style="{ height }">
+<div class="cv-root" :class="{ 'cv-root--minimal': minimal }" :style="{ height }">
 
   <!-- Tabs bar (only when multiple views) -->
-  <div v-if="view_list.length > 1" class="cv-tabs">
+  <div v-if="view_list.length > 1 && !minimal" class="cv-tabs">
     <button
       v-for="v in view_list" :key="v"
       class="cv-tab"
@@ -86,16 +93,17 @@ export default defineComponent({
       <span>{{ VIEW_META[v] ? VIEW_META[v].label : v }}</span>
     </button>
     <div class="cv-tab-spacer"></div>
-    <button v-if="active_view !== 'table'" class="cv-action" @click="do_export" title="Export PNG">
+    <button v-if="active_view !== 'table' && exportable" class="cv-action" @click="do_export" title="Export PNG">
       <i class="fas fa-download"></i>
     </button>
   </div>
 
-  <!-- Single-view action bar -->
-  <div v-if="view_list.length === 1" class="cv-tabs cv-tabs--single">
+  <!-- Single-view action bar — hidden entirely in minimal mode, or when
+       there's nothing to put in it (no title and export disabled) -->
+  <div v-if="view_list.length === 1 && !minimal && (data.title || exportable)" class="cv-tabs cv-tabs--single">
     <span v-if="data.title" class="cv-chart-title">{{ data.title }}</span>
     <div class="cv-tab-spacer"></div>
-    <button v-if="active_view !== 'table'" class="cv-action" @click="do_export" title="Export PNG">
+    <button v-if="active_view !== 'table' && exportable" class="cv-action" @click="do_export" title="Export PNG">
       <i class="fas fa-download"></i>
     </button>
   </div>
@@ -195,6 +203,12 @@ export default defineComponent({
             if (!build_option) return;
 
             const theme = get_theme();
+            // Optional per-chart categorical override — e.g. a status
+            // breakdown (good/warning/critical/info) needs colors that carry
+            // that meaning, not the generic default series palette.
+            if (Array.isArray(props.data.colors) && props.data.colors.length) {
+                theme.palette = props.data.colors;
+            }
             // Single-view: title shown in the bar above — strip it from ECharts options
             const chart_data = view_list.value.length === 1
                 ? { ...props.data, title: undefined, subtitle: undefined }

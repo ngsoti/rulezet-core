@@ -317,13 +317,10 @@ def _find_in_trash_by_content(content: str):
     """Return a soft-deleted rule with identical content, or None."""
     if not content:
         return None
-    clean = "".join(content.split()).lower()
+    content_hash = compute_rule_content_hash(content)
     return Rule.query.filter(
         Rule.is_deleted == True,
-        func.lower(
-            func.replace(func.replace(func.replace(
-                func.replace(Rule.to_string, ' ', ''), '\n', ''), '\r', ''), '\t', '')
-        ) == clean
+        Rule.content_hash == content_hash
     ).first()
 
 # Create
@@ -452,22 +449,9 @@ def get_rule_by_uuid(uuid, include_deleted=False):
 def get_rule_by_content(content):
     if not content:
         return None
-        
-    clean_content = "".join(content.split()).lower()
 
-    query = _active().filter(
-        func.lower(
-            func.replace(
-                func.replace(
-                    func.replace(
-                        func.replace(Rule.to_string, ' ', ''),
-                    '\n', ''),
-                '\r', ''),
-            '\t', '')
-        ) == clean_content
-    )
-    
-    return query.first()
+    content_hash = compute_rule_content_hash(content)
+    return _active().filter(Rule.content_hash == content_hash).first()
 
 def rule_exists(Metadata: dict) -> tuple[bool, int]:
     """
@@ -732,7 +716,7 @@ def _normalize_github_url(url: str) -> str:
     return url.rstrip('/')
 
 
-def get_rule_from_a_github(title, filepath_in_the_repo, repo_source, original_uuid) -> tuple[Rule | None, str]:
+def get_rule_from_a_github(title, filepath_in_the_repo, repo_source, original_uuid, content=None) -> tuple[Rule | None, str]:
     clean_uuid = str(original_uuid).strip().lower()
     forbidden = ["none", "null", "unknown", "n/a", "undefined", ""]
 
@@ -740,6 +724,16 @@ def get_rule_from_a_github(title, filepath_in_the_repo, repo_source, original_uu
         rule = Rule.query.filter_by(original_uuid=original_uuid).first()
         if rule:
             return rule, "Rule found in Rulezet with this original_uuid"
+
+    # Content match is the strongest signal available — a rule renamed or
+    # moved to a different path/file upstream still has byte-identical
+    # content. Checking this before the title/path heuristics below is what
+    # keeps "new rule found" from flagging something add_rule_core() would
+    # immediately reject as "already exists (content matches)".
+    if content:
+        rule = get_rule_by_content(content)
+        if rule:
+            return rule, "Rule found in Rulezet with matching content"
 
     # Build a set of equivalent URLs to handle .git suffix mismatches
     norm_source = _normalize_github_url(repo_source)
@@ -2885,10 +2879,18 @@ def get_rule_update_list(sid):
     rule_udpate_list = RuleStatus.query.filter_by(update_result_id=update_result.id, update_available=True).all()
     return rule_udpate_list, len(rule_udpate_list)
 
-def accept_all_update(rule_udpate_list):
+def accept_all_update(rule_udpate_list, on_progress=None, should_stop=None):
+    """on_progress(n, rule), if given, is called after the n-th rule commits —
+    lets a caller (e.g. a BackgroundJob) surface real per-rule progress
+    instead of only finding out once the entire list is done.
+    should_stop(), if given, is checked before each rule — a truthy return
+    stops the loop early (already-committed rules stay committed; the caller
+    decides what "stopped early" means, e.g. a paused/cancelled job)."""
     # for each rule take the history_id associated
     try:
-        for rule in rule_udpate_list:
+        for i, rule in enumerate(rule_udpate_list):
+            if should_stop and should_stop():
+                return True
             rule.update_available = False
             if rule.rule_syntax_valid == True:
                 rule.message = "Updated successfully"
@@ -2906,21 +2908,28 @@ def accept_all_update(rule_udpate_list):
             else:
                 history.message = "rejected"
             history.success = True
+            if on_progress:
+                on_progress(i + 1, rule)
             db.session.commit()
         return True
     except Exception as e:
         return False
-   
 
-def reject_all_update(rule_update_list):
+
+def reject_all_update(rule_update_list, on_progress=None, should_stop=None):
+    """See accept_all_update() for on_progress / should_stop."""
     try:
-        for rule in rule_update_list:
+        for i, rule in enumerate(rule_update_list):
+            if should_stop and should_stop():
+                return True
             rule.update_available = False
             rule.message = "Rejected"
             history = RuleUpdateHistory.query.filter_by(id=rule.history_id).first()
             if history:
                 history.message = "rejected"
-        db.session.commit()
+            if on_progress:
+                on_progress(i + 1, rule)
+            db.session.commit()
         return True
     except Exception:
         db.session.rollback()

@@ -1,7 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Any
-from app.features.rule.rule import get_rule
+from app.features.rule.rule_core import get_rule
 from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.core.utils.utils import detect_cve
 

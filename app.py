@@ -68,5 +68,9 @@ elif args.delete_db:
         print("DB delete with success")
 else:
     port = int(os.environ.get("PORT", app.config.get("FLASK_PORT", 7009)))
-    app.run(host=app.config.get("FLASK_URL"), port=port)
+    # threaded=True — without it Werkzeug's dev server handles one request at a
+    # time, so any single slow request (a status poll waiting on a background
+    # session to finalize, a git clone/pull, ...) blocks every other request,
+    # including the page's own other AJAX calls, until it's done.
+    app.run(host=app.config.get("FLASK_URL"), port=port, threaded=True)
     

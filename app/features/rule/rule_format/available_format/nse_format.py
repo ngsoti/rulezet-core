@@ -5,7 +5,7 @@ import tempfile
 from typing import Any, Dict, List
 from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.core.utils.utils import detect_cve
-from ...rule import get_rule
+from ...rule_core import get_rule
 import base64
 
 class NseRule(RuleType):

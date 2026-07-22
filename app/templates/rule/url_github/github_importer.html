@@ -15,7 +15,7 @@
 </style>
 {% endblock %}
 {% block content %}
-<div class="container mt-4" id="main-container">
+<div class="container mt-4" id="main-container" v-cloak>
     <div class="explorer-banner mb-4">
         <i class="fa-solid fa-bars-progress banner-watermark"></i>
         <nav aria-label="breadcrumb" class="mb-3">
@@ -67,7 +67,14 @@
     <div class="tab-content" id="exampleTabsContent">
         <div class="tab-pane fade show active" id="github-pane" role="tabpanel" aria-labelledby="github-tab">
             <div class="card p-3">
-                <template v-if="history_list.length === 0">
+                <template v-if="loading">
+                    <div class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        Loading…
+                    </div>
+                </template>
+
+                <template v-else-if="history_list.length === 0">
                     <div class="alert alert-info text-center" role="alert">
                         No history found.
                     </div>
@@ -75,7 +82,7 @@
 
 
                 <!-- Table -->
-                <template v-if="history_list.length > 0">
+                <template v-if="!loading && history_list.length > 0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
                             <thead class="table-light">
@@ -177,7 +184,14 @@
         </div>
         <div class="tab-pane fade" id="rule-pane" role="tabpanel" aria-labelledby="rule-tab">
             <div class="card p-3">
-                <template v-if="history_list_update.length === 0">
+                <template v-if="loading_update">
+                    <div class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        Loading…
+                    </div>
+                </template>
+
+                <template v-else-if="history_list_update.length === 0">
                     <div class="alert alert-info text-center" role="alert">
                         No history found.
                     </div>
@@ -185,7 +199,7 @@
 
 
                 <!-- Table -->
-                <template v-if="history_list_update.length > 0">
+                <template v-if="!loading_update && history_list_update.length > 0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
                             <thead class="table-light">
@@ -245,14 +259,7 @@
                                         [[ history.found ?? 0 ]]
                                     </td>
                                     <td class="text-center">
-                                        <template v-if="history.new_rules && history.new_rules.length === 0">
-                                            0
-                                        </template>
-                                        <template v-else>
-                                            [[ history.new_rules.length ]]
-                                        </template>
-
-
+                                        [[ history.new_rules_count ?? 0 ]]
                                     </td>
                                     <td class="text-center">
                                         [[ history.updated ?? 0 ]]
@@ -432,24 +439,29 @@
             const running_sessions = ref({})
             const highlightUuid       = ref(null)
             const highlightUpdateUuid = ref(null)
+            const loading = ref(true)
 
             async function fetchGithubImporter(page) {
                 const params = new URLSearchParams({
                     page
                 })
 
-                const res = await fetch('/rule/history_github_importer/list?' + params.toString())
-                const data = await res.json()
+                try {
+                    const res = await fetch('/rule/history_github_importer/list?' + params.toString())
+                    const data = await res.json()
 
-                if (res.status === 200) {
-                    history_list.value = data.history || []
-                    total_history.value = data.total_history || 0
-                    total_pages.value = data.total_pages || 1
-                    current_page.value = page
-                } else {
-                    history_list.value = []
-                    total_history.value = 0
-                    total_pages.value = 1
+                    if (res.status === 200) {
+                        history_list.value = data.history || []
+                        total_history.value = data.total_history || 0
+                        total_pages.value = data.total_pages || 1
+                        current_page.value = page
+                    } else {
+                        history_list.value = []
+                        total_history.value = 0
+                        total_pages.value = 1
+                    }
+                } finally {
+                    loading.value = false
                 }
             }
 
@@ -539,24 +551,29 @@
             const current_page_update = ref(1)
             const total_pages_update = ref(1)
             const running_sessions_update = ref({})
+            const loading_update = ref(true)
 
             async function fetchGithubUpdater(page) {
                 const params = new URLSearchParams({
                     page
                 })
 
-                const res = await fetch('/rule/history_github_updater/list?' + params.toString())
-                const data = await res.json()
+                try {
+                    const res = await fetch('/rule/history_github_updater/list?' + params.toString())
+                    const data = await res.json()
 
-                if (res.status === 200) {
-                    history_list_update.value = data.history || []
-                    total_history_update.value = data.total_history || 0
-                    total_pages_update.value = data.total_pages || 1
-                    current_page_update.value = page
-                } else {
-                    history_list_update.value = []
-                    total_history_update.value = 0
-                    total_pages_update.value = 1
+                    if (res.status === 200) {
+                        history_list_update.value = data.history || []
+                        total_history_update.value = data.total_history || 0
+                        total_pages_update.value = data.total_pages || 1
+                        current_page_update.value = page
+                    } else {
+                        history_list_update.value = []
+                        total_history_update.value = 0
+                        total_pages_update.value = 1
+                    }
+                } finally {
+                    loading_update.value = false
                 }
             }
 
@@ -629,6 +646,7 @@
                 running_sessions,
                 fetchGithubImporter,
                 deleteImportHistory,
+                loading,
 
                 history_list_update,
                 total_history_update,
@@ -638,6 +656,7 @@
                 visiblePagesUpdate,
                 fetchGithubUpdater,
                 deleteUpdateHistory,
+                loading_update,
 
                 goto,
                 gotoUpdate,

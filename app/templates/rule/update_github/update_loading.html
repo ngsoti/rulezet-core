@@ -1,84 +1,266 @@
 {% extends 'base.html' %}
 {% block head %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/diff-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/chart-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/github/update_loading.css') }}">
 {% endblock %}
 {% block content %}
 
-<div v-cloak v-if="info_session">
-    <h2 class="fw-bold mb-1 text-center text-primary">Update Status</h2>
-    <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+<div v-cloak v-if="info_session" class="container">
+
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-arrows-rotate banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
+                <li class="breadcrumb-item"><a href="/rule/github/history_github_importer" class="text-decoration-none text-muted">GitHub Sources</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Update check</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-arrows-rotate"></i></div>
+            <div><h2 class="fw-bold mb-1">Update check</h2><div class="banner-accent"></div></div>
+        </div>
+        <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+            [[ !is_finished ? 'Comparing your imported rules against their GitHub source, live.' : 'Review what changed, then accept or reject each update.' ]]
+        </p>
+    </div>
+
+    <!-- Neutral state until we know whether this session is still running or
+         already finished — otherwise a session that was already done flashes
+         the progress bar for a frame before switching to the results. -->
+    <div v-if="!pageReady" class="text-center py-5">
+        <span class="spinner-border text-primary" role="status"></span>
+        <p class="text-muted small mt-3 mb-0">Loading update check…</p>
+    </div>
 
     <!-- Progress bar -->
-    <div v-if="!is_finished" class="mx-5">
-        <p class="text-muted mt-2">Updating rules. Please wait...</p>
-        <div class="progress mb-2">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-                :style="'width:'+progress+'%;'" :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+    <div v-else-if="!is_finished" class="mb-4">
+        <div class="ul-progress-card">
+            <div class="ul-progress-head">
+                <div class="ul-progress-icon"><i class="fas fa-arrows-rotate fa-spin"></i></div>
+                <div>
+                    <p class="ul-progress-title">Checking for updates…</p>
+                    <p class="ul-progress-sub">
+                        [[ info_session.repo_url || (info_session.repo_sources && info_session.repo_sources.length ? info_session.repo_sources.join(', ') : (info_session.count ? info_session.count + ' rule(s) selected' : 'Working…')) ]]
+                    </p>
+                </div>
+                <div class="ul-stat-row">
+                    <span class="ul-stat-chip ul-stat-chip--found"><span class="dot"></span>[[ liveFound ]] found</span>
+                    <span class="ul-stat-chip ul-stat-chip--update"><span class="dot"></span>[[ liveUpdated ]] update<span v-if="liveUpdated!==1">s</span></span>
+                    <span class="ul-stat-chip ul-stat-chip--new"><span class="dot"></span>[[ liveNew ]] new</span>
+                    <span v-if="liveErrors > 0" class="ul-stat-chip ul-stat-chip--error"><span class="dot"></span>[[ liveErrors ]] error<span v-if="liveErrors!==1">s</span></span>
+                </div>
+            </div>
+
+            <div class="ul-bar-track">
+                <div class="ul-bar-fill" :style="'width:'+progress+'%;'"></div>
+            </div>
+            <div class="ul-bar-meta">
+                <span><b>[[ progressDone ]]</b> / [[ progressTotal ]] rule<span v-if="progressTotal!==1">s</span> checked</span>
+                <span><b>[[ progress ]]%</b></span>
+            </div>
+
+            <div class="ul-log" ref="logEl">
+                <div v-if="!logEntries.length" class="ul-log-empty">
+                    <i class="fas fa-terminal me-1"></i> Waiting for the first result…
+                </div>
+                <div v-for="(entry, idx) in logEntries" :key="idx" class="ul-log-row" :class="'ul-log-row--'+entry.type">
+                    <i class="ul-log-icon" :class="entry.icon"></i>
+                    <span><span class="ul-log-rule">[[ entry.rule ]]</span> <span class="ul-log-msg">— [[ entry.msg ]]</span></span>
+                </div>
             </div>
         </div>
-        <span v-if="status_site" id="status">[[status_site]]</span>
     </div>
 
     <!-- Finished update -->
-    <div v-if="is_finished" class="container col-md-11 justify-content-center my-5">
-        <!-- Accordion for repos -->
-        <div v-if="result_data.info && result_data.info.github_metadata && result_data.info.github_metadata.length">
-            <div class="card p-3">
-                <h3 class="fw-bold mb-3">Repository Metadata</h3>
-                <div class="accordion" id="repoAccordion">
-                    <div v-for="(repo, index) in result_data.info.github_metadata" :key="repo.url"
-                        class="accordion-item">
-                        <h2 class="accordion-header" :id="'heading'+index">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                :data-bs-target="'#collapse'+index" aria-expanded="false"
-                                :aria-controls="'collapse'+index">
-                                [[ repo.name || repo.url ]]
-                            </button>
-                        </h2>
-                        <div :id="'collapse'+index" class="accordion-collapse collapse"
-                            :aria-labelledby="'heading'+index" data-bs-parent="#repoAccordion">
-                            <div class="accordion-body">
-                                <table class="table table-striped">
-                                    <tr v-if="repo.author">
-                                        <td>Author</td>
-                                        <td><b>[[ repo.author ]]</b></td>
-                                    </tr>
-                                    <tr v-if="repo.description">
-                                        <td>Description</td>
-                                        <td><b>[[ repo.description ]]</b></td>
-                                    </tr>
-                                    <tr v-if="repo.license_name">
-                                        <td>License</td>
-                                        <td><b>[[ repo.license_name ]]</b></td>
-                                    </tr>
-                                    <tr v-if="repo.created_at">
-                                        <td>Creation Date</td>
-                                        <td><b>[[ repo.created_at ]]</b></td>
-                                    </tr>
-                                    <tr v-if="repo.language">
-                                        <td>Language</td>
-                                        <td><b><span class="badge bg-primary">[[ repo.language ]]</span></b></td>
-                                    </tr>
-                                    <tr v-if="repo.watchers">
-                                        <td>Watchers</td>
-                                        <td><b>[[ repo.watchers ]]</b></td>
-                                    </tr>
-                                    <tr v-if="repo.stars">
-                                        <td>Stars</td>
-                                        <td><b>[[ repo.stars ]]</b></td>
-                                    </tr>
-                                    <tr v-if="repo.open_issues">
-                                        <td>Open Issues</td>
-                                        <td><b>[[ repo.open_issues ]]</b></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Repo URL</td>
-                                        <td><a :href="repo.url" rel="noreferrer" target="_blank">[[ repo.url ]]</a></td>
-                                    </tr>
-                                </table>
+    <div v-else class="justify-content-center mb-5">
+        <!-- Update summary — the report -->
+        <div v-if="result_data" class="ul-report-card">
+            <div class="ul-report-head">
+                <div>
+                    <p class="ul-report-title">Update summary</p>
+                    <p class="ul-report-sub d-flex align-items-center flex-wrap gap-1">
+                        <span>Checked [[ result_data.query_date || '—' ]]</span>
+                        <span v-if="result_data.user_id">· requested by
+                            <user-chip :user-id="Number(result_data.user_id)"
+                                       :username="requesterInfo ? requesterInfo.username : info_session.initiated_by"
+                                       :avatar="requesterInfo ? requesterInfo.avatar : null"
+                                       size="xs"></user-chip>
+                        </span>
+                    </p>
+                </div>
+                <div class="ul-hero">
+                    <div class="ul-hero-ring" :style="'--pct:'+successRate+';'">
+                        <span class="ul-hero-ring-value">[[ successRate ]]%</span>
+                    </div>
+                    <div class="ul-hero-copy">
+                        <p class="ul-hero-label">Up to date</p>
+                        <p class="ul-hero-text">[[ upToDate ]] of [[ totalChecked ]] checked rule<span v-if="totalChecked!==1">s</span> already match their GitHub source.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ul-kpi-row">
+                <div class="ul-kpi ul-kpi--found ul-kpi--clickable" @click="filterRuleStatus({})" title="Show all checked rules">
+                    <div class="ul-kpi-value">[[ totalChecked ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Rules checked</div>
+                </div>
+                <div class="ul-kpi ul-kpi--ok ul-kpi--clickable" @click="filterRuleStatus({update_available:'false', found:'true'})" title="Show rules that are up to date">
+                    <div class="ul-kpi-value">[[ upToDate ]] <small v-if="totalChecked">([[ successRate ]]%)</small></div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Up to date</div>
+                </div>
+                <div class="ul-kpi ul-kpi--update ul-kpi--clickable" @click="filterRuleStatus({update_available:'true'})" title="Show rules with an update available">
+                    <div class="ul-kpi-value">[[ updateAvailableCount ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Updates available</div>
+                </div>
+                <div class="ul-kpi ul-kpi--found ul-kpi--clickable" @click="showNewRulesTab()" title="Show new rules found in the repo">
+                    <div class="ul-kpi-value">[[ total_new_rules ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>New rules found</div>
+                </div>
+                <div v-if="notFoundCount > 0" class="ul-kpi ul-kpi--error ul-kpi--clickable" @click="filterRuleStatus({found:'false'})" title="Show rules not found in the repo">
+                    <div class="ul-kpi-value">[[ notFoundCount ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Not found in repo</div>
+                </div>
+            </div>
+
+            <div class="ul-report-grid">
+                <div>
+                    <p class="ul-report-grid-title">Breakdown</p>
+                    <div class="ul-repo-card ul-chart-wrap">
+                        <chart-viewer v-if="totalChecked > 0" :data="summaryChartData" views="donut" height="100%" :minimal="true"></chart-viewer>
+                    </div>
+                </div>
+                <div v-if="result_data.info && result_data.info.github_metadata && result_data.info.github_metadata.length">
+                    <p class="ul-report-grid-title">Repository</p>
+                    <div v-for="repo in result_data.info.github_metadata" :key="repo.url" class="ul-repo-card">
+
+                        <template v-if="ghRepoCache[repo.url]">
+                            <!-- Live GitHub API data -->
+                            <div class="d-flex align-items-start gap-3 mb-3">
+                                <img :src="ghRepoCache[repo.url].owner.avatar_url" :alt="ghRepoCache[repo.url].owner.login"
+                                     class="rounded-circle flex-shrink-0"
+                                     style="width:40px;height:40px;border:2px solid var(--border-color);" />
+                                <div style="min-width:0;">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                        <a :href="ghRepoCache[repo.url].owner.html_url" target="_blank" rel="noreferrer"
+                                           class="text-decoration-none" style="font-size:.85rem;color:var(--subtle-text-color);">[[ ghRepoCache[repo.url].owner.login ]]</a>
+                                        <span class="text-muted">/</span>
+                                        <a :href="ghRepoCache[repo.url].html_url" target="_blank" rel="noreferrer" class="ul-repo-name">[[ ghRepoCache[repo.url].name ]]</a>
+                                        <span v-if="ghRepoCache[repo.url].archived" class="badge bg-warning text-dark">Archived</span>
+                                        <span class="badge" style="font-size:.63rem;"
+                                              :class="ghRepoCache[repo.url].visibility==='public' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                                            <i class="fa-solid" :class="ghRepoCache[repo.url].visibility==='public' ? 'fa-lock-open' : 'fa-lock'"></i>
+                                            [[ ghRepoCache[repo.url].visibility ]]
+                                        </span>
+                                    </div>
+                                    <p v-if="ghRepoCache[repo.url].description" class="ul-repo-desc mb-0">[[ ghRepoCache[repo.url].description ]]</p>
+                                </div>
+                            </div>
+
+                            <div class="gh-kpi-grid mb-3">
+                                <div class="gh-kpi">
+                                    <div class="gh-kpi-icon" style="background:rgba(255,193,7,.15);color:#e6a817;"><i class="fa-solid fa-star"></i></div>
+                                    <div><div class="gh-kpi-num">[[ fmtNum(ghRepoCache[repo.url].stargazers_count) ]]</div><div class="gh-kpi-lbl">Stars</div></div>
+                                </div>
+                                <div class="gh-kpi">
+                                    <div class="gh-kpi-icon" style="background:rgba(13,110,253,.12);color:#0d6efd;"><i class="fa-solid fa-code-branch"></i></div>
+                                    <div><div class="gh-kpi-num">[[ fmtNum(ghRepoCache[repo.url].forks_count) ]]</div><div class="gh-kpi-lbl">Forks</div></div>
+                                </div>
+                                <div class="gh-kpi">
+                                    <div class="gh-kpi-icon" style="background:rgba(220,53,69,.12);color:#dc3545;"><i class="fa-solid fa-circle-dot"></i></div>
+                                    <div><div class="gh-kpi-num">[[ fmtNum(ghRepoCache[repo.url].open_issues_count) ]]</div><div class="gh-kpi-lbl">Open issues</div></div>
+                                </div>
+                                <div class="gh-kpi">
+                                    <div class="gh-kpi-icon" style="background:rgba(13,202,240,.12);color:#0dcaf0;"><i class="fa-solid fa-eye"></i></div>
+                                    <div><div class="gh-kpi-num">[[ fmtNum(ghRepoCache[repo.url].subscribers_count) ]]</div><div class="gh-kpi-lbl">Watchers</div></div>
+                                </div>
+                                <div class="gh-kpi">
+                                    <div class="gh-kpi-icon" style="background:rgba(108,117,125,.12);color:#6c757d;"><i class="fa-solid fa-database"></i></div>
+                                    <div><div class="gh-kpi-num">[[ fmtSize(ghRepoCache[repo.url].size) ]]</div><div class="gh-kpi-lbl">Size</div></div>
+                                </div>
+                            </div>
+
+                            <div class="gh-info-grid">
+                                <div class="gh-info-cell" v-if="ghRepoCache[repo.url].language">
+                                    <div class="gh-info-cell-icon" style="background:rgba(13,110,253,.1);color:#0d6efd;"><i class="fa-solid fa-code"></i></div>
+                                    <div><div class="gh-info-lbl">Language</div><div class="gh-info-val">[[ ghRepoCache[repo.url].language ]]</div></div>
+                                </div>
+                                <div class="gh-info-cell" v-if="ghRepoCache[repo.url].license">
+                                    <div class="gh-info-cell-icon" style="background:rgba(25,135,84,.1);color:#198754;"><i class="fa-solid fa-scale-balanced"></i></div>
+                                    <div><div class="gh-info-lbl">License</div><div class="gh-info-val">[[ ghRepoCache[repo.url].license.name ]]</div></div>
+                                </div>
+                                <div class="gh-info-cell">
+                                    <div class="gh-info-cell-icon" style="background:rgba(108,117,125,.1);color:#6c757d;"><i class="fa-solid fa-code-branch"></i></div>
+                                    <div><div class="gh-info-lbl">Default branch</div><div class="gh-info-val">[[ ghRepoCache[repo.url].default_branch ]]</div></div>
+                                </div>
+                                <div class="gh-info-cell">
+                                    <div class="gh-info-cell-icon" style="background:rgba(255,193,7,.1);color:#e6a817;"><i class="fa-solid fa-calendar-plus"></i></div>
+                                    <div><div class="gh-info-lbl">Created</div><div class="gh-info-val">[[ fmtDate(ghRepoCache[repo.url].created_at) ]]</div></div>
+                                </div>
+                                <div class="gh-info-cell">
+                                    <div class="gh-info-cell-icon" style="background:rgba(13,202,240,.1);color:#0dcaf0;"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                                    <div><div class="gh-info-lbl">Last push</div><div class="gh-info-val">[[ fmtDate(ghRepoCache[repo.url].pushed_at) ]]</div></div>
+                                </div>
+                                <div class="gh-info-cell" v-if="ghRepoCache[repo.url].homepage">
+                                    <div class="gh-info-cell-icon" style="background:rgba(13,110,253,.1);color:#0d6efd;"><i class="fa-solid fa-link"></i></div>
+                                    <div>
+                                        <div class="gh-info-lbl">Homepage</div>
+                                        <div class="gh-info-val"><a :href="ghRepoCache[repo.url].homepage" target="_blank" rel="noreferrer" style="word-break:break-all;">[[ ghRepoCache[repo.url].homepage ]]</a></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template v-else-if="ghRepoLoading[repo.url]">
+                            <div class="d-flex flex-column gap-2">
+                                <div class="placeholder-glow"><span class="placeholder col-6 rounded"></span></div>
+                                <div class="gh-kpi-grid">
+                                    <div v-for="n in 5" :key="n" class="gh-kpi placeholder-glow"><span class="placeholder col-10 rounded" style="height:30px;"></span></div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template v-else>
+                            <!-- Fallback: the fields snapshotted at scan time -->
+                            <a :href="repo.url" target="_blank" rel="noreferrer" class="ul-repo-name">[[ repo.name || repo.url ]]</a>
+                            <p v-if="repo.description" class="ul-repo-desc">[[ repo.description ]]</p>
+                            <div class="ul-repo-stats">
+                                <span v-if="repo.author" class="ul-repo-stat"><i class="fas fa-user"></i>[[ repo.author ]]</span>
+                                <span v-if="repo.language" class="ul-repo-stat"><i class="fas fa-code"></i>[[ repo.language ]]</span>
+                                <span v-if="repo.license_name" class="ul-repo-stat"><i class="fas fa-scale-balanced"></i>[[ repo.license_name ]]</span>
+                                <span v-if="repo.stars" class="ul-repo-stat ul-repo-stat--stars"><i class="fas fa-star"></i>[[ repo.stars ]]</span>
+                                <span v-if="repo.watchers" class="ul-repo-stat ul-repo-stat--watchers"><i class="fas fa-eye"></i>[[ repo.watchers ]]</span>
+                                <span v-if="repo.open_issues" class="ul-repo-stat ul-repo-stat--issues"><i class="fas fa-circle-exclamation"></i>[[ repo.open_issues ]] issues</span>
+                                <span v-if="repo.created_at" class="ul-repo-stat"><i class="fas fa-calendar"></i>since [[ repo.created_at ]]</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div v-else>
+                    <p class="ul-report-grid-title">Job activity</p>
+                    <div class="ul-repo-card">
+                        <div class="d-flex flex-column gap-2">
+                            <div class="d-flex justify-content-between small">
+                                <span class="text-muted">Updates</span>
+                                <template v-if="activeJobUuid && bulkUpdating">
+                                    <span><span class="spinner-border spinner-border-sm text-primary me-1" style="width:.7rem;height:.7rem;"></span>[[activeJobDone]] / [[activeJobTotal]] ([[activeJobPct]]%)</span>
+                                </template>
+                                <span v-else-if="updatesAvailable > 0" class="badge bg-warning text-dark">[[updatesAvailable]] pending</span>
+                                <span v-else class="badge bg-success">All processed</span>
+                            </div>
+                            <div class="d-flex justify-content-between small">
+                                <span class="text-muted">New rules</span>
+                                <template v-if="activeJobUuid && bulkNewRules">
+                                    <span><span class="spinner-border spinner-border-sm text-success me-1" style="width:.7rem;height:.7rem;"></span>[[activeJobDone]] / [[activeJobTotal]] ([[activeJobPct]]%)</span>
+                                </template>
+                                <span v-else-if="total_new_rules > 0" class="badge bg-success">[[total_new_rules]] pending</span>
+                                <span v-else class="badge bg-secondary">All processed</span>
                             </div>
                         </div>
                     </div>
@@ -86,96 +268,97 @@
             </div>
         </div>
 
-        <!-- Update summary -->
-        <div v-if="result_data" class="card shadow border-0 mb-4 p-4 bg-light rounded">
-            <h3 class="fw-bold mb-3">Update Summary</h3>
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <tr v-if="result_data.total">
-                        <td>Total Rules</td>
-                        <td><b>[[result_data.total]]</b></td>
-                    </tr>
-                    <tr v-if="result_data.found">
-                        <td>Total Found</td>
-                        <td><b>[[result_data.found]]</b></td>
-                    </tr>
-                    <tr v-if="result_data.not_found">
-                        <td>Total Not Found</td>
-                        <td><b>[[result_data.not_found]]</b></td>
-                    </tr>
-                    <!-- Updates row -->
-                    <tr v-if="updatesAvailable > 0 || (activeJobUuid && bulkUpdating)" style="background-color: #f2e7c3;">
-                        <td>Updates</td>
-                        <td>
-                            <template v-if="activeJobUuid && bulkUpdating">
-                                <span class="spinner-border spinner-border-sm text-primary me-1" style="width:.8rem;height:.8rem;"></span>
-                                <span class="fw-semibold">[[activeJobDone]] / [[activeJobTotal]]</span>
-                                <span class="text-muted ms-1 small">([[activeJobPct]]%)</span>
-                            </template>
-                            <template v-else>
-                                <span class="badge bg-warning text-dark ms-1">[[updatesAvailable]] pending</span>
-                            </template>
-                        </td>
-                    </tr>
-                    <tr v-else>
-                        <td>Updates</td>
-                        <td><span class="badge bg-success ms-1">All processed</span></td>
-                    </tr>
-
-                    <!-- New Rules row -->
-                    <tr v-if="total_new_rules > 0 || (activeJobUuid && bulkNewRules)" style="background-color: #e8f4ec;">
-                        <td>New Rules</td>
-                        <td>
-                            <template v-if="activeJobUuid && bulkNewRules">
-                                <span class="spinner-border spinner-border-sm text-success me-1" style="width:.8rem;height:.8rem;"></span>
-                                <span class="fw-semibold">[[activeJobDone]] / [[activeJobTotal]]</span>
-                                <span class="text-muted ms-1 small">([[activeJobPct]]%)</span>
-                            </template>
-                            <template v-else>
-                                <span class="badge bg-success ms-1">[[total_new_rules]] pending</span>
-                            </template>
-                        </td>
-                    </tr>
-                    <tr v-else>
-                        <td>New Rules</td>
-                        <td><span class="badge bg-secondary ms-1">All processed</span></td>
-                    </tr>
-                    <tr v-if="result_data.skipped">
-                        <td>Skipped</td>
-                        <td><b>[[result_data.skipped]]</b></td>
-                    </tr>
-                    <tr v-if="result_data.query_date">
-                        <td>Query Date</td>
-                        <td><b>[[result_data.query_date]]</b></td>
-                    </tr>
-                </table>
+        <!-- What to do next — a running bulk job takes over its own item
+             inline (progress + log + pause/stop) instead of the button; the
+             item disappears on its own once the count it's about drops to 0
+             (getRules()/getNewRules() refresh those counts when the job ends). -->
+        <div v-if="totalChecked > 0 || total_new_rules > 0" class="ul-report-card ul-next-steps">
+            <p class="ul-report-title mb-3">What to do next</p>
+            <div class="ul-actions-list">
+                <div v-if="updateAvailableCount > 0" class="ul-action-item ul-action-item--update" :class="{ 'ul-action-item--running': activeJobUuid && bulkUpdating }">
+                    <i class="fas fa-arrow-up-from-bracket"></i>
+                    <div class="ul-action-copy" style="flex:1;">
+                        <strong>[[ updateAvailableCount ]] update<span v-if="updateAvailableCount!==1">s</span> available</strong>
+                        <span v-if="!(activeJobUuid && bulkUpdating)">Review each change and accept or reject it.</span>
+                        <template v-else>
+                            [[ activeJobLabel ]] — [[ activeJobDone ]] / [[ activeJobTotal ]] ([[ activeJobPct ]]%)
+                            <div class="ul-bar-track my-2"><div class="ul-bar-fill" :class="{ 'bg-success': activeJobStatus==='done' }" :style="'width:'+activeJobPct+'%;'"></div></div>
+                            <div class="ul-log ul-log--inline" ref="bulkJobLogEl">
+                                <div v-if="!bulkJobLogEntries.length" class="ul-log-empty"><i class="fas fa-terminal me-1"></i>Waiting for the first result…</div>
+                                <div v-for="(entry, idx) in bulkJobLogEntries" :key="idx" class="ul-log-row" :class="'ul-log-row--'+entry.type">
+                                    <i class="ul-log-icon" :class="entry.icon"></i><span class="ul-log-msg">[[ entry.msg ]]</span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    <button v-if="!(activeJobUuid && bulkUpdating)" class="ul-action-btn" @click="filterRuleStatus({update_available:'true'})">Review updates</button>
+                    <div v-else class="d-flex gap-1">
+                        <button v-if="activeJobStatus==='running'" class="ul-job-ctrl-btn" title="Pause" @click="pauseBulkJob()"><i class="fas fa-pause"></i></button>
+                        <button v-else-if="activeJobStatus==='paused'" class="ul-job-ctrl-btn" title="Resume" @click="resumeBulkJob()"><i class="fas fa-play"></i></button>
+                        <button class="ul-job-ctrl-btn ul-job-ctrl-btn--stop" title="Stop" @click="cancelBulkJob()"><i class="fas fa-stop"></i></button>
+                    </div>
+                </div>
+                <div v-if="total_new_rules > 0" class="ul-action-item ul-action-item--new" :class="{ 'ul-action-item--running': activeJobUuid && bulkNewRules }">
+                    <i class="fas fa-circle-plus"></i>
+                    <div class="ul-action-copy" style="flex:1;">
+                        <strong>[[ total_new_rules ]] new rule<span v-if="total_new_rules!==1">s</span> found</strong>
+                        <span v-if="!(activeJobUuid && bulkNewRules)">Not yet in Rulezet — review and add the ones you want to keep.</span>
+                        <template v-else>
+                            [[ activeJobLabel ]] — [[ activeJobDone ]] / [[ activeJobTotal ]] ([[ activeJobPct ]]%)
+                            <div class="ul-bar-track my-2"><div class="ul-bar-fill" :class="{ 'bg-success': activeJobStatus==='done' }" :style="'width:'+activeJobPct+'%;'"></div></div>
+                            <div class="ul-log ul-log--inline" ref="bulkJobLogEl">
+                                <div v-if="!bulkJobLogEntries.length" class="ul-log-empty"><i class="fas fa-terminal me-1"></i>Waiting for the first result…</div>
+                                <div v-for="(entry, idx) in bulkJobLogEntries" :key="idx" class="ul-log-row" :class="'ul-log-row--'+entry.type">
+                                    <i class="ul-log-icon" :class="entry.icon"></i><span class="ul-log-msg">[[ entry.msg ]]</span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    <button v-if="!(activeJobUuid && bulkNewRules)" class="ul-action-btn ul-action-btn--new" @click="showNewRulesTab()">Review new rules</button>
+                    <div v-else class="d-flex gap-1">
+                        <button v-if="activeJobStatus==='running'" class="ul-job-ctrl-btn" title="Pause" @click="pauseBulkJob()"><i class="fas fa-pause"></i></button>
+                        <button v-else-if="activeJobStatus==='paused'" class="ul-job-ctrl-btn" title="Resume" @click="resumeBulkJob()"><i class="fas fa-play"></i></button>
+                        <button class="ul-job-ctrl-btn ul-job-ctrl-btn--stop" title="Stop" @click="cancelBulkJob()"><i class="fas fa-stop"></i></button>
+                    </div>
+                </div>
+                <div v-if="notFoundCount > 0" class="ul-action-item ul-action-item--warn">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <div class="ul-action-copy">
+                        <strong>[[ notFoundCount ]] rule<span v-if="notFoundCount!==1">s</span> not found in the repo</strong>
+                        <span>They may have been renamed, moved, or removed upstream.</span>
+                    </div>
+                    <button class="ul-action-btn ul-action-btn--warn" @click="filterRuleStatus({found:'false'})">Take a look</button>
+                </div>
+                <div v-if="updateAvailableCount === 0 && total_new_rules === 0 && notFoundCount === 0" class="ul-action-item ul-action-item--ok">
+                    <i class="fas fa-circle-check"></i>
+                    <div class="ul-action-copy">
+                        <strong>Nothing to do</strong>
+                        <span>All checked rules already match their GitHub source.</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <ul class="nav nav-underline justify-content-center w-100 mb-3" id="exampleTabs" role="tablist">
-            <li class="nav-item flex-fill text-center">
-                <a class="nav-link active" id="github-tab" data-bs-toggle="tab" href="#github-pane" role="tab"
-                    aria-controls="github" aria-selected="true" style="color: var(--text-color);">
-                    Rule Status
-                    <span v-if="rulesLoaded && updatesAvailable > 0" class="badge bg-primary ms-1">
-                        [[ updatesAvailable ]]
-                    </span>
-                </a>
-            </li>
-            <li class="nav-item flex-fill text-center">
-                <a class="nav-link" id="rule-tab" data-bs-toggle="tab" href="#rule-pane" role="tab"
-                    aria-controls="rule-pane" aria-selected="false" style="color: var(--text-color);">
-                    New Rules
-                    <span v-if="rulesLoaded && new_rules && new_rules.length" class="badge bg-success ms-1">[[ total_new_rules ]]</span>
-                </a>
-            </li>
-        </ul>
+        <nav class="dr-nav" id="exampleTabs" role="tablist">
+            <button class="dr-nav__item active" id="github-tab" data-bs-toggle="tab" data-bs-target="#github-pane"
+                type="button" role="tab" aria-controls="github-pane" aria-selected="true">
+                <i class="fa-solid fa-list-check"></i>
+                <span>Rule Status</span>
+                <span v-if="rulesLoaded && updatesAvailable > 0" class="dr-nav__badge">[[ updatesAvailable ]]</span>
+            </button>
+            <button class="dr-nav__item" id="rule-tab" data-bs-toggle="tab" data-bs-target="#rule-pane"
+                type="button" role="tab" aria-controls="rule-pane" aria-selected="false">
+                <i class="fa-solid fa-circle-plus"></i>
+                <span>New Rules</span>
+                <span v-if="rulesLoaded && new_rules && new_rules.length" class="dr-nav__badge">[[ total_new_rules ]]</span>
+            </button>
+        </nav>
 
         <div class="tab-content" id="exampleTabsContent">
             <div class="tab-pane fade show active" id="github-pane" role="tabpanel" aria-labelledby="github-tab">
                 <div class="card p-3">
                     <!-- Toolbar (ruleList style) -->
-                    <div class="rl-toolbar mb-0">
+                    <div class="rl-toolbar">
                         <div class="rl-toolbar-left">
                             <span class="text-muted small ms-1">
                                 <strong>[[ total_rules ]]</strong> result<span v-if="total_rules!==1">s</span>
@@ -249,31 +432,16 @@
                         </div>
                     </div>
 
-                    <!-- ── Active bulk-job progress bar ── -->
-                    <div v-if="activeJobUuid" class="rounded-3 p-3 mb-3"
-                         style="background:var(--light-bg-color);border:1px solid var(--border-color);">
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <span v-if="activeJobStatus!=='done'" class="spinner-border spinner-border-sm text-primary"></span>
-                            <i v-else class="fas fa-circle-check text-success"></i>
-                            <span class="fw-semibold small">[[ activeJobLabel ]]</span>
-                            <span class="ms-auto small text-muted">[[ activeJobPct ]]%</span>
-                        </div>
-                        <div class="progress" style="height:6px;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated"
-                                 :class="activeJobStatus==='done'?'bg-success':''"
-                                 role="progressbar"
-                                 :style="'width:'+activeJobPct+'%'"
-                                 :aria-valuenow="activeJobPct" aria-valuemin="0" aria-valuemax="100">
-                            </div>
-                        </div>
-                        <div class="text-muted" style="font-size:.72rem;margin-top:4px;">
-                            <span v-if="activeJobStatus==='pending'"><i class="fas fa-clock me-1"></i>Queued…</span>
-                            <span v-else-if="activeJobStatus==='running'"><i class="fas fa-circle-notch fa-spin me-1"></i>Running…</span>
-                            <span v-else-if="activeJobStatus==='done'" class="text-success"><i class="fas fa-check me-1"></i>Completed</span>
+                    <div v-if="rulesLoading">
+                        <div class="ul-skeleton-row" v-for="n in 5" :key="n">
+                            <div class="ul-skeleton-line" style="width:56px;height:22px;"></div>
+                            <div class="ul-skeleton-line" style="flex:1;"></div>
+                            <div class="ul-skeleton-line" style="width:110px;"></div>
+                            <div class="ul-skeleton-line" style="width:130px;"></div>
                         </div>
                     </div>
 
-                    <div v-if="rules && rules.length">
+                    <div v-else-if="rules && rules.length">
 
                         <!-- dt-table Rule Status -->
                         <div class="dt-table-wrap rl-table-wrap">
@@ -408,21 +576,11 @@
                         </div>
 
                         <!-- Pagination -->
-                        <nav v-if="total_pages_rules > 1" class="mt-3" aria-label="Rule status pagination">
-                            <ul class="pagination justify-content-center mb-0">
-                                <li class="page-item" :class="{ disabled: current_page_rules === 1 }">
-                                    <button class="page-link" @click="getRules(current_page_rules - 1)">Previous</button>
-                                </li>
-                                <li v-for="page in visiblePagesRules" :key="page" class="page-item"
-                                    :class="{ active: page === current_page_rules, disabled: page === '...' }">
-                                    <button class="page-link" v-if="page !== '...'" @click="getRules(page)">[[ page ]]</button>
-                                    <span class="page-link" v-else>…</span>
-                                </li>
-                                <li class="page-item" :class="{ disabled: current_page_rules === total_pages_rules }">
-                                    <button class="page-link" @click="getRules(current_page_rules + 1)">Next</button>
-                                </li>
-                            </ul>
-                        </nav>
+                        <pagination-component
+                            :current-page="current_page_rules"
+                            :total-pages="total_pages_rules"
+                            @change-page="getRules">
+                        </pagination-component>
                     </div>
 
                     <div v-else class="text-center py-5 text-muted">
@@ -434,10 +592,18 @@
             </div>
             <div class="tab-pane fade" id="rule-pane" role="tabpanel" aria-labelledby="rule-tab">
                 <div class="card p-3">
-                    <div v-if="new_rules && new_rules.length || nrActiveFilterCount > 0" class="card shadow border-0 mb-4 p-3">
+                    <div v-if="newRulesLoading" class="card shadow border-0 mb-4 p-3">
+                        <div class="ul-skeleton-row" v-for="n in 4" :key="n">
+                            <div class="ul-skeleton-line" style="width:56px;height:22px;"></div>
+                            <div class="ul-skeleton-line" style="flex:1;"></div>
+                            <div class="ul-skeleton-line" style="width:110px;"></div>
+                            <div class="ul-skeleton-line" style="width:90px;"></div>
+                        </div>
+                    </div>
+                    <div v-else-if="new_rules && new_rules.length || nrActiveFilterCount > 0" class="card shadow border-0 mb-4 p-3">
 
                         <!-- Toolbar (ruleList style) -->
-                        <div class="rl-toolbar mb-0">
+                        <div class="rl-toolbar">
                             <div class="rl-toolbar-left">
                                 <span class="text-muted small ms-1">
                                     <strong>[[ total_new_rules ]]</strong> result<span v-if="total_new_rules!==1">s</span>
@@ -612,21 +778,11 @@
                         </div>
 
                         <!-- Pagination -->
-                        <nav v-if="total_pages_new_rules > 1" class="mt-3" aria-label="New rules pagination">
-                            <ul class="pagination justify-content-center mb-0">
-                                <li class="page-item" :class="{ disabled: current_page_new_rules === 1 }">
-                                    <button class="page-link" @click="getNewRules(current_page_new_rules - 1)">Previous</button>
-                                </li>
-                                <li v-for="page in visiblePagesNewRules" :key="page" class="page-item"
-                                    :class="{ active: page === current_page_new_rules, disabled: page === '...' }">
-                                    <button class="page-link" v-if="page !== '...'" @click="getNewRules(page)">[[ page ]]</button>
-                                    <span class="page-link" v-else>…</span>
-                                </li>
-                                <li class="page-item" :class="{ disabled: current_page_new_rules === total_pages_new_rules }">
-                                    <button class="page-link" @click="getNewRules(current_page_new_rules + 1)">Next</button>
-                                </li>
-                            </ul>
-                        </nav>
+                        <pagination-component
+                            :current-page="current_page_new_rules"
+                            :total-pages="total_pages_new_rules"
+                            @change-page="getNewRules">
+                        </pagination-component>
                     </div>
                     <div v-else class="text-center text-muted">
                         <h5 class="fw-bold">No new rules available</h5>
@@ -650,20 +806,161 @@
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, onMounted, computed } = Vue;
+    const { createApp, ref, onMounted, computed, nextTick, watch } = Vue;
     import { message_list, create_message } from '/static/js/toaster.js';
     import CodeViewer from '/static/js/components/code-viewer.js';
     import DiffViewer from '/static/js/components/diff-viewer.js';
+    import ChartViewer from '/static/js/components/chart-viewer.js';
+    import PaginationComponent from '/static/js/rule/paginationComponent.js';
+    import UserChip from '/static/js/components/UserChip.js';
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { CodeViewer, DiffViewer },
+        components: { CodeViewer, DiffViewer, ChartViewer, PaginationComponent, 'user-chip': UserChip },
         setup() {
             const progress = ref(0)
+            const progressDone = ref(0)
+            const progressTotal = ref(0)
             const status_site = ref("")
             const info_session = ref({})
             const result_data = ref({})
             const is_finished = ref(false)
+            // Stays false until the very first status check resolves — avoids
+            // showing the progress bar for a split second on a session that
+            // was already finished (e.g. navigating back to an old sid).
+            const pageReady = ref(false)
+
+            // Tables start "loading" until their first fetch resolves — without
+            // this, an empty `rules`/`new_rules` ref default renders the same as
+            // a genuinely empty result, flashing "up to date" / "no new rules"
+            // for a few seconds right after the check finishes.
+            const rulesLoading    = ref(true)
+            const newRulesLoading = ref(true)
+
+            // ── Live log — built client-side from each poll response, not
+            // persisted. Every rule/new-rule the running session has resolved
+            // since the last poll becomes one line, appended in order.
+            const logEntries = ref([])
+            const logEl = ref(null)
+            let _loggedRuleCount = 0
+            let _loggedNewRuleCount = 0
+
+            const liveFound   = computed(() => result_data.value.found || 0)
+            const liveUpdated = computed(() => result_data.value.updated || 0)
+            const liveNew     = computed(() => (result_data.value.new_rules || []).length)
+            const liveErrors  = computed(() => (result_data.value.bad_rules || 0) + (result_data.value.not_found || 0))
+
+            // ── Finished-view report: summary hero + KPIs + donut ───────────
+            // skipped == found && !update_available (see update_class.py) —
+            // i.e. rules that are already up to date. skipped + updated +
+            // not_found always sums to total, so the donut is an honest
+            // 3-way split of every rule actually checked.
+            const totalChecked        = computed(() => result_data.value.total || 0)
+            const upToDate             = computed(() => result_data.value.skipped || 0)
+            const updateAvailableCount = computed(() => result_data.value.updated || 0)
+            const notFoundCount        = computed(() => result_data.value.not_found || 0)
+            const successRate = computed(() =>
+                totalChecked.value > 0 ? Math.round((upToDate.value / totalChecked.value) * 100) : 0
+            )
+            const summaryChartData = computed(() => ({
+                categories: ['Up to date', 'Update available', 'Not found'],
+                colors: [
+                    '#198754',
+                    document.documentElement.classList.contains('dark-mode') ? '#b3791f' : '#e0a03c',
+                    '#dc3545',
+                ],
+                series: [{ name: 'Rules', values: [upToDate.value, updateAvailableCount.value, notFoundCount.value] }],
+            }))
+
+            // Full name + avatar for the "requested by" chip — info_session
+            // only carries the requester's first name (see rule.py's `info`
+            // payload), so fetch the same lightweight profile UserChip's own
+            // hover tooltip uses, once, instead of showing just a first name
+            // and no picture until the user happens to hover over it.
+            const requesterInfo = ref(null)
+            watch(() => result_data.value.user_id, (uid) => {
+                if (!uid || requesterInfo.value) return
+                fetch(`/account/user_mini/${Number(uid)}`)
+                    .then(r => r.ok ? r.json() : null)
+                    .then(d => { if (d) requesterInfo.value = d })
+                    .catch(() => {})
+            })
+
+            // ── Live GitHub repo card — same direct-to-api.github.com call as
+            // the github_detail page, so the repo panel here shows the same
+            // richness (stars/forks/issues/watchers/size/branch/homepage…)
+            // instead of only the handful of fields snapshotted at scan time.
+            const ghRepoCache   = ref({})
+            const ghRepoLoading = ref({})
+
+            function fmtNum(n) {
+                if (n === undefined || n === null) return '—'
+                return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n)
+            }
+            function fmtSize(kb) {
+                if (!kb) return '—'
+                return kb < 1024 ? kb + ' KB' : (kb / 1024).toFixed(1) + ' MB'
+            }
+            function fmtDate(iso) {
+                if (!iso) return '—'
+                return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+            }
+
+            async function fetchGhRepoLive(repoUrl) {
+                if (!repoUrl || ghRepoCache.value[repoUrl] || ghRepoLoading.value[repoUrl]) return
+                const match = repoUrl.replace(/\.git$/, '').match(/github\.com\/([^/]+)\/([^/]+)/)
+                if (!match) return
+                ghRepoLoading.value = { ...ghRepoLoading.value, [repoUrl]: true }
+                try {
+                    const res = await fetch(`https://api.github.com/repos/${match[1]}/${match[2]}`, {
+                        headers: { 'Accept': 'application/vnd.github+json' },
+                    })
+                    if (res.ok) {
+                        ghRepoCache.value = { ...ghRepoCache.value, [repoUrl]: await res.json() }
+                    }
+                } catch {
+                    // Stay on the snapshotted `repo` fields already in result_data.info.
+                } finally {
+                    const l = { ...ghRepoLoading.value }; delete l[repoUrl]; ghRepoLoading.value = l
+                }
+            }
+
+            watch(() => result_data.value.info && result_data.value.info.github_metadata, (list) => {
+                (list || []).forEach(repo => fetchGhRepoLive(repo.url))
+            })
+
+            function _describeRule(entry) {
+                if (entry.update_available) return { type: 'update', icon: 'fas fa-arrow-up-from-bracket', msg: 'update available' }
+                if (entry.error)             return { type: 'error',  icon: 'fas fa-triangle-exclamation', msg: entry.message || 'error' }
+                if (entry.found === false)   return { type: 'error',  icon: 'fas fa-magnifying-glass',      msg: 'not found in repository' }
+                return { type: 'ok', icon: 'fas fa-check', msg: 'up to date' }
+            }
+
+            function _appendLogEntries(data) {
+                const rulesArr = data.rules || []
+                for (let i = _loggedRuleCount; i < rulesArr.length; i++) {
+                    const r = rulesArr[i]
+                    const { type, icon, msg } = _describeRule(r)
+                    logEntries.value.push({ type, icon, rule: r.name || 'Rule', msg })
+                }
+                _loggedRuleCount = rulesArr.length
+
+                const newArr = data.new_rules || []
+                for (let i = _loggedNewRuleCount; i < newArr.length; i++) {
+                    const nr = newArr[i]
+                    logEntries.value.push({
+                        type: 'new',
+                        icon: 'fas fa-circle-plus',
+                        rule: nr.name_rule || 'Rule',
+                        msg: nr.rule_syntax_valid === false ? 'new rule found — invalid syntax' : 'new rule found',
+                    })
+                }
+                _loggedNewRuleCount = newArr.length
+
+                if (logEntries.value.length > 300) logEntries.value = logEntries.value.slice(-300)
+
+                nextTick(() => { if (logEl.value) logEl.value.scrollTop = logEl.value.scrollHeight })
+            }
 
             async function fetchInfoSession() {
                 const res = await fetch('/rule/update_get_info_session/{{sid}}')
@@ -683,6 +980,30 @@
             function gotoRuleDetail(rule_id) {
                 if (!rule_id) return;
                 window.location.href = `/rule/detail_rule/${rule_id}`;
+            }
+
+            // ── KPI cards / "what to do next" → jump to a tab, pre-filtered ──
+            function goToTab(tabId) {
+                const el = document.getElementById(tabId)
+                if (el && window.bootstrap) {
+                    window.bootstrap.Tab.getOrCreateInstance(el).show()
+                }
+                nextTick(() => {
+                    const pane = document.getElementById(tabId === 'rule-tab' ? 'rule-pane' : 'github-pane')
+                    if (pane) pane.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                })
+            }
+
+            function filterRuleStatus(overrides) {
+                rsFilter.value = { update_available: '', found: '', syntax_valid: '', error: '', ...overrides }
+                goToTab('github-tab')
+                getRules(1)
+            }
+
+            function showNewRulesTab() {
+                nrFilter.value = { syntax_valid: '', accept: '', error: '' }
+                goToTab('rule-tab')
+                getNewRules(1)
             }
 
             /**
@@ -708,6 +1029,38 @@
             const activeJobTotal  = ref(0)
             let   _jobPollTimer   = null
 
+            // Live log for the active job — same idea as the scan's own live
+            // log, but backed by the real BackgroundJobLog rows the handler
+            // writes per rule (see log_job() calls in job_handlers.py), fetched
+            // incrementally via /jobs/logs/<uuid>?since_id=N.
+            const bulkJobLogEntries = ref([])
+            const bulkJobLogEl      = ref(null)
+            let   _bulkJobLogSinceId = 0
+
+            function _describeJobLog(entry) {
+                if (entry.level === 'success') return { type: 'new',    icon: 'fas fa-check' }
+                if (entry.level === 'warning') return { type: 'update', icon: 'fas fa-triangle-exclamation' }
+                if (entry.level === 'error')   return { type: 'error',  icon: 'fas fa-circle-xmark' }
+                return { type: 'ok', icon: 'fas fa-circle-info' }
+            }
+
+            async function _pollBulkJobLogs() {
+                if (!activeJobUuid.value) return
+                try {
+                    const res = await fetch(`/jobs/logs/${activeJobUuid.value}?since_id=${_bulkJobLogSinceId}`)
+                    if (!res.ok) return
+                    const rows = await res.json()
+                    if (!rows.length) return
+                    for (const row of rows) {
+                        const { type, icon } = _describeJobLog(row)
+                        bulkJobLogEntries.value.push({ type, icon, msg: row.message })
+                        _bulkJobLogSinceId = Math.max(_bulkJobLogSinceId, row.id)
+                    }
+                    if (bulkJobLogEntries.value.length > 300) bulkJobLogEntries.value = bulkJobLogEntries.value.slice(-300)
+                    nextTick(() => { if (bulkJobLogEl.value) bulkJobLogEl.value.scrollTop = bulkJobLogEl.value.scrollHeight })
+                } catch {}
+            }
+
             async function _pollActiveJob() {
                 if (!activeJobUuid.value) return
                 try {
@@ -718,6 +1071,7 @@
                     activeJobStatus.value = data.status
                     activeJobDone.value   = data.done  ?? 0
                     activeJobTotal.value  = data.total ?? 0
+                    await _pollBulkJobLogs()
                     if (['done', 'failed', 'cancelled'].includes(data.status)) {
                         clearInterval(_jobPollTimer); _jobPollTimer = null
                         bulkUpdating.value = false
@@ -739,7 +1093,39 @@
                 activeJobTotal.value  = 0
                 activeJobStatus.value = 'pending'
                 activeJobLabel.value  = label
-                _jobPollTimer = setInterval(_pollActiveJob, 2000)
+                bulkJobLogEntries.value = []
+                _bulkJobLogSinceId = 0
+                _pollActiveJob()
+                // 800ms, not 2000ms — a bulk action on already-processed/fast
+                // rows (e.g. duplicate content rejected instantly) can finish
+                // in well under 2s; slower polling just never sees the
+                // in-between values and looks like a single 0→100% jump.
+                _jobPollTimer = setInterval(_pollActiveJob, 800)
+            }
+
+            async function pauseBulkJob() {
+                if (!activeJobUuid.value) return
+                await fetch(`/jobs/api/${activeJobUuid.value}/pause`, {
+                    method: 'POST', headers: { 'X-CSRFToken': csrf_token },
+                })
+                activeJobStatus.value = 'paused'
+            }
+
+            async function resumeBulkJob() {
+                if (!activeJobUuid.value) return
+                await fetch(`/jobs/api/${activeJobUuid.value}/resume`, {
+                    method: 'POST', headers: { 'X-CSRFToken': csrf_token },
+                })
+                activeJobStatus.value = 'pending'
+                if (!_jobPollTimer) _jobPollTimer = setInterval(_pollActiveJob, 800)
+            }
+
+            async function cancelBulkJob() {
+                if (!activeJobUuid.value) return
+                await fetch(`/jobs/api/${activeJobUuid.value}/cancel`, {
+                    method: 'POST', headers: { 'X-CSRFToken': csrf_token },
+                })
+                activeJobStatus.value = 'cancelled'
             }
 
             // ── Rule Status: server-side filters ───────────────────────────
@@ -934,35 +1320,21 @@
                 if (f.syntax_valid !== '') params.set('syntax_valid', f.syntax_valid)
                 if (f.accept !== '')       params.set('accept', f.accept)
                 if (f.error !== '')        params.set('error', f.error)
-                const res = await fetch('/rule/update_loading_status/{{sid}}/get_news_rules?' + params.toString())
-                if (res.status === 200) {
-                    const data = await res.json()
-                    new_rules.value = data.rules || []
-                    total_pages_new_rules.value = data.total_pages || 1
-                    total_new_rules.value = data.total_rules || 0
-                    current_page_new_rules.value = page
-                } else {
-                    create_message((await res.json()).message, (await res.json()).toast_class)
+                try {
+                    const res = await fetch('/rule/update_loading_status/{{sid}}/get_news_rules?' + params.toString())
+                    if (res.status === 200) {
+                        const data = await res.json()
+                        new_rules.value = data.rules || []
+                        total_pages_new_rules.value = data.total_pages || 1
+                        total_new_rules.value = data.total_rules || 0
+                        current_page_new_rules.value = page
+                    } else {
+                        create_message((await res.json()).message, (await res.json()).toast_class)
+                    }
+                } finally {
+                    newRulesLoading.value = false
                 }
             }
-            const visiblePagesNewRules = computed(() => {
-                const pages = []
-                const total = total_pages_new_rules.value
-                const current = current_page_new_rules.value
-                if (total <= 7) {
-                    for (let i = 1; i <= total; i++) pages.push(i)
-                } else {
-                    if (current <= 4) {
-                        pages.push(1, 2, 3, 4, 5, '...', total)
-                    } else if (current >= total - 3) {
-                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-                    } else {
-                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
-                    }
-                }
-                return pages
-            })
-
             /**
             * 
             *  ####################
@@ -986,54 +1358,60 @@
                 if (f.found !== '')            params.set('found', f.found)
                 if (f.syntax_valid !== '')     params.set('syntax_valid', f.syntax_valid)
                 if (f.error !== '')            params.set('error', f.error)
-                const res = await fetch('/rule/update_loading_status/{{sid}}/get_rules?' + params.toString())
-                if (res.status === 200) {
-                    const data = await res.json()
-                    rules.value = data.rules || []
-                    total_pages_rules.value = data.total_pages || 1
-                    total_rules.value = data.total_rules || 0
-                    updatesAvailable.value = data.updates_available ?? 0
-                    current_page_rules.value = page
-                    rulesLoaded.value = true
-                } else {
-                    create_message((await res.json()).message, (await res.json()).toast_class)
+                try {
+                    const res = await fetch('/rule/update_loading_status/{{sid}}/get_rules?' + params.toString())
+                    if (res.status === 200) {
+                        const data = await res.json()
+                        rules.value = data.rules || []
+                        total_pages_rules.value = data.total_pages || 1
+                        total_rules.value = data.total_rules || 0
+                        updatesAvailable.value = data.updates_available ?? 0
+                        current_page_rules.value = page
+                        rulesLoaded.value = true
+                    } else {
+                        create_message((await res.json()).message, (await res.json()).toast_class)
+                    }
+                } finally {
+                    rulesLoading.value = false
                 }
             }
-            const visiblePagesRules = computed(() => {
-                const pages = []
-                const total = total_pages_rules.value
-                const current = current_page_rules.value
-                if (total <= 7) {
-                    for (let i = 1; i <= total; i++) pages.push(i)
-                } else {
-                    if (current <= 4) {
-                        pages.push(1, 2, 3, 4, 5, '...', total)
-                    } else if (current >= total - 3) {
-                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-                    } else {
-                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
-                    }
-                }
-                return pages
-            })
-
             function pollScan() {
                 $.getJSON('/rule/update_loading_status/{{sid}}', async function (data) {
                     if (data) {
-                        result_data.value = data
+                        _appendLogEntries(data)
+                        result_data.value  = data
+                        progressDone.value  = data['complete']
+                        progressTotal.value = data['total']
                         progress.value = Math.round((data['complete'] / data['total']) * 100)
-                        status_site.value = 'Processed ' + data['complete'] + ' of ' + data['total'] + ' files'
+                        status_site.value = 'Processed ' + data['complete'] + ' of ' + data['total'] + ' rules'
                         if (data['remaining'] > 0) {
-                            setTimeout(pollScan, 5000);
+                            // Only reveal the progress bar once we know for sure
+                            // the session is still running — otherwise an
+                            // already-finished session would flash it for the
+                            // one frame it takes to fetch the final summary below.
+                            pageReady.value = true
+                            setTimeout(pollScan, 2000);
                         } else {
+                            status_site.value = 'Checked ' + data['complete'] + ' rule(s).'
+                            // The last live poll (already in `data`) already has
+                            // every number the summary card needs — total, found,
+                            // updated, skipped, not_found. Show it immediately
+                            // instead of waiting on a second round trip.
                             is_finished.value = true
-                            status_site.value = 'Found ' + data['complete'] + ' files.'
-                            const res = await fetch('/rule/update_loading_status/{{sid}}?is_finished=true')
-                            const loc = await res.json()
-                            result_data.value = loc
+                            pageReady.value = true
 
                             getNewRules(1)
                             getRules(1)
+
+                            // The persisted result additionally carries `info`
+                            // (repo metadata for the accordion) and `mode`, which
+                            // the live status() doesn't — fetch that in the
+                            // background and merge it in once it arrives, instead
+                            // of blocking the summary on it.
+                            fetch('/rule/update_loading_status/{{sid}}?is_finished=true')
+                                .then(res => res.json())
+                                .then(loc => { result_data.value = { ...result_data.value, ...loc } })
+                                .catch(() => {})
                         }
                     }
                 });
@@ -1048,24 +1426,50 @@
                 message_list,
                 status_site,
                 progress,
+                progressDone,
+                progressTotal,
                 info_session,
                 result_data,
                 is_finished,
+                pageReady,
                 goto,
                 gotoRuleDetail,
+                goToTab,
+                filterRuleStatus,
+                showNewRulesTab,
+
+                rulesLoading,
+                newRulesLoading,
+                logEntries,
+                logEl,
+                liveFound,
+                liveUpdated,
+                liveNew,
+                liveErrors,
+
+                totalChecked,
+                upToDate,
+                updateAvailableCount,
+                notFoundCount,
+                successRate,
+                summaryChartData,
+                requesterInfo,
+                ghRepoCache,
+                ghRepoLoading,
+                fmtNum,
+                fmtSize,
+                fmtDate,
 
                 new_rules,
                 current_page_new_rules,
                 total_new_rules,
                 total_pages_new_rules,
-                visiblePagesNewRules,
                 getNewRules,
 
                 rules,
                 current_page_rules,
                 total_rules,
                 total_pages_rules,
-                visiblePagesRules,
                 getRules,
                 updatesAvailable,
                 rulesLoaded,
@@ -1078,6 +1482,8 @@
                 loading_rule_id,
 
                 activeJobUuid, activeJobPct, activeJobStatus, activeJobLabel, activeJobDone, activeJobTotal,
+                bulkJobLogEntries, bulkJobLogEl,
+                pauseBulkJob, resumeBulkJob, cancelBulkJob,
 
                 rsFiltersOpen, rsFilter, rsActiveFilterCount, rsClearFilters,
                 rsSort, rsSortDir, setRsSort, rsSorted,

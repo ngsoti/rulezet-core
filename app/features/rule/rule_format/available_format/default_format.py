@@ -4,7 +4,7 @@ from typing import Any, Dict
 from git import List
 from sympy import re
 
-from app.features.rule.rule import get_rule
+from app.features.rule.rule_core import get_rule
 from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.core.utils.utils import detect_cve
 

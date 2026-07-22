@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import json
 from sqlalchemy.orm import attributes
 from sqlalchemy import String, TypeDecorator, func
@@ -154,6 +155,11 @@ class Rule(db.Model):
     cve_id = db.Column(db.String , nullable=True)
 
     github_path = db.Column(db.String , nullable=True)
+
+    # MD5 of the whitespace-normalized, lowercased to_string — kept in sync by the
+    # `set` event below. Lets duplicate-content lookups use an index instead of a
+    # full-table scan through nested REPLACE()/LOWER() SQL functions.
+    content_hash = db.Column(db.String(32), nullable=True, index=True)
 
     # Soft delete
     is_deleted        = db.Column(db.Boolean, nullable=False, default=False, index=True)
@@ -362,6 +368,20 @@ class Rule(db.Model):
                 "update_history": update_history,
             },
         }
+
+
+def compute_rule_content_hash(content):
+    """MD5 of a rule's content, normalized the same way get_rule_by_content()
+    used to normalize it for its SQL comparison (strip space/\\n/\\r/\\t, lowercase)."""
+    if not content:
+        return None
+    clean = content.replace(' ', '').replace('\n', '').replace('\r', '').replace('\t', '').lower()
+    return hashlib.md5(clean.encode('utf-8')).hexdigest()
+
+
+@event.listens_for(Rule.to_string, 'set')
+def _rule_to_string_set(target, value, oldvalue, initiator):
+    target.content_hash = compute_rule_content_hash(value)
 
 
 
@@ -1401,11 +1421,32 @@ class UpdateResult(db.Model):
         }
     
     def to_json_list(self):
-        json_dict = self.to_json()
-        del json_dict["rules"]
-        json_dict["rule_name_by_rule_mode"] = self._get_rule_name_by_mode()
-        return json_dict        
-    
+        """Lean summary — aggregate counts + metadata only, no per-rule content.
+        Used by the update-status polling endpoint and the update-history list;
+        neither needs individual rules (those load through their own paginated
+        get_rules()/get_news_rules() endpoints). Building the full to_json()
+        here would mean loading and serializing every RuleStatus/NewRule row
+        — up to thousands, each carrying full rule content — just to discard
+        them a line later."""
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "user_id": self.user_id,
+            "mode": self.mode,
+            "info": json.loads(self.info) if self.info else None,
+            "repo_sources": json.loads(self.repo_sources) if self.repo_sources else None,
+            "not_found": self.not_found,
+            "found": self.found,
+            "updated": self.updated,
+            "skipped": self.skipped,
+            "total": self.total,
+            "thread_count": self.thread_count,
+            "query_date": self.query_date.strftime('%Y-%m-%d %H:%M') if self.query_date else None,
+            "rule_name_by_rule_mode": self._get_rule_name_by_mode(),
+            # A count, not the array itself — see the docstring above.
+            "new_rules_count": NewRule.query.filter_by(update_result_id=self.id).count(),
+        }
+
 
 class RuleStatus(db.Model):
     __tablename__ = "rule_status"

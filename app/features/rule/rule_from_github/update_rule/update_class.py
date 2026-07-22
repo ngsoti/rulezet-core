@@ -18,9 +18,10 @@ from app.features.rule import rule_core as RuleModel
 from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType, load_all_rule_formats
 from app.features.rule.rule_format.utils_format.utils_import_update import (
     clone_or_access_repo,
-    delete_existing_repo_folder,
     git_pull_repo,
-    github_repo_metadata
+    github_repo_metadata,
+    get_repo_head_sha,
+    get_changed_files_between,
 )
 
 sessions = []
@@ -54,8 +55,10 @@ class Update_class:
         self.count_per_format = {}
         self.local_repo_path = None
 
-        # Rule Tracking for Ruleset
-        self.rules_to_process: List[Dict[str, Any]] = [] # Rules from Rulezet to be checked against repo
+        # Rule Tracking for Ruleset — keyed by rule id (was a list, O(N) per removal
+        # under a global lock; a repo with tens of thousands of rules made every
+        # single processed file pay for a full linear scan of every other rule).
+        self.rules_to_process: Dict[int, Dict[str, Any]] = {} # {rule_id: {"title":, "github_path":}}
 
         # Stats
         self.bad_rules = 0
@@ -83,54 +86,94 @@ class Update_class:
         if self.mode == "by_url":
             cp = 0
             repo_dir, exists = clone_or_access_repo(self.repo_sources)
-            
+
             self.local_repo_path = repo_dir
 
             # found all the rule in the repo currently in Rulezet
             rules_listes_github = RuleModel.get_all_rule_by_url_github(self.repo_sources , self.current_user)
-            
-            # Initialize the list of rules we need to check
-            self.rules_to_process = [
-                {"id": r.id, "title": r.title}
-                for r in rules_listes_github
-            ]
 
-            total_rule_to_update = len(rules_listes_github)
-            self.total = total_rule_to_update
+            # Only diff against last check if we already had this repo cloned —
+            # a brand-new clone has no meaningful "before" state to diff against.
+            sha_before = get_repo_head_sha(repo_dir) if exists else None
 
             success = git_pull_repo(repo_dir)
 
             if not success:
                 return
 
+            sha_after = get_repo_head_sha(repo_dir)
+            changed_files = None  # None = unknown/first run -> re-check everything
+            if sha_before:
+                changed_files = get_changed_files_between(repo_dir, sha_before, sha_after)
 
-            
+            # Split rules into "file changed since last check" (re-check) vs
+            # "file untouched" (report as unchanged immediately, no re-parse/re-diff
+            # needed). A repo with no new commits resolves its whole rule set this
+            # way, instantly, instead of re-walking and re-validating every file.
+            self.rules_to_process = {}
+            unchanged_count = 0
+            for r in rules_listes_github:
+                if not r.github_path:
+                    rel_path = None
+                elif os.path.isabs(r.github_path):
+                    rel_path = os.path.relpath(r.github_path, repo_dir)
+                else:
+                    rel_path = r.github_path
+                if changed_files is not None and rel_path and rel_path not in changed_files:
+                    unchanged_count += 1
+                    with self.lock:
+                        self.rule_status_list.append({
+                            "update_result_uuid": self.uuid,
+                            "name_rule": r.title,
+                            "rule_id": r.id,
+                            "message": "No change detected (file unchanged since last sync).",
+                            "found": True,
+                            "update_available": False,
+                            "rule_syntax_valid": True,
+                            "error": False,
+                            "history_id": None,
+                        })
+                else:
+                    self.rules_to_process[r.id] = {"title": r.title, "github_path": r.github_path}
+
+            self.processed = unchanged_count
+
             if os.path.exists(repo_dir):
+                load_all_rule_formats()
+                subclasses = RuleType.__subclasses__()
                 for root, dirs, files in os.walk(repo_dir):
                     dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
                     for file in files:
-                        if not file.startswith('.') or not file.startswith('_'):
-                            load_all_rule_formats()
-                            subclasses = RuleType.__subclasses__()
-                            for RuleClass in subclasses:
-                                rule_instance = RuleClass()
+                        if file.startswith('.') or file.startswith('_'):
+                            continue
+                        filepath = os.path.join(root, file)
+                        rel_path = os.path.relpath(filepath, repo_dir)
+                        if changed_files is not None and rel_path not in changed_files:
+                            continue
 
-                                is_file = rule_instance.get_rule_files(file)
+                        for RuleClass in subclasses:
+                            rule_instance = RuleClass()
+                            if not rule_instance.get_rule_files(file):
+                                continue
 
-                                if not is_file:
-                                    continue
+                            # Read + split into individual rules now (once) so each
+                            # queue item is one rule, not one file — see session_class.py
+                            # for the same fix on the import side.
+                            try:
+                                rules_text = rule_instance.extract_rules_from_file(filepath)
+                            except Exception:
+                                rules_text = []
+                            for rule_text in rules_text:
+                                cp += 1
+                                self.jobs.put((cp, filepath, rule_instance, rule_text))
+                            break
 
-                                if is_file:
-                                    cp += 1
-                                    self.jobs.put((cp, file, os.path.join(root, file), rule_instance))
-                                    break
-               
-            self.total = cp
+            self.total = cp + unchanged_count
         elif self.mode == "by_rule":
-            
+
             # get all the rules from Rulezet with the ids
             rules_list: List[Rule] = Rule.query.filter(Rule.id.in_(self.repo_sources) ).all()
-            
+
             # Group rules by source to minimize cloning/pulling
             rules_by_source: Dict[str, List[Rule]] = {}
             for r in rules_list:
@@ -139,12 +182,9 @@ class Update_class:
                     if source_url not in rules_by_source:
                         rules_by_source[source_url] = []
                     rules_by_source[source_url].append(r)
-            
-            # Initialize the list of rules we need to check
-            self.rules_to_process = [
-                {"id": r.id, "title": r.title}
-                for r in rules_list
-            ]
+
+            # Initialize the rules we need to check
+            self.rules_to_process = {r.id: {"title": r.title} for r in rules_list}
 
             cp = 0
             for source_url, rule_list in rules_by_source.items():
@@ -198,15 +238,10 @@ class Update_class:
 
     # ------------------ RULE TRACKING ------------------
 
-    def remove_processed_rule(self, rule_name: str):
-        """Removes a rule from the to-process list if found in the repo."""
+    def remove_processed_rule(self, rule_id: int):
+        """Removes a rule from the to-process dict if found in the repo — O(1)."""
         with self.lock:
-            # We check the title/name against the rules_to_process list
-            # Note: This is an O(N) operation inside a lock, but safe.
-            # A dictionary could improve performance if necessary.
-            self.rules_to_process = [
-                r for r in self.rules_to_process if r["title"] != rule_name
-            ]
+            self.rules_to_process.pop(rule_id, None)
 
 
     # ------------------ STATUS ------------------
@@ -233,7 +268,7 @@ class Update_class:
         ]
 
         # Get rules that were in Rulezet but not processed against the repo
-        unprocessed_rules = [r["title"] for r in self.rules_to_process]
+        unprocessed_rules = [r["title"] for r in self.rules_to_process.values()]
 
         return {
             "id": self.uuid,
@@ -247,7 +282,23 @@ class Update_class:
             "not_found": self.not_found,
             "bad_rules": self.bad_rules,
             "rules": rules_json,
-            "new_rules": [nr.to_json() for nr in self.new_rules_list],
+            "new_rules": [
+                {
+                    "id": None,  # not yet persisted — assigned in save_info()
+                    "uuid": nr["uuid"],
+                    "update_result_id": nr["update_result_id"],
+                    "date": nr["date"].strftime('%Y-%m-%d %H:%M') if nr["date"] else None,
+                    "name_rule": nr["name_rule"],
+                    "rule_content": nr["rule_content"],
+                    "message": nr["message"],
+                    "format": nr["format"],
+                    "rule_syntax_valid": nr["rule_syntax_valid"],
+                    "error": nr["error"],
+                    "accept": nr["accept"],
+                    "github_path": nr["github_path"],
+                }
+                for nr in self.new_rules_list
+            ],
             "unprocessed_rules": unprocessed_rules # ADDED: Rules from Rulezet not found in repo
         }
 
@@ -271,195 +322,175 @@ class Update_class:
 
                 if self.mode == "by_url":
 
-                    rule_instance = work[3]
+                    # work = (cp, filepath, rule_instance, rule_text) — one queue
+                    # item is one rule (extracted up front in start()), not one file.
+                    filepath = work[1]
+                    rule_instance = work[2]
+                    rule_text = work[3]
 
-                    rules = rule_instance.extract_rules_from_file(work[2])
+                    enriched_info = {**self.info, "filepath": filepath}
+                    # Validate
+                    validation_result  = rule_instance.validate(rule_text)
+                    # Parse metadata
+                    metadata = rule_instance.parse_metadata(rule_text , enriched_info , validation_result)
 
-                    for rule_text in rules:    
-                        enriched_info = {**self.info, "filepath": work[2]}
-                        # Validate
-                        validation_result  = rule_instance.validate(rule_text)
-                        # Parse metadata
-                        metadata = rule_instance.parse_metadata(rule_text , enriched_info , validation_result)
+                    # --- Determine Rule Name ---
+                    name = metadata.get("title") or metadata.get("name")
+                    if not name:
+                        # Skip if a name/title cannot be extracted for logging
+                        self.jobs.task_done()
+                        continue
 
-                        result_dict = {
-                            "validation": {
-                                "ok": validation_result.ok,
-                                "errors": validation_result.errors,
-                                "warnings": validation_result.warnings
-                            },
-                            "rule": metadata,
-                            "raw_rule": rule_text,
-                            "file": work[2]
-                        }
-                        
-                        # --- Determine Rule Name ---
-                        name = metadata.get("title") or metadata.get("name")
-                        if not name:
-                            # Skip if a name/title cannot be extracted for logging
-                            continue
+                    metadata["github_path"] = os.path.relpath(filepath, self.local_repo_path)
 
+                    # verify if the rule is correct or not
+                    if metadata.get("original_uuid"):
+                        _original_uuid = metadata.get("original_uuid")
+                    else:
+                        _original_uuid = None
 
-                        metadata["github_path"] = os.path.relpath(work[2], self.repo_sources)
+                    # we have parse a rule and we want to found if it is already in Rulezet
+                    existing_rule , message = RuleModel.get_rule_from_a_github(
+                        name, filepath, self.repo_sources, _original_uuid,
+                        content=metadata.get("to_string"),
+                    )
 
-                        # verify if the rule is correct or not
-                        if metadata.get("original_uuid"):
-                            _original_uuid = metadata.get("original_uuid")  
-                        else:
-                            _original_uuid = None
+                    if validation_result.ok:
+                        # Case 1: Rule is VALID (either an update or a completely new rule)
 
-                        # we have parse a rule and we want to found if it is already in Rulezet
-                        existing_rule , message = RuleModel.get_rule_from_a_github(name , work[2], self.repo_sources, _original_uuid)
-                       
-                        if validation_result.ok:
-                            # Case 1: Rule is VALID (either an update or a completely new rule)
-                            
-                            if existing_rule:
-                                # Sub-case 1.1: Rule EXISTS (Attempt Update and History Creation)
-                                
-                                # Use self.local_repo_path instead of self.repo_sources
-                                user = db.session.merge(user)
-                                if existing_rule.user_id == user.id or user.is_admin():
+                        if existing_rule:
+                            # Sub-case 1.1: Rule EXISTS (Attempt Update and History Creation)
 
-                                    # Check for rule updates
-                                    # compare the rules
-                                    # exsisting_rule.to_string and rule_text
+                            # Use self.local_repo_path instead of self.repo_sources
+                            user = db.session.merge(user)
+                            if existing_rule.user_id == user.id or user.is_admin():
 
-                                    # message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.id, self.local_repo_path ) 
+                                # Check for rule updates
+                                message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.to_string, rule_text, existing_rule.id)
 
-                                    message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.to_string, rule_text, existing_rule.id) 
-                                  
-                                    # --- create history if needed ---
-                                    history_id = None
-                                    if success and new_rule_content:
+                                # --- create history if needed ---
+                                history_id = None
+                                if success and new_rule_content:
 
-                                        history_id = RuleModel.create_rule_history({
-                                            "id": existing_rule.id,
-                                            "title": existing_rule.title,
-                                            "success": success,
-                                            "message": message_dict.get("message", ""),
-                                            "new_content": new_rule_content,
-                                            "old_content": existing_rule.to_string
-                                        })
-                                        # message_dict["history_id"] = history_id # Not strictly necessary if history_id is used below
-
-                                    msg = message_dict.get("message", "") or ""
-                                    syntax_valid = not ("Update found but invalid:" in msg)
-
-                                    # --- update status ---
-                                    with self.lock:
-                                        self.rule_status_list.append({
-                                            "update_result_uuid": self.uuid,
-                                            "name_rule": existing_rule.title,
-                                            "rule_id": existing_rule.id,
-                                            "message": message_dict.get("message", ""),
-                                            # success from Check_for_rule_updates means it was FOUND and processed
-                                            "found": success,
-                                            "update_available": bool(new_rule_content),
-                                            "rule_syntax_valid": syntax_valid,
-                                            "error": not success,
-                                            "history_id": history_id # history_id is set here
-                                        })
-                               
-                                # Remove rule from the list of rules to process (because it was found in the repo)
-                                self.remove_processed_rule(existing_rule.title)
-
-                            else:
-                                if message == "[new rule]":
-                                    
-                                    # Sub-case 1.2: Rule does NOT EXIST (Log as New Valid Rule)
-                                    new_rule_obj = NewRule(
-                                        uuid=str(uuid4()),
-                                        update_result_id=None,  # filled later in save_info()
-                                        date=datetime.datetime.now(tz=datetime.timezone.utc),
-                                        name_rule=name,
-                                        rule_content=rule_text,
-                                        message="", # No error message since it's valid
-                                        rule_syntax_valid=True,
-                                        error=False,
-                                        accept=False,
-                                        # Ensure 'format' is set if available
-                                        format=metadata.get("format"),
-                                        github_path=os.path.relpath(work[2], self.repo_sources) 
-                                    )
-                                    self.new_rules_list.append(new_rule_obj)
-                                    
-                                    # Safety: Remove rule from the list of rules to process if it somehow matched a title 
-                                    self.remove_processed_rule(name)
-
-
-                        else:
-                            # Case 2: Rule is INVALID (Log as Update Status OR New Invalid Rule)
-
-                            # Extract errors and warnings for the message
-                            error_details = []
-                            if validation_result.errors:
-                                error_details.append(f"Errors: {validation_result.errors}")
-                            if validation_result.warnings:
-                                error_details.append(f"Warnings: {validation_result.warnings}")
-                            
-                            full_error_message = "Validation Failed. " + " | ".join(error_details)
-                                
-                            if existing_rule:
-                                # Case 2.1: Rule EXISTS but the content in the repo is INVALID (Log as Invalid Update Status AND Create History)
-                                user = db.session.merge(user)
-                                if existing_rule.user_id == user.id or user.is_admin():
-
-
-
-                                    # --- create history for the failed update ---
                                     history_id = RuleModel.create_rule_history({
                                         "id": existing_rule.id,
                                         "title": existing_rule.title,
-                                        # Update failed because the new content is invalid
-                                        "success": False, 
-                                        "message": "rejected",
-                                        "new_content": rule_text,
+                                        "success": success,
+                                        "message": message_dict.get("message", ""),
+                                        "new_content": new_rule_content,
                                         "old_content": existing_rule.to_string
                                     })
 
-                                    # Log status for the failed update
-                                    with self.lock:
-                                        self.rule_status_list.append({
-                                            "update_result_uuid": self.uuid,
-                                            "name_rule": existing_rule.title,
-                                            "rule_id": existing_rule.id,
-                                            "message": f"Update found but invalid: {full_error_message}",
-                                            "found": True,
-                                            "update_available": True, # Update exists, but we don't apply it
-                                            "rule_syntax_valid": False,
-                                            "error": True, # Error because the update failed validation
-                                            "history_id": history_id # History ID is recorded
-                                        })
+                                msg = message_dict.get("message", "") or ""
+                                syntax_valid = not ("Update found but invalid:" in msg)
 
-                        
-                                # Remove rule from the list of rules to process (because it was found in the repo)
-                                self.remove_processed_rule(existing_rule.title)
-                            
-                            else:
-                                # Case 2.2: Rule does NOT EXIST (Log as New Invalid Rule for Correction)
-                                if message == "[new rule]":
-                                   
-                                    # Create the NewRule object for the bad rule
-                                    new_rule_obj = NewRule(
-                                        uuid=str(uuid4()),
-                                        update_result_id=None,  # filled later in save_info()
-                                        date=datetime.datetime.now(tz=datetime.timezone.utc),
-                                        name_rule=name,
-                                        rule_content=rule_text,
-                                        # Use the detailed error message
-                                        message=full_error_message,
-                                        rule_syntax_valid=False, # Key change: Syntax is invalid
-                                        error=True,             # Key change: There is an error
-                                        accept=False,
-                                        # Ensure 'format' is set if available
-                                        format=metadata.get("format") ,
-                                        github_path=metadata.get("github_path")
-                                    )
-                                    self.new_rules_list.append(new_rule_obj)
-                                    
-                                    # Remove rule from the list of rules to process (as it was found in the repo but is invalid)
-                                    self.remove_processed_rule(name)
+                                # --- update status ---
+                                with self.lock:
+                                    self.rule_status_list.append({
+                                        "update_result_uuid": self.uuid,
+                                        "name_rule": existing_rule.title,
+                                        "rule_id": existing_rule.id,
+                                        "message": message_dict.get("message", ""),
+                                        # success from Check_for_rule_updates means it was FOUND and processed
+                                        "found": success,
+                                        "update_available": bool(new_rule_content),
+                                        "rule_syntax_valid": syntax_valid,
+                                        "error": not success,
+                                        "history_id": history_id # history_id is set here
+                                    })
+
+                            # Remove rule from the list of rules to process (because it was found in the repo)
+                            self.remove_processed_rule(existing_rule.id)
+
+                        else:
+                            if message == "[new rule]":
+
+                                # Sub-case 1.2: Rule does NOT EXIST (Log as New Valid Rule)
+                                # Stored as a plain dict, not a NewRule ORM instance — this list
+                                # lives in memory across the whole run, read from many different
+                                # app-context/session scopes (status() polls, other worker
+                                # iterations); an unattached ORM object read outside the context
+                                # it was built in can raise DetachedInstanceError. Actual NewRule
+                                # rows are only constructed once, at insert time, in save_info().
+                                self.new_rules_list.append({
+                                    "uuid": str(uuid4()),
+                                    "update_result_id": None,  # filled in save_info()
+                                    "date": datetime.datetime.now(tz=datetime.timezone.utc),
+                                    "name_rule": name,
+                                    "rule_content": rule_text,
+                                    "message": "", # No error message since it's valid
+                                    "rule_syntax_valid": True,
+                                    "error": False,
+                                    "accept": False,
+                                    "format": metadata.get("format"),
+                                    "github_path": os.path.relpath(filepath, self.local_repo_path),
+                                })
+
+                    else:
+                        # Case 2: Rule is INVALID (Log as Update Status OR New Invalid Rule)
+
+                        # Extract errors and warnings for the message
+                        error_details = []
+                        if validation_result.errors:
+                            error_details.append(f"Errors: {validation_result.errors}")
+                        if validation_result.warnings:
+                            error_details.append(f"Warnings: {validation_result.warnings}")
+
+                        full_error_message = "Validation Failed. " + " | ".join(error_details)
+
+                        if existing_rule:
+                            # Case 2.1: Rule EXISTS but the content in the repo is INVALID (Log as Invalid Update Status AND Create History)
+                            user = db.session.merge(user)
+                            if existing_rule.user_id == user.id or user.is_admin():
+
+                                # --- create history for the failed update ---
+                                history_id = RuleModel.create_rule_history({
+                                    "id": existing_rule.id,
+                                    "title": existing_rule.title,
+                                    # Update failed because the new content is invalid
+                                    "success": False,
+                                    "message": "rejected",
+                                    "new_content": rule_text,
+                                    "old_content": existing_rule.to_string
+                                })
+
+                                # Log status for the failed update
+                                with self.lock:
+                                    self.rule_status_list.append({
+                                        "update_result_uuid": self.uuid,
+                                        "name_rule": existing_rule.title,
+                                        "rule_id": existing_rule.id,
+                                        "message": f"Update found but invalid: {full_error_message}",
+                                        "found": True,
+                                        "update_available": True, # Update exists, but we don't apply it
+                                        "rule_syntax_valid": False,
+                                        "error": True, # Error because the update failed validation
+                                        "history_id": history_id # History ID is recorded
+                                    })
+
+                            # Remove rule from the list of rules to process (because it was found in the repo)
+                            self.remove_processed_rule(existing_rule.id)
+
+                        else:
+                            # Case 2.2: Rule does NOT EXIST (Log as New Invalid Rule for Correction)
+                            if message == "[new rule]":
+
+                # Same rationale as the valid-new-rule case above: plain dict, not
+                                # a live ORM instance, since this list outlives the app-context
+                                # it was built in.
+                                self.new_rules_list.append({
+                                    "uuid": str(uuid4()),
+                                    "update_result_id": None,  # filled in save_info()
+                                    "date": datetime.datetime.now(tz=datetime.timezone.utc),
+                                    "name_rule": name,
+                                    "rule_content": rule_text,
+                                    "message": full_error_message,
+                                    "rule_syntax_valid": False,
+                                    "error": True,
+                                    "accept": False,
+                                    "format": metadata.get("format"),
+                                    "github_path": metadata.get("github_path"),
+                                })
 
                 else:
                     # by rule: work = (cp, rule_id, repo_dir, rule_type_instance, rule_title)
@@ -493,7 +524,7 @@ class Update_class:
                                 "error": True,
                                 "history_id": None
                             })
-                        self.remove_processed_rule(existing_rule.title)
+                        self.remove_processed_rule(existing_rule.id)
                         self.jobs.task_done()
                         continue
 
@@ -532,8 +563,8 @@ class Update_class:
                             "history_id": history_id
                         })
 
-                    self.remove_processed_rule(existing_rule.title)
-                        
+                    self.remove_processed_rule(existing_rule.id)
+
 
             self.jobs.task_done()
 
@@ -547,12 +578,11 @@ class Update_class:
 
         if is_last:
             with self.lock:
-                remaining_rules = self.rules_to_process[:]
-                for rule in remaining_rules:
+                for rule_id, rule in list(self.rules_to_process.items()):
                     self.rule_status_list.append({
                         "update_result_uuid": self.uuid,
                         "name_rule": rule["title"],
-                        "rule_id": rule["id"],
+                        "rule_id": rule_id,
                         "message": "Rule from Rulezet not found in the repository.",
                         "found": False,
                         "update_available": False,
@@ -560,7 +590,7 @@ class Update_class:
                         "error": True,
                         "history_id": None
                     })
-                    self.rules_to_process.remove(rule)
+                self.rules_to_process.clear()
 
                 self.found     = sum(1 for r in self.rule_status_list if r["found"])
                 self.updated   = sum(1 for r in self.rule_status_list if r["update_available"])
@@ -577,10 +607,6 @@ class Update_class:
 
             if self in sessions:
                 sessions.remove(self)
-            try:
-                delete_existing_repo_folder("app/rule_from_github/Rules_Github")
-            except Exception:
-                pass
 
         return True
 
@@ -623,10 +649,22 @@ class Update_class:
             )
             db.session.add(rule_status)
 
-        # Save new rules
+        # Save new rules — built here, at insert time, from the plain dicts
+        # accumulated during the run (see the "by_url" branch of process()).
         for nr in self.new_rules_list:
-            nr.update_result_id = s.id
-            db.session.add(nr)
+            db.session.add(NewRule(
+                uuid=nr["uuid"],
+                update_result_id=s.id,
+                date=nr["date"],
+                name_rule=nr["name_rule"],
+                rule_content=nr["rule_content"],
+                message=nr["message"],
+                rule_syntax_valid=nr["rule_syntax_valid"],
+                error=nr["error"],
+                accept=nr["accept"],
+                format=nr["format"],
+                github_path=nr["github_path"],
+            ))
 
         db.session.commit()
 

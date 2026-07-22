@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import subprocess
 from urllib.parse import urlparse
 from flask_login import current_user
 import datetime
@@ -9,6 +10,14 @@ import datetime
 from urllib.parse import urlparse
 from git import Repo
 import requests
+
+
+def _github_auth_headers() -> dict:
+    """Authorization header for GitHub API calls, if GITHUB_TOKEN is configured.
+    Unauthenticated calls are capped at 60 req/hour by GitHub and start failing
+    under normal admin usage (repeated imports/branch checks/metadata lookups)."""
+    token = os.environ.get('GITHUB_TOKEN')
+    return {'Authorization': f'Bearer {token}'} if token else {}
 
 def get_repo_name_from_url(repo_url):
     """Extract the full repository path (owner/repo) from its Git URL."""
@@ -42,7 +51,7 @@ def clone_or_access_repo(repo_url, branch=None):
         if not status:
             raise Exception(f"The repo {repo_url} is not accessible: {msg}")
         try:
-            kwargs = {"branch": branch} if branch else {}
+            kwargs = {"branch": branch, "depth": 1} if branch else {"depth": 1}
             Repo.clone_from(repo_url, repo_dir, **kwargs)
         except Exception as e:
             # Remove the partially-created directory so a retry starts fresh
@@ -80,12 +89,12 @@ def is_github_repo_accessible(repo_url):
         path = parsed.path.strip("/").replace(".git", "")
         api_url = f"https://api.github.com/repos/{path}"
 
-        response = requests.get(api_url, timeout=5)
+        response = requests.get(api_url, headers=_github_auth_headers(), timeout=5)
 
         # A status code of 200 indicates the repository is accessible
-        return response.status_code == 200 , ""
+        return response.status_code == 200 , "" if response.status_code == 200 else response.text
     except Exception as e:
-        return False , response.text
+        return False , str(e)
 
 def delete_existing_repo_folder(local_dir):
     """Delete the existing folder if it exists."""
@@ -211,7 +220,7 @@ def github_repo_metadata(repo_url: str, selected_license: str) -> dict:
     api_url = github_repo_to_api_url(repo_url)
 
     # --- Call GitHub API ---
-    response = requests.get(api_url)
+    response = requests.get(api_url, headers=_github_auth_headers(), timeout=8)
     response.raise_for_status()  # raise exception if request failed
     data = response.json()
 
@@ -246,8 +255,6 @@ def get_licst_license() -> list:
                 licenses.append(line)
     return licenses
 
-import subprocess
-
 def git_pull_repo(repo_dir):
     try:
         result = subprocess.run(
@@ -260,7 +267,36 @@ def git_pull_repo(repo_dir):
         return True
     except subprocess.CalledProcessError as e:
         return False
-    
+
+
+def get_repo_head_sha(repo_dir):
+    """Current HEAD commit SHA of a local clone, or None if unavailable."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", repo_dir, "rev-parse", "HEAD"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
+        )
+        return result.stdout.strip() or None
+    except subprocess.CalledProcessError:
+        return None
+
+
+def get_changed_files_between(repo_dir, sha_before, sha_after):
+    """Repo-relative paths that changed between two commits, or None if the diff
+    can't be computed (e.g. sha_before fell out of a shallow clone's history) —
+    callers should treat None as "diff unknown, re-check everything"."""
+    if not sha_before or not sha_after or sha_before == sha_after:
+        return set()
+    try:
+        result = subprocess.run(
+            ["git", "-C", repo_dir, "diff", "--name-only", sha_before, sha_after],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
+        )
+        return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+    except subprocess.CalledProcessError:
+        return None
+
+
 
 def fill_all_void_field(form_dict: dict) -> dict:
     """Fill all the void fields of a rule form with default values."""

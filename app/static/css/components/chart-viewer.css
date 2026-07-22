@@ -17,6 +17,13 @@
     clip-path: none;
 }
 
+.cv-root--minimal {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    min-height: 0;
+}
+
 
 /*---TABS---*/
 
