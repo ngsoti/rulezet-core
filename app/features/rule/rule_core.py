@@ -207,6 +207,10 @@ def _wipe_rule_children(rule_ids: list) -> None:
     # 3. Tag associations — the table causing the FK violation
     RuleTagAssociation.query.filter(RuleTagAssociation.rule_id.in_(ids)).delete(synchronize_session=False)
 
+    # 3b. ATT&CK technique associations — same shape as tag associations, same
+    # missing ondelete=CASCADE on rule_id, same permanent-delete FK violation.
+    RuleAttackAssociation.query.filter(RuleAttackAssociation.rule_id.in_(ids)).delete(synchronize_session=False)
+
     # 4. Bundle ↔ rule associations (no ondelete=CASCADE on this FK)
     BundleRuleAssociation.query.filter(BundleRuleAssociation.rule_id.in_(ids)).delete(synchronize_session=False)
 
@@ -2459,11 +2463,37 @@ def get_github_source_stats(url: str) -> dict:
     last = base.order_by(Rule.last_modif.desc()).first()
     first = base.order_by(Rule.creation_date.asc()).first()
 
+    # Distinct CVEs referenced by this source's rules — cve_id is a JSON-encoded
+    # list per rule (see add_rule_core()), so this can't be a plain SQL DISTINCT;
+    # accumulate a set in Python instead. Bounded to this source's rule count,
+    # not the whole table, so this stays cheap even on a large instance.
+    rule_ids = [r_id for (r_id,) in base.with_entities(Rule.id).all()]
+    cve_set = set()
+    for (raw,) in base.with_entities(Rule.cve_id).all():
+        if not raw:
+            continue
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                cve_set.update(v for v in parsed if v)
+        except (TypeError, ValueError):
+            pass
+
+    attack_count = 0
+    if rule_ids:
+        attack_count = (
+            db.session.query(func.count(func.distinct(RuleAttackAssociation.technique_id)))
+            .filter(RuleAttackAssociation.rule_id.in_(rule_ids))
+            .scalar()
+        ) or 0
+
     return {
         'total_rules':    total,
         'formats':        [{'name': f or 'unknown', 'count': c} for f, c in formats],
         'authors_count':  authors_count,
         'licenses_count': licenses_count,
+        'cve_count':      len(cve_set),
+        'attack_count':   attack_count,
         'last_update':    last.last_modif.strftime('%Y-%m-%d %H:%M') if last else None,
         'first_import':   first.creation_date.strftime('%Y-%m-%d %H:%M') if first else None,
     }

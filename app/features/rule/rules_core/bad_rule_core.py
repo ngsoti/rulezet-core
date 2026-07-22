@@ -235,9 +235,10 @@ def delete_all_bad_rules(filters):
 
         deleted_count = query.delete(synchronize_session=False)
         db.session.commit()
+        return deleted_count
     except Exception as e:
         db.session.rollback()
-        return False
+        return None
 
 def get_sources_usage(user_id=None):
     query = db.session.query(
@@ -344,7 +345,20 @@ def get_filtered_bad_rules_query(params) -> tuple:
             query = query.filter(InvalidRuleModel.license.in_(license_list))
     
     total_rules = query.count()
-    per_page = 12
+
+    # Server-side sort — same sort/dir query params RuleList's own /rule/data_table uses.
+    sort_col = {
+        'file_name':    InvalidRuleModel.file_name,
+        'rule_type':    InvalidRuleModel.rule_type,
+        'error_message': InvalidRuleModel.error_message,
+        'github_path':  InvalidRuleModel.github_path,
+        'created_at':   InvalidRuleModel.created_at,
+    }.get(params.get('sort', '', type=str), InvalidRuleModel.created_at)
+    sort_dir = params.get('dir', 'desc', type=str)
+    query = query.order_by(sort_col.asc() if sort_dir == 'asc' else sort_col.desc())
+
+    per_page = params.get('per_page', 12, type=int) or 12
+    per_page = max(1, min(per_page, 100))  # same bound RuleList's own rows-per-page picker offers (10/25/50/100)
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
     
     return paginated, total_rules

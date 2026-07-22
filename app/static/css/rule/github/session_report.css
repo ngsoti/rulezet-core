@@ -1,4 +1,6 @@
-/* Update-check loading page — live progress + log feed, loading skeletons. */
+/* GitHub session report — shared by import_loading.html and update_loading.html:
+   live progress + log feed, loading skeletons, and the finished-view report
+   (hero, KPIs, donut breakdown, live GitHub repo card, "what to do next"). */
 
 .ul-progress-card {
     border: 0;

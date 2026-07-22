@@ -2131,6 +2131,13 @@ def delete_all_bad_rule() -> jsonify:
     try:
         deleted_count = BadRuleModel.delete_all_bad_rules(filters)
 
+        if deleted_count is None:
+            return jsonify({
+                "success": False,
+                "toast_class": 'danger',
+                "message": "System error during deletion."
+            }), 500
+
         if deleted_count == 0:
              return jsonify({
                 "success": True,

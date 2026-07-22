@@ -1,243 +1,669 @@
 {% extends 'base.html' %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/chart-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/github/session_report.css') }}">
+{% endblock %}
 {% block content %}
 
-<div v-if="info_session">
-    <h2 class="fw-bold mb-1 text-center text-primary">[[info_session.repo_url]]</h2>
-    <div class="mx-auto mb-4" style="width: 60px; height: 4px; background-color: #0d6efd; border-radius: 2px;"></div>
+<div v-cloak v-if="info_session" class="container">
 
-
-    <div v-if="!is_finished">
-        <p class="text-muted mt-2">
-            Importing rules
-            This may take a while, please wait...
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-file-import banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
+                <li class="breadcrumb-item"><a href="/rule/github/history_github_importer" class="text-decoration-none text-muted">GitHub Sources</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Import</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-file-import"></i></div>
+            <div><h2 class="fw-bold mb-1">GitHub Import</h2><div class="banner-accent"></div></div>
+        </div>
+        <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+            [[ !is_finished ? 'Importing rules from GitHub, live.' : 'Here is what was imported from this repository.' ]]
         </p>
+        <div v-if="repoUrl" class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+            <a :href="repoUrl" target="_blank" rel="noreferrer" class="ul-repo-stat" style="text-decoration:none;" title="Open on GitHub">
+                <i class="fa-brands fa-github"></i>[[ repoUrl ]]
+            </a>
+            <button class="ul-job-ctrl-btn" title="Copy URL" @click="copyRepoUrl()">
+                <i class="fas" :class="repoUrlCopied ? 'fa-check' : 'fa-copy'"></i>
+            </button>
+        </div>
+    </div>
 
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped active" id="progress" role="progressbar" aria-valuemin="0"
-                aria-valuemax="100" :style="'width:'+progress + '%;'">
+    <!-- Neutral state until we know whether this session is still running or
+         already finished — otherwise an already-finished session flashes the
+         progress bar for a frame before switching to the report. -->
+    <div v-if="!pageReady" class="text-center py-5">
+        <span class="spinner-border text-primary" role="status"></span>
+        <p class="text-muted small mt-3 mb-0">Loading import…</p>
+    </div>
+
+    <!-- Progress -->
+    <div v-else-if="!is_finished" class="mb-4">
+        <div class="ul-progress-card">
+            <div class="ul-progress-head">
+                <div class="ul-progress-icon"><i class="fas fa-file-import"></i></div>
+                <div>
+                    <p class="ul-progress-title">Importing rules…</p>
+                    <p class="ul-progress-sub">[[ repoUrl || 'Working…' ]]</p>
+                </div>
+                <div class="ul-stat-row">
+                    <span class="ul-stat-chip ul-stat-chip--new"><span class="dot"></span>[[ liveImported ]] imported</span>
+                    <span class="ul-stat-chip ul-stat-chip--found"><span class="dot"></span>[[ liveSkipped ]] skipped</span>
+                    <span v-if="liveBad > 0" class="ul-stat-chip ul-stat-chip--error"><span class="dot"></span>[[ liveBad ]] bad</span>
+                </div>
+            </div>
+
+            <div class="ul-bar-track">
+                <div class="ul-bar-fill" :style="'width:'+progress+'%;'"></div>
+            </div>
+            <div class="ul-bar-meta">
+                <span><b>[[ progressDone ]]</b> / [[ progressTotal ]] rule<span v-if="progressTotal!==1">s</span> processed</span>
+                <span><b>[[ progress ]]%</b></span>
+            </div>
+
+            <div class="ul-log" ref="logEl">
+                <div v-if="!logEntries.length" class="ul-log-empty">
+                    <i class="fas fa-terminal me-1"></i> Waiting for the first result…
+                </div>
+                <div v-for="(entry, idx) in logEntries" :key="idx" class="ul-log-row" :class="'ul-log-row--'+entry.type">
+                    <i class="ul-log-icon" :class="entry.icon"></i>
+                    <span><span class="ul-log-rule">[[ entry.rule ]]</span> <span class="ul-log-msg">— [[ entry.msg ]]</span></span>
+                </div>
             </div>
         </div>
-        <span v-if="status_site" id="status">[[status_site]]</span>
     </div>
-    <!-- [[info_session]] -->
 
-    <div v-if="is_finished" class="container col-md-10 justify-content-center my-5">
-        <template v-if="data_is_loading">
-            <p class="text-muted mt-2">
-                Import completed successfully.
-                You can now view the imported rules and their details below.
-                <span class="text-primary">
-                    <a :href="info_session.repo_url" rel="noreferrer" target="_blank">
-                        [[info_session.repo_url]]
-                    </a>
-                </span>.
-            </p>
-
-            <div v-if="result_data.info" class="card shadow border-0">
-                <div class="card-body p-4 bg-light rounded">
-                    <h3 class="fw-bold mb-3">Github information</h3>
-
-                    <table class="table">
-                        <tr v-if="result_data.info.author">
-                            <td style="color:#494950">Author</td>
-                            <td><b>[[ result_data.info.author ]]</b></td>
-                        </tr>
-                        <tr v-if="result_data.info.description">
-                            <td style="color:#494950">Description</td>
-                            <td><b>[[ result_data.info.description ]]</b></td>
-                        </tr>
-                        <tr v-if="result_data.info.license">
-                            <td style="color:#494950">License</td>
-                            <td><b>[[ result_data.info.license ]]</b></td>
-                        </tr>
-                        <tr v-if="result_data.info.created_at">
-                            <td style="color:#494950">Creation Date</td>
-                            <td><b>[[ result_data.info.created_at ]]</b></td>
-                        </tr>
-                        <tr v-if="result_data.info.language">
-                            <td style="color:#494950">Language</td>
-                            <td><b><span class="badge bg-primary">[[ result_data.info.language ]]</span></b></td>
-                        </tr>
-                        <tr v-if="result_data.info.watchers">
-                            <td style="color:#494950">Watchers</td>
-                            <td><b>[[ result_data.info.watchers ]]</b></td>
-                        </tr>
-                        <tr v-if="result_data.info.stars">
-                            <td style="color:#494950">Stars</td>
-                            <td><b>[[ result_data.info.stars ]]</b></td>
-                        </tr>
-                        <tr v-if="result_data.info.open_issues">
-                            <td style="color:#494950">Open Issues</td>
-                            <td><b>[[ result_data.info.open_issues ]]</b></td>
-                        </tr>
-                    </table>
+    <!-- Report -->
+    <div v-else>
+        <div class="ul-report-card">
+            <div class="ul-report-head">
+                <div>
+                    <p class="ul-report-title">Import summary</p>
+                    <p class="ul-report-sub d-flex align-items-center flex-wrap gap-1">
+                        <span>Imported [[ result_data.query_date || '—' ]]</span>
+                        <span v-if="result_data.user_id">· requested by
+                            <user-chip :user-id="Number(result_data.user_id)"
+                                       :username="requesterInfo ? requesterInfo.username : null"
+                                       :avatar="requesterInfo ? requesterInfo.avatar : null"
+                                       size="xs"></user-chip>
+                        </span>
+                    </p>
                 </div>
-
-                <div class="card-body p-4 bg-light rounded">
-                    <h3 class="fw-bold mb-3">Import summary</h3>
-                    <div class="table-responsive">
-                        <table class="table">
-                            <tr>
-                                <td style="color:#494950">Total Files</td>
-                                <td><b>[[result_data.total]]</b></td>
-                            </tr>
-                            <tr>
-                                <td style="color:#494950">Total Rules</td>
-                                <td><b>[[result_data.imported + result_data.bad_rules + result_data.skipped]]</b></td>
-                            </tr>
-                            <tr>
-                                <td style="color:#494950">Imported</td>
-                                <td><b>[[result_data.imported]]</b></td>
-                            </tr>
-                            <tr>
-                                <td style="color:#494950">Bad Rules</td>
-                                <td><b>[[result_data.bad_rules]]</b></td>
-                            </tr>
-                            <tr>
-                                <td style="color:#494950">Skipped</td>
-                                <td><b>[[result_data.skipped]]</b></td>
-                            </tr>
-                            <tr>
-                                <td style="color:#494950">Query Date</td>
-                                <td><b>[[result_data.query_date]]</b></td>
-                            </tr>
-                            <template v-for="format, key in result_data.count_per_format">
-                                <template v-if="format.bad_rule > 0 || format.imported > 0 || format.skipped > 0">
-                                    <tr>
-                                        <td class="text-end"><b>[[key]]</b></td>
-                                        <td></td>
-                                    </tr>
-                                    <tr v-if="format.bad_rule > 0">
-                                        <td></td>
-                                        <td>Bad rules: [[format.bad_rule]]</td>
-                                    </tr>
-                                    <tr v-if="format.imported > 0">
-                                        <td></td>
-                                        <td>Imported: [[format.imported]]</td>
-                                    </tr>
-                                    <tr v-if="format.skipped > 0">
-                                        <td></td>
-                                        <td>Skipped: [[format.skipped]]</td>
-                                    </tr>
-                                </template>
-                            </template>
-                        </table>
+                <div class="ul-hero">
+                    <div class="ul-hero-ring" :style="'--pct:'+successRate+';'">
+                        <span class="ul-hero-ring-value">[[ successRate ]]%</span>
                     </div>
-                    <div class="text-center">
-
-                        <!-- Go back Button -->
-                        <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
-                            <a href="javascript:history.back()" style="width: auto;"
-                                class="btn btn-secondary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
-                                <i class="fas fa-arrow-left me-2"></i>
-                                Back
-                            </a>
-                            <button
-                                class="btn btn-primary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill"
-                                type="button" @click="goto(info_session.repo_url)">
-                                View rules
-                            </button>
-                        </div>
+                    <div class="ul-hero-copy">
+                        <p class="ul-hero-label">Imported</p>
+                        <p class="ul-hero-text">[[ importedCount ]] of [[ totalProcessed ]] rule<span v-if="totalProcessed!==1">s</span> found were imported successfully.</p>
                     </div>
                 </div>
             </div>
-        </template>
-        <template v-else>
-            <!-- loading the data -->
-            <div class="col-12 text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+
+            <div class="ul-kpi-row">
+                <div class="ul-kpi ul-kpi--found ul-kpi--clickable" @click="viewAllImported()" title="Show all imported rules">
+                    <div class="ul-kpi-value">[[ totalProcessed ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Rules found</div>
+                </div>
+                <div class="ul-kpi ul-kpi--ok ul-kpi--clickable" @click="viewAllImported()" title="Show all imported rules">
+                    <div class="ul-kpi-value">[[ importedCount ]] <small v-if="totalProcessed">([[ successRate ]]%)</small></div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Imported</div>
+                </div>
+                <div class="ul-kpi ul-kpi--update" title="Duplicates aren't stored separately — they already exist in Rulezet">
+                    <div class="ul-kpi-value">[[ skippedCount ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Skipped (duplicates)</div>
+                </div>
+                <div v-if="badRuleCountDisplay > 0" class="ul-kpi ul-kpi--error ul-kpi--clickable" @click="viewAllBadRules()" title="Show all bad rules">
+                    <div class="ul-kpi-value">[[ badRuleCountDisplay ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Invalid syntax</div>
                 </div>
             </div>
-        </template>
 
+            <div class="ul-report-grid">
+                <div>
+                    <p class="ul-report-grid-title">Breakdown</p>
+                    <div class="ul-repo-card ul-chart-wrap">
+                        <chart-viewer v-if="totalProcessed > 0" :data="summaryChartData" views="donut" height="100%" :minimal="true"></chart-viewer>
+                    </div>
+                </div>
+                <div>
+                    <p class="ul-report-grid-title">Repository</p>
+                    <div class="ul-repo-card">
+
+                        <template v-if="ghRepo">
+                            <div class="d-flex align-items-start gap-3 mb-3">
+                                <img :src="ghRepo.owner.avatar_url" :alt="ghRepo.owner.login"
+                                     class="rounded-circle flex-shrink-0"
+                                     style="width:40px;height:40px;border:2px solid var(--border-color);" />
+                                <div style="min-width:0;">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                        <a :href="ghRepo.owner.html_url" target="_blank" rel="noreferrer"
+                                           class="text-decoration-none" style="font-size:.85rem;color:var(--subtle-text-color);">[[ ghRepo.owner.login ]]</a>
+                                        <span class="text-muted">/</span>
+                                        <a :href="ghRepo.html_url" target="_blank" rel="noreferrer" class="ul-repo-name">[[ ghRepo.name ]]</a>
+                                        <span v-if="ghRepo.archived" class="badge bg-warning text-dark">Archived</span>
+                                        <span class="badge" style="font-size:.63rem;"
+                                              :class="ghRepo.visibility==='public' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                                            <i class="fa-solid" :class="ghRepo.visibility==='public' ? 'fa-lock-open' : 'fa-lock'"></i>
+                                            [[ ghRepo.visibility ]]
+                                        </span>
+                                    </div>
+                                    <p v-if="ghRepo.description" class="ul-repo-desc mb-0">[[ ghRepo.description ]]</p>
+                                </div>
+                            </div>
+
+                            <div class="gh-kpi-grid mb-3">
+                                <div class="gh-kpi">
+                                    <div class="gh-kpi-icon" style="background:rgba(255,193,7,.15);color:#e6a817;"><i class="fa-solid fa-star"></i></div>
+                                    <div><div class="gh-kpi-num">[[ fmtNum(ghRepo.stargazers_count) ]]</div><div class="gh-kpi-lbl">Stars</div></div>
+                                </div>
+                                <div class="gh-kpi">
+                                    <div class="gh-kpi-icon" style="background:rgba(13,110,253,.12);color:#0d6efd;"><i class="fa-solid fa-code-branch"></i></div>
+                                    <div><div class="gh-kpi-num">[[ fmtNum(ghRepo.forks_count) ]]</div><div class="gh-kpi-lbl">Forks</div></div>
+                                </div>
+                                <div class="gh-kpi">
+                                    <div class="gh-kpi-icon" style="background:rgba(220,53,69,.12);color:#dc3545;"><i class="fa-solid fa-circle-dot"></i></div>
+                                    <div><div class="gh-kpi-num">[[ fmtNum(ghRepo.open_issues_count) ]]</div><div class="gh-kpi-lbl">Open issues</div></div>
+                                </div>
+                                <div class="gh-kpi">
+                                    <div class="gh-kpi-icon" style="background:rgba(13,202,240,.12);color:#0dcaf0;"><i class="fa-solid fa-eye"></i></div>
+                                    <div><div class="gh-kpi-num">[[ fmtNum(ghRepo.subscribers_count) ]]</div><div class="gh-kpi-lbl">Watchers</div></div>
+                                </div>
+                                <div class="gh-kpi">
+                                    <div class="gh-kpi-icon" style="background:rgba(108,117,125,.12);color:#6c757d;"><i class="fa-solid fa-database"></i></div>
+                                    <div><div class="gh-kpi-num">[[ fmtSize(ghRepo.size) ]]</div><div class="gh-kpi-lbl">Size</div></div>
+                                </div>
+                            </div>
+
+                            <div class="gh-info-grid">
+                                <div class="gh-info-cell" v-if="ghRepo.language">
+                                    <div class="gh-info-cell-icon" style="background:rgba(13,110,253,.1);color:#0d6efd;"><i class="fa-solid fa-code"></i></div>
+                                    <div><div class="gh-info-lbl">Language</div><div class="gh-info-val">[[ ghRepo.language ]]</div></div>
+                                </div>
+                                <div class="gh-info-cell" v-if="ghRepo.license">
+                                    <div class="gh-info-cell-icon" style="background:rgba(25,135,84,.1);color:#198754;"><i class="fa-solid fa-scale-balanced"></i></div>
+                                    <div><div class="gh-info-lbl">License</div><div class="gh-info-val">[[ ghRepo.license.name ]]</div></div>
+                                </div>
+                                <div class="gh-info-cell">
+                                    <div class="gh-info-cell-icon" style="background:rgba(108,117,125,.1);color:#6c757d;"><i class="fa-solid fa-code-branch"></i></div>
+                                    <div><div class="gh-info-lbl">Default branch</div><div class="gh-info-val">[[ ghRepo.default_branch ]]</div></div>
+                                </div>
+                                <div class="gh-info-cell">
+                                    <div class="gh-info-cell-icon" style="background:rgba(255,193,7,.1);color:#e6a817;"><i class="fa-solid fa-calendar-plus"></i></div>
+                                    <div><div class="gh-info-lbl">Created</div><div class="gh-info-val">[[ fmtDate(ghRepo.created_at) ]]</div></div>
+                                </div>
+                                <div class="gh-info-cell">
+                                    <div class="gh-info-cell-icon" style="background:rgba(13,202,240,.1);color:#0dcaf0;"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                                    <div><div class="gh-info-lbl">Last push</div><div class="gh-info-val">[[ fmtDate(ghRepo.pushed_at) ]]</div></div>
+                                </div>
+                                <div class="gh-info-cell" v-if="ghRepo.homepage">
+                                    <div class="gh-info-cell-icon" style="background:rgba(13,110,253,.1);color:#0d6efd;"><i class="fa-solid fa-link"></i></div>
+                                    <div>
+                                        <div class="gh-info-lbl">Homepage</div>
+                                        <div class="gh-info-val"><a :href="ghRepo.homepage" target="_blank" rel="noreferrer" style="word-break:break-all;">[[ ghRepo.homepage ]]</a></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template v-else-if="ghRepoLoading">
+                            <div class="d-flex flex-column gap-2">
+                                <div class="placeholder-glow"><span class="placeholder col-6 rounded"></span></div>
+                                <div class="gh-kpi-grid">
+                                    <div v-for="n in 5" :key="n" class="gh-kpi placeholder-glow"><span class="placeholder col-10 rounded" style="height:30px;"></span></div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template v-else>
+                            <a v-if="repoUrl" :href="repoUrl" target="_blank" rel="noreferrer" class="ul-repo-name">[[ repoUrl ]]</a>
+                            <p class="ul-repo-desc mb-0" v-if="info_session.description">[[ info_session.description ]]</p>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- By format -->
+        <div class="ul-report-card" v-if="perFormatList.length">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                <p class="ul-report-title mb-0">By format</p>
+                <div v-if="sourceStats" class="d-flex gap-2 flex-wrap">
+                    <span class="ul-repo-stat">
+                        <i class="fas fa-shield-virus text-danger"></i>[[ sourceStats.cve_count ]] CVE<span v-if="sourceStats.cve_count!==1">s</span> referenced
+                    </span>
+                    <span class="ul-repo-stat">
+                        <i class="fas fa-crosshairs text-warning"></i>[[ sourceStats.attack_count ]] ATT&amp;CK technique<span v-if="sourceStats.attack_count!==1">s</span>
+                    </span>
+                </div>
+            </div>
+            <div class="ul-repo-card" v-for="fmt in perFormatList" :key="fmt.name" style="margin-bottom:.6rem;">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <span class="badge rounded-pill bg-dark pt-1">[[ fmt.name.toUpperCase() ]]</span>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span v-if="fmt.imported > 0" class="ul-repo-stat ul-repo-stat--stars" style="cursor:pointer;"
+                              title="Show imported rules of this format" @click="filterImportedByFormat(fmt.name)">
+                            <i class="fas fa-circle-check text-success"></i>[[ fmt.imported ]] imported
+                        </span>
+                        <span v-if="fmt.skipped > 0" class="ul-repo-stat">
+                            <i class="fas fa-minus-circle"></i>[[ fmt.skipped ]] skipped
+                        </span>
+                        <span v-if="fmt.bad_rule > 0" class="ul-repo-stat" style="cursor:pointer;color:#dc3545;"
+                              title="Show bad rules of this format" @click="filterBadByFormat(fmt.name)">
+                            <i class="fas fa-triangle-exclamation"></i>[[ fmt.bad_rule ]] bad
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- What to do next -->
+        <div v-if="badRuleCountDisplay > 0" class="ul-report-card ul-next-steps">
+            <p class="ul-report-title mb-3">What to do next</p>
+            <div class="ul-actions-list">
+                <div class="ul-action-item ul-action-item--warn">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    <div class="ul-action-copy">
+                        <strong>[[ badRuleCountDisplay ]] rule<span v-if="badRuleCountDisplay!==1">s</span> could not be imported</strong>
+                        <span>Invalid syntax — fix each one individually, or remove them if you don't need them.</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="ul-action-btn ul-action-btn--warn" @click="goToBadRulesTab()">Manage bad rules</button>
+                        <button class="ul-action-btn" style="background:linear-gradient(135deg,#6c757d,#495057);" @click="deleteAllBadRulesQuick()">Delete all</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Imported rules / Bad rules -->
+        <nav class="dr-nav mb-3" id="importTabs" role="tablist">
+            <button class="dr-nav__item active" id="imported-tab" data-bs-toggle="tab" data-bs-target="#imported-pane"
+                type="button" role="tab" aria-controls="imported-pane" aria-selected="true">
+                <i class="fa-solid fa-list-check"></i>
+                <span>Imported Rules</span>
+            </button>
+            <button class="dr-nav__item" id="badrules-tab" data-bs-toggle="tab" data-bs-target="#badrules-pane"
+                type="button" role="tab" aria-controls="badrules-pane" aria-selected="false">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Bad Rules</span>
+                <span v-if="badRuleCountDisplay > 0" class="dr-nav__badge">[[ badRuleCountDisplay ]]</span>
+            </button>
+        </nav>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="imported-pane" role="tabpanel" aria-labelledby="imported-tab">
+                <div class="ul-report-card">
+                    <rule-list v-if="repoUrl" ref="ruleListRef"
+                        mode="manage"
+                        default-view="card"
+                        fetch-url="/rule/data_table"
+                        :source="repoUrl"
+                        :can-vote="isAuthenticated"
+                        :can-favorite="isAuthenticated"
+                        :current-user-id="currentUserId"
+                        :current-user-is-admin="isAdmin"
+                        :csrf-token="csrfToken"
+                        :current-user-is-authenticated="isAuthenticated"
+                        :show-create="false"
+                        :hidden-filters="['sources']"
+                        :bulk-actions="[{ key: 'download', label: 'Download selected', icon: 'fa-download' }]">
+                    </rule-list>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="badrules-pane" role="tabpanel" aria-labelledby="badrules-tab">
+                <div class="ul-report-card">
+                    <bad-rule-list v-if="repoUrl" ref="badRuleListRef"
+                        :source="repoUrl"
+                        :csrf-token="csrfToken"
+                        :current-user-id="currentUserId"
+                        :current-user-is-admin="isAdmin"
+                        @count-loaded="badRuleCount = $event">
+                    </bad-rule-list>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center gap-3 mt-4 mb-3">
+            <a href="javascript:history.back()" style="width: auto;"
+                class="btn btn-secondary btn-sm d-inline-flex align-items-center shadow-sm px-3 py-2 rounded-pill">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back
+            </a>
+        </div>
     </div>
-
-
-
 </div>
 
 {% endblock %}
 
 
-
 {% block script %}
 <script type="module">
-
-    const { createApp, ref, onMounted } = Vue;
+    const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
     import { message_list, create_message } from '/static/js/toaster.js';
+    import ChartViewer from '/static/js/components/chart-viewer.js';
+    import UserChip from '/static/js/components/UserChip.js';
+    import RuleList from '/static/js/rule/ruleList.js';
+    import BadRuleList from '/static/js/rule/badRuleList.js';
+    import TagsDisplaysList from '/static/js/tags/tagsDisplaysList.js';
+    import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
+
+    const isAuthenticated = {{ current_user.is_authenticated | tojson }}
+    const isAdmin         = {{ current_user.is_admin()        | tojson }}
+    const currentUserId   = {{ current_user.id if current_user.is_authenticated else 'null' }}
+    const csrfToken       = '{{ csrf_token() }}'
 
     createApp({
         delimiters: ['[[', ']]'],
+        components: {
+            ChartViewer,
+            'user-chip':                   UserChip,
+            'rule-list':                   RuleList,
+            'bad-rule-list':               BadRuleList,
+            'tags-displays-list':          TagsDisplaysList,
+            'vulnerability-displays-list': VulnerabilityDisplaysList,
+        },
         setup() {
+            const progress       = ref(0)
+            const progressDone   = ref(0)
+            const progressTotal  = ref(0)
+            const status_site    = ref("")
+            const info_session   = ref({})
+            const result_data    = ref({})
+            const is_finished    = ref(false)
+            // Stays false until the very first status check resolves — avoids
+            // showing the progress bar for a split second on a session that
+            // was already finished (e.g. navigating back to an old sid).
+            const pageReady      = ref(false)
 
-            const data_is_loading = ref(false)
+            const repoUrl = computed(() =>
+                info_session.value.repo_url || (result_data.value.info && result_data.value.info.repo_url) || ''
+            )
 
-
-
-            const progress = ref(0)
-            const status_site = ref("")
-
-            const info_session = ref({})
-            const result_data = ref({})
-            const is_finished = ref(false)
+            const repoUrlCopied = ref(false)
+            async function copyRepoUrl() {
+                if (!repoUrl.value) return
+                try {
+                    await navigator.clipboard.writeText(repoUrl.value)
+                    repoUrlCopied.value = true
+                    create_message('Repository URL copied to clipboard.', 'success-subtle')
+                    setTimeout(() => { repoUrlCopied.value = false }, 1500)
+                } catch {
+                    create_message('Could not copy the URL.', 'danger-subtle')
+                }
+            }
 
             async function fetchInfoSession() {
-                data_is_loading.value = false
                 const res = await fetch('/rule/import_get_info_session/{{sid}}')
-
-                if (await res.status === 200) {
-                    const data = await res.json()
-                    info_session.value = data
-
+                if (res.status === 200) {
+                    info_session.value = await res.json()
                 } else {
                     create_message((await res.json()).message, (await res.json()).toast_class)
                 }
-                data_is_loading.value = true
             }
 
-            function goto(url) {
-                const params = new URLSearchParams({ url })
-                window.location.href = `/rule/github_detail?` + params.toString()
+            // ── Live log — built client-side from each poll response, not
+            // persisted. The backend caps events to its last 500, so a plain
+            // full replace each poll is simpler and just as correct as
+            // incremental appends.
+            const logEntries = ref([])
+            const logEl      = ref(null)
+
+            function _describeImportEvent(entry) {
+                if (entry.type === 'imported') return { type: 'new',   icon: 'fas fa-circle-plus' }
+                if (entry.type === 'bad')      return { type: 'error', icon: 'fas fa-triangle-exclamation' }
+                return { type: 'ok', icon: 'fas fa-minus-circle' } // skipped — duplicate, not an error
             }
 
+            function _appendLogEvents(data) {
+                const events = data.events || []
+                logEntries.value = events.map(e => {
+                    const { type, icon } = _describeImportEvent(e)
+                    const msg = e.type === 'imported' ? `imported (${e.format})`
+                              : e.type === 'bad'       ? `invalid syntax (${e.format})`
+                              : `skipped — already exists (${e.format})`
+                    return { type, icon, rule: e.name, msg }
+                })
+                nextTick(() => { if (logEl.value) logEl.value.scrollTop = logEl.value.scrollHeight })
+            }
 
+            const liveImported = computed(() => result_data.value.imported || 0)
+            const liveSkipped  = computed(() => result_data.value.skipped  || 0)
+            const liveBad      = computed(() => result_data.value.bad_rules || 0)
 
+            // ── Finished-view report ────────────────────────────────────────
+            const totalProcessed = computed(() => (result_data.value.imported || 0) + (result_data.value.skipped || 0) + (result_data.value.bad_rules || 0))
+            const importedCount  = computed(() => result_data.value.imported  || 0)
+            const skippedCount   = computed(() => result_data.value.skipped   || 0)
+            const badCount       = computed(() => result_data.value.bad_rules || 0)
+            const successRate = computed(() =>
+                totalProcessed.value > 0 ? Math.round((importedCount.value / totalProcessed.value) * 100) : 0
+            )
+            const summaryChartData = computed(() => ({
+                categories: ['Imported', 'Skipped', 'Invalid syntax'],
+                colors: [
+                    '#198754',
+                    document.documentElement.classList.contains('dark-mode') ? '#b3791f' : '#e0a03c',
+                    '#dc3545',
+                ],
+                series: [{ name: 'Rules', values: [importedCount.value, skippedCount.value, badCount.value] }],
+            }))
+
+            // Full name + avatar for the "requested by" chip.
+            const requesterInfo = ref(null)
+            watch(() => result_data.value.user_id, (uid) => {
+                if (!uid || requesterInfo.value) return
+                fetch(`/account/user_mini/${Number(uid)}`)
+                    .then(r => r.ok ? r.json() : null)
+                    .then(d => { if (d) requesterInfo.value = d })
+                    .catch(() => {})
+            })
+
+            // ── Live GitHub repo card — direct client-side call to the
+            // GitHub API, same pattern as detail_url_github.html / the update
+            // report, so this shows richer live data instead of only the
+            // handful of fields snapshotted at import time.
+            const ghRepo        = ref(null)
+            const ghRepoLoading = ref(false)
+
+            function fmtNum(n) {
+                if (n === undefined || n === null) return '—'
+                return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n)
+            }
+            function fmtSize(kb) {
+                if (!kb) return '—'
+                return kb < 1024 ? kb + ' KB' : (kb / 1024).toFixed(1) + ' MB'
+            }
+            function fmtDate(iso) {
+                if (!iso) return '—'
+                return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+            }
+
+            async function fetchGhRepoLive(url) {
+                const match = url.replace(/\.git$/, '').match(/github\.com\/([^/]+)\/([^/]+)/)
+                if (!match) return
+                ghRepoLoading.value = true
+                try {
+                    const res = await fetch(`https://api.github.com/repos/${match[1]}/${match[2]}`, {
+                        headers: { 'Accept': 'application/vnd.github+json' },
+                    })
+                    if (res.ok) ghRepo.value = await res.json()
+                } catch {
+                    // Stay on the snapshotted repoUrl fallback already rendered.
+                } finally {
+                    ghRepoLoading.value = false
+                }
+            }
+
+            watch(repoUrl, (url) => { if (url && !ghRepo.value && !ghRepoLoading.value) fetchGhRepoLive(url) })
+
+            // ── Per-format breakdown (imported/skipped/bad per rule format) ──
+            // Only present once the background merge-fetch resolves (see
+            // pollScan()'s `is_finished` branch) — the live status() payload
+            // doesn't carry it, only the persisted ImporterResult does.
+            const perFormatList = computed(() => {
+                const obj = result_data.value.count_per_format || {}
+                return Object.entries(obj)
+                    .map(([name, v]) => ({ name, imported: v.imported || 0, skipped: v.skipped || 0, bad_rule: v.bad_rule || 0 }))
+                    .filter(f => f.imported > 0 || f.skipped > 0 || f.bad_rule > 0)
+                    .sort((a, b) => (b.imported + b.skipped + b.bad_rule) - (a.imported + a.skipped + a.bad_rule))
+            })
+
+            // ── CVE / ATT&CK coverage across this repo's imported rules ──────
+            // Reuses the same aggregate endpoint the GitHub source dashboard
+            // page (detail_url_github.html) already calls.
+            const sourceStats = ref(null)
+            async function fetchSourceStats(url) {
+                try {
+                    const res = await fetch('/rule/github_source_stats?url=' + encodeURIComponent(url))
+                    if (res.ok) sourceStats.value = await res.json()
+                } catch { /* leave sourceStats null — the row just won't render */ }
+            }
+            watch(repoUrl, (url) => { if (url && !sourceStats.value) fetchSourceStats(url) })
+
+            // ── Bad Rules tab + "what to do next" ────────────────────────────
+            // badRuleCount is the authoritative, DB-backed count reported by
+            // <bad-rule-list> once it loads (it queries InvalidRuleModel
+            // directly, scoped to this repo's url — the true "still needs
+            // fixing" number). badCount (from result_data.bad_rules) is this
+            // run's own in-memory counter, available instantly but can
+            // over-count exact duplicates of already-saved invalid rules.
+            // Showing badCount first and swapping to badRuleCount once it
+            // arrives avoids a "no bad rules" flash while the real count loads.
+            const badRuleCount = ref(null)
+            const badRuleCountDisplay = computed(() => badRuleCount.value ?? badCount.value)
+
+            const ruleListRef    = ref(null)
+            const badRuleListRef = ref(null)
+
+            function goToBadRulesTab() {
+                const el = document.getElementById('badrules-tab')
+                if (el && window.bootstrap) window.bootstrap.Tab.getOrCreateInstance(el).show()
+                nextTick(() => { document.getElementById('badrules-pane')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) })
+            }
+
+            function goToImportedTab() {
+                const el = document.getElementById('imported-tab')
+                if (el && window.bootstrap) window.bootstrap.Tab.getOrCreateInstance(el).show()
+            }
+
+            function filterImportedByFormat(fmt) {
+                goToImportedTab()
+                nextTick(() => {
+                    if (ruleListRef.value) {
+                        ruleListRef.value.ruleType = fmt
+                        ruleListRef.value.onFilterChange()
+                    }
+                    document.getElementById('imported-pane')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                })
+            }
+
+            function filterBadByFormat(fmt) {
+                goToBadRulesTab()
+                nextTick(() => {
+                    if (badRuleListRef.value) {
+                        badRuleListRef.value.formatFilter = fmt
+                        badRuleListRef.value.fetchData(1)
+                    }
+                })
+            }
+
+            // Top-level KPI cards — same tab-switch as the per-format rows,
+            // but clear any format filter so the tab shows everything.
+            function viewAllImported() { filterImportedByFormat('') }
+            function viewAllBadRules() { filterBadByFormat('') }
+
+            async function deleteAllBadRulesQuick() {
+                if (!repoUrl.value) return
+                if (!confirm(`Delete all ${badRuleCountDisplay.value} invalid rule(s) from this repository? This cannot be undone.`)) return
+                try {
+                    const params = new URLSearchParams({ sources: repoUrl.value })
+                    const res = await fetch('/rule/bad_rule/delete_all_bad_rule?' + params.toString(), {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                    })
+                    const data = await res.json()
+                    create_message(data.message, data.toast_class)
+                    if (badRuleListRef.value) badRuleListRef.value.fetchData(1)
+                } catch {
+                    create_message('Could not delete these rules.', 'danger-subtle')
+                }
+            }
 
             function pollScan() {
-                // Loop function to update the list of identified domains
                 $.getJSON('/rule/import_loading_status/{{sid}}', async function (data) {
-                    result_data.value = data
-                    progress.value = Math.round((data['complete'] / data['total']) * 100)
-                    status_site.value = 'Processed ' + data['complete'] + ' of ' + data['total'] + ' files'
-                    if (data['remaining'] > 0) {
-                        setTimeout(pollScan, 5000);
+                    if (!data) return
+                    _appendLogEvents(data)
+                    result_data.value  = data
+                    progressDone.value  = data.complete
+                    progressTotal.value = data.total
+                    progress.value = data.total ? Math.round((data.complete / data.total) * 100) : 100
+                    status_site.value = 'Processed ' + data.complete + ' of ' + data.total + ' rules'
+                    if (data.remaining > 0) {
+                        // Only reveal the progress bar once we know for sure
+                        // the session is still running — otherwise an
+                        // already-finished session would flash it for the
+                        // one frame it takes to resolve this first poll.
+                        pageReady.value = true
+                        setTimeout(pollScan, 800)
                     } else {
+                        status_site.value = 'Found ' + data.complete + ' rule(s).'
                         is_finished.value = true
-                        status_site.value = 'Found ' + data['complete'] + ' files.'
-                        const res = await fetch('/rule/import_loading_status/{{sid}}?is_finished=true')
-                        const loc = await res.json()
-                        result_data.value = loc
+                        pageReady.value = true
+
+                        // The persisted result additionally carries query_date
+                        // and user_id, which the live status() doesn't — fetch
+                        // that in the background and merge it in once it
+                        // arrives, instead of blocking the report on it.
+                        fetch('/rule/import_loading_status/{{sid}}?is_finished=true')
+                            .then(res => res.json())
+                            .then(loc => { result_data.value = { ...result_data.value, ...loc } })
+                            .catch(() => {})
                     }
                 });
             }
-
 
             onMounted(() => {
                 fetchInfoSession()
                 pollScan();
             });
 
-
             return {
                 message_list,
                 status_site,
-                progress,
+                progress, progressDone, progressTotal,
                 info_session,
                 result_data,
                 is_finished,
-                goto,
-                data_is_loading
+                pageReady,
+                repoUrl, repoUrlCopied, copyRepoUrl,
+
+                logEntries, logEl,
+                liveImported, liveSkipped, liveBad,
+
+                totalProcessed, importedCount, skippedCount, badCount,
+                successRate, summaryChartData,
+                requesterInfo,
+
+                ghRepo, ghRepoLoading, fmtNum, fmtSize, fmtDate,
+
+                perFormatList, sourceStats,
+                badRuleCount, badRuleCountDisplay,
+                ruleListRef, badRuleListRef,
+                goToBadRulesTab, goToImportedTab,
+                filterImportedByFormat, filterBadByFormat,
+                viewAllImported, viewAllBadRules,
+                deleteAllBadRulesQuick,
+
+                isAuthenticated, isAdmin, currentUserId, csrfToken,
             };
         }
     }).mount('#main-container');

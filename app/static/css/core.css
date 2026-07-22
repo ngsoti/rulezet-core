@@ -547,6 +547,11 @@ body.modal-open .custom-rule-link {
   background: linear-gradient(90deg, transparent, rgb(10, 88, 202), transparent);
 }
 
+/* Red variant — cards representing an error/invalid state (e.g. bad rules). */
+.premium-accent-line--danger {
+  background: linear-gradient(90deg, transparent, #dc3545, transparent);
+}
+
 .card-watermark,
 .card-watermark-list,
 .card-watermark-detail {

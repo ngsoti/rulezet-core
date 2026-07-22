@@ -38,6 +38,19 @@ class Session_class:
         self._save_done    = Event()  # set once save_info() has completed
         self._workers_done = 0        # how many worker threads have exited
 
+        # Live activity feed for the loading page — not persisted (ImporterResult
+        # only stores the final counts), purely for the "what's happening right
+        # now" log while the import is still running. Capped so a huge repo
+        # doesn't grow this — and the JSON payload status() sends — without bound.
+        self.events      = []
+        self._events_lock = Lock()
+
+    def _log_event(self, kind, name, fmt):
+        with self._events_lock:
+            self.events.append({"type": kind, "name": name, "format": fmt})
+            if len(self.events) > 500:
+                self.events = self.events[-500:]
+
     def start(self):
         job_index = 0
         load_all_rule_formats()
@@ -134,6 +147,9 @@ class Session_class:
         remaining = max(self.jobs.qsize(), len(self.threads))
         complete = total - remaining
 
+        with self._events_lock:
+            events = list(self.events)
+
         return {
             'id': self.uuid,
             'total': total,
@@ -143,6 +159,7 @@ class Session_class:
             "bad_rules": self.bad_rules,
             "imported": self.imported,
             "skipped": self.skipped,
+            "events": events,
         }
 
     def _ensure_finalized(self, app_obj=None):
@@ -196,6 +213,7 @@ class Session_class:
                 metadata = rule_instance.parse_metadata(clean_text, enriched_info, validation)
                 # add to metadata the enriched info (github_path)
                 metadata["github_path"] = rel_path
+                rule_name = metadata.get("title") or os.path.basename(rel_path)
                 with loc_app.app_context():
                     local_user = db.session.merge(user)
 
@@ -205,9 +223,11 @@ class Session_class:
                         if success:
                             self.imported += 1
                             self.count_per_format[rule_instance.format]["imported"] += 1
+                            self._log_event("imported", rule_name, rule_instance.format)
                         else:
                             self.skipped += 1
                             self.count_per_format[rule_instance.format]["skipped"] += 1
+                            self._log_event("skipped", rule_name, rule_instance.format)
                     else:
                         BadRuleModel.save_invalid_rule(
                             form_dict=metadata,
@@ -218,6 +238,7 @@ class Session_class:
                         )
                         self.bad_rules += 1
                         self.count_per_format[rule_instance.format]["bad_rule"] += 1
+                        self._log_event("bad", rule_name, rule_instance.format)
 
                 self.jobs.task_done()
             except Exception:

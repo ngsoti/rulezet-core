@@ -142,7 +142,11 @@ export default {
 
     emits: ['create', 'edit', 'delete', 'vote', 'favorite', 'bulk-action', 'send', 'rule-drag-start', 'rule-drag-end', 'status-change'],
 
-    expose: ['fetchData'],
+    // 'ruleType'/'onFilterChange' let a parent page drive the format filter
+    // from outside (e.g. clicking a "12 YARA rules" stat elsewhere on the
+    // page) via a template ref — same idea as 'fetchData' already being
+    // exposed for an external refresh trigger.
+    expose: ['fetchData', 'ruleType', 'onFilterChange'],
 
     template: `
     <div class="rl-wrapper">
