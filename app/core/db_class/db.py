@@ -2715,8 +2715,9 @@ class NotificationPreference(db.Model):
     pref_bundle_comment = db.Column(db.Boolean, nullable=False, default=True)
 
     # System
-    pref_job_done  = db.Column(db.Boolean, nullable=False, default=True)
+    pref_job_done  = db.Column(db.Boolean, nullable=False, default=True)  # GitHub import/update session finished
     pref_proposal  = db.Column(db.Boolean, nullable=False, default=True)
+    pref_background_jobs = db.Column(db.Boolean, nullable=False, default=True)  # any BackgroundJob started/finished (bulk actions, connector pulls, sync schedule runs, ...)
 
     # Proposals & replies
     pref_proposal_comment  = db.Column(db.Boolean, nullable=False, default=True)
@@ -2741,6 +2742,7 @@ class NotificationPreference(db.Model):
             'bundle_comment':     self.pref_bundle_comment,
             'job_done':           self.pref_job_done,
             'proposal':           self.pref_proposal,
+            'background_jobs':    self.pref_background_jobs,
             'proposal_comment':   self.pref_proposal_comment,
             'proposal_accepted':  self.pref_proposal_accepted,
             'comment_reply':      self.pref_comment_reply,

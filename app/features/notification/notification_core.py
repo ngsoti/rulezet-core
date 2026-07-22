@@ -143,39 +143,46 @@ def create_notification(user_id, notif_type, title, body=None, link=None,
 
 
 def create_job_notification(job, user_id):
-    """Create a job_created notification for the job owner and all admins."""
+    """Create a job_created notification for the job owner and all admins —
+    covers every BackgroundJob type (bulk actions, connector pulls, Sync
+    Schedule runs, ...). Respects pref_background_jobs per recipient so a
+    user who doesn't want to hear about every job launch can turn it off
+    entirely, independent of pref_job_done (which is specifically about
+    GitHub import/update session completions)."""
     # Notify the job creator
-    create_notification(
-        user_id      = user_id,
-        notif_type   = 'job_created',
-        title        = f'Job started: {job.label or job.job_type}',
-        body         = 'Your background job has been queued.',
-        link         = '/jobs/list',
-        icon         = 'fa-solid fa-clock',
-        job_uuid     = job.uuid,
-        job_status   = 'pending',
-        job_progress = 0,
-    )
+    if _get_pref(user_id).pref_background_jobs:
+        create_notification(
+            user_id      = user_id,
+            notif_type   = 'job_created',
+            title        = f'Job started: {job.label or job.job_type}',
+            body         = 'Your background job has been queued.',
+            link         = '/jobs/list',
+            icon         = 'fa-solid fa-clock',
+            job_uuid     = job.uuid,
+            job_status   = 'pending',
+            job_progress = 0,
+        )
     # Also notify all admins (skip creator to avoid duplicate)
     try:
         admin_ids = [uid for uid in _get_all_admin_ids() if uid != user_id]
-        if admin_ids:
-            notifs = [
-                Notification(
-                    user_id      = uid,
-                    notif_type   = 'job_created',
-                    title        = f'Job started: {job.label or job.job_type}',
-                    body         = f'Queued by user #{user_id}',
-                    link         = '/jobs/list',
-                    icon         = 'fa-solid fa-clock',
-                    job_uuid     = job.uuid,
-                    job_status   = 'pending',
-                    job_progress = 0,
-                    is_read      = False,
-                    created_at   = datetime.datetime.utcnow(),
-                )
-                for uid in admin_ids
-            ]
+        notifs = []
+        for uid in admin_ids:
+            if not _get_pref(uid).pref_background_jobs:
+                continue
+            notifs.append(Notification(
+                user_id      = uid,
+                notif_type   = 'job_created',
+                title        = f'Job started: {job.label or job.job_type}',
+                body         = f'Queued by user #{user_id}',
+                link         = '/jobs/list',
+                icon         = 'fa-solid fa-clock',
+                job_uuid     = job.uuid,
+                job_status   = 'pending',
+                job_progress = 0,
+                is_read      = False,
+                created_at   = datetime.datetime.utcnow(),
+            ))
+        if notifs:
             db.session.add_all(notifs)
             db.session.commit()
     except Exception as e:
@@ -778,7 +785,12 @@ def notify_rule_update_found(user_id, count, update_result_id=None):
 
 
 def notify_github_import_done(user_id, imported, skipped, bad_rules, result_uuid=None):
-    """Notification sent when a GitHub / ZIP import session finishes."""
+    """Notification sent when a GitHub / ZIP import session finishes.
+    Respects pref_job_done — this is specifically the "GitHub import/update
+    finished" preference, distinct from pref_background_jobs (generic
+    BackgroundJob started/finished, any job type)."""
+    if not _get_pref(user_id).pref_job_done:
+        return None
     total = imported + skipped + bad_rules
     link = f'/rule/import_loading/{result_uuid}' if result_uuid else '/rule/github/manage'
     return create_notification(
@@ -792,7 +804,10 @@ def notify_github_import_done(user_id, imported, skipped, bad_rules, result_uuid
 
 
 def notify_github_update_done(user_id, updated, found, result_id=None, result_uuid=None):
-    """Notification sent when a GitHub update check session finishes."""
+    """Notification sent when a GitHub update check session finishes.
+    Respects pref_job_done (see notify_github_import_done)."""
+    if not _get_pref(user_id).pref_job_done:
+        return None
     if result_uuid:
         link = f'/rule/update_loading/{result_uuid}'
     elif result_id:
