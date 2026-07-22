@@ -158,26 +158,11 @@
 
 
                 <!-- Pagination -->
-                <nav v-if="total_pages > 1" aria-label="GitHub pagination">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item" :class="{ disabled: current_page === 1 }">
-                            <button class="page-link" @click="fetchGithubImporter(current_page - 1)"
-                                :disabled="current_page === 1">Previous</button>
-                        </li>
-
-                        <li v-for="page in visiblePages" :key="page" class="page-item"
-                            :class="{ active: page === current_page, disabled: page === '...' }">
-                            <button class="page-link" v-if="page !== '...'" @click="fetchGithubImporter(page)">[[ page
-                                ]]</button>
-                            <span class="page-link" v-else>...</span>
-                        </li>
-
-                        <li class="page-item" :class="{ disabled: current_page === total_pages }">
-                            <button class="page-link" @click="fetchGithubImporter(current_page + 1)"
-                                :disabled="current_page === total_pages">Next</button>
-                        </li>
-                    </ul>
-                </nav>
+                <pagination-component
+                    :current-page="current_page"
+                    :total-pages="total_pages"
+                    @change-page="fetchGithubImporter">
+                </pagination-component>
 
                 <p class="text-center mt-3 text-muted">Total history found: [[ total_history ]]</p>
             </div>
@@ -323,26 +308,11 @@
 
 
                 <!-- Pagination -->
-                <nav v-if="total_pages_update > 1" aria-label="GitHub pagination">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item" :class="{ disabled: current_page_update === 1 }">
-                            <button class="page-link" @click="fetchGithubUpdater(current_page_update - 1)"
-                                :disabled="current_page_update === 1">Previous</button>
-                        </li>
-
-                        <li v-for="page in visiblePagesUpdate" :key="page" class="page-item"
-                            :class="{ active: page === current_page_update, disabled: page === '...' }">
-                            <button class="page-link" v-if="page !== '...'" @click="fetchGithubUpdater(page)">[[ page
-                                ]]</button>
-                            <span class="page-link" v-else>...</span>
-                        </li>
-
-                        <li class="page-item" :class="{ disabled: current_page_update === total_pages_update }">
-                            <button class="page-link" @click="fetchGithubUpdater(current_page_update + 1)"
-                                :disabled="current_page_update === total_pages">Next</button>
-                        </li>
-                    </ul>
-                </nav>
+                <pagination-component
+                    :current-page="current_page_update"
+                    :total-pages="total_pages_update"
+                    @change-page="fetchGithubUpdater">
+                </pagination-component>
 
                 <p class="text-center mt-3 text-muted">Total history found: [[ total_history_update ]]</p>
             </div>
@@ -424,9 +394,11 @@
 <script type="module">
     const { createApp, ref, computed } = Vue
     import { message_list, create_message } from '/static/js/toaster.js'
+    import PaginationComponent from '/static/js/rule/paginationComponent.js'
 
     createApp({
         delimiters: ['[[', ']]'],
+        components: { PaginationComponent },
         setup() {
             //  #############################
             //  #       Importer section    #
@@ -505,24 +477,6 @@
             }
             fetchSessionRunning()
 
-            const visiblePages = computed(() => {
-                const pages = []
-                const total = total_pages.value
-                const current = current_page.value
-                if (total <= 7) {
-                    for (let i = 1; i <= total; i++) pages.push(i)
-                } else {
-                    if (current <= 4) {
-                        pages.push(1, 2, 3, 4, 5, '...', total)
-                    } else if (current >= total - 3) {
-                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-                    } else {
-                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
-                    }
-                }
-                return pages
-            })
-
             async function deleteImportHistory(uuid, index) {
                 const params = new URLSearchParams({
                     uuid
@@ -593,24 +547,6 @@
                 fetchGithubUpdater(1)
             }
 
-            const visiblePagesUpdate = computed(() => {
-                const pages = []
-                const total = total_pages_update.value
-                const current = current_page_update.value
-                if (total <= 7) {
-                    for (let i = 1; i <= total; i++) pages.push(i)
-                } else {
-                    if (current <= 4) {
-                        pages.push(1, 2, 3, 4, 5, '...', total)
-                    } else if (current >= total - 3) {
-                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total)
-                    } else {
-                        pages.push(1, '...', current - 1, current, current + 1, '...', total)
-                    }
-                }
-                return pages
-            })
-
             async function deleteUpdateHistory(uuid, index) {
                 const params = new URLSearchParams({
                     uuid
@@ -642,7 +578,6 @@
                 total_history,
                 total_pages,
                 current_page,
-                visiblePages,
                 running_sessions,
                 fetchGithubImporter,
                 deleteImportHistory,
@@ -653,7 +588,6 @@
                 current_page_update,
                 total_pages_update,
                 running_sessions_update,
-                visiblePagesUpdate,
                 fetchGithubUpdater,
                 deleteUpdateHistory,
                 loading_update,

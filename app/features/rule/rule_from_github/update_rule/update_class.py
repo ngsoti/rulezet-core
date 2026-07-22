@@ -22,6 +22,7 @@ from app.features.rule.rule_format.utils_format.utils_import_update import (
     github_repo_metadata,
     get_repo_head_sha,
     get_changed_files_between,
+    delete_existing_repo_folder,
 )
 
 sessions = []
@@ -99,7 +100,20 @@ class Update_class:
             success = git_pull_repo(repo_dir)
 
             if not success:
-                return
+                # The persistent clone (kept around across runs on purpose —
+                # see clone_or_access_repo) can end up in a state `git pull`
+                # refuses to fast-forward (diverged history, an interrupted
+                # previous run, etc). Recover once by re-cloning fresh instead
+                # of just giving up.
+                try:
+                    delete_existing_repo_folder(repo_dir)
+                    repo_dir, _ = clone_or_access_repo(self.repo_sources)
+                    self.local_repo_path = repo_dir
+                    sha_before = None  # fresh clone — nothing meaningful to diff against
+                    success = True
+                except Exception as e:
+                    self._finalize_with_error(f"Could not access or update the repository: {e}")
+                    return
 
             sha_after = get_repo_head_sha(repo_dir)
             changed_files = None  # None = unknown/first run -> re-check everything
@@ -301,6 +315,36 @@ class Update_class:
             ],
             "unprocessed_rules": unprocessed_rules # ADDED: Rules from Rulezet not found in repo
         }
+
+    # ------------------ FAIL FAST, DON'T HANG FOREVER ------------------
+
+    def _finalize_with_error(self, message):
+        """Used when start() bails out before ever enqueueing a job or
+        spawning a worker (e.g. git pull failed even after a re-clone retry).
+        Without this, self.total stays 0 and _save_done is never set — every
+        future status() poll calls stop(), which then blocks for its full
+        30s _save_done.wait() over and over, forever, since nothing ever
+        completes process() to set it. The user sees an update-check page
+        that spins indefinitely with no error and no way out."""
+        self.total = max(self.total, 1)
+        self.rule_status_list.append({
+            "update_result_uuid": self.uuid,
+            "name_rule": "—",
+            "rule_id": None,
+            "message": message,
+            "found": False,
+            "update_available": False,
+            "rule_syntax_valid": False,
+            "error": True,
+            "history_id": None,
+        })
+        self.not_found = 1
+        try:
+            self.save_info()
+        except Exception:
+            pass
+        finally:
+            self._save_done.set()
 
     # ------------------ STOP ------------------
 

@@ -262,10 +262,11 @@ def git_pull_repo(repo_dir):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            check=True
+            check=True,
+            timeout=120,
         )
         return True
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return False
 
 
@@ -274,10 +275,11 @@ def get_repo_head_sha(repo_dir):
     try:
         result = subprocess.run(
             ["git", "-C", repo_dir, "rev-parse", "HEAD"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True,
+            timeout=10,
         )
         return result.stdout.strip() or None
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return None
 
 
@@ -290,10 +292,11 @@ def get_changed_files_between(repo_dir, sha_before, sha_after):
     try:
         result = subprocess.run(
             ["git", "-C", repo_dir, "diff", "--name-only", sha_before, sha_after],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True,
+            timeout=15,
         )
         return {line.strip() for line in result.stdout.splitlines() if line.strip()}
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return None
 
 

@@ -2589,10 +2589,9 @@ def get_updater_result_new_rule_page(sid: str, page: int, per_page: int = 30,
     if not update_result:
         return None
 
-    q = (NewRule.query
-         .filter_by(update_result_id=update_result.id)
-         .filter(NewRule.message != "imported")
-         .filter(NewRule.message != "rejected"))
+    q = _new_rule_still_pending_filter(
+        NewRule.query.filter_by(update_result_id=update_result.id)
+    )
     if f_syntax_valid is not None:
         q = q.filter(NewRule.rule_syntax_valid == f_syntax_valid)
     if f_accept is not None:
@@ -2617,11 +2616,9 @@ def count_pending_new_rules(sid: str) -> int:
     update_result = UpdateResult.query.filter_by(uuid=sid).first()
     if not update_result:
         return 0
-    return (NewRule.query
-            .filter_by(update_result_id=update_result.id)
-            .filter(NewRule.message != 'imported')
-            .filter(NewRule.message != 'rejected')
-            .count())
+    return _new_rule_still_pending_filter(
+        NewRule.query.filter_by(update_result_id=update_result.id)
+    ).count()
 
 
 def get_updater_result_rule_page(sid: str, page: int, per_page: int = 30,
@@ -2936,16 +2933,26 @@ def reject_all_update(rule_update_list, on_progress=None, should_stop=None):
         return False
 
 
+def _new_rule_still_pending_filter(query):
+    """A NewRule is "still pending" (needs a decision) unless it was already
+    imported/rejected, or add_rule_core() already rejected it as a permanent
+    duplicate ("error: ..." — retrying would just fail identically, since the
+    content match that caused it doesn't change). Without excluding the
+    "error: ..." case here, a duplicate that failed to add keeps reappearing
+    in both the pending list and every future "Add all" retry forever."""
+    return query.filter(
+        NewRule.message != 'imported',
+        NewRule.message != 'rejected',
+        db.or_(NewRule.message.is_(None), ~NewRule.message.like('error:%')),
+    )
+
+
 def get_valid_new_rules_by_sid(sid):
     updater = get_updater_result(sid)
     if not updater:
         return []
-    return NewRule.query.filter_by(
-        update_result_id=updater.id,
-        rule_syntax_valid=True
-    ).filter(
-        NewRule.message != 'imported',
-        NewRule.message != 'rejected'
+    return _new_rule_still_pending_filter(
+        NewRule.query.filter_by(update_result_id=updater.id, rule_syntax_valid=True)
     ).all()
 
 
