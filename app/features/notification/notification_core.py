@@ -59,6 +59,7 @@ _TYPE_ICON = {
     'ownership_rejected':      'fa-solid fa-user-xmark',
     'blog_published':          'fa-solid fa-newspaper',
     'github_token_invalid':    'fa-solid fa-key',
+    'sync_run_finished':       'fa-solid fa-arrows-rotate',
 }
 
 
@@ -409,6 +410,52 @@ def update_admin_session_notifications(session_uuid, summary, link=None):
         print(f"[notification_core] update_admin_session_notifications error: {e}")
 
 
+def notify_admins_sync_run_finished(run):
+    """Notify every admin (honouring pref_sync_run_finished) that a
+    recurring GitHub Sync Schedule run has finished. `run` is a
+    GithubSyncRun row with its repo_results already populated."""
+    try:
+        admin_ids = _get_all_admin_ids()
+        if not admin_ids:
+            return
+
+        schedule = run.schedule
+        repo_count = len(run.repo_results)
+        error_count = sum(1 for r in run.repo_results if r.status == 'error')
+        added_total = sum(r.auto_added for r in run.repo_results)
+        accepted_total = sum(r.auto_accepted for r in run.repo_results)
+
+        body_parts = [f"{repo_count} repo{'s' if repo_count != 1 else ''} checked"]
+        if accepted_total:
+            body_parts.append(f"{accepted_total} update{'s' if accepted_total != 1 else ''} auto-accepted")
+        if added_total:
+            body_parts.append(f"{added_total} new rule{'s' if added_total != 1 else ''} auto-added")
+        if error_count:
+            body_parts.append(f"{error_count} error{'s' if error_count != 1 else ''}")
+
+        notifs = []
+        for uid in admin_ids:
+            pref = _get_pref(uid)
+            if not pref.pref_sync_run_finished:
+                continue
+            notifs.append(Notification(
+                user_id    = uid,
+                notif_type = 'sync_run_finished',
+                title      = f"{schedule.title} launched an update",
+                body       = ' · '.join(body_parts),
+                link       = f'/rule/github/sync_run/{run.uuid}',
+                icon       = _TYPE_ICON['sync_run_finished'],
+                is_read    = False,
+                created_at = datetime.datetime.utcnow(),
+            ))
+        if notifs:
+            db.session.add_all(notifs)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"[notification_core] notify_admins_sync_run_finished error: {e}")
+
+
 def notify_followers_new_rule(rule, author_user_id):
     """Notify every follower of author_user_id that a new rule was created."""
     try:
@@ -733,7 +780,7 @@ def notify_rule_update_found(user_id, count, update_result_id=None):
 def notify_github_import_done(user_id, imported, skipped, bad_rules, result_uuid=None):
     """Notification sent when a GitHub / ZIP import session finishes."""
     total = imported + skipped + bad_rules
-    link = f'/rule/import_loading/{result_uuid}' if result_uuid else '/rule/github/history_github_importer'
+    link = f'/rule/import_loading/{result_uuid}' if result_uuid else '/rule/github/manage'
     return create_notification(
         user_id    = user_id,
         notif_type = 'github_import_done',

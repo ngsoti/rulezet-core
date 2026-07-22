@@ -1,0 +1,49 @@
+/* ==========================================================================
+   sync_schedule.css — Sync Schedules 3rd panel (manage_github.html), the
+   ScheduleRecurrencePicker and RepoSelectionTable components.
+   Depends on: core.css, dataTable.css, ruleList.css (dt-*/rl-* reused).
+   ========================================================================== */
+
+/* ── Recurrence picker — consistent label height + bottom-aligned controls
+   so Frequency / Time / Timezone line up on the same baseline regardless of
+   how many sub-controls a given item renders (e.g. Time has two selects +
+   a colon, Frequency has just one select). ── */
+.schedule-recurrence-picker .rl-fp-row {
+    align-items: flex-end;
+    row-gap: .75rem;
+}
+.schedule-recurrence-picker .rl-fp-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 56px;
+}
+.schedule-recurrence-picker .rl-fp-item > label {
+    line-height: 1.2;
+}
+
+/* ── Format badges (repo picker) — uppercase, white on black ── */
+.repo-fmt-badge {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: .65rem;
+    letter-spacing: .03em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin: 0 .25rem .25rem 0;
+}
+[data-bs-theme="dark"] .repo-fmt-badge,
+.dark-mode .repo-fmt-badge {
+    background: #fff;
+    color: #000;
+}
+
+/* ── Required-field marker ── */
+.required-marker {
+    color: #dc3545;
+    margin-left: .2rem;
+    font-weight: 700;
+}

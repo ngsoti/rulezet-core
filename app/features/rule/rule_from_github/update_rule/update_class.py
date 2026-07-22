@@ -7,7 +7,6 @@ from typing import Optional, List, Dict, Any
 from uuid import uuid4
 
 from flask import current_app
-from flask_login import current_user
 
 from app import db
 
@@ -49,7 +48,17 @@ class Update_class:
             self.repo_sources = repo_sources
 
         self.mode = mode
-        self.current_user = user
+        # Unwrap immediately if `user` is a Flask-Login LocalProxy (existing
+        # call sites pass `current_user` directly, from inside request
+        # context). Storing the proxy itself would be fine here but not once
+        # a worker thread (process(), a different thread with no request
+        # context) accesses it later — the proxy re-resolves on every
+        # attribute access and silently returns None outside a request,
+        # crashing that thread. Resolve to the real User object now, while
+        # we know we're in a valid context, so it's a plain thread-safe
+        # object for the rest of this instance's life.
+        self.current_user = user._get_current_object() if hasattr(user, '_get_current_object') else user
+        user = self.current_user
         self.user_id      = user.id if user else None
         self.info = info
         self.repo_cache = {}
@@ -243,7 +252,16 @@ class Update_class:
         for _ in range(self.thread_count):
             worker = Thread(
                 target=self.process,
-                args=[current_app._get_current_object(), current_user._get_current_object()]
+                # self.current_user (set in __init__ from the constructor's `user`
+                # param), never Flask-Login's current_user proxy — that proxy
+                # resolves via has_request_context() and silently returns None
+                # once we're outside a Flask request (e.g. triggered from a
+                # BackgroundJob worker thread, as the Sync Schedule feature does).
+                # A None here crashes process() the first time it touches
+                # user.id/user.is_admin() (db.session.merge(user) etc.), which
+                # kills the worker thread mid-loop with no error surfaced —
+                # exactly the "progress stuck at 1/N forever" symptom.
+                args=[current_app._get_current_object(), self.current_user]
             )
             worker.daemon = True
             worker.start()

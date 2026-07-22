@@ -1554,6 +1554,154 @@ class NewRule(db.Model):
         }
 
 
+############################################
+#    Recurring GitHub sync schedules       #
+############################################
+
+class GithubSyncSchedule(db.Model):
+    __tablename__ = "github_sync_schedule"
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid        = db.Column(db.String(36), index=True, unique=True)
+    title       = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    editor_id   = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    is_active   = db.Column(db.Boolean, default=True, index=True)
+
+    # Recurrence — explicit fields (not a raw cron string) so the UI can
+    # round-trip a schedule back into its picker widgets for editing.
+    frequency    = db.Column(db.String(20), nullable=False)   # 'daily' | 'weekly' | 'monthly' | 'cron'
+    days_of_week = db.Column(db.String(20), nullable=True)    # '0,2,4' (APScheduler day_of_week ints, Mon=0) — 'weekly' only
+    day_of_month = db.Column(db.Integer, nullable=True)       # 1-31, or -1 for "last day" — 'monthly' only
+    hour         = db.Column(db.Integer, nullable=False, default=3)
+    minute       = db.Column(db.Integer, nullable=False, default=0)
+    cron_expr    = db.Column(db.String(120), nullable=True)   # only used when frequency == 'cron'
+    timezone     = db.Column(db.String(60), nullable=False, default="UTC")
+
+    next_run_at  = db.Column(db.DateTime, index=True, nullable=True)
+    last_run_at  = db.Column(db.DateTime, nullable=True)
+
+    created_at   = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at   = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    editor = db.relationship("User")
+    repos  = db.relationship("GithubSyncScheduleRepo", backref="schedule", cascade="all, delete-orphan", lazy=True)
+    runs   = db.relationship("GithubSyncRun", backref="schedule", cascade="all, delete-orphan", lazy=True,
+                              order_by="desc(GithubSyncRun.started_at)")
+
+    def days_of_week_list(self):
+        if not self.days_of_week:
+            return []
+        return [int(d) for d in self.days_of_week.split(',') if d != '']
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "title": self.title,
+            "description": self.description,
+            "editor": {
+                "id": self.editor.id,
+                "name": f"{self.editor.first_name} {self.editor.last_name}".strip(),
+                "avatar": self.editor.get_avatar_url(),
+            } if self.editor else None,
+            "is_active": self.is_active,
+            "frequency": self.frequency,
+            "days_of_week": self.days_of_week_list(),
+            "day_of_month": self.day_of_month,
+            "hour": self.hour,
+            "minute": self.minute,
+            "cron_expr": self.cron_expr,
+            "timezone": self.timezone,
+            "next_run_at": self.next_run_at.strftime('%Y-%m-%d %H:%M') if self.next_run_at else None,
+            "last_run_at": self.last_run_at.strftime('%Y-%m-%d %H:%M') if self.last_run_at else None,
+            "repo_count": len(self.repos),
+            "repos": [r.to_json() for r in self.repos],
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else None,
+        }
+
+
+class GithubSyncScheduleRepo(db.Model):
+    __tablename__ = "github_sync_schedule_repo"
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    schedule_id = db.Column(db.Integer, db.ForeignKey("github_sync_schedule.id", ondelete="CASCADE"), nullable=False)
+    repo_url    = db.Column(db.String(500), nullable=False)
+
+    auto_accept_update = db.Column(db.Boolean, default=False)
+    auto_add_new_rule  = db.Column(db.Boolean, default=False)
+
+    __table_args__ = (db.UniqueConstraint('schedule_id', 'repo_url', name='uq_schedule_repo'),)
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "repo_url": self.repo_url,
+            "auto_accept_update": self.auto_accept_update,
+            "auto_add_new_rule": self.auto_add_new_rule,
+        }
+
+
+class GithubSyncRun(db.Model):
+    """One firing of a GithubSyncSchedule. Wraps N per-repo results — it does
+    not duplicate UpdateResult data, only groups it for the report page."""
+    __tablename__ = "github_sync_run"
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid        = db.Column(db.String(36), index=True, unique=True)
+    schedule_id = db.Column(db.Integer, db.ForeignKey("github_sync_schedule.id", ondelete="CASCADE"), nullable=False)
+    job_uuid    = db.Column(db.String(36), nullable=True)
+
+    status      = db.Column(db.String(20), default="pending")  # pending | running | done | failed
+    started_at  = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    finished_at = db.Column(db.DateTime, nullable=True)
+
+    repo_results = db.relationship("GithubSyncRunRepo", backref="run", cascade="all, delete-orphan", lazy=True)
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "schedule_id": self.schedule_id,
+            "schedule_title": self.schedule.title if self.schedule else None,
+            "job_uuid": self.job_uuid,
+            "status": self.status,
+            "started_at": self.started_at.strftime('%Y-%m-%d %H:%M') if self.started_at else None,
+            "finished_at": self.finished_at.strftime('%Y-%m-%d %H:%M') if self.finished_at else None,
+            "repos": [r.to_json() for r in self.repo_results],
+        }
+
+
+class GithubSyncRunRepo(db.Model):
+    """Per-repo outcome within one run. Points at the real UpdateResult (by
+    uuid) where found/updated/not_found/skipped already live — this table
+    only records what the automation decided to do with that repo."""
+    __tablename__ = "github_sync_run_repo"
+
+    id                  = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    run_id              = db.Column(db.Integer, db.ForeignKey("github_sync_run.id", ondelete="CASCADE"), nullable=False)
+    repo_url            = db.Column(db.String(500), nullable=False)
+    update_result_uuid  = db.Column(db.String(36), nullable=True)
+
+    status         = db.Column(db.String(20), default="pending")  # pending | running | done | error
+    error_message  = db.Column(db.Text, nullable=True)
+    auto_accepted  = db.Column(db.Integer, default=0)
+    auto_rejected  = db.Column(db.Integer, default=0)
+    auto_added     = db.Column(db.Integer, default=0)
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "repo_url": self.repo_url,
+            "update_result_uuid": self.update_result_uuid,
+            "status": self.status,
+            "error_message": self.error_message,
+            "auto_accepted": self.auto_accepted,
+            "auto_rejected": self.auto_rejected,
+            "auto_added": self.auto_added,
+        }
+
 
 ############################################
 #    Gamification of users contribution    #
@@ -2578,6 +2726,9 @@ class NotificationPreference(db.Model):
     # Platform content
     pref_blog_published = db.Column(db.Boolean, nullable=False, default=True)
 
+    # GitHub sync schedules
+    pref_sync_run_finished = db.Column(db.Boolean, nullable=False, default=True)
+
     user = db.relationship('User', backref=db.backref(
         'notification_preference', uselist=False, cascade='all, delete-orphan'))
 
@@ -2594,6 +2745,7 @@ class NotificationPreference(db.Model):
             'proposal_accepted':  self.pref_proposal_accepted,
             'comment_reply':      self.pref_comment_reply,
             'blog_published':     self.pref_blog_published,
+            'sync_run_finished':  self.pref_sync_run_finished,
         }
 
 

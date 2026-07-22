@@ -22,6 +22,7 @@ idstools
 suricataparser
 psycopg2-binary
 schedule
+APScheduler
 aiofiles
 zeekscript
 msc_pyparser

@@ -25,3 +25,58 @@ button#scan {
 button#scan:hover {
     background-color: #2779bd;
 }
+
+/* ── Running sessions panel (github_importer.html) ─────────────────────── */
+.gh-running-card { overflow: hidden; }
+
+.gh-live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #0d6efd;
+    box-shadow: 0 0 0 rgba(13, 110, 253, .6);
+    animation: gh-pulse 1.6s infinite;
+    flex-shrink: 0;
+}
+@keyframes gh-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(13, 110, 253, .55); }
+    70%  { box-shadow: 0 0 0 8px rgba(13, 110, 253, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
+}
+
+.gh-running-count {
+    background: rgba(13, 110, 253, .12);
+    color: #0d6efd;
+    font-size: .75rem;
+    font-weight: 700;
+}
+
+.gh-running-list { display: flex; flex-direction: column; gap: .4rem; }
+
+.gh-running-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .6rem .85rem;
+    border-radius: 10px;
+    background: var(--light-bg-color);
+    cursor: pointer;
+    transition: background .15s ease, transform .1s ease;
+}
+.gh-running-row:hover { background: rgba(13, 110, 253, .08); transform: translateX(2px); }
+
+.gh-running-info { flex: 1 1 auto; min-width: 0; }
+.gh-running-name {
+    font-weight: 600;
+    font-size: .87rem;
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gh-running-sub { font-size: .74rem; color: var(--subtle-text-color); }
+
+.gh-badge-import { background: rgba(13, 110, 253, .12); color: #0d6efd; font-size: .72rem; font-weight: 600; }
+.gh-badge-update { background: rgba(255, 193, 7, .18); color: #b8860b; font-size: .72rem; font-weight: 600; }
+
+.gh-running-arrow { font-size: .7rem; color: var(--subtle-text-color); flex-shrink: 0; }

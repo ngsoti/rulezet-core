@@ -1,0 +1,1335 @@
+{% extends 'base.html' %}
+{% block title %}Manage GitHub — Rulezet{% endblock %}
+{% import 'macros/form_macros.html' as f %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/ruleList.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/github/importer.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/github/sync_schedule.css') }}">
+<style>
+.row-highlight-import {
+    outline: 2px solid #0d6efd !important;
+    background: rgba(13,110,253,.08) !important;
+}
+.row-highlight-update {
+    outline: 2px solid #ffc107 !important;
+    background: rgba(255,193,7,.1) !important;
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container mt-4" id="main-container" v-cloak>
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-bars-progress banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
+                <li class="breadcrumb-item"><a href="/rule/url_github" class="text-decoration-none text-muted">GitHub Sources</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Manage GitHub</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon">
+                <i class="fa-solid fa-bars-progress"></i>
+            </div>
+            <div>
+                <h2 class="fw-bold mb-1">Manage GitHub</h2>
+                <div class="banner-accent"></div>
+            </div>
+        </div>
+        <p class="text-muted mb-0" style="max-width: 600px; font-size: 0.95rem;">
+            Monitor imported repositories, review update history, and automate recurring GitHub syncs.
+        </p>
+    </div>
+
+    <!-- Running sessions — inline live panel, only shown when something is actually running -->
+    <div v-if="runningTotal > 0" class="card border-0 shadow-sm rounded-3 mb-4 gh-running-card position-relative">
+        <div class="premium-accent-line"></div>
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="gh-live-dot"></span>
+                <h6 class="fw-bold mb-0">Running now</h6>
+                <span class="badge rounded-pill gh-running-count">[[ runningTotal ]]</span>
+            </div>
+            <div class="gh-running-list">
+                <div v-for="(running, index) in running_sessions" :key="'imp-' + index"
+                     class="gh-running-row" @click="goto(running.uuid)">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <div class="gh-running-info">
+                        <div class="gh-running-name">[[ running.info?.repo_url || (running.info?.repo_sources || []).join(', ') || 'Unknown source' ]]</div>
+                        <div class="gh-running-sub">by [[ running.info?.author || '—' ]]</div>
+                    </div>
+                    <span class="badge gh-badge-import">Import</span>
+                    <i class="fa-solid fa-chevron-right gh-running-arrow"></i>
+                </div>
+                <div v-for="(running, index) in running_sessions_update" :key="'upd-' + index"
+                     class="gh-running-row" @click="gotoUpdate(running.uuid)">
+                    <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
+                    <div class="gh-running-info">
+                        <div class="gh-running-name">[[ running.info?.repo_url || (running.info?.repo_sources || []).join(', ') || 'Unknown source' ]]</div>
+                        <div class="gh-running-sub">by [[ running.info?.author || '—' ]]</div>
+                    </div>
+                    <span class="badge gh-badge-update">Update</span>
+                    <i class="fa-solid fa-chevron-right gh-running-arrow"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="dr-nav mb-3" id="githubHistoryTabs" role="tablist">
+        <button class="dr-nav__item active" id="github-tab" data-bs-toggle="tab" data-bs-target="#github-pane"
+            type="button" role="tab" aria-controls="github-pane" aria-selected="true">
+            <i class="fa-solid fa-download"></i>
+            <span>Imported Repositories</span>
+            <span v-if="total_history > 0" class="dr-nav__badge">[[ total_history ]]</span>
+        </button>
+        <button class="dr-nav__item" id="rule-tab" data-bs-toggle="tab" data-bs-target="#rule-pane"
+            type="button" role="tab" aria-controls="rule-pane" aria-selected="false">
+            <i class="fa-solid fa-rotate"></i>
+            <span>Updates &amp; Status</span>
+            <span v-if="total_history_update > 0" class="dr-nav__badge">[[ total_history_update ]]</span>
+        </button>
+        {% if current_user.is_admin() %}
+        <button class="dr-nav__item" id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule-pane"
+            type="button" role="tab" aria-controls="schedule-pane" aria-selected="false">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Sync Schedules</span>
+            <span v-if="totalSchedules > 0" class="dr-nav__badge">[[ totalSchedules ]]</span>
+        </button>
+        {% endif %}
+    </nav>
+
+    <div class="tab-content" id="exampleTabsContent">
+        <div class="tab-pane fade show active" id="github-pane" role="tabpanel" aria-labelledby="github-tab">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3 p-md-4">
+
+                    <!-- Toolbar: search + columns -->
+                    <div class="dt-toolbar mb-3">
+                        <div class="dt-toolbar-left">
+                            <div class="dt-search">
+                                <i class="fas fa-search dt-search-icon"></i>
+                                <input class="dt-search-input" type="text" placeholder="Search repository…"
+                                    v-model="search" @input="onSearchInput" aria-label="Search imported repositories" />
+                                <button v-if="search" class="dt-search-clear" @click="clearSearch" aria-label="Clear search">
+                                    <i class="fas fa-xmark"></i>
+                                </button>
+                            </div>
+                            <button class="dt-toolbar-btn" :class="{ 'dt-toolbar-btn--active': filtersOpen }"
+                                @click="filtersOpen = !filtersOpen" :aria-expanded="filtersOpen">
+                                <i class="fa-solid fa-filter"></i>
+                                <span>Filters</span>
+                            </button>
+                        </div>
+                        <div class="dt-toolbar-right">
+                            <div class="dropdown">
+                                <button class="dt-toolbar-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Toggle columns">
+                                    <i class="fas fa-table-columns"></i><span>Columns</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="border-radius:12px;min-width:175px;" @click.stop>
+                                    <li v-for="col in IMPORT_COLS" :key="col.key">
+                                        <label class="dropdown-item rounded-2 d-flex align-items-center gap-2" style="cursor:pointer;font-size:.84rem;user-select:none;">
+                                            <input type="checkbox" :checked="colVisible[col.key]" @change="toggleColumn(col.key)" />
+                                            [[ col.label ]]
+                                        </label>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-show="filtersOpen" class="rl-filter-panel mb-3">
+                        <div class="rl-fp-row">
+                            <div class="rl-fp-item">
+                                <label class="form-label mb-1" style="font-size:.78rem;">Rows per page</label>
+                                <select class="rl-fp-select" v-model.number="per_page" @change="fetchGithubImporter(1)">
+                                    <option :value="10">10</option>
+                                    <option :value="20">20</option>
+                                    <option :value="50">50</option>
+                                    <option :value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <template v-if="loading">
+                        <div class="text-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading…
+                        </div>
+                    </template>
+
+                    <template v-else-if="history_list.length === 0">
+                        <div class="dt-empty">
+                            <div class="dt-empty-icon"><i class="fa-solid fa-inbox"></i></div>
+                            <p class="dt-empty-text">No history found.</p>
+                        </div>
+                    </template>
+
+                    <!-- Table -->
+                    <template v-if="!loading && history_list.length > 0">
+                        <div class="dt-table-wrap">
+                            <table class="dt-table">
+                                <thead class="dt-thead">
+                                    <tr>
+                                        <th class="dt-th text-center" style="width:44px;">#</th>
+                                        <th class="dt-th">
+                                            <div class="dt-th-inner">GitHub Importer</div>
+                                        </th>
+                                        <th v-if="colVisible.imported" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKey === 'imported' }" @click="setSort('imported')">
+                                            <div class="dt-th-inner justify-content-center">Imported <i class="fas dt-sort-icon" :class="sortIcon('imported')"></i></div>
+                                        </th>
+                                        <th v-if="colVisible.bad_rules" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKey === 'bad_rules' }" @click="setSort('bad_rules')">
+                                            <div class="dt-th-inner justify-content-center">Bad rules <i class="fas dt-sort-icon" :class="sortIcon('bad_rules')"></i></div>
+                                        </th>
+                                        <th v-if="colVisible.skipped" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKey === 'skipped' }" @click="setSort('skipped')">
+                                            <div class="dt-th-inner justify-content-center">Skipped <i class="fas dt-sort-icon" :class="sortIcon('skipped')"></i></div>
+                                        </th>
+                                        <th v-if="colVisible.total" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKey === 'total' }" @click="setSort('total')">
+                                            <div class="dt-th-inner justify-content-center">Total <i class="fas dt-sort-icon" :class="sortIcon('total')"></i></div>
+                                        </th>
+                                        <th v-if="colVisible.date" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKey === 'query_date' }" @click="setSort('query_date')">
+                                            <div class="dt-th-inner justify-content-center">Date <i class="fas dt-sort-icon" :class="sortIcon('query_date')"></i></div>
+                                        </th>
+                                        {% if current_user.is_admin() %}
+                                        <th class="dt-th text-center" style="width:60px;">Actions</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(history, index) in history_list" :key="index"
+                                        class="dt-row"
+                                        :id="'import-row-' + history.uuid"
+                                        :class="{ 'row-highlight-import': highlightUuid === history.uuid }"
+                                        @click="goto(history.uuid)"
+                                        style="cursor: pointer;">
+                                        <td class="dt-td text-center">[[ (current_page - 1) * per_page + index + 1 ]]</td>
+                                        <td class="dt-td">[[ history.info.repo_url ]]</td>
+                                        <td v-if="colVisible.imported" class="dt-td text-center">[[ history.imported ]]</td>
+                                        <td v-if="colVisible.bad_rules" class="dt-td text-center">[[ history.bad_rules ]]</td>
+                                        <td v-if="colVisible.skipped" class="dt-td text-center">[[ history.skipped ]]</td>
+                                        <td v-if="colVisible.total" class="dt-td text-center">[[ history.total ]]</td>
+                                        <td v-if="colVisible.date" class="dt-td text-center">[[ history.query_date ]]</td>
+                                        {% if current_user.is_admin() %}
+                                        <!-- delete button with modal-->
+                                        <td class="dt-td text-center"><button class="dt-action-btn dt-action-btn--danger" data-bs-toggle="modal"
+                                                :data-bs-target="'#delete_import_modal_'+history.uuid" @click.stop title="Delete">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                            <div class="modal fade" :id="'delete_import_modal_'+history.uuid" tabindex="-1"
+                                                aria-hidden="true" @click.stop>
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content border-0 shadow-lg"
+                                                        style="border-radius: 15px;">
+                                                        <div class="modal-header border-0 pb-0">
+                                                            <h5 class="modal-title fw-bold">Confirm Deletion</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                                @click.stop></button>
+                                                        </div>
+                                                        <div class="modal-body py-4 text-center">
+                                                            <div class="text-danger mb-3"><i
+                                                                    class="fas fa-exclamation-triangle fa-3x"></i>
+                                                            </div>
+                                                            <p class="mb-0">Are you sure you want to delete <br><strong>[[
+                                                                    history.info.repo_url
+                                                                    ]]</strong> ?
+                                                            </p>
+                                                        </div>
+                                                        <div class="modal-footer border-0 pt-0">
+                                                            <button type="button" class="btn btn-light rounded-pill px-4"
+                                                                data-bs-dismiss="modal" @click.stop>Cancel</button>
+                                                            <button class="btn btn-danger rounded-pill px-4"
+                                                                @click="deleteImportHistory(history.uuid, index)"
+                                                                data-bs-dismiss="modal" @click.stop>
+                                                                Confirm Delete
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+
+                    <!-- Pagination -->
+                    <pagination-component
+                        :current-page="current_page"
+                        :total-pages="total_pages"
+                        @change-page="fetchGithubImporter">
+                    </pagination-component>
+
+                    <p class="text-center mt-3 text-muted">Total history found: [[ total_history ]]</p>
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="rule-pane" role="tabpanel" aria-labelledby="rule-tab">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3 p-md-4">
+
+                    <!-- Toolbar: search + filters + columns -->
+                    <div class="dt-toolbar mb-3">
+                        <div class="dt-toolbar-left">
+                            <div class="dt-search">
+                                <i class="fas fa-search dt-search-icon"></i>
+                                <input class="dt-search-input" type="text" placeholder="Search source…"
+                                    v-model="search_update" @input="onSearchUpdateInput" aria-label="Search update history" />
+                                <button v-if="search_update" class="dt-search-clear" @click="clearSearchUpdate" aria-label="Clear search">
+                                    <i class="fas fa-xmark"></i>
+                                </button>
+                            </div>
+                            <button class="dt-toolbar-btn" :class="{ 'dt-toolbar-btn--active': filtersOpenUpdate || mode_update }"
+                                @click="filtersOpenUpdate = !filtersOpenUpdate" :aria-expanded="filtersOpenUpdate">
+                                <i class="fa-solid fa-filter"></i>
+                                <span>Filters</span>
+                                <span v-if="mode_update" class="rl-filter-badge ms-1">1</span>
+                            </button>
+                        </div>
+                        <div class="dt-toolbar-right">
+                            <div class="dropdown">
+                                <button class="dt-toolbar-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Toggle columns">
+                                    <i class="fas fa-table-columns"></i><span>Columns</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="border-radius:12px;min-width:175px;" @click.stop>
+                                    <li v-for="col in UPDATE_COLS" :key="col.key">
+                                        <label class="dropdown-item rounded-2 d-flex align-items-center gap-2" style="cursor:pointer;font-size:.84rem;user-select:none;">
+                                            <input type="checkbox" :checked="colVisibleUpdate[col.key]" @change="toggleColumnUpdate(col.key)" />
+                                            [[ col.label ]]
+                                        </label>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-show="filtersOpenUpdate" class="rl-filter-panel mb-3">
+                        <div class="rl-fp-row">
+                            <div class="rl-fp-item">
+                                <label class="form-label mb-1" style="font-size:.78rem;">Mode</label>
+                                <select class="rl-fp-select" v-model="mode_update" @change="fetchGithubUpdater(1)">
+                                    <option value="">All</option>
+                                    <option value="by_url">By URL</option>
+                                    <option value="by_rule">By Rule</option>
+                                </select>
+                            </div>
+                            <div class="rl-fp-item">
+                                <label class="form-label mb-1" style="font-size:.78rem;">Rows per page</label>
+                                <select class="rl-fp-select" v-model.number="per_page_update" @change="fetchGithubUpdater(1)">
+                                    <option :value="10">10</option>
+                                    <option :value="20">20</option>
+                                    <option :value="50">50</option>
+                                    <option :value="100">100</option>
+                                </select>
+                            </div>
+                            <div class="rl-fp-item d-flex align-items-end">
+                                <button class="rl-fp-reset" @click="resetUpdateFilters()">
+                                    <i class="fa-solid fa-rotate-left me-1"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <template v-if="loading_update">
+                        <div class="text-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading…
+                        </div>
+                    </template>
+
+                    <template v-else-if="history_list_update.length === 0">
+                        <div class="dt-empty">
+                            <div class="dt-empty-icon"><i class="fa-solid fa-inbox"></i></div>
+                            <p class="dt-empty-text">No history found.</p>
+                        </div>
+                    </template>
+
+                    <!-- Table -->
+                    <template v-if="!loading_update && history_list_update.length > 0">
+                        <div class="dt-table-wrap">
+                            <table class="dt-table">
+                                <thead class="dt-thead">
+                                    <tr>
+                                        <th class="dt-th text-center" style="width:44px;">#</th>
+                                        <th class="dt-th">URLs / Rules</th>
+                                        <th v-if="colVisibleUpdate.found" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKeyUpdate === 'found' }" @click="setSortUpdate('found')">
+                                            <div class="dt-th-inner justify-content-center">Found <i class="fas dt-sort-icon" :class="sortIconUpdate('found')"></i></div>
+                                        </th>
+                                        <th v-if="colVisibleUpdate.new_rules" class="dt-th text-center">New Rules</th>
+                                        <th v-if="colVisibleUpdate.updated" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKeyUpdate === 'updated' }" @click="setSortUpdate('updated')">
+                                            <div class="dt-th-inner justify-content-center">Updated <i class="fas dt-sort-icon" :class="sortIconUpdate('updated')"></i></div>
+                                        </th>
+                                        <th v-if="colVisibleUpdate.not_found" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKeyUpdate === 'not_found' }" @click="setSortUpdate('not_found')">
+                                            <div class="dt-th-inner justify-content-center">Not found <i class="fas dt-sort-icon" :class="sortIconUpdate('not_found')"></i></div>
+                                        </th>
+                                        <th v-if="colVisibleUpdate.skipped" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKeyUpdate === 'skipped' }" @click="setSortUpdate('skipped')">
+                                            <div class="dt-th-inner justify-content-center">Skipped <i class="fas dt-sort-icon" :class="sortIconUpdate('skipped')"></i></div>
+                                        </th>
+                                        <th v-if="colVisibleUpdate.mode" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKeyUpdate === 'mode' }" @click="setSortUpdate('mode')">
+                                            <div class="dt-th-inner justify-content-center">Mode <i class="fas dt-sort-icon" :class="sortIconUpdate('mode')"></i></div>
+                                        </th>
+                                        <th v-if="colVisibleUpdate.date" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKeyUpdate === 'query_date' }" @click="setSortUpdate('query_date')">
+                                            <div class="dt-th-inner justify-content-center">Date <i class="fas dt-sort-icon" :class="sortIconUpdate('query_date')"></i></div>
+                                        </th>
+                                        {% if current_user.is_admin() %}
+                                        <th class="dt-th text-center" style="width:60px;">Actions</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(history, index) in history_list_update" :key="history.uuid"
+                                        class="dt-row"
+                                        :id="'update-row-' + history.uuid"
+                                        @click="gotoUpdate(history.uuid)" style="cursor: pointer;" :class="{
+                                    'row-highlight-update': highlightUpdateUuid === history.uuid
+                                }">
+                                        <td class="dt-td text-center">[[ (current_page_update - 1) * per_page_update + index + 1 ]]</td>
+
+                                        <!-- GitHub Repositories -->
+                                        <td class="dt-td">
+                                            <template v-if="history.mode === 'by_url'">
+                                                <div v-if="Array.isArray(history.repo_sources)">
+                                                    <span v-for="(repo, rIndex) in history.repo_sources" :key="rIndex"
+                                                        class="badge bg-secondary me-1">
+                                                        [[ repo ]]
+                                                    </span>
+                                                </div>
+                                                <div v-else>
+                                                    [[ history.info.repo_url || '—' ]]
+                                                </div>
+                                            </template>
+                                            <template v-else>
+                                                <div v-if="Array.isArray(history.rule_name_by_rule_mode)">
+                                                    <span v-for="(repo, rIndex) in history.rule_name_by_rule_mode"
+                                                        :key="rIndex" class="badge bg-secondary me-1">
+                                                        [[ repo ]]
+                                                    </span>
+                                                </div>
+                                                <div v-else>
+                                                    [[ history.info.repo_url || '—' ]]
+                                                </div>
+                                            </template>
+                                        </td>
+
+                                        <td v-if="colVisibleUpdate.found" class="dt-td text-center">
+                                            [[ history.found ?? 0 ]]
+                                        </td>
+                                        <td v-if="colVisibleUpdate.new_rules" class="dt-td text-center">
+                                            [[ history.new_rules_count ?? 0 ]]
+                                        </td>
+                                        <td v-if="colVisibleUpdate.updated" class="dt-td text-center">
+                                            [[ history.updated ?? 0 ]]
+                                        </td>
+                                        <td v-if="colVisibleUpdate.not_found" class="dt-td text-center">
+                                            [[ history.not_found ?? 0 ]]
+                                        </td>
+                                        <td v-if="colVisibleUpdate.skipped" class="dt-td text-center">
+                                            [[ history.skipped ?? 0 ]]
+                                        </td>
+                                        <td v-if="colVisibleUpdate.mode" class="dt-td text-center text-capitalize">
+                                            <template v-if="history.mode === 'by_url'">
+                                                <span class="badge bg-info text-dark">By URL</span>
+                                            </template>
+                                            <template v-else>
+                                                <span class="badge bg-warning text-dark">By Rule</span>
+                                            </template>
+                                        </td>
+                                        <td v-if="colVisibleUpdate.date" class="dt-td text-center">
+                                            [[ history.query_date ]]
+                                        </td>
+                                        {% if current_user.is_admin() %}
+                                        <!-- delete button with modal-->
+                                        <td class="dt-td text-center"><button class="dt-action-btn dt-action-btn--danger" data-bs-toggle="modal"
+                                                :data-bs-target="'#delete_update_modal_'+history.uuid" @click.stop title="Delete">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                            <div class="modal fade" :id="'delete_update_modal_'+history.uuid" tabindex="-1"
+                                                aria-hidden="true" @click.stop>
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content border-0 shadow-lg"
+                                                        style="border-radius: 15px;">
+                                                        <div class="modal-header border-0 pb-0">
+                                                            <h5 class="modal-title fw-bold">Confirm Deletion</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                                @click.stop></button>
+                                                        </div>
+                                                        <div class="modal-body py-4 text-center">
+                                                            <div class="text-danger mb-3"><i
+                                                                    class="fas fa-exclamation-triangle fa-3x"></i>
+                                                            </div>
+                                                            <p class="mb-0">Are you sure you want to delete <br><strong>[[
+                                                                    history.info.repo_url
+                                                                    ]]</strong> ?
+                                                            </p>
+                                                        </div>
+                                                        <div class="modal-footer border-0 pt-0">
+                                                            <button type="button" class="btn btn-light rounded-pill px-4"
+                                                                data-bs-dismiss="modal" @click.stop>Cancel</button>
+                                                            <button class="btn btn-danger rounded-pill px-4"
+                                                                @click="deleteUpdateHistory(history.uuid, index)"
+                                                                data-bs-dismiss="modal" @click.stop>
+                                                                Confirm Delete
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+
+                    <!-- Pagination -->
+                    <pagination-component
+                        :current-page="current_page_update"
+                        :total-pages="total_pages_update"
+                        @change-page="fetchGithubUpdater">
+                    </pagination-component>
+
+                    <p class="text-center mt-3 text-muted">Total history found: [[ total_history_update ]]</p>
+                </div>
+            </div>
+        </div>
+
+        {% if current_user.is_admin() %}
+        <div class="tab-pane fade" id="schedule-pane" role="tabpanel" aria-labelledby="schedule-tab">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3 p-md-4">
+
+                    <div class="dt-toolbar mb-3">
+                        <div class="dt-toolbar-left">
+                            <div class="dt-search">
+                                <i class="fas fa-search dt-search-icon"></i>
+                                <input class="dt-search-input" type="text" placeholder="Search schedules…"
+                                    v-model="scheduleSearch" @input="onScheduleSearchInput" aria-label="Search Sync Schedules" />
+                            </div>
+                            <div class="dt-view-toggle">
+                                <button class="dt-view-btn" :class="{ 'dt-view-btn--active': scheduleView === 'table' }" @click="scheduleView = 'table'" title="Table view">
+                                    <i class="fa-solid fa-table-list"></i>
+                                </button>
+                                <button class="dt-view-btn" :class="{ 'dt-view-btn--active': scheduleView === 'card' }" @click="scheduleView = 'card'" title="Card view">
+                                    <i class="fa-solid fa-grip"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="dt-toolbar-right">
+                            <button class="dt-toolbar-btn dt-toolbar-btn--primary" @click="openCreateSchedule()">
+                                <i class="fa-solid fa-plus"></i><span>New Sync Schedule</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="scheduleSelectedUuids.size > 0" class="dt-bulk-bar mb-3">
+                        <span class="dt-bulk-count">[[ scheduleSelectedUuids.size ]] selected</span>
+                        <div class="dt-bulk-actions">
+                            <button class="dt-bulk-btn" @click="scheduleSelectedUuids.clear()">Clear</button>
+                            <button class="dt-bulk-btn" @click="bulkSetActiveSchedules(true)">
+                                <i class="fa-solid fa-play me-1"></i>Activate
+                            </button>
+                            <button class="dt-bulk-btn" @click="bulkSetActiveSchedules(false)">
+                                <i class="fa-solid fa-pause me-1"></i>Deactivate
+                            </button>
+                            <button class="dt-bulk-btn" style="color:#dc3545;" @click="bulkDeleteSchedules()">
+                                <i class="fa-solid fa-trash me-1"></i>Delete selected
+                            </button>
+                        </div>
+                    </div>
+
+                    <template v-if="loadingSchedules">
+                        <div class="text-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading…
+                        </div>
+                    </template>
+
+                    <template v-else-if="schedules.length === 0">
+                        <div class="dt-empty">
+                            <div class="dt-empty-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                            <p class="dt-empty-text">No Sync Schedules yet — create one to automate recurring GitHub updates.</p>
+                        </div>
+                    </template>
+
+                    <!-- Table view -->
+                    <div v-if="!loadingSchedules && schedules.length > 0 && scheduleView === 'table'" class="dt-table-wrap">
+                        <table class="dt-table">
+                            <thead class="dt-thead">
+                                <tr>
+                                    <th class="dt-th dt-th--checkbox">
+                                        <input type="checkbox" class="dt-checkbox" :checked="isScheduleListFullySelected" @change="toggleAllSchedulesOnPage" />
+                                    </th>
+                                    <th class="dt-th dt-th--sortable" :class="{ 'dt-th--sorted': scheduleSortKey === 'title' }" @click="setScheduleSort('title')">
+                                        <div class="dt-th-inner">Title <i class="fas dt-sort-icon" :class="scheduleSortIcon('title')"></i></div>
+                                    </th>
+                                    <th class="dt-th">Editor</th>
+                                    <th class="dt-th text-center">Repos</th>
+                                    <th class="dt-th">Frequency</th>
+                                    <th class="dt-th dt-th--sortable" :class="{ 'dt-th--sorted': scheduleSortKey === 'next_run_at' }" @click="setScheduleSort('next_run_at')">
+                                        <div class="dt-th-inner">Next run <i class="fas dt-sort-icon" :class="scheduleSortIcon('next_run_at')"></i></div>
+                                    </th>
+                                    <th class="dt-th dt-th--sortable" :class="{ 'dt-th--sorted': scheduleSortKey === 'last_run_at' }" @click="setScheduleSort('last_run_at')">
+                                        <div class="dt-th-inner">Last run <i class="fas dt-sort-icon" :class="scheduleSortIcon('last_run_at')"></i></div>
+                                    </th>
+                                    <th class="dt-th text-center">Status</th>
+                                    <th class="dt-th text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="s in schedules" :key="s.uuid" class="dt-row">
+                                    <td class="dt-td dt-td--checkbox">
+                                        <input type="checkbox" class="dt-checkbox" :checked="scheduleSelectedUuids.has(s.uuid)"
+                                            @change="toggleScheduleSelection(s.uuid, $event.target.checked)" />
+                                    </td>
+                                    <td class="dt-td">
+                                        <div class="fw-bold">[[ s.title ]]</div>
+                                        <div class="text-muted" style="font-size:.78rem;" v-if="s.description">[[ s.description ]]</div>
+                                    </td>
+                                    <td class="dt-td">
+                                        <user-chip v-if="s.editor" :user-id="s.editor.id" :username="s.editor.name" :avatar="s.editor.avatar" size="xs"></user-chip>
+                                        <span v-else>—</span>
+                                    </td>
+                                    <td class="dt-td text-center">[[ s.repo_count ]]</td>
+                                    <td class="dt-td">[[ frequencySummary(s) ]]</td>
+                                    <td class="dt-td">[[ s.next_run_at || '—' ]]</td>
+                                    <td class="dt-td">[[ s.last_run_at || 'Never' ]]</td>
+                                    <td class="dt-td text-center">
+                                        <span class="badge" :class="s.is_active ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'">
+                                            [[ s.is_active ? 'Active' : 'Paused' ]]
+                                        </span>
+                                    </td>
+                                    <td class="dt-td text-center">
+                                        <div class="dt-actions justify-content-center">
+                                            <button class="dt-action-btn" title="Run now" @click="runScheduleNow(s)"><i class="fa-solid fa-play"></i></button>
+                                            <button class="dt-action-btn" title="Edit" @click="openEditSchedule(s)"><i class="fa-solid fa-pen"></i></button>
+                                            <button class="dt-action-btn dt-action-btn--danger" title="Delete" @click="deleteSchedule(s)"><i class="fa-solid fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Card view -->
+                    <div v-if="!loadingSchedules && schedules.length > 0 && scheduleView === 'card'" class="dt-card-grid">
+                        <div v-for="s in schedules" :key="s.uuid" class="dt-card" :class="{ 'dt-card--selected': scheduleSelectedUuids.has(s.uuid) }">
+                            <div class="dt-card-header">
+                                <input type="checkbox" class="dt-checkbox dt-card-checkbox" :checked="scheduleSelectedUuids.has(s.uuid)"
+                                    @change="toggleScheduleSelection(s.uuid, $event.target.checked)" />
+                                <div class="dt-card-title">[[ s.title ]]</div>
+                            </div>
+                            <div class="dt-card-body">
+                                <p class="text-muted small mb-2" v-if="s.description">[[ s.description ]]</p>
+                                <div class="small mb-1"><i class="fa-brands fa-github me-1"></i>[[ s.repo_count ]] repo(s)</div>
+                                <div class="small mb-1"><i class="fa-solid fa-clock me-1"></i>[[ frequencySummary(s) ]]</div>
+                                <div class="small mb-1">Next run: [[ s.next_run_at || '—' ]]</div>
+                                <span class="badge" :class="s.is_active ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'">
+                                    [[ s.is_active ? 'Active' : 'Paused' ]]
+                                </span>
+                            </div>
+                            <div class="dt-card-footer">
+                                <button class="dt-action-btn" title="Run now" @click="runScheduleNow(s)"><i class="fa-solid fa-play"></i></button>
+                                <button class="dt-action-btn" title="Edit" @click="openEditSchedule(s)"><i class="fa-solid fa-pen"></i></button>
+                                <button class="dt-action-btn dt-action-btn--danger" title="Delete" @click="deleteSchedule(s)"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <pagination-component
+                        :current-page="scheduleCurrentPage"
+                        :total-pages="scheduleTotalPages"
+                        @change-page="fetchSchedules">
+                    </pagination-component>
+
+                    <p class="text-center mt-3 text-muted">Total Sync Schedules: [[ totalSchedules ]]</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if current_user.is_admin() %}
+    <!-- Sync Schedule create/edit modal -->
+    <div class="modal fade" id="syncScheduleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius:15px;">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">[[ scheduleForm.uuid ? 'Edit Sync Schedule' : 'New Sync Schedule' ]]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Title<span class="required-marker">*</span></label>
+                        <input type="text" class="form-control" v-model="scheduleForm.title" placeholder="e.g. Weekly threat-intel sync">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <textarea class="form-control" rows="2" v-model="scheduleForm.description" placeholder="Optional notes about what this schedule does"></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="scheduleActiveToggle" v-model="scheduleForm.is_active">
+                        <label class="form-check-label" for="scheduleActiveToggle">Active</label>
+                    </div>
+
+                    <div class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                        <div class="fw-bold mb-2" style="font-size:.85rem;">Recurrence<span class="required-marker">*</span></div>
+                        <schedule-recurrence-picker :key="scheduleFormInstance" :initial="scheduleForm.recurrence" @recurrence-change="onRecurrenceChange"></schedule-recurrence-picker>
+                    </div>
+
+                    <div class="rounded-3 border p-3" style="background:var(--light-bg-color);">
+                        <div class="fw-bold mb-2" style="font-size:.85rem;">Repositories<span class="required-marker">*</span></div>
+                        <repo-selection-table :key="scheduleFormInstance"
+                            :initial-selected-urls="scheduleForm.initialRepoUrls"
+                            :initial-repo-settings="scheduleForm.initialRepoSettings"
+                            @selection-change="onRepoSelectionChange">
+                        </repo-selection-table>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4" :disabled="savingSchedule" @click="submitScheduleForm()">
+                        <span v-if="savingSchedule" class="spinner-border spinner-border-sm me-1"></span>
+                        [[ scheduleForm.uuid ? 'Save changes' : 'Create Sync Schedule' ]]
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, reactive, computed } = Vue
+    import { message_list, create_message } from '/static/js/toaster.js'
+    import PaginationComponent from '/static/js/rule/paginationComponent.js'
+    import RepoSelectionTable from '/static/js/rule/repoSelectionTable.js'
+    import ScheduleRecurrencePicker from '/static/js/rule/scheduleRecurrencePicker.js'
+    import UserChip from '/static/js/components/UserChip.js'
+
+    const csrfToken = '{{ csrf_token() }}'
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: { PaginationComponent, RepoSelectionTable, ScheduleRecurrencePicker, UserChip },
+        setup() {
+            //  #############################
+            //  #       Importer section    #
+            //  #############################
+
+            const history_list = ref([])
+            const total_history = ref(0)
+            const current_page = ref(1)
+            const total_pages = ref(1)
+            const running_sessions = ref([])
+            const highlightUuid       = ref(null)
+            const highlightUpdateUuid = ref(null)
+            const loading = ref(true)
+
+            const search = ref('')
+            const per_page = ref(20)
+            const sortKey = ref('query_date')
+            const sortDir = ref('desc')
+            const filtersOpen = ref(false)
+            let searchTimer = null
+
+            const IMPORT_COLS = [
+                { key: 'imported', label: 'Imported' },
+                { key: 'bad_rules', label: 'Bad rules' },
+                { key: 'skipped', label: 'Skipped' },
+                { key: 'total', label: 'Total' },
+                { key: 'date', label: 'Date' },
+            ]
+            const colVisible = ref({ imported: true, bad_rules: true, skipped: true, total: false, date: true })
+
+            function toggleColumn(key) {
+                colVisible.value[key] = !colVisible.value[key]
+            }
+
+            function setSort(key) {
+                if (sortKey.value === key) {
+                    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+                } else {
+                    sortKey.value = key
+                    sortDir.value = 'asc'
+                }
+                fetchGithubImporter(1)
+            }
+            function sortIcon(key) {
+                if (sortKey.value !== key) return 'fa-sort'
+                return sortDir.value === 'asc' ? 'fa-sort-up' : 'fa-sort-down'
+            }
+            function onSearchInput() {
+                clearTimeout(searchTimer)
+                searchTimer = setTimeout(() => fetchGithubImporter(1), 300)
+            }
+            function clearSearch() {
+                search.value = ''
+                fetchGithubImporter(1)
+            }
+
+            async function fetchGithubImporter(page) {
+                const params = new URLSearchParams({
+                    page,
+                    per_page: per_page.value,
+                    search: search.value,
+                    sort: sortKey.value,
+                    dir: sortDir.value,
+                })
+
+                try {
+                    const res = await fetch('/rule/history_github_importer/list?' + params.toString())
+                    const data = await res.json()
+
+                    if (res.status === 200) {
+                        history_list.value = data.history || []
+                        total_history.value = data.total_history || 0
+                        total_pages.value = data.total_pages || 1
+                        current_page.value = page
+                    } else {
+                        history_list.value = []
+                        total_history.value = 0
+                        total_pages.value = 1
+                    }
+                } finally {
+                    loading.value = false
+                }
+            }
+
+            // ── Scroll helper (retries until element exists in DOM) ───────────
+            function scrollToRow(rowId, attempts = 0) {
+                const el = document.getElementById(rowId)
+                if (el) {
+                    const top = el.getBoundingClientRect().top + window.pageYOffset - 120
+                    window.scrollTo({ top, behavior: 'smooth' })
+                } else if (attempts < 12) {
+                    setTimeout(() => scrollToRow(rowId, attempts + 1), 150)
+                }
+            }
+
+            // ── Handle ?highlight / ?highlight_update from activity logs ─────
+            const _params    = new URLSearchParams(window.location.search)
+            const _hImport   = _params.get('highlight')
+            const _hUpdate   = _params.get('highlight_update')
+
+            if (_hImport) {
+                highlightUuid.value = _hImport
+                // 1. Ask backend which page this UUID is on
+                fetch(`/rule/history_github_importer/find_page?uuid=${_hImport}&type=import`)
+                    .then(r => r.json())
+                    .then(data => fetchGithubImporter(data.page || 1))
+                    .then(() => scrollToRow('import-row-' + _hImport))
+            } else {
+                fetchGithubImporter(1)
+            }
+
+            async function fetchSessionRunning() {
+                const res = await fetch('/rule/import_get_session_running')
+
+                if (await res.status === 200) {
+                    const data = await res.json()
+                    running_sessions.value = data.import_sessions
+                    running_sessions_update.value = data.update_sessions
+                } else {
+                    create_message((await res.json()).message, (await res.json()).toast_class)
+                }
+            }
+            fetchSessionRunning()
+
+            const runningTotal = computed(() => (running_sessions.value?.length || 0) + (running_sessions_update.value?.length || 0))
+
+            async function deleteImportHistory(uuid, index) {
+                const params = new URLSearchParams({
+                    uuid
+                })
+
+
+                const res = await fetch('/rule/history_github_importer/delete?' + params.toString())
+                const data = await res.json()
+                if (res.status == 200) {
+                    var myModalEl = document.getElementById('delete_import_modal_' + uuid);
+                    var modal = bootstrap.Modal.getInstance(myModalEl)
+                    modal.hide();
+
+                    fetchGithubImporter(current_page.value)
+                    fetchSessionRunning()
+                }
+                create_message(data.message, data.toast_class)
+            }
+
+            //  #############################
+            //  #       Updater section     #
+            //  #############################
+
+            const history_list_update = ref([])
+            const total_history_update = ref(0)
+            const current_page_update = ref(1)
+            const total_pages_update = ref(1)
+            const running_sessions_update = ref([])
+            const loading_update = ref(true)
+
+            const search_update = ref('')
+            const per_page_update = ref(20)
+            const mode_update = ref('')
+            const sortKeyUpdate = ref('query_date')
+            const sortDirUpdate = ref('desc')
+            const filtersOpenUpdate = ref(false)
+            let searchTimerUpdate = null
+
+            const UPDATE_COLS = [
+                { key: 'found', label: 'Found' },
+                { key: 'new_rules', label: 'New rules' },
+                { key: 'updated', label: 'Updated' },
+                { key: 'not_found', label: 'Not found' },
+                { key: 'skipped', label: 'Skipped' },
+                { key: 'mode', label: 'Mode' },
+                { key: 'date', label: 'Date' },
+            ]
+            const colVisibleUpdate = ref({ found: true, new_rules: true, updated: true, not_found: false, skipped: false, mode: true, date: true })
+
+            function toggleColumnUpdate(key) {
+                colVisibleUpdate.value[key] = !colVisibleUpdate.value[key]
+            }
+
+            function setSortUpdate(key) {
+                if (sortKeyUpdate.value === key) {
+                    sortDirUpdate.value = sortDirUpdate.value === 'asc' ? 'desc' : 'asc'
+                } else {
+                    sortKeyUpdate.value = key
+                    sortDirUpdate.value = 'asc'
+                }
+                fetchGithubUpdater(1)
+            }
+            function sortIconUpdate(key) {
+                if (sortKeyUpdate.value !== key) return 'fa-sort'
+                return sortDirUpdate.value === 'asc' ? 'fa-sort-up' : 'fa-sort-down'
+            }
+            function onSearchUpdateInput() {
+                clearTimeout(searchTimerUpdate)
+                searchTimerUpdate = setTimeout(() => fetchGithubUpdater(1), 300)
+            }
+            function clearSearchUpdate() {
+                search_update.value = ''
+                fetchGithubUpdater(1)
+            }
+            function resetUpdateFilters() {
+                mode_update.value = ''
+                per_page_update.value = 20
+                fetchGithubUpdater(1)
+            }
+
+            async function fetchGithubUpdater(page) {
+                const params = new URLSearchParams({
+                    page,
+                    per_page: per_page_update.value,
+                    search: search_update.value,
+                    mode: mode_update.value,
+                    sort: sortKeyUpdate.value,
+                    dir: sortDirUpdate.value,
+                })
+
+                try {
+                    const res = await fetch('/rule/history_github_updater/list?' + params.toString())
+                    const data = await res.json()
+
+                    if (res.status === 200) {
+                        history_list_update.value = data.history || []
+                        total_history_update.value = data.total_history || 0
+                        total_pages_update.value = data.total_pages || 1
+                        current_page_update.value = page
+                    } else {
+                        history_list_update.value = []
+                        total_history_update.value = 0
+                        total_pages_update.value = 1
+                    }
+                } finally {
+                    loading_update.value = false
+                }
+            }
+
+            if (_hUpdate) {
+                highlightUpdateUuid.value = _hUpdate
+                // Activate "Updates & Status" tab — click is most reliable
+                setTimeout(() => {
+                    const tabEl = document.getElementById('rule-tab')
+                    if (tabEl) tabEl.click()
+                }, 50)
+                // Ask backend which page, then fetch + scroll
+                fetch(`/rule/history_github_importer/find_page?uuid=${_hUpdate}&type=update`)
+                    .then(r => r.json())
+                    .then(data => fetchGithubUpdater(data.page || 1))
+                    .then(() => scrollToRow('update-row-' + _hUpdate))
+            } else {
+                fetchGithubUpdater(1)
+            }
+
+            async function deleteUpdateHistory(uuid, index) {
+                const params = new URLSearchParams({
+                    uuid
+                })
+
+
+                const res = await fetch('/rule/history_github_updater/delete?' + params.toString())
+                const data = await res.json()
+                if (res.status == 200) {
+                    var myModalEl = document.getElementById('delete_update_modal_' + uuid);
+                    var modal = bootstrap.Modal.getInstance(myModalEl)
+                    modal.hide();
+                    fetchGithubUpdater(current_page_update.value)
+                    fetchSessionRunning()
+                }
+                create_message(data.message, data.toast_class)
+            }
+
+            function goto(history_uuid) {
+                window.location.href = `/rule/import_loading/${history_uuid}`
+            }
+            function gotoUpdate(history_uuid) {
+                window.location.href = `/rule/update_loading/${history_uuid}`
+            }
+
+            //  #############################
+            //  #     Sync Schedules (admin) #
+            //  #############################
+
+            const schedules = ref([])
+            const totalSchedules = ref(0)
+            const scheduleCurrentPage = ref(1)
+            const scheduleTotalPages = ref(1)
+            const loadingSchedules = ref(true)
+            const scheduleSearch = ref('')
+            const scheduleView = ref('table')
+            const scheduleSelectedUuids = ref(new Set())
+            const scheduleSortKey = ref('created_at')
+            const scheduleSortDir = ref('desc')
+            let scheduleSearchTimer = null
+
+            function setScheduleSort(key) {
+                if (scheduleSortKey.value === key) {
+                    scheduleSortDir.value = scheduleSortDir.value === 'asc' ? 'desc' : 'asc'
+                } else {
+                    scheduleSortKey.value = key
+                    scheduleSortDir.value = 'asc'
+                }
+                fetchSchedules(1)
+            }
+            function scheduleSortIcon(key) {
+                if (scheduleSortKey.value !== key) return 'fa-sort'
+                return scheduleSortDir.value === 'asc' ? 'fa-sort-up' : 'fa-sort-down'
+            }
+
+            const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+            function frequencySummary(s) {
+                const time = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`
+                if (s.frequency === 'daily') return `Daily at ${time}`
+                if (s.frequency === 'weekly') {
+                    const days = (s.days_of_week || []).map(d => WEEKDAY_LABELS[d]).join(', ')
+                    return `Weekly (${days || '—'}) at ${time}`
+                }
+                if (s.frequency === 'monthly') {
+                    const day = s.day_of_month === -1 ? 'last day' : `day ${s.day_of_month}`
+                    return `Monthly (${day}) at ${time}`
+                }
+                return `Custom: ${s.cron_expr || '—'}`
+            }
+
+            async function fetchSchedules(page) {
+                loadingSchedules.value = true
+                const params = new URLSearchParams({
+                    page, search: scheduleSearch.value,
+                    sort: scheduleSortKey.value, dir: scheduleSortDir.value,
+                })
+                try {
+                    const res = await fetch('/rule/github/schedule/list?' + params.toString())
+                    const data = await res.json()
+                    if (res.status === 200) {
+                        schedules.value = data.schedules || []
+                        totalSchedules.value = data.total || 0
+                        scheduleTotalPages.value = data.total_pages || 1
+                        scheduleCurrentPage.value = page
+                    }
+                } finally {
+                    loadingSchedules.value = false
+                }
+            }
+            function onScheduleSearchInput() {
+                clearTimeout(scheduleSearchTimer)
+                scheduleSearchTimer = setTimeout(() => fetchSchedules(1), 300)
+            }
+
+            const isScheduleListFullySelected = computed(() =>
+                schedules.value.length > 0 && schedules.value.every(s => scheduleSelectedUuids.value.has(s.uuid))
+            )
+            function toggleScheduleSelection(uuid, checked) {
+                if (checked) scheduleSelectedUuids.value.add(uuid)
+                else scheduleSelectedUuids.value.delete(uuid)
+            }
+            function toggleAllSchedulesOnPage(event) {
+                const checked = event.target.checked
+                schedules.value.forEach(s => toggleScheduleSelection(s.uuid, checked))
+            }
+
+            async function bulkDeleteSchedules() {
+                if (scheduleSelectedUuids.value.size === 0) return
+                if (!confirm(`Delete ${scheduleSelectedUuids.value.size} Sync Schedule(s)? This cannot be undone.`)) return
+                const res = await fetch('/rule/github/schedule/bulk_delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ mode: 'partial', selected_uuids: Array.from(scheduleSelectedUuids.value) }),
+                })
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+                if (res.status === 200) {
+                    scheduleSelectedUuids.value.clear()
+                    fetchSchedules(scheduleCurrentPage.value)
+                }
+            }
+
+            async function bulkSetActiveSchedules(isActive) {
+                if (scheduleSelectedUuids.value.size === 0) return
+                const res = await fetch('/rule/github/schedule/bulk_set_active', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({
+                        mode: 'partial', selected_uuids: Array.from(scheduleSelectedUuids.value), is_active: isActive,
+                    }),
+                })
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+                if (res.status === 200) {
+                    scheduleSelectedUuids.value.clear()
+                    fetchSchedules(scheduleCurrentPage.value)
+                }
+            }
+
+            async function runScheduleNow(s) {
+                const res = await fetch(`/rule/github/schedule/${s.uuid}/run_now`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                })
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+            }
+
+            async function deleteSchedule(s) {
+                if (!confirm(`Delete Sync Schedule "${s.title}"? This cannot be undone.`)) return
+                const res = await fetch(`/rule/github/schedule/${s.uuid}/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                })
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+                if (res.status === 200) fetchSchedules(scheduleCurrentPage.value)
+            }
+
+            // ── Create / edit modal ─────────────────────────────────────────
+            const savingSchedule = ref(false)
+            const scheduleForm = reactive({
+                uuid: null,
+                title: '',
+                description: '',
+                is_active: true,
+                recurrence: {},
+                initialRepoUrls: [],
+                initialRepoSettings: {},
+            })
+            let currentRecurrence = {}
+            let currentRepoSelection = null
+            // Bumped on every open — used as the :key for schedule-recurrence-picker
+            // and repo-selection-table so they always remount fresh with the
+            // right :initial data (a Vue component's data() only runs once at
+            // mount; without a changing key, reopening the SAME schedule twice,
+            // or opening Edit after the picker already mounted with defaults,
+            // would leave its internal state stale and never re-emit — this is
+            // exactly what caused "Invalid frequency: None" on Edit).
+            const scheduleFormInstance = ref(0)
+
+            function showScheduleModal() {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('syncScheduleModal')).show()
+            }
+
+            function openCreateSchedule() {
+                scheduleFormInstance.value++
+                scheduleForm.uuid = null
+                scheduleForm.title = ''
+                scheduleForm.description = ''
+                scheduleForm.is_active = true
+                scheduleForm.recurrence = { frequency: 'weekly', days_of_week: [0], hour: 3, minute: 0 }
+                scheduleForm.initialRepoUrls = []
+                scheduleForm.initialRepoSettings = {}
+                currentRecurrence = {}
+                currentRepoSelection = null
+                showScheduleModal()
+            }
+
+            function openEditSchedule(s) {
+                scheduleFormInstance.value++
+                scheduleForm.uuid = s.uuid
+                scheduleForm.title = s.title
+                scheduleForm.description = s.description || ''
+                scheduleForm.is_active = s.is_active
+                scheduleForm.recurrence = {
+                    frequency: s.frequency, days_of_week: s.days_of_week,
+                    day_of_month: s.day_of_month, hour: s.hour, minute: s.minute,
+                    cron_expr: s.cron_expr, timezone: s.timezone,
+                }
+                scheduleForm.initialRepoUrls = (s.repos || []).map(r => r.repo_url)
+                const settingsMap = {}
+                for (const r of (s.repos || [])) {
+                    settingsMap[r.repo_url] = { auto_accept_update: r.auto_accept_update, auto_add_new_rule: r.auto_add_new_rule }
+                }
+                scheduleForm.initialRepoSettings = settingsMap
+                currentRecurrence = {}
+                currentRepoSelection = null
+                showScheduleModal()
+            }
+
+            function onRecurrenceChange(payload) {
+                currentRecurrence = payload
+            }
+            function onRepoSelectionChange(payload) {
+                currentRepoSelection = payload
+            }
+
+            async function submitScheduleForm() {
+                if (!scheduleForm.title.trim()) {
+                    create_message('Title is required.', 'danger-subtle')
+                    return
+                }
+                savingSchedule.value = true
+                const payload = {
+                    title: scheduleForm.title,
+                    description: scheduleForm.description,
+                    is_active: scheduleForm.is_active,
+                    ...currentRecurrence,
+                }
+                if (currentRepoSelection) {
+                    payload.repo_mode = currentRepoSelection.repo_mode
+                    payload.repo_filters = currentRepoSelection.repo_filters
+                    payload.selected_repo_urls = currentRepoSelection.selected_repo_urls
+                    payload.excluded_repo_urls = currentRepoSelection.excluded_repo_urls
+                    payload.repo_settings = currentRepoSelection.repo_settings
+                    payload.default_repo_settings = currentRepoSelection.default_repo_settings
+                }
+
+                const endpoint = scheduleForm.uuid
+                    ? `/rule/github/schedule/${scheduleForm.uuid}/update`
+                    : '/rule/github/schedule/create'
+
+                try {
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify(payload),
+                    })
+                    const data = await res.json()
+                    create_message(data.message, data.toast_class)
+                    if (res.status === 200 || res.status === 201) {
+                        bootstrap.Modal.getInstance(document.getElementById('syncScheduleModal'))?.hide()
+                        fetchSchedules(scheduleCurrentPage.value)
+                    }
+                } finally {
+                    savingSchedule.value = false
+                }
+            }
+
+            {% if current_user.is_admin() %}
+            fetchSchedules(1)
+            {% endif %}
+
+            return {
+                message_list,
+                history_list,
+                total_history,
+                total_pages,
+                current_page,
+                running_sessions,
+                fetchGithubImporter,
+                deleteImportHistory,
+                loading,
+                runningTotal,
+
+                search,
+                per_page,
+                sortKey,
+                sortDir,
+                filtersOpen,
+                IMPORT_COLS,
+                colVisible,
+                toggleColumn,
+                setSort,
+                sortIcon,
+                onSearchInput,
+                clearSearch,
+
+                history_list_update,
+                total_history_update,
+                current_page_update,
+                total_pages_update,
+                running_sessions_update,
+                fetchGithubUpdater,
+                deleteUpdateHistory,
+                loading_update,
+
+                search_update,
+                per_page_update,
+                mode_update,
+                sortKeyUpdate,
+                sortDirUpdate,
+                filtersOpenUpdate,
+                UPDATE_COLS,
+                colVisibleUpdate,
+                toggleColumnUpdate,
+                setSortUpdate,
+                sortIconUpdate,
+                onSearchUpdateInput,
+                clearSearchUpdate,
+                resetUpdateFilters,
+
+                goto,
+                gotoUpdate,
+                highlightUuid,
+                highlightUpdateUuid,
+
+                schedules,
+                totalSchedules,
+                scheduleCurrentPage,
+                scheduleTotalPages,
+                loadingSchedules,
+                scheduleSearch,
+                scheduleView,
+                scheduleSelectedUuids,
+                frequencySummary,
+                fetchSchedules,
+                onScheduleSearchInput,
+                isScheduleListFullySelected,
+                toggleScheduleSelection,
+                toggleAllSchedulesOnPage,
+                bulkDeleteSchedules,
+                bulkSetActiveSchedules,
+                scheduleSortKey,
+                scheduleSortDir,
+                setScheduleSort,
+                scheduleSortIcon,
+                runScheduleNow,
+                deleteSchedule,
+                savingSchedule,
+                scheduleForm,
+                scheduleFormInstance,
+                openCreateSchedule,
+                openEditSchedule,
+                onRecurrenceChange,
+                onRepoSelectionChange,
+                submitScheduleForm,
+            }
+        }
+    }).mount('#main-container')
+</script>
+{% endblock %}

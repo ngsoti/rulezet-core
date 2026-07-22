@@ -2651,7 +2651,7 @@ def import_rules_from_github():
                 session_type = 'github_import',
                 session_uuid = session_th.uuid,
                 label        = f'GitHub import running — {repo_url}',
-                link         = '/rule/github/history_github_importer',
+                link         = '/rule/github/manage',
             )
         except Exception as _e:
             print(f"[rule] notify_admins_session_started (import) error: {_e}")
@@ -2790,20 +2790,31 @@ def import_get_info_session(sid):
         return json.loads(r.info)
     return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
 
+@rule_blueprint.route("/github/manage", methods=['GET'])
+@login_required
+def manage_github():
+    return render_template("rule/url_github/manage_github.html")
+
+
 @rule_blueprint.route("/github/history_github_importer", methods=['GET'])
 @login_required
 def history_github_importer():
-    return render_template("rule/url_github/github_importer.html")
+    # Old URL — kept as a permanent redirect so bookmarks/links still work.
+    return redirect(url_for('rule.manage_github'), code=301)
 
 
 @rule_blueprint.route("/history_github_importer/list", methods=['GET'])
 @login_required
 def history_github_importer_list():
     page = request.args.get('page', 1, type=int)
-    github_importer_list = RuleModel.get_importer_list_page(page)
+    per_page = request.args.get('per_page', 20, type=int)
+    search = request.args.get('search', '', type=str).strip()
+    sort = request.args.get('sort', 'query_date', type=str)
+    direction = request.args.get('dir', 'desc', type=str)
+    github_importer_list = RuleModel.get_importer_list_page(page, per_page, search, sort, direction)
 
-    return {"history": [g.to_json() for g in github_importer_list], 
-            "total_history": github_importer_list.total, 
+    return {"history": [g.to_json() for g in github_importer_list],
+            "total_history": github_importer_list.total,
             "total_pages": github_importer_list.pages}, 200
 
 @rule_blueprint.route("/history_github_importer/find_page", methods=['GET'])
@@ -2889,7 +2900,12 @@ def import_get_session_running():
 @login_required
 def history_github_updater_list():
     page = request.args.get('page', 1, type=int)
-    github_updater_list = RuleModel.get_updater_list_page(page)
+    per_page = request.args.get('per_page', 20, type=int)
+    search = request.args.get('search', '', type=str).strip()
+    mode = request.args.get('mode', '', type=str)
+    sort = request.args.get('sort', 'query_date', type=str)
+    direction = request.args.get('dir', 'desc', type=str)
+    github_updater_list = RuleModel.get_updater_list_page(page, per_page, search, mode, sort, direction)
 
     return {"history": [g.to_json_list() for g in github_updater_list], 
             "total_history": github_updater_list.total, 
@@ -3155,7 +3171,7 @@ def check_updates_by_url():
             session_type = 'github_update',
             session_uuid = update_session.uuid,
             label        = f'GitHub update check running — {len(valid_urls)} repo(s)',
-            link         = '/rule/github/history_github_importer',
+            link         = '/rule/github/manage',
         )
     except Exception as _e:
         print(f"[rule] notify_admins_session_started (update_by_url) error: {_e}")
@@ -3213,7 +3229,7 @@ def check_updates_by_rule():
             session_type = 'github_update',
             session_uuid = update_session.uuid,
             label        = f'GitHub update check running — {len(rule_ids)} rule(s)',
-            link         = '/rule/github/history_github_importer',
+            link         = '/rule/github/manage',
         )
     except Exception as _e:
         print(f"[rule] notify_admins_session_started (update_by_rule) error: {_e}")

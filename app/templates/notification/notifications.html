@@ -500,7 +500,7 @@
                         <i class="fa-solid fa-gear me-2" style="color:#6c757d;"></i>
                         System notifications
                     </div>
-                    <div class="notif-prefs-item" style="border-bottom:none;">
+                    <div class="notif-prefs-item">
                         <div class="notif-prefs-item-info">
                             <div class="notif-prefs-item-label">
                                 <i class="fa-solid fa-circle-check me-1" style="color:#198754;"></i>
@@ -510,6 +510,19 @@
                         </div>
                         <div class="form-check form-switch mb-0">
                             <input class="form-check-input" type="checkbox" v-model="prefs.job_done"
+                                   @change="savePrefs" style="cursor:pointer;">
+                        </div>
+                    </div>
+                    <div class="notif-prefs-item" style="border-bottom:none;">
+                        <div class="notif-prefs-item-info">
+                            <div class="notif-prefs-item-label">
+                                <i class="fa-solid fa-arrows-rotate me-1" style="color:#0d6efd;"></i>
+                                Scheduled sync run finished
+                            </div>
+                            <div class="notif-prefs-item-sub">Notified when a recurring GitHub Sync Schedule finishes a run</div>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" v-model="prefs.sync_run_finished"
                                    @change="savePrefs" style="cursor:pointer;">
                         </div>
                     </div>
@@ -579,6 +592,7 @@ const DEFAULT_PREFS = {
     rule_comment: true, bundle_comment: true, comment_reply: true,
     job_done: true, proposal: true,
     proposal_comment: true, proposal_accepted: true,
+    blog_published: true, sync_run_finished: true,
 }
 
 createApp({

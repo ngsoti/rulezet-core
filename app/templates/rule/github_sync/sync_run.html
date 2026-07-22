@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% block title %}Sync Schedule run — Rulezet{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/github/session_report.css') }}">
+{% endblock %}
+{% block content %}
+
+<div v-cloak class="container" id="main-container">
+
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-clock-rotate-left banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
+                <li class="breadcrumb-item"><a href="/rule/github/manage" class="text-decoration-none text-muted">Manage GitHub</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Sync run</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+            <div><h2 class="fw-bold mb-1">[[ scheduleTitle || 'Sync Schedule run' ]]</h2><div class="banner-accent"></div></div>
+        </div>
+        <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+            [[ !isFinished ? 'Running the scheduled repositories, one at a time.' : 'Automated run summary across every repository in this schedule.' ]]
+        </p>
+    </div>
+
+    <div v-if="!pageReady" class="text-center py-5">
+        <span class="spinner-border text-primary" role="status"></span>
+        <p class="text-muted small mt-3 mb-0">Loading run…</p>
+    </div>
+
+    <!-- Running -->
+    <div v-else-if="!isFinished" class="mb-4">
+        <div class="ul-progress-card">
+            <div class="ul-progress-head">
+                <div class="ul-progress-icon"><i class="fas fa-arrows-rotate fa-spin"></i></div>
+                <div>
+                    <p class="ul-progress-title">Syncing repositories…</p>
+                    <p class="ul-progress-sub">[[ jobDone ]] of [[ jobTotal ]] repositor[[ jobTotal !== 1 ? 'ies' : 'y' ]] processed</p>
+                </div>
+                <div class="ul-stat-row">
+                    <span class="ul-stat-chip ul-stat-chip--found"><span class="dot"></span>[[ doneRepos.length ]] done</span>
+                    <span v-if="errorRepos.length > 0" class="ul-stat-chip ul-stat-chip--error"><span class="dot"></span>[[ errorRepos.length ]] error<span v-if="errorRepos.length!==1">s</span></span>
+                </div>
+            </div>
+
+            <div class="ul-bar-track">
+                <div class="ul-bar-fill" :style="'width:'+jobPct+'%;'"></div>
+            </div>
+            <div class="ul-bar-meta">
+                <span><b>[[ jobDone ]]</b> / [[ jobTotal ]] repositor[[ jobTotal !== 1 ? 'ies' : 'y' ]] checked</span>
+                <span><b>[[ jobPct ]]%</b></span>
+            </div>
+
+            <div class="ul-log">
+                <div v-for="repo in repos" :key="repo.repo_url" class="ul-log-row" :class="'ul-log-row--' + repoLogType(repo.status)">
+                    <i class="ul-log-icon" :class="repoStatusIcon(repo.status)"></i>
+                    <span><span class="ul-log-rule">[[ shortRepoName(repo.repo_url) ]]</span> <span class="ul-log-msg">— [[ repo.status ]]</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Finished -->
+    <div v-else class="mb-5">
+        <div class="ul-report-card">
+            <div class="ul-report-head">
+                <div>
+                    <p class="ul-report-title">Sync run summary</p>
+                    <p class="ul-report-sub">[[ repos.length ]] repositor[[ repos.length !== 1 ? 'ies' : 'y' ]] processed [[ runFinishedAt ? '· finished ' + runFinishedAt : '' ]]</p>
+                </div>
+                <div class="ul-hero">
+                    <div class="ul-hero-ring" :style="'--pct:'+successRate+';'">
+                        <span class="ul-hero-ring-value">[[ successRate ]]%</span>
+                    </div>
+                    <div class="ul-hero-copy">
+                        <p class="ul-hero-label">Repositories synced cleanly</p>
+                        <p class="ul-hero-text">[[ doneRepos.length ]] of [[ repos.length ]] repositor[[ repos.length !== 1 ? 'ies' : 'y' ]] finished without error.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ul-kpi-row">
+                <div class="ul-kpi ul-kpi--found">
+                    <div class="ul-kpi-value">[[ totalAutoAccepted ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Auto-accepted updates</div>
+                </div>
+                <div class="ul-kpi ul-kpi--update">
+                    <div class="ul-kpi-value">[[ totalAutoRejected ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Auto-rejected (invalid syntax)</div>
+                </div>
+                <div class="ul-kpi ul-kpi--ok">
+                    <div class="ul-kpi-value">[[ totalAutoAdded ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>New rules auto-added</div>
+                </div>
+                <div v-if="errorRepos.length > 0" class="ul-kpi ul-kpi--error">
+                    <div class="ul-kpi-value">[[ errorRepos.length ]]</div>
+                    <div class="ul-kpi-label"><span class="dot"></span>Repositories with errors</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- One tab per repository -->
+        <nav class="dr-nav mb-3 mt-4" id="repoTabs" role="tablist">
+            <button v-for="(repo, idx) in repos" :key="repo.repo_url"
+                class="dr-nav__item" :class="{ active: idx === 0 }"
+                :id="'repo-tab-' + idx" data-bs-toggle="tab" :data-bs-target="'#repo-pane-' + idx"
+                type="button" role="tab" :aria-selected="idx === 0">
+                <i class="fa-brands fa-github"></i>
+                <span>[[ shortRepoName(repo.repo_url) ]]</span>
+                <span v-if="repoBadgeCount(repo) > 0" class="dr-nav__badge">[[ repoBadgeCount(repo) ]]</span>
+            </button>
+        </nav>
+
+        <div class="tab-content">
+            <div v-for="(repo, idx) in repos" :key="repo.repo_url"
+                class="tab-pane fade" :class="{ 'show active': idx === 0 }" :id="'repo-pane-' + idx" role="tabpanel">
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-1">[[ repo.repo_url ]]</h6>
+
+                        <div v-if="repo.status === 'error'" class="alert alert-danger">
+                            [[ repo.error_message || 'This repository failed during the sync.' ]]
+                        </div>
+
+                        <template v-else-if="repo.update_summary">
+                            <div class="row g-3 mb-3">
+                                <div class="col-6 col-md-3">
+                                    <div class="text-muted small">Found</div>
+                                    <div class="fw-bold fs-5">[[ repo.update_summary.found ?? 0 ]]</div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="text-muted small">Updated</div>
+                                    <div class="fw-bold fs-5">[[ repo.update_summary.updated ?? 0 ]]</div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="text-muted small">New rules</div>
+                                    <div class="fw-bold fs-5">[[ repo.update_summary.new_rules_count ?? 0 ]]</div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="text-muted small">Not found</div>
+                                    <div class="fw-bold fs-5">[[ repo.update_summary.not_found ?? 0 ]]</div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                                <div class="small fw-bold mb-1">Automation applied</div>
+                                <div class="small text-muted">
+                                    [[ repo.auto_accepted ]] update(s) auto-accepted ·
+                                    [[ repo.auto_rejected ]] rejected for invalid syntax ·
+                                    [[ repo.auto_added ]] new rule(s) auto-added
+                                </div>
+                            </div>
+
+                            <a class="btn btn-primary rounded-pill px-4" :href="'/rule/update_loading/' + repo.update_result_uuid">
+                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Open full report
+                            </a>
+                        </template>
+
+                        <div v-else class="text-muted small">No result recorded for this repository yet.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, computed } = Vue
+
+    const runUuid = '{{ run_uuid }}'
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const pageReady = ref(false)
+            const scheduleTitle = ref('')
+            const runStatus = ref('pending')
+            const runFinishedAt = ref(null)
+            const repos = ref([])
+            const jobDone = ref(0)
+            const jobTotal = ref(1)
+            let pollTimer = null
+
+            const isFinished = computed(() => ['done', 'failed'].includes(runStatus.value))
+            const jobPct = computed(() => jobTotal.value ? Math.round((jobDone.value / jobTotal.value) * 100) : 0)
+            const doneRepos = computed(() => repos.value.filter(r => r.status === 'done'))
+            const errorRepos = computed(() => repos.value.filter(r => r.status === 'error'))
+            const successRate = computed(() => repos.value.length ? Math.round((doneRepos.value.length / repos.value.length) * 100) : 0)
+
+            const totalAutoAccepted = computed(() => repos.value.reduce((s, r) => s + (r.auto_accepted || 0), 0))
+            const totalAutoRejected = computed(() => repos.value.reduce((s, r) => s + (r.auto_rejected || 0), 0))
+            const totalAutoAdded = computed(() => repos.value.reduce((s, r) => s + (r.auto_added || 0), 0))
+
+            function shortRepoName(url) {
+                if (!url) return 'repo'
+                const parts = url.replace(/\/$/, '').split('/')
+                return parts.slice(-2).join('/')
+            }
+            function repoBadgeCount(repo) {
+                const s = repo.update_summary
+                if (!s) return 0
+                return (s.updated || 0) + (s.new_rules_count || 0)
+            }
+            function repoStatusIcon(status) {
+                if (status === 'done') return 'fas fa-check-circle'
+                if (status === 'error') return 'fas fa-circle-xmark'
+                if (status === 'running') return 'fas fa-spinner fa-spin'
+                return 'fas fa-clock'
+            }
+            function repoLogType(status) {
+                if (status === 'done') return 'success'
+                if (status === 'error') return 'error'
+                return 'info'
+            }
+
+            async function poll() {
+                try {
+                    const res = await fetch(`/rule/github/sync_run/${runUuid}/status`)
+                    if (res.status !== 200) return
+                    const data = await res.json()
+                    scheduleTitle.value = data.schedule_title || ''
+                    runStatus.value = data.status
+                    runFinishedAt.value = data.finished_at
+                    repos.value = data.repos || []
+                    if (data.job) { jobDone.value = data.job.done; jobTotal.value = data.job.total || 1 }
+                } finally {
+                    pageReady.value = true
+                    if (!isFinished.value) {
+                        pollTimer = setTimeout(poll, 800)
+                    }
+                }
+            }
+            poll()
+
+            return {
+                pageReady, scheduleTitle, isFinished, repos, jobDone, jobTotal, jobPct,
+                doneRepos, errorRepos, successRate, totalAutoAccepted, totalAutoRejected, totalAutoAdded,
+                runFinishedAt, shortRepoName, repoBadgeCount, repoStatusIcon, repoLogType,
+            }
+        }
+    }).mount('#main-container')
+</script>
+{% endblock %}

@@ -2251,6 +2251,37 @@ def get_all_format() -> list[dict]:
     formats = FormatRule.query.all()
     return [fmt.to_json() for fmt in formats]
 
+def get_all_github_urls_matching(search: str = None, search_field: str = 'url', format_filter: str = None, author_filter: str = None):
+    """Unpaginated list of distinct GitHub source URLs matching the same
+    filters as get_optimized_github_data — backs 'select all N matching this
+    filter' bulk actions (Sync Schedule repo picker), where the full matching
+    set (not just the current page) must be resolved server-side."""
+    github_pattern = r'^https?://(www\.)?github\.com/[\w\-_]+/[\w\-_]+'
+    author_expr = func.substring(Rule.source, r'github\.com/([^/]+)')
+    query = db.session.query(Rule.source.label("url")).filter(
+        Rule.source.op('~')(github_pattern), Rule.is_deleted == False
+    )
+
+    if format_filter:
+        query = query.filter(Rule.format == format_filter)
+    if author_filter:
+        query = query.filter(author_expr.ilike(f"%{author_filter}%"))
+    if search:
+        if search_field == 'url':
+            query = query.filter(Rule.source.ilike(f"%{search}%"))
+        else:
+            query = query.filter(
+                or_(
+                    Rule.source.ilike(f"%{search}%"),
+                    Rule.format.ilike(f"%{search}%"),
+                    Rule.title.ilike(f"%{search}%")
+                )
+            )
+
+    query = query.group_by(Rule.source)
+    return [row.url for row in query.all()]
+
+
 def get_optimized_github_data(page: int = 1, search: str = None, search_field: str = 'url', format_filter: str = None, author_filter: str = None):
     github_pattern = r'^https?://(www\.)?github\.com/[\w\-_]+/[\w\-_]+'
     author_expr = func.substring(Rule.source, r'github\.com/([^/]+)')
@@ -2716,14 +2747,45 @@ def get_rule_update_list_filtered(sid: str,
     return rules, len(rules)
 
 
-def get_importer_list_page(page: int = 1):
-    return ImporterResult.query.paginate(page=page, per_page=20, max_per_page=20)
+def get_importer_list_page(page: int = 1, per_page: int = 20, search: str = '', sort: str = 'query_date', direction: str = 'desc'):
+    per_page = max(1, min(per_page or 20, 100))
+    query = ImporterResult.query
+    if search:
+        query = query.filter(ImporterResult.info.ilike(f"%{search}%"))
+    sort_col = {
+        'imported': ImporterResult.imported,
+        'bad_rules': ImporterResult.bad_rules,
+        'skipped': ImporterResult.skipped,
+        'total': ImporterResult.total,
+        'query_date': ImporterResult.query_date,
+    }.get(sort, ImporterResult.query_date)
+    query = query.order_by(sort_col.asc() if direction == 'asc' else sort_col.desc())
+    return query.paginate(page=page, per_page=per_page, max_per_page=100)
 
-def get_updater_list_page(page: int = 1):
+def get_updater_list_page(page: int = 1, per_page: int = 20, search: str = '', mode: str = '', sort: str = 'query_date', direction: str = 'desc'):
+    per_page = max(1, min(per_page or 20, 100))
     if current_user.is_admin():
-        return UpdateResult.query.paginate(page=page, per_page=20, max_per_page=20)
-    else :
-        return UpdateResult.query.filter_by(user_id=str(current_user.id)).paginate(page=page, per_page=20, max_per_page=20)
+        query = UpdateResult.query
+    else:
+        query = UpdateResult.query.filter_by(user_id=str(current_user.id))
+    if mode in ('by_url', 'by_rule'):
+        query = query.filter(UpdateResult.mode == mode)
+    if search:
+        query = query.filter(or_(
+            UpdateResult.info.ilike(f"%{search}%"),
+            UpdateResult.repo_sources.ilike(f"%{search}%"),
+        ))
+    sort_col = {
+        'found': UpdateResult.found,
+        'updated': UpdateResult.updated,
+        'not_found': UpdateResult.not_found,
+        'skipped': UpdateResult.skipped,
+        'total': UpdateResult.total,
+        'mode': UpdateResult.mode,
+        'query_date': UpdateResult.query_date,
+    }.get(sort, UpdateResult.query_date)
+    query = query.order_by(sort_col.asc() if direction == 'asc' else sort_col.desc())
+    return query.paginate(page=page, per_page=per_page, max_per_page=100)
 #####################
 #   Dump all rules  #
 #####################
@@ -3099,6 +3161,40 @@ def change_message_new_rule(id, new_message):
     new_rule.message = new_message
     db.session.commit()
     return True
+
+
+def import_single_new_rule(nr, user):
+    """Validate + import one NewRule row exactly like the manual 'Add all new
+    rules' bulk action does (handle_bulk_new_rules_decision) — full
+    re-validation via parse_rule_by_format, so a syntactically invalid row
+    can never become a real Rule regardless of what triggered the import
+    (manual click or a Sync Schedule's auto_add_new_rule). Returns
+    (added: bool, message: str)."""
+    import json as _json
+    from app.features.rule.rule_format.main_format import parse_rule_by_format
+    import app.features.account.account_core as AccountModel
+
+    source_info = None
+    updater = get_updater_result_by_id(nr.update_result_id)
+    if updater:
+        try:
+            info = _json.loads(updater.info)
+            source_info = info.get('repo_url')
+        except Exception:
+            pass
+
+    change_message_new_rule(nr.id, 'imported')
+    success, message, imported = parse_rule_by_format(
+        nr.rule_content, user, nr.format, source_info, github_path=nr.github_path
+    )
+    if success and imported:
+        profil = AccountModel.get_or_create_gamification_profile(imported.user_id)
+        if profil:
+            AccountModel.update_rules_owned_gamification(profil.id, imported.user_id)
+        return True, f"Added '{nr.name_rule}'"
+    else:
+        change_message_new_rule(nr.id, f'error: {message}')
+        return False, f"Skipped '{nr.name_rule}': {message}"
 
 
 def update_all_updater_status(history_id, message):

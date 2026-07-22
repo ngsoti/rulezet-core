@@ -26,7 +26,6 @@ from app import db
 from app.core.db_class.db import Rule, Tag, RuleTagAssociation, BackgroundJob, BackgroundJobLog, ActivityLog, RequestOwnerRule, User
 from app.features.rule.rule_core import _wipe_rule_children
 from app.core.utils.activity_log import log_activity
-import json as _json
 
 BATCH_SIZE = 2000   # bulk_insert_mappings handles large batches efficiently
 
@@ -1734,11 +1733,9 @@ def handle_bulk_new_rules_decision(job, app):
 
         from app.features.rule.rule_core import (
             get_valid_new_rules_by_sid, reject_all_new_rules_by_sid,
-            get_updater_result_by_id, change_message_new_rule,
+            import_single_new_rule,
         )
-        from app.features.rule.rule_format.main_format import parse_rule_by_format
         from app.core.db_class.db import User
-        import app.features.account.account_core as AccountModel
 
         if action == 'reject':
             reject_all_new_rules_by_sid(sid)
@@ -1773,29 +1770,13 @@ def handle_bulk_new_rules_decision(job, app):
                         level='info', event='paused')
                 return
 
-            source_info = None
-            updater = get_updater_result_by_id(nr.update_result_id)
-            if updater:
-                try:
-                    info = _json.loads(updater.info)
-                    source_info = info.get('repo_url')
-                except Exception:
-                    pass
-
-            change_message_new_rule(nr.id, 'imported')
-            success, message, imported = parse_rule_by_format(
-                nr.rule_content, user, nr.format, source_info, github_path=nr.github_path
-            )
-            if success and imported:
-                profil = AccountModel.get_or_create_gamification_profile(imported.user_id)
-                if profil:
-                    AccountModel.update_rules_owned_gamification(profil.id, imported.user_id)
+            added_ok, message = import_single_new_rule(nr, user)
+            if added_ok:
                 added += 1
-                log_job(job, f"Added '{nr.name_rule}'", level='success', event='progress')
+                log_job(job, message, level='success', event='progress')
             else:
-                change_message_new_rule(nr.id, f'error: {message}')
                 errors += 1
-                log_job(job, f"Skipped '{nr.name_rule}': {message}", level='warning', event='progress')
+                log_job(job, message, level='warning', event='progress')
 
             job.done = i + 1
             db.session.commit()
@@ -3051,3 +3032,162 @@ def handle_rule_test_bulk(job, app):
     TesterModel.mark_test_done(test, matched_count=matched_count, total_rules=total)
     log_job(job, f'Done — {matched_count}/{total} rules matched.',
             level='success', event='done')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  github_sync_schedule_run — execute one firing of a recurring Sync Schedule
+# ─────────────────────────────────────────────────────────────────────────────
+
+REPO_SYNC_TIMEOUT_SECONDS = 1800  # 30 min per repo — one hung repo must never block the rest of the schedule
+
+
+@register_handler('github_sync_schedule_run')
+def handle_github_sync_schedule_run(job, app):
+    """
+    One firing of a GithubSyncSchedule. Loops its repos, reusing the exact
+    same mechanism as a manual GitHub update check (Update_class) for each
+    one, then — per repo — reuses the exact same core functions the manual
+    "Accept all" / "Add all new rules" buttons call if that repo has
+    auto_accept_update / auto_add_new_rule enabled.
+
+    IMPORTANT: there is exactly one global job_worker thread (job_worker.py).
+    This handler must never enqueue another BackgroundJob and wait for it —
+    that would deadlock, since this very thread is the only one that could
+    ever pick it up. All per-rule decision logic is called in-process here.
+
+    No nested `with app.app_context()` — see the comment on
+    handle_bulk_update_decision() for why that silently breaks progress
+    tracking.
+
+    Payload: schedule_uuid, run_uuid.
+    job.total is set to len(schedule.repos) when the run was created
+    (scheduler_engine._fire_schedule) — progress is one unit per repo, not
+    per rule, matching the fix already applied to Update_class/Session_class
+    (a per-rule progress bar across N repos would reintroduce the exact
+    "0→N jump" bug the whole GitHub import/update rework started from).
+    """
+    from app.core.db_class.db import GithubSyncSchedule, GithubSyncRun, GithubSyncRunRepo
+    from app.features.rule.rule_core import (
+        get_updater_result, get_rule_update_list_filtered, accept_all_update,
+        get_valid_new_rules_by_sid, import_single_new_rule,
+    )
+    from app.features.rule.rule_from_github.update_rule import update_class as UpdateModel
+
+    payload      = job.payload or {}
+    schedule_uuid = payload.get('schedule_uuid')
+    run_uuid      = payload.get('run_uuid')
+
+    run = GithubSyncRun.query.filter_by(uuid=run_uuid).first()
+    schedule = GithubSyncSchedule.query.filter_by(uuid=schedule_uuid).first()
+
+    if not run or not schedule:
+        job.status = 'failed'
+        job.error = 'Sync Schedule or run not found (deleted before the job started?).'
+        log_job(job, job.error, level='error', event='failed')
+        db.session.commit()
+        return
+
+    try:
+        run.status = 'running'
+        db.session.commit()
+
+        repos = list(schedule.repos)
+        job.total = max(len(repos), 1)
+
+        for i, repo_cfg in enumerate(repos):
+            if _is_cancelled(job):
+                log_job(job, f"Cancelled at {job.done}/{job.total} repo(s).", level='warning', event='cancelled')
+                run.status = 'failed'
+                db.session.commit()
+                return
+            if _should_pause(job):
+                db.session.commit()
+                log_job(job, f"Paused at {job.done}/{job.total} repo(s). Click Resume to continue.",
+                        level='info', event='paused')
+                return
+
+            run_repo = GithubSyncRunRepo(run_id=run.id, repo_url=repo_cfg.repo_url, status='running')
+            db.session.add(run_repo)
+            db.session.commit()
+            log_job(job, f"Checking '{repo_cfg.repo_url}'…", level='info', event='progress')
+
+            info = {
+                "mode": "by_url",
+                "repo_url": repo_cfg.repo_url,
+                "initiated_by": f"Sync Schedule — {schedule.title}",
+                "author": (schedule.editor.last_name if schedule.editor else None),
+                "license": None,
+                "description": None,
+            }
+            update_session = UpdateModel.Update_class([repo_cfg.repo_url], schedule.editor, info, mode="by_url")
+            update_session.start()
+            UpdateModel.sessions.append(update_session)
+
+            finished = update_session._save_done.wait(timeout=REPO_SYNC_TIMEOUT_SECONDS)
+            if not finished:
+                run_repo.status = 'error'
+                run_repo.error_message = f'Timed out after {REPO_SYNC_TIMEOUT_SECONDS}s.'
+                log_job(job, f"'{repo_cfg.repo_url}' timed out.", level='error', event='progress')
+                job.done = i + 1
+                db.session.commit()
+                continue
+
+            sid = update_session.uuid
+            run_repo.update_result_uuid = sid
+            result = get_updater_result(sid)
+            if not result:
+                run_repo.status = 'error'
+                run_repo.error_message = 'Update session finished but produced no result (see server logs).'
+                log_job(job, f"'{repo_cfg.repo_url}' produced no result.", level='error', event='progress')
+                job.done = i + 1
+                db.session.commit()
+                continue
+
+            if repo_cfg.auto_accept_update:
+                rule_list, count = get_rule_update_list_filtered(sid)
+                if count:
+                    # accept_all_update force-rejects rule_syntax_valid == False rows —
+                    # it never auto-accepts an invalid-syntax update, by design.
+                    run_repo.auto_accepted = sum(1 for r in rule_list if r.rule_syntax_valid)
+                    run_repo.auto_rejected = sum(1 for r in rule_list if not r.rule_syntax_valid)
+                    accept_all_update(rule_list)
+                    log_job(job, f"'{repo_cfg.repo_url}': auto-accepted {run_repo.auto_accepted} update(s), "
+                                 f"auto-rejected {run_repo.auto_rejected} invalid-syntax update(s).",
+                            level='success', event='progress')
+
+            if repo_cfg.auto_add_new_rule:
+                new_rules = get_valid_new_rules_by_sid(sid)
+                added = 0
+                for nr in new_rules:
+                    added_ok, _message = import_single_new_rule(nr, schedule.editor)
+                    if added_ok:
+                        added += 1
+                run_repo.auto_added = added
+                if new_rules:
+                    log_job(job, f"'{repo_cfg.repo_url}': auto-added {added}/{len(new_rules)} new rule(s).",
+                            level='success', event='progress')
+
+            run_repo.status = 'done'
+            job.done = i + 1
+            db.session.commit()
+
+        run.status = 'done'
+        run.finished_at = datetime.datetime.utcnow()
+        schedule.last_run_at = run.finished_at
+        job.status = 'done'
+        db.session.commit()
+
+        log_job(job, f'Sync Schedule run finished — {len(repos)} repo(s) processed.', level='success', event='done')
+
+        try:
+            from app.features.notification.notification_core import notify_admins_sync_run_finished
+            notify_admins_sync_run_finished(run)
+        except Exception as e:
+            print(f"[job_handlers] notify_admins_sync_run_finished error: {e}")
+
+    except Exception as e:
+        job.status = 'failed'
+        job.error = str(e)
+        run.status = 'failed'
+        log_job(job, str(e), level='error', event='failed')
+        db.session.commit()
