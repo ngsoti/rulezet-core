@@ -650,7 +650,12 @@ class InvalidRuleModel(db.Model):
             "user_id": self.user_id,
             "url": self.url,
             "license": self.license,
-            "github_path": self.github_path if self.github_path else None
+            "github_path": self.github_path if self.github_path else None,
+            # Sent eagerly (not just user_id) so the UI can show the editor's
+            # name right away instead of a "?" placeholder until a UserChip
+            # hover triggers its own lazy /account/user_mini/<id> fetch.
+            "editor_name": (f"{self.user.first_name} {self.user.last_name}".strip() if self.user else None),
+            "editor_avatar": (self.user.get_avatar_url() if self.user else None),
         }
     
 

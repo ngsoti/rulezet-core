@@ -24,13 +24,14 @@
 
 import PaginationComponent from '/static/js/rule/paginationComponent.js'
 import CodeViewer from '/static/js/components/code-viewer.js'
+import UserChip from '/static/js/components/UserChip.js'
 import { create_message } from '/static/js/toaster.js'
 
 const { ref, reactive, computed, onMounted, watch } = Vue
 
 export default {
     name: 'BadRuleList',
-    components: { PaginationComponent, CodeViewer },
+    components: { PaginationComponent, CodeViewer, 'user-chip': UserChip },
     props: {
         fetchUrl:        { type: String,  default: '/rule/get_bads_rules_page_filter' },
         deleteAllUrl:    { type: String,  default: '/rule/bad_rule/delete_all_bad_rule' },
@@ -56,7 +57,28 @@ export default {
         const search      = ref('')
         const searchField = ref('all')
         const formatFilter = ref(props.ruleTypeFilter || '')
+        const userFilter  = ref('')
         let searchTimer = null
+
+        // ── Editor (user) filter — single-select, scoped to the same
+        // source/format the list itself is scoped to, refetched whenever
+        // either changes so the picker never offers a user with 0 rules
+        // in the current view.
+        const userList = ref([])
+        async function fetchUserList() {
+            try {
+                const params = new URLSearchParams()
+                if (props.source)       params.set('sources', props.source)
+                if (formatFilter.value) params.set('rule_types', formatFilter.value)
+                const res = await fetch('/rule/get_bad_rules_users_usage?' + params.toString())
+                if (res.ok) userList.value = await res.json()
+            } catch {
+                userList.value = []
+            }
+        }
+        // Only admins can filter by other users (the backend returns [] and
+        // ignores user_id entirely for anyone else — see get_bad_rules_users_usage).
+        if (props.currentUserIsAdmin) watch(formatFilter, fetchUserList)
 
         // ── Sort — server-side, same setSort/sortIcon convention as RuleList ──
         const sortKey = ref('created_at')
@@ -78,6 +100,7 @@ export default {
         // ── Column visibility (table mode) — same picker pattern as RuleList ──
         const TOGGLEABLE_COLS = [
             { key: 'format', label: 'Format' },
+            { key: 'editor', label: 'Editor' },
             { key: 'error',  label: 'Error message' },
             { key: 'path',   label: 'Path' },
             { key: 'date',   label: 'Date' },
@@ -119,6 +142,7 @@ export default {
                 if (search.value.trim())      params.set('search_field', searchField.value)
                 if (props.source)             params.set('sources', props.source)
                 if (formatFilter.value)       params.set('rule_types', formatFilter.value)
+                if (userFilter.value)         params.set('user_id', userFilter.value)
 
                 const res = await fetch(props.fetchUrl + '?' + params.toString())
                 if (res.status === 200) {
@@ -156,10 +180,11 @@ export default {
             search.value = ''
             searchField.value = 'all'
             formatFilter.value = ''
+            userFilter.value = ''
             fetchData(1)
         }
 
-        const hasActiveFilters = computed(() => !!(search.value.trim() || formatFilter.value))
+        const hasActiveFilters = computed(() => !!(search.value.trim() || formatFilter.value || userFilter.value))
 
         function toggleExpand(id) {
             const next = new Set(expandedIds.value)
@@ -211,12 +236,15 @@ export default {
             }
         }
 
-        onMounted(() => fetchData(1))
+        onMounted(() => {
+            fetchData(1)
+            if (props.currentUserIsAdmin) fetchUserList()
+        })
 
         return {
             items, loading, currentPage, totalPages, totalRules, viewMode, expandedIds,
             filtersOpen, perPage,
-            search, searchField, formatFilter, hasActiveFilters,
+            search, searchField, formatFilter, userFilter, userList, hasActiveFilters,
             TOGGLEABLE_COLS, colVisible, toggleColumn, tableColspan,
             allExpanded, expandAll, collapseAll,
             sortKey, sortDir, setSort, sortIcon,
@@ -341,6 +369,13 @@ export default {
                 </select>
             </div>
 
+            <div v-if="currentUserIsAdmin" class="rl-fp-item">
+                <select v-model="userFilter" class="rl-fp-select" @change="onFilterChange" aria-label="Editor">
+                    <option value="">All editors</option>
+                    <option v-for="u in userList" :key="u.id" :value="u.id">{{ u.name }} ({{ u.count }})</option>
+                </select>
+            </div>
+
             <button v-if="hasActiveFilters" class="rl-fp-reset" @click="resetFilters">
                 <i class="fas fa-rotate-left"></i> Reset
             </button>
@@ -368,7 +403,11 @@ export default {
             <div class="card-body d-flex flex-column p-4" style="z-index:1;">
                 <div class="mb-3 pe-5">
                     <h5 class="fw-bold mb-1 border-start border-danger border-4 ps-3">{{ rule.file_name }}</h5>
-                    <small class="text-muted d-block mt-2">{{ rule.created_at }}</small>
+                    <div class="d-flex align-items-center gap-2 mt-2">
+                        <user-chip v-if="colVisible.editor" :user-id="rule.user_id" :username="rule.editor_name" :avatar="rule.editor_avatar" size="xs"></user-chip>
+                        <span v-if="colVisible.editor" class="text-muted opacity-50">|</span>
+                        <small class="text-muted">{{ rule.created_at }}</small>
+                    </div>
                 </div>
                 <p class="rl-card-desc mb-2 text-danger" style="-webkit-line-clamp:3;-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden;">
                     <i class="fas fa-triangle-exclamation me-1"></i>{{ rule.error_message }}
@@ -413,6 +452,7 @@ export default {
                     <th class="dt-th dt-th--sortable" @click="setSort('file_name')">
                         <div class="dt-th-inner">File <i class="fas dt-sort-icon" :class="sortIcon('file_name')"></i></div>
                     </th>
+                    <th v-if="colVisible.editor" class="dt-th" style="width:160px;">Editor</th>
                     <th v-if="colVisible.error" class="dt-th dt-th--sortable" @click="setSort('error_message')">
                         <div class="dt-th-inner">Error message <i class="fas dt-sort-icon" :class="sortIcon('error_message')"></i></div>
                     </th>
@@ -430,6 +470,7 @@ export default {
                     <tr class="dt-row">
                         <td v-if="colVisible.format" class="dt-td"><span class="badge rounded-pill bg-dark pt-1 shadow-sm">{{ (rule.rule_type||'?').toUpperCase() }}</span></td>
                         <td class="dt-td" style="max-width:220px;word-break:break-word;">{{ rule.file_name }}</td>
+                        <td v-if="colVisible.editor" class="dt-td"><user-chip :user-id="rule.user_id" :username="rule.editor_name" :avatar="rule.editor_avatar" size="xs"></user-chip></td>
                         <td v-if="colVisible.error" class="dt-td dt-td--truncate text-danger" style="font-size:.8rem;">{{ rule.error_message }}</td>
                         <td v-if="colVisible.path" class="dt-td" style="font-size:.78rem;color:var(--subtle-text-color);">{{ rule.github_path || '—' }}</td>
                         <td v-if="colVisible.date" class="dt-td" style="font-size:.78rem;">{{ rule.created_at }}</td>

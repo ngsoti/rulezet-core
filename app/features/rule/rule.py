@@ -2184,11 +2184,25 @@ def get_bad_rules_error_messages_usage():
 @rule_blueprint.route('/get_bad_rules_licenses_usage', methods=['GET'])
 def get_bad_rules_licenses_usage():
     user_id = request.args.get('user_id', type=int)
-    
+
     licenses = BadRuleModel.get_licenses_usage(user_id)
-    
+
     return licenses
-    
+
+@rule_blueprint.route('/get_bad_rules_users_usage', methods=['GET'])
+@login_required
+def get_bad_rules_users_usage():
+    """Distinct users with an invalid rule in the given source/format scope —
+    feeds BadRuleList's Editor filter dropdown. Admin-only: a non-admin is
+    always scoped to their own invalid rules (see get_filtered_bad_rules_query),
+    so a cross-user listing wouldn't be usable to them anyway, and it would
+    otherwise leak other users' identities/activity for no reason."""
+    if not current_user.is_admin():
+        return jsonify([])
+    source    = request.args.get('sources', None, type=str)
+    rule_type = request.args.get('rule_types', None, type=str)
+    return jsonify(BadRuleModel.get_users_usage(source=source, rule_type=rule_type))
+
 
 #####################
 #   Repport rule    #

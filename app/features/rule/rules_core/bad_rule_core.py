@@ -292,6 +292,29 @@ def get_licenses_usage(user_id=None):
     licenses = [{'name': license, 'count': count} for license, count in results]
     return licenses
 
+def get_users_usage(source=None, rule_type=None):
+    """Distinct users with an invalid rule matching the given source/format
+    scope — feeds BadRuleList's "Editor" filter with the same {id, name, count}
+    shape UserChip-adjacent pickers elsewhere in the app already expect."""
+    query = db.session.query(
+        InvalidRuleModel.user_id,
+        User.first_name,
+        User.last_name,
+        db.func.count(InvalidRuleModel.id).label('count'),
+    ).join(User, User.id == InvalidRuleModel.user_id).group_by(
+        InvalidRuleModel.user_id, User.first_name, User.last_name
+    )
+    if source:
+        query = query.filter(InvalidRuleModel.url == source)
+    if rule_type:
+        query = query.filter(InvalidRuleModel.rule_type == rule_type)
+
+    results = query.order_by(db.func.count(InvalidRuleModel.id).desc()).all()
+    return [
+        {'id': uid, 'name': f"{first} {last}".strip(), 'count': count}
+        for uid, first, last, count in results
+    ]
+
 def get_filtered_bad_rules_query(params) -> tuple:
     """Return a SQLAlchemy paginated query for filtered bad rules belonging to the current user."""
     page = params.get('page', 1, type=int)
@@ -304,12 +327,17 @@ def get_filtered_bad_rules_query(params) -> tuple:
     licenses = params.get('licenses', '', type=str)
     
     query = InvalidRuleModel.query
-    
-    if user_id:
+
+    # A non-admin can never pass an arbitrary `user_id` to view someone
+    # else's invalid rules (which include full raw rule content and error
+    # detail) — only admins may pick a specific user via the Editor filter;
+    # everyone else is always scoped to their own rows regardless of what
+    # `user_id` was sent.
+    if current_user.is_admin() and user_id:
         query = query.filter(InvalidRuleModel.user_id == user_id)
-    else:
+    elif not current_user.is_admin():
         query = query.filter(InvalidRuleModel.user_id == current_user.id)
-    
+
     if search and search.strip():
         search_term = f"%{search}%"
         if search_field == 'file_name':
