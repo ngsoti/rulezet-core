@@ -2965,6 +2965,8 @@ def get_rules(sid):
     rules = paginated.items
 
     updates_available = RuleModel.count_updates_available(sid)
+    up_to_date        = RuleModel.count_up_to_date(sid)
+    not_found          = RuleModel.count_rules_not_found(sid)
     if rules:
         rules_list = [rule.to_json() for rule in rules]
         return {
@@ -2972,10 +2974,14 @@ def get_rules(sid):
             "total_pages": paginated.pages,
             "total_rules": paginated.total,
             "updates_available": updates_available,
+            "up_to_date": up_to_date,
+            "not_found": not_found,
         }, 200
     return {
         "rules": [],
         "updates_available": updates_available,
+        "up_to_date": up_to_date,
+        "not_found": not_found,
     }, 200
 
 # accetped all change associate to a sid

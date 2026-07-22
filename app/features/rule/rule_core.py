@@ -2611,6 +2611,30 @@ def count_updates_available(sid: str) -> int:
     ).count()
 
 
+def count_up_to_date(sid: str) -> int:
+    """Count RuleStatus rows found with no pending update — i.e. currently up
+    to date. Computed live (not the UpdateResult.skipped snapshot column,
+    which is only ever set once when the scan itself finishes) so it reflects
+    rules the user has since accepted/rejected too."""
+    update_result = UpdateResult.query.filter_by(uuid=sid).first()
+    if not update_result:
+        return 0
+    return RuleStatus.query.filter_by(
+        update_result_id=update_result.id, found=True, update_available=False
+    ).count()
+
+
+def count_rules_not_found(sid: str) -> int:
+    """Count RuleStatus rows never located in the repo. Live, same rationale
+    as count_up_to_date()."""
+    update_result = UpdateResult.query.filter_by(uuid=sid).first()
+    if not update_result:
+        return 0
+    return RuleStatus.query.filter_by(
+        update_result_id=update_result.id, found=False
+    ).count()
+
+
 def count_pending_new_rules(sid: str) -> int:
     """Count NewRule rows not yet imported or rejected for a session."""
     update_result = UpdateResult.query.filter_by(uuid=sid).first()

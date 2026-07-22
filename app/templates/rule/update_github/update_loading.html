@@ -851,14 +851,16 @@
             const liveErrors  = computed(() => (result_data.value.bad_rules || 0) + (result_data.value.not_found || 0))
 
             // ── Finished-view report: summary hero + KPIs + donut ───────────
-            // skipped == found && !update_available (see update_class.py) —
-            // i.e. rules that are already up to date. skipped + updated +
-            // not_found always sums to total, so the donut is an honest
-            // 3-way split of every rule actually checked.
+            // result_data.{skipped,updated,not_found} are a one-time snapshot
+            // taken when the scan itself finished — they never change again,
+            // so "Accept all" on every update left the UI claiming updates
+            // were still pending forever. updatesAvailable/liveUpToDate/
+            // liveNotFound come from getRules() instead, which re-fetches
+            // after every accept/reject/bulk job, so these track reality.
             const totalChecked        = computed(() => result_data.value.total || 0)
-            const upToDate             = computed(() => result_data.value.skipped || 0)
-            const updateAvailableCount = computed(() => result_data.value.updated || 0)
-            const notFoundCount        = computed(() => result_data.value.not_found || 0)
+            const upToDate             = computed(() => liveUpToDate.value ?? (result_data.value.skipped || 0))
+            const updateAvailableCount = computed(() => updatesAvailable.value ?? (result_data.value.updated || 0))
+            const notFoundCount        = computed(() => liveNotFound.value ?? (result_data.value.not_found || 0))
             const successRate = computed(() =>
                 totalChecked.value > 0 ? Math.round((upToDate.value / totalChecked.value) * 100) : 0
             )
@@ -1348,7 +1350,13 @@
             const current_page_rules = ref(1)
             const total_pages_rules = ref(1)
             const total_rules = ref(0)
-            const updatesAvailable = ref(0)
+            const updatesAvailable = ref(null)
+            // Live counterparts to updatesAvailable — null until the first
+            // fetch resolves, so the report can fall back to the scan's
+            // one-time snapshot (result_data.skipped/not_found) until then,
+            // then switch to these and never look at the stale snapshot again.
+            const liveUpToDate  = ref(null)
+            const liveNotFound  = ref(null)
             const rulesLoaded = ref(false)
 
             async function getRules(page) {
@@ -1366,6 +1374,8 @@
                         total_pages_rules.value = data.total_pages || 1
                         total_rules.value = data.total_rules || 0
                         updatesAvailable.value = data.updates_available ?? 0
+                        liveUpToDate.value = data.up_to_date ?? 0
+                        liveNotFound.value = data.not_found ?? 0
                         current_page_rules.value = page
                         rulesLoaded.value = true
                     } else {
