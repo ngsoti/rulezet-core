@@ -390,6 +390,34 @@
                 </div>
             </div>
 
+            <!-- Application font -->
+            <div class="card mb-3" id="section-app-font">
+                <div class="card-body">
+                    <div class="settings-card-header mb-3">
+                        <div class="settings-card-icon"><i class="fas fa-font"></i></div>
+                        <div>
+                            <h6 class="settings-section-title mb-0">Application font</h6>
+                            <p class="text-muted small mb-0">Font used across the whole interface — menus, text, buttons.</p>
+                        </div>
+                    </div>
+                    <div class="settings-theme-group">
+                        <div v-for="opt in app_font_options" :key="opt.value"
+                             class="settings-theme-card"
+                             :class="{ active: app_font === opt.value }"
+                             @click="setAppFont(opt.value)">
+                            <div class="font-preview" :style="opt.css ? { fontFamily: opt.css } : {}">
+                                <div style="font-weight:500;font-size:.9rem;">[[ opt.sample ]]</div>
+                                <div style="font-size:.72rem;opacity:.6;">Aa Bb Cc 123</div>
+                            </div>
+                            <div class="settings-theme-label">
+                                <span>[[ opt.label ]]</span>
+                                <i v-if="app_font === opt.value" class="fas fa-circle-check ms-auto text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- PivoTick graph background -->
             <div class="card mb-3" id="section-pivotick-bg">
                 <div class="card-body">
@@ -689,6 +717,22 @@
                             </div>
                             <div class="recap-status">
                                 <i v-if="code_font_saved" class="fas fa-circle-check text-success"></i>
+                            </div>
+                        </div>
+
+                        <div class="recap-divider"></div>
+
+                        <!-- Application font row -->
+                        <div class="recap-row">
+                            <div class="recap-icon"><i class="fas fa-font"></i></div>
+                            <div class="recap-body">
+                                <div class="recap-label">App font</div>
+                                <div class="recap-value">
+                                    [[ app_font_options.find(o => o.value === app_font)?.label || app_font ]]
+                                </div>
+                            </div>
+                            <div class="recap-status">
+                                <i v-if="app_font_saved" class="fas fa-circle-check text-success"></i>
                             </div>
                         </div>
 
@@ -1158,6 +1202,42 @@
                 create_message('Code font saved', 'success')
             }
 
+            // ── Application font (localStorage only) — same shape as Code font,
+            // but applied as a direct inline style on <body> rather than a CSS
+            // variable + fallback on the body{} rule: body's default font
+            // already comes from Bootstrap's own stylesheet, and a var(--font-app,
+            // inherit) fallback on body overrides that rule unconditionally —
+            // 'inherit' then resolves to whatever <html> has (nothing), losing
+            // Bootstrap's sans-serif default the moment this feature shipped.
+            // Setting/removing body.style.fontFamily directly leaves that
+            // stylesheet rule untouched whenever "System" (no override) is picked.
+            const APP_FONT_OPTS = [
+                { value: 'system',  label: 'System',  sample: 'System UI',  css: null },
+                { value: 'inter',   label: 'Inter',    sample: 'Inter',      css: "'Inter', sans-serif" },
+                { value: 'poppins', label: 'Poppins',  sample: 'Poppins',    css: "'Poppins', sans-serif" },
+                { value: 'georgia', label: 'Serif',    sample: 'Georgia',    css: "Georgia, 'Times New Roman', serif" },
+            ]
+            const stored_app_font_css = localStorage.getItem('rz-app-font')
+            const app_font = ref(APP_FONT_OPTS.find(o => o.css === stored_app_font_css)?.value || 'system')
+            const app_font_saved = ref(false)
+            const app_font_options = APP_FONT_OPTS
+            function setAppFont(value) {
+                if (value === app_font.value) return
+                app_font.value = value
+                const opt = APP_FONT_OPTS.find(o => o.value === value)
+                if (!opt) return
+                if (opt.css) {
+                    localStorage.setItem('rz-app-font', opt.css)
+                    document.body.style.fontFamily = opt.css
+                } else {
+                    localStorage.removeItem('rz-app-font')
+                    document.body.style.removeProperty('font-family')
+                }
+                app_font_saved.value = true
+                setTimeout(() => { app_font_saved.value = false }, 2000)
+                create_message('Application font saved', 'success')
+            }
+
             // ── PivoTick graph background ───────────────────────────────────────
             // dots/default/plain: pure CSS, attribute-driven (see pivotick-overrides.css).
             // color/image: same attribute PLUS an inline CSS var carrying the actual
@@ -1613,6 +1693,7 @@
                 localStorage.removeItem('rz-notif-style')
                 localStorage.removeItem('rz-list-view')
                 localStorage.removeItem('rz-code-font')
+                localStorage.removeItem('rz-app-font')
                 localStorage.removeItem('rz-per-page-card')
                 localStorage.removeItem('rz-per-page-table')
                 localStorage.removeItem('rz-json-theme')
@@ -1622,6 +1703,7 @@
 
                 // Reset CSS vars / attributes immediately
                 document.documentElement.style.removeProperty('--font-mono')
+                document.body.style.removeProperty('font-family')
                 document.documentElement.removeAttribute('data-json-theme')
 
                 // Server-side preference (theme)
@@ -1649,6 +1731,7 @@
                 notif_style, notif_style_saved, notif_style_options, setNotifStyle,
                 list_view, list_view_saved, list_view_options, setListView,
                 code_font, code_font_saved, font_options, setCodeFont,
+                app_font, app_font_saved, app_font_options, setAppFont,
                 pivotick_bg, pivotick_bg_options, pivotick_bg_color, pivotick_bg_image, setPivotickBg,
                 onPivotickColorInput, pivotickBackgrounds, pivotickBackgroundsLoading,
                 selectPivotickImage, onUploadPivotickImage, onDeletePivotickImage, IS_ADMIN,
