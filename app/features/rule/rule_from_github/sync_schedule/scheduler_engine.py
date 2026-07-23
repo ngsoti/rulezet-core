@@ -125,7 +125,15 @@ def start_scheduler(app):
     from app.core.db_class.db import GithubSyncSchedule
 
     with app.app_context():
-        schedules = GithubSyncSchedule.query.filter_by(is_active=True).all()
+        try:
+            schedules = GithubSyncSchedule.query.filter_by(is_active=True).all()
+        except Exception:
+            # Table doesn't exist yet — a brand-new install/test DB before
+            # `flask db upgrade` / db.create_all() has run. Same defensive
+            # pattern as seed_official_connector()/seed_default_themes()
+            # just above in create_app(): nothing to register yet, and the
+            # app must still boot cleanly either way.
+            return
         for schedule in schedules:
             try:
                 register_schedule(app, schedule)
