@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+{% import 'macros/admin_nav.html' as anav %}
+{% block title %}Chat History — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot/admin_conversations.css') }}">
+{% endblock %}
+
+{% block content %}
+{% if current_user.is_admin() %}
+<div class="container-fluid my-4" id="chx-app" v-cloak>
+
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-robot banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">Chat History</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="banner-icon"><i class="fa-solid fa-robot"></i></div>
+      <div>
+        <h2 class="fw-bold mb-1">Chat History</h2>
+        <div class="banner-accent"></div>
+      </div>
+    </div>
+    <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+      Every conversation held with the chatbot assistant — who asked what, and how it responded.
+    </p>
+  </div>
+
+  <div class="dr-nav mb-3">
+    {{ anav.admin_nav_toggle() }}
+  </div>
+  {{ anav.admin_nav_panel('chatbot') }}
+
+  <!-- Toolbar -->
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+      <span class="text-muted small">Total conversations:</span>
+      <span class="badge bg-primary">[[ total ]]</span>
+    </div>
+    <div class="chx-search">
+      <i class="fas fa-search chx-search-icon"></i>
+      <input class="chx-search-input" type="text" placeholder="Search by user…"
+             v-model="search" @input="onSearchInput" aria-label="Search conversations" />
+      <button v-if="search" class="chx-search-clear" @click="clearSearch" aria-label="Clear search">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="chx-filters mb-3">
+
+    <!-- User picker -->
+    <div class="dropdown chx-user-filter">
+      <button class="chx-filter-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside" type="button">
+        <i class="fa-solid fa-user"></i>
+        <span v-if="!userFilter">Any user</span>
+        <span v-else class="fw-semibold">[[ userFilter.username ]]</span>
+        <i class="fa-solid fa-chevron-down chx-filter-caret"></i>
+      </button>
+      <div class="dropdown-menu shadow-lg border-0 p-2" style="min-width:260px;max-height:340px;overflow-y:auto;">
+        <input type="text" class="form-control form-control-sm mb-2" placeholder="Search users…"
+               v-model="userSearch" @click.stop />
+        <div v-if="!userList.length" class="text-center text-muted small py-2">No users yet.</div>
+        <div v-for="u in filteredUserList" :key="u.user_id"
+             class="chx-user-option" :class="{ 'chx-user-option--active': userFilter && userFilter.user_id === u.user_id }"
+             @click="selectUserFilter(u)">
+          <user-chip :user-id="u.user_id" :username="u.username" :avatar="u.avatar" size="xs"></user-chip>
+          <span class="badge rounded-pill chx-count-badge ms-auto">[[ u.count ]]</span>
+        </div>
+        <div v-if="userFilter" class="text-end pt-1 border-top mt-1">
+          <button class="btn btn-sm btn-link text-muted text-decoration-none" @click="selectUserFilter(null)">
+            <i class="fa-solid fa-rotate-left me-1"></i>Clear
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Date range -->
+    <div class="chx-date-range">
+      <i class="fa-solid fa-calendar-days text-muted" style="font-size:.75rem;"></i>
+      <input type="date" class="chx-date-input" v-model="dateFrom" @change="onFilterChange" title="From date" />
+      <span class="text-muted small">→</span>
+      <input type="date" class="chx-date-input" v-model="dateTo" @change="onFilterChange" title="To date" />
+      <button v-if="dateFrom || dateTo" class="chx-filter-clear" @click="dateFrom=''; dateTo=''; onFilterChange()" title="Clear dates">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Message count range -->
+    <div class="chx-count-range">
+      <i class="fa-solid fa-comments text-muted" style="font-size:.75rem;"></i>
+      <input type="number" min="0" class="chx-count-input" placeholder="Min" v-model.number="countMin" @change="onFilterChange" />
+      <span class="text-muted small">–</span>
+      <input type="number" min="0" class="chx-count-input" placeholder="Max" v-model.number="countMax" @change="onFilterChange" />
+    </div>
+
+    <!-- Errors only -->
+    <button type="button" class="chx-filter-chip" :class="{ 'chx-filter-chip--active': errorsOnly }" @click="errorsOnly = !errorsOnly; onFilterChange()">
+      <i class="fa-solid fa-triangle-exclamation"></i> Errors only
+    </button>
+  </div>
+
+  <!-- Conversation list -->
+  <div class="chx-panel mb-3">
+    <div class="chx-table-scroll">
+      <table class="dt-table">
+        <thead class="dt-thead">
+          <tr>
+            <th class="dt-th">User</th>
+            <th class="dt-th dt-th--sortable" :class="{ 'dt-th--sorted': sortBy === 'started_at' }" @click="sortColumn('started_at')">
+              <span class="dt-th-inner">Started <i :class="sortIcon('started_at')"></i></span>
+            </th>
+            <th class="dt-th dt-th--sortable" :class="{ 'dt-th--sorted': sortBy === 'last_message_at' }" @click="sortColumn('last_message_at')">
+              <span class="dt-th-inner">Last Activity <i :class="sortIcon('last_message_at')"></i></span>
+            </th>
+            <th class="dt-th dt-th--sortable" :class="{ 'dt-th--sorted': sortBy === 'message_count' }" @click="sortColumn('message_count')">
+              <span class="dt-th-inner">Messages <i :class="sortIcon('message_count')"></i></span>
+            </th>
+            <th class="dt-th"></th>
+          </tr>
+        </thead>
+        <tbody v-if="items.length">
+          <tr v-for="conv in items" :key="conv.uuid" class="dt-row chx-row" :class="{ 'chx-row--error': conv.error_count > 0 }" @click="openConversation(conv)">
+            <td class="dt-td">
+              <user-chip :user-id="conv.user_id" :username="conv.username" :avatar="conv.avatar" size="sm"></user-chip>
+            </td>
+            <td class="dt-td text-muted">[[ formatDate(conv.started_at) ]]</td>
+            <td class="dt-td text-muted">[[ formatDate(conv.last_message_at) ]]</td>
+            <td class="dt-td">
+              <span class="badge rounded-pill chx-count-badge">[[ conv.message_count ]]</span>
+              <span v-if="conv.error_count > 0" class="badge rounded-pill chx-error-badge ms-1" title="Contains a failed action">
+                <i class="fa-solid fa-triangle-exclamation"></i> [[ conv.error_count ]]
+              </span>
+            </td>
+            <td class="dt-td text-end">
+              <button class="btn btn-sm btn-outline-primary rounded-pill px-3" @click.stop="openConversation(conv)">
+                <i class="fas fa-eye me-1"></i>View
+              </button>
+              <button class="btn btn-sm btn-outline-danger rounded-pill px-3 ms-1" @click.stop="deleteConversation(conv)" title="Delete this conversation">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+        <tbody v-else>
+          <tr><td colspan="5" class="text-center p-4" style="color: var(--subtle-text-color);">
+            <i class="fas fa-spinner fa-spin me-2" v-if="loading"></i>
+            <span v-if="!loading">No conversations yet.</span>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chx-panel-footer">
+      <pagination-component :current-page="page" :total-pages="totalPages" @change-page="goToPage"></pagination-component>
+    </div>
+  </div>
+
+  <!-- Transcript modal -->
+  <div v-if="activeConversation" class="modal fade show d-block" style="background:rgba(0,0,0,.5);" @click.self="closeConversation">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+            <user-chip :user-id="activeConversation.user_id" :username="activeConversation.username" :avatar="activeConversation.avatar" size="sm"></user-chip>
+            <span class="text-muted fw-normal small">— [[ formatDate(activeConversation.started_at) ]]</span>
+          </h5>
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="deleteConversation(activeConversation)">
+              <i class="fas fa-trash me-1"></i>Delete
+            </button>
+            <button class="btn-close" @click="closeConversation"></button>
+          </div>
+        </div>
+        <div class="modal-body pt-2">
+          <div v-if="transcriptLoading" class="text-center py-4">
+            <i class="fas fa-spinner fa-spin text-muted"></i>
+          </div>
+          <div v-else class="chx-transcript">
+            <div v-for="m in transcript" :key="m.id" :class="['chx-msg', m.role === 'user' ? 'chx-msg--user' : 'chx-msg--bot']">
+              <div class="chx-msg__bubble" :class="{ 'chx-msg__bubble--error': m.role === 'assistant' && m.success === false }">
+                [[ m.content ]]
+                <div v-if="m.action && m.role === 'assistant'" class="chx-msg__meta">
+                  <span class="badge rounded-pill chx-action-badge" :class="m.success ? 'chx-action-badge--ok' : 'chx-action-badge--fail'">[[ m.action ]]</span>
+                  <a v-if="m.meta && m.meta.redirect" :href="m.meta.redirect" target="_blank" class="chx-msg__link">[[ m.meta.redirect ]]</a>
+                  <a v-if="m.meta && m.meta.link" :href="m.meta.link" target="_blank" class="chx-msg__link">[[ m.meta.link ]]</a>
+                  <a v-for="l in (m.meta && m.meta.links) || []" :key="l.url" :href="l.url" target="_blank" class="chx-msg__link">[[ l.label ]]</a>
+                </div>
+                <div class="chx-msg__time">[[ formatDate(m.created_at) ]]</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% else %}
+<div class="container my-5 text-center">
+  <h4 class="text-danger">Access denied</h4>
+</div>
+{% endif %}
+
+<script type="module">
+import { create_message }  from '/static/js/toaster.js'
+import UserChip             from '/static/js/components/UserChip.js'
+import PaginationComponent  from '/static/js/rule/paginationComponent.js'
+
+const { createApp, ref, computed } = Vue
+
+function csrf() {
+    return document.querySelector('input[name="csrf_token"]')?.value || ''
+}
+
+createApp({
+    delimiters: ['[[', ']]'],
+    components: { 'user-chip': UserChip, 'pagination-component': PaginationComponent },
+    setup() {
+        const items    = ref([])
+        const total    = ref(0)
+        const page     = ref(1)
+        const totalPages = ref(1)
+        const perPage  = ref(25)
+        const search   = ref('')
+        const sortBy   = ref('last_message_at')
+        const sortDir  = ref('desc')
+        const loading  = ref(false)
+
+        // Filters
+        const userFilter  = ref(null)   // { user_id, username, avatar, count } | null
+        const userList    = ref([])
+        const userSearch  = ref('')
+        const dateFrom    = ref('')
+        const dateTo      = ref('')
+        const countMin    = ref(null)
+        const countMax    = ref(null)
+        const errorsOnly  = ref(false)
+
+        const filteredUserList = computed(() => {
+            const q = userSearch.value.toLowerCase()
+            return q ? userList.value.filter(u => u.username.toLowerCase().includes(q)) : userList.value
+        })
+
+        const activeConversation = ref(null)
+        const transcript         = ref([])
+        const transcriptLoading  = ref(false)
+
+        let searchTimer = null
+
+        async function fetchUserList() {
+            try {
+                const res  = await fetch('/chatbot/admin/conversations/users')
+                userList.value = res.ok ? await res.json() : []
+            } catch {
+                userList.value = []
+            }
+        }
+
+        async function fetchPage() {
+            loading.value = true
+            try {
+                const params = new URLSearchParams({
+                    page: page.value, per_page: perPage.value,
+                    sort: sortBy.value, dir: sortDir.value,
+                })
+                if (search.value)              params.set('search', search.value)
+                if (userFilter.value)          params.set('user_id', userFilter.value.user_id)
+                if (dateFrom.value)             params.set('date_from', dateFrom.value)
+                if (dateTo.value)               params.set('date_to', dateTo.value)
+                if (countMin.value !== null && countMin.value !== '') params.set('message_count_min', countMin.value)
+                if (countMax.value !== null && countMax.value !== '') params.set('message_count_max', countMax.value)
+                if (errorsOnly.value)           params.set('errors_only', '1')
+                const res  = await fetch('/chatbot/admin/conversations/data?' + params.toString())
+                const data = await res.json()
+                items.value = data.items || []
+                total.value = data.total || 0
+                totalPages.value = data.total_pages || 1
+            } catch {
+                items.value = []
+            } finally {
+                loading.value = false
+            }
+        }
+
+        function goToPage(p) { page.value = p; fetchPage() }
+
+        function sortColumn(col) {
+            if (sortBy.value === col) sortDir.value = sortDir.value === 'desc' ? 'asc' : 'desc'
+            else { sortBy.value = col; sortDir.value = 'desc' }
+            page.value = 1
+            fetchPage()
+        }
+
+        function sortIcon(col) {
+            if (sortBy.value !== col) return 'fas fa-sort'
+            return sortDir.value === 'desc' ? 'fas fa-sort-down' : 'fas fa-sort-up'
+        }
+
+        function onSearchInput() {
+            clearTimeout(searchTimer)
+            searchTimer = setTimeout(() => { page.value = 1; fetchPage() }, 350)
+        }
+
+        function clearSearch() { search.value = ''; page.value = 1; fetchPage() }
+
+        function onFilterChange() { page.value = 1; fetchPage() }
+
+        function selectUserFilter(u) { userFilter.value = u; onFilterChange() }
+
+        async function openConversation(conv) {
+            activeConversation.value = conv
+            transcript.value = []
+            transcriptLoading.value = true
+            try {
+                const res  = await fetch(`/chatbot/admin/conversations/${conv.uuid}`)
+                const data = await res.json()
+                transcript.value = data.messages || []
+            } catch {
+                transcript.value = []
+            } finally {
+                transcriptLoading.value = false
+            }
+        }
+
+        function closeConversation() {
+            activeConversation.value = null
+            transcript.value = []
+        }
+
+        async function deleteConversation(conv) {
+            if (!confirm(`Delete this conversation with ${conv.username}? This cannot be undone.`)) return
+            try {
+                const res  = await fetch(`/chatbot/admin/conversations/${conv.uuid}/delete`, {
+                    method: 'POST', headers: { 'X-CSRFToken': csrf() },
+                })
+                const data = await res.json()
+                if (data.success) {
+                    if (activeConversation.value && activeConversation.value.uuid === conv.uuid) closeConversation()
+                    create_message('Conversation deleted', 'success-subtle')
+                    fetchPage()
+                } else {
+                    create_message(data.message || 'Failed to delete', 'danger-subtle')
+                }
+            } catch (e) {
+                create_message('Error: ' + e, 'danger-subtle')
+            }
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '—'
+            return new Date(iso).toLocaleString(undefined, {
+                year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+            })
+        }
+
+        fetchPage()
+        fetchUserList()
+
+        return {
+            items, total, page, totalPages, search, sortBy, sortDir, loading,
+            userFilter, userList, userSearch, filteredUserList,
+            dateFrom, dateTo, countMin, countMax, errorsOnly,
+            activeConversation, transcript, transcriptLoading,
+            goToPage, sortColumn, sortIcon, onSearchInput, clearSearch, onFilterChange, selectUserFilter,
+            openConversation, closeConversation, deleteConversation, formatDate,
+        }
+    }
+}).mount('#chx-app')
+</script>
+{% endblock %}

@@ -8,7 +8,7 @@ NC='\033[0m'
 echo -e "${YELLOW}--- Starting Update Process ---${NC}"
 
 # 1. BACKUP
-echo -e "\n${YELLOW}[1/5] Running Backup...${NC}"
+echo -e "\n${YELLOW}[1/6] Running Backup...${NC}"
 if bash backup/scripts/backup_rulezet.sh; then
     echo -e "${GREEN}✔ Backup completed successfully.${NC}"
 else
@@ -17,7 +17,7 @@ else
 fi
 
 # 2. GIT PULL
-echo -e "\n${YELLOW}[2/5] Pulling latest changes from Git...${NC}"
+echo -e "\n${YELLOW}[2/6] Pulling latest changes from Git...${NC}"
 if git pull; then
     echo -e "${GREEN}✔ Git pull successful.${NC}"
 else
@@ -26,7 +26,7 @@ else
 fi
 
 # 3. DATABASE UPGRADE
-echo -e "\n${YELLOW}[3/5] Upgrading Database...${NC}"
+echo -e "\n${YELLOW}[3/6] Upgrading Database...${NC}"
  export FLASKENV=development    
 if flask db upgrade; then
     echo -e "${GREEN}✔ Database upgrade successful.${NC}"
@@ -46,7 +46,7 @@ git submodule update --remote --depth 1 app/modules/cti 2>/dev/null && \
     echo -e "${RED}⚠ CTI update skipped (no network or submodule not initialised).${NC}"
 
 # 4. REQUIREMENTS CHECK
-echo -e "\n${YELLOW}[4/5] Checking and installing requirements...${NC}"
+echo -e "\n${YELLOW}[4/6] Checking and installing requirements...${NC}"
 if [ -f "requirements.txt" ]; then
     # Install what's in requirements.txt
     if pip install -r requirements.txt; then
@@ -69,7 +69,24 @@ else
     echo -e "${RED}✘ requirements.txt not found! Skipping installation.${NC}"
 fi
 
-# 5. LAUNCH
-echo -e "\n${YELLOW}[5/5] Everything looks good. Launching...${NC}"
+# 5. OLLAMA (powers the in-app chat assistant prototype — optional, never blocks the update)
+echo -e "\n${YELLOW}[5/6] Checking for Ollama (used by the chat assistant)...${NC}"
+if command -v ollama >/dev/null 2>&1; then
+    echo -e "${GREEN}✔ Ollama is already installed.${NC}"
+else
+    echo -e "${YELLOW}Ollama not found — installing (this may prompt for your sudo password)...${NC}"
+    if curl -fsSL https://ollama.com/install.sh | sh; then
+        echo -e "${GREEN}✔ Ollama installed.${NC}"
+    else
+        echo -e "${RED}⚠ Ollama installation failed or was skipped — the chat assistant will report a connection error until it's installed manually (curl -fsSL https://ollama.com/install.sh | sh).${NC}"
+    fi
+fi
+if command -v ollama >/dev/null 2>&1 && ! ollama list 2>/dev/null | grep -q '^qwen2.5:1.5b'; then
+    echo -e "${YELLOW}Pulling the qwen2.5:1.5b model (used by the chat assistant)...${NC}"
+    ollama pull qwen2.5:1.5b || echo -e "${RED}⚠ Could not pull qwen2.5:1.5b — run 'ollama pull qwen2.5:1.5b' manually.${NC}"
+fi
+
+# 6. LAUNCH
+echo -e "\n${YELLOW}[6/6] Everything looks good. Launching...${NC}"
 echo -e "${GREEN}Ready to start the engine.${NC}"
 bash launch.sh -l

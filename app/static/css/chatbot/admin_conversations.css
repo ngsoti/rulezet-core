@@ -1,0 +1,227 @@
+/* admin_conversations.css — Chat History admin page.
+   Prefixed chx- deliberately (not cb- or chatbot-) — this page shares no
+   markup with contributor.css or the widget's chatbot.css, and a fresh
+   prefix keeps it that way. */
+
+.chx-panel {
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+    overflow: hidden;
+}
+.chx-table-scroll { overflow-x: auto; }
+.chx-panel-footer {
+    padding: .4rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.chx-row { cursor: pointer; }
+.chx-row--error {
+    background: rgba(220,53,69,.08);
+    border-left: 3px solid #dc3545;
+}
+.chx-row--error:hover { background: rgba(220,53,69,.14); }
+
+.chx-count-badge {
+    background: var(--light-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+}
+
+/* ── Search box ── */
+.chx-search {
+    position: relative;
+    width: 260px;
+    max-width: 100%;
+}
+.chx-search-icon {
+    position: absolute;
+    left: .75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: .8rem;
+    color: var(--subtle-text-color);
+}
+.chx-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--text-color);
+    border-radius: 20px;
+    padding: .4rem .75rem .4rem 2rem;
+    font-size: .85rem;
+}
+.chx-search-input:focus { outline: none; border-color: #0d6efd; }
+.chx-search-clear {
+    position: absolute;
+    right: .5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    color: var(--subtle-text-color);
+    cursor: pointer;
+}
+
+.chx-error-badge {
+    background: rgba(220,53,69,.12);
+    color: #dc3545;
+    font-weight: 700;
+    font-size: .68rem;
+}
+
+/* ── Filter bar ── */
+.chx-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .6rem;
+}
+
+.chx-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--text-color);
+    border-radius: 20px;
+    padding: .35rem .85rem;
+    font-size: .82rem;
+}
+.chx-filter-caret { font-size: .65rem; opacity: .6; margin-left: .1rem; }
+
+.chx-user-option {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .4rem .5rem;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.chx-user-option:hover { background: var(--light-bg-color); }
+.chx-user-option--active { background: rgba(13,110,253,.1); }
+
+.chx-date-range,
+.chx-count-range {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    border-radius: 20px;
+    padding: .3rem .7rem;
+}
+.chx-date-input,
+.chx-count-input {
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    font-size: .8rem;
+    width: auto;
+}
+.chx-count-input { width: 60px; }
+.chx-date-input:focus,
+.chx-count-input:focus { outline: none; }
+
+.chx-filter-clear {
+    border: none;
+    background: none;
+    color: var(--subtle-text-color);
+    cursor: pointer;
+    font-size: .75rem;
+}
+
+.chx-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--subtle-text-color);
+    border-radius: 20px;
+    padding: .35rem .85rem;
+    font-size: .82rem;
+}
+.chx-filter-chip--active {
+    background: rgba(220,53,69,.1);
+    border-color: rgba(220,53,69,.35);
+    color: #dc3545;
+    font-weight: 600;
+}
+
+/* ── Transcript modal ── */
+.chx-transcript {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: .25rem;
+}
+.chx-msg { display: flex; }
+.chx-msg--user { justify-content: flex-end; }
+.chx-msg--bot  { justify-content: flex-start; }
+
+.chx-msg__bubble {
+    max-width: 78%;
+    padding: .55rem .8rem;
+    border-radius: 12px;
+    font-size: .86rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.chx-msg--user .chx-msg__bubble {
+    background: #0d6efd;
+    color: #fff;
+    border-bottom-right-radius: 3px;
+}
+.chx-msg--bot .chx-msg__bubble {
+    background: var(--light-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-bottom-left-radius: 3px;
+}
+.chx-msg__bubble--error {
+    background: rgba(220,53,69,.1) !important;
+    border-color: rgba(220,53,69,.4) !important;
+}
+
+.chx-msg__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .4rem;
+    margin-top: .4rem;
+}
+.chx-action-badge {
+    font-size: .62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    background: rgba(255,255,255,.15);
+}
+.chx-msg--bot .chx-action-badge {
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--subtle-text-color);
+}
+.chx-action-badge--ok   { color: #198754 !important; }
+.chx-action-badge--fail { color: #dc3545 !important; }
+
+.chx-msg__link {
+    font-size: .72rem;
+    font-weight: 600;
+    color: inherit;
+    text-decoration: underline;
+}
+
+.chx-msg__time {
+    margin-top: .3rem;
+    font-size: .68rem;
+    opacity: .65;
+}

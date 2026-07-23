@@ -60,6 +60,7 @@ def create_app(start_worker=True):
     from app.features.rule_tester.rule_tester import rule_tester_blueprint
     from app.features.dashboard.dashboard import dashboard_blueprint
     from app.features.docs.docs import docs_blueprint
+    from app.features.chatbot.chatbot import chatbot_blueprint
 
     app.register_blueprint(home_blueprint, url_prefix="/")
     app.register_blueprint(account_blueprint, url_prefix="/account")
@@ -78,6 +79,7 @@ def create_app(start_worker=True):
     app.register_blueprint(rule_tester_blueprint)
     app.register_blueprint(dashboard_blueprint, url_prefix='/dashboard')
     app.register_blueprint(docs_blueprint, url_prefix='/docs')
+    app.register_blueprint(chatbot_blueprint, url_prefix='/chatbot')
 
     from app.api.api import api_blueprint
 
@@ -97,6 +99,13 @@ def create_app(start_worker=True):
     if start_worker:
         from app.features.jobs.job_worker import start_worker as _start_worker
         _start_worker(app)
+
+    if start_worker and config_name != 'testing':
+        try:
+            from app.features.chatbot.ollama_launcher import ensure_ollama_running
+            ensure_ollama_running(app.config.get('OLLAMA_URL', 'http://localhost:11434'))
+        except Exception as e:
+            print(f"[chatbot] Ollama auto-start check failed: {e}")
 
     with app.app_context():
         try:
