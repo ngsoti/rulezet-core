@@ -10,7 +10,7 @@ Commands:
     start       Start the dev server
     start-prod  Start with Gunicorn (production)
     test        Run the test suite
-    update      git pull + install deps + DB migrations
+    update      git pull + install deps + ensure ollama + DB migrations
     backup      Backup the PostgreSQL database
     restore     Restore a PostgreSQL backup (interactive)
     deploy      Full deployment: backup + update + start-prod
@@ -96,6 +96,48 @@ def _check_venv() -> None:
         sys.exit(1)
 
 
+OLLAMA_MODEL = "qwen2.5:1.5b"
+
+
+def _ensure_ollama() -> None:
+    """Best-effort: install Ollama (used by the in-app chat assistant) and
+    pull the default model if missing. Mirrors install.sh/update.sh's step —
+    manage.py's start-prod/update never call those scripts, so without this
+    an instance driven only through manage.py never gets Ollama set up."""
+    import shutil as _shutil
+
+    info("Checking for Ollama (used by the chat assistant)…")
+    ollama_bin = _shutil.which("ollama")
+    if not ollama_bin:
+        info("Ollama not found — installing (this may prompt for your sudo password)…")
+        result = subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True)
+        if result.returncode != 0:
+            error("Ollama installation failed or was skipped — the chat assistant will "
+                  "report a connection error until it's installed manually "
+                  "(curl -fsSL https://ollama.com/install.sh | sh).")
+            return
+        ollama_bin = _shutil.which("ollama")
+        if not ollama_bin:
+            return
+        ok("Ollama installed")
+    else:
+        ok("Ollama is already installed")
+
+    try:
+        listed = subprocess.run([ollama_bin, "list"], capture_output=True, text=True, check=False)
+        if OLLAMA_MODEL not in (listed.stdout or ""):
+            info(f"Pulling the {OLLAMA_MODEL} model (used by the chat assistant)…")
+            pulled = subprocess.run([ollama_bin, "pull", OLLAMA_MODEL])
+            if pulled.returncode == 0:
+                ok(f"{OLLAMA_MODEL} pulled")
+            else:
+                error(f"Could not pull {OLLAMA_MODEL} — run 'ollama pull {OLLAMA_MODEL}' manually.")
+        else:
+            ok(f"{OLLAMA_MODEL} already pulled")
+    except OSError as e:
+        error(f"Could not check/pull Ollama models: {e}")
+
+
 # ── Commands ──────────────────────────────────────────────────────────────────
 
 def cmd_help() -> None:
@@ -124,13 +166,13 @@ def cmd_help() -> None:
                   {D}→ Use this for local development{R}
 
   {G}start-prod{R}    {D}Full production launch:{R}
-                  {D}  backup → git pull → pip install → db upgrade{R}
+                  {D}  backup → git pull → pip install → ensure ollama → db upgrade{R}
                   {D}  → flask run --host=0.0.0.0 --port=80{R}
                   {D}→ Use this on the production server (needs root for port 80){R}
 
   {G}test{R}          {D}Run the full test suite (FLASKENV=testing){R}
 
-  {G}update{R}        {D}git pull + pip install + flask db upgrade{R}
+  {G}update{R}        {D}git pull + pip install + ensure ollama + flask db upgrade{R}
                   {D}→ Use this after pulling new code{R}
 
   {G}backup{R}        {D}Backup PostgreSQL database to backup/dumps/{R}
@@ -217,6 +259,8 @@ def cmd_start_prod() -> None:
     run([PIP, "install", "-r", "requirements.txt"])
     ok("Dependencies up to date")
 
+    _ensure_ollama()
+
     info("Running database migrations…")
     run([FLASK, "db", "upgrade"], extra_env={"FLASKENV": "production"})
     ok("Database schema up to date")
@@ -272,6 +316,8 @@ def cmd_update() -> None:
     info("Syncing Python dependencies…")
     run([PIP, "install", "-r", "requirements.txt"])
     ok("Dependencies up to date")
+
+    _ensure_ollama()
 
     info("Running database migrations…")
     run([FLASK, "db", "upgrade"], extra_env={"FLASKENV": "development"})
