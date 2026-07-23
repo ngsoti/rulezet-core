@@ -23,6 +23,12 @@ def load_user(user_id):
 # Replace the existing User class with this one.
 # ============================================================
 
+# Sentinel value for User.profile_picture — the one exception to "profile_picture
+# is a bare filename under static/uploads/avatars/": the official Rulezet
+# connector's shadow user (app/features/connector/connector_core.py) uses this
+# to point straight at the app logo under static/image/ instead.
+OFFICIAL_LOGO_AVATAR_SENTINEL = '__official_rulezet_logo__'
+
 class User(UserMixin, db.Model):
     """User model for authentication and authorization."""
 
@@ -75,6 +81,12 @@ class User(UserMixin, db.Model):
 
     def get_avatar_url(self):
         """Return the profile picture URL or a default gravatar-style fallback."""
+        # Exception: the official Rulezet connector's shadow user points
+        # straight at the app logo under static/image/ instead of a copy in
+        # the user-uploaded avatars folder — see OFFICIAL_LOGO_AVATAR_SENTINEL
+        # in connector_core.py.
+        if self.profile_picture == OFFICIAL_LOGO_AVATAR_SENTINEL:
+            return "/static/image/pp_Rulezet.png"
         if self.profile_picture:
             return "/static/uploads/avatars/" + self.profile_picture
         return None

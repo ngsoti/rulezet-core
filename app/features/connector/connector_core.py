@@ -6,6 +6,7 @@ functions and never touch the session directly.
 """
 
 import datetime
+import re
 import uuid as uuid_mod
 import logging
 
@@ -21,6 +22,7 @@ from app import db
 from app.core.db_class.db import (
     Bundle, BundleRuleAssociation, BundleTagAssociation, Connector, Rule, User,
     RuleTagAssociation, Tag, ActivityLog, RuleUpdateHistory,
+    OFFICIAL_LOGO_AVATAR_SENTINEL,
 )
 from sqlalchemy import func
 from app.core.utils.activity_log import log_activity
@@ -28,6 +30,30 @@ from app.features.jobs.jobs_core import create_job
 
 
 # ─── Shadow user ──────────────────────────────────────────────────────────────
+
+_OLD_SHADOW_USERNAME_RE = re.compile(r'^connector_[0-9a-f]{8}$')
+
+
+def _slugify_username(name: str) -> str:
+    """'Rulezet Official' -> 'rulezet_official' — used instead of a raw uuid
+    fragment so a connector's shadow user has a readable username rather
+    than 'connector_3f9a21bc'."""
+    slug = re.sub(r'[^a-z0-9]+', '_', (name or '').lower()).strip('_')
+    return slug or 'connector'
+
+
+def _unique_username(base: str, exclude_user_id: int = None) -> str:
+    candidate = base
+    n = 1
+    while True:
+        q = User.query.filter_by(username=candidate)
+        if exclude_user_id:
+            q = q.filter(User.id != exclude_user_id)
+        if not q.first():
+            return candidate
+        n += 1
+        candidate = f"{base}_{n}"
+
 
 def _get_or_create_shadow_user(connector: Connector) -> User:
     """Return (and lazily create) the ghost user that owns imported content."""
@@ -47,7 +73,7 @@ def _get_or_create_shadow_user(connector: Connector) -> User:
         first_name=connector.name,
         last_name=f"[{connector.connector_type}]",
         email=shadow_email,
-        username=f"connector_{connector.uuid[:8]}",
+        username=_unique_username(_slugify_username(connector.name)),
         is_verified=False,
         admin=False,
     )
@@ -68,6 +94,15 @@ def _get_or_create_shadow_user(connector: Connector) -> User:
     connector.shadow_user_id = shadow.id
     db.session.commit()
     return shadow
+
+
+def _seed_official_shadow_avatar(shadow: User) -> None:
+    """Point the official connector's shadow user at the app logo under
+    static/image/ — not a copy under static/uploads/avatars/ like a normal
+    user avatar. get_avatar_url() special-cases OFFICIAL_LOGO_AVATAR_SENTINEL
+    to resolve straight to /static/image/pp_Rulezet.png."""
+    if shadow.profile_picture != OFFICIAL_LOGO_AVATAR_SENTINEL:
+        shadow.profile_picture = OFFICIAL_LOGO_AVATAR_SENTINEL
 
 
 # ─── CRUD ─────────────────────────────────────────────────────────────────────
@@ -259,27 +294,37 @@ def get_connector_history(connector: Connector) -> list:
 
 
 def seed_official_connector() -> None:
-    """Create the read-only official Rulezet connector if it doesn't exist yet."""
+    """Create the read-only official Rulezet connector if it doesn't exist yet,
+    and make sure its shadow user (the ghost owner attributed to every rule
+    pulled from rulezet.org) has a readable username and the Rulezet logo as
+    its avatar — runs on every boot so existing installs self-heal too, not
+    just brand-new ones."""
     try:
-        if Connector.query.filter_by(is_system=True).first():
-            return
-        admin = User.query.filter_by(admin=True).first()
-        if not admin:
-            return
-        c = Connector(
-            uuid=str(uuid_mod.uuid4()),
-            name='Rulezet Official',
-            description='The official Rulezet community — rulezet.org.',
-            icon='fa-solid fa-shield-halved',
-            connector_type='rulezet',
-            instance_url='https://rulezet.org',
-            owner_id=admin.id,
-            sync_rules=True,
-            sync_bundles=True,
-            is_system=True,
-            owner_mode='shadow',
-        )
-        db.session.add(c)
+        c = Connector.query.filter_by(is_system=True).first()
+        if not c:
+            admin = User.query.filter_by(admin=True).first()
+            if not admin:
+                return
+            c = Connector(
+                uuid=str(uuid_mod.uuid4()),
+                name='Rulezet Official',
+                description='The official Rulezet community — rulezet.org.',
+                icon='fa-solid fa-shield-halved',
+                connector_type='rulezet',
+                instance_url='https://rulezet.org',
+                owner_id=admin.id,
+                sync_rules=True,
+                sync_bundles=True,
+                is_system=True,
+                owner_mode='shadow',
+            )
+            db.session.add(c)
+            db.session.commit()
+
+        shadow = _get_or_create_shadow_user(c)
+        if _OLD_SHADOW_USERNAME_RE.match(shadow.username or ''):
+            shadow.username = _unique_username(_slugify_username(c.name), exclude_user_id=shadow.id)
+        _seed_official_shadow_avatar(shadow)
         db.session.commit()
     except Exception:
         db.session.rollback()
