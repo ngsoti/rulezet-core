@@ -98,30 +98,58 @@ def _check_venv() -> None:
 
 OLLAMA_MODEL = "qwen2.5:1.5b"
 
+# Pinned, not "latest": 0.32.1+ segfaults on every model on Intel Sapphire
+# Rapids Xeons (e.g. Xeon Silver 4410Y) — its AMX-aware CPU inference path
+# crashes on this CPU generation even with OLLAMA_LLM_LIBRARY=cpu forced and
+# a from-scratch reinstall/re-pulled model. 0.5.7 predates that code path
+# (falls back to a plain avx2 runner) and was confirmed working. Bump this
+# only after confirming a newer release fixes the Sapphire Rapids crash.
+OLLAMA_VERSION = "0.5.7"
+
+
+def _install_ollama() -> bool:
+    info(f"Installing Ollama {OLLAMA_VERSION} (this may prompt for your sudo password)…")
+    result = subprocess.run(
+        f"curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION={OLLAMA_VERSION} sh",
+        shell=True,
+    )
+    if result.returncode != 0:
+        error("Ollama installation failed or was skipped — the chat assistant will "
+              "report a connection error until it's installed manually "
+              f"(curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION={OLLAMA_VERSION} sh).")
+        return False
+    return True
+
 
 def _ensure_ollama() -> None:
-    """Best-effort: install Ollama (used by the in-app chat assistant) and
-    pull the default model if missing. Mirrors install.sh/update.sh's step —
-    manage.py's start-prod/update never call those scripts, so without this
-    an instance driven only through manage.py never gets Ollama set up."""
+    """Best-effort: install Ollama (used by the in-app chat assistant), pinned
+    to OLLAMA_VERSION (see comment above — NOT "latest", a known segfault on
+    Sapphire Rapids CPUs), and pull the default model if missing. Mirrors
+    install.sh/update.sh's step — manage.py's start-prod/update never call
+    those scripts, so without this an instance driven only through manage.py
+    never gets Ollama set up."""
     import shutil as _shutil
 
     info("Checking for Ollama (used by the chat assistant)…")
     ollama_bin = _shutil.which("ollama")
+
     if not ollama_bin:
-        info("Ollama not found — installing (this may prompt for your sudo password)…")
-        result = subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True)
-        if result.returncode != 0:
-            error("Ollama installation failed or was skipped — the chat assistant will "
-                  "report a connection error until it's installed manually "
-                  "(curl -fsSL https://ollama.com/install.sh | sh).")
+        if not _install_ollama():
             return
         ollama_bin = _shutil.which("ollama")
         if not ollama_bin:
             return
-        ok("Ollama installed")
+        ok(f"Ollama {OLLAMA_VERSION} installed")
     else:
-        ok("Ollama is already installed")
+        version = subprocess.run([ollama_bin, "--version"], capture_output=True, text=True, check=False)
+        if OLLAMA_VERSION not in (version.stdout or ""):
+            info(f"Ollama is installed but not pinned version {OLLAMA_VERSION} "
+                 f"({(version.stdout or '').strip() or 'unknown version'}) — reinstalling the pinned version…")
+            if not _install_ollama():
+                return
+            ok(f"Ollama downgraded/reinstalled to {OLLAMA_VERSION}")
+        else:
+            ok(f"Ollama {OLLAMA_VERSION} is already installed")
 
     try:
         listed = subprocess.run([ollama_bin, "list"], capture_output=True, text=True, check=False)

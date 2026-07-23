@@ -18,15 +18,27 @@ echo -e "${CYAN}🐘 Install PostgreSQL ...${RESET}"
 ./install_postgresql.sh
 
 # Ollama (powers the in-app chat assistant prototype — optional, never blocks install)
-echo -e "${CYAN}🤖 Checking for Ollama (used by the chat assistant)...${RESET}"
-if command -v ollama >/dev/null 2>&1; then
-    echo -e "${GREEN}✔ Ollama is already installed.${RESET}"
+#
+# Pinned, not "latest": 0.32.1+ segfaults on every model on Intel Sapphire
+# Rapids Xeons (e.g. Xeon Silver 4410Y) — its AMX-aware CPU inference path
+# crashes on this CPU generation even with OLLAMA_LLM_LIBRARY=cpu forced and
+# a from-scratch reinstall/re-pulled model. 0.5.7 predates that code path
+# (falls back to a plain avx2 runner) and was confirmed working. Bump this
+# only after confirming a newer release fixes the Sapphire Rapids crash.
+OLLAMA_VERSION="0.5.7"
+echo -e "${CYAN}🤖 Checking for Ollama ${OLLAMA_VERSION} (used by the chat assistant)...${RESET}"
+if command -v ollama >/dev/null 2>&1 && ollama --version 2>/dev/null | grep -q "$OLLAMA_VERSION"; then
+    echo -e "${GREEN}✔ Ollama ${OLLAMA_VERSION} is already installed.${RESET}"
 else
-    echo -e "${CYAN}Ollama not found — installing (this may prompt for your sudo password)...${RESET}"
-    if curl -fsSL https://ollama.com/install.sh | sh; then
-        echo -e "${GREEN}✔ Ollama installed.${RESET}"
+    if command -v ollama >/dev/null 2>&1; then
+        echo -e "${CYAN}Ollama is installed but not pinned version ${OLLAMA_VERSION} — reinstalling the pinned version (this may prompt for your sudo password)...${RESET}"
     else
-        echo -e "${CYAN}⚠ Ollama installation failed or was skipped — the chat assistant will report a connection error until it's installed manually (curl -fsSL https://ollama.com/install.sh | sh).${RESET}"
+        echo -e "${CYAN}Ollama not found — installing ${OLLAMA_VERSION} (this may prompt for your sudo password)...${RESET}"
+    fi
+    if curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION="$OLLAMA_VERSION" sh; then
+        echo -e "${GREEN}✔ Ollama ${OLLAMA_VERSION} installed.${RESET}"
+    else
+        echo -e "${CYAN}⚠ Ollama installation failed or was skipped — the chat assistant will report a connection error until it's installed manually (curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION=${OLLAMA_VERSION} sh).${RESET}"
     fi
 fi
 if command -v ollama >/dev/null 2>&1 && ! ollama list 2>/dev/null | grep -q '^qwen2.5:1.5b'; then
