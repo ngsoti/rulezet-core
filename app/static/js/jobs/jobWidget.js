@@ -22,6 +22,15 @@ const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vu
 const POLL_INTERVAL = 5000   // ms between polls
 const DISMISSED_KEY = 'rz_dismissed_jobs'
 const MAX_LOG_LINES = 10
+const POSITION_KEY   = 'rz-job-widget-position'
+const VISIBILITY_KEY = 'rz-job-widget-visibility'
+
+function loadPosition() {
+    return localStorage.getItem(POSITION_KEY) || 'bottom-right'
+}
+function loadAlwaysVisible() {
+    return (localStorage.getItem(VISIBILITY_KEY) || 'active-only') === 'always'
+}
 
 function csrf() {
     return document.getElementById('csrf_token')?.value || ''
@@ -67,6 +76,8 @@ const JobWidget = {
         const jobs      = ref([])           // all active jobs from server
         const expanded  = ref(false)
         const dismissed = ref(loadDismissed())
+        const position      = ref(loadPosition())
+        const alwaysVisible  = ref(loadAlwaysVisible())
 
         // Per-job log storage  { uuid: [{...}] }
         const jobLogs   = ref({})
@@ -79,7 +90,9 @@ const JobWidget = {
         const visible = computed(() =>
             jobs.value.filter(j => !dismissed.value.has(j.uuid))
         )
-        const hasVisible = computed(() => visible.value.length > 0)
+        const hasVisible = computed(() => visible.value.length > 0 || alwaysVisible.value)
+        const isIdle = computed(() => visible.value.length === 0)
+        const positionClass = computed(() => `jw-pos--${position.value}`)
         const runningCount = computed(() =>
             visible.value.filter(j => j.status === 'running').length
         )
@@ -202,10 +215,19 @@ const JobWidget = {
             return 'fa-solid fa-circle text-muted'
         }
 
+        // Live-updates position/visibility if changed on the settings page
+        // without needing a full reload (settings.html dispatches this after
+        // every change, same convention as 'rz:job-created' below).
+        function onSettingsChanged() {
+            position.value = loadPosition()
+            alwaysVisible.value = loadAlwaysVisible()
+        }
+
         // ── Lifecycle ────────────────────────────────────────────────────────
         onMounted(() => {
             wake()
             window.addEventListener('rz:job-created', wake)
+            window.addEventListener('rz:job-widget-settings-changed', onSettingsChanged)
             document.addEventListener('visibilitychange', onVisible)
             window.addEventListener('focus', wake)
         })
@@ -213,12 +235,13 @@ const JobWidget = {
         onUnmounted(() => {
             stopPolling()
             window.removeEventListener('rz:job-created', wake)
+            window.removeEventListener('rz:job-widget-settings-changed', onSettingsChanged)
             document.removeEventListener('visibilitychange', onVisible)
             window.removeEventListener('focus', wake)
         })
 
         return {
-            jobs, expanded, visible, hasVisible, runningCount, allDone,
+            jobs, expanded, visible, hasVisible, isIdle, positionClass, runningCount, allDone,
             jobLogs, logOpen, toggleLog,
             dismiss, dismissAll,
             pauseJob, resumeJob, cancelJob,
@@ -227,10 +250,16 @@ const JobWidget = {
     },
 
     template: `
-<div v-if="hasVisible">
+<div v-if="hasVisible" :class="positionClass">
+
+    <!-- ── Collapsed bar — idle (always-visible mode, nothing running) ── -->
+    <div v-if="!expanded && isIdle" class="jw-bar jw-bar--idle" title="No background jobs running">
+        <i class="fa-regular fa-circle-check text-muted" style="font-size:.85rem;"></i>
+        <span class="jw-bar__label">No active jobs</span>
+    </div>
 
     <!-- ── Collapsed bar ── -->
-    <div v-if="!expanded" class="jw-bar" @click="expanded = true" title="Show background jobs">
+    <div v-else-if="!expanded" class="jw-bar" @click="expanded = true" title="Show background jobs">
         <i v-if="allDone" class="fa-solid fa-circle-check" style="font-size:.85rem;color:#198754;"></i>
         <i v-else class="fa-solid fa-circle-notch fa-spin text-primary" style="font-size:.85rem;"></i>
         <span class="jw-bar__label">Background Jobs</span>

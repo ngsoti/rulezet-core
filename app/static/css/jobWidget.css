@@ -5,13 +5,24 @@
 
 #job-widget {
     position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
     z-index: 1090;
     width: 380px;
     max-width: calc(100vw - 2rem);
     font-size: .85rem;
 }
+
+/* Corner, configurable from /settings — Background Jobs Widget */
+#job-widget > .jw-pos--bottom-right { position: fixed; bottom: 1.5rem; right: 1.5rem; }
+#job-widget > .jw-pos--bottom-left  { position: fixed; bottom: 1.5rem; left: 1.5rem; }
+#job-widget > .jw-pos--top-right    { position: fixed; top: 1.5rem; right: 1.5rem; }
+#job-widget > .jw-pos--top-left     { position: fixed; top: 1.5rem; left: 1.5rem; }
+
+/* Expanded panel opens away from whichever edge it's pinned to, so it never
+   overflows off the top or bottom of the viewport */
+.jw-pos--top-right .jw-panel,
+.jw-pos--top-left  .jw-panel { margin-top: .5rem; }
+.jw-pos--bottom-right .jw-panel,
+.jw-pos--bottom-left  .jw-panel { margin-bottom: .5rem; }
 
 /* ── Collapsed bar ── */
 .jw-bar {
@@ -29,6 +40,14 @@
 }
 
 .jw-bar:hover { box-shadow: 0 6px 24px rgba(13,110,253,.18); }
+
+/* Idle state — "Always visible" mode, no job running */
+.jw-bar--idle {
+    cursor: default;
+    opacity: .65;
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+.jw-bar--idle:hover { box-shadow: 0 2px 10px rgba(0,0,0,.06); }
 
 .jw-bar__label {
     flex: 1;

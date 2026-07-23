@@ -318,6 +318,7 @@
                 </div>
             </div>
 
+            <!-- Job widget -->
             <!-- Default list view -->
             <div class="card mb-3" id="section-view">
                 <div class="card-body">
@@ -519,6 +520,63 @@
                 </div>
             </div>
 
+            <!-- Job widget -->
+            <div class="card mb-3" id="section-job-widget">
+                <div class="card-body">
+                    <div class="settings-card-header mb-3">
+                        <div class="settings-card-icon"><i class="fas fa-list-check"></i></div>
+                        <div>
+                            <h6 class="settings-section-title mb-0">Background Jobs Widget</h6>
+                            <p class="text-muted small mb-0">Choose where the floating jobs card sits and when it appears.</p>
+                        </div>
+                    </div>
+
+                    <!-- Position -->
+                    <p class="settings-sub-label mb-2">Position</p>
+                    <div class="settings-theme-group settings-pos-group mb-4">
+                        <div v-for="pos in job_widget_pos_options" :key="pos.value"
+                             class="settings-theme-card settings-pos-card"
+                             :class="{ active: job_widget_pos === pos.value }"
+                             @click="setJobWidgetPosition(pos.value)">
+                            <div class="toast-pos-preview">
+                                <div class="tpp-screen">
+                                    <div class="tpp-dot" :class="'tpp-dot--' + pos.value"></div>
+                                </div>
+                            </div>
+                            <div class="settings-theme-label">
+                                <span style="font-size:.72rem;">[[ pos.label ]]</span>
+                                <i v-if="job_widget_pos === pos.value" class="fas fa-circle-check ms-auto text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visibility -->
+                    <p class="settings-sub-label mb-2">Visibility</p>
+                    <div class="settings-theme-group">
+                        <div v-for="opt in job_widget_visibility_options" :key="opt.value"
+                             class="settings-theme-card"
+                             :class="{ active: job_widget_visibility === opt.value }"
+                             @click="setJobWidgetVisibility(opt.value)">
+                            <div class="nav-preview">
+                                <div class="nsp-bell">
+                                    <i :class="'fas ' + opt.icon" style="font-size:1rem;color:#0d6efd;"></i>
+                                </div>
+                            </div>
+                            <div class="settings-theme-label">
+                                <i :class="'fas ' + opt.icon"></i>
+                                <span>[[ opt.label ]]</span>
+                                <i v-if="job_widget_visibility === opt.value" class="fas fa-circle-check ms-auto text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0" style="font-size:.75rem;">
+                        <i class="fas fa-info-circle me-1 text-primary opacity-75"></i>
+                        <template v-if="job_widget_visibility === 'active-only'">The card only appears while a background job is running or pending.</template>
+                        <template v-else>The card always stays on screen, collapsed to a small pill when nothing is running.</template>
+                    </p>
+                </div>
+            </div>
+
         </div>
 
         <!-- ── Right column: settings recap ─────────────────── -->
@@ -667,6 +725,26 @@
                             </div>
                             <div class="recap-status">
                                 <i v-if="json_theme_saved" class="fas fa-circle-check text-success"></i>
+                            </div>
+                        </div>
+
+                        <div class="recap-divider"></div>
+
+                        <!-- Job widget row -->
+                        <div class="recap-row">
+                            <div class="recap-icon"><i class="fas fa-list-check"></i></div>
+                            <div class="recap-body">
+                                <div class="recap-label">Jobs widget</div>
+                                <div class="recap-value">
+                                    <i class="fas fa-location-dot me-1 text-primary" style="font-size:.75rem;"></i>
+                                    [[ job_widget_pos_options.find(o => o.value === job_widget_pos)?.label || job_widget_pos ]]
+                                    <span class="ms-1 opacity-50">·</span>
+                                    <i :class="'fas ' + (job_widget_visibility_options.find(o => o.value === job_widget_visibility)?.icon || 'fa-eye')" class="ms-1 text-primary" style="font-size:.75rem;"></i>
+                                    [[ job_widget_visibility_options.find(o => o.value === job_widget_visibility)?.label || job_widget_visibility ]]
+                                </div>
+                            </div>
+                            <div class="recap-status">
+                                <i v-if="job_widget_saved" class="fas fa-circle-check text-success"></i>
                             </div>
                         </div>
 
@@ -985,6 +1063,39 @@
                 toast_saved.value = true
                 setTimeout(() => { toast_saved.value = false }, 2000)
                 create_message('Toast style updated', 'success')
+            }
+
+            // ── Background jobs widget (localStorage only) ────────────────────
+            const job_widget_pos        = ref(localStorage.getItem('rz-job-widget-position')   || 'bottom-right')
+            const job_widget_visibility = ref(localStorage.getItem('rz-job-widget-visibility') || 'active-only')
+            const job_widget_saved      = ref(false)
+            const job_widget_pos_options = [
+                { value: 'top-left',     label: 'Top Left'     },
+                { value: 'top-right',    label: 'Top Right'    },
+                { value: 'bottom-left',  label: 'Bottom Left'  },
+                { value: 'bottom-right', label: 'Bottom Right' },
+            ]
+            const job_widget_visibility_options = [
+                { value: 'active-only', label: 'Only when active', icon: 'fa-eye-slash' },
+                { value: 'always',      label: 'Always visible',   icon: 'fa-eye'        },
+            ]
+            function setJobWidgetPosition(value) {
+                if (value === job_widget_pos.value) return
+                job_widget_pos.value = value
+                localStorage.setItem('rz-job-widget-position', value)
+                window.dispatchEvent(new Event('rz:job-widget-settings-changed'))
+                job_widget_saved.value = true
+                setTimeout(() => { job_widget_saved.value = false }, 2000)
+                create_message('Job widget position updated', 'success')
+            }
+            function setJobWidgetVisibility(value) {
+                if (value === job_widget_visibility.value) return
+                job_widget_visibility.value = value
+                localStorage.setItem('rz-job-widget-visibility', value)
+                window.dispatchEvent(new Event('rz:job-widget-settings-changed'))
+                job_widget_saved.value = true
+                setTimeout(() => { job_widget_saved.value = false }, 2000)
+                create_message('Job widget visibility updated', 'success')
             }
 
             // ── Notification style (localStorage only) ────────────────────────
@@ -1505,6 +1616,9 @@
                 localStorage.removeItem('rz-per-page-card')
                 localStorage.removeItem('rz-per-page-table')
                 localStorage.removeItem('rz-json-theme')
+                localStorage.removeItem('rz-job-widget-position')
+                localStorage.removeItem('rz-job-widget-visibility')
+                window.dispatchEvent(new Event('rz:job-widget-settings-changed'))
 
                 // Reset CSS vars / attributes immediately
                 document.documentElement.style.removeProperty('--font-mono')
@@ -1529,6 +1643,9 @@
                 toast_pos, toast_sty, toast_saved,
                 toast_pos_options, toast_style_options,
                 setToastPosition, setToastStyle,
+                job_widget_pos, job_widget_visibility, job_widget_saved,
+                job_widget_pos_options, job_widget_visibility_options,
+                setJobWidgetPosition, setJobWidgetVisibility,
                 notif_style, notif_style_saved, notif_style_options, setNotifStyle,
                 list_view, list_view_saved, list_view_options, setListView,
                 code_font, code_font_saved, font_options, setCodeFont,
