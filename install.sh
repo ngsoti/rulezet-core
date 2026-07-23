@@ -17,6 +17,23 @@ pip install -r requirements.txt
 echo -e "${CYAN}🐘 Install PostgreSQL ...${RESET}"
 ./install_postgresql.sh
 
+# Ollama (powers the in-app chat assistant prototype — optional, never blocks install)
+echo -e "${CYAN}🤖 Checking for Ollama (used by the chat assistant)...${RESET}"
+if command -v ollama >/dev/null 2>&1; then
+    echo -e "${GREEN}✔ Ollama is already installed.${RESET}"
+else
+    echo -e "${CYAN}Ollama not found — installing (this may prompt for your sudo password)...${RESET}"
+    if curl -fsSL https://ollama.com/install.sh | sh; then
+        echo -e "${GREEN}✔ Ollama installed.${RESET}"
+    else
+        echo -e "${CYAN}⚠ Ollama installation failed or was skipped — the chat assistant will report a connection error until it's installed manually (curl -fsSL https://ollama.com/install.sh | sh).${RESET}"
+    fi
+fi
+if command -v ollama >/dev/null 2>&1 && ! ollama list 2>/dev/null | grep -q '^qwen2.5:1.5b'; then
+    echo -e "${CYAN}Pulling the qwen2.5:1.5b model (used by the chat assistant)...${RESET}"
+    ollama pull qwen2.5:1.5b || echo -e "${CYAN}⚠ Could not pull qwen2.5:1.5b — run 'ollama pull qwen2.5:1.5b' manually.${RESET}"
+fi
+
 chmod +x ./launch.sh
 
 # Init required git submodules

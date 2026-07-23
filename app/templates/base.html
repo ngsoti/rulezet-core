@@ -307,8 +307,10 @@
     <div id="job-widget"></div>
     <script type="module" src="{{ url_for('static', filename='js/jobs/jobWidget.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/notification/notificationBell.js') }}"></script>
+    {% if chatbot_enabled %}
     <div id="chatbot-widget"></div>
     <script type="module" src="{{ url_for('static', filename='js/chatbot/chatbot.js') }}"></script>
+    {% endif %}
     {% endif %}
 </body>
 

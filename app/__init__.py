@@ -141,9 +141,18 @@ def create_app(start_worker=True):
     @app.context_processor
     def inject_globals():
         from flask import current_app
+        from app.core.db_class.db import InstanceConfig
+        chatbot_enabled = True
+        try:
+            cfg = InstanceConfig.query.first()
+            if cfg is not None:
+                chatbot_enabled = cfg.chatbot_enabled
+        except Exception:
+            pass  # table may not exist yet (fresh install before migrations run)
         return {
             'app_version': current_app.config.get('APP_VERSION', 'unknown'),
             'is_official': current_app.config.get('IS_OFFICIAL_INSTANCE', False),
+            'chatbot_enabled': chatbot_enabled,
         }
 
     def admin_jobs_running_count():

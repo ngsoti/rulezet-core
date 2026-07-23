@@ -1180,6 +1180,7 @@ def admin_settings_instance():
         'exists':            True,
         'endpoint_uuid':     cfg.uuid,
         'telemetry_enabled': cfg.telemetry_enabled,
+        'chatbot_enabled':   cfg.chatbot_enabled,
         'public_url':        cfg.public_url,
         'reported_url':      reported_url,
         'version':           cfg.version,
@@ -1227,6 +1228,31 @@ def admin_settings_instance_init():
         'version':         cfg.version,
         'last_started_at': cfg.last_started_at.strftime('%Y-%m-%d %H:%M:%S'),
     })
+
+
+@home_blueprint.route('/admin/settings/chatbot_toggle', methods=['POST'])
+@login_required
+def admin_settings_chatbot_toggle():
+    """Enable/disable the chatbot instance-wide — hides the floating widget
+    and rejects new /chatbot/message calls server-side (not just a UI hint)."""
+    if not current_user.is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+    from app import db
+    from .core.db_class.db import InstanceConfig
+    from .core.utils.activity_log import log_activity
+
+    data = request.get_json(silent=True) or {}
+    enabled = bool(data.get('enabled', True))
+
+    cfg = InstanceConfig.query.first()
+    if not cfg:
+        return jsonify({'error': 'Instance config not initialized yet'}), 400
+
+    cfg.chatbot_enabled = enabled
+    db.session.commit()
+    log_activity('admin.chatbot_toggle',
+                 f"{'Enabled' if enabled else 'Disabled'} the chatbot instance-wide")
+    return jsonify({'success': True, 'chatbot_enabled': cfg.chatbot_enabled})
 
 
 @home_blueprint.route('/platform/insights')

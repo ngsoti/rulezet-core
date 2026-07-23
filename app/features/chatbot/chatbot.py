@@ -9,6 +9,11 @@ chatbot_blueprint = Blueprint('chatbot', __name__)
 @chatbot_blueprint.route('/message', methods=['POST'])
 @login_required
 def send_message():
+    from app.core.db_class.db import InstanceConfig
+    cfg = InstanceConfig.query.first()
+    if cfg and not cfg.chatbot_enabled:
+        return jsonify({"success": False, "reply": "The chatbot is disabled on this instance."}), 403
+
     data = request.get_json(force=True) or {}
     message = (data.get('message') or '').strip()
     history = data.get('history') or []

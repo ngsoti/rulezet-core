@@ -899,6 +899,44 @@
                     </div>
 
                 </div>
+
+                <div class="row g-4 mt-1">
+                    <div class="col-12">
+                        <div class="config-section">
+                            <div class="config-section__title">
+                                <i class="fa-solid fa-comment-dots text-primary"></i>Chatbot Assistant
+                            </div>
+
+                            <div class="config-row">
+                                <div class="config-row__key">Floating chat widget</div>
+                                <div class="config-row__value d-flex align-items-center gap-2">
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               id="chatbotEnabledSwitch"
+                                               :checked="instance.chatbot_enabled"
+                                               :disabled="chatbotToggleSaving"
+                                               @change="toggleChatbotEnabled($event.target.checked)">
+                                    </div>
+                                    <span :class="instance.chatbot_enabled ? 'badge bg-success' : 'badge bg-secondary'">
+                                        [[ instance.chatbot_enabled ? 'Enabled' : 'Disabled' ]]
+                                    </span>
+                                    <span v-if="chatbotToggleSaving" class="spinner-border spinner-border-sm text-muted"></span>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
+                                <div class="text-muted" style="font-size:.78rem;line-height:1.6;">
+                                    <i class="fa-solid fa-circle-info text-primary me-1"></i>
+                                    Turning this off hides the floating assistant for every user and rejects
+                                    new chat messages — existing conversation history stays visible in
+                                    <a href="/chatbot/admin/conversations">Chatbot conversations</a>.
+                                    Uses a self-hosted <code style="font-size:.72rem;">ollama</code> instance
+                                    (<code style="font-size:.72rem;">OLLAMA_URL</code> in <code style="font-size:.72rem;">.env</code>).
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </template>
 
             <div v-else-if="!instanceLoading" class="text-center text-muted py-5">
@@ -1079,6 +1117,7 @@ createApp({
         const instanceLoading   = ref(false)
         const instanceLoaded    = ref(false)
         const instanceInitSaving = ref(false)
+        const chatbotToggleSaving = ref(false)
 
         /* ── CSRF ── */
         function csrf() {
@@ -1295,6 +1334,22 @@ createApp({
             }
         }
 
+        async function toggleChatbotEnabled(checked) {
+            chatbotToggleSaving.value = true
+            const { create_message } = await import('/static/js/toaster.js')
+            try {
+                const data = await post('/admin/settings/chatbot_toggle', { enabled: checked })
+                if (data.success) {
+                    instance.value.chatbot_enabled = data.chatbot_enabled
+                    create_message(data.chatbot_enabled ? 'Chatbot enabled.' : 'Chatbot disabled.', 'success-subtle')
+                } else {
+                    create_message(data.error || 'Could not update the chatbot setting.', 'danger-subtle')
+                }
+            } finally {
+                chatbotToggleSaving.value = false
+            }
+        }
+
         function copyText(text) {
             navigator.clipboard.writeText(text).then(() => {
                 import('/static/js/toaster.js').then(({ create_message }) =>
@@ -1324,6 +1379,7 @@ createApp({
             saveEnvKey,
             testEmailRecipient, testEmailSending, testEmailResult, sendTestEmail,
             instance, instanceLoading, instanceInitSaving, loadInstance, initInstance, copyText,
+            chatbotToggleSaving, toggleChatbotEnabled,
         }
     }
 }).mount('#settings-app')
