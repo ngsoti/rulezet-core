@@ -98,7 +98,7 @@ export default {
         startCollapsed: { type: Boolean, default: false },
     },
 
-    emits: ['select', 'delete'],
+    emits: ['select', 'delete', 'view-content'],
 
     setup(props, { emit }) {
         const collapsed = ref(new Set())
@@ -255,11 +255,16 @@ export default {
                                 </a>
                             </div>
 
-                            <!-- Diff hint for version events -->
-                            <div v-if="item.type === 'update' && (item.old_content || item.new_content)"
-                                 class="tl-diff-hint" style="cursor:pointer;" @click.stop="$emit('select', item)">
-                                <i class="fas fa-code-compare me-1"></i>
-                                Click to see diff
+                            <!-- Content / diff hints for version events -->
+                            <div v-if="item.type === 'update' && (item.old_content || item.new_content)" class="d-flex gap-2 flex-wrap">
+                                <div class="tl-diff-hint" style="cursor:pointer;" @click.stop="$emit('view-content', item)">
+                                    <i class="fas fa-file-code me-1"></i>
+                                    Click to see the rule
+                                </div>
+                                <div class="tl-diff-hint" style="cursor:pointer;" @click.stop="$emit('select', item)">
+                                    <i class="fas fa-code-compare me-1"></i>
+                                    Click to see diff
+                                </div>
                             </div>
                         </div>
                     </div>

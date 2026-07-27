@@ -65,15 +65,26 @@
 
 .ver-num {
     display: flex; align-items: center; justify-content: center;
-    width: 20px; height: 20px; border-radius: 50%;
-    font-size: .6rem; font-weight: 700; flex-shrink: 0;
+    width: 26px; height: 20px; border-radius: 10px;
+    font-size: .62rem; font-weight: 700; flex-shrink: 0;
     background: var(--light-bg-color); border: 1px solid var(--border-color); color: var(--subtle-text-color);
 }
 
-/* Old/New pick buttons */
-.ver-pick-btn {
-    display: inline-flex; align-items: center; gap: .25rem;
-    padding: .2rem .55rem;
+.ver-row {
+    cursor: pointer;
+}
+.ver-row--selected {
+    border-color: #0d6efd;
+    background: rgba(13,110,253,.05);
+}
+.ver-row--selected .ver-num {
+    background: #0d6efd; border-color: #0d6efd; color: #fff;
+}
+
+/* Compare toggle button */
+.ver-compare-btn {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .22rem .6rem;
     border-radius: 99px;
     border: 1.5px solid var(--border-color);
     background: var(--light-bg-color);
@@ -84,10 +95,33 @@
     user-select: none;
     white-space: nowrap;
 }
-.ver-pick-btn:hover { border-color: #0d6efd55; color: #0d6efd; }
-.ver-pick-btn.slot-a { background: #0d6efd; border-color: #0d6efd; color: #fff; }
-.ver-pick-btn.slot-b { background: #198754; border-color: #198754; color: #fff; }
-.ver-pick-btn.no-content { opacity: .35; cursor: not-allowed; }
+.ver-compare-btn:hover { border-color: #198754aa; color: #198754; }
+.ver-compare-btn.active { background: #198754; border-color: #198754; color: #fff; }
+.ver-compare-btn .cmp-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(255,255,255,.3); font-size: .55rem; font-weight: 800;
+}
+
+/* ── Segmented toggle (Content / What changed) ──────────────── */
+.seg-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border-color);
+    border-radius: 99px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.seg-toggle button {
+    border: none;
+    background: transparent;
+    padding: .3rem .85rem;
+    font-size: .68rem;
+    font-weight: 700;
+    color: var(--subtle-text-color);
+    cursor: pointer;
+    transition: all .12s;
+}
+.seg-toggle button.active { background: #0d6efd; color: #fff; }
 
 /* ── Diff transition ─────────────────────────────────────── */
 .slide-down-enter-active { animation: slideDown .2s ease; }
@@ -163,14 +197,38 @@
                 :group-by-day="true"
                 :can-delete="canDelete"
                 @select="onTimelineSelect"
+                @view-content="onTimelineViewContent"
                 @delete="deleteActivity">
             </timeline>
         </div>
     </div>
 
+    <!-- ── Inline content (timeline "see the rule" click) ─────────── -->
+    <transition name="slide-down">
+        <div v-if="inlineContent" id="inline-content-anchor" class="h-card mb-4">
+            <div class="h-card__header">
+                <div class="h-card__accent"></div>
+                <span class="h-card__title">
+                    <i class="fa-solid fa-file-code me-1"></i>[[ inlineContent.title ]]
+                    <span class="ms-2 text-muted fw-normal" style="text-transform:none;letter-spacing:0;font-size:.7rem;">
+                        [[ inlineContent.created_at ? new Date(inlineContent.created_at).toLocaleString() : '' ]]
+                    </span>
+                </span>
+                <button class="btn-close ms-auto" style="font-size:.6rem;" @click="inlineContent = null"></button>
+            </div>
+            <div class="h-card__body">
+                <code-viewer
+                    :code="inlineContent.new_content || inlineContent.old_content || ''"
+                    :language="RULE_FORMAT"
+                    max-height="500px">
+                </code-viewer>
+            </div>
+        </div>
+    </transition>
+
     <!-- ── Inline diff (timeline click) ─────────────────────────── -->
     <transition name="slide-down">
-        <div v-if="inlineDiff" class="h-card mb-4" style="border-left:3px solid #0d6efd;">
+        <div v-if="inlineDiff" id="inline-diff-anchor" class="h-card mb-4" style="border-left:3px solid #0d6efd;">
             <div class="h-card__header">
                 <div class="h-card__accent"></div>
                 <span class="h-card__title">
@@ -194,34 +252,29 @@
         </div>
     </transition>
 
-    <!-- ── Compare versions ──────────────────────────────────────── -->
+    <!-- ── Versions ──────────────────────────────────────────────── -->
     <div class="h-card">
         <div class="h-card__header">
             <div class="h-card__accent h-card__accent--green"></div>
-            <span class="h-card__title"><i class="fa-solid fa-code-branch me-1"></i>Compare versions</span>
+            <span class="h-card__title"><i class="fa-solid fa-code-branch me-1"></i>Versions</span>
             <span class="badge ms-2 rounded-pill" style="font-size:.65rem;background:var(--light-bg-color);color:var(--subtle-text-color);border:1px solid var(--border-color);">
-                [[ allVersions.length ]] version(s)
+                [[ numberedVersions.length ]] version(s)
             </span>
 
-            <!-- Slot status + clear -->
+            <!-- Compare status + clear -->
             <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
-                <template v-if="slotA || slotB">
-                    <span v-if="slotA" class="d-flex align-items-center gap-1" style="font-size:.72rem;">
-                        <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#0d6efd;color:#fff;font-size:.55rem;font-weight:700;">A</span>
-                        <span style="color:var(--subtle-text-color);">#[[ slotA.version.id ]] [[ slotA.side ]]</span>
-                    </span>
-                    <span v-if="slotA && slotB" style="color:var(--subtle-text-color);font-size:.7rem;">vs</span>
-                    <span v-if="slotB" class="d-flex align-items-center gap-1" style="font-size:.72rem;">
-                        <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#198754;color:#fff;font-size:.55rem;font-weight:700;">B</span>
-                        <span style="color:var(--subtle-text-color);">#[[ slotB.version.id ]] [[ slotB.side ]]</span>
+                <template v-if="compareList.length">
+                    <span class="d-flex align-items-center gap-1" style="font-size:.72rem;color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-code-compare" style="color:#198754;"></i>
+                        [[ compareList.length ]]/2 selected for comparison
                     </span>
                     <button class="btn btn-sm rounded-pill"
                             style="font-size:.7rem;padding:.15rem .6rem;border:1px solid var(--border-color);background:transparent;color:var(--subtle-text-color);"
-                            @click="resetCmp">
+                            @click="resetCompare">
                         <i class="fa-solid fa-xmark me-1"></i>Clear
                     </button>
                 </template>
-                <span v-else class="text-muted" style="font-size:.72rem;">Pick <strong>Old</strong> or <strong>New</strong> on two versions to compare</span>
+                <span v-else class="text-muted" style="font-size:.72rem;">Click a version to view it — use <i class="fa-solid fa-code-compare mx-1"></i> to compare two</span>
             </div>
         </div>
 
@@ -230,55 +283,52 @@
                 <div class="spinner-border spinner-border-sm me-2"></div>Loading versions…
             </div>
 
-            <div v-else-if="!allVersions.length" class="text-center py-5 text-muted">
+            <div v-else-if="!numberedVersions.length" class="text-center py-5 text-muted">
                 <i class="fa-solid fa-clock-rotate-left fa-2x mb-3 opacity-25 d-block"></i>
                 <span class="small">No version history available for this rule.</span>
             </div>
 
             <template v-else>
                 <!-- Version list -->
-                <div class="ver-list mb-4">
-                    <div v-for="(v, idx) in allVersions" :key="v.id" class="ver-row">
+                <div class="ver-list mb-3">
+                    <div v-for="v in numberedVersions" :key="v.id"
+                         class="ver-row" :class="{ 'ver-row--selected': selectedVersion && selectedVersion.id === v.id }"
+                         @click="selectVersion(v)">
 
-                        <div class="ver-num">[[ idx + 1 ]]</div>
+                        <div class="ver-num">v[[ v.versionNumber ]]</div>
 
                         <!-- Info -->
                         <div class="flex-grow-1 min-width-0">
                             <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                                <span class="fw-semibold small">#[[ v.id ]]</span>
-                                <span class="badge rounded-pill"
+                                <span v-if="!v.isOriginal" class="badge rounded-pill"
                                       :class="v.success ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'"
                                       style="font-size:.6rem;">[[ v.success ? 'OK' : 'Error' ]]</span>
-                                <span v-if="v.id === latestVersionId"
+                                <span v-if="v.isLatest"
                                       class="badge rounded-pill bg-primary-subtle text-primary"
                                       style="font-size:.6rem;">latest</span>
-                                <span v-if="v.manual" class="badge rounded-pill"
+                                <span v-if="v.manuel_submit" class="badge rounded-pill"
                                       style="font-size:.6rem;background:rgba(111,66,193,.1);color:#6f42c1;border:1px solid rgba(111,66,193,.2);">manual</span>
+                                <user-chip v-if="v.analyzed_by_user_id"
+                                           :user-id="v.analyzed_by_user_id"
+                                           :username="v.analyzed_by_name"
+                                           :avatar="v.analyzed_by_avatar"
+                                           size="xs">
+                                </user-chip>
                             </div>
-                            <div class="text-truncate" style="font-size:.75rem;color:var(--subtle-text-color);" :title="v.message">[[ v.message || '—' ]]</div>
+                            <div class="text-truncate" style="font-size:.75rem;color:var(--subtle-text-color);" :title="v.message">[[ v.isOriginal ? 'Original content, before the first tracked change' : (v.message || '—') ]]</div>
                             <div style="font-size:.65rem;color:var(--subtle-text-color);margin-top:.1rem;">[[ v.analyzed_at ]]</div>
                         </div>
 
-                        <!-- Old / New pick buttons -->
-                        <div class="d-flex gap-1 flex-shrink-0">
-                            <span :class="['ver-pick-btn', !v.old_content ? 'no-content' : slotClass(v, 'old')]"
-                                  @click="v.old_content && pickSlot(v, 'old')"
-                                  :title="v.old_content ? 'Use old content' : 'No old content'">
-                                <i class="fa-solid fa-clock-rotate-left" style="font-size:.6rem;"></i>Old
-                                <span v-if="slotClass(v, 'old') === 'slot-a'" style="font-size:.55rem;font-weight:800;">A</span>
-                                <span v-if="slotClass(v, 'old') === 'slot-b'" style="font-size:.55rem;font-weight:800;">B</span>
-                            </span>
-                            <span :class="['ver-pick-btn', !v.new_content ? 'no-content' : slotClass(v, 'new')]"
-                                  @click="v.new_content && pickSlot(v, 'new')"
-                                  :title="v.new_content ? 'Use new content' : 'No new content'">
-                                <i class="fa-solid fa-file-code" style="font-size:.6rem;"></i>New
-                                <span v-if="slotClass(v, 'new') === 'slot-a'" style="font-size:.55rem;font-weight:800;">A</span>
-                                <span v-if="slotClass(v, 'new') === 'slot-b'" style="font-size:.55rem;font-weight:800;">B</span>
-                            </span>
-                        </div>
+                        <!-- Compare toggle -->
+                        <span class="ver-compare-btn flex-shrink-0" :class="{ active: isComparing(v) }"
+                              @click.stop="toggleCompare(v)"
+                              :title="isComparing(v) ? 'Remove from comparison' : 'Add to comparison'">
+                            <i class="fa-solid fa-code-compare"></i>
+                            <span v-if="isComparing(v)" class="cmp-num">[[ compareIndex(v) + 1 ]]</span>
+                        </span>
 
                         <!-- Delete -->
-                        <button v-if="canDelete"
+                        <button v-if="canDelete && !v.isOriginal"
                                 class="btn btn-sm rounded-pill flex-shrink-0"
                                 style="font-size:.7rem;padding:.2rem .55rem;border:1px solid rgba(220,53,69,.3);color:#dc3545;background:rgba(220,53,69,.05);"
                                 @click.stop="deleteVersion(v)"
@@ -288,37 +338,80 @@
                     </div>
                 </div>
 
-                <!-- Diff panel — auto-shows when A + B selected -->
+                <!-- Version content panel — shows on row click -->
                 <transition name="slide-down">
-                    <div v-if="slotA && slotB" id="cmp-diff-anchor">
-                        <div class="d-flex align-items-center gap-2 mb-3 pt-3" style="border-top:1px solid var(--border-color);">
-                            <i class="fa-solid fa-code-compare text-muted" style="font-size:.8rem;"></i>
-                            <span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
-                                Comparing
-                                <span style="color:#0d6efd;">A — #[[ slotA.version.id ]] ([[ slotA.side ]])</span>
-                                <span class="mx-1">vs</span>
-                                <span style="color:#198754;">B — #[[ slotB.version.id ]] ([[ slotB.side ]])</span>
+                    <div v-if="selectedVersion" id="version-content-anchor" class="h-card mb-4">
+                        <div class="h-card__header">
+                            <div class="h-card__accent"></div>
+                            <span class="h-card__title">
+                                v[[ selectedVersion.versionNumber ]]
+                                <span class="ms-2 text-muted fw-normal" style="text-transform:none;letter-spacing:0;font-size:.7rem;">[[ selectedVersion.analyzed_at ]]</span>
                             </span>
+
+                            <div v-if="selectedVersion.old_content && selectedVersion.new_content" class="seg-toggle ms-3">
+                                <button :class="{ active: contentTab === 'content' }" @click="contentTab = 'content'">Content</button>
+                                <button :class="{ active: contentTab === 'changes' }" @click="contentTab = 'changes'">What changed</button>
+                            </div>
+
+                            <button class="btn-close ms-auto" style="font-size:.6rem;" @click="selectedVersion = null"></button>
                         </div>
-                        <diff-viewer
-                            :key="'cmp-' + cmpKey"
-                            :initial-left="slotA.content"
-                            :initial-right="slotB.content"
-                            :left-label="'#' + slotA.version.id + ' — ' + slotA.side"
-                            :right-label="'#' + slotB.version.id + ' — ' + slotB.side"
-                            mode="read">
-                        </diff-viewer>
+                        <div class="h-card__body">
+                            <code-viewer v-if="contentTab === 'content'"
+                                         :code="contentOf(selectedVersion)"
+                                         :language="RULE_FORMAT"
+                                         max-height="500px">
+                            </code-viewer>
+                            <diff-viewer v-else
+                                         :key="'sel-' + selectedVersion.id"
+                                         :initial-left="selectedVersion.old_content"
+                                         :initial-right="selectedVersion.new_content"
+                                         left-label="Before"
+                                         right-label="After"
+                                         mode="read">
+                            </diff-viewer>
+
+                            <div class="text-end mt-3">
+                                <button class="ver-compare-btn" :class="{ active: isComparing(selectedVersion) }"
+                                        @click="toggleCompare(selectedVersion)">
+                                    <i class="fa-solid fa-code-compare"></i>
+                                    [[ isComparing(selectedVersion) ? 'Remove from comparison' : 'Add to comparison' ]]
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </transition>
 
-                <div v-if="!slotA" class="text-center py-3 text-muted small">
+                <!-- Diff panel — shows once 2 versions are selected for comparison -->
+                <transition name="slide-down">
+                    <div v-if="compareList.length === 2" id="cmp-diff-anchor" class="h-card mb-0" style="border-left:3px solid #198754;">
+                        <div class="h-card__header">
+                            <div class="h-card__accent h-card__accent--green"></div>
+                            <span class="h-card__title">
+                                <i class="fa-solid fa-code-compare me-1"></i>
+                                Comparing v[[ sortedCompare[0].versionNumber ]] vs v[[ sortedCompare[1].versionNumber ]]
+                            </span>
+                            <button class="btn-close ms-auto" style="font-size:.6rem;" @click="resetCompare"></button>
+                        </div>
+                        <div class="h-card__body">
+                            <diff-viewer
+                                :key="'cmp-' + cmpKey"
+                                :initial-left="contentOf(sortedCompare[0])"
+                                :initial-right="contentOf(sortedCompare[1])"
+                                :left-label="'v' + sortedCompare[0].versionNumber + ' — ' + (sortedCompare[0].analyzed_at || 'original')"
+                                :right-label="'v' + sortedCompare[1].versionNumber + ' — ' + (sortedCompare[1].analyzed_at || 'original')"
+                                mode="read">
+                            </diff-viewer>
+                        </div>
+                    </div>
+                </transition>
+
+                <div v-if="!selectedVersion && !compareList.length" class="text-center py-3 text-muted small">
                     <i class="fa-solid fa-hand-pointer me-1 opacity-50"></i>
-                    Click <strong>Old</strong> or <strong>New</strong> on any version → becomes <strong style="color:#0d6efd;">A</strong>.
-                    Then pick another → becomes <strong style="color:#198754;">B</strong>. Diff appears instantly.
+                    Click any version to see its content. Use the <i class="fa-solid fa-code-compare mx-1"></i> button on two versions to compare them side by side.
                 </div>
-                <div v-else-if="!slotB" class="text-center py-3 text-muted small">
+                <div v-else-if="compareList.length === 1" class="text-center py-3 text-muted small">
                     <i class="fa-solid fa-hand-pointer me-1 opacity-50"></i>
-                    Now pick a second <strong>Old</strong> or <strong>New</strong> to compare against <strong style="color:#0d6efd;">A</strong>.
+                    Pick one more version to compare against v[[ compareList[0].versionNumber ]].
                 </div>
             </template>
         </div>
@@ -333,14 +426,17 @@
     import { create_message } from '/static/js/toaster.js';
     import Timeline   from '/static/js/components/timeline.js';
     import DiffViewer from '/static/js/components/diff-viewer.js';
+    import CodeViewer from '/static/js/components/code-viewer.js';
+    import UserChip   from '/static/js/components/UserChip.js';
 
-    const RULE_ID   = {{ rule.id }};
-    const CSRF      = '{{ csrf_token() }}';
-    const CAN_DELETE = {{ (current_user.is_authenticated and (current_user.id == rule.user_id or current_user.is_admin())) | tojson }};
+    const RULE_ID     = {{ rule.id }};
+    const RULE_FORMAT = '{{ rule.format or "text" }}';
+    const CSRF        = '{{ csrf_token() }}';
+    const CAN_DELETE  = {{ (current_user.is_authenticated and (current_user.id == rule.user_id or current_user.is_admin())) | tojson }};
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { 'timeline': Timeline, 'diff-viewer': DiffViewer },
+        components: { 'timeline': Timeline, 'diff-viewer': DiffViewer, 'code-viewer': CodeViewer, 'user-chip': UserChip },
         setup() {
             // ── Timeline ─────────────────────────────────────────────
             const items   = ref([]);
@@ -375,9 +471,10 @@
             }
             fetchHistory();
 
-            // ── Inline diff (from timeline click) ────────────────────
+            // ── Inline diff / content (from timeline click) ──────────
             const inlineDiff    = ref(null);
             const inlineDiffKey = ref(0);
+            const inlineContent = ref(null);
 
             const PROPOSAL_ACTIONS = new Set(['rule.propose_edit', 'rule.proposal_approved', 'rule.proposal_rejected']);
 
@@ -397,17 +494,52 @@
                 }
             }
 
-            // ── Compare versions ──────────────────────────────────────
-            const allVersions     = ref([]);
-            const versionsLoading = ref(false);
-            // Each slot: { version, side: 'old'|'new', content }
-            const slotA  = ref(null);
-            const slotB  = ref(null);
-            const cmpKey = ref(0);
+            function onTimelineViewContent(item) {
+                inlineContent.value = item;
+                setTimeout(() => {
+                    document.getElementById('inline-content-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 80);
+            }
 
-            const latestVersionId = computed(() => {
-                if (!allVersions.value.length) return null;
-                return Math.max(...allVersions.value.map(v => v.id));
+            // ── Versions: view content + compare ──────────────────────
+            const allVersions     = ref([]); // raw rows from the API, newest first
+            const versionsLoading = ref(false);
+
+            // A version selected for full-content viewing (click on a row)
+            const selectedVersion = ref(null);
+            const contentTab      = ref('content'); // 'content' | 'changes'
+
+            // Up to 2 versions picked for side-by-side comparison
+            const compareList = ref([]);
+            const cmpKey       = ref(0);
+
+            // Adds chronological numbering (oldest = v1) and an "original"
+            // pseudo-version (the content before the first tracked change),
+            // without mutating the raw fetched rows.
+            const numberedVersions = computed(() => {
+                const rows = allVersions.value;
+                if (!rows.length) return [];
+
+                const list = rows.map(v => ({ ...v }));
+                const oldest = list[list.length - 1];
+                if (oldest.old_content) {
+                    list.push({
+                        id: 'original',
+                        isOriginal: true,
+                        analyzed_at: '',
+                        message: '',
+                        old_content: null,
+                        new_content: oldest.old_content,
+                        success: true,
+                    });
+                }
+
+                const total = list.length;
+                return list.map((v, idx) => ({
+                    ...v,
+                    versionNumber: total - idx,
+                    isLatest: idx === 0,
+                }));
             });
 
             async function fetchAllVersions() {
@@ -422,28 +554,52 @@
             }
             fetchAllVersions();
 
-            function slotClass(v, side) {
-                if (slotA.value?.version.id === v.id && slotA.value?.side === side) return 'slot-a';
-                if (slotB.value?.version.id === v.id && slotB.value?.side === side) return 'slot-b';
-                return '';
+            function contentOf(v) {
+                return v.new_content || v.old_content || '';
             }
 
-            function pickSlot(v, side) {
-                const content = side === 'old' ? v.old_content : v.new_content;
-                // Deselect if already assigned
-                if (slotA.value?.version.id === v.id && slotA.value?.side === side) { slotA.value = null; return; }
-                if (slotB.value?.version.id === v.id && slotB.value?.side === side) { slotB.value = null; return; }
-                // Assign A first, then B
-                if (!slotA.value) { slotA.value = { version: v, side, content }; return; }
-                slotB.value = { version: v, side, content };
-                cmpKey.value++;
+            function selectVersion(v) {
+                if (selectedVersion.value?.id === v.id) { selectedVersion.value = null; return; }
+                selectedVersion.value = v;
+                contentTab.value = 'content';
                 setTimeout(() => {
-                    document.getElementById('cmp-diff-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    document.getElementById('version-content-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }, 80);
             }
 
-            function resetCmp() {
-                slotA.value = null; slotB.value = null; cmpKey.value++;
+            function isComparing(v) {
+                return compareList.value.some(x => x.id === v.id);
+            }
+
+            function compareIndex(v) {
+                return compareList.value.findIndex(x => x.id === v.id);
+            }
+
+            function toggleCompare(v) {
+                const list = compareList.value.slice();
+                const idx = list.findIndex(x => x.id === v.id);
+                if (idx !== -1) {
+                    list.splice(idx, 1);
+                    compareList.value = list;
+                    return;
+                }
+                if (list.length >= 2) list.shift(); // keep only the 2 most recently picked
+                list.push(v);
+                compareList.value = list;
+                if (list.length === 2) {
+                    cmpKey.value++;
+                    setTimeout(() => {
+                        document.getElementById('cmp-diff-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 80);
+                }
+            }
+
+            const sortedCompare = computed(() =>
+                compareList.value.slice().sort((a, b) => a.versionNumber - b.versionNumber)
+            );
+
+            function resetCompare() {
+                compareList.value = [];
             }
 
             // ── Delete ────────────────────────────────────────────────
@@ -460,8 +616,8 @@
                     if (item.type === 'update') {
                         const id = parseInt(item.uuid.replace('upd-', ''));
                         allVersions.value = allVersions.value.filter(v => v.id !== id);
-                        if (cmpA.value?.id === id) cmpA.value = null;
-                        if (cmpB.value?.id === id) cmpB.value = null;
+                        if (selectedVersion.value?.id === id) selectedVersion.value = null;
+                        compareList.value = compareList.value.filter(v => v.id !== id);
                     }
                 }
             }
@@ -472,8 +628,8 @@
                 create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
                 if (res.ok) {
                     allVersions.value = allVersions.value.filter(x => x.id !== v.id);
-                    if (cmpA.value?.id === v.id) cmpA.value = null;
-                    if (cmpB.value?.id === v.id) cmpB.value = null;
+                    if (selectedVersion.value?.id === v.id) selectedVersion.value = null;
+                    compareList.value = compareList.value.filter(x => x.id !== v.id);
                     items.value = items.value.filter(i => i.uuid !== `upd-${v.id}`);
                 }
             }
@@ -481,9 +637,10 @@
             return {
                 items, loading, filters, activeFilters, filteredItems, updateCount, toggleFilter,
                 canDelete: CAN_DELETE, deleteActivity, deleteVersion,
-                inlineDiff, inlineDiffKey, onTimelineSelect,
-                allVersions, versionsLoading, latestVersionId,
-                slotA, slotB, cmpKey, slotClass, pickSlot, resetCmp,
+                inlineDiff, inlineDiffKey, inlineContent, onTimelineSelect, onTimelineViewContent,
+                allVersions, numberedVersions, versionsLoading, RULE_FORMAT,
+                selectedVersion, contentTab, selectVersion, contentOf,
+                compareList, sortedCompare, cmpKey, isComparing, compareIndex, toggleCompare, resetCompare,
             };
         }
     }).mount('#main-container');

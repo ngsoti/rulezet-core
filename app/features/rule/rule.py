@@ -2285,9 +2285,7 @@ def get_rules_page_history_():
         old_content = rule.old_content or ""
         new_content = rule.new_content or ""
 
-        # Generate HTML diff for each rule
-        old_html, new_html = generate_side_by_side_diff_html(old_content, new_content)
-
+        analyzed_by = rule.analyzed_by
         rule_data = {
             "id": rule.id,
             "rule_title": rule.rule_title,
@@ -2295,10 +2293,12 @@ def get_rules_page_history_():
             "message": rule.message,
             "old_content": old_content,
             "new_content": new_content,
-            "old_html": old_html,
-            "new_html": new_html,
             "rule_id": rule.rule_id,
             "success": rule.success,
+            "manuel_submit": bool(rule.manuel_submit),
+            "analyzed_by_user_id": analyzed_by.id if analyzed_by else None,
+            "analyzed_by_name": (f"{analyzed_by.first_name} {analyzed_by.last_name}".strip() if analyzed_by else None),
+            "analyzed_by_avatar": (analyzed_by.get_avatar_url() if analyzed_by else None),
         }
         result.append(rule_data)
 
