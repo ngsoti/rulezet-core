@@ -426,6 +426,31 @@ def add_rule_core(form_dict, user) -> tuple[bool, str] | tuple[Rule, str]:
 
         db.session.commit()
 
+        # Record the creation itself as v1 of the version history + a visible
+        # "Rule created" timeline entry — centralized here (not left to each
+        # caller) so every creation path (manual form, private API, auto-parse
+        # import) gets consistent tracking.
+        try:
+            from app.core.utils.activity_log import log_activity
+            log_activity("rule.create", f"Created rule '{new_rule.title}' [{new_rule.format}]",
+                         target_type="rule", target_id=new_rule.id, target_uuid=new_rule.uuid)
+            create_rule_history({
+                "id": new_rule.id,
+                "title": new_rule.title,
+                "success": True,
+                "message": "Rule created",
+                "new_content": new_rule.to_string,
+                "old_content": None,
+                # NOT a manual content submission — was_last_history_manuel()
+                # gates GitHub auto-sync updates on this flag, and creation
+                # shouldn't permanently block future syncs for the rule.
+                "manual_submit": False,
+                "new_snapshot": rule_metadata_snapshot(new_rule),
+                "change_type": "created",
+            })
+        except Exception:
+            pass
+
         # Notify followers of the rule author
         if user_id:
             try:
@@ -945,10 +970,35 @@ def get_total_rules_count_owner() -> int:
 
 def give_all_right_to_admin(rules) -> None:
     """give all right for admin for each rule"""
+    # Called right before the previous owner's account is deleted (see
+    # delete_user_core) — not crediting them as a contributor here, since
+    # their User row (and any contributions) is about to be removed anyway.
     id_default =  AccountModel.get_default_user()
+    old_snapshots = {rule.id: rule_metadata_snapshot(rule) for rule in rules}
     for rule in rules:
-        rule.user_id = id_default.id   
+        rule.user_id = id_default.id
     db.session.commit()
+
+    from app.core.utils.activity_log import log_activity
+
+    default_owner_name = f"{id_default.first_name} {id_default.last_name}".strip()
+    for rule in rules:
+        old_snap = old_snapshots[rule.id]
+        new_snap = {**old_snap, "owner_id": id_default.id, "owner_name": default_owner_name}
+        create_rule_history({
+            "id": rule.id,
+            "title": rule.title,
+            "success": True,
+            "manual_submit": False,
+            "message": f"Ownership reassigned to {default_owner_name} (previous owner's account was removed)",
+            "old_snapshot": old_snap,
+            "new_snapshot": new_snap,
+            "change_type": "ownership",
+        })
+        log_activity("rule.ownership_transfer",
+                     f"Ownership of '{rule.title}' reassigned to {default_owner_name} (previous owner's account was removed)",
+                     target_type="rule", target_id=rule.id, target_uuid=rule.uuid,
+                     icon="fa-solid fa-user-shield", category="rule")
 
 #####################
 #   Favorite rule   #
@@ -1889,13 +1939,34 @@ def add_reaction_to_rule_comment(comment_id, user_id, reaction_type):
 def create_contribution(user_id, proposal_id) -> bool:
     """Add a user to the contributor"""
     if not user_id or not proposal_id:
-        return False 
+        return False
 
     rule_id = get_rule_id_with_edit_disccuss(proposal_id)
     contribution = RuleEditContribution(user_id=user_id, proposal_id=proposal_id , rule_id=rule_id , created_at=datetime.datetime.now(tz=datetime.timezone.utc))
     db.session.add(contribution)
     db.session.commit()
     return True , contribution
+
+
+def add_contributor(user_id, rule_id) -> bool:
+    """Credit a user as a contributor to a rule with no edit proposal involved —
+    e.g. an admin/non-owner directly editing the rule, or the previous owner
+    right after an ownership transfer. No-op if already credited for this rule.
+    """
+    if not user_id or not rule_id:
+        return False
+
+    already = RuleEditContribution.query.filter_by(user_id=user_id, rule_id=rule_id).first()
+    if already:
+        return True
+
+    contribution = RuleEditContribution(
+        user_id=user_id, proposal_id=None, rule_id=rule_id,
+        created_at=datetime.datetime.now(tz=datetime.timezone.utc),
+    )
+    db.session.add(contribution)
+    db.session.commit()
+    return True
 
 # Read
 
@@ -1989,7 +2060,12 @@ def delete_report(repport_id) -> bool:
 #######################
 
 def create_rule_history(data: dict) -> bool:
-    """Create a history entry for a rule update, unless it already exists. Returns the created RuleUpdateHistory.id or None if duplicate or error."""
+    """Create a history entry for a rule update, unless it already exists. Returns the created RuleUpdateHistory.id or None if duplicate or error.
+
+    Optional `old_snapshot`/`new_snapshot` (dicts from `rule_metadata_snapshot()`) and
+    `change_type` ('created'|'content'|'metadata'|'ownership'|'mixed') are always stored
+    as given.
+    """
     try:
         rule_id = data.get("id")
         rule_title = data.get("title", "Unknown Title")
@@ -1997,8 +2073,9 @@ def create_rule_history(data: dict) -> bool:
         message = data.get("message", "")
         new_content = data.get("new_content", "")
         old_content = data.get("old_content", "")
+        change_type = data.get("change_type")
 
-       
+
         if not data.get("manual_submit"):
             _submit_content = False
         else:
@@ -2006,23 +2083,35 @@ def create_rule_history(data: dict) -> bool:
 
         rule = get_rule(rule_id)
         if rule:
-            if current_user:
+            if data.get("analyzed_by_user_id") is not None:
+                # Explicit override — needed by background jobs/connectors where
+                # current_user isn't the one who actually made the change.
+                user_id = data.get("analyzed_by_user_id")
+            elif current_user:
                 user_id = current_user.id
             else:
                 user_id = rule.user_id
 
-        existing_entry = RuleUpdateHistory.query.filter_by(
-            rule_id=rule_id,
-            rule_title=rule_title,
-            success=success,
-            message=message,
-            new_content=new_content,
-            old_content=old_content,
-            analyzed_by_user_id=user_id,
-        ).first()
+        # 'created'/'metadata'/'ownership' entries always carry identical
+        # old_content/new_content (content never changes) and often an
+        # identical static message ("Metadata updated", ...) — dedup on those
+        # fields alone would treat every distinct metadata/ownership edit
+        # after the first as a "duplicate" of it and silently drop it. The
+        # old_snapshot/new_snapshot pair is what actually distinguishes them,
+        # so skip the content/message dedup entirely for these change types.
+        if change_type not in ("created", "metadata", "ownership"):
+            existing_entry = RuleUpdateHistory.query.filter_by(
+                rule_id=rule_id,
+                rule_title=rule_title,
+                success=success,
+                message=message,
+                new_content=new_content,
+                old_content=old_content,
+                analyzed_by_user_id=user_id,
+            ).first()
 
-        if existing_entry:
-            return existing_entry.id
+            if existing_entry:
+                return existing_entry.id
 
 
         history_entry = RuleUpdateHistory(
@@ -2034,7 +2123,10 @@ def create_rule_history(data: dict) -> bool:
             old_content=old_content,
             analyzed_by_user_id=user_id,
             analyzed_at=datetime.datetime.now(tz=datetime.timezone.utc),
-            manuel_submit=_submit_content
+            manuel_submit=_submit_content,
+            old_snapshot=data.get("old_snapshot"),
+            new_snapshot=data.get("new_snapshot"),
+            change_type=data.get("change_type"),
         )
 
         db.session.add(history_entry)
@@ -2045,6 +2137,121 @@ def create_rule_history(data: dict) -> bool:
     except Exception as e:
         db.session.rollback()
         return None
+
+
+def rule_metadata_snapshot(rule) -> dict:
+    """Serialize the rule fields/tags that matter for a human-readable history diff.
+
+    Used to detect and display changes that don't touch rule content at all —
+    e.g. an admin reassigning the owner, or a title/tag edit — which the plain
+    old_content/new_content diff can never show.
+    """
+    owner = User.query.get(rule.user_id) if rule.user_id else None
+    tags = sorted(a.tag.name for a in rule.rule_tags_assocs if a.tag)
+
+    try:
+        cve_ids = json.loads(rule.cve_id) if rule.cve_id else []
+        if not isinstance(cve_ids, list):
+            cve_ids = []
+    except (TypeError, ValueError):
+        cve_ids = []
+
+    attack_techniques = sorted(a.technique_id for a in rule.attack_assocs)
+
+    return {
+        "title": rule.title,
+        "author": rule.author,
+        "owner_id": rule.user_id,
+        "owner_name": (f"{owner.first_name} {owner.last_name}".strip() if owner else None),
+        "license": rule.license,
+        "description": rule.description,
+        "status": rule.status,
+        "format": rule.format,
+        "version": rule.version,
+        "source": rule.source,
+        "original_uuid": rule.original_uuid,
+        "tags": tags,
+        "cve_ids": sorted(cve_ids),
+        "attack_techniques": attack_techniques,
+    }
+
+
+_SNAPSHOT_FIELD_LABELS = {
+    "title":         "Title",
+    "author":        "Author",
+    "license":       "License",
+    "description":   "Description",
+    "status":        "Status",
+    "format":        "Format",
+    "version":       "Version",
+    "source":        "Source",
+    "original_uuid": "Original UUID",
+}
+
+_SNAPSHOT_LIST_FIELD_LABELS = {
+    "tags":              "Tags",
+    "cve_ids":           "Vulnerabilities",
+    "attack_techniques": "ATT&CK techniques",
+}
+
+
+def diff_rule_snapshots(old_snapshot, new_snapshot) -> list:
+    """Turn two `rule_metadata_snapshot()` dicts into a list of human-readable
+    field changes — so the frontend can render "Owner: X -> Y" style rows
+    instead of ever having to parse/display raw JSON.
+    """
+    if not old_snapshot or not new_snapshot:
+        return []
+
+    changes = []
+    for field, label in _SNAPSHOT_FIELD_LABELS.items():
+        old_val = old_snapshot.get(field)
+        new_val = new_snapshot.get(field)
+        if old_val != new_val:
+            changes.append({"field": field, "label": label, "type": "scalar", "old": old_val, "new": new_val})
+
+    if old_snapshot.get("owner_id") != new_snapshot.get("owner_id"):
+        def _owner_label(snap):
+            return snap.get("owner_name") or (f"user #{snap['owner_id']}" if snap.get("owner_id") else "—")
+        changes.insert(0, {
+            "field": "owner", "label": "Owner", "type": "scalar",
+            "old": _owner_label(old_snapshot), "new": _owner_label(new_snapshot),
+        })
+
+    for field, label in _SNAPSHOT_LIST_FIELD_LABELS.items():
+        old_set = set(old_snapshot.get(field) or [])
+        new_set = set(new_snapshot.get(field) or [])
+        if old_set != new_set:
+            changes.append({
+                "field": field, "label": label, "type": "list",
+                "added": sorted(new_set - old_set),
+                "removed": sorted(old_set - new_set),
+            })
+
+    return changes
+
+
+# Internal RuleUpdateHistory.message values that read fine in logs/dedup
+# queries but are too terse for the history UI — mapped to a full sentence.
+# Anything not in this map (dynamic messages like "Ownership transferred to
+# X", or connector/GitHub sync messages) is already a proper sentence and
+# passes through unchanged.
+_MESSAGE_DISPLAY_OVERRIDES = {
+    "accepted":                     "Content changes were reviewed and accepted.",
+    "simple edit":                  "A content edit was submitted.",
+    "Rule created":                 "Rule created.",
+    "Metadata updated":             "Rule metadata was updated.",
+    "Tags/vulnerabilities updated": "Tags and vulnerabilities were updated.",
+}
+
+
+def humanize_history_message(message: str) -> str:
+    """Turn a RuleUpdateHistory.message value into a display-friendly sentence.
+    Falsy input passes through unchanged so callers keep their own empty-value fallback."""
+    if not message:
+        return message
+    return _MESSAGE_DISPLAY_OVERRIDES.get(message, message)
+
 
 def was_last_history_manuel(rule_id):
     """
@@ -2075,25 +2282,41 @@ def get_history_rule_by_id(history_id):
 
 
 def get_history_rule_(page, rule_id, per_page) -> list:
-    """Get all the accepted edit history of a rule by its ID, paginated."""
+    """Get all meaningful version-history entries for a rule — accepted content
+    edits, plus creation/ownership/metadata changes — paginated."""
     return RuleUpdateHistory.query.filter(
         RuleUpdateHistory.rule_id == rule_id,
-        RuleUpdateHistory.success == True ,
-        RuleUpdateHistory.message == "accepted" 
+        RuleUpdateHistory.success == True,
+        or_(
+            RuleUpdateHistory.message == "accepted",
+            RuleUpdateHistory.change_type.in_(["created", "ownership", "metadata", "mixed"]),
+        ),
     ).paginate(page=page, per_page=per_page, max_per_page=per_page)
 
+
+# change_type values that are never a pending GitHub-update decision awaiting
+# accept/reject — they're plain history records (creation, metadata edit,
+# ownership transfer) that never enter the accepted/rejected life cycle at
+# all, so a naive "message not in (accepted, rejected)" filter would treat
+# them as permanently pending. Excluded from both queries below.
+_NON_PENDING_CHANGE_TYPES = ('created', 'metadata', 'ownership')
+
+
 def get_old_rule_choice(page , search=None) -> list:
-    """Get all the old choice to make"""    
+    """Get all the old choice to make"""
+    base_filters = [
+        RuleUpdateHistory.message != "accepted",
+        RuleUpdateHistory.message != "rejected",
+        or_(
+            RuleUpdateHistory.change_type.is_(None),
+            RuleUpdateHistory.change_type.notin_(_NON_PENDING_CHANGE_TYPES),
+        ),
+    ]
     if current_user.is_admin():
-        query = RuleUpdateHistory.query.filter(
-            RuleUpdateHistory.message != "accepted",
-            RuleUpdateHistory.message != "rejected"
-        )
+        query = RuleUpdateHistory.query.filter(*base_filters)
     else:
         query = RuleUpdateHistory.query.filter(
-            RuleUpdateHistory.message != "accepted",
-            RuleUpdateHistory.message != "rejected",
-            RuleUpdateHistory.analyzed_by_user_id == current_user.id
+            *base_filters, RuleUpdateHistory.analyzed_by_user_id == current_user.id
         )
     if search:
         query = query.filter(RuleUpdateHistory.rule_title.ilike(f"%{search}%"))
@@ -2105,7 +2328,11 @@ def get_update_pending():
     return RuleUpdateHistory.query.filter(
         RuleUpdateHistory.analyzed_by_user_id == current_user.id,
         RuleUpdateHistory.message != 'accepted',
-        RuleUpdateHistory.message != 'rejected'
+        RuleUpdateHistory.message != 'rejected',
+        or_(
+            RuleUpdateHistory.change_type.is_(None),
+            RuleUpdateHistory.change_type.notin_(_NON_PENDING_CHANGE_TYPES),
+        ),
     ).count()
 
 #####################

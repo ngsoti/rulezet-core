@@ -304,7 +304,8 @@ def get_changed_files_between(repo_dir, sha_before, sha_after):
 def fill_all_void_field(form_dict: dict) -> dict:
     """Fill all the void fields of a rule form with default values."""
 
-    form_dict['author'] = current_user.first_name + " " + current_user.last_name
+    if not form_dict.get('author'):
+        form_dict['author'] = current_user.first_name + " " + current_user.last_name
 
     if not form_dict.get('description'):
         form_dict['description'] = "No description for the rule"

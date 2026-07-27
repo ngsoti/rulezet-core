@@ -1,0 +1,86 @@
+/*---META_CHANGE_LIST---*/
+
+.mcl {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.mcl-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: .78rem;
+    font-family: var(--font-sans);
+    color: var(--text-main);
+    padding: 4px 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md, 8px);
+}
+
+.mcl--compact .mcl-row {
+    font-size: .7rem;
+    padding: 3px 8px;
+}
+
+.mcl-icon {
+    color: var(--brand);
+    font-size: .75em;
+    flex-shrink: 0;
+}
+
+.mcl-label {
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    font-size: .85em;
+    flex-shrink: 0;
+}
+
+.mcl-old {
+    color: var(--text-muted);
+    text-decoration: line-through;
+    text-decoration-color: rgba(239, 68, 68, .5);
+}
+
+.mcl-new {
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.mcl-arrow {
+    color: var(--text-muted);
+    font-size: .7em;
+    opacity: .6;
+    flex-shrink: 0;
+}
+
+.mcl-tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.mcl-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 99px;
+    font-size: .82em;
+    font-weight: 600;
+}
+
+.mcl-tag--added {
+    background: rgba(34, 197, 94, .12);
+    color: #16a34a;
+}
+
+.mcl-tag--removed {
+    background: rgba(239, 68, 68, .12);
+    color: #dc2626;
+    text-decoration: line-through;
+}

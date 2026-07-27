@@ -98,8 +98,6 @@ def rule() -> render_template:
                 except Exception:
                     pass
 
-            log_activity("rule.create", f"Created rule '{new_rule.title}' [{new_rule.format}]",
-                         target_type="rule", target_id=new_rule.id, target_uuid=new_rule.uuid)
             flash('Rule added !', 'success')
             return redirect(url_for('rule.detail_rule', rule_id=new_rule.id))
         elif isinstance(message, str) and message.startswith("TRASH_CONFLICT:"):
@@ -372,8 +370,12 @@ def edit_rule(rule_id) -> render_template:
         if form.validate_on_submit():
             
             form_dict = form_to_dict(form)
-           
+
             form_dict['to_string'] = form_dict['to_string'].replace('\r\n', '\n').replace('\r', '\n')
+            # EditRuleForm has no author field — preserve the rule's existing
+            # author instead of letting fill_all_void_field default it to
+            # whoever is currently editing.
+            form_dict['author'] = rule.author
             rule_dict = fill_all_void_field(form_dict)
            
             
@@ -386,8 +388,12 @@ def edit_rule(rule_id) -> render_template:
 
             
             # create an history for the rule
-            
-            if rule.to_string.strip() != form_dict['to_string'].strip():
+
+            content_changed = rule.to_string.strip() != form_dict['to_string'].strip()
+            old_snapshot = RuleModel.rule_metadata_snapshot(rule)
+            history = None
+
+            if content_changed:
                 if rule_dict["version"] == rule.version:
                     rule_dict["version"] = bump_version(rule_dict["version"])
                 result = {
@@ -397,12 +403,13 @@ def edit_rule(rule_id) -> render_template:
                     "manual_submit": True,
                     "message": "simple edit",
                     "new_content": form_dict['to_string'],
-                    "old_content": rule.to_string
+                    "old_content": rule.to_string,
+                    "old_snapshot": old_snapshot,
                 }
                 history_id = RuleModel.create_rule_history(result)
                 history = RuleModel.get_history_rule_by_id(history_id)
                 history.message = "accepted"
-            
+
             v_data = request.form.get('vulnerabilities')
             form_dict['vulnerabilities'] = v_data
 
@@ -415,6 +422,38 @@ def edit_rule(rule_id) -> render_template:
             success , current_rule = RuleModel.edit_rule_core(rule_dict, rule_id)
             log_activity("rule.edit", f"Edited rule '{current_rule.title}' (id={rule_id})",
                          target_type="rule", target_id=rule_id, target_uuid=current_rule.uuid)
+
+            # Someone other than the owner (an admin, typically) touched this
+            # rule — credit them as a contributor.
+            if current_user.id != current_rule.user_id:
+                RuleModel.add_contributor(current_user.id, rule_id)
+
+            new_snapshot = RuleModel.rule_metadata_snapshot(current_rule)
+            metadata_changed = new_snapshot != old_snapshot
+
+            if history is not None:
+                # Content already tracked above — attach the metadata diff to the same version.
+                history.new_snapshot = new_snapshot
+                history.change_type = "mixed" if metadata_changed else "content"
+                db.session.commit()
+            elif metadata_changed:
+                # No content change, but title/author/owner/tags/etc changed — still worth a version.
+                # manual_submit=False: was_last_history_manuel() gates GitHub
+                # auto-sync on this flag and a metadata-only edit shouldn't
+                # block future content syncs for the rule.
+                RuleModel.create_rule_history({
+                    "id": rule_id,
+                    "title": current_rule.title,
+                    "success": True,
+                    "manual_submit": False,
+                    "message": "Metadata updated",
+                    "new_content": current_rule.to_string,
+                    "old_content": current_rule.to_string,
+                    "old_snapshot": old_snapshot,
+                    "new_snapshot": new_snapshot,
+                    "change_type": "metadata",
+                })
+
             flash("Rule modified with success!", "success")
 
             return redirect(url_for('rule.detail_rule', rule_id=current_rule.id))
@@ -878,7 +917,14 @@ def rule_history_data(rule_id):
         ActivityLog.target_id == rule_id,
     ).order_by(ActivityLog.created_at.desc()).limit(200).all()
 
-    EXCLUDED_ACTIONS = {'rule.vote_up', 'rule.vote_down', 'rule.favorite', 'rule.unfavorite'}
+    # 'rule.create'/'rule.edit'/'rule.quick_meta'/'rule.ownership_transfer' are
+    # logged as ActivityLog entries too (for the global admin logs / notifications),
+    # but each one has a matching, richer RuleUpdateHistory entry (with the
+    # content/metadata diff) — showing both here would duplicate every event.
+    EXCLUDED_ACTIONS = {
+        'rule.vote_up', 'rule.vote_down', 'rule.favorite', 'rule.unfavorite',
+        'rule.create', 'rule.edit', 'rule.quick_meta', 'rule.ownership_transfer',
+    }
 
     action_labels = {
         'rule.create':            ('Rule created',       'success', 'fa-solid fa-file-shield'),
@@ -893,6 +939,8 @@ def rule_history_data(rule_id):
         'rule.proposal_approved': ('Proposal approved',  'success', 'fa-solid fa-circle-check'),
         'rule.proposal_rejected': ('Proposal rejected',  'warning', 'fa-solid fa-circle-xmark'),
         'rule.version_bump':      ('Content updated',    'success', 'fa-solid fa-tag'),
+        'rule.quick_meta':        ('Tags/vulnerabilities updated', 'info', 'fa-solid fa-tags'),
+        'rule.ownership_transfer': ('Ownership changed', 'warning', 'fa-solid fa-user-shield'),
     }
 
     for log in logs:
@@ -926,22 +974,41 @@ def rule_history_data(rule_id):
 
     for upd in updates:
         has_diff = bool(upd.new_content and upd.old_content and upd.new_content != upd.old_content)
+        metadata_changes = RuleModel.diff_rule_snapshots(upd.old_snapshot, upd.new_snapshot)
+
+        if upd.change_type == 'created':
+            title, icon, level = 'Rule created', 'fa-solid fa-sparkles', 'success'
+        elif upd.change_type == 'ownership':
+            title, icon, level = 'Ownership changed', 'fa-solid fa-user-shield', 'warning'
+        elif has_diff and metadata_changes:
+            title, icon, level = 'Content & metadata updated', 'fa-solid fa-code-compare', ('success' if upd.success else 'error')
+        elif has_diff:
+            title, icon, level = 'Content updated', 'fa-solid fa-code-compare', ('success' if upd.success else 'error')
+        elif metadata_changes:
+            title, icon, level = 'Metadata updated', 'fa-solid fa-pen-to-square', 'info'
+        else:
+            title  = 'Checked — no change' if upd.success else 'Update failed'
+            icon   = 'fa-solid fa-check' if upd.success else 'fa-solid fa-xmark'
+            level  = 'info' if upd.success else 'error'
+
         events.append({
-            'uuid':        f'upd-{upd.id}',
-            'type':        'update',
-            'action':      'rule.update',
-            'title':       'Content updated' if has_diff else ('Checked — no change' if upd.success else 'Update failed'),
-            'description': upd.message or '',
-            'level':       'success' if (upd.success and has_diff) else ('info' if upd.success else 'error'),
-            'category':    'system',
-            'icon':        'fa-solid fa-code-compare' if has_diff else ('fa-solid fa-check' if upd.success else 'fa-solid fa-xmark'),
-            'actor_name':  upd.analyzed_by.first_name if upd.analyzed_by else 'System',
-            'actor_id':    upd.analyzed_by_user_id,
-            'created_at':  upd.analyzed_at.isoformat() if upd.analyzed_at else None,
-            'old_content': upd.old_content if has_diff else None,
-            'new_content': upd.new_content if has_diff else None,
-            'rule_format': upd.get_rule_format(),
-            'manual':      bool(upd.manuel_submit),
+            'uuid':             f'upd-{upd.id}',
+            'type':             'update',
+            'action':           'rule.update',
+            'title':            title,
+            'description':      RuleModel.humanize_history_message(upd.message) or '',
+            'level':            level,
+            'category':         'system',
+            'icon':             icon,
+            'actor_name':       upd.analyzed_by.first_name if upd.analyzed_by else 'System',
+            'actor_id':         upd.analyzed_by_user_id,
+            'created_at':       upd.analyzed_at.isoformat() if upd.analyzed_at else None,
+            'old_content':      upd.old_content if has_diff else None,
+            'new_content':      upd.new_content if has_diff else None,
+            'rule_format':      upd.get_rule_format(),
+            'manual':           bool(upd.manuel_submit),
+            'change_type':      upd.change_type,
+            'metadata_changes': metadata_changes,
         })
 
     # Sort all events by date desc
@@ -2290,7 +2357,7 @@ def get_rules_page_history_():
             "id": rule.id,
             "rule_title": rule.rule_title,
             "analyzed_at": rule.analyzed_at.strftime("%Y-%m-%d %H:%M") if rule.analyzed_at else "",
-            "message": rule.message,
+            "message": RuleModel.humanize_history_message(rule.message),
             "old_content": old_content,
             "new_content": new_content,
             "rule_id": rule.rule_id,
@@ -2299,6 +2366,8 @@ def get_rules_page_history_():
             "analyzed_by_user_id": analyzed_by.id if analyzed_by else None,
             "analyzed_by_name": (f"{analyzed_by.first_name} {analyzed_by.last_name}".strip() if analyzed_by else None),
             "analyzed_by_avatar": (analyzed_by.get_avatar_url() if analyzed_by else None),
+            "change_type": rule.change_type,
+            "metadata_changes": RuleModel.diff_rule_snapshots(rule.old_snapshot, rule.new_snapshot),
         }
         result.append(rule_data)
 
@@ -3540,6 +3609,7 @@ def quick_meta(rule_id):
             return jsonify({'success': False}), 403
 
     data = request.get_json(force=True)
+    old_snapshot = RuleModel.rule_metadata_snapshot(rule)
 
     # Tags
     if 'tag_ids' in data:
@@ -3569,6 +3639,27 @@ def quick_meta(rule_id):
                 pass
 
     db.session.commit()
+
+    new_snapshot = RuleModel.rule_metadata_snapshot(rule)
+    if current_user.id != rule.user_id:
+        RuleModel.add_contributor(current_user.id, rule.id)
+
+    if new_snapshot != old_snapshot:
+        log_activity("rule.quick_meta", f"Updated tags/vulnerabilities on rule '{rule.title}' (id={rule.id})",
+                     target_type="rule", target_id=rule.id, target_uuid=rule.uuid)
+        RuleModel.create_rule_history({
+            "id": rule.id,
+            "title": rule.title,
+            "success": True,
+            "manual_submit": False,
+            "message": "Tags/vulnerabilities updated",
+            "new_content": rule.to_string,
+            "old_content": rule.to_string,
+            "old_snapshot": old_snapshot,
+            "new_snapshot": new_snapshot,
+            "change_type": "metadata",
+        })
+
     return jsonify({'success': True})
 
 

@@ -771,7 +771,10 @@ class RuleEditComment(db.Model):
 class RuleEditContribution(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    proposal_id = db.Column(db.Integer, db.ForeignKey('rule_edit_proposal.id'), nullable=False)
+    # Nullable: set when the contribution comes from an accepted edit proposal;
+    # NULL for a direct credit (admin/non-owner editing the rule, or the
+    # previous owner after an ownership transfer) with no proposal involved.
+    proposal_id = db.Column(db.Integer, db.ForeignKey('rule_edit_proposal.id'), nullable=True)
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
 
@@ -910,7 +913,15 @@ class RuleUpdateHistory(db.Model):
     analyzed_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     analyzed_at = db.Column(db.DateTime, index=True)
     manuel_submit = db.Column(db.Boolean, default=False, nullable=True)
-    
+
+    # Metadata snapshot (title/author/owner/tags/status/...) before and after this
+    # version — lets the history UI show field-level changes (e.g. "Owner: X -> Y")
+    # for edits that don't touch the rule content at all. NULL on rows created
+    # before this was introduced; only new/edited rows going forward carry it.
+    old_snapshot = db.Column(db.JSON, nullable=True)
+    new_snapshot = db.Column(db.JSON, nullable=True)
+    # 'created' | 'content' | 'metadata' | 'ownership' | 'mixed' — NULL on legacy rows.
+    change_type = db.Column(db.String(20), nullable=True)
 
     analyzed_by = db.relationship("User", backref=db.backref("rule_updates", lazy='dynamic', cascade='all, delete-orphan'))
     rule = db.relationship("Rule", backref=db.backref("rule_update_history", lazy='dynamic', cascade='all, delete-orphan'))
@@ -946,7 +957,10 @@ class RuleUpdateHistory(db.Model):
             "analyzed_by_user_name": self.analyzed_by.first_name,
             "rule_format": self.get_rule_format(),
             "rule_source": self.get_rule_source(),
-            "manuel_submit": self.manuel_submit if self.manuel_submit else False
+            "manuel_submit": self.manuel_submit if self.manuel_submit else False,
+            "old_snapshot": self.old_snapshot,
+            "new_snapshot": self.new_snapshot,
+            "change_type": self.change_type,
         }
 
 class RuleTagAssociation(db.Model):

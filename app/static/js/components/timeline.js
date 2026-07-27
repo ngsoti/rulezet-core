@@ -14,6 +14,8 @@
 
 const { computed, ref } = Vue
 
+import MetaChangeList from './meta-change-list.js'
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const LEVEL_CONFIG = {
@@ -88,6 +90,8 @@ function truncate(str, max) {
 
 export default {
     name: 'Timeline',
+
+    components: { 'meta-change-list': MetaChangeList },
 
     props: {
         items:          { type: Array,   default: () => [] },
@@ -245,6 +249,11 @@ export default {
                             <div v-if="item.description" class="tl-desc">
                                 {{ item.description }}
                             </div>
+
+                            <!-- Human-readable metadata diff (e.g. "Owner: X -> Y") — never raw JSON -->
+                            <meta-change-list v-if="item.metadata_changes && item.metadata_changes.length"
+                                               :changes="item.metadata_changes" compact>
+                            </meta-change-list>
 
                             <!-- View proposal button -->
                             <div v-if="item.proposal_id" class="tl-diff-hint" style="cursor:default;">

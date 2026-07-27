@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/timeline.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/diff-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/meta-change-list.css') }}">
 <style>
 [v-cloak] { display: none; }
 
@@ -308,6 +309,15 @@
                                       style="font-size:.6rem;">latest</span>
                                 <span v-if="v.manuel_submit" class="badge rounded-pill"
                                       style="font-size:.6rem;background:rgba(111,66,193,.1);color:#6f42c1;border:1px solid rgba(111,66,193,.2);">manual</span>
+                                <span v-if="v.change_type === 'created'" class="badge rounded-pill"
+                                      style="font-size:.6rem;background:rgba(13,110,253,.1);color:#0d6efd;border:1px solid rgba(13,110,253,.2);">
+                                    <i class="fa-solid fa-sparkles me-1"></i>created</span>
+                                <span v-if="v.change_type === 'ownership'" class="badge rounded-pill"
+                                      style="font-size:.6rem;background:rgba(253,126,20,.1);color:#fd7e14;border:1px solid rgba(253,126,20,.2);">
+                                    <i class="fa-solid fa-user-shield me-1"></i>ownership</span>
+                                <span v-if="v.change_type === 'metadata' || v.change_type === 'mixed'" class="badge rounded-pill"
+                                      style="font-size:.6rem;background:rgba(111,66,193,.1);color:#6f42c1;border:1px solid rgba(111,66,193,.2);">
+                                    <i class="fa-solid fa-pen-to-square me-1"></i>[[ v.change_type ]]</span>
                                 <user-chip v-if="v.analyzed_by_user_id"
                                            :user-id="v.analyzed_by_user_id"
                                            :username="v.analyzed_by_name"
@@ -348,9 +358,13 @@
                                 <span class="ms-2 text-muted fw-normal" style="text-transform:none;letter-spacing:0;font-size:.7rem;">[[ selectedVersion.analyzed_at ]]</span>
                             </span>
 
-                            <div v-if="selectedVersion.old_content && selectedVersion.new_content" class="seg-toggle ms-3">
+                            <div v-if="(selectedVersion.old_content && selectedVersion.new_content) || selectedVersion.metadata_changes?.length"
+                                 class="seg-toggle ms-3">
                                 <button :class="{ active: contentTab === 'content' }" @click="contentTab = 'content'">Content</button>
-                                <button :class="{ active: contentTab === 'changes' }" @click="contentTab = 'changes'">What changed</button>
+                                <button v-if="selectedVersion.old_content && selectedVersion.new_content"
+                                        :class="{ active: contentTab === 'changes' }" @click="contentTab = 'changes'">What changed</button>
+                                <button v-if="selectedVersion.metadata_changes?.length"
+                                        :class="{ active: contentTab === 'metadata' }" @click="contentTab = 'metadata'">Metadata</button>
                             </div>
 
                             <button class="btn-close ms-auto" style="font-size:.6rem;" @click="selectedVersion = null"></button>
@@ -361,7 +375,7 @@
                                          :language="RULE_FORMAT"
                                          max-height="500px">
                             </code-viewer>
-                            <diff-viewer v-else
+                            <diff-viewer v-else-if="contentTab === 'changes'"
                                          :key="'sel-' + selectedVersion.id"
                                          :initial-left="selectedVersion.old_content"
                                          :initial-right="selectedVersion.new_content"
@@ -369,6 +383,9 @@
                                          right-label="After"
                                          mode="read">
                             </diff-viewer>
+                            <meta-change-list v-else-if="contentTab === 'metadata'"
+                                               :changes="selectedVersion.metadata_changes">
+                            </meta-change-list>
 
                             <div class="text-end mt-3">
                                 <button class="ver-compare-btn" :class="{ active: isComparing(selectedVersion) }"
@@ -401,6 +418,22 @@
                                 :right-label="'v' + sortedCompare[1].versionNumber + ' — ' + (sortedCompare[1].analyzed_at || 'original')"
                                 mode="read">
                             </diff-viewer>
+
+                            <div v-if="sortedCompare[0].metadata_changes?.length || sortedCompare[1].metadata_changes?.length"
+                                 class="row mt-3 g-3">
+                                <div class="col-md-6">
+                                    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0d6efd;">
+                                        v[[ sortedCompare[0].versionNumber ]] metadata changes
+                                    </div>
+                                    <meta-change-list :changes="sortedCompare[0].metadata_changes || []" compact></meta-change-list>
+                                </div>
+                                <div class="col-md-6">
+                                    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#198754;">
+                                        v[[ sortedCompare[1].versionNumber ]] metadata changes
+                                    </div>
+                                    <meta-change-list :changes="sortedCompare[1].metadata_changes || []" compact></meta-change-list>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </transition>
@@ -428,6 +461,7 @@
     import DiffViewer from '/static/js/components/diff-viewer.js';
     import CodeViewer from '/static/js/components/code-viewer.js';
     import UserChip   from '/static/js/components/UserChip.js';
+    import MetaChangeList from '/static/js/components/meta-change-list.js';
 
     const RULE_ID     = {{ rule.id }};
     const RULE_FORMAT = '{{ rule.format or "text" }}';
@@ -436,7 +470,7 @@
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { 'timeline': Timeline, 'diff-viewer': DiffViewer, 'code-viewer': CodeViewer, 'user-chip': UserChip },
+        components: { 'timeline': Timeline, 'diff-viewer': DiffViewer, 'code-viewer': CodeViewer, 'user-chip': UserChip, 'meta-change-list': MetaChangeList },
         setup() {
             // ── Timeline ─────────────────────────────────────────────
             const items   = ref([]);

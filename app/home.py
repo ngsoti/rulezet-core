@@ -591,8 +591,36 @@ def update_request_status() -> jsonify:
             ownership_request = AccountModel.get_request_by_id(request_id)
             for rule in rules:
                 if rule.user_id == current_user.id or current_user.is_admin():
+                    # Snapshot before/after so the rule's own history shows the
+                    # ownership change (old owner -> new owner), not just the
+                    # aggregate admin.request_approved log above.
+                    old_snapshot = RuleModel.rule_metadata_snapshot(rule)
+                    previous_owner_id = rule.user_id
+
                     # Update the rule ownership
                     rule.user_id = ownership_request.user_id
+
+                    # The dispossessed owner authored/held this rule — credit them as a contributor.
+                    if previous_owner_id and previous_owner_id != ownership_request.user_id:
+                        RuleModel.add_contributor(previous_owner_id, rule.id)
+
+                    new_snapshot = RuleModel.rule_metadata_snapshot(rule)
+                    RuleModel.create_rule_history({
+                        "id": rule.id,
+                        "title": rule.title,
+                        "success": True,
+                        "manual_submit": False,
+                        "message": f"Ownership transferred to {new_snapshot.get('owner_name') or 'user #' + str(ownership_request.user_id)}",
+                        "new_content": rule.to_string,
+                        "old_content": rule.to_string,
+                        "old_snapshot": old_snapshot,
+                        "new_snapshot": new_snapshot,
+                        "change_type": "ownership",
+                    })
+                    log_activity("rule.ownership_transfer",
+                                 f"Ownership of '{rule.title}' transferred to {new_snapshot.get('owner_name') or 'user #' + str(ownership_request.user_id)}",
+                                 target_type="rule", target_id=rule.id, target_uuid=rule.uuid,
+                                 icon="fa-solid fa-user-shield", category="rule")
 
                     requests_list_to_refused = AccountModel.get_all_requests_one_rule_with_rule_id(rule.id)
                     if requests_list_to_refused:

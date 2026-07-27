@@ -213,9 +213,11 @@ def test_upsert_updates_in_place(app, connector):
         assert Rule.query.filter_by(remote_rule_uuid=remote["uuid"]).count() == 1
 
 
-def test_upsert_metadata_only_change_updates_without_history(app, connector):
-    """Title/description changes are imported, but only content changes
-    create a RuleUpdateHistory entry."""
+def test_upsert_metadata_only_change_records_metadata_history(app, connector):
+    """Title/description-only changes (no content change) are imported and now
+    get their own 'metadata' RuleUpdateHistory entry — distinct from a 'content'
+    entry — so an admin/connector-driven metadata change is still visible in
+    the rule's history."""
     with app.app_context():
         c = Connector.query.filter_by(uuid=connector.uuid).first()
         shadow = core._get_or_create_shadow_user(c)
@@ -230,7 +232,12 @@ def test_upsert_metadata_only_change_updates_without_history(app, connector):
 
         rule = Rule.query.get(rule_id)
         assert rule.title == "Meta Rule Renamed"
-        assert RuleUpdateHistory.query.filter_by(rule_id=rule_id).count() == 0
+
+        entries = RuleUpdateHistory.query.filter_by(rule_id=rule_id).all()
+        assert len(entries) == 1
+        assert entries[0].change_type == "metadata"
+        assert entries[0].old_snapshot["title"] == "Meta Rule"
+        assert entries[0].new_snapshot["title"] == "Meta Rule Renamed"
 
 
 def test_upsert_archives_previous_version(app, connector):

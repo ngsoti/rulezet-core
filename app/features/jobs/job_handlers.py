@@ -1961,6 +1961,14 @@ def handle_bulk_transfer_ownership(job, app):
         if not batch_ids:
             break
 
+        # Snapshot pre-transfer state so each rule's OWN history shows the
+        # ownership change (old owner -> new owner) — the bulk .update() below
+        # bypasses ORM instance tracking entirely, so this is the only place
+        # that can capture it.
+        from app.features.rule.rule_core import rule_metadata_snapshot, create_rule_history, add_contributor
+        batch_rules    = Rule.query.filter(Rule.id.in_(batch_ids)).all()
+        old_snapshots  = {r.id: rule_metadata_snapshot(r) for r in batch_rules}
+
         Rule.query.filter(Rule.id.in_(batch_ids)).update(
             {"user_id": new_owner_id}, synchronize_session=False
         )
@@ -1976,6 +1984,31 @@ def handle_bulk_transfer_ownership(job, app):
         )
 
         db.session.commit()
+
+        new_owner_name = f"{new_owner.first_name} {new_owner.last_name}".strip()
+        for rid, old_snap in old_snapshots.items():
+            new_snap = {**old_snap, "owner_id": new_owner_id, "owner_name": new_owner_name}
+            create_rule_history({
+                "id": rid,
+                "title": old_snap.get("title") or "Unknown Title",
+                "success": True,
+                "manual_submit": False,
+                "message": f"Ownership transferred to {new_owner_name} (bulk admin action)",
+                "old_snapshot": old_snap,
+                "new_snapshot": new_snap,
+                "change_type": "ownership",
+                "analyzed_by_user_id": job.created_by,
+            })
+            log_activity("rule.ownership_transfer",
+                         f"Ownership of '{old_snap.get('title') or 'Unknown Title'}' transferred to {new_owner_name} (bulk admin action)",
+                         target_type="rule", target_id=rid,
+                         icon="fa-solid fa-user-shield", category="rule")
+
+            # The dispossessed owner authored/held this rule — credit them as a contributor.
+            previous_owner_id = old_snap.get("owner_id")
+            if previous_owner_id and previous_owner_id != new_owner_id:
+                add_contributor(previous_owner_id, rid)
+
         transferred += len(batch_ids)
         offset      += len(batch_ids)
         batch_num   += 1

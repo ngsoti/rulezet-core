@@ -395,6 +395,9 @@ def _upsert_rule(connector: Connector, shadow_user_id: int, remote: dict,
         ).order_by(Rule.is_deleted.asc()).first()
 
     if local_match:
+        from app.features.rule.rule_core import rule_metadata_snapshot
+        old_snapshot = rule_metadata_snapshot(local_match)
+
         restored = False
         if local_match.is_deleted:
             local_match.is_deleted        = False
@@ -406,8 +409,9 @@ def _upsert_rule(connector: Connector, shadow_user_id: int, remote: dict,
         new_content     = remote.get('to_string', '')
         content_changed = (local_match.to_string or '') != new_content
 
+        content_history = None
         if content_changed:
-            db.session.add(RuleUpdateHistory(
+            content_history = RuleUpdateHistory(
                 rule_id=local_match.id,
                 rule_title=local_match.title,
                 success=True,
@@ -417,7 +421,9 @@ def _upsert_rule(connector: Connector, shadow_user_id: int, remote: dict,
                 analyzed_by_user_id=owner_id,
                 analyzed_at=now,
                 manuel_submit=True,
-            ))
+                change_type="content",
+            )
+            db.session.add(content_history)
             local_match.to_string = new_content
 
         meta_changed = False
@@ -437,8 +443,32 @@ def _upsert_rule(connector: Connector, shadow_user_id: int, remote: dict,
             missing_tags.update(missed)
         _sync_cve_ids(local_match, remote.get('cve_ids', []))
 
-        if not content_changed and not meta_changed and not restored:
+        new_snapshot     = rule_metadata_snapshot(local_match)
+        metadata_changed = new_snapshot != old_snapshot
+
+        if not content_changed and not metadata_changed and not restored:
             return 'skipped'
+
+        if content_history is not None:
+            content_history.old_snapshot = old_snapshot
+            content_history.new_snapshot = new_snapshot
+            content_history.change_type  = "mixed" if metadata_changed else "content"
+        elif metadata_changed:
+            db.session.add(RuleUpdateHistory(
+                rule_id=local_match.id,
+                rule_title=local_match.title,
+                success=True,
+                message=f"Metadata updated by pull from '{connector.name}' ({connector.instance_url})",
+                old_snapshot=old_snapshot,
+                new_snapshot=new_snapshot,
+                analyzed_by_user_id=owner_id,
+                analyzed_at=now,
+                # Not a content submission — was_last_history_manuel() gates
+                # GitHub auto-sync on this flag, and a metadata-only sync
+                # shouldn't block future content syncs for the rule.
+                manuel_submit=False,
+                change_type="metadata",
+            ))
 
         local_match.connector_id      = connector.id
         local_match.sync_instance_url = connector.instance_url
