@@ -387,45 +387,35 @@
             <table>
               <thead><tr><th style="width:22%;">Term</th><th>Meaning</th></tr></thead>
               <tbody>
-                <tr><td class="glossary-term">Detection rule</td><td class="glossary-term">Règle de détection</td>
-                  <td colspan="1">A piece of logic, written in a specific format, that flags something as suspicious or malicious when matched against data — a file, a log line, network traffic.</td>
-                  
+                <tr><td class="glossary-term">Detection rule</td>
+                  <td>A piece of logic, written in a specific format, that flags something as suspicious or malicious when matched against data — a file, a log line, network traffic.</td>
                 </tr>
-                <tr><td class="glossary-term">Rule format</td><td class="glossary-term">Format de règle</td>
+                <tr><td class="glossary-term">Rule format</td>
                   <td>The syntax/engine a rule targets. Different detection surfaces need different tools — YARA reads files, Sigma describes log conditions abstractly, Suricata/Zeek watch network traffic.</td>
-                  
                 </tr>
-                <tr><td class="glossary-term">TLP / PAP</td><td class="glossary-term">TLP / PAP</td>
+                <tr><td class="glossary-term">TLP / PAP</td>
                   <td>Traffic Light Protocol / Permissible Actions Protocol — standardized labels (clear, green, amber, red) describing how freely a piece of content can be shared or acted on. Every new rule gets <span class="inline-code">tlp:clear</span> and <span class="inline-code">pap:clear</span> by default.</td>
-                  
                 </tr>
-                <tr><td class="glossary-term"><span>Edit proposal</span></td><td class="glossary-term"></td>
+                <tr><td class="glossary-term"><span>Edit proposal</span></td>
                   <td>A pull-request-style review mechanism: someone proposes a change to a rule they don't own, the owner reviews a diff and approves or rejects it.</td>
-                  
                 </tr>
-                <tr><td class="glossary-term">Bundle</td><td class="glossary-term">Bundle</td>
+                <tr><td class="glossary-term">Bundle</td>
                   <td>A curated, named collection of rules — the detection equivalent of a playlist.</td>
-                  
                 </tr>
-                <tr><td class="glossary-term"><span>Tag / taxonomy / galaxy</span></td><td class="glossary-term"></td>
+                <tr><td class="glossary-term"><span>Tag / taxonomy / galaxy</span></td>
                   <td>MISP-standard vocabularies reused for classification. A <em>taxonomy</em> is a structured vocabulary (like TLP); a <em>galaxy</em> is a knowledge base of clusters (threat actors, malware families); a <em>tag</em> is the concrete label attached to a rule, coming from either.</td>
-                  
                 </tr>
-                <tr><td class="glossary-term"><span>ATT&amp;CK technique</span></td><td class="glossary-term"></td>
+                <tr><td class="glossary-term"><span>ATT&amp;CK technique</span></td>
                   <td>MITRE's standard framework for describing adversary behavior (e.g. <span class="inline-code">T1068</span>); rules can be mapped to the technique(s) they detect.</td>
-                  
                 </tr>
-                <tr><td class="glossary-term">Ownership</td><td class="glossary-term">Propriété</td>
+                <tr><td class="glossary-term">Ownership</td>
                   <td>Every rule has exactly one owning user — the accountable point of contact, and the person (besides an admin) allowed to change or delete it.</td>
-                  
                 </tr>
-                <tr><td class="glossary-term"><span>Instance / connector</span></td><td class="glossary-term"></td>
+                <tr><td class="glossary-term"><span>Instance / connector</span></td>
                   <td>A "Rulezet instance" is one deployment (e.g. the official rulezet.org). A connector lets one instance pull content from another, or from MISP.</td>
-                  
                 </tr>
-                <tr><td class="glossary-term"><span>Background job</span></td><td class="glossary-term"></td>
+                <tr><td class="glossary-term"><span>Background job</span></td>
                   <td>Any operation heavy or slow enough to run asynchronously with visible progress instead of blocking a page load.</td>
-                  
                 </tr>
               </tbody>
             </table>
@@ -1618,7 +1608,7 @@
           <div class="callout-icon"><i class="fas fa-circle-check"></i></div>
           <div class="callout-body">
             <strong>End of report</strong>
-            Use the <strong>Export</strong> button (top-right) at any time to print this as a PDF or download it as a standalone Markdown file — in whichever language is currently selected.
+            Use the <strong>Export</strong> button (top-right) at any time to print this as a PDF or download it as a standalone Markdown file.
           </div>
         </div>
 
@@ -1685,8 +1675,6 @@
 
     <div class="footer-bottom">
       <span>&copy; CIRCL, Luxembourg — this report can be exported (top-right) as a PDF or as a standalone Markdown file at any time.</span>
-      
-      <span><span>Language: </span>EN <i class="fas fa-arrow-right-arrow-left" style="font-size:9px;"></i> FR</span>
     </div>
   </div>
 </footer>
