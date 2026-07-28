@@ -38,7 +38,11 @@ fi
 # 3.1 SUBMODULES UPDATE
 echo -e "\n${YELLOW}Updating Git submodules...${NC}"
 # Update all submodules except cti (too large for --remote; cti data is refreshed via the admin UI)
-git submodule update --remote app/modules/rulezet-cast app/modules/pivotick app/modules/misp-taxonomies app/modules/misp-galaxy 2>/dev/null || git submodule update --remote
+# and pivotick (its dist build is hand-copied into static/ on version bumps, not auto-followed —
+# see app/static/js/pivotick.iife.js; --remote here would silently desync the pinned commit from
+# the served JS/CSS the next time upstream pushes to its main branch).
+git submodule update --remote app/modules/rulezet-cast app/modules/misp-taxonomies app/modules/misp-galaxy 2>/dev/null || git submodule update --remote
+git submodule update app/modules/pivotick
 # Update cti with shallow fetch to keep the footprint small
 echo -e "${YELLOW}Pulling latest MITRE CTI data (shallow)...${NC}"
 git submodule update --remote --depth 1 app/modules/cti 2>/dev/null && \
