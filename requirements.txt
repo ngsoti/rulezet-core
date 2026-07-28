@@ -36,3 +36,6 @@ dotenv
 pySigma
 weasyprint
 markdown
+cryptography
+grpcio
+pyvelociraptor

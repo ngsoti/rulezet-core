@@ -50,6 +50,7 @@ def create_app(start_worker=True):
     from .features.tags.tags import tags_blueprint
     from app.features.jobs.jobs import jobs_blueprint
     from app.features.connector.connector import connector_blueprint
+    from app.features.velociraptor.velociraptor import velociraptor_blueprint
     from app.features.rule.rule_from_github.sync_schedule.sync_schedule_routes import sync_schedule_blueprint
     from app.features.notification.notification import notification_blueprint
     from app.features.report.report import report_blueprint
@@ -69,6 +70,7 @@ def create_app(start_worker=True):
     app.register_blueprint(tags_blueprint, url_prefix="/tags")
     app.register_blueprint(jobs_blueprint, url_prefix='/jobs')
     app.register_blueprint(connector_blueprint, url_prefix='/connector')
+    app.register_blueprint(velociraptor_blueprint, url_prefix='/velociraptor')
     app.register_blueprint(sync_schedule_blueprint, url_prefix='/rule/github')
     app.register_blueprint(notification_blueprint, url_prefix='/notifications')
     app.register_blueprint(report_blueprint, url_prefix='/report')

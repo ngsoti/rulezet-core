@@ -3224,3 +3224,83 @@ def handle_github_sync_schedule_run(job, app):
         run.status = 'failed'
         log_job(job, str(e), level='error', event='failed')
         db.session.commit()
+
+
+# ─── Velociraptor: push a generated artifact to a connected server ───────────
+
+@register_handler('velociraptor_push')
+def handle_velociraptor_push(job, app):
+    """
+    Generate the Velociraptor artifact YAML for a rule and push it to a
+    configured Velociraptor server over gRPC (mutual TLS).
+
+    Payload:
+        server_id : int — local VelociraptorServer.id to push to
+        rule_id   : int — local Rule.id to generate the artifact from
+    """
+    from app.core.db_class.db import VelociraptorServer
+    from app.features.rule import rule_core as RuleModel
+    from app.features.velociraptor import velociraptor_core as VelociraptorModel
+    from app.features.rule.exporters.velociraptor_exporter import (
+        generate_velociraptor_artifact, SUPPORTED_FORMATS,
+    )
+
+    payload   = job.payload or {}
+    server_id = payload.get('server_id')
+    rule_id   = payload.get('rule_id')
+
+    server = VelociraptorServer.query.get(server_id)
+    if not server or not server.is_active:
+        log_job(job, 'Velociraptor server not found or disabled.', level='error', event='done')
+        job.status = 'failed'
+        job.error  = 'Server not found or disabled.'
+        db.session.commit()
+        return
+
+    rule = RuleModel.get_rule(rule_id)
+    if not rule:
+        log_job(job, f'Rule {rule_id} not found (deleted?).', level='error', event='done')
+        job.status = 'failed'
+        job.error  = 'Rule not found.'
+        db.session.commit()
+        return
+
+    if (rule.format or '').lower() not in SUPPORTED_FORMATS:
+        msg = f"Velociraptor export is not supported for format '{rule.format}'."
+        log_job(job, msg, level='error', event='done')
+        job.status = 'failed'
+        job.error  = msg
+        db.session.commit()
+        return
+
+    log_job(job, f"Generating artifact for '{rule.title}'…", level='info', event='started')
+    try:
+        # No active `request` in a background job (unlike the route-based
+        # generation, which uses request.host_url) — FLASK_URL/FLASK_PORT are
+        # just a bare host/port, so reconstruct a real URL for the artifact's
+        # "Source:" link.
+        host = app.config.get('FLASK_URL', '127.0.0.1')
+        port = app.config.get('FLASK_PORT', 7009)
+        base_url = f"http://{host}:{port}"
+        artifact_yaml = generate_velociraptor_artifact(rule, base_url=base_url)
+    except Exception as e:
+        log_job(job, f"Artifact generation failed: {e}", level='error', event='done')
+        job.status = 'failed'
+        job.error  = str(e)
+        db.session.commit()
+        return
+
+    log_job(job, f"Pushing artifact to '{server.name}'…", level='info', event='progress')
+    ok, msg = VelociraptorModel.push_artifact(server, artifact_yaml)
+
+    job.done   = 1
+    job.total  = 1
+    job.status = 'done' if ok else 'failed'
+    if not ok:
+        job.error = msg
+    db.session.commit()
+
+    log_job(job, msg, level='success' if ok else 'error', event='done')
+    log_activity('velociraptor.push_done', f"Push to '{server.name}': {msg}",
+                 target_type='velociraptor_server', target_id=server.id, target_uuid=server.uuid,
+                 extra={'rule_id': rule.id, 'rule_uuid': rule.uuid, 'rule_title': rule.title, 'success': ok})

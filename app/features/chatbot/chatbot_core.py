@@ -59,6 +59,8 @@ _ROUTES = {
     'admin_similar_rules':    ('/admin/similar_rules', 'admin'),
     'trash':                  ('/rule/trash', 'admin'),
     'connectors':             ('/connector/list', 'admin'),
+    'velociraptor':           ('/velociraptor/list', 'admin'),
+    'velociraptor_how_it_works': ('/velociraptor/how-it-works', 'admin'),
     # Deliberately NOT mapped: backups. A DB backup is a full data dump —
     # too sensitive to be reachable through an LLM-mediated interface at
     # all, even behind the admin check every other destination here gets.

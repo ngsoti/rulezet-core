@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% import 'macros/admin_nav.html' as anav %}
+
+{% block title %}Velociraptor{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/velociraptor/velociraptor.css') }}">
+{% endblock %}
+
+{% block content %}
+<div id="velociraptor-app" v-cloak>
+<div class="container-fluid py-4 px-4">
+
+   <!-- ── Banner ─────────────────────────────────────────── -->
+   <div class="explorer-banner mb-4">
+      <i class="fa-solid fa-server banner-watermark"></i>
+      <nav aria-label="breadcrumb" class="mb-3">
+         <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+            <li class="breadcrumb-item active text-muted" aria-current="page">Velociraptor</li>
+         </ol>
+      </nav>
+      <div class="d-flex align-items-center gap-3 mb-3">
+         <div class="banner-icon">
+            <img src="{{ url_for('static', filename='custom-icon/velociraptor-remove-bg.svg') }}"  alt="Velociraptor" style="height:44px;width:44px;object-fit:contain;vertical-align:-2px;" class="me-1">
+         </div>
+         <div>
+            <h2 class="fw-bold mb-1">Velociraptor</h2>
+            <div class="banner-accent"></div>
+         </div>
+      </div>
+      <p class="text-muted mb-0" style="max-width:640px;font-size:.95rem;">
+         Push generated YARA/Sigma artifacts directly to a connected Velociraptor server.
+         Servers authenticate via mutual TLS using their "API client config" — paste its
+         three PEM blocks below.
+      </p>
+   </div>
+
+   {{ anav.admin_nav('velociraptor') }}
+
+   <!-- ── How it works — link to doc page ─────────── -->
+   <div class="mb-4">
+      <a href="{{ url_for('velociraptor.velociraptor_how_it_works') }}"
+         class="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-pill text-decoration-none fw-semibold shadow-sm"
+         style="background:var(--card-bg-color);border:1px solid var(--border-color);color:var(--text-color);font-size:.875rem;transition:box-shadow .15s;">
+         <i class="fa-solid fa-book-open text-primary"></i>
+         How does Velociraptor push work?
+         <i class="fa-solid fa-arrow-right text-primary" style="font-size:.75rem;"></i>
+      </a>
+   </div>
+
+   <velociraptor-table
+      ref="serverTable"
+      :csrf-token="CSRF"
+      @create="openCreate"
+      @edit="openEdit">
+   </velociraptor-table>
+
+</div><!-- /container -->
+
+<!-- ── Create modal ───────────────────────────────────────── -->
+<div class="modal fade" id="velociraptorModal" tabindex="-1">
+   <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow-lg" style="background:var(--card-bg-color);">
+         <div class="modal-header border-bottom">
+            <h5 class="modal-title fw-bold">
+               <i class="fa-solid fa-server text-primary me-2"></i>[[ editMode ? 'Edit Velociraptor server' : 'New Velociraptor server' ]]
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+         </div>
+         <div class="modal-body p-4">
+
+            <div class="mb-3">
+               <label class="vrp-form-label">Name <span class="text-danger">*</span></label>
+               <input v-model="form.name" type="text" class="form-control"
+                      placeholder="Production Velociraptor" maxlength="120">
+            </div>
+
+            <div class="mb-3">
+               <label class="vrp-form-label">Description</label>
+               <input v-model="form.description" type="text" class="form-control"
+                      placeholder="Optional note" maxlength="255">
+            </div>
+
+            <div class="mb-3">
+               <label class="vrp-form-label">API connection string <span class="text-danger">*</span></label>
+               <input v-model="form.api_connection_string" type="text" class="form-control font-monospace"
+                      placeholder="127.0.0.1:8001">
+               <div class="vrp-form-hint">
+                  The `api_connection_string` field from your Velociraptor API client config YAML —
+                  a bare <code>host:port</code>, e.g. <code>127.0.0.1:8001</code>.
+                  <strong>Not the GUI URL</strong> (that's a different port, typically 8889) and no
+                  <code>https://</code> prefix.
+               </div>
+            </div>
+
+            <div class="mb-3">
+               <div class="d-flex align-items-center justify-content-between">
+                  <label class="vrp-form-label mb-0">CA certificate <span v-if="!editMode" class="text-danger">*</span></label>
+                  <label class="vrp-upload-btn">
+                     <i class="fa-solid fa-upload me-1"></i>Upload file
+                     <input type="file" accept=".pem,.crt,.cer,.cert,.txt" class="d-none"
+                            @change="loadFileInto('ca_certificate', $event)">
+                  </label>
+               </div>
+               <textarea v-model="form.ca_certificate" class="form-control font-monospace" rows="4"
+                         :placeholder="editMode ? 'Leave blank to keep the current certificate' : '-----BEGIN CERTIFICATE-----'"></textarea>
+               <div class="vrp-form-hint">The `ca_certificate` field — public, not sensitive.</div>
+            </div>
+
+            <div class="mb-3">
+               <div class="d-flex align-items-center justify-content-between">
+                  <label class="vrp-form-label mb-0">Client certificate <span v-if="!editMode" class="text-danger">*</span></label>
+                  <label class="vrp-upload-btn">
+                     <i class="fa-solid fa-upload me-1"></i>Upload file
+                     <input type="file" accept=".pem,.crt,.cer,.cert,.txt" class="d-none"
+                            @change="loadFileInto('client_cert', $event)">
+                  </label>
+               </div>
+               <textarea v-model="form.client_cert" class="form-control font-monospace" rows="4"
+                         :placeholder="editMode ? 'Leave blank to keep the current certificate' : '-----BEGIN CERTIFICATE-----'"></textarea>
+               <div class="vrp-form-hint">
+                  The `client_cert` field — encrypted at rest.
+                  <span v-if="editMode">Never shown back once saved; leave blank to keep the existing one.</span>
+               </div>
+            </div>
+
+            <div class="mb-3">
+               <div class="d-flex align-items-center justify-content-between">
+                  <label class="vrp-form-label mb-0">Client private key <span v-if="!editMode" class="text-danger">*</span></label>
+                  <label class="vrp-upload-btn">
+                     <i class="fa-solid fa-upload me-1"></i>Upload file
+                     <input type="file" accept=".pem,.key,.txt" class="d-none"
+                            @change="loadFileInto('client_key', $event)">
+                  </label>
+               </div>
+               <textarea v-model="form.client_key" class="form-control font-monospace" rows="4"
+                         :placeholder="editMode ? 'Leave blank to keep the current private key' : '-----BEGIN PRIVATE KEY-----'"></textarea>
+               <div class="vrp-form-hint">
+                  The `client_private_key` field — encrypted at rest. This grants full API access to your Velociraptor deployment; only add servers you trust this instance's admins with.
+                  <span v-if="editMode">Never shown back once saved; leave blank to keep the existing one.</span>
+               </div>
+            </div>
+
+            <div v-if="formError" class="alert alert-danger mt-3 mb-0 py-2">
+               <i class="fa-solid fa-circle-exclamation me-1"></i>[[ formError ]]
+            </div>
+         </div>
+         <div class="modal-footer border-top">
+            <button class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+            <button class="btn btn-primary rounded-pill px-4" @click="saveServer" :disabled="saving">
+               <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
+               [[ editMode ? 'Save changes' : 'Add server' ]]
+            </button>
+         </div>
+      </div>
+   </div>
+</div>
+
+</div><!-- /velociraptor-app -->
+{% endblock %}
+
+{% block script %}
+<script type="module">
+import VelociraptorTable from '/static/js/velociraptor/velociraptorTable.js'
+import { create_message } from '/static/js/toaster.js'
+
+const { createApp, reactive, ref, onMounted } = Vue
+
+const CSRF = '{{ csrf_token() }}'
+
+createApp({
+   delimiters: ['[[', ']]'],
+   components: { 'velociraptor-table': VelociraptorTable },
+   setup() {
+      const serverTable = ref(null)
+      const saving    = ref(false)
+      const formError = ref('')
+      const editMode  = ref(false)
+      const editUuid  = ref(null)
+
+      const form = reactive({
+         name: '', description: '', api_connection_string: '',
+         ca_certificate: '', client_cert: '', client_key: '',
+      })
+
+      function resetForm() {
+         Object.assign(form, {
+            name: '', description: '', api_connection_string: '',
+            ca_certificate: '', client_cert: '', client_key: '',
+         })
+         formError.value = ''
+      }
+
+      // Lets an admin either paste the PEM text directly or pick the file —
+      // both end up as the same plain string field, no upload endpoint needed.
+      function loadFileInto(field, event) {
+         const file = event.target.files && event.target.files[0]
+         if (!file) return
+         const reader = new FileReader()
+         reader.onload = () => { form[field] = String(reader.result || '').trim() }
+         reader.onerror = () => { create_message(`Could not read ${file.name}.`, 'danger') }
+         reader.readAsText(file)
+         event.target.value = ''   // allow re-selecting the same file later
+      }
+
+      let bsModal
+      onMounted(() => {
+         const Modal = window.bootstrap?.Modal
+         if (Modal) bsModal = new Modal(document.getElementById('velociraptorModal'))
+      })
+
+      function openCreate() {
+         editMode.value = false
+         editUuid.value = null
+         resetForm()
+         bsModal?.show()
+      }
+
+      function openEdit(s) {
+         editMode.value = true
+         editUuid.value = s.uuid
+         Object.assign(form, {
+            name: s.name, description: s.description || '', api_connection_string: s.api_connection_string,
+            // Cert/key material is never sent back by the API — left blank
+            // here on purpose, filling them in only replaces the stored value.
+            ca_certificate: '', client_cert: '', client_key: '',
+         })
+         formError.value = ''
+         bsModal?.show()
+      }
+
+      async function saveServer() {
+         formError.value = ''
+         const missingCreateFields = !editMode.value &&
+            (!form.ca_certificate.trim() || !form.client_cert.trim() || !form.client_key.trim())
+         if (!form.name.trim() || !form.api_connection_string.trim() || missingCreateFields) {
+            formError.value = editMode.value
+               ? 'Name and connection string are required.'
+               : 'All fields except description are required.'
+            return
+         }
+         saving.value = true
+         try {
+            const url = editMode.value ? `/velociraptor/update/${editUuid.value}` : '/velociraptor/create'
+            const res  = await fetch(url, {
+               method:  'POST',
+               headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+               body:    JSON.stringify({ ...form }),
+            })
+            const data = await res.json()
+            if (data.success) {
+               bsModal?.hide()
+               create_message(editMode.value ? 'Velociraptor server updated.' : 'Velociraptor server added.', 'success')
+               serverTable.value?.refresh()
+            } else {
+               formError.value = data.error || 'An error occurred.'
+            }
+         } catch {
+            formError.value = 'Network error.'
+         } finally {
+            saving.value = false
+         }
+      }
+
+      return { CSRF, serverTable, form, saving, formError, editMode, openCreate, openEdit, saveServer, loadFileInto }
+   }
+}).mount('#velociraptor-app')
+</script>
+{% endblock %}

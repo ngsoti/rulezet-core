@@ -109,6 +109,12 @@
         <span>Connectors</span>
     </a>
 
+    <a href="/velociraptor/list"
+       class="dr-nav__item {% if active == 'velociraptor' %}active{% endif %}">
+        <img src="{{ url_for('static', filename='custom-icon/velociraptor-remove-bg.svg') }}" alt="" style="height:14px;width:14px;object-fit:contain;">
+        <span>Velociraptor</span>
+    </a>
+
     <a href="/admin/jobs/list"
        class="dr-nav__item {% if active == 'jobs' %}active{% endif %}">
         <i class="fa-solid fa-gears"></i>

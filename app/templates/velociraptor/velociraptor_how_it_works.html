@@ -1,0 +1,638 @@
+{% extends "base.html" %}
+{% import 'macros/admin_nav.html' as anav %}
+
+{% block title %}How Velociraptor Push Works — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/velociraptor/velociraptor.css') }}">
+<style>
+  .hiw-section { scroll-margin-top: 80px; }
+
+  .hiw-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    color: #fff;
+    font-weight: 700;
+    font-size: .85rem;
+    flex-shrink: 0;
+  }
+
+  .hiw-endpoint {
+    font-family: monospace;
+    font-size: .82rem;
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 2px 8px;
+    color: #0d6efd;
+    word-break: break-all;
+  }
+
+  .hiw-flow-arrow {
+    font-size: 1.4rem;
+    color: #0d6efd;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .hiw-flow-box {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--card-bg-color);
+    padding: .75rem 1rem;
+    font-size: .83rem;
+    text-align: center;
+    flex: 1;
+  }
+
+  .hiw-toc-link {
+    display: block;
+    padding: .35rem .75rem;
+    color: var(--subtle-text-color);
+    text-decoration: none;
+    font-size: .82rem;
+    border-left: 2px solid transparent;
+    transition: all .15s;
+    border-radius: 0 4px 4px 0;
+  }
+  .hiw-toc-link:hover {
+    color: #0d6efd;
+    border-left-color: #0d6efd;
+    background: rgba(13,110,253,.06);
+  }
+
+  .hiw-badge-method {
+    font-family: monospace;
+    font-size: .7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: .03em;
+  }
+  .hiw-badge-grpc { background: rgba(13,110,253,.15); color: #0d6efd; }
+
+  .hiw-verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: .78rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 20px;
+  }
+  .hiw-verdict--ok      { background: rgba(25,135,84,.12);  color: #198754; }
+  .hiw-verdict--warn    { background: rgba(255,193,7,.15);  color: #997404; }
+  .hiw-verdict--error   { background: rgba(220,53,69,.12);  color: #dc3545; }
+
+  .hiw-callout {
+    border-left: 3px solid;
+    border-radius: 0 8px 8px 0;
+    padding: .75rem 1rem;
+    font-size: .84rem;
+    margin-bottom: 0;
+  }
+  .hiw-callout--info    { border-color: #0d6efd; background: rgba(13,110,253,.07); }
+  .hiw-callout--warning { border-color: #ffc107; background: rgba(255,193,7,.07); }
+  .hiw-callout--success { border-color: #198754; background: rgba(25,135,84,.07); }
+  .hiw-callout--danger  { border-color: #dc3545; background: rgba(220,53,69,.07); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-4">
+
+  <!-- ── Banner ──────────────────────────────────────────────────── -->
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-server banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('velociraptor.velociraptor_list') }}" class="text-decoration-none text-muted">Velociraptor</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">How it works</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="banner-icon">
+        <img src="{{ url_for('static', filename='custom-icon/velociraptor-remove-bg.svg') }}"
+             alt="Velociraptor" style="height:26px;width:26px;object-fit:contain;">
+      </div>
+      <div>
+        <h2 class="fw-bold mb-1">How Velociraptor Push Works</h2>
+        <div class="banner-accent"></div>
+      </div>
+    </div>
+    <p class="text-muted mb-0" style="max-width:660px;font-size:.95rem;">
+      A complete walkthrough of the Rulezet → Velociraptor integration — from server configuration
+      to the exact mechanics used to turn a detection rule into a live Velociraptor artifact.
+    </p>
+  </div>
+
+  {{ anav.admin_nav('velociraptor') }}
+
+  <div class="row g-4">
+
+    <!-- ── Sticky Table of Contents ──────────────────────────────── -->
+    <div class="col-lg-3 d-none d-lg-block">
+      <div class="sticky-top" style="top:1.5rem;">
+        <div class="p-3 rounded-3 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;">
+          <div class="fw-bold mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle-text-color);">
+            <i class="fa-solid fa-list-ul me-2 text-primary"></i>On this page
+          </div>
+          <nav class="border-start ps-1" style="border-color:var(--border-color)!important;">
+            <a class="hiw-toc-link" href="#what-is">What is Velociraptor?</a>
+            <a class="hiw-toc-link" href="#setup">Setting up a server</a>
+            <a class="hiw-toc-link" href="#connection">The gRPC connection</a>
+            <a class="hiw-toc-link" href="#artifacts">Rule → artifact generation</a>
+            <a class="hiw-toc-link" href="#push-lifecycle">Push lifecycle</a>
+            <a class="hiw-toc-link" href="#format-support">Format support</a>
+            <a class="hiw-toc-link" href="#security">Credential security</a>
+            <a class="hiw-toc-link" href="#activity">Activity &amp; history</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Main content ──────────────────────────────────────────── -->
+    <div class="col-lg-9">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 1 — What is Velociraptor?
+      ════════════════════════════════════════════════════════════ -->
+      <section id="what-is" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;">
+            <img src="{{ url_for('static', filename='custom-icon/velociraptor-remove-bg.svg') }}"
+                 alt="" style="height:20px;width:20px;object-fit:contain;">
+          </div>
+          <h4 class="fw-bold mb-0">What is Velociraptor?</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          <a href="https://github.com/Velocidex/velociraptor" target="_blank" rel="noopener">Velociraptor</a>
+          is an open-source endpoint monitoring, digital forensics and incident response (DFIR) platform.
+          It deploys lightweight agents ("clients") to endpoints and lets responders run
+          <strong>VQL</strong> (Velociraptor Query Language) — a SQL-like language — against them, live,
+          at fleet scale: process listings, file system scans, YARA memory/disk scans, Windows event log
+          and ETW monitoring, registry inspection, and more.
+        </p>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Detections are packaged as <strong>Artifacts</strong> — YAML documents describing parameters and
+          one or more VQL sources. This integration takes a Rulezet detection rule (YARA or Sigma) and
+          <strong>compiles it into a Velociraptor Artifact</strong>, then registers that artifact directly
+          on a connected Velociraptor server so it's immediately deployable to your fleet.
+        </p>
+
+        <!-- High-level diagram -->
+        <div class="d-flex align-items-center gap-3 flex-wrap mt-4 mb-2">
+          <div class="hiw-flow-box">
+            <i class="fa-solid fa-file-shield text-primary mb-1 d-block" style="font-size:1.3rem;"></i>
+            <strong>Rulezet rule</strong><br>
+            <span class="text-muted" style="font-size:.75rem;">YARA or Sigma content</span>
+          </div>
+          <div class="hiw-flow-arrow text-center" style="min-width:2.5rem;">
+            <i class="fa-solid fa-arrow-right"></i><br>
+            <span style="font-size:.68rem;color:var(--subtle-text-color);">compile</span>
+          </div>
+          <div class="hiw-flow-box" style="border-color:rgba(13,110,253,.3);background:rgba(13,110,253,.04);">
+            <i class="fa-solid fa-file-code text-primary mb-1 d-block" style="font-size:1.3rem;"></i>
+            <strong>Artifact YAML</strong><br>
+            <span class="text-muted" style="font-size:.75rem;">VQL sources + parameters</span>
+          </div>
+          <div class="hiw-flow-arrow text-center" style="min-width:2.5rem;">
+            <i class="fa-solid fa-arrow-right"></i><br>
+            <span style="font-size:.68rem;color:var(--subtle-text-color);">gRPC / mTLS</span>
+          </div>
+          <div class="hiw-flow-box" style="border-color:rgba(25,135,84,.3);background:rgba(25,135,84,.04);">
+            <i class="fa-solid fa-server text-success mb-1 d-block" style="font-size:1.3rem;"></i>
+            <strong>Velociraptor server</strong><br>
+            <span class="text-muted" style="font-size:.75rem;">artifact_set() registers it</span>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          Nothing is deployed to endpoints automatically. Pushing an artifact only <strong>registers</strong> it
+          on the server — an operator still needs to run a Hunt or a client-targeted collection from the
+          Velociraptor GUI to actually execute it on endpoints.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 2 — Setting up a server
+      ════════════════════════════════════════════════════════════ -->
+      <section id="setup" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-sliders" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Setting up a server</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Adding a server requires an <strong>admin account</strong>. The credentials come from a Velociraptor
+          <strong>API client config</strong> — generate one on your Velociraptor server with:
+        </p>
+        <div class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);font-family:monospace;font-size:.82rem;">
+          velociraptor config api_client --name rulezet --role administrator rulezet.api_client.yaml
+        </div>
+
+        <div class="table-responsive rounded-3 border shadow-sm" style="border-color:var(--border-color)!important;">
+          <table class="table table-sm mb-0 align-middle" style="background:var(--card-bg-color);font-size:.83rem;">
+            <thead style="background:var(--light-bg-color);">
+              <tr>
+                <th class="fw-semibold ps-3" style="width:22%;">Field</th>
+                <th class="fw-semibold">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">Name</td>
+                <td>Display name shown in the server table.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">API connection string</td>
+                <td>
+                  The <code>api_connection_string</code> field from the API client config — a bare
+                  <code>host:port</code>, e.g. <code>127.0.0.1:8001</code>.
+                  <span class="text-muted">Not the GUI URL (a different port, typically 8889) and no
+                  <code>https://</code> scheme — gRPC targets are bare host:port.</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">CA certificate</td>
+                <td>The <code>ca_certificate</code> field — public, not sensitive.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">Client certificate</td>
+                <td>The <code>client_cert</code> field — grants API access, encrypted at rest here.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">Client private key</td>
+                <td>The <code>client_private_key</code> field — grants full API access, encrypted at rest here.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-upload me-2 text-primary"></i>
+          Each certificate/key field can be <strong>pasted directly</strong> or loaded from a file with the
+          "Upload file" button next to it — both end up as the same plain text field, no separate upload endpoint.
+        </div>
+
+        <div class="hiw-callout hiw-callout--success mt-3">
+          <i class="fa-solid fa-shield-check me-2 text-success"></i>
+          After creation, use the <strong>Test connection</strong> button (<code>SELECT Hostname, OS, Platform,
+          PlatformVersion FROM info()</code>) to verify the server is reachable and the credentials are valid.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 3 — The gRPC connection
+      ════════════════════════════════════════════════════════════ -->
+      <section id="connection" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-network-wired" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">The gRPC connection</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Velociraptor's API server speaks <strong>gRPC over mutual TLS</strong> — both sides present a
+          certificate. Every request Rulezet makes follows the same pattern:
+        </p>
+
+        <div class="p-3 rounded-3 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;">
+          <div class="d-flex flex-column gap-3">
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">1</div>
+              <div style="font-size:.88rem;">
+                <strong>Build mTLS credentials</strong><br>
+                <span class="text-muted">
+                  <span class="hiw-endpoint">grpc.ssl_channel_credentials()</span> is built from the stored
+                  CA certificate, client certificate, and (decrypted) client private key.
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">2</div>
+              <div style="font-size:.88rem;">
+                <strong>Open a secure channel</strong><br>
+                <span class="text-muted">
+                  <span class="hiw-endpoint">grpc.secure_channel(api_connection_string, creds, options)</span> —
+                  with <code>grpc.ssl_target_name_override=&quot;VelociraptorServer&quot;</code>, required because
+                  Velociraptor's server certificate CN doesn't match an IP target.
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">3</div>
+              <div style="font-size:.88rem;">
+                <strong>Run a VQL query</strong><br>
+                <span class="text-muted">
+                  A single <span class="hiw-badge-method hiw-badge-grpc">gRPC</span>
+                  <span class="hiw-endpoint">APIStub.Query()</span> call streams back response chunks —
+                  each one either JSON row data or a log line.
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">4</div>
+              <div style="font-size:.88rem;">
+                <strong>Detect silent VQL errors</strong><br>
+                <span class="text-muted">
+                  A bad query can return <strong>zero rows with no gRPC exception at all</strong> — the compile
+                  error only appears as an <code>ERROR:</code>-prefixed log line. Every query checks for that
+                  case explicitly and raises if rows are empty and an error was logged.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--warning mt-3">
+          <i class="fa-solid fa-triangle-exclamation me-2" style="color:#997404;"></i>
+          A <code>Received http2 header with status: 307</code> gRPC error almost always means the connection
+          string points at the wrong port — most commonly the <strong>GUI port</strong> (redirects to a login
+          page over plain HTTP/2) instead of the real API port from the client config.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 4 — Rule → artifact generation
+      ════════════════════════════════════════════════════════════ -->
+      <section id="artifacts" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-file-code" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Rule → artifact generation</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Before anything is sent to a server, the rule's raw content is compiled into a Velociraptor
+          <strong>Artifact YAML</strong> document. The exact shape depends on the rule's format.
+        </p>
+
+        <div class="row g-3 mt-1">
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-magnifying-glass text-primary me-2"></i>YARA rules</div>
+              <p class="text-muted mb-2">
+                Compiled into a <code>CLIENT</code>-type artifact named
+                <code>Rulezet.Detection.YARA.&lt;Title&gt;</code> with two VQL sources:
+              </p>
+              <ul class="mb-0 ps-3 text-muted" style="line-height:1.7;">
+                <li><code>ProcessScan</code> — scans every running process's memory via
+                  <code>foreach(row={SELECT ... FROM pslist()}, query={SELECT ... FROM proc_yara(...)})</code>,
+                  gated by the <code>ScanProcesses</code> parameter.</li>
+                <li><code>DiskScan</code> — scans files matching a configurable <code>TargetGlob</code>
+                  parameter via <code>FROM yara(rules=YaraRule, files=TargetGlob)</code>,
+                  gated by <code>ScanDisk</code>.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-bolt text-primary me-2"></i>Sigma rules</div>
+              <p class="text-muted mb-2">
+                Compiled into a <code>CLIENT_EVENT</code>-type artifact named
+                <code>Rulezet.Detection.Sigma.&lt;Title&gt;</code>, using Velociraptor's built-in
+                <code>sigma()</code> VQL plugin with a <code>log_sources</code> mapping derived from the
+                rule's <code>logsource.category</code>.
+              </p>
+              <div class="d-flex flex-column gap-1">
+                <span class="hiw-verdict hiw-verdict--ok"><i class="fa-solid fa-check"></i> process_creation → watch_etw() mapped</span>
+                <span class="hiw-verdict hiw-verdict--warn"><i class="fa-solid fa-triangle-exclamation"></i> other categories → flagged placeholder</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--warning mt-3">
+          <i class="fa-solid fa-triangle-exclamation me-2" style="color:#997404;"></i>
+          For Sigma categories other than <code>process_creation</code>, the generated artifact still compiles,
+          but its log source is a clearly-marked <code>TODO</code> placeholder rather than a guessed ETW GUID —
+          an unverified mapping would be worse than an honest gap. Both the artifact's description and its
+          VQL comment flag this before deployment.
+        </div>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          Every generated artifact's description includes the rule's UUID, a link back to its Rulezet detail
+          page, its author, and its tags — so anyone browsing artifacts on the Velociraptor server can trace
+          it back to its source.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 5 — Push lifecycle
+      ════════════════════════════════════════════════════════════ -->
+      <section id="push-lifecycle" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-paper-plane" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Push lifecycle</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Clicking <em>Push</em> on a rule's detail page (Velociraptor tab, admin only) queues a background
+          job of type <code>velociraptor_push</code> — it does not block the request.
+        </p>
+
+        <div class="d-flex flex-column gap-3 mt-2">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">1</div>
+            <div style="font-size:.88rem;">
+              <strong>Job queued</strong><br>
+              <span class="text-muted">
+                A <code>velociraptor.push_triggered</code> activity log entry records the triggering admin,
+                the target server, and the job UUID.
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">2</div>
+            <div style="font-size:.88rem;">
+              <strong>Server &amp; rule lookup</strong><br>
+              <span class="text-muted">
+                The handler loads the target <code>VelociraptorServer</code> (must be active) and the rule
+                (via the standard <code>rule_core.get_rule()</code>, respecting soft-deletion).
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">3</div>
+            <div style="font-size:.88rem;">
+              <strong>Artifact generation</strong><br>
+              <span class="text-muted">
+                The rule is compiled to Artifact YAML as described above. Failure here (e.g. unsupported
+                format) fails the job immediately without attempting a connection.
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">4</div>
+            <div style="font-size:.88rem;">
+              <strong>Registration via <code>artifact_set()</code></strong><br>
+              <span class="text-muted">
+                The artifact is registered with
+                <span class="hiw-endpoint">SELECT artifact_set(prefix='Rulezet', definition=ArtifactYAML) AS Result FROM scope()</span>.
+                <code>artifact_set()</code> is a VQL <strong>function</strong>, not a plugin — calling it as
+                a table source (<code>FROM artifact_set(...)</code>) silently compiles to zero rows with no error.
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">5</div>
+            <div style="font-size:.88rem;">
+              <strong>Completion</strong><br>
+              <span class="text-muted">
+                <code>last_push_at</code> and <code>artifacts_pushed</code> are updated on the server row,
+                and a <code>velociraptor.push_done</code> activity log entry records the outcome.
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 6 — Format support
+      ════════════════════════════════════════════════════════════ -->
+      <section id="format-support" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-list-check" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Format support</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Only formats with a real, verified VQL mapping are supported — the Velociraptor tab (and its
+          "Push" control) only appears on a rule's detail page when its format is supported.
+        </p>
+
+        <div class="table-responsive rounded-3 border shadow-sm" style="border-color:var(--border-color)!important;">
+          <table class="table table-sm mb-0 align-middle" style="background:var(--card-bg-color);font-size:.83rem;">
+            <thead style="background:var(--light-bg-color);">
+              <tr>
+                <th class="fw-semibold ps-3" style="width:20%;">Format</th>
+                <th class="fw-semibold">Support</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">YARA</td>
+                <td><span class="hiw-verdict hiw-verdict--ok"><i class="fa-solid fa-check"></i> Supported</span> — process memory + disk scan.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">Sigma</td>
+                <td><span class="hiw-verdict hiw-verdict--ok"><i class="fa-solid fa-check"></i> Supported</span> — <code>process_creation</code> fully mapped, other categories flagged for manual completion.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">Suricata, Zeek, others</td>
+                <td><span class="hiw-verdict hiw-verdict--error"><i class="fa-solid fa-xmark"></i> Not supported</span> — no verified VQL equivalent yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 7 — Credential security
+      ════════════════════════════════════════════════════════════ -->
+      <section id="security" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-lock" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Credential security</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          A leaked Velociraptor client private key is impersonation-capable against your entire endpoint
+          fleet — a much larger blast radius than a typical API key. Because of that, this feature deviates
+          from the plaintext-credential convention used elsewhere in Rulezet:
+        </p>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-key text-primary me-2"></i>Encrypted at rest</div>
+              <p class="text-muted mb-0">
+                <code>client_cert</code> and <code>client_private_key</code> are encrypted with Fernet before
+                being stored, using a key derived from <code>VELOCIRAPTOR_ENCRYPTION_KEY</code> (or, if unset,
+                a SHA-256 of <code>SECRET_KEY</code> as a zero-config fallback).
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-eye-slash text-primary me-2"></i>Never returned to the client</div>
+              <p class="text-muted mb-0">
+                The server's <code>to_json()</code> never includes certificate or key material — the server
+                table and edit form only ever show the connection string and status, never the secrets themselves.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--danger mt-3">
+          <i class="fa-solid fa-shield-halved me-2 text-danger"></i>
+          This feature is admin-only, gated by the same <code>before_request</code> pattern as Connectors.
+          Only add servers you trust every admin on this instance with — anyone with admin access can
+          trigger a push.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 8 — Activity & history
+      ════════════════════════════════════════════════════════════ -->
+      <section id="activity" class="hiw-section mb-4">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-clock-rotate-left" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Activity &amp; history</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Every significant event in a server's lifecycle is recorded in the <strong>Activity Log</strong>.
+        </p>
+
+        <div class="row g-2">
+          {% set events = [
+            ('velociraptor.server_create',   'plug',          'primary',   'Server added — name and connection string are logged.'),
+            ('velociraptor.server_delete',   'trash',         'danger',    'Server deleted.'),
+            ('velociraptor.test_ok',         'check',         'success',   'Connection test succeeded.'),
+            ('velociraptor.push_triggered',  'paper-plane',   'info',      'Push job queued — records the triggering admin, target server, and job UUID.'),
+            ('velociraptor.push_done',       'flag-checkered','primary',   'Push completed — records success/failure and the registered artifact name.'),
+          ] %}
+          {% for action, icon, color, description in events %}
+          <div class="col-12">
+            <div class="d-flex align-items-center gap-3 p-2 rounded-2"
+                 style="background:var(--card-bg-color);border:1px solid var(--border-color);">
+              <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                   style="width:28px;height:28px;background:rgba(var(--bs-{{ color }}-rgb),.12);">
+                <i class="fa-solid fa-{{ icon }} text-{{ color }}" style="font-size:.7rem;"></i>
+              </div>
+              <div style="font-size:.82rem;">
+                <code class="text-{{ color }}">{{ action }}</code>
+                <span class="text-muted ms-2">— {{ description }}</span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- Back to Velociraptor -->
+      <div class="text-center pt-3">
+        <a href="{{ url_for('velociraptor.velociraptor_list') }}" class="btn btn-primary rounded-pill px-4">
+          <i class="fa-solid fa-arrow-left me-2"></i>Back to Velociraptor
+        </a>
+      </div>
+
+    </div><!-- /col main -->
+  </div><!-- /row -->
+</div><!-- /container -->
+{% endblock %}

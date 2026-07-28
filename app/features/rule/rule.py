@@ -678,7 +678,11 @@ def detail_rule_by_uuid(rule_uuid):
     if (rule.format or '').lower() in VELOCIRAPTOR_SUPPORTED_FORMATS:
         try:
             rule_velociraptor_artifact = generate_velociraptor_artifact(rule, base_url=request.host_url)
-        except Exception:
+        except Exception as e:
+            # Format was already confirmed supported above, so any exception here
+            # is a real generator bug, not an expected "unsupported format" case —
+            # don't let it disappear silently.
+            print(f"[rule] Velociraptor artifact generation failed for rule {rule.id}: {e}")
             rule_velociraptor_artifact = None
 
     rule_to_json = json.dumps(rule.to_json_detail(), indent=4)
@@ -779,7 +783,11 @@ def detail_rule(rule_id)-> render_template:
     if (rule.format or '').lower() in VELOCIRAPTOR_SUPPORTED_FORMATS:
         try:
             rule_velociraptor_artifact = generate_velociraptor_artifact(rule, base_url=request.host_url)
-        except Exception:
+        except Exception as e:
+            # Format was already confirmed supported above, so any exception here
+            # is a real generator bug, not an expected "unsupported format" case —
+            # don't let it disappear silently.
+            print(f"[rule] Velociraptor artifact generation failed for rule {rule.id}: {e}")
             rule_velociraptor_artifact = None
 
     rule_to_json = json.dumps(rule.to_json_detail(), indent=4)
@@ -1115,6 +1123,13 @@ def download_rule_unified() -> Response:
                         if stix_raw:
                             stix_data = json.loads(stix_raw) if isinstance(stix_raw, str) else stix_raw
                             zip_file.writestr(f"{rule.title}_stix_object.json", json.dumps(stix_data, indent=2))
+                except Exception:
+                    pass
+
+                try:
+                    if (rule.format or '').lower() in VELOCIRAPTOR_SUPPORTED_FORMATS:
+                        artifact_yaml = generate_velociraptor_artifact(rule, base_url=request.host_url)
+                        zip_file.writestr(f"{rule.title}_velociraptor_artifact.yaml", artifact_yaml)
                 except Exception:
                     pass
 

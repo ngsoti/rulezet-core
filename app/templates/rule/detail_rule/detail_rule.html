@@ -362,6 +362,47 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                     </div>
                                     {% if rule_velociraptor_artifact %}
                                     <div class="tab-pane fade" id="velociraptor" role="tabpanel">
+                                        {% if current_user.is_authenticated and current_user.is_admin() %}
+                                        <div v-if="!velociraptorServersLoading && !velociraptorServers.length"
+                                             class="rounded-3 border p-3 mb-3"
+                                             style="background:rgba(13,110,253,.06);border-color:rgba(13,110,253,.25)!important;">
+                                            <div class="d-flex align-items-center flex-wrap gap-3">
+                                                <img src="{{ url_for('static', filename='custom-icon/velociraptor-remove-bg.svg') }}"
+                                                     alt="" style="height:28px;width:28px;object-fit:contain;flex-shrink:0;">
+                                                <div class="flex-grow-1" style="min-width:200px;">
+                                                    <div class="fw-semibold small mb-1">No Velociraptor server connected</div>
+                                                    <div class="text-muted" style="font-size:.8rem;">
+                                                        Push this rule straight to your endpoints as a live Velociraptor artifact.
+                                                    </div>
+                                                </div>
+                                                <a href="/velociraptor/list" class="btn btn-primary btn-sm rounded-pill px-3 flex-shrink-0">
+                                                    <i class="fa-solid fa-plus me-1"></i>Create a connector to your Velociraptor
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div v-else class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                                <span class="fw-semibold small">
+                                                    <i class="fa-solid fa-server me-1 text-primary"></i>Push to Velociraptor
+                                                </span>
+                                                <select v-model="selectedVelociraptorServer" class="form-select form-select-sm"
+                                                        style="max-width:260px;" :disabled="velociraptorPushBusy">
+                                                    <option value="" disabled>
+                                                        [[ velociraptorServersLoading ? 'Loading servers…' : 'Choose a server…' ]]
+                                                    </option>
+                                                    <option v-for="s in velociraptorServers" :key="s.uuid" :value="s.uuid" :disabled="!s.is_active">
+                                                        [[ s.name ]][[ s.is_active ? '' : ' (disabled)' ]]
+                                                    </option>
+                                                </select>
+                                                <button class="btn btn-primary btn-sm rounded-pill px-3"
+                                                        @click="pushToVelociraptor"
+                                                        :disabled="!selectedVelociraptorServer || velociraptorPushBusy">
+                                                    <span v-if="velociraptorPushBusy" class="spinner-border spinner-border-sm me-1"></span>
+                                                    <i v-else class="fa-solid fa-paper-plane me-1"></i>Push
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {% endif %}
                                         <code-viewer
                                             :code="velociraptorArtifactData"
                                             language="yaml"
@@ -931,6 +972,45 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
             const mispEventData  = ref(window.__misp_event  ? JSON.stringify(window.__misp_event,  null, 4) : '');
             const velociraptorArtifactData = ref(window.__velociraptor_artifact || '');
 
+            // ── Push generated artifact to a connected Velociraptor server ──
+            const velociraptorServers        = ref([]);
+            const velociraptorServersLoading = ref(false);
+            const selectedVelociraptorServer = ref('');
+            const velociraptorPushBusy       = ref(false);
+            let _velociraptorServersFetched  = false;
+
+            async function fetchVelociraptorServers() {
+                if (_velociraptorServersFetched) return;
+                _velociraptorServersFetched = true;
+                velociraptorServersLoading.value = true;
+                try {
+                    const res = await fetch('/velociraptor/get');
+                    if (res.ok) velociraptorServers.value = await res.json();
+                } catch { /* admin-only widget — fail quietly if unauthorized/offline */ }
+                finally { velociraptorServersLoading.value = false; }
+            }
+
+            async function pushToVelociraptor() {
+                if (!selectedVelociraptorServer.value || !currentRule.value?.id) return;
+                velociraptorPushBusy.value = true;
+                try {
+                    const res = await fetch('/velociraptor/push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf_token },
+                        body: JSON.stringify({
+                            rule_id: currentRule.value.id,
+                            server_uuid: selectedVelociraptorServer.value,
+                        }),
+                    });
+                    const data = await res.json();
+                    create_message(data.message || data.error || 'Push request sent.', data.success ? 'success-subtle' : 'danger-subtle');
+                } catch {
+                    create_message('Network error — push not queued.', 'danger-subtle');
+                } finally {
+                    velociraptorPushBusy.value = false;
+                }
+            }
+
             // ── Rule visualization graph (MISP event via bundleMispGraph) ──
             const vizGraphLoading = ref(false);
             let _vizGraphInited = false;
@@ -962,6 +1042,9 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                     fetchBundleVulnerabilities(),
                     fetchRuleTags(),
                     // attack: no fetch needed — AttackDisplay fetches independently via ruleId prop
+                    {% if current_user.is_authenticated and current_user.is_admin() %}
+                    fetchVelociraptorServers(),
+                    {% endif %}
 
                 ])
 
@@ -1395,6 +1478,11 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                 mispObjectData,
                 mispEventData,
                 velociraptorArtifactData,
+                velociraptorServers,
+                velociraptorServersLoading,
+                selectedVelociraptorServer,
+                velociraptorPushBusy,
+                pushToVelociraptor,
                 is_lock,
                 toggleLock,
                 vizGraphLoading,
