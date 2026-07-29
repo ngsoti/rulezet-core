@@ -2706,6 +2706,8 @@ def import_rules_from_github():
     Clone or access a GitHub repo, then test all YARA rules in it,
     creating rules and classifying bad rules automatically.
     """
+    if not current_user.is_admin():
+        return {"message": "Admin access required. Non-admins can submit a proposal instead.", "toast_class": "danger-subtle"}, 403
     try:
         repo_url = request.json.get('url')
         selected_license = request.json.get('license')
@@ -2760,6 +2762,8 @@ def import_rules_from_zip():
     The ZIP is extracted into a temp folder, and processed the same way
     as GitHub repositories were.
     """
+    if not current_user.is_admin():
+        return {"message": "Admin access required.", "toast_class": "danger-subtle"}, 403
 
     try:
 
@@ -2878,6 +2882,18 @@ def import_get_info_session(sid):
 @login_required
 def manage_github():
     return render_template("rule/url_github/manage_github.html")
+
+
+@rule_blueprint.route("/github_proposal_detail/<uuid>", methods=['GET'])
+@login_required
+def github_proposal_detail_page(uuid):
+    from app.features.rule.rule_from_github.proposal import proposal_core as ProposalModel
+    proposal = ProposalModel.get_proposal_by_uuid(uuid)
+    if not proposal:
+        return render_template("404.html"), 404
+    if current_user.id != proposal.user_id and not current_user.is_admin():
+        return render_template("access_denied.html"), 403
+    return render_template("rule/url_github/proposal_detail.html", proposal_uuid=uuid)
 
 
 @rule_blueprint.route("/github/history_github_importer", methods=['GET'])

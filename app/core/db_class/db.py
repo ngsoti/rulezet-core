@@ -1729,6 +1729,68 @@ class GithubSyncRunRepo(db.Model):
         }
 
 
+import uuid as _uuid_mod
+
+
+def _gen_github_proposal_uuid():
+    return str(_uuid_mod.uuid4())
+
+
+class GithubProposal(db.Model):
+    """A non-admin user's request to import a GitHub repository. Reviewed by
+    admins (accept/reject, bulk), accepted proposals are imported one after
+    another by the 'github_proposal_bulk_import' background job."""
+    __tablename__ = "github_proposal"
+
+    id       = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid     = db.Column(db.String(36), unique=True, nullable=False, index=True, default=_gen_github_proposal_uuid)
+    user_id  = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    repo_url = db.Column(db.String(512), nullable=False)
+    branch   = db.Column(db.String(255), nullable=True)
+    license  = db.Column(db.String(128), nullable=True)
+    message  = db.Column(db.Text, nullable=True)
+
+    # pending | accepted | rejected | imported | failed | transferred
+    status         = db.Column(db.String(32), default="pending", index=True)
+    ownership_mode = db.Column(db.String(16), nullable=True)  # 'requester' | 'admin'
+
+    decided_by_id  = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    decided_at     = db.Column(db.DateTime, nullable=True)
+    decision_note  = db.Column(db.Text, nullable=True)
+
+    job_uuid              = db.Column(db.String(36), nullable=True, index=True)
+    importer_result_uuid  = db.Column(db.String(36), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    requester  = db.relationship("User", foreign_keys=[user_id])
+    decided_by = db.relationship("User", foreign_keys=[decided_by_id])
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "user_id": self.user_id,
+            "requester_username": self.requester.get_username() if self.requester else None,
+            "requester_avatar": self.requester.get_avatar_url() if self.requester else None,
+            "repo_url": self.repo_url,
+            "branch": self.branch,
+            "license": self.license,
+            "message": self.message,
+            "status": self.status,
+            "ownership_mode": self.ownership_mode,
+            "decided_by_id": self.decided_by_id,
+            "decided_by_username": self.decided_by.get_username() if self.decided_by else None,
+            "decided_at": self.decided_at.strftime('%Y-%m-%d %H:%M') if self.decided_at else None,
+            "decision_note": self.decision_note,
+            "job_uuid": self.job_uuid,
+            "importer_result_uuid": self.importer_result_uuid,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else None,
+        }
+
+
 ############################################
 #    Gamification of users contribution    #
 ############################################

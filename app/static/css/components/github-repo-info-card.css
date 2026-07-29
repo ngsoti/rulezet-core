@@ -1,0 +1,145 @@
+/*
+ * github-repo-info-card.css — styles for the GithubRepoInfoCard component
+ * (app/static/js/components/github-repo-info-card.js).
+ * Extracted from detail_url_github.html's inline <style> block so any page
+ * using the component doesn't need to duplicate it.
+ */
+
+/* ── KPI strip ── */
+.gh-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: .75rem;
+}
+.gh-kpi {
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: .75rem 1rem;
+    display: flex; align-items: center; gap: .65rem;
+}
+.gh-kpi-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0;
+}
+.gh-kpi-num { font-weight: 700; font-size: .95rem; line-height: 1.1; color: var(--text-color); }
+.gh-kpi-lbl { font-size: .67rem; text-transform: uppercase; letter-spacing: .05em; color: var(--subtle-text-color); }
+
+/* ── Info cells ── */
+.gh-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: .6rem;
+}
+.gh-info-cell {
+    display: flex; align-items: flex-start; gap: .6rem;
+    padding: .6rem .75rem;
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+.gh-info-cell-icon {
+    width: 28px; height: 28px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0; margin-top: 1px;
+}
+.gh-info-lbl { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--subtle-text-color); margin-bottom: 1px; }
+.gh-info-val { font-size: .82rem; color: var(--text-color); font-weight: 500; word-break: break-word; }
+
+/* ── Topics ── */
+.gh-topic {
+    display: inline-block; font-size: .7rem; font-weight: 600;
+    padding: 2px 9px; border-radius: 20px;
+    background: rgba(13,110,253,.1); color: #0d6efd;
+    border: 1px solid rgba(13,110,253,.2);
+}
+
+/* ── Sub-section header ── */
+.gh-sub-header {
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .78rem; font-weight: 700; color: var(--text-color);
+    text-transform: uppercase; letter-spacing: .06em;
+    margin-bottom: .75rem;
+}
+.gh-sub-header i { color: var(--subtle-text-color); font-size: .85rem; }
+
+/* ── Commits list ── */
+.gh-commit-item {
+    display: flex; align-items: flex-start; gap: .6rem;
+    padding: .6rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.gh-commit-item:last-child { border-bottom: none; }
+.gh-commit-avatar {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    border: 1px solid var(--border-color);
+    background: var(--light-bg-color); object-fit: cover;
+}
+.gh-commit-avatar-fallback {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    border: 1px solid var(--border-color);
+    background: var(--light-bg-color);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: var(--subtle-text-color);
+}
+.gh-commit-msg {
+    font-size: .82rem; font-weight: 500; color: var(--text-color);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%;
+}
+.gh-commit-meta { font-size: .72rem; color: var(--subtle-text-color); }
+.gh-sha {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .7rem; color: #0d6efd;
+    background: rgba(13,110,253,.08);
+    padding: 1px 6px; border-radius: 4px;
+    text-decoration: none;
+}
+.gh-sha:hover { text-decoration: underline; }
+
+/* ── Contributors ── */
+.gh-contributor {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; text-decoration: none;
+    padding: .4rem;
+    border-radius: 8px;
+    transition: background .15s;
+}
+.gh-contributor:hover { background: var(--light-bg-color); }
+.gh-contributor img {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 2px solid var(--border-color);
+}
+.gh-contributor-login { font-size: .68rem; color: var(--text-color); font-weight: 500; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gh-contributor-count { font-size: .62rem; color: var(--subtle-text-color); }
+
+/* ── Collapse ── */
+.gh-collapse-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.gh-collapse-body--open { max-height: 6000px; }
+.gh-toggle-btn {
+    background: none; border: none; padding: 0;
+    display: flex; align-items: center; gap: .5rem;
+    cursor: pointer; width: 100%;
+    color: inherit;
+}
+.gh-toggle-btn:focus-visible { outline: 2px solid #0d6efd; border-radius: 4px; }
+.gh-chevron {
+    transition: transform .25s ease;
+    color: var(--subtle-text-color);
+    font-size: .8rem;
+    margin-left: auto;
+}
+.gh-chevron--open { transform: rotate(180deg); }
+
+/* ── Error / empty ── */
+.gh-error-box {
+    background: var(--light-bg-color); border: 1px solid var(--border-color);
+    border-radius: 10px; padding: 1rem 1.25rem;
+    font-size: .85rem; color: var(--subtle-text-color);
+}
+.gh-empty { font-size: .82rem; color: var(--subtle-text-color); font-style: italic; padding: .5rem 0; }

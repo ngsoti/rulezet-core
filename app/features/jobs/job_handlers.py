@@ -23,7 +23,7 @@ from pathlib import Path
 
 from app.features.jobs.job_worker import register_handler
 from app import db
-from app.core.db_class.db import Rule, Tag, RuleTagAssociation, BackgroundJob, BackgroundJobLog, ActivityLog, RequestOwnerRule, User
+from app.core.db_class.db import Rule, Tag, RuleTagAssociation, BackgroundJob, BackgroundJobLog, ActivityLog, RequestOwnerRule, User, GithubProposal
 from app.features.rule.rule_core import _wipe_rule_children
 from app.core.utils.activity_log import log_activity
 
@@ -2061,6 +2061,126 @@ def handle_bulk_transfer_ownership(job, app):
         )
         db.session.add(history_entry)
         db.session.commit()
+
+
+# ─── github_proposal_bulk_import (accepted GitHub import proposals) ─────────
+
+@register_handler('github_proposal_bulk_import')
+def handle_github_proposal_bulk_import(job, app):
+    """
+    Sequentially imports every accepted GithubProposal in the batch, one repo
+    at a time (single-threaded — Session_class.run_sync, no daemon threads),
+    attributing new rules' ownership to either the requester or the admin who
+    accepted the batch.
+
+    Payload:
+        proposal_uuids : list[str]
+        ownership_mode : 'requester' | 'admin'
+    """
+    from app.features.rule.rule_from_github.import_rule import session_class as SessionModel
+    from app.features.rule.rule_format.utils_format.utils_import_update import (
+        clone_or_access_repo, github_repo_metadata, valider_repo_github,
+    )
+
+    payload = job.payload or {}
+    proposal_uuids = payload.get('proposal_uuids', [])
+    ownership_mode = payload.get('ownership_mode', 'admin')
+    offset = payload.get('_resume_offset', 0)
+
+    acting_admin = User.query.get(job.created_by)
+    if not acting_admin:
+        raise ValueError(f"Acting admin #{job.created_by} not found.")
+
+    if job.total == 0:
+        job.total = len(proposal_uuids)
+        db.session.commit()
+        log_job(job, f"Job started — importing {job.total} accepted proposal(s).",
+                level='info', event='started')
+    elif offset > 0:
+        log_job(job, f"Resuming from proposal {offset + 1}/{job.total}.",
+                level='info', event='resumed')
+
+    if job.total == 0:
+        log_job(job, "No proposals to import.", level='warning', event='done')
+        return
+
+    done = offset
+    while offset < len(proposal_uuids):
+        if _is_cancelled(job):
+            log_job(job, f"Job cancelled after {done}/{job.total} proposal(s).",
+                    level='warning', event='cancelled')
+            return
+        if _should_pause(job):
+            _save_offset(job, offset)
+            db.session.commit()
+            log_job(job, f"Job paused after {done}/{job.total} proposal(s). Click Resume to continue.",
+                    level='info', event='paused')
+            return
+
+        proposal_uuid = proposal_uuids[offset]
+        proposal = GithubProposal.query.filter_by(uuid=proposal_uuid).first()
+        if not proposal:
+            log_job(job, f"Proposal {proposal_uuid} no longer exists — skipping.", level='warning')
+            offset += 1
+            done += 1
+            job.done = done
+            _save_offset(job, offset)
+            db.session.commit()
+            continue
+
+        owner = proposal.requester if ownership_mode == 'requester' else acting_admin
+        try:
+            if not valider_repo_github(proposal.repo_url):
+                raise ValueError("Invalid repository URL.")
+
+            repo_dir, _ = clone_or_access_repo(proposal.repo_url, branch=proposal.branch)
+            if not repo_dir:
+                raise ValueError("Failed to clone or access the repository.")
+
+            info = github_repo_metadata(proposal.repo_url, proposal.license)
+            if proposal.branch:
+                info['branch'] = proposal.branch
+
+            session = SessionModel.Session_class(repo_dir, owner, info)
+            imported, skipped, bad_rules, _total = session.run_sync(app, owner)
+
+            proposal.status = 'imported'
+            proposal.importer_result_uuid = session.uuid
+            db.session.commit()
+
+            log_job(job,
+                    f"Imported '{proposal.repo_url}': {imported} imported, {skipped} skipped, {bad_rules} invalid.",
+                    level='success', event='progress')
+
+            try:
+                from app.features.notification.notification_core import notify_github_proposal_import_done
+                notify_github_proposal_import_done(proposal.user_id, proposal.repo_url, imported, success=True)
+            except Exception as e:
+                log_job(job, f"Notification error: {e}", level='warning')
+
+        except Exception as e:
+            db.session.rollback()
+            proposal.status = 'failed'
+            db.session.commit()
+            log_job(job, f"Failed importing '{proposal.repo_url}': {e}", level='error', event='progress')
+
+            try:
+                from app.features.notification.notification_core import notify_github_proposal_import_done
+                notify_github_proposal_import_done(proposal.user_id, proposal.repo_url, 0, success=False, error=str(e))
+            except Exception as e2:
+                log_job(job, f"Notification error: {e2}", level='warning')
+
+        offset += 1
+        done += 1
+        job.done = done
+        _save_offset(job, offset)
+        db.session.commit()
+
+    log_job(job, f"Done — processed {done}/{job.total} proposal(s).", level='success', event='done')
+    log_activity('admin.github_proposal_bulk_import',
+                 f"Imported {done} accepted GitHub proposal(s) (ownership: {ownership_mode})",
+                 target_type='job', target_id=job.id, target_uuid=job.uuid,
+                 extra={'proposal_uuids': proposal_uuids, 'ownership_mode': ownership_mode})
 
 
 # ─── ATT&CK: update catalogue from MITRE ─────────────────────────────────────

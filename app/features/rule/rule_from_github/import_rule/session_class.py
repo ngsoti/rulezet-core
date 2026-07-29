@@ -51,7 +51,7 @@ class Session_class:
             if len(self.events) > 500:
                 self.events = self.events[-500:]
 
-    def start(self):
+    def _populate_jobs(self):
         job_index = 0
         load_all_rule_formats()
         rule_subclasses = RuleType.__subclasses__()
@@ -129,6 +129,9 @@ class Session_class:
                         self.jobs.put((job_index, rel_path, rule_instance, raw_text))
 
         self.total = job_index
+
+    def start(self):
+        self._populate_jobs()
         app_obj = current_app._get_current_object()
         user_obj = current_user._get_current_object()
 
@@ -138,6 +141,15 @@ class Session_class:
             worker.start()
             self.threads.append(worker)
 
+    def run_sync(self, app_obj, user: User):
+        """Blocking single-threaded import — for use inside a BackgroundJob.
+        No daemon threads and no Flask request context needed: unlike start(),
+        the acting user is passed explicitly instead of read from
+        flask_login.current_user (which is unavailable in a worker thread)."""
+        self.thread_count = 1  # process() self-finalizes (calls save_info()) after 1 worker
+        self._populate_jobs()
+        self.process(app_obj, user)
+        return self.imported, self.skipped, self.bad_rules, self.total
 
     def status(self):
         if self.jobs.empty():

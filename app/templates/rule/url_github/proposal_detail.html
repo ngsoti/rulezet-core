@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% block title %}GitHub Proposal — Rulezet{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/github-repo-info-card.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/base/detail_rule.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/github/github-proposal-table.css') }}">
+{% endblock %}
+{% block content %}
+<div class="container my-4" id="main-container" v-cloak>
+
+    <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+            <li class="breadcrumb-item"><a href="/rule/github/manage" class="text-decoration-none text-muted">Manage GitHub</a></li>
+            <li class="breadcrumb-item active text-muted" aria-current="page">GitHub Proposal</li>
+        </ol>
+    </nav>
+
+    <div v-if="loading" class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+
+    <template v-else-if="proposal">
+        <!-- Main detail card -->
+        <div class="card h-100 border-0 card_detail border-top shadow-lg position-relative mb-4" style="border-radius:12px;">
+            <div class="card-watermark-detail"><i class="fa-brands fa-github"></i></div>
+            <div class="position-absolute top-0 end-0 mt-3 me-3 d-flex gap-2" style="z-index:2;">
+                <span :class="['gpt-status-badge', 'gpt-status-badge--' + proposal.status]">[[ proposal.status ]]</span>
+            </div>
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <i class="fa-brands fa-github" style="font-size:2rem;color:var(--text-color);flex-shrink:0;"></i>
+                    <div style="min-width:0;">
+                        <h4 class="mb-1 fw-bold" style="color:var(--text-color);">
+                            <span class="text-muted">[[ repoOwner ]]</span>
+                            <span class="text-muted mx-1">/</span>
+                            <span class="text-truncate" style="display:inline-block;max-width:60vw;vertical-align:bottom;">[[ repoName ]]</span>
+                        </h4>
+                        <small class="text-muted">Submitted [[ proposal.created_at ]]</small>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center flex-wrap gap-3 mb-4" style="font-size:.88rem;">
+                    <user-chip :user-id="proposal.user_id" :username="proposal.requester_username" :avatar="proposal.requester_avatar" size="sm"></user-chip>
+                    <span class="text-muted"><i class="fas fa-code-branch me-1"></i>[[ proposal.branch || 'default branch' ]]</span>
+                    <span v-if="proposal.license" class="gpt-license-badge">[[ proposal.license ]]</span>
+                </div>
+
+                <div v-if="proposal.message" class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                    <label class="fw-bold mb-2 d-block" style="font-size:.8rem;color:var(--subtle-text-color);text-transform:uppercase;">Message from requester</label>
+                    <code-viewer :code="proposal.message" language="markdown"></code-viewer>
+                </div>
+
+                <div v-if="proposal.decided_by_username" class="rounded-3 border p-3" style="background:var(--light-bg-color);">
+                    <div style="font-size:.85rem;color:var(--text-color);">
+                        Decided by <strong>[[ proposal.decided_by_username ]]</strong> on [[ proposal.decided_at ]]
+                        <span v-if="proposal.ownership_mode"> — ownership: <strong>[[ proposal.ownership_mode ]]</strong></span>
+                    </div>
+                    <div v-if="proposal.decision_note" class="text-muted mt-1" style="font-size:.83rem;">
+                        Note: [[ proposal.decision_note ]]
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GitHub repository info -->
+        <github-repo-info-card :repo-url="proposal.repo_url" start-expanded></github-repo-info-card>
+
+        <!-- Existing rules with this source — only relevant while a decision is still pending -->
+        <div v-if="existingRulesCount > 0 && proposal.status === 'pending'" class="card border-0 shadow-sm rounded-3 mb-4" style="border-left:3px solid #fd7e14;">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-2"><i class="fas fa-triangle-exclamation me-1" style="color:#fd7e14;"></i>Already in Rulezet</h6>
+                <p style="font-size:.87rem;color:var(--text-color);">
+                    This repository already has <strong>[[ existingRulesCount ]]</strong> rule(s) in Rulezet.
+                    Accepting below will <strong>not</strong> re-import it — ownership of those existing rules is transferred instead
+                    (per the ownership choice below), the same way a manual ownership request would. Rejecting leaves them untouched.
+                    You can also delete this request without deciding either way.
+                </p>
+                <div v-if="isAdminUser">
+                    <button class="btn btn-outline-danger btn-sm rounded-pill px-3" :disabled="actionLoading" @click="deleteRequest()">
+                        Delete request
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin decision panel -->
+        <div v-if="isAdminUser && proposal.status === 'pending'" class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">Review this proposal</h6>
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:.85rem;">Rule ownership (if accepted)</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="ownAdminD" value="admin" v-model="ownershipMode">
+                        <label class="form-check-label" for="ownAdminD">Keep ownership as me (accepting admin)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="ownRequesterD" value="requester" v-model="ownershipMode">
+                        <label class="form-check-label" for="ownRequesterD">Grant ownership to the requester</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:.85rem;">Note<span class="opt-badge">optional</span></label>
+                    <textarea class="form-control" rows="2" v-model="decisionNote" placeholder="Optional note shown to the requester"></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary rounded-pill px-4" :disabled="actionLoading" @click="decide('accept')">
+                        <i class="fas fa-check me-1"></i>Accept
+                    </button>
+                    <button class="btn btn-outline-danger rounded-pill px-4" :disabled="actionLoading" @click="decide('reject')">
+                        <i class="fas fa-xmark me-1"></i>Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Job progress: import for a new repo, or ownership transfer if the source already existed -->
+        <div v-if="proposal.job_uuid" class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">[[ proposal.status === 'transferred' ? 'Ownership transfer progress' : 'Import progress' ]]</h6>
+                <job-tracker :job-uuid="proposal.job_uuid"></job-tracker>
+            </div>
+        </div>
+
+        <!-- Requester cancel -->
+        <div v-if="isOwner && proposal.status === 'pending'" class="text-end">
+            <button class="btn btn-outline-danger rounded-pill px-4" :disabled="actionLoading" @click="cancelMine()">
+                Cancel my proposal
+            </button>
+        </div>
+    </template>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, computed, onMounted } = Vue;
+    import { create_message } from '/static/js/toaster.js';
+    import UserChip from '/static/js/components/UserChip.js';
+    import CodeViewer from '/static/js/components/code-viewer.js';
+    import GithubRepoInfoCard from '/static/js/components/github-repo-info-card.js';
+    import JobTracker from '/static/js/jobs/JobTracker.js';
+
+    const csrfToken = '{{ csrf_token() }}';
+    const proposalUuid = '{{ proposal_uuid }}';
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: { UserChip, CodeViewer, GithubRepoInfoCard, JobTracker },
+        setup() {
+            const proposal = ref(null);
+            const existingRulesCount = ref(0);
+            const isOwner = ref(false);
+            const isAdminUser = ref(false);
+            const loading = ref(true);
+            const actionLoading = ref(false);
+
+            const ownershipMode = ref('admin');
+            const decisionNote = ref('');
+
+            const repoOwner = computed(() => {
+                const parts = (proposal.value?.repo_url || '').replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').split('/');
+                return parts[0] || '';
+            });
+            const repoName = computed(() => {
+                const parts = (proposal.value?.repo_url || '').replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').split('/');
+                return parts[1] || proposal.value?.repo_url || '';
+            });
+
+            async function fetchDetail() {
+                loading.value = true;
+                try {
+                    const res = await fetch(`/rule/github_proposal/${proposalUuid}`);
+                    const data = await res.json();
+                    if (res.ok) {
+                        proposal.value = data.proposal;
+                        existingRulesCount.value = data.existing_rules_count || 0;
+                        isOwner.value = data.is_owner;
+                        isAdminUser.value = data.is_admin;
+                    } else {
+                        create_message(data.message || 'Could not load this proposal.', data.toast_class || 'danger-subtle');
+                    }
+                } finally {
+                    loading.value = false;
+                }
+            }
+
+            async function decide(decision) {
+                actionLoading.value = true;
+                try {
+                    const res = await fetch('/rule/github_proposal/bulk_decision', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify({
+                            uuids: [proposalUuid],
+                            decision,
+                            ownership_mode: decision === 'accept' ? ownershipMode.value : undefined,
+                            note: decision === 'reject' ? decisionNote.value : undefined,
+                        }),
+                    });
+                    const data = await res.json();
+                    create_message(data.message, data.toast_class || (res.ok ? 'success-subtle' : 'danger-subtle'));
+                    if (res.ok) fetchDetail();
+                } finally {
+                    actionLoading.value = false;
+                }
+            }
+
+            async function deleteRequest() {
+                if (!confirm('Delete this proposal request?')) return;
+                actionLoading.value = true;
+                try {
+                    const res = await fetch(`/rule/github_proposal/${proposalUuid}/delete`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                    });
+                    const data = await res.json();
+                    create_message(data.message, data.toast_class || (res.ok ? 'success-subtle' : 'danger-subtle'));
+                    if (res.ok) window.location.href = '/rule/github/manage';
+                } finally {
+                    actionLoading.value = false;
+                }
+            }
+
+            async function cancelMine() {
+                if (!confirm('Cancel your proposal?')) return;
+                actionLoading.value = true;
+                try {
+                    const res = await fetch(`/rule/github_proposal/${proposalUuid}/cancel`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                    });
+                    const data = await res.json();
+                    create_message(data.message, data.toast_class || (res.ok ? 'success-subtle' : 'danger-subtle'));
+                    if (res.ok) window.location.href = '/rule/create_rule?tab=github';
+                } finally {
+                    actionLoading.value = false;
+                }
+            }
+
+            onMounted(() => {
+                fetchDetail();
+            });
+
+            return {
+                proposal, existingRulesCount, isOwner, isAdminUser, loading, actionLoading,
+                ownershipMode, decisionNote, repoOwner, repoName,
+                decide, deleteRequest, cancelMine,
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

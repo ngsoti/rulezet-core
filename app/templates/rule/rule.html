@@ -383,8 +383,15 @@
         <div class="d-flex align-items-start gap-2 p-3 mb-4 rounded-3" style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);">
           <i class="fas fa-circle-info mt-1" style="color:#3b82f6;flex-shrink:0;"></i>
           <div style="font-size:.83rem;color:var(--text-color);">
+            {% if current_user.is_admin() %}
             The importer walks every file in the repository and tries to parse each one using the matching format engine.
             Rules that fail validation are saved in <strong>Bad Rules</strong> for manual review rather than discarded.
+            {% else %}
+            The importer walks every file in the repository and tries to parse each one using the matching format engine.
+            Rules that fail validation are saved in <strong>Bad Rules</strong> for manual review rather than discarded.
+            Direct GitHub import is restricted to administrators, so submit a proposal instead —
+            an admin will review it and, if accepted, the repository will be imported for you.
+            {% endif %}
           </div>
         </div>
 
@@ -465,11 +472,95 @@
           </div>
         </div>
         {% else %}
-        <div class="admin-gate">
-          <div><i class="fas fa-lock"></i></div>
-          <p class="fw-semibold mb-1" style="color:var(--text-color);">Admin access required</p>
-          <p class="mb-3" style="font-size:.83rem;">Importing rules from GitHub is restricted to administrators.</p>
-          <a href="/account/login" class="btn btn-primary btn-sm" style="border-radius:8px;">Sign in as admin</a>
+        <div>
+          <div class="mb-3">
+            <div class="d-flex align-items-center gap-1 mb-1">
+              <label class="form-label-styled mb-0" for="proposal-url">Repository URL<span class="req-badge">required</span></label>
+              <i class="rf-label-hint" data-tip="Must be a public GitHub repository URL ending in .git.">?</i>
+            </div>
+            <div class="input-group">
+              <span class="input-group-text" style="background:var(--light-bg-color);border-color:var(--border-color);color:var(--muted-text-color,#6c757d);">
+                <i class="fab fa-github"></i>
+              </span>
+              <input type="text" name="proposal-url" class="form-control" id="proposal-url"
+                placeholder="https://github.com/your_username/project.git" v-model="url">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex align-items-center gap-1 mb-1">
+              <label class="form-label-styled mb-0" for="proposal-branch">Branch<span class="opt-badge">optional</span></label>
+              <i class="rf-label-hint" data-tip="Leave empty to use the repository's default branch.">?</i>
+            </div>
+            <div class="input-group">
+              <span class="input-group-text" style="background:var(--light-bg-color);border-color:var(--border-color);color:var(--muted-text-color,#6c757d);">
+                <i class="fas fa-code-branch"></i>
+              </span>
+              <input type="text" name="proposal-branch" class="form-control" id="proposal-branch"
+                placeholder="main, develop, feature/xyz…" v-model="branch">
+              <span v-if="branchesLoading" class="input-group-text" style="background:var(--light-bg-color);border-color:var(--border-color);">
+                <div class="spinner-border spinner-border-sm text-primary" style="width:14px;height:14px;border-width:2px;"></div>
+              </span>
+            </div>
+            <div v-if="availableBranches.length > 0" class="d-flex flex-wrap gap-1 mt-2">
+              <button v-for="b in availableBranches" :key="b" type="button"
+                      @click="branch = b"
+                      :class="['btn btn-xs rounded-pill px-2 py-1', branch === b ? 'btn-primary' : 'btn-outline-secondary']"
+                      style="font-size:.72rem;">
+                <i class="fas fa-code-branch me-1" style="font-size:.65rem;"></i>[[ b ]]
+              </button>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex align-items-center gap-1 mb-1">
+              <label class="form-label-styled mb-0" for="proposal-license-select">License<span class="opt-badge">optional</span></label>
+              <i class="rf-label-hint" data-tip="Applied to every imported rule if accepted. Leave blank if not applicable.">?</i>
+            </div>
+            <select id="proposal-license-select" name="proposal-license" class="form-select" v-model="selectedLicense">
+              <option disabled value="">Select a license…</option>
+              <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <div class="d-flex align-items-center gap-1 mb-1">
+              <label class="form-label-styled mb-0">Why should this repository be added?<span class="opt-badge">optional</span></label>
+            </div>
+            <smart-editor v-model="proposalMessage" mode="markdown"
+              placeholder="Explain why this repository would be a good addition to Rulezet…"
+              min-height="140px" max-height="320px">
+            </smart-editor>
+          </div>
+
+          <div class="d-flex justify-content-end">
+            <button v-if="!proposalSubmitting" type="button" class="btn btn-primary px-4" @click="submitGithubProposal()" style="border-radius:8px;">
+              <i class="fas fa-paper-plane me-2"></i>Submit Proposal
+            </button>
+            <button v-else class="btn btn-primary px-4" type="button" disabled style="border-radius:8px;">
+              <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Submitting…
+            </button>
+          </div>
+
+          <hr style="border-color:var(--border-color);margin:2rem 0 1.25rem;">
+
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <h6 class="mb-0 fw-bold" style="color:var(--text-color);">My proposals</h6>
+          </div>
+          <div v-if="myProposalsLoading" class="text-center py-3">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+          </div>
+          <p v-else-if="myProposals.length === 0" class="text-muted" style="font-size:.85rem;">You haven't submitted any GitHub proposals yet.</p>
+          <div v-else class="d-flex flex-column gap-2">
+            <div v-for="p in myProposals" :key="p.uuid" class="d-flex align-items-center gap-2 p-2 rounded-3" style="background:var(--light-bg-color);border:1px solid var(--border-color);">
+              <span :class="['gp-status-badge', 'gp-status-badge--' + p.status]">[[ p.status ]]</span>
+              <span class="text-truncate flex-grow-1" style="font-size:.83rem;color:var(--text-color);" :title="p.repo_url">[[ p.repo_url ]]</span>
+              <small class="text-muted flex-shrink-0">[[ p.created_at ]]</small>
+              <button v-if="p.status === 'pending'" class="btn btn-outline-danger btn-sm flex-shrink-0" style="font-size:.72rem;" @click="cancelMyProposal(p)">
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
         {% endif %}
         </div>
@@ -752,9 +843,72 @@ window.__manual_format  = {{ (form.format.data  or '') | tojson }};
                         version: "{{ form.version.data or '1.0' }}",
                   });
 
+                  // ── GitHub import proposal (non-admin) ──────────────────────
+                  const isAdminUser        = {{ current_user.is_admin() | tojson }};
+                  const proposalMessage    = ref("");
+                  const proposalSubmitting = ref(false);
+                  const myProposals        = ref([]);
+                  const myProposalsLoading = ref(false);
+
+                  async function fetchMyProposals() {
+                        myProposalsLoading.value = true;
+                        try {
+                              const res  = await fetch('/rule/github_proposal/mine');
+                              const data = await res.json();
+                              if (res.ok) myProposals.value = data.items || [];
+                        } catch (e) {
+                              // silent — non-critical widget
+                        }
+                        myProposalsLoading.value = false;
+                  }
+
+                  async function submitGithubProposal() {
+                        if (!url.value.trim()) {
+                              create_message('The repository URL is required.', 'warning-subtle');
+                              return;
+                        }
+                        proposalSubmitting.value = true;
+                        try {
+                              const res  = await fetch('/rule/github_proposal/create', {
+                                    method:  "POST",
+                                    headers: { "X-CSRFToken": $("#csrf_token").val(), "Content-Type": "application/json" },
+                                    body:    JSON.stringify({
+                                          repo_url: url.value.trim(),
+                                          branch:   branch.value.trim() || null,
+                                          license:  selectedLicense.value || null,
+                                          message:  proposalMessage.value || null,
+                                    })
+                              });
+                              const data = await res.json();
+                              create_message(data.message, data.toast_class || (res.ok ? "success-subtle" : "danger-subtle"));
+                              if (res.ok) {
+                                    url.value = "";
+                                    branch.value = "";
+                                    selectedLicense.value = "";
+                                    proposalMessage.value = "";
+                                    fetchMyProposals();
+                              }
+                        } catch (e) {
+                              create_message('Network error — please try again.', 'danger-subtle');
+                        }
+                        proposalSubmitting.value = false;
+                  }
+
+                  async function cancelMyProposal(proposal) {
+                        if (!confirm(`Cancel your proposal for ${proposal.repo_url}?`)) return;
+                        const res  = await fetch(`/rule/github_proposal/${proposal.uuid}/cancel`, {
+                              method:  "POST",
+                              headers: { "X-CSRFToken": $("#csrf_token").val(), "Content-Type": "application/json" },
+                        });
+                        const data = await res.json();
+                        create_message(data.message, data.toast_class || (res.ok ? "success-subtle" : "danger-subtle"));
+                        if (res.ok) fetchMyProposals();
+                  }
+
                   onMounted(() => {
                         fetchRules();
                         fetchRulesFormats();
+                        if (!isAdminUser) fetchMyProposals();
                   });
 
 
@@ -786,7 +940,14 @@ window.__manual_format  = {{ (form.format.data  or '') | tojson }};
                         detectedVulnerabilities,
                         selectedTags,
                         selectedAttacks,
-                        formData
+                        formData,
+
+                        proposalMessage,
+                        proposalSubmitting,
+                        myProposals,
+                        myProposalsLoading,
+                        submitGithubProposal,
+                        cancelMyProposal,
                   };
             }
       }).mount('#main-container');

@@ -60,6 +60,10 @@ _TYPE_ICON = {
     'blog_published':          'fa-solid fa-newspaper',
     'github_token_invalid':    'fa-solid fa-key',
     'sync_run_finished':       'fa-solid fa-arrows-rotate',
+    'github_proposal_submitted':   'fa-brands fa-github',
+    'github_proposal_approved':    'fa-solid fa-circle-check',
+    'github_proposal_rejected':    'fa-solid fa-circle-xmark',
+    'github_proposal_import_done': 'fa-brands fa-github',
 }
 
 
@@ -757,6 +761,83 @@ def notify_ownership_granted(new_owner_id, rule_count):
         )
     except Exception as e:
         print(f"[notification_core] notify_ownership_granted error: {e}")
+
+
+def notify_github_proposal_submitted(proposal, requester):
+    """Notify all admins when a non-admin submits a GitHub import proposal."""
+    try:
+        recipients = set(_get_all_admin_ids())
+        if not recipients:
+            return
+        requester_name = requester.get_username() if requester else 'Someone'
+        title = 'New GitHub import proposal'
+        body  = f'{requester_name} proposed importing {proposal.repo_url}'
+        link  = f'/rule/github_proposal_detail/{proposal.uuid}'
+
+        notifs = [
+            Notification(
+                user_id    = uid,
+                notif_type = 'github_proposal_submitted',
+                title      = title,
+                body       = body,
+                link       = link,
+                icon       = _TYPE_ICON['github_proposal_submitted'],
+                is_read    = False,
+                created_at = datetime.datetime.utcnow(),
+            )
+            for uid in recipients
+        ]
+        db.session.add_all(notifs)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"[notification_core] notify_github_proposal_submitted error: {e}")
+
+
+def notify_github_proposal_decision(proposal, approved, note=None):
+    """Notify the requester when their GitHub import proposal is accepted or rejected."""
+    try:
+        notif_type = 'github_proposal_approved' if approved else 'github_proposal_rejected'
+        verb       = 'accepted' if approved else 'rejected'
+        title      = f'GitHub proposal {verb}'
+        body       = f'Your proposal for {proposal.repo_url} was {verb}.'
+        if note:
+            body += f' Note: {note}'
+        link = f'/rule/github_proposal_detail/{proposal.uuid}'
+
+        create_notification(
+            user_id    = proposal.user_id,
+            notif_type = notif_type,
+            title      = title,
+            body       = body,
+            link       = link,
+        )
+    except Exception as e:
+        print(f"[notification_core] notify_github_proposal_decision error: {e}")
+
+
+def notify_github_proposal_import_done(user_id, repo_url, imported, success, error=None):
+    """Notification sent once the sequential import for one accepted GitHub
+    proposal finishes. Respects pref_job_done (see notify_github_import_done)."""
+    try:
+        if not _get_pref(user_id).pref_job_done:
+            return None
+        if success:
+            title = f'Import finished — {imported} rule{"s" if imported != 1 else ""} received'
+            body  = f'Your proposed repository {repo_url} was imported.'
+        else:
+            title = 'Import failed'
+            body  = f'Importing {repo_url} failed{": " + error if error else "."}'
+        return create_notification(
+            user_id    = user_id,
+            notif_type = 'github_proposal_import_done',
+            title      = title,
+            body       = body,
+            link       = '/rule/github/manage',
+            icon       = _TYPE_ICON['github_proposal_import_done'],
+        )
+    except Exception as e:
+        print(f"[notification_core] notify_github_proposal_import_done error: {e}")
 
 
 def delete_all_notifications(user_id):

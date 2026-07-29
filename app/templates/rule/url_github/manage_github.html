@@ -6,6 +6,7 @@
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/ruleList.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/github/importer.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/github/sync_schedule.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/github/github-proposal-table.css') }}">
 <style>
 .row-highlight-import {
     outline: 2px solid #0d6efd !important;
@@ -96,6 +97,12 @@
             <i class="fa-solid fa-clock-rotate-left"></i>
             <span>Sync Schedules</span>
             <span v-if="totalSchedules > 0" class="dr-nav__badge">[[ totalSchedules ]]</span>
+        </button>
+        <button class="dr-nav__item" id="proposals-tab" data-bs-toggle="tab" data-bs-target="#proposals-pane"
+            type="button" role="tab" aria-controls="proposals-pane" aria-selected="false">
+            <i class="fa-brands fa-github"></i>
+            <span>Community Proposals</span>
+            <span v-if="totalProposals > 0" class="dr-nav__badge">[[ totalProposals ]]</span>
         </button>
         {% endif %}
     </nav>
@@ -649,6 +656,35 @@
                 </div>
             </div>
         </div>
+
+        <div class="tab-pane fade" id="proposals-pane" role="tabpanel" aria-labelledby="proposals-tab">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3 p-md-4">
+                    <github-proposal-table
+                        :items="proposals"
+                        :loading="loadingProposals"
+                        :is-admin="true"
+                        default-view="table"
+                        remote-search
+                        :per-page="proposalsPerPage"
+                        @update:per-page="handleProposalsPerPageChange"
+                        @search="handleProposalsSearch"
+                        @bulk-decision="onProposalBulkDecision"
+                        @delete="deleteProposal"
+                        @bulk-delete="bulkDeleteProposals">
+                    </github-proposal-table>
+
+                    <pagination-component
+                        v-if="proposalsTotalPages > 1"
+                        :current-page="proposalsCurrentPage"
+                        :total-pages="proposalsTotalPages"
+                        @change-page="fetchProposals">
+                    </pagination-component>
+
+                    <p class="text-center mt-3 text-muted">Total proposals: [[ totalProposals ]]</p>
+                </div>
+            </div>
+        </div>
         {% endif %}
     </div>
 
@@ -699,6 +735,51 @@
             </div>
         </div>
     </div>
+
+    <!-- Proposal bulk accept/reject confirm modal -->
+    <div class="modal fade" id="proposalDecisionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius:15px;">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">
+                        [[ pendingBulkDecision?.decision === 'accept' ? 'Accept' : 'Reject' ]]
+                        [[ pendingBulkDecision?.uuids?.length ]] proposal[[ pendingBulkDecision?.uuids?.length === 1 ? '' : 's' ]]
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4">
+                    <div v-if="pendingBulkDecision?.decision === 'accept'" class="mb-3">
+                        <label class="form-label fw-bold">Rule ownership</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="ownAdmin" value="admin" v-model="bulkOwnershipMode">
+                            <label class="form-check-label" for="ownAdmin">Keep ownership as the accepting admin</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="ownRequester" value="requester" v-model="bulkOwnershipMode">
+                            <label class="form-check-label" for="ownRequester">Grant ownership to each requester</label>
+                        </div>
+                        <p class="text-muted mt-2 mb-0" style="font-size:.78rem;">
+                            Applies to newly-imported rules. If a proposal's repository already exists in Rulezet, it won't be
+                            re-imported — its existing rules are handed over instead, following this same ownership choice.
+                        </p>
+                    </div>
+                    <div v-else class="mb-3">
+                        <label class="form-label fw-bold">Note to requester(s)<span class="opt-badge">optional</span></label>
+                        <textarea class="form-control" rows="3" v-model="bulkDecisionNote" placeholder="Why is this being rejected?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn rounded-pill px-4"
+                        :class="pendingBulkDecision?.decision === 'accept' ? 'btn-primary' : 'btn-danger'"
+                        :disabled="confirmingDecision" @click="confirmProposalDecision()">
+                        <span v-if="confirmingDecision" class="spinner-border spinner-border-sm me-1"></span>
+                        [[ pendingBulkDecision?.decision === 'accept' ? 'Accept' : 'Reject' ]]
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
@@ -712,12 +793,13 @@
     import RepoSelectionTable from '/static/js/rule/repoSelectionTable.js'
     import ScheduleRecurrencePicker from '/static/js/rule/scheduleRecurrencePicker.js'
     import UserChip from '/static/js/components/UserChip.js'
+    import GithubProposalTable from '/static/js/rule/github/githubProposalTable.js'
 
     const csrfToken = '{{ csrf_token() }}'
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { PaginationComponent, RepoSelectionTable, ScheduleRecurrencePicker, UserChip },
+        components: { PaginationComponent, RepoSelectionTable, ScheduleRecurrencePicker, UserChip, GithubProposalTable },
         setup() {
             //  #############################
             //  #       Importer section    #
@@ -1240,8 +1322,111 @@
                 }
             }
 
+            //  #############################
+            //  #  Community Proposals (admin) #
+            //  #############################
+
+            const proposals = ref([])
+            const totalProposals = ref(0)
+            const proposalsCurrentPage = ref(1)
+            const proposalsTotalPages = ref(1)
+            const loadingProposals = ref(true)
+            const proposalsPerPage = ref(20)
+            const proposalsSearch = ref('')
+
+            async function fetchProposals(page) {
+                loadingProposals.value = true
+                const params = new URLSearchParams({
+                    page, per_page: proposalsPerPage.value, search: proposalsSearch.value,
+                })
+                try {
+                    const res = await fetch('/rule/github_proposal/list?' + params.toString())
+                    const data = await res.json()
+                    if (res.status === 200) {
+                        proposals.value = data.items || []
+                        totalProposals.value = data.total || 0
+                        proposalsTotalPages.value = data.total_pages || 1
+                        proposalsCurrentPage.value = page
+                    }
+                } finally {
+                    loadingProposals.value = false
+                }
+            }
+            function handleProposalsPerPageChange(n) {
+                proposalsPerPage.value = n
+                fetchProposals(1)
+            }
+            function handleProposalsSearch(term) {
+                proposalsSearch.value = term
+                fetchProposals(1)
+            }
+
+            const pendingBulkDecision = ref(null)
+            const bulkOwnershipMode = ref('admin')
+            const bulkDecisionNote = ref('')
+            const confirmingDecision = ref(false)
+
+            function onProposalBulkDecision(payload) {
+                pendingBulkDecision.value = payload
+                bulkOwnershipMode.value = 'admin'
+                bulkDecisionNote.value = ''
+                new bootstrap.Modal(document.getElementById('proposalDecisionModal')).show()
+            }
+
+            async function confirmProposalDecision() {
+                if (!pendingBulkDecision.value) return
+                confirmingDecision.value = true
+                try {
+                    const res = await fetch('/rule/github_proposal/bulk_decision', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify({
+                            uuids: pendingBulkDecision.value.uuids,
+                            decision: pendingBulkDecision.value.decision,
+                            ownership_mode: pendingBulkDecision.value.decision === 'accept' ? bulkOwnershipMode.value : undefined,
+                            note: pendingBulkDecision.value.decision === 'reject' ? bulkDecisionNote.value : undefined,
+                        }),
+                    })
+                    const data = await res.json()
+                    create_message(data.message, data.toast_class)
+                    if (res.status === 200) {
+                        bootstrap.Modal.getInstance(document.getElementById('proposalDecisionModal'))?.hide()
+                        fetchProposals(proposalsCurrentPage.value)
+                    }
+                } finally {
+                    confirmingDecision.value = false
+                }
+            }
+
+            async function deleteProposal(uuid) {
+                const res = await fetch(`/rule/github_proposal/${uuid}/delete`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                })
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+                if (res.status === 200) fetchProposals(proposalsCurrentPage.value)
+            }
+
+            async function bulkDeleteProposals(uuids) {
+                const results = await Promise.all(uuids.map(uuid =>
+                    fetch(`/rule/github_proposal/${uuid}/delete`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                    }).then(res => res.ok)
+                ))
+                const deletedCount = results.filter(Boolean).length
+                if (deletedCount === uuids.length) {
+                    create_message(`${deletedCount} proposal(s) deleted`, 'success-subtle')
+                } else {
+                    create_message(`${deletedCount}/${uuids.length} deleted — some failed`, 'warning-subtle')
+                }
+                fetchProposals(proposalsCurrentPage.value)
+            }
+
             {% if current_user.is_admin() %}
             fetchSchedules(1)
+            fetchProposals(1)
             {% endif %}
 
             return {
@@ -1328,6 +1513,24 @@
                 onRecurrenceChange,
                 onRepoSelectionChange,
                 submitScheduleForm,
+
+                proposals,
+                totalProposals,
+                proposalsCurrentPage,
+                proposalsTotalPages,
+                loadingProposals,
+                proposalsPerPage,
+                fetchProposals,
+                handleProposalsPerPageChange,
+                handleProposalsSearch,
+                pendingBulkDecision,
+                bulkOwnershipMode,
+                bulkDecisionNote,
+                confirmingDecision,
+                onProposalBulkDecision,
+                confirmProposalDecision,
+                deleteProposal,
+                bulkDeleteProposals,
             }
         }
     }).mount('#main-container')
