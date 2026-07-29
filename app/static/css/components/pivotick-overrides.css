@@ -1,23 +1,33 @@
 /*
   pivotick-overrides.css — Configurable PivoTick canvas background.
-  The vendor default (since v1.1.0) hardcodes `.pvt-canvas`'s background-image
-  as a repeating-linear-gradient colored by --pvt-graph-grid-color — there's no
-  longer a single swappable variable for it (v1.0.0 had --pvt-graph-background-image
-  at :root; the vendor dropped it). So each mode below overrides background-image
-  directly on `.pvt-canvas`, at higher specificity than the vendor's plain-class rule.
+
+  Up to Pivotick v1.4.0 the vendor's own `.pvt-canvas` rule painted its grid
+  via `background-image: var(--pvt-graph-background-image)`, so overriding
+  that one custom property was enough. v1.5.0's chrome rewrite hardcoded the
+  two-layer repeating-linear-gradient grid directly onto `.pvt-canvas`
+  instead of reading a variable — so from here on, EVERY variant below must
+  set `background-image` itself on a `.pvt-canvas` selector scoped under
+  `html[data-pivotick-bg="..."]` (specific enough to win the cascade over the
+  vendor's own `.pvt-canvas` rule) rather than just poking a custom property.
+  `--pvt-graph-background-image` is Rulezet's own bridge variable (not a
+  vendor one) — settings.html's JS still sets it inline for the "image"
+  variant, consumed by the rule below.
+
   User picks a style on /settings ("PivoTick graph background") which sets
   html[data-pivotick-bg] (see base.html's early-apply script). No attribute
   (or data-pivotick-bg="default") = the vendor's own grid lines, untouched.
 
   Load this AFTER pivotick.css (and pvt-dark.css) so overrides win the cascade.
-  The dots variant reads --pvt-graph-grid-color, so it automatically follows the
-  active theme (light default or pvt-dark.css's dark value).
+  The "dots" variant reads --pvt-graph-grid-color (still vendor-defined), so
+  it automatically follows the active theme (light default or pvt-dark.css's
+  dark value). "color" mode's flat fill still works via the vendor's own
+  `background-color: var(--pvt-bg)` — only `background-image` needs zeroing
+  out here so the grid lines don't show through/over it.
 */
 
 /* ── Dots — soft dot-grid instead of hard lines ─────────────────────────── */
 html[data-pivotick-bg="dots"] .pvt-canvas {
-    background-image:
-        radial-gradient(circle, var(--pvt-graph-grid-color) 1.4px, transparent 1.4px);
+    background-image: radial-gradient(circle, var(--pvt-graph-grid-color) 1.4px, transparent 1.4px);
     background-size: 28px 28px;
     background-position: -1px -1px;
 }
@@ -32,12 +42,20 @@ html[data-pivotick-bg="color"] .pvt-canvas {
     background-image: none;
 }
 
-/* ── Image — admin-uploaded picture, url set inline via --rz-pivotick-bg-image-url
-   (our own namespaced variable — not a vendor one, so it survives future Pivotick
-   upgrades even if the library's internal background handling changes again) ── */
+/* ── Image — admin-uploaded picture, url set inline via --pvt-graph-background-image ── */
 html[data-pivotick-bg="image"] .pvt-canvas {
-    background-image: var(--rz-pivotick-bg-image-url, none);
+    background-image: var(--pvt-graph-background-image, none);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+}
+
+/* ── Brand color — Pivotick's default chrome (mode rail, active states,
+   buttons) is driven entirely by --pvt-theme-primary (vendor default:
+   #eb2e53, a red/crimson). Rulezet uses blue everywhere else, so override
+   it here to match instead of the vendor red. Everything downstream
+   (--pvt-bg-color-primary, --pvt-text-color-primary, toast colors, etc.)
+   derives from this one variable, in both light and dark mode. ── */
+:root {
+    --pvt-theme-primary: #0d6efd;
 }
