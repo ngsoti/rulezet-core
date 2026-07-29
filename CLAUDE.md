@@ -1,18 +1,19 @@
 Flask + Vue.js 3 + PostgreSQL. Community platform for cybersecurity detection rules (YARA, Sigma, Suricata, Zeek, etc.). Live at rulezet.org.
 
-Run dev: `source env/bin/activate && ./launch.sh -l`
-Run tests: `./launch.sh -t` or `FLASKENV=testing pytest tests`
+Preferred entrypoint is `manage.py` (wraps everything below): `python3 manage.py start` (dev server), `python3 manage.py test`, `python3 manage.py update` (post-`git pull` deps+db sync), `python3 manage.py deploy` (prod backup+update+restart), `python3 manage.py db-init` / `db-reload`, `python3 manage.py backup` / `restore`. Full list: `python3 manage.py --help`.
+Lower-level equivalents still used directly in dev: `source env/bin/activate && ./launch.sh -l` (run dev), `./launch.sh -t` or `FLASKENV=testing pytest tests` (run tests), `python3 app.py -i` (DB init) / `-r` (DB reset).
 Single test: `FLASKENV=testing pytest tests/rules/test_rule.py -k "test_name"`
-DB init: `python3 app.py -i` — DB reset: `python3 app.py -r`
 Migrations: `flask db migrate -m "desc" && flask db upgrade`
 Environments via `FLASKENV`: `development` (pg, debug), `testing` (sqlite, no csrf), `production` (pg).
-App runs on `127.0.0.1:7009` by default. Secrets in `.env`.
+App runs on `127.0.0.1:7009` by default. Secrets in `.env` — see `.env_default` for the full set (includes `GITHUB_TOKEN` for GitHub rule import/issue filing, `MAIL_SERVER`/`MAIL_PORT`/etc., `INSTANCE_PUBLIC_URL`); chatbot feature also reads `OLLAMA_URL`/`OLLAMA_MODEL` from `config.py`.
+CI: `.github/workflows/main.yml` runs `./launch.sh -t` on every push; `.github/workflows/codeql.yml` runs CodeQL security scanning.
 
-All SQLAlchemy models in `app/core/db_class/db.py`.
+All SQLAlchemy models in `app/core/db_class/db.py` (74 model classes, ~3500 lines — search, don't read linearly).
 Feature logic split: blueprint in `app/features/<feature>/<feature>.py`, DB logic in `*_core.py`.
-REST API (Flask-RESTX, CSRF exempt) under `/api/`, swagger at `/api/`. Public/private namespaces per feature.
+Feature folders under `app/features/`: `account`, `admin`, `attack`, `blog`, `bundle`, `chatbot` (Ollama-backed assistant), `community`, `config`, `connector`, `dashboard`, `docs`, `jobs`, `misp`, `notification`, `report`, `rule`, `rule_tester`, `tags`, `velociraptor`, `workspace`.
+REST API (Flask-RESTX, CSRF exempt) under `/api/`, swagger at `/api/`. Public/private namespaces per feature: `rule`, `bundle`, `connector`, `account`, `comment`, `config`, `log`, `instance`, `rule_tester`, `utils`.
 API key auth via `@api_required` decorator, key in `X-API-KEY` header.
-Background jobs: `BackgroundJob` rows, handlers registered with `@register_handler('type')` in `job_handlers.py`, worker polls every 2s.
+Background jobs: `BackgroundJob` rows, handlers registered with `@register_handler('type')` in `app/features/jobs/job_handlers.py` (~20 types, e.g. `bulk_add_tag_to_rules`, `delete_github_rules`, `connector_pull`, `update_misp_data`, `bulk_parse_attack_rules`, `trash_restore_bulk`), worker in `job_worker.py` polls every 2s.
 Activity log everywhere: `from app.core.utils.activity_log import log_activity` — action dot-namespaced e.g. `rule.create`.
 
 CRITICAL: never use `Rule.query` directly — always use `_active()` from `rule_core.py` which filters `is_deleted == False`.
@@ -121,7 +122,7 @@ Admin-only pages: use `before_request` hook returning 403 for non-admins, not in
 Tag tooltips use Vue `<teleport to="body">` with `position:fixed` to escape overflow:hidden parents.
 Connectors (federation sync) admin-only. Pull modes: soft (skip existing) / hard (update in place). Match by uuid only.
 Instance telemetry: phone-home to rulezet.org every 24h. `IS_OFFICIAL_INSTANCE=true` only on rulezet.org.
-Tests: SQLite, no CSRF. Fixtures in `conftest.py`: `create_user_test()`, `create_admin_test()`, `create_rule_test()`.
+Tests: SQLite, no CSRF. `conftest.py` calls `create_user_test()`, `create_admin_test()`, `create_rule_test()` (defined in `app/core/utils/init_db.py`) inside the `app` fixture.
 
 File organisation — never put files in the wrong place:
 Python blueprints → `app/features/<feature>/`  |  DB logic → `app/features/<feature>/<feature>_core.py`  |  API → `app/api/<feature>/`
