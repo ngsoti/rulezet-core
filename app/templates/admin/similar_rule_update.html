@@ -76,18 +76,17 @@
                         </span>
                     </div>
 
-                    <div v-if="loading_global" class="text-center py-5">
-                        <div class="spinner-grow text-success" role="status"></div>
-                    </div>
-
-                    <div v-else class="animate__animated animate__fadeIn">
+                    <div class="animate__animated animate__fadeIn">
                         <duplicate-table
                             item-type="pair"
                             :items="global_duplicates"
-                            default-view="card"
+                            :loading="loading_global"
+                            default-view="table"
+                            remote-search
                             :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}"
                             :per-page="global_per_page"
                             @update:per-page="handleGlobalPerPageChange"
+                            @search="handleGlobalSearch"
                             @refresh="fetchGlobalDuplicates(global_page)">
                             <template #filters>
                                 <similar-rules-filter v-model:score="global_min_score" v-model:format="global_format"
@@ -363,9 +362,15 @@
             const global_format = ref('');
             const global_source_mode = ref('all');
             const global_author_mode = ref('all');
+            const global_search = ref('');
 
             function handleGlobalPerPageChange(n) {
                 global_per_page.value = n;
+                fetchGlobalDuplicates(1);
+            }
+
+            function handleGlobalSearch(term) {
+                global_search.value = term;
                 fetchGlobalDuplicates(1);
             }
 
@@ -377,7 +382,8 @@
                     min_score: global_min_score.value,
                     format: global_format.value,
                     source_mode: global_source_mode.value,
-                    author_mode: global_author_mode.value
+                    author_mode: global_author_mode.value,
+                    search: global_search.value
                 });
                 const res = await fetch(`/rule/similar_global_duplicates?${params.toString()}`);
                 if (res.ok) {
@@ -430,7 +436,7 @@
 
                 global_duplicates, global_page, global_total_pages, loading_global, fetchGlobalDuplicates,
                 global_min_score, global_format, global_source_mode, global_author_mode,
-                global_per_page, handleGlobalPerPageChange
+                global_per_page, handleGlobalPerPageChange, global_search, handleGlobalSearch
             };
         }
     }).mount('#main-container');

@@ -4442,6 +4442,7 @@ def similar_global_duplicates():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 20, type=int), 50)
     min_score = request.args.get('min_score', 0.80, type=float)
+    search = (request.args.get('search', '') or '').strip()
 
     filters = {
         "format": request.args.get('format'),
@@ -4451,7 +4452,8 @@ def similar_global_duplicates():
 
     pagination = RuleModel.get_top_global_duplicates_query(
         min_score=min_score,
-        filters=filters
+        filters=filters,
+        search=search
     ).paginate(page=page, per_page=per_page)
 
     result = []

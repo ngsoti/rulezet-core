@@ -318,6 +318,25 @@ mark.dup-highlight {
 .dup-mode-badge--global { color: #0d6efd; background: rgba(13, 110, 253, .12); border-color: rgba(13, 110, 253, .3); }
 .dup-mode-badge--filter { color: #fd7e14; background: rgba(253, 126, 20, .12); border-color: rgba(253, 126, 20, .3); }
 
+/* Format badge (rule format, e.g. YARA/Sigma/Suricata) — black pill, uppercase */
+.dup-format-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding: .22rem .7rem;
+    border-radius: 99px;
+    color: #fff;
+    background: #212529;
+}
+
+[data-bs-theme="dark"] .dup-format-badge {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
 /* Mode filter pills (History tab) */
 .dup-pill-row {
     display: flex;
@@ -348,14 +367,26 @@ mark.dup-highlight {
 /* Compact table-mode cells for pairs */
 .dup-pair-cell {
     display: flex;
-    align-items: center;
-    gap: .4rem;
+    align-items: flex-start;
+    gap: .5rem;
     min-width: 0;
 }
 
 .dup-pair-cell .dup-title {
-    max-width: 180px;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    word-break: break-word;
     font-size: .85rem;
+    line-height: 1.3;
+}
+
+/* Extra breathing room around the Source/Target rule-name cells */
+.dup-name-cell {
+    min-width: 260px;
+    padding-left: 1.1rem !important;
+    padding-right: 1.1rem !important;
 }
 
 /* Table-mode expanded row content reuses .dup-asset-panel / .dup-diff-panel

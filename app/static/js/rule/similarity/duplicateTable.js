@@ -28,13 +28,21 @@ const DuplicateTable = {
         isAdmin: { type: Boolean, default: false },
         selectable: { type: Boolean, default: false },
         bulkActions: { type: Array, default: () => [] },
-        defaultView: { type: String, default: 'card' }, // 'table' | 'card'
+        defaultView: { type: String, default: 'table' }, // 'table' | 'card'
         perPage: { type: Number, default: 20 },
+        remoteSearch: { type: Boolean, default: false }, // true: server searches across all pages, not just this one
     },
-    emits: ['refresh', 'bulk-delete', 'update:per-page'],
+    emits: ['refresh', 'bulk-delete', 'update:per-page', 'search'],
     setup(props, { emit }) {
         const viewMode = ref(props.defaultView);
         const search = ref('');
+        let searchDebounce = null;
+
+        watch(search, (val) => {
+            if (!props.remoteSearch) return;
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => emit('search', val), 350);
+        });
         const sortKey = ref('');
         const sortDir = ref('asc');
         const hiddenColumns = reactive(new Set());
@@ -50,9 +58,9 @@ const DuplicateTable = {
         });
 
         const PAIR_COLUMNS = [
-            { key: 'format', label: 'Format', sortable: false, hideable: true },
-            { key: 'authors', label: 'Authors', sortable: false, hideable: true },
-            { key: 'dates', label: 'Dates', sortable: false, hideable: true },
+            { key: 'format', label: 'Format', sortable: true, hideable: true },
+            { key: 'authors', label: 'Authors', sortable: true, hideable: true },
+            { key: 'dates', label: 'Dates', sortable: true, hideable: true },
         ];
 
         const HISTORY_COLUMNS = [
@@ -127,6 +135,7 @@ const DuplicateTable = {
 
         // ── Search + sort + filter ───────────────────────────────────────
         function matchesSearch(item) {
+            if (props.remoteSearch) return true; // server already filtered by search across all pages
             if (!search.value.trim()) return true;
             const needle = search.value.toLowerCase();
             const haystacks = props.itemType === 'pair'
@@ -144,13 +153,23 @@ const DuplicateTable = {
         }
 
         function sortValue(item, key) {
-            if (props.itemType === 'pair') return key === 'score' ? item.score : null;
+            if (props.itemType === 'pair') {
+                switch (key) {
+                    case 'score': return item.score;
+                    case 'source': return item.rule_a_data.title;
+                    case 'target': return item.rule_b_data.title;
+                    case 'format': return item.rule_a_data.format;
+                    case 'authors': return item.rule_a_data.author;
+                    case 'dates': return item.rule_a_data.creation_date;
+                    default: return null;
+                }
+            }
             return item[key];
         }
 
         const sortableKeys = computed(() => {
             const keys = columns.value.filter(c => c.sortable).map(c => c.key);
-            if (props.itemType === 'pair') keys.push('score');
+            if (props.itemType === 'pair') keys.push('score', 'source', 'target');
             return keys;
         });
 
@@ -319,7 +338,8 @@ const DuplicateTable = {
             <slot name="filters"></slot>
         </div>
 
-        <p class="dup-search-hint">Searching current page only ([[ items.length ]] item[[ items.length === 1 ? '' : 's' ]] loaded)</p>
+        <p v-if="!remoteSearch" class="dup-search-hint">Searching current page only ([[ items.length ]] item[[ items.length === 1 ? '' : 's' ]] loaded)</p>
+        <p v-else class="dup-search-hint">Searching across all results</p>
 
         <!-- History-only mode filter pills -->
         <div v-if="itemType === 'history'" class="dup-pill-row">
@@ -409,8 +429,20 @@ const DuplicateTable = {
                                 <i class="fas dt-sort-icon" :class="sortIcon('score')"></i>
                             </div>
                         </th>
-                        <th v-if="itemType === 'pair'" class="dt-th">Source</th>
-                        <th v-if="itemType === 'pair'" class="dt-th">Target</th>
+                        <th v-if="itemType === 'pair'" class="dt-th" :class="{ 'dt-th--sortable': true, 'dt-th--sorted': sortKey === 'source' }"
+                            @click="setSort('source')">
+                            <div class="dt-th-inner">
+                                <span class="text-truncate">Source</span>
+                                <i class="fas dt-sort-icon" :class="sortIcon('source')"></i>
+                            </div>
+                        </th>
+                        <th v-if="itemType === 'pair'" class="dt-th" :class="{ 'dt-th--sortable': true, 'dt-th--sorted': sortKey === 'target' }"
+                            @click="setSort('target')">
+                            <div class="dt-th-inner">
+                                <span class="text-truncate">Target</span>
+                                <i class="fas dt-sort-icon" :class="sortIcon('target')"></i>
+                            </div>
+                        </th>
 
                         <th v-for="col in visibleColumns" :key="col.key" class="dt-th"
                             :class="{ 'dt-th--sortable': col.sortable, 'dt-th--sorted': sortKey === col.key }"
@@ -449,26 +481,28 @@ const DuplicateTable = {
                                         <span class="dup-score-badge__pct" style="font-size:.8rem;">[[ getScoreDetails(item.score).val ]]%</span>
                                     </div>
                                 </td>
-                                <td class="dt-td">
+                                <td class="dt-td dup-name-cell">
                                     <div class="dup-pair-cell">
                                         <span class="dup-side-tag dup-side-tag--source">A</span>
-                                        <span class="dup-title text-truncate" :title="item.rule_a_data.title" v-html="highlight(item.rule_a_data.title)"></span>
+                                        <span class="dup-title" :title="item.rule_a_data.title" v-html="highlight(item.rule_a_data.title)"></span>
                                         <button class="dt-action-btn" title="View" @click="viewDetails(item.rule_a_data.id)">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </div>
                                 </td>
-                                <td class="dt-td">
+                                <td class="dt-td dup-name-cell">
                                     <div class="dup-pair-cell">
                                         <span class="dup-side-tag dup-side-tag--target">B</span>
-                                        <span class="dup-title text-truncate" :title="item.rule_b_data.title" v-html="highlight(item.rule_b_data.title)"></span>
+                                        <span class="dup-title" :title="item.rule_b_data.title" v-html="highlight(item.rule_b_data.title)"></span>
                                         <button class="dt-action-btn" title="View" @click="viewDetails(item.rule_b_data.id)">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         <span v-if="isIdentical(item)" class="dup-exact-badge" style="font-size:.6rem;padding:.15rem .45rem;">Exact</span>
                                     </div>
                                 </td>
-                                <td v-if="!hiddenColumns.has('format')" class="dt-td">[[ (item.rule_a_data.format || 'YARA').toUpperCase() ]]</td>
+                                <td v-if="!hiddenColumns.has('format')" class="dt-td">
+                                    <span class="dup-format-badge">[[ (item.rule_a_data.format || 'YARA').toUpperCase() ]]</span>
+                                </td>
                                 <td v-if="!hiddenColumns.has('authors')" class="dt-td">[[ item.rule_a_data.author || 'N/A' ]] / [[ item.rule_b_data.author || 'N/A' ]]</td>
                                 <td v-if="!hiddenColumns.has('dates')" class="dt-td">[[ formatDate(item.rule_a_data.creation_date) ]] / [[ formatDate(item.rule_b_data.creation_date) ]]</td>
                             </template>

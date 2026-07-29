@@ -3945,17 +3945,26 @@ def get_similar_rules_query(rule_id):
         .filter(RuleSimilarity.rule_id == rule_id)\
         .order_by(RuleSimilarity.score.desc())
 
-def get_top_global_duplicates_query(min_score=0.85, filters=None):
+def get_top_global_duplicates_query(min_score=0.85, filters=None, search=None):
     RuleA = aliased(Rule)
     RuleB = aliased(Rule)
-    
+
     query = db.session.query(RuleSimilarity, RuleA, RuleB)\
         .join(RuleA, RuleSimilarity.rule_id == RuleA.id)\
         .join(RuleB, RuleSimilarity.similar_rule_id == RuleB.id)\
         .filter(
             RuleSimilarity.score >= min_score,
-            RuleSimilarity.rule_id < RuleSimilarity.similar_rule_id 
+            RuleSimilarity.rule_id < RuleSimilarity.similar_rule_id
         )
+
+    if search:
+        like = f"%{search}%"
+        query = query.filter(or_(
+            RuleA.title.ilike(like),
+            RuleB.title.ilike(like),
+            RuleA.author.ilike(like),
+            RuleB.author.ilike(like)
+        ))
 
     if filters:
         if filters.get('format'):
