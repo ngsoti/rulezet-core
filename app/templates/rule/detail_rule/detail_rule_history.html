@@ -7,50 +7,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/diff-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/meta-change-list.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/base/detail_rule_section_card.css') }}">
 <style>
 [v-cloak] { display: none; }
-
-/* ── Section cards (same style as propose_edit) ─────────── */
-.h-card {
-    background: var(--card-bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    overflow: hidden;
-    margin-bottom: 1.25rem;
-}
-.h-card__header {
-    display: flex;
-    align-items: center;
-    gap: .55rem;
-    padding: .7rem 1.1rem;
-    border-bottom: 1px solid var(--border-color);
-    background: var(--light-bg-color);
-    flex-wrap: wrap;
-}
-.h-card__accent { width: 3px; height: 15px; background: #0d6efd; border-radius: 2px; flex-shrink: 0; }
-.h-card__accent--green  { background: #198754; }
-.h-card__accent--orange { background: #fd7e14; }
-.h-card__title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--subtle-text-color); }
-.h-card__body { padding: 1.1rem; }
-
-/* ── Filter chips ────────────────────────────────────────── */
-.h-filter-chip {
-    display: inline-flex; align-items: center; gap: .3rem;
-    padding: .2rem .65rem;
-    border-radius: 99px;
-    border: 1px solid var(--border-color);
-    background: var(--light-bg-color);
-    font-size: .7rem; font-weight: 600;
-    color: var(--subtle-text-color);
-    cursor: pointer;
-    transition: all .12s;
-    user-select: none;
-}
-.h-filter-chip.active {
-    background: #0d6efd;
-    border-color: #0d6efd;
-    color: #fff;
-}
 
 /* ── Version list ────────────────────────────────────────── */
 .ver-list { max-height: 400px; overflow-y: auto; }

@@ -5,7 +5,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/diff-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rule/base/detail_rule_nav.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/base/detail_rule_section_card.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rule/similarity/duplicate-table.css') }}">
+<style>[v-cloak] { display: none; }</style>
 {% endblock %}
 {% import 'macros/detail_rule_nav.html' as nav with context %}
 
@@ -51,25 +53,36 @@
 
         <template v-if="similar_rules.length > 0">
 
-            <p class="mb-2 small" style="color: var(--subtle-text-color);">
-                <strong>[[ total_count ]]</strong> similar rule[[ total_count === 1 ? '' : 's' ]] found for this asset
-            </p>
+            <div class="h-card">
+                <div class="h-card__header">
+                    <div class="h-card__accent"></div>
+                    <span class="h-card__title"><i class="fa-solid fa-code-compare me-1"></i>Similarity matches</span>
 
-            <duplicate-table
-                item-type="pair"
-                :items="similar_rules"
-                default-view="table"
-                :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}"
-                :per-page="per_page"
-                @update:per-page="handlePerPageChange"
-                @refresh="fetchSimilar(current_page)">
-            </duplicate-table>
+                    <div class="d-flex gap-2 ms-2">
+                        <span class="badge rounded-pill" style="font-size:.65rem;background:rgba(13,110,253,.1);color:#0d6efd;border:1px solid rgba(13,110,253,.2);">
+                            [[ total_count ]] rule[[ total_count === 1 ? '' : 's' ]]
+                        </span>
+                    </div>
+                </div>
 
-            <pagination-component v-if="total_pages > 1"
-                :current-page="current_page"
-                :total-pages="total_pages"
-                @change-page="(p) => fetchSimilar(p)">
-            </pagination-component>
+                <div class="h-card__body">
+                    <duplicate-table
+                        item-type="pair"
+                        :items="similar_rules"
+                        default-view="table"
+                        :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}"
+                        :per-page="per_page"
+                        @update:per-page="handlePerPageChange"
+                        @refresh="fetchSimilar(current_page)">
+                    </duplicate-table>
+
+                    <pagination-component v-if="total_pages > 1"
+                        :current-page="current_page"
+                        :total-pages="total_pages"
+                        @change-page="(p) => fetchSimilar(p)">
+                    </pagination-component>
+                </div>
+            </div>
 
         </template>
 
