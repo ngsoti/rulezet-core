@@ -3979,11 +3979,11 @@ def get_top_global_duplicates_query(min_score=0.85, filters=None):
 
     return query.order_by(RuleSimilarity.score.desc())
 
-def get_similarity_list_page(page: int = 1):
+def get_similarity_list_page(page: int = 1, per_page: int = 20):
     if current_user.is_admin():
-        return SimilarResult.query.paginate(page=page, per_page=20, max_per_page=20)
+        return SimilarResult.query.paginate(page=page, per_page=per_page, max_per_page=50)
     else :
-        return SimilarResult.query.filter_by(user_id=str(current_user.id)).paginate(page=page, per_page=20, max_per_page=20)
+        return SimilarResult.query.filter_by(user_id=str(current_user.id)).paginate(page=page, per_page=per_page, max_per_page=50)
     
 
 def delete_similarity_history(uuid: str):

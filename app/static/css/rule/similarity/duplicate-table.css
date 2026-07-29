@@ -1,0 +1,452 @@
+/* ==========================================================================
+   Duplicate pair card (SimilarRuleCard) — used standalone and inside
+   DuplicateTable's card view.
+   ========================================================================== */
+
+.dup-pair-card {
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin-bottom: .75rem;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.dup-pair-card:hover {
+    box-shadow: 0 6px 18px rgba(13, 110, 253, .08);
+    transform: translateY(-2px);
+}
+
+.dup-pair-card--open {
+    border-color: #0d6efd;
+    box-shadow: 0 8px 24px rgba(13, 110, 253, .12);
+}
+
+.dup-pair-card__header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+}
+
+/* Score badge */
+.dup-score-badge {
+    flex-shrink: 0;
+    width: 58px;
+    height: 58px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    border: 1px solid transparent;
+}
+
+.dup-score-badge__pct { font-size: 1.05rem; line-height: 1.1; }
+.dup-score-badge__lbl { font-size: .55rem; text-transform: uppercase; letter-spacing: .03em; opacity: .85; margin-top: 2px; }
+
+.dup-score--critical { color: #dc2626; background: rgba(220, 38, 38, .1); border-color: rgba(220, 38, 38, .3); }
+.dup-score--warning  { color: #d97706; background: rgba(217, 119, 6, .1); border-color: rgba(217, 119, 6, .3); }
+.dup-score--low      { color: #059669; background: rgba(5, 150, 105, .1); border-color: rgba(5, 150, 105, .3); }
+
+/* Header main content */
+.dup-pair-card__main {
+    flex-grow: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.dup-pair-card__titles { min-width: 0; }
+
+.dup-pair-card__titles-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+.dup-title {
+    font-weight: 700;
+    margin: 0;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-color);
+}
+
+.dup-swap-icon {
+    color: var(--subtle-text-color);
+    opacity: .6;
+    font-size: .8rem;
+    margin: 0 .1rem;
+}
+
+.dup-side-tag {
+    font-size: .62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: .18rem .5rem;
+    border-radius: 99px;
+    border: 1px solid transparent;
+    flex-shrink: 0;
+}
+
+.dup-side-tag--source { color: #6c757d; background: rgba(108, 117, 125, .1); border-color: rgba(108, 117, 125, .3); }
+.dup-side-tag--target { color: #0d6efd; background: rgba(13, 110, 253, .1); border-color: rgba(13, 110, 253, .3); }
+
+.dup-pair-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: .4rem;
+    font-size: .78rem;
+    color: var(--subtle-text-color);
+}
+
+.dup-pair-card__meta i { opacity: .7; margin-right: .25rem; }
+
+.dup-pair-card__actions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+
+.dup-exact-badge {
+    font-size: .68rem;
+    font-weight: 700;
+    color: #fff;
+    background: #dc3545;
+    border-radius: 99px;
+    padding: .3rem .65rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    box-shadow: 0 2px 6px rgba(220, 53, 69, .3);
+}
+
+.dup-chevron {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--light-bg-color);
+    color: var(--subtle-text-color);
+    font-size: .65rem;
+    transition: transform .2s ease, background .2s ease, color .2s ease;
+}
+
+.dup-chevron--open {
+    background: #0d6efd;
+    color: #fff;
+    transform: rotate(180deg);
+}
+
+/* Expanded detail area */
+.dup-pair-card__detail {
+    display: grid;
+    grid-template-columns: minmax(220px, 26%) 1fr;
+    border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 767px) {
+    .dup-pair-card__detail { grid-template-columns: 1fr; }
+}
+
+.dup-asset-panel {
+    padding: 1rem;
+    background: var(--light-bg-color);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+}
+
+.dup-panel-label {
+    font-size: .65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--subtle-text-color);
+    margin-bottom: -.25rem;
+}
+
+.dup-asset-card {
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: .65rem .75rem;
+}
+
+.dup-asset-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .4rem;
+}
+
+.dup-asset-card__side {
+    font-weight: 700;
+    font-size: .78rem;
+}
+
+.dup-asset-card--a .dup-asset-card__side { color: #0d6efd; }
+.dup-asset-card--b .dup-asset-card__side { color: #198754; }
+
+.dup-asset-card__id {
+    font-size: .62rem;
+    font-weight: 600;
+    color: var(--subtle-text-color);
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 99px;
+    padding: .1rem .5rem;
+}
+
+.dup-asset-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    font-size: .72rem;
+    color: var(--subtle-text-color);
+    margin-bottom: .55rem;
+}
+
+.dup-asset-card__meta i { width: 1rem; opacity: .7; }
+
+.dup-asset-card__actions {
+    display: flex;
+    gap: .35rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: .5rem;
+}
+
+.dup-btn {
+    flex-grow: 1;
+    font-size: .68rem;
+    font-weight: 600;
+    padding: .3rem .5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--text-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .3rem;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.dup-btn:hover { background: var(--light-bg-color); }
+
+.dup-btn--danger {
+    flex-grow: 0;
+    color: #dc3545;
+    border-color: rgba(220, 53, 69, .35);
+}
+
+.dup-btn--danger:hover {
+    background: rgba(220, 53, 69, .1);
+    color: #dc3545;
+}
+
+.dup-diff-panel {
+    padding: 1rem;
+    max-height: 520px;
+    overflow: auto;
+}
+
+/* ==========================================================================
+   DuplicateTable chrome — reuses dt-* structural classes from dataTable.css
+   (search input, toolbar, view toggle, column picker, table/th/td, bulk bar)
+   wherever the visual need is identical; only genuinely new needs get
+   classes here.
+   ========================================================================== */
+
+/* Wraps the slotted filter component (e.g. SimilarRulesFilter) — the slot
+   content already renders its own card chrome, so this stays unboxed and
+   just adds the collapse spacing + entrance animation. */
+.dup-filter-panel {
+    padding-top: .35rem;
+    padding-bottom: .35rem;
+    animation: dup-filter-fadein .15s ease;
+}
+
+@keyframes dup-filter-fadein {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: none; }
+}
+
+.dup-search-hint {
+    font-size: .72rem;
+    color: var(--subtle-text-color);
+    padding: 0 .25rem .6rem;
+}
+
+/* Search match highlight */
+mark.dup-highlight {
+    background: rgba(253, 126, 20, .35);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+    font-weight: 700;
+}
+
+/* Mode badges (Global vs Filtered runs) */
+.dup-mode-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding: .22rem .7rem;
+    border-radius: 99px;
+    border: 1px solid transparent;
+}
+
+.dup-mode-badge--global { color: #0d6efd; background: rgba(13, 110, 253, .12); border-color: rgba(13, 110, 253, .3); }
+.dup-mode-badge--filter { color: #fd7e14; background: rgba(253, 126, 20, .12); border-color: rgba(253, 126, 20, .3); }
+
+/* Mode filter pills (History tab) */
+.dup-pill-row {
+    display: flex;
+    gap: .4rem;
+    padding: 0 0 .85rem;
+    flex-wrap: wrap;
+}
+
+.dup-pill {
+    font-size: .74rem;
+    font-weight: 600;
+    padding: .3rem .8rem;
+    border-radius: 99px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--subtle-text-color);
+    transition: all .15s ease;
+}
+
+.dup-pill:hover { background: var(--light-bg-color); }
+
+.dup-pill--active {
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}
+
+/* Compact table-mode cells for pairs */
+.dup-pair-cell {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    min-width: 0;
+}
+
+.dup-pair-cell .dup-title {
+    max-width: 180px;
+    font-size: .85rem;
+}
+
+/* Table-mode expanded row content reuses .dup-asset-panel / .dup-diff-panel
+   inside a two-column grid, same as the card's detail area */
+.dup-expand-detail {
+    display: grid;
+    grid-template-columns: minmax(220px, 26%) 1fr;
+    gap: 0;
+}
+
+@media (max-width: 767px) {
+    .dup-expand-detail { grid-template-columns: 1fr; }
+}
+
+/* History session card (card view) */
+.dup-session-card {
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    transition: transform .2s ease, box-shadow .2s ease;
+    cursor: pointer;
+}
+
+.dup-session-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px rgba(13, 110, 253, .1);
+}
+
+.dup-session-card--selected {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, .15);
+}
+
+.dup-session-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .5rem;
+}
+
+.dup-session-card__date {
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.dup-session-card__time {
+    font-size: .75rem;
+    color: var(--subtle-text-color);
+}
+
+.dup-session-card__desc {
+    font-size: .8rem;
+    color: var(--subtle-text-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.dup-session-card__stats {
+    display: flex;
+    gap: 1.25rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: .6rem;
+}
+
+.dup-session-card__stat {
+    display: flex;
+    flex-direction: column;
+}
+
+.dup-session-card__stat-val {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+.dup-session-card__stat-lbl {
+    font-size: .65rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--subtle-text-color);
+}
+
+.dup-session-card__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: .4rem;
+}

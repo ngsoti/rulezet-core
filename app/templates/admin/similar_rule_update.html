@@ -8,12 +8,26 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/report-modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/similarity/duplicate-table.css') }}">
 {% endblock %}
 {% block content %}
 <div class="container my-4" id="main-container" v-cloak>
     <template v-if="fetch_all_pages">
         <div class="explorer-banner mb-4">
             <i class="fa-solid fa-link banner-watermark"></i>
+
+            <div class="position-absolute top-0 end-0 mt-3 me-3" style="z-index:2;">
+                <button type="button" class="btn btn-outline-primary rounded-pill position-relative px-3"
+                    data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                    <i class="fa-solid fa-bolt me-1"></i> Running Sessions
+                    <span v-if="running_sessions.length" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                        v-cloak>
+                        [[running_sessions.length]]
+                        <span class="visually-hidden">unread messages</span>
+                    </span>
+                </button>
+            </div>
+
             <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
                     <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
@@ -55,38 +69,37 @@
             <!-- Global Similarity -->
             <div class="tab-pane fade show active" id="global-pane" role="tabpanel">
                 <div class="card border-0 shadow-sm p-4">
-                    <h5 class="fw-bold mb-4">Global Similarity</h5>
+                    <div class="mb-4 d-flex align-items-center gap-2" style="border-bottom:1px solid var(--border-color); padding-bottom:.6rem;">
+                        <div style="width:3px; height:14px; background:#0d6efd; border-radius:2px; flex-shrink:0;"></div>
+                        <span class="fw-bold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--subtle-text-color);">
+                            <i class="fa-solid fa-globe me-1"></i>Global Similarity
+                        </span>
+                    </div>
 
                     <div v-if="loading_global" class="text-center py-5">
                         <div class="spinner-grow text-success" role="status"></div>
                     </div>
 
                     <div v-else class="animate__animated animate__fadeIn">
-                        <similar-rules-filter v-model:score="global_min_score" v-model:format="global_format"
-                            v-model:source-mode="global_source_mode" v-model:author-mode="global_author_mode"
-                            @filter="fetchGlobalDuplicates(1)">
-                        </similar-rules-filter>
-                        <template v-if="global_duplicates.length > 0">
-                            <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
-                                :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
-                            </pagination-component>
+                        <duplicate-table
+                            item-type="pair"
+                            :items="global_duplicates"
+                            default-view="card"
+                            :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}"
+                            :per-page="global_per_page"
+                            @update:per-page="handleGlobalPerPageChange"
+                            @refresh="fetchGlobalDuplicates(global_page)">
+                            <template #filters>
+                                <similar-rules-filter v-model:score="global_min_score" v-model:format="global_format"
+                                    v-model:source-mode="global_source_mode" v-model:author-mode="global_author_mode"
+                                    @filter="fetchGlobalDuplicates(1)">
+                                </similar-rules-filter>
+                            </template>
+                        </duplicate-table>
 
-                            <similar-rule-card v-for="(pair, index) in global_duplicates" :key="'glob-' + index"
-                                :rule-a="pair.rule_a_data" :rule-b="pair.rule_b_data" :score="pair.score" type="global"
-                                :unique-id="'glob-' + index" @refresh-list="fetchGlobalDuplicates(1)"
-                                :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}">
-                            </similar-rule-card>
-
-                            <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
-                                :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
-                            </pagination-component>
-                        </template>
-
-                        <template v-else>
-                            <div class="text-center py-5">
-                                <p class="text-muted">No similar rules found.</p>
-                            </div>
-                        </template>
+                        <pagination-component v-if="global_total_pages > 1" :current-page="global_page"
+                            :total-pages="global_total_pages" @change-page="(p) => fetchGlobalDuplicates(p)">
+                        </pagination-component>
                     </div>
                 </div>
             </div>
@@ -94,7 +107,12 @@
             <!-- Filtered Results -->
             <div class="tab-pane fade" id="filtered-pane" role="tabpanel">
                 <div class="card border-0 shadow-sm p-4">
-                    <h5 class="fw-bold mb-4">Batch Processing Interface</h5>
+                    <div class="mb-4 d-flex align-items-center gap-2" style="border-bottom:1px solid var(--border-color); padding-bottom:.6rem;">
+                        <div style="width:3px; height:14px; background:#0d6efd; border-radius:2px; flex-shrink:0;"></div>
+                        <span class="fw-bold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--subtle-text-color);">
+                            <i class="fa-solid fa-filter me-1"></i>Batch Processing Interface
+                        </span>
+                    </div>
 
                     <rule-list
                         mode="select"
@@ -114,134 +132,25 @@
             <!-- History -->
             <div class="tab-pane fade" id="history-pane" role="tabpanel">
                 <div class="card border-0 shadow-sm p-4">
-                    <h5 class="fw-bold mb-4">Update History</h5>
-
-                    <!-- In progress-->
-                    <button type="button" class="btn btn-outline-primary float-end position-relative"
-                        data-bs-toggle="modal" data-bs-target="#staticBackdrop">
-                        Running
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                            v-cloak>
-                            [[running_sessions.length]]
-                            <span class="visually-hidden">unread messages</span>
+                    <div class="mb-4 d-flex align-items-center gap-2" style="border-bottom:1px solid var(--border-color); padding-bottom:.6rem;">
+                        <div style="width:3px; height:14px; background:#0d6efd; border-radius:2px; flex-shrink:0;"></div>
+                        <span class="fw-bold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--subtle-text-color);">
+                            <i class="fa-solid fa-clock-rotate-left me-1"></i>Update History
                         </span>
-                    </button>
-                    <div class="modal fade" id="staticBackdrop" tabindex="-1" aria-labelledby="staticBackdropLabel"
-                        aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Running Sessions</h1>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Close"></button>
-                                </div>
-
-                                <div class="modal-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-hover align-middle">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th class="text-center">Date & Time</th>
-                                                    <th class="text-center">Step</th>
-                                                    <th class="text-center">Mode</th>
-                                                    <th class="text-center">Description</th>
-                                                    <th class="text-end pe-4">%</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <!-- Import sessions -->
-                                                <tr v-for="(running, index) in running_sessions"
-                                                    :key="'import-' + index" @click="goto(running.uuid)"
-                                                    style="cursor: pointer;" class="table-info">
-                                                    <td class="text-center">
-                                                        [[ formatDate(running.date_time) || running.date_time || 'N/A'
-                                                        ]]
-                                                    </td>
-                                                    <td class="text-center text-capitalize">[[ running.step ||
-                                                        'N/A' ]]</td>
-                                                    <td class="text-center">
-                                                        <!-- badge by mode global or filtered -->
-                                                        <span
-                                                            :class="['badge rounded-pill px-3', running.mode === 'global' ? 'bg-primary' : 'bg-info text-dark']">
-                                                            [[ running.mode.toUpperCase() ]]
-                                                        </span>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        [[ running.info || 'N/A' ]]
-                                                    </td>
-                                                    <td>
-                                                        <div class="progress">
-                                                            <div class="progress-bar bg-info" role="progressbar"
-                                                                :style="'width: ' + running.percentage + '%'"
-                                                                :aria-valuenow="running.percentage" aria-valuemin="0"
-                                                                aria-valuemax="100"></div>
-
-                                                        </div>
-                                                        <span>
-                                                            [[ running.percentage || 'N/A' ]] %
-                                                        </span>
-                                                    </td>
-                                                </tr>
-
-                                                <!-- No sessions -->
-                                                <tr v-if="running_sessions.length === 0">
-                                                    <td colspan="5" class="text-center text-muted py-3">
-                                                        No running sessions at the moment.
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary"
-                                        data-bs-dismiss="modal">Close</button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
-                    <!-- History-->
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th class="ps-4">Date & Time</th>
-                                    <th>Mode</th>
-                                    <th>Description</th>
-                                    <th class="text-center">Processed</th>
-                                    <th class="text-center">Pairs</th>
-                                    <th class="text-end pe-4">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(item, index) in history_list" :key="item.uuid" @click="goto(item.uuid)"
-                                    style="cursor: pointer;">
-                                    <td class="ps-4">
-                                        <div class="fw-bold">[[ formatDate(item.date) ]]</div>
-                                        <div class="small text-muted">[[ formatTime(item.date) ]]</div>
-                                    </td>
-                                    <td>
-                                        <span
-                                            :class="['badge rounded-pill px-3', item.mode === 'global' ? 'bg-primary' : 'bg-info text-dark']">
-                                            [[ item.mode.toUpperCase() ]]
-                                        </span>
-                                    </td>
-                                    <td class="small text-truncate" style="max-width: 200px;">[[ item.info ]]</td>
-                                    <td class="text-center fw-semibold">[[ item.total_rules_processed ]]</td>
-                                    <td class="text-center">[[ item.similar_pairs_found ]]</td>
-                                    <td class="text-end pe-4" @click.stop>
-                                        <button class="btn btn-link text-danger p-0" @click="prepDelete(item, index)">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr v-if="history_list.length === 0">
-                                    <td colspan="6" class="text-center py-5 text-muted">No records found.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+
+                    <duplicate-table
+                        item-type="history"
+                        :items="history_list"
+                        default-view="table"
+                        selectable
+                        :bulk-actions="[{ key: 'delete', label: 'Delete selected', icon: 'fa-trash', variant: 'danger' }]"
+                        :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}"
+                        :per-page="history_per_page"
+                        @update:per-page="handleHistoryPerPageChange"
+                        @refresh="fetchHistory(current_page)"
+                        @bulk-delete="handleBulkDeleteHistory">
+                    </duplicate-table>
 
                     <div v-if="total_pages > 1" class="mt-4">
                         <pagination-component :current-page="current_page" :total-pages="total_pages"
@@ -251,23 +160,66 @@
             </div>
         </div>
 
-        <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;" v-if="itemToDelete">
-                    <div class="modal-header border-0 pb-0">
-                        <h5 class="modal-title fw-bold">Confirm Deletion</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <!-- Running Sessions modal — kept outside the tab-panes so it isn't
+             trapped inside a display:none .tab-pane when its tab isn't active -->
+        <div class="modal fade" id="staticBackdrop" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="staticBackdropLabel">Running Sessions</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body py-4 text-center">
-                        <div class="text-danger mb-3"><i class="fas fa-exclamation-triangle fa-3x"></i></div>
-                        <p class="mb-0">Are you sure you want to delete this record?<br>
-                            <strong>[[ itemToDelete.uuid.substring(0,8) ]]...</strong>
-                        </p>
+
+                    <div class="modal-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-center">Date & Time</th>
+                                        <th class="text-center">Step</th>
+                                        <th class="text-center">Mode</th>
+                                        <th class="text-center">Description</th>
+                                        <th class="text-end pe-4">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(running, index) in running_sessions"
+                                        :key="'import-' + index" @click="goto(running.uuid)"
+                                        style="cursor: pointer;" class="table-info">
+                                        <td class="text-center">
+                                            [[ formatDate(running.date_time) || running.date_time || 'N/A' ]]
+                                        </td>
+                                        <td class="text-center text-capitalize">[[ running.step || 'N/A' ]]</td>
+                                        <td class="text-center">
+                                            <span :class="['dup-mode-badge', running.mode === 'global' ? 'dup-mode-badge--global' : 'dup-mode-badge--filter']">
+                                                [[ running.mode.toUpperCase() ]]
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            [[ running.info || 'N/A' ]]
+                                        </td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-info" role="progressbar"
+                                                    :style="'width: ' + running.percentage + '%'"
+                                                    :aria-valuenow="running.percentage" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <span>[[ running.percentage || 'N/A' ]] %</span>
+                                        </td>
+                                    </tr>
+
+                                    <tr v-if="running_sessions.length === 0">
+                                        <td colspan="5" class="text-center text-muted py-3">
+                                            No running sessions at the moment.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="modal-footer border-0 pt-0 justify-content-center">
-                        <button type="button" class="btn btn-light rounded-pill px-4"
-                            data-bs-dismiss="modal">Cancel</button>
-                        <button class="btn btn-danger rounded-pill px-4" @click="confirmDelete">Confirm Delete</button>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -288,7 +240,7 @@
     const { createApp, ref, onMounted, computed, nextTick } = Vue;
     import { create_message, message_list } from '/static/js/toaster.js';
     import PaginationComponent from '/static/js/rule/paginationComponent.js';
-    import SimilarRuleCard from '/static/js/rule/similarity/similarRulesCard.js';
+    import DuplicateTable from '/static/js/rule/similarity/duplicateTable.js';
     import SimilarRulesFilter from '/static/js/rule/similarity/similarRulesFilter.js';
     import RuleList from '/static/js/rule/ruleList.js';
     import TagsDisplaysList from '/static/js/tags/tagsDisplaysList.js';
@@ -300,7 +252,7 @@
         delimiters: ['[[', ']]'],
         components: {
             'pagination-component': PaginationComponent,
-            'similar-rule-card': SimilarRuleCard,
+            'duplicate-table': DuplicateTable,
             'similar-rules-filter': SimilarRulesFilter,
             'rule-list': RuleList,
             'tags-displays-list': TagsDisplaysList,
@@ -340,9 +292,10 @@
             const history_list = ref([]);
             const current_page = ref(1);
             const total_pages = ref(1);
+            const history_per_page = ref(20);
 
             async function fetchHistory(page) {
-                const res = await fetch(`/rule/history_updater/list?page=${page}`);
+                const res = await fetch(`/rule/history_updater/list?page=${page}&per_page=${history_per_page.value}`);
                 const data = await res.json();
                 if (res.status === 200) {
                     history_list.value = data.history || [];
@@ -354,6 +307,11 @@
                     current_page.value = 1;
                     create_message("Error fetching history", "danger-subtle");
                 }
+            }
+
+            function handleHistoryPerPageChange(n) {
+                history_per_page.value = n;
+                fetchHistory(1);
             }
 
             // In progress
@@ -374,29 +332,19 @@
              * ##################
              * */
 
-            const itemToDelete = ref(null);
-            const indexToDelete = ref(null);
-            let bsModal = null;
-            const prepDelete = (item, index) => {
-                itemToDelete.value = item;
-                indexToDelete.value = index;
-                if (!bsModal) bsModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-                bsModal.show();
-            };
-
-            async function confirmDelete() {
-                try {
-                    const res = await fetch(`/rule/history_updater/delete/${itemToDelete.value.uuid}`);
-                    if (res.ok) {
-                        history_list.value.splice(indexToDelete.value, 1);
-                        create_message("History deleted", "success-subtle");
-                    }
-                } catch (e) {
-                    create_message("Error during deletion", "danger-subtle");
-                } finally {
-                    bsModal.hide();
-                    itemToDelete.value = null;
+            async function handleBulkDeleteHistory(uuids) {
+                if (!uuids.length) return;
+                if (!confirm(`Delete ${uuids.length} selected history record(s)?`)) return;
+                const results = await Promise.all(uuids.map(uuid =>
+                    fetch(`/rule/history_updater/delete/${uuid}`).then(res => res.ok)
+                ));
+                const deletedCount = results.filter(Boolean).length;
+                if (deletedCount === uuids.length) {
+                    create_message(`${deletedCount} history record(s) deleted`, "success-subtle");
+                } else {
+                    create_message(`${deletedCount}/${uuids.length} deleted — some failed`, "warning-subtle");
                 }
+                await fetchHistory(current_page.value);
             };
 
             /**
@@ -409,16 +357,23 @@
             const global_page = ref(1);
             const global_total_pages = ref(1);
             const loading_global = ref(false);
+            const global_per_page = ref(20);
 
             const global_min_score = ref(0.80);
             const global_format = ref('');
             const global_source_mode = ref('all');
             const global_author_mode = ref('all');
 
+            function handleGlobalPerPageChange(n) {
+                global_per_page.value = n;
+                fetchGlobalDuplicates(1);
+            }
+
             async function fetchGlobalDuplicates(page = 1) {
                 loading_global.value = true;
                 const params = new URLSearchParams({
                     page: page,
+                    per_page: global_per_page.value,
                     min_score: global_min_score.value,
                     format: global_format.value,
                     source_mode: global_source_mode.value,
@@ -430,7 +385,7 @@
 
                     global_duplicates.value = data.items;
                     global_page.value = data.current_page || page;
-                    global_total_pages.value = Math.ceil(data.total / 20);
+                    global_total_pages.value = data.total_pages || 1;
                 }
                 loading_global.value = false;
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -467,14 +422,15 @@
             }
 
             return {
-                history_list, current_page, total_pages,
+                history_list, current_page, total_pages, history_per_page,
                 formatDate, formatTime, fetchHistory, changePage, goto,
-                prepDelete, confirmDelete, itemToDelete,
+                handleBulkDeleteHistory, handleHistoryPerPageChange,
                 message_list, fetch_all_pages, running_sessions, fetchInProgress,
                 csrfToken, submitSimilarity,
 
                 global_duplicates, global_page, global_total_pages, loading_global, fetchGlobalDuplicates,
-                SimilarRuleCard, global_min_score, SimilarRulesFilter, global_format, global_source_mode, global_author_mode
+                global_min_score, global_format, global_source_mode, global_author_mode,
+                global_per_page, handleGlobalPerPageChange
             };
         }
     }).mount('#main-container');

@@ -3,7 +3,9 @@
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/diff-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rule/base/detail_rule_nav.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/similarity/duplicate-table.css') }}">
 {% endblock %}
 {% import 'macros/detail_rule_nav.html' as nav with context %}
 
@@ -49,31 +51,19 @@
 
         <template v-if="similar_rules.length > 0">
 
-            <!-- Controls bar -->
-            <div class="mb-3">
-                <p class="mb-0 small" style="color: var(--subtle-text-color);">
-                    <strong>[[ total_count ]]</strong> similar rule[[ total_count === 1 ? '' : 's' ]] found
-                </p>
-            </div>
+            <p class="mb-2 small" style="color: var(--subtle-text-color);">
+                <strong>[[ total_count ]]</strong> similar rule[[ total_count === 1 ? '' : 's' ]] found for this asset
+            </p>
 
-            <pagination-component v-if="total_pages > 1"
-                :current-page="current_page"
-                :total-pages="total_pages"
-                @change-page="(p) => fetchSimilar(p)">
-            </pagination-component>
-
-            <similar-rule-card
-                v-for="rule_item in similar_rules"
-                :key="'spec-' + rule_item.rule_id"
-                :rule-a="rule_item.rule_a_data"
-                :rule-b="rule_item.rule_b_data"
-                :score="rule_item.score"
-                type="specific"
-                :unique-id="'spec-' + rule_item.rule_id"
-                @refresh-list="fetchSimilar(1)"
-                :rule="rule_item"
-                :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}">
-            </similar-rule-card>
+            <duplicate-table
+                item-type="pair"
+                :items="similar_rules"
+                default-view="table"
+                :is-admin="{{ 'true' if current_user.is_admin() else 'false' }}"
+                :per-page="per_page"
+                @update:per-page="handlePerPageChange"
+                @refresh="fetchSimilar(current_page)">
+            </duplicate-table>
 
             <pagination-component v-if="total_pages > 1"
                 :current-page="current_page"
@@ -106,7 +96,7 @@
 <script type="module">
     const { createApp, ref, onMounted } = Vue;
     import PaginationComponent from '/static/js/rule/paginationComponent.js';
-    import SimilarRuleCard from '/static/js/rule/similarity/similarRulesCard.js';
+    import DuplicateTable from '/static/js/rule/similarity/duplicateTable.js';
     import { create_message } from '/static/js/toaster.js';
 
     const rule_id = {{ rule.id }};
@@ -114,12 +104,13 @@
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { PaginationComponent, SimilarRuleCard },
+        components: { PaginationComponent, DuplicateTable },
         setup() {
             const similar_rules   = ref([]);
             const current_page    = ref(1);
             const total_pages     = ref(1);
             const total_count     = ref(0);
+            const per_page        = ref(10);
             const loading         = ref(true);
             const refreshing      = ref(false);
 
@@ -129,7 +120,7 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     const compareWithId = urlParams.get('compare_with');
 
-                    const res = await fetch(`/rule/similar_detail/${rule_id}?page=${page}`);
+                    const res = await fetch(`/rule/similar_detail/${rule_id}?page=${page}&per_page=${per_page.value}`);
                     if (res.ok) {
                         const data = await res.json();
                         similar_rules.value = data.items.map(r => ({
@@ -137,7 +128,7 @@
                             startOpen: compareWithId && String(r.rule_b_data?.id) === String(compareWithId)
                         }));
                         current_page.value  = data.current_page || page;
-                        total_pages.value   = Math.ceil(data.total / 10);
+                        total_pages.value   = data.total_pages || 1;
                         total_count.value   = data.total || 0;
 
                         if (compareWithId) {
@@ -150,6 +141,11 @@
                 } finally {
                     loading.value = false;
                 }
+            }
+
+            function handlePerPageChange(n) {
+                per_page.value = n;
+                fetchSimilar(1);
             }
 
             async function refreshSimilarity() {
@@ -177,8 +173,8 @@
             onMounted(() => fetchSimilar(1));
 
             return {
-                similar_rules, current_page, total_pages, total_count,
-                loading, refreshing, fetchSimilar, refreshSimilarity,
+                similar_rules, current_page, total_pages, total_count, per_page,
+                loading, refreshing, fetchSimilar, refreshSimilarity, handlePerPageChange,
             };
         }
     }).mount('#main-container');

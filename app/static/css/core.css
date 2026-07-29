@@ -605,25 +605,6 @@ body.modal-open .custom-rule-link {
   pointer-events: none;
 }
 
-/* Analysis wrapper */
-.rule-analysis-wrapper {
-  background: var(--bg-color);
-  border: 1px solid #dee2e6 !important;
-  border-radius: 10px;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  cursor: pointer;
-}
-
-.rule-analysis-wrapper:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  border-color: #b4bcc7 !important;
-}
-
-.rule-analysis-wrapper.is-open {
-  border-color: #0d6efd !important;
-  box-shadow: 0 8px 24px rgba(13, 110, 253, 0.1);
-}
-
 /* Card — choose change (diff) */
 .card-choose-change {
   background-color: var(--bg-color);
@@ -666,48 +647,6 @@ body.modal-open .custom-rule-link {
   font-weight: bold;
   font-size: 0.9rem;
   flex-direction: column;
-}
-
-.score-badge-square {
-  width: 54px;
-  height: 54px;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 800;
-  border: 1px solid transparent;
-}
-
-.score-badge-square .pct {
-  font-size: 1.1rem;
-}
-
-.score-badge-square .lbl {
-  font-size: 0.55rem;
-  text-transform: uppercase;
-  margin-top: -4px;
-  opacity: 0.8;
-}
-
-.score-critical {
-  background: #fff1f2;
-  color: #e11d48;
-  border-color: #fda4af;
-}
-
-.score-warning {
-  background: #fffbeb;
-  color: #d97706;
-  border-color: #fcd34d;
-}
-
-.score-low {
-  background: #ecfdf5;
-  color: #059669;
-  border-color: #6ee7b7;
 }
 
 /* Podium */
@@ -1170,24 +1109,6 @@ textarea:focus {
 .btn-action:hover {
   background-color: rgba(0, 0, 0, 0.05);
   color: #000;
-}
-
-.btn-action-chevron {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-color);
-  color: #6c757d;
-  transition: all 0.2s;
-}
-
-.is-open .btn-action-chevron {
-  background: #0d6efd;
-  color: white;
-  transform: rotate(180deg);
 }
 
 .btn-hover-emoji {

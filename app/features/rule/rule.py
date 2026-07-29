@@ -4405,7 +4405,7 @@ def similar_loading(sid):
 @login_required
 def similar_detail(rule_id):
     page = request.args.get('page', 1, type=int)
-    per_page = 10
+    per_page = min(request.args.get('per_page', 10, type=int), 50)
 
     pagination = RuleModel.get_similar_rules_query(rule_id).paginate(page=page, per_page=per_page)
 
@@ -4432,6 +4432,7 @@ def similar_detail(rule_id):
         "items": result,
         "has_next": pagination.has_next,
         "total": pagination.total,
+        "total_pages": pagination.pages,
         "current_page": pagination.page
     })
 
@@ -4439,18 +4440,19 @@ def similar_detail(rule_id):
 @login_required
 def similar_global_duplicates():
     page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 50)
     min_score = request.args.get('min_score', 0.80, type=float)
-    
+
     filters = {
         "format": request.args.get('format'),
         "source_mode": request.args.get('source_mode', 'all'),
         "author_mode": request.args.get('author_mode', 'all')
     }
-    
+
     pagination = RuleModel.get_top_global_duplicates_query(
-        min_score=min_score, 
+        min_score=min_score,
         filters=filters
-    ).paginate(page=page, per_page=20)
+    ).paginate(page=page, per_page=per_page)
 
     result = []
     for sim, rule_a, rule_b in pagination.items:
@@ -4476,6 +4478,7 @@ def similar_global_duplicates():
         "items": result,
         "has_next": pagination.has_next,
         "total": pagination.total,
+        "total_pages": pagination.pages,
         "current_page": pagination.page
     })
 @rule_blueprint.route("/similar_detail_page/<int:rule_id>")
@@ -4487,7 +4490,8 @@ def similar_detail_page(rule_id):
 @login_required
 def history_updater_list():
     page = request.args.get('page', 1, type=int)
-    github_importer_list = RuleModel.get_similarity_list_page(page)
+    per_page = min(request.args.get('per_page', 20, type=int), 50)
+    github_importer_list = RuleModel.get_similarity_list_page(page, per_page=per_page)
 
     return {"history": [g.to_json() for g in github_importer_list], 
             "total_history": github_importer_list.total, 
