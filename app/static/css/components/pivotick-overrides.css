@@ -37,3 +37,13 @@ html[data-pivotick-bg="image"] .pvt-canvas {
     background-position: center;
     background-repeat: no-repeat;
 }
+
+/* ── Brand color — Pivotick's default chrome (mode rail, active states,
+   buttons) is driven entirely by --pvt-theme-primary (vendor default:
+   #eb2e53, a red/crimson). Rulezet uses blue everywhere else, so override
+   it here to match instead of the vendor red. Everything downstream
+   (--pvt-bg-color-primary, --pvt-text-color-primary, toast colors, etc.)
+   derives from this one variable, in both light and dark mode. ── */
+:root {
+    --pvt-theme-primary: #0d6efd;
+}
