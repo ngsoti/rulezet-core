@@ -1,38 +1,50 @@
 /*
   pivotick-overrides.css — Configurable PivoTick canvas background.
-  The vendor default is a two-layer repeating-linear-gradient forming a hard
-  square grid (--pvt-graph-background-image, defined at :root in pivotick.css).
+
+  Up to Pivotick v1.4.0 the vendor's own `.pvt-canvas` rule painted its grid
+  via `background-image: var(--pvt-graph-background-image)`, so overriding
+  that one custom property was enough. v1.5.0's chrome rewrite hardcoded the
+  two-layer repeating-linear-gradient grid directly onto `.pvt-canvas`
+  instead of reading a variable — so from here on, EVERY variant below must
+  set `background-image` itself on a `.pvt-canvas` selector scoped under
+  `html[data-pivotick-bg="..."]` (specific enough to win the cascade over the
+  vendor's own `.pvt-canvas` rule) rather than just poking a custom property.
+  `--pvt-graph-background-image` is Rulezet's own bridge variable (not a
+  vendor one) — settings.html's JS still sets it inline for the "image"
+  variant, consumed by the rule below.
+
   User picks a style on /settings ("PivoTick graph background") which sets
   html[data-pivotick-bg] (see base.html's early-apply script). No attribute
   (or data-pivotick-bg="default") = the vendor's own grid lines, untouched.
 
   Load this AFTER pivotick.css (and pvt-dark.css) so overrides win the cascade.
-  All variants read --pvt-graph-grid-color, so they automatically follow the
-  active theme (light default or pvt-dark.css's dark value).
+  The "dots" variant reads --pvt-graph-grid-color (still vendor-defined), so
+  it automatically follows the active theme (light default or pvt-dark.css's
+  dark value). "color" mode's flat fill still works via the vendor's own
+  `background-color: var(--pvt-bg)` — only `background-image` needs zeroing
+  out here so the grid lines don't show through/over it.
 */
 
 /* ── Dots — soft dot-grid instead of hard lines ─────────────────────────── */
-html[data-pivotick-bg="dots"] {
-    --pvt-graph-background-image:
-        radial-gradient(circle, var(--pvt-graph-grid-color) 1.4px, transparent 1.4px);
-}
 html[data-pivotick-bg="dots"] .pvt-canvas {
+    background-image: radial-gradient(circle, var(--pvt-graph-grid-color) 1.4px, transparent 1.4px);
     background-size: 28px 28px;
     background-position: -1px -1px;
 }
 
 /* ── Plain — flat panel background, no pattern at all ───────────────────── */
-html[data-pivotick-bg="plain"] {
-    --pvt-graph-background-image: none;
+html[data-pivotick-bg="plain"] .pvt-canvas {
+    background-image: none;
 }
 
 /* ── Color — flat custom color, set inline via --pvt-bg override ─────────── */
-html[data-pivotick-bg="color"] {
-    --pvt-graph-background-image: none;
+html[data-pivotick-bg="color"] .pvt-canvas {
+    background-image: none;
 }
 
-/* ── Image — admin-uploaded picture, set inline via --pvt-graph-background-image ── */
+/* ── Image — admin-uploaded picture, url set inline via --pvt-graph-background-image ── */
 html[data-pivotick-bg="image"] .pvt-canvas {
+    background-image: var(--pvt-graph-background-image, none);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
