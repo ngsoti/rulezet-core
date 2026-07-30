@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% import 'macros/admin_nav.html' as anav %}
 {% block title %}PivoTick — Graph Rendering — Rulezet{% endblock %}
 
 {% block head %}
@@ -33,7 +34,19 @@
         </p>
     </div>
 
-    <div v-for="section in sections" :key="section.key" class="card border-0 shadow-sm rounded-3 mb-4">
+    <!-- Rule / Bundle / ATT&CK panel switcher, with admin navigation inline (like one more tab) -->
+    <div class="dr-nav mb-3" role="tablist">
+        <a v-for="section in sections" :key="section.key"
+           class="dr-nav__item" :class="{ active: activeTab === section.key }"
+           role="tab" style="cursor:pointer;" @click="activeTab = section.key">
+            <i :class="section.icon"></i><span>[[ section.label ]]</span>
+        </a>
+        <span class="dr-nav__sep"></span>
+        {{ anav.admin_nav_toggle() }}
+    </div>
+    {{ anav.admin_nav_panel('pivotick') }}
+
+    <div v-for="section in sections" v-show="activeTab === section.key" :key="section.key" class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-body p-4">
 
             <div class="pvs-section-head">
@@ -42,15 +55,15 @@
                     <div class="pvs-section-title">[[ section.label ]]</div>
                     <div class="pvs-section-hint">[[ section.hint ]]</div>
                 </div>
-                <div class="btn-group btn-group-sm pvs-mode-toggle" role="group">
-                    <button type="button" class="btn"
-                            :class="section.mode === 'form' ? 'btn-primary' : 'btn-outline-secondary'"
-                            @click="setMode(section, 'form')">
+                <div class="d-flex gap-1 p-1 rounded-3 pvs-mode-toggle" style="background:var(--light-bg-color);">
+                    <button @click="setMode(section, 'form')"
+                            :style="section.mode === 'form' ? 'background:rgba(13,110,253,.1);color:#0d6efd;' : 'background:transparent;color:var(--subtle-text-color);'"
+                            style="font-size:.78rem;font-weight:600;padding:.32rem .75rem;border-radius:7px;border:none;cursor:pointer;transition:background .13s,color .13s;">
                         <i class="fa-solid fa-sliders me-1"></i>Form
                     </button>
-                    <button type="button" class="btn"
-                            :class="section.mode === 'json' ? 'btn-primary' : 'btn-outline-secondary'"
-                            @click="setMode(section, 'json')">
+                    <button @click="setMode(section, 'json')"
+                            :style="section.mode === 'json' ? 'background:rgba(13,110,253,.1);color:#0d6efd;' : 'background:transparent;color:var(--subtle-text-color);'"
+                            style="font-size:.78rem;font-weight:600;padding:.32rem .75rem;border-radius:7px;border:none;cursor:pointer;transition:background .13s,color .13s;">
                         <i class="fa-solid fa-code me-1"></i>Raw JSON
                     </button>
                 </div>

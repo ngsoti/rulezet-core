@@ -57,6 +57,7 @@ export function createPivotickAdminApp(initialConfigs, defaultConfigs) {
         data() {
             return {
                 shapes: SHAPES,
+                activeTab: SECTION_META[0].key,
                 sections: SECTION_META.map(meta => reactive({
                     ...meta,
                     mode: 'form',            // 'form' | 'json'
