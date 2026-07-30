@@ -1020,7 +1020,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                 const container = document.getElementById('rule-viz-graph-container');
                 if (!container) return;
                 _vizGraphInited = true;
-                initBundleGraph('rule-viz-graph-container', JSON.stringify(window.__misp_event), { sizeScale: 0.55 });
+                initBundleGraph('rule-viz-graph-container', JSON.stringify(window.__misp_event), { sizeScale: 0.55, graphType: 'rule' });
             }
 
             function refreshVizGraph() {
@@ -1327,7 +1327,10 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
 
 
             async function favorite() {
-                const res = await fetch(`/rule/favorite/${rule_id}`);
+                const res = await fetch(`/rule/favorite/${rule_id}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrf_token },
+                });
                 const data = await res.json();
 
                 if (res.ok) {

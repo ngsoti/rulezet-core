@@ -3,6 +3,7 @@ from pymisp import MISPEvent, MISPObject
 
 from app.features.misp.rule.misp_object import content_convert_to_misp_object, create_rulezet_metadata_misp_object
 from ...bundle import bundle_core as BundleModel
+from ..object_templates import load_object_template
 
 ###############################################
 #   Get bundle in MISP Object or MISP Event   #
@@ -110,7 +111,7 @@ def create_bundle_misp_object(bundle_id: int) -> MISPObject | None:
     if not bundle:
         return None
 
-    misp_object = MISPObject(name='rulezet-bundle', ignore_warning=False)
+    misp_object = MISPObject(name='rulezet-bundle', misp_objects_template_custom=load_object_template('rulezet-bundle'))
 
     # Required fields
     misp_object.add_attribute('name', value=bundle.name)

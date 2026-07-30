@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% block title %}PivoTick — Graph Rendering — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/smart-editor.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/pivotick/admin_style.css') }}">
+{% endblock %}
+
+{% block content %}
+<div id="pivotick-admin-app" v-cloak>
+
+    <!-- Banner -->
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-diagram-project banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="/admin/settings" class="text-decoration-none text-muted">Admin</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">PivoTick</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-diagram-project"></i></div>
+            <div>
+                <h2 class="fw-bold mb-1">PivoTick — Graph Rendering</h2>
+                <div class="banner-accent"></div>
+            </div>
+        </div>
+        <p class="text-muted mb-0" style="max-width:640px;font-size:.95rem;">
+            Configure the shape, color and icon of every node and relation type for the site's 3 PivoTick graphs.
+            This setting is stored in the database and completely independent from the PivoTick module itself:
+            a PivoTick update will never overwrite it.
+        </p>
+    </div>
+
+    <div v-for="section in sections" :key="section.key" class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body p-4">
+
+            <div class="pvs-section-head">
+                <div class="pvs-section-icon"><i :class="section.icon"></i></div>
+                <div>
+                    <div class="pvs-section-title">[[ section.label ]]</div>
+                    <div class="pvs-section-hint">[[ section.hint ]]</div>
+                </div>
+                <div class="btn-group btn-group-sm pvs-mode-toggle" role="group">
+                    <button type="button" class="btn"
+                            :class="section.mode === 'form' ? 'btn-primary' : 'btn-outline-secondary'"
+                            @click="setMode(section, 'form')">
+                        <i class="fa-solid fa-sliders me-1"></i>Form
+                    </button>
+                    <button type="button" class="btn"
+                            :class="section.mode === 'json' ? 'btn-primary' : 'btn-outline-secondary'"
+                            @click="setMode(section, 'json')">
+                        <i class="fa-solid fa-code me-1"></i>Raw JSON
+                    </button>
+                </div>
+            </div>
+
+            <!-- ── Form mode ─────────────────────────────────────────── -->
+            <template v-if="section.mode === 'form'">
+
+                <div class="pvs-subhead">Default node (unknown type)</div>
+                <div class="pvs-row">
+                    <span class="pvs-row-name">
+                        <span class="pvs-icon-preview" :style="{ background: section.config.nodes.default.color }">
+                            <i :class="section.config.nodes.default.icon || 'fa-solid fa-circle'"></i>
+                        </span>
+                        default
+                    </span>
+                    <div class="pvs-field">
+                        <label>Shape</label>
+                        <select class="form-select form-select-sm" v-model="section.config.nodes.default.shape">
+                            <option v-for="s in shapes" :key="s" :value="s">[[ s ]]</option>
+                        </select>
+                    </div>
+                    <div class="pvs-field">
+                        <label>Icon (FontAwesome)</label>
+                        <input type="text" class="form-control form-control-sm pvs-icon-input"
+                               v-model="section.config.nodes.default.icon" placeholder="fa-solid fa-circle">
+                    </div>
+                    <div class="pvs-field">
+                        <label>Color</label>
+                        <input type="color" v-model="section.config.nodes.default.color">
+                    </div>
+                    <div class="pvs-field">
+                        <label>Dark color</label>
+                        <input type="color" v-model="section.config.nodes.default.dark_color">
+                    </div>
+                    <template v-if="!isAttack(section)">
+                        <div class="pvs-field">
+                            <label>Size</label>
+                            <input type="number" min="4" max="80" class="form-control form-control-sm pvs-size-input"
+                                   v-model.number="section.config.nodes.default.size">
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div class="pvs-field">
+                            <label>Min size</label>
+                            <input type="number" min="4" max="80" class="form-control form-control-sm pvs-size-input"
+                                   v-model.number="section.config.nodes.default.size_min">
+                        </div>
+                        <div class="pvs-field">
+                            <label>Max size</label>
+                            <input type="number" min="4" max="80" class="form-control form-control-sm pvs-size-input"
+                                   v-model.number="section.config.nodes.default.size_max">
+                        </div>
+                    </template>
+                </div>
+
+                <div class="pvs-subhead">Node types</div>
+                <div v-for="(type, key) in section.config.nodes.types" :key="key" class="pvs-row">
+                    <span class="pvs-row-name">
+                        <span class="pvs-icon-preview" :style="{ background: type.color || '#64748b' }">
+                            <i :class="type.icon || 'fa-solid fa-circle'"></i>
+                        </span>
+                        [[ key ]]
+                    </span>
+                    <div class="pvs-field">
+                        <label>Shape</label>
+                        <select class="form-select form-select-sm" v-model="type.shape">
+                            <option v-for="s in shapes" :key="s" :value="s">[[ s ]]</option>
+                        </select>
+                    </div>
+                    <div class="pvs-field">
+                        <label>Icon (FontAwesome)</label>
+                        <input type="text" class="form-control form-control-sm pvs-icon-input"
+                               v-model="type.icon" placeholder="fa-solid fa-tag">
+                    </div>
+
+                    <template v-if="!isAttack(section) || key === 'tactic'">
+                        <div class="pvs-field">
+                            <label>Color</label>
+                            <input type="color" v-model="type.color">
+                        </div>
+                        <div class="pvs-field">
+                            <label>Dark color</label>
+                            <input type="color" v-model="type.dark_color">
+                        </div>
+                    </template>
+                    <span v-else class="pvs-inherit-note">Color inherited from the parent tactic</span>
+
+                    <template v-if="!isAttack(section)">
+                        <div class="pvs-field">
+                            <label>Size</label>
+                            <input type="number" min="4" max="80" class="form-control form-control-sm pvs-size-input"
+                                   v-model.number="type.size">
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div class="pvs-field">
+                            <label>Min size</label>
+                            <input type="number" min="4" max="80" class="form-control form-control-sm pvs-size-input"
+                                   v-model.number="type.size_min">
+                        </div>
+                        <div class="pvs-field">
+                            <label>Max size</label>
+                            <input type="number" min="4" max="80" class="form-control form-control-sm pvs-size-input"
+                                   v-model.number="type.size_max">
+                        </div>
+                        <template v-if="key === 'tactic'">
+                            <div class="pvs-field">
+                                <label>Palette (14 tactics, comma-separated hex)</label>
+                                <input type="text" class="form-control form-control-sm pvs-palette-input"
+                                       :value="paletteText(type, 'palette')"
+                                       @change="setPaletteText(type, 'palette', $event.target.value)">
+                            </div>
+                            <div class="pvs-field">
+                                <label>Dark palette</label>
+                                <input type="text" class="form-control form-control-sm pvs-palette-input"
+                                       :value="paletteText(type, 'palette_dark')"
+                                       @change="setPaletteText(type, 'palette_dark', $event.target.value)">
+                            </div>
+                        </template>
+                    </template>
+
+                    <button type="button" class="pvs-row-remove" title="Remove" @click="removeNodeType(section, key)">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+                <div class="pvs-add-row">
+                    <input type="text" class="form-control form-control-sm" placeholder="type name (e.g. hunt)"
+                           v-model="section.newNodeTypeName" @keyup.enter="addNodeType(section)">
+                    <button type="button" class="btn btn-sm btn-outline-primary" @click="addNodeType(section)">
+                        <i class="fa-solid fa-plus me-1"></i>Add node type
+                    </button>
+                </div>
+
+                <div class="pvs-subhead">Default relation</div>
+                <div class="pvs-row">
+                    <span class="pvs-row-name">default</span>
+                    <div class="pvs-field">
+                        <label>Color</label>
+                        <input type="color" v-model="section.config.edges.default.color">
+                    </div>
+                    <div class="pvs-field">
+                        <label>Dark color</label>
+                        <input type="color" v-model="section.config.edges.default.dark_color">
+                    </div>
+                    <div class="pvs-field">
+                        <label>Width</label>
+                        <input type="number" min="1" max="10" class="form-control form-control-sm pvs-size-input"
+                               v-model.number="section.config.edges.default.width">
+                    </div>
+                    <div class="form-check pvs-field">
+                        <label>Dashed</label>
+                        <input type="checkbox" class="form-check-input" v-model="section.config.edges.default.dashed">
+                    </div>
+                </div>
+
+                <div class="pvs-subhead">Relation types</div>
+                <div v-for="(type, key) in section.config.edges.types" :key="key" class="pvs-row">
+                    <span class="pvs-row-name">[[ key ]]</span>
+                    <div class="pvs-field">
+                        <label>Color</label>
+                        <input type="color" v-model="type.color">
+                    </div>
+                    <div class="pvs-field">
+                        <label>Dark color</label>
+                        <input type="color" v-model="type.dark_color">
+                    </div>
+                    <div class="pvs-field">
+                        <label>Width</label>
+                        <input type="number" min="1" max="10" class="form-control form-control-sm pvs-size-input"
+                               v-model.number="type.width">
+                    </div>
+                    <div class="form-check pvs-field">
+                        <label>Dashed</label>
+                        <input type="checkbox" class="form-check-input" v-model="type.dashed">
+                    </div>
+                    <button type="button" class="pvs-row-remove" title="Remove" @click="removeEdgeType(section, key)">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+                <div class="pvs-add-row">
+                    <input type="text" class="form-control form-control-sm" placeholder="relation name (e.g. related-to)"
+                           v-model="section.newEdgeTypeName" @keyup.enter="addEdgeType(section)">
+                    <button type="button" class="btn btn-sm btn-outline-primary" @click="addEdgeType(section)">
+                        <i class="fa-solid fa-plus me-1"></i>Add relation type
+                    </button>
+                </div>
+
+            </template>
+
+            <!-- ── Raw JSON mode ─────────────────────────────────────── -->
+            <template v-else>
+                <smart-editor
+                    v-model="section.jsonText"
+                    mode="code"
+                    language="json"
+                    min-height="360px"
+                    max-height="70vh">
+                </smart-editor>
+                <div v-if="section.jsonError" class="pvs-status pvs-status--error mt-2">
+                    <i class="fa-solid fa-circle-exclamation me-1"></i>[[ section.jsonError ]]
+                </div>
+            </template>
+
+            <div class="pvs-footer">
+                <button type="button" class="btn btn-primary" :disabled="section.saving" @click="save(section)">
+                    <i class="fa-solid fa-floppy-disk me-1"></i>Save
+                </button>
+                <button type="button" class="btn btn-outline-secondary" :disabled="section.saving" @click="reset(section)">
+                    <i class="fa-solid fa-rotate-left me-1"></i>Reset
+                </button>
+                <span v-if="section.savedAt" class="pvs-status pvs-status--ok ms-auto">
+                    <i class="fa-solid fa-check me-1"></i>Saved at [[ section.savedAt ]]
+                </span>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    import { createPivotickAdminApp } from '/static/js/pivotick/adminStyleConfig.js'
+
+    const configs  = {{ configs | tojson }}
+    const defaults = {{ defaults | tojson }}
+
+    createPivotickAdminApp(configs, defaults).mount('#pivotick-admin-app')
+</script>
+{% endblock %}

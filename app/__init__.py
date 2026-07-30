@@ -99,6 +99,9 @@ def create_app(start_worker=True):
     from app.features.config.config import config_blueprint
     app.register_blueprint(config_blueprint, url_prefix='/')
 
+    from app.features.pivotick.pivotick import pivotick_blueprint
+    app.register_blueprint(pivotick_blueprint, url_prefix='/')
+
     from app.features.jobs import job_handlers  # noqa
     if start_worker:
         from app.features.jobs.job_worker import start_worker as _start_worker

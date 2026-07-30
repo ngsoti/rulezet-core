@@ -922,7 +922,7 @@
                 const container = document.getElementById('misp-graph-container');
                 if (!container) return;
                 _graphInited = true;
-                initBundleGraph('misp-graph-container', JSON.stringify(_mispParsed.value));
+                initBundleGraph('misp-graph-container', JSON.stringify(_mispParsed.value), { graphType: 'bundle' });
             }
 
             // Fullscreen toggle for the MISP graph canvas

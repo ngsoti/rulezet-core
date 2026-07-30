@@ -3,7 +3,15 @@
 //  Renders the /attack/heatmap_data payload with Pivotick.
 //  Call initAttackGraph(containerId, coverage) only when the graph view is shown —
 //  it lazy-loads pivotick.iife.js on first call, it is not bundled on the page.
+//
+//  Node/edge look (shape, icon, size range, tactic color palette) is NOT
+//  hardcoded here — it's fetched from /pivotick/style/attack, which an admin
+//  can customize at /admin/pivotick. See app/features/pivotick/. Technique and
+//  sub-technique nodes always inherit their parent tactic's resolved color, so
+//  a tactic's cluster still reads as one visual group.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { fetchPivotickStyle, isDarkMode, edgeStyleFor } from '../pivotick/pivotickStyle.js'
 
 const _TACTIC_ORDER = [
     'reconnaissance', 'resource-development', 'initial-access', 'execution',
@@ -12,27 +20,8 @@ const _TACTIC_ORDER = [
     'exfiltration', 'impact',
 ]
 
-// One distinct hue per tactic so its technique/sub-technique cluster reads as a group.
-const _PALETTE_LIGHT = [
-    '#0ea5e9', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444',
-    '#ec4899', '#a855f7', '#6366f1', '#3b82f6', '#06b6d4', '#f43f5e', '#7c3aed',
-]
-const _PALETTE_DARK = [
-    '#38bdf8', '#2dd4bf', '#4ade80', '#a3e635', '#facc15', '#fb923c', '#f87171',
-    '#f472b6', '#c084fc', '#818cf8', '#60a5fa', '#22d3ee', '#fb7185', '#a78bfa',
-]
-
 const _instances = new Map()
 let _themeObserver = null
-
-function _isDark() {
-    return document.documentElement.classList.contains('dark-mode')
-}
-
-function _tacticColor(tacticKey) {
-    const idx = Math.max(0, _TACTIC_ORDER.indexOf(tacticKey))
-    return (_isDark() ? _PALETTE_DARK : _PALETTE_LIGHT)[idx % _PALETTE_LIGHT.length]
-}
 
 function _clamp(n, min, max) {
     return Math.max(min, Math.min(max, n))
@@ -47,6 +36,35 @@ function _showSpinner(container, message) {
         </div>`
 }
 
+function _tacticStyle(cfg, dark) {
+    const t = (cfg?.nodes?.types?.tactic) || {}
+    const palette = (dark ? t.palette_dark : t.palette) || []
+    return {
+        shape:    t.shape || 'hexagon',
+        icon:     t.icon || undefined,
+        sizeMin:  t.size_min ?? 30,
+        sizeMax:  t.size_max ?? 56,
+        palette,
+        fallbackColor: (dark ? t.dark_color : t.color) || '#0ea5e9',
+    }
+}
+
+function _techStyle(cfg, key, defaultSizeMin, defaultSizeMax) {
+    const t = (cfg?.nodes?.types?.[key]) || {}
+    return {
+        shape:   t.shape || 'circle',
+        icon:    t.icon || undefined,
+        sizeMin: t.size_min ?? defaultSizeMin,
+        sizeMax: t.size_max ?? defaultSizeMax,
+    }
+}
+
+function _tacticColor(tacticStyle, tacticKey) {
+    if (!tacticStyle.palette.length) return tacticStyle.fallbackColor
+    const idx = Math.max(0, _TACTIC_ORDER.indexOf(tacticKey))
+    return tacticStyle.palette[idx % tacticStyle.palette.length]
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  Public: buildAttackGraphData
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,13 +73,21 @@ function _showSpinner(container, message) {
  * Turn the /attack/heatmap_data payload into a Pivotick { nodes, edges } graph.
  *
  * Hierarchy:
- *   Tactic (hexagon, hub) ──covers──► Technique (circle)
- *   Technique ──has──────────────────► Sub-technique (small circle)
+ *   Tactic (hub) ──covers──────────► Technique
+ *   Technique    ──sub-technique──► Sub-technique
+ *
+ * @param {object} coverage    The /attack/heatmap_data payload
+ * @param {object} styleConfig Resolved /pivotick/style/attack config
+ * @param {boolean} dark       Whether to use the dark-mode color variants
  */
-export function buildAttackGraphData(coverage) {
+export function buildAttackGraphData(coverage, styleConfig, dark) {
     const nodes = [], edges = []
     const seen = new Set()
     function addNode(n) { if (!seen.has(n.id)) { seen.add(n.id); nodes.push(n) } }
+
+    const tacticStyle = _tacticStyle(styleConfig, dark)
+    const techStyle    = _techStyle(styleConfig, 'technique', 10, 30)
+    const subStyle      = _techStyle(styleConfig, 'subtechnique', 7, 20)
 
     const tactics = (coverage?.tactics || []).filter(t => t.covered)
 
@@ -69,7 +95,7 @@ export function buildAttackGraphData(coverage) {
     const techMap = new Map()
 
     for (const tactic of tactics) {
-        const color = _tacticColor(tactic.key)
+        const color = _tacticColor(tacticStyle, tactic.key)
         const tacticId = `tactic_${tactic.key}`
         addNode({
             id: tacticId,
@@ -80,10 +106,10 @@ export function buildAttackGraphData(coverage) {
                 raw: tactic,
             },
             style: {
-                shape: 'hexagon',
+                shape: tacticStyle.shape,
                 color,
-                size: _clamp(30 + Math.round(Math.sqrt(tactic.rule_count) * 3), 30, 56),
-                iconClass: 'fa-solid fa-crosshairs',
+                size: _clamp(tacticStyle.sizeMin + Math.round(Math.sqrt(tactic.rule_count) * 3), tacticStyle.sizeMin, tacticStyle.sizeMax),
+                iconClass: tacticStyle.icon,
             },
         })
 
@@ -102,6 +128,7 @@ export function buildAttackGraphData(coverage) {
     // Technique + sub-technique nodes, sized by how many rules cover them.
     for (const [id, entry] of techMap) {
         const isSub = id.includes('.')
+        const s = isSub ? subStyle : techStyle
         addNode({
             id,
             data: {
@@ -111,11 +138,12 @@ export function buildAttackGraphData(coverage) {
                 raw: entry,
             },
             style: {
-                shape: 'circle',
+                shape: s.shape,
                 color: entry.color,
                 size: isSub
-                    ? _clamp(7 + Math.round(Math.sqrt(entry.count) * 2.5), 7, 20)
-                    : _clamp(10 + Math.round(Math.sqrt(entry.count) * 4), 10, 30),
+                    ? _clamp(s.sizeMin + Math.round(Math.sqrt(entry.count) * 2.5), s.sizeMin, s.sizeMax)
+                    : _clamp(s.sizeMin + Math.round(Math.sqrt(entry.count) * 4), s.sizeMin, s.sizeMax),
+                iconClass: s.icon,
             },
         })
 
@@ -124,15 +152,19 @@ export function buildAttackGraphData(coverage) {
             // fall back to the tactic hub if the parent technique itself has 0 rules.
             const parentId = id.split('.')[0]
             if (techMap.has(parentId)) {
-                edges.push({ from: parentId, to: id, data: { label: 'sub-technique' } })
+                edges.push({ from: parentId, to: id, data: { label: 'sub-technique', type: 'sub-technique' } })
             } else {
-                edges.push({ from: entry.tacticIds[0], to: id, data: { label: 'covers' } })
+                edges.push({ from: entry.tacticIds[0], to: id, data: { label: 'covers', type: 'covers' } })
             }
         } else {
             entry.tacticIds.forEach(tacticId => {
-                edges.push({ from: tacticId, to: id, data: { label: 'covers' } })
+                edges.push({ from: tacticId, to: id, data: { label: 'covers', type: 'covers' } })
             })
         }
+    }
+
+    for (const edge of edges) {
+        edge.style = edgeStyleFor(styleConfig?.edges, edge.data?.type, dark)
     }
 
     return { nodes, edges }
@@ -229,8 +261,9 @@ export function initAttackGraph(containerId, coverage, opts = {}) {
 
     _showSpinner(container, 'Building coverage graph…')
 
-    setTimeout(() => {
-        const parsed = buildAttackGraphData(coverage)
+    fetchPivotickStyle('attack').then((styleConfig) => {
+        const dark = isDarkMode()
+        const parsed = buildAttackGraphData(coverage, styleConfig, dark)
 
         if (!parsed.nodes.length) {
             container.innerHTML = '<p style="padding:2rem;text-align:center;color:#888">No ATT&CK coverage to graph yet.</p>'
@@ -294,7 +327,7 @@ export function initAttackGraph(containerId, coverage, opts = {}) {
             attributes: true,
             attributeFilter: ['class'],
         })
-    }, 0)
+    })
 }
 
 export function destroyAttackGraph(containerId) {

@@ -2345,6 +2345,33 @@ class PivotickBackground(db.Model):
         }
 
 
+class PivotickGraphStyle(db.Model):
+    """Admin-defined node/edge render config (icon/color/shape/size) for a PivoTick graph.
+
+    One row per graph_type ('rule', 'bundle', 'attack'). Lives entirely outside the
+    app/modules/pivotick submodule and its bundled JS/CSS, so bumping the PivoTick
+    version never touches this table or overwrites an admin's customization.
+    A NULL config means "use the built-in default" (see PIVOTICK_DEFAULT_STYLES
+    in app/features/pivotick/pivotick_core.py).
+    """
+    __tablename__ = 'pivotick_graph_style'
+
+    id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    graph_type = db.Column(db.String(20), unique=True, nullable=False, index=True)
+    config     = db.Column(db.JSON, nullable=True)
+    updated_at = db.Column(db.DateTime, nullable=True,
+                           default=lambda: datetime.datetime.now(datetime.timezone.utc),
+                           onupdate=lambda: datetime.datetime.now(datetime.timezone.utc))
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+
+    def to_json(self):
+        return {
+            "graph_type":  self.graph_type,
+            "config":      self.config,
+            "updated_at":  self.updated_at.strftime('%Y-%m-%d %H:%M') if self.updated_at else None,
+        }
+
+
 class RuleScope(db.Model):
     """One scope declaration per user per rule — captures the environment where a rule works (or not)."""
     __tablename__ = 'rule_scope'

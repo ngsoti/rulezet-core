@@ -1,8 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  bundleMispGraph.js — MISP event graph for Rulezet bundle detail pages.
+//  bundleMispGraph.js — MISP event graph for Rulezet bundle/rule detail pages.
 //  Parses the Rulezet MISP JSON structure and renders it with Pivotick directly.
-//  Call initBundleGraph(containerId, jsonText) after the container is visible.
+//  Call initBundleGraph(containerId, jsonText, { graphType }) after the
+//  container is visible.
+//
+//  Node/edge look (shape, color, icon, size) is NOT hardcoded here — it's
+//  fetched from /pivotick/style/<graphType> ('rule' or 'bundle'), which an
+//  admin can customize at /admin/pivotick. See app/features/pivotick/.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { fetchPivotickStyle, buildNodeStyleMap, edgeStyleFor, isDarkMode } from '../pivotick/pivotickStyle.js'
 
 // Raw rule content: too large to display or add as nodes.
 const SKIP_CONTENT_RELATIONS = new Set(['yara', 'nse', 'suricata', 'snort', 'sigma', 'zeek'])
@@ -21,57 +28,6 @@ export const GRAPH_CONFIG = {
     maxNodes: 2000,
     layout: { type: 'force' },
     pivotickUI: { mode: 'full', sidebar: { collapsed: 'auto' } },
-}
-
-// Node shapes stay the same in both themes; only colors change.
-const _SHAPES = {
-    'bundle':        'hexagon',
-    'metadata':      'square',
-    'rule':          'circle',
-    'property':      'circle',
-    'vulnerability': 'triangle',
-    'tag':           'circle',
-    '_default':      'circle',
-}
-
-const _COLORS_LIGHT = {
-    'bundle':        '#2563eb',
-    'metadata':      '#16a34a',
-    'rule':          '#ea580c',
-    'property':      '#94a3b8',
-    'vulnerability': '#dc2626',
-    'tag':           '#9333ea',
-    '_default':      '#64748b',
-}
-
-const _COLORS_DARK = {
-    'bundle':        '#60a5fa',
-    'metadata':      '#4ade80',
-    'rule':          '#fb923c',
-    'property':      '#475569',
-    'vulnerability': '#f87171',
-    'tag':           '#c084fc',
-    '_default':      '#94a3b8',
-}
-
-const _SIZES = {
-    'bundle': 42, 'metadata': 28, 'rule': 22,
-    'property': 12, 'vulnerability': 20, 'tag': 16, '_default': 14,
-}
-
-function _isDark() {
-    return document.documentElement.classList.contains('dark-mode')
-}
-
-function _nodeStyles(sizeScale = 1) {
-    const colors = _isDark() ? _COLORS_DARK : _COLORS_LIGHT
-    return Object.fromEntries(
-        Object.keys(_SHAPES).map(type => [type, {
-            shape: _SHAPES[type],
-            color: colors[type],
-            size:  Math.round(_SIZES[type] * sizeScale),
-        }])
-    )
 }
 
 // Track live Pivotick instances and the theme observer so we can clean up.
@@ -110,11 +66,14 @@ function _attr(obj, relation) {
  * Parse a Rulezet MISP event JSON into Pivotick { nodes, edges }.
  *
  * Graph hierarchy:
- *   Bundle ──contains──► Metadata ──related-to──► Rule
+ *   Bundle ──contains──► Metadata ──contains──► Rule
  *          ──tagged────► Tag
- *          ──prop──────► (author / description / date)
+ *          ──property──► (author / description / date)
  *          Metadata ───► (format / author / version / license / source / description)
  *          Rule ────────► (any non-content, non-name attribute)
+ *
+ * Every edge carries a `type` used purely for style lookup (contains / related-to
+ * / tagged / property) — its `label` keeps the original, more descriptive text.
  */
 export function parseMispBundle(json) {
     const nodes = [], edges = []
@@ -143,7 +102,24 @@ export function parseMispBundle(json) {
                     raw: { key, value: val },
                 },
             })
-            edges.push({ from: parentId, to: propId, data: { label: key } })
+            edges.push({ from: parentId, to: propId, data: { label: key, type: 'property' } })
+        }
+    }
+
+    // Helper: create ATT&CK technique leaf nodes attached to a parent node.
+    // Sourced from an object's "Attribute" array, same as any other MISP
+    // object attribute (object_relation "attack-id" — see
+    // create_rulezet_metadata_misp_object in app/features/misp/rule/misp_object.py,
+    // added the same way "cve-id" already is).
+    function _addAttackNodes(parentId, attributes) {
+        for (const attr of (attributes || [])) {
+            if (attr.object_relation !== 'attack-id' || !attr.value) continue
+            const techId = `${parentId}_attack_${attr.uuid}`
+            addNode({
+                id: techId,
+                data: { label: attr.value, sublabel: 'ATT&CK', type: 'attack', raw: attr },
+            })
+            edges.push({ from: parentId, to: techId, data: { label: 'uses', type: 'attack' } })
         }
     }
 
@@ -164,7 +140,7 @@ export function parseMispBundle(json) {
                     raw: attr,
                 },
             })
-            edges.push({ from: ruleId, to: propId, data: { label: attr.object_relation } })
+            edges.push({ from: ruleId, to: propId, data: { label: attr.object_relation, type: 'property' } })
         }
     }
 
@@ -193,7 +169,7 @@ export function parseMispBundle(json) {
                     id: meta.uuid,
                     data: { label: title.substring(0, 34), sublabel: format || 'metadata', type: 'metadata', raw: meta },
                 })
-                edges.push({ from: bundleObj.uuid, to: meta.uuid, data: { label: 'contains' } })
+                edges.push({ from: bundleObj.uuid, to: meta.uuid, data: { label: 'contains', type: 'contains' } })
 
                 // Metadata-level property nodes (format, author, version, license, source, description)
                 _addPropNodes(meta.uuid, meta, META_PROP_ATTRS)
@@ -206,10 +182,17 @@ export function parseMispBundle(json) {
                         id: ruleObj.uuid,
                         data: { label: ruleLabel.substring(0, 38), sublabel: ruleObj.name, type: 'rule', raw: ruleObj },
                     })
-                    edges.push({ from: meta.uuid, to: ruleObj.uuid, data: { label: mref.relationship_type || 'related-to' } })
+                    edges.push({
+                        from: meta.uuid, to: ruleObj.uuid,
+                        data: { label: mref.relationship_type || 'related-to', type: 'contains' },
+                    })
 
                     // Rule-level property nodes (any non-content, non-name attribute)
                     _addRulePropNodes(ruleObj.uuid, ruleObj)
+
+                    // ATT&CK techniques used by this rule (stored as "attack-id"
+                    // attributes on the metadata object, same as "cve-id")
+                    _addAttackNodes(ruleObj.uuid, meta.Attribute)
                 })
 
             } else if (rel === 'related-to' && attrByUuid[tgt]) {
@@ -218,7 +201,7 @@ export function parseMispBundle(json) {
                     id: attr.uuid,
                     data: { label: String(attr.value || attr.type).substring(0, 28), sublabel: attr.type, type: 'vulnerability', raw: attr },
                 })
-                edges.push({ from: bundleObj.uuid, to: attr.uuid, data: { label: rel } })
+                edges.push({ from: bundleObj.uuid, to: attr.uuid, data: { label: rel, type: 'related-to' } })
             }
         })
 
@@ -226,7 +209,7 @@ export function parseMispBundle(json) {
         ;(ev.Tag || []).forEach((tag, i) => {
             const id = 'tag_' + i
             addNode({ id, data: { label: String(tag.name || 'tag').substring(0, 30), sublabel: 'tag', type: 'tag', raw: tag } })
-            edges.push({ from: bundleObj.uuid, to: id, data: { label: 'tagged' } })
+            edges.push({ from: bundleObj.uuid, to: id, data: { label: 'tagged', type: 'tagged' } })
         })
 
     } else {
@@ -234,16 +217,20 @@ export function parseMispBundle(json) {
         const evId = 'ev'
         addNode({ id: evId, data: { label: String(ev.info || 'Event').substring(0, 38), sublabel: 'event', type: 'bundle', raw: ev } })
         ;(ev.Object || []).forEach((obj, i) => {
-            addNode({ id: obj.uuid || ('o' + i), data: { label: obj.name, sublabel: obj['meta-category'] || '', type: 'metadata', raw: obj } })
-            edges.push({ from: evId, to: obj.uuid || ('o' + i), data: { label: '' } })
+            const objId = obj.uuid || ('o' + i)
+            addNode({ id: objId, data: { label: obj.name, sublabel: obj['meta-category'] || '', type: 'metadata', raw: obj } })
+            edges.push({ from: evId, to: objId, data: { label: '', type: 'contains' } })
+
+            // ATT&CK techniques used by this rule ("attack-id" attributes on the metadata object)
+            _addAttackNodes(objId, obj.Attribute)
         })
         ;(ev.Attribute || []).forEach((attr, i) => {
             addNode({ id: attr.uuid || ('a' + i), data: { label: String(attr.value || '').substring(0, 26), sublabel: attr.type, type: 'vulnerability', raw: attr } })
-            edges.push({ from: evId, to: attr.uuid || ('a' + i), data: { label: '' } })
+            edges.push({ from: evId, to: attr.uuid || ('a' + i), data: { label: '', type: 'related-to' } })
         })
         ;(ev.Tag || []).forEach((tag, i) => {
             addNode({ id: 'tag_' + i, data: { label: String(tag.name || '').substring(0, 28), sublabel: 'tag', type: 'tag', raw: tag } })
-            edges.push({ from: evId, to: 'tag_' + i, data: { label: 'tagged' } })
+            edges.push({ from: evId, to: 'tag_' + i, data: { label: 'tagged', type: 'tagged' } })
         })
     }
 
@@ -289,6 +276,14 @@ function _showSpinner(container, message) {
         </div>`
 }
 
+// Apply per-type edge styling (from the fetched config) onto parsed edges in place.
+function _applyEdgeStyles(edges, edgeConfig, dark) {
+    for (const edge of edges) {
+        const type = edge.data?.type
+        edge.style = edgeStyleFor(edgeConfig, type, dark)
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  Public: initBundleGraph
 // ─────────────────────────────────────────────────────────────────────────────
@@ -299,7 +294,9 @@ function _showSpinner(container, message) {
  *
  * @param {string} containerId  DOM id of the target div
  * @param {string} jsonText     Raw JSON string of the MISP event
- * @param {object} [opts]       Optional overrides: { sizeScale }
+ * @param {object} [opts]       Optional overrides: { sizeScale, graphType }
+ *   graphType: 'bundle' (default) or 'rule' — selects which admin-configurable
+ *   style (/pivotick/style/<graphType>) to render with.
  */
 export function initBundleGraph(containerId, jsonText, opts = {}) {
     const container = document.getElementById(containerId)
@@ -340,11 +337,15 @@ export function initBundleGraph(containerId, jsonText, opts = {}) {
 
     _showSpinner(container, 'Parsing MISP event…')
 
-    setTimeout(() => {
-        let parsed
-        try {
-            parsed = parseMispBundle(JSON.parse(jsonText))
-        } catch {
+    const graphType = opts.graphType === 'rule' ? 'rule' : 'bundle'
+
+    Promise.all([
+        Promise.resolve().then(() => {
+            try { return parseMispBundle(JSON.parse(jsonText)) } catch { return null }
+        }),
+        fetchPivotickStyle(graphType),
+    ]).then(([parsed, styleConfig]) => {
+        if (!parsed) {
             container.innerHTML = '<p style="padding:2rem;text-align:center;color:#888">Could not parse MISP JSON.</p>'
             return
         }
@@ -355,7 +356,9 @@ export function initBundleGraph(containerId, jsonText, opts = {}) {
         }
 
         const { maxNodes, layout, pivotickUI } = GRAPH_CONFIG
-        const nodeStyles = _nodeStyles(opts.sizeScale ?? 1)
+        const dark = isDarkMode()
+        const nodeStyles = buildNodeStyleMap(styleConfig.nodes, dark, opts.sizeScale ?? 1)
+        _applyEdgeStyles(parsed.edges, styleConfig.edges, dark)
 
         if (parsed.nodes.length > maxNodes) {
             const degree = {}
@@ -453,5 +456,5 @@ export function initBundleGraph(containerId, jsonText, opts = {}) {
             attributes: true,
             attributeFilter: ['class'],
         })
-    }, 0)
+    })
 }

@@ -2,6 +2,8 @@
 import json
 from pymisp import MISPEvent, MISPObject
 from ...rule import rule_core as RuleModel
+from ...attack.attack_core import get_techniques_for_rule
+from ..object_templates import load_object_template
 
 #############################################
 #   Get rule in MISP Object or MISP Event   #
@@ -50,7 +52,7 @@ def create_rulezet_metadata_misp_object(rule_id: int) -> MISPObject:
     """
     Specific mapper for Rulezet metadata based on the 'rulezet-metadata' object template.
     """
-    misp_object = MISPObject(name='rulezet-metadata', ignore_warning=False)
+    misp_object = MISPObject(name='rulezet-metadata', misp_objects_template_custom=load_object_template('rulezet-metadata'))
 
     rule = RuleModel.get_rule(rule_id)
     if not rule:
@@ -114,6 +116,11 @@ def create_rulezet_metadata_misp_object(rule_id: int) -> MISPObject:
         except (json.JSONDecodeError, AttributeError):
             pass
 
+    # ATT&CK techniques used by this rule → multiple attributes, same pattern as cve-id
+    for technique in get_techniques_for_rule(rule_id):
+        technique_id = technique.get('technique_id')
+        if technique_id:
+            misp_object.add_attribute('attack-id', value=technique_id)
 
     return misp_object
 
