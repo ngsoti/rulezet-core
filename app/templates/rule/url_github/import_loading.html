@@ -46,39 +46,80 @@
         <p class="text-muted small mt-3 mb-0">Loading import…</p>
     </div>
 
+    <!-- Import failed while preparing/scanning (e.g. bad URL, clone error) -->
+    <div v-else-if="sessionError" class="mb-4">
+        <div class="ul-progress-card text-center py-4">
+            <div class="ul-progress-icon mx-auto mb-3" style="background:linear-gradient(135deg,#dc3545,#a52834);">
+                <i class="fas fa-triangle-exclamation"></i>
+            </div>
+            <p class="ul-progress-title mb-1">Import failed</p>
+            <p class="ul-progress-sub mb-3">[[ sessionError ]]</p>
+            <a href="/rule/create_rule?tab=github" class="btn btn-sm btn-secondary rounded-pill px-3">
+                <i class="fas fa-arrow-left me-1"></i> Back to import
+            </a>
+        </div>
+    </div>
+
     <!-- Progress -->
     <div v-else-if="!is_finished" class="mb-4">
         <div class="ul-progress-card">
             <div class="ul-progress-head">
-                <div class="ul-progress-icon"><i class="fas fa-file-import"></i></div>
+                <div class="ul-progress-icon"><i class="fas" :class="currentPhase==='importing' ? 'fa-file-import' : 'fa-magnifying-glass'"></i></div>
                 <div>
-                    <p class="ul-progress-title">Importing rules…</p>
+                    <p class="ul-progress-title">[[ phaseTitle ]]</p>
                     <p class="ul-progress-sub">[[ repoUrl || 'Working…' ]]</p>
                 </div>
-                <div class="ul-stat-row">
+                <div v-if="currentPhase==='importing'" class="ul-stat-row">
                     <span class="ul-stat-chip ul-stat-chip--new"><span class="dot"></span>[[ liveImported ]] imported</span>
                     <span class="ul-stat-chip ul-stat-chip--found"><span class="dot"></span>[[ liveSkipped ]] skipped</span>
                     <span v-if="liveBad > 0" class="ul-stat-chip ul-stat-chip--error"><span class="dot"></span>[[ liveBad ]] bad</span>
                 </div>
             </div>
 
-            <div class="ul-bar-track">
-                <div class="ul-bar-fill" :style="'width:'+progress+'%;'"></div>
-            </div>
-            <div class="ul-bar-meta">
-                <span><b>[[ progressDone ]]</b> / [[ progressTotal ]] rule<span v-if="progressTotal!==1">s</span> processed</span>
-                <span><b>[[ progress ]]%</b></span>
-            </div>
+            <template v-if="currentPhase==='importing'">
+                <div class="ul-bar-track">
+                    <div class="ul-bar-fill" :style="'width:'+progress+'%;'"></div>
+                </div>
+                <div class="ul-bar-meta">
+                    <span><b>[[ progressDone ]]</b> / [[ progressTotal ]] rule<span v-if="progressTotal!==1">s</span> processed</span>
+                    <span><b>[[ progress ]]%</b></span>
+                </div>
 
-            <div class="ul-log" ref="logEl">
-                <div v-if="!logEntries.length" class="ul-log-empty">
-                    <i class="fas fa-terminal me-1"></i> Waiting for the first result…
+                <div class="ul-log" ref="logEl">
+                    <div v-if="!logEntries.length" class="ul-log-empty">
+                        <i class="fas fa-terminal me-1"></i> Waiting for the first result…
+                    </div>
+                    <div v-for="(entry, idx) in logEntries" :key="idx" class="ul-log-row" :class="'ul-log-row--'+entry.type">
+                        <i class="ul-log-icon" :class="entry.icon"></i>
+                        <span><span class="ul-log-rule">[[ entry.rule ]]</span> <span class="ul-log-msg">— [[ entry.msg ]]</span></span>
+                    </div>
                 </div>
-                <div v-for="(entry, idx) in logEntries" :key="idx" class="ul-log-row" :class="'ul-log-row--'+entry.type">
-                    <i class="ul-log-icon" :class="entry.icon"></i>
-                    <span><span class="ul-log-rule">[[ entry.rule ]]</span> <span class="ul-log-msg">— [[ entry.msg ]]</span></span>
+            </template>
+
+            <!-- Step 1: still cloning / walking the repo to find every rule.
+                 No final total is known yet, so an indeterminate bar instead
+                 of a numeric one — this is the step that used to block the
+                 create_rule page itself, now it lives here instead. While
+                 scanning, the rule count found so far still ticks up live. -->
+            <template v-else>
+                <div class="ul-bar-track">
+                    <div class="ul-bar-fill" style="width:100%;"></div>
                 </div>
-            </div>
+                <div class="ul-bar-meta">
+                    <span>[[ phaseSub ]]</span>
+                    <span v-if="currentPhase==='scanning'"><b>[[ scanFoundCount ]]</b> rule<span v-if="scanFoundCount!==1">s</span> found so far</span>
+                </div>
+
+                <div v-if="currentPhase==='scanning'" class="ul-log" ref="logEl">
+                    <div v-if="!logEntries.length" class="ul-log-empty">
+                        <i class="fas fa-magnifying-glass me-1"></i> Walking the repository…
+                    </div>
+                    <div v-for="(entry, idx) in logEntries" :key="idx" class="ul-log-row" :class="'ul-log-row--'+entry.type">
+                        <i class="ul-log-icon" :class="entry.icon"></i>
+                        <span><span class="ul-log-rule">[[ entry.rule ]]</span> <span class="ul-log-msg">— [[ entry.msg ]]</span></span>
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
 
@@ -384,6 +425,23 @@
             // was already finished (e.g. navigating back to an old sid).
             const pageReady      = ref(false)
 
+            // 'preparing' (cloning/accessing the repo) -> 'scanning' (walking
+            // it, counting every rule) -> 'importing' (actually processing
+            // them). Mirrors Session_class.phase — see session_class.py.
+            const currentPhase   = ref('preparing')
+            const sessionError   = ref(null)
+            const scanFoundCount = ref(0)  // running "rules found so far" counter while phase === 'scanning'
+
+            const phaseTitle = computed(() => {
+                if (currentPhase.value === 'preparing') return 'Connecting to the repository…'
+                if (currentPhase.value === 'scanning')  return 'Searching for rules…'
+                return 'Importing rules…'
+            })
+            const phaseSub = computed(() => {
+                if (currentPhase.value === 'preparing') return 'Step 1 of 2 — cloning or accessing the repository…'
+                return 'Step 1 of 2 — reading every file to find all the rules. This can take a while for large repositories…'
+            })
+
             const repoUrl = computed(() =>
                 info_session.value.repo_url || (result_data.value.info && result_data.value.info.repo_url) || ''
             )
@@ -418,16 +476,23 @@
             const logEl      = ref(null)
 
             function _describeImportEvent(entry) {
+                if (entry.type === 'found')    return { type: 'found', icon: 'fas fa-magnifying-glass' }
                 if (entry.type === 'imported') return { type: 'new',   icon: 'fas fa-circle-plus' }
                 if (entry.type === 'bad')      return { type: 'error', icon: 'fas fa-triangle-exclamation' }
                 return { type: 'ok', icon: 'fas fa-minus-circle' } // skipped — duplicate, not an error
             }
 
-            function _appendLogEvents(data) {
-                const events = data.events || []
+            function _appendLogEvents(data, onlyTypes) {
+                // Scanning ('found') and importing ('imported'/'skipped'/'bad')
+                // events all land in the same session.events array server-side —
+                // filter per phase so the "Step 1" log doesn't get polluted by
+                // "Step 2" entries once phase flips (and vice versa).
+                let events = data.events || []
+                if (onlyTypes) events = events.filter(e => onlyTypes.includes(e.type))
                 logEntries.value = events.map(e => {
                     const { type, icon } = _describeImportEvent(e)
-                    const msg = e.type === 'imported' ? `imported (${e.format})`
+                    const msg = e.type === 'found'    ? `+${e.count} rule${e.count !== 1 ? 's' : ''} found (${e.format})`
+                              : e.type === 'imported' ? `imported (${e.format})`
                               : e.type === 'bad'       ? `invalid syntax (${e.format})`
                               : `skipped — already exists (${e.format})`
                     return { type, icon, rule: e.name, msg }
@@ -601,7 +666,33 @@
             function pollScan() {
                 $.getJSON('/rule/import_loading_status/{{sid}}', async function (data) {
                     if (!data) return
-                    _appendLogEvents(data)
+
+                    if (data.phase === 'error') {
+                        sessionError.value = data.error || 'Something went wrong while preparing this import.'
+                        pageReady.value = true
+                        return // stop polling — nothing more will happen on this session
+                    }
+
+                    currentPhase.value = data.phase || 'importing'
+
+                    // Still cloning/walking the repo — the final total isn't
+                    // known yet, so there's nothing meaningful to compute a %
+                    // from. Keep polling and show the indeterminate "Step 1"
+                    // state — but during 'scanning', self.total is already
+                    // being updated live file by file (see session_class.py),
+                    // so surface that running count + the "+N rules found"
+                    // log as it comes in instead of just a bare spinner.
+                    if (currentPhase.value === 'preparing' || currentPhase.value === 'scanning') {
+                        if (currentPhase.value === 'scanning') {
+                            _appendLogEvents(data, ['found'])
+                            scanFoundCount.value = data.total || 0
+                        }
+                        pageReady.value = true
+                        setTimeout(pollScan, 800)
+                        return
+                    }
+
+                    _appendLogEvents(data, ['imported', 'skipped', 'bad'])
                     result_data.value  = data
                     progressDone.value  = data.complete
                     progressTotal.value = data.total
@@ -644,6 +735,7 @@
                 result_data,
                 is_finished,
                 pageReady,
+                currentPhase, sessionError, phaseTitle, phaseSub, scanFoundCount,
                 repoUrl, repoUrlCopied, copyRepoUrl,
 
                 logEntries, logEl,

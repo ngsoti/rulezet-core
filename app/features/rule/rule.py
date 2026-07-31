@@ -4,7 +4,8 @@ import json
 import zipfile
 import os
 import tempfile
-from flask import  request, send_file
+from threading import Thread
+from flask import  request, send_file, current_app
 from math import ceil
 from urllib.parse import urlparse
 from datetime import datetime,  timezone
@@ -2705,6 +2706,11 @@ def import_rules_from_github():
     """
     Clone or access a GitHub repo, then test all YARA rules in it,
     creating rules and classifying bad rules automatically.
+
+    The clone/scan/import all happen in a background thread — this view
+    only validates the URL and returns a session_uuid right away, so the
+    caller can redirect to the loading page immediately instead of being
+    stuck waiting (potentially minutes, for a big repo) on this request.
     """
     if not current_user.is_admin():
         return {"message": "Admin access required. Non-admins can submit a proposal instead.", "toast_class": "danger-subtle"}, 403
@@ -2717,39 +2723,57 @@ def import_rules_from_github():
         if not verif:
             return {"message": "Please enter a valid URL to import rules.", "toast_class": "danger-subtle"}, 400
 
-        repo_dir, _ = clone_or_access_repo(repo_url, branch=branch)
-
-        if not repo_dir:
-            return {"message": "Failed to clone or access the repository.", "toast_class": "danger-subtle"}, 400
-
-        info = github_repo_metadata(repo_url, selected_license)
+        info = {"origin": "github", "url": repo_url, "repo_url": repo_url}
         if branch:
             info['branch'] = branch
 
-        session_th = SessionModel.Session_class(repo_dir, current_user, info)
-        session_th.start()
+        session_th = SessionModel.Session_class(None, current_user, info)
         SessionModel.sessions.append(session_th)
 
-        try:
-            from app.features.notification.notification_core import notify_admins_session_started
-            notify_admins_session_started(
-                user         = current_user,
-                session_type = 'github_import',
-                session_uuid = session_th.uuid,
-                label        = f'GitHub import running — {repo_url}',
-                link         = '/rule/github/manage',
-            )
-        except Exception as _e:
-            print(f"[rule] notify_admins_session_started (import) error: {_e}")
+        app_obj = current_app._get_current_object()
+        user_obj = current_user._get_current_object()
 
-        branch_label = f" (branch: {branch})" if branch else ""
-        log_activity("github.import_started",
-                     f"Started GitHub import from '{repo_url}'{branch_label}",
-                     target_type="github_import",
-                     target_uuid=session_th.uuid,
-                     extra={"url": repo_url, "branch": branch},
-                     is_public=True,
-                     icon="fa-brands fa-github")
+        def _run_github_import():
+            with app_obj.app_context():
+                try:
+                    repo_dir, _ = clone_or_access_repo(repo_url, branch=branch)
+                    if not repo_dir:
+                        raise Exception("Failed to clone or access the repository.")
+
+                    full_info = github_repo_metadata(repo_url, selected_license)
+                    if branch:
+                        full_info['branch'] = branch
+                    session_th.repo_dir = repo_dir
+                    session_th.info = full_info
+
+                    session_th.start(app_obj=app_obj, user_obj=user_obj)
+
+                    try:
+                        from app.features.notification.notification_core import notify_admins_session_started
+                        notify_admins_session_started(
+                            user         = user_obj,
+                            session_type = 'github_import',
+                            session_uuid = session_th.uuid,
+                            label        = f'GitHub import running — {repo_url}',
+                            link         = '/rule/github/manage',
+                        )
+                    except Exception as _e:
+                        print(f"[rule] notify_admins_session_started (import) error: {_e}")
+
+                    branch_label = f" (branch: {branch})" if branch else ""
+                    log_activity("github.import_started",
+                                 f"Started GitHub import from '{repo_url}'{branch_label}",
+                                 target_type="github_import",
+                                 target_uuid=session_th.uuid,
+                                 extra={"url": repo_url, "branch": branch},
+                                 is_public=True,
+                                 icon="fa-brands fa-github")
+                except Exception as e:
+                    session_th.error = str(e)
+                    session_th.phase = 'error'
+
+        Thread(target=_run_github_import, daemon=True).start()
+
         return {"message": "Go !", "toast_class": "success-subtle", "session_uuid": session_th.uuid}, 201
     except Exception as e:
         return {"message": f"An error occurred during import: {str(e)}", "toast_class": "danger-subtle"}, 400

@@ -170,6 +170,7 @@
 .ul-log-row--new    .ul-log-icon { color: #45b07f; }
 .ul-log-row--ok     .ul-log-icon { color: #6c757d; }
 .ul-log-row--error  .ul-log-icon { color: #e5604a; }
+.ul-log-row--found  .ul-log-icon { color: #0d6efd; }
 
 .ul-log::-webkit-scrollbar { width: 8px; }
 .ul-log::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 8px; }

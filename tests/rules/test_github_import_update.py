@@ -43,14 +43,21 @@ pytestmark = pytest.mark.skipif(not _network_reachable(), reason="no network acc
 def _poll_status(client, url, timeout=120):
     """Poll a /rule/{import,update}_loading_status/<sid> endpoint until the
     session reports complete >= total (see session_class.py / update_class.py —
-    total/complete are now tracked per rule, not per file)."""
+    total/complete are now tracked per rule, not per file).
+
+    A github import session starts in phase 'preparing'/'scanning' (cloning
+    the repo, then walking it to build the job queue — see session_class.py),
+    during which total is still 0. Guard on total > 0 too, or the transient
+    0 >= 0 would read as "already complete" before scanning has even started."""
     deadline = time.time() + timeout
     status = None
     while time.time() < deadline:
         res = client.get(url)
         assert res.status_code == 200, res.get_json()
         status = res.get_json()
-        if status.get("complete", 0) >= status.get("total", 1):
+        if status.get("phase", "importing") == "error":
+            raise AssertionError(f"session at {url} failed: {status.get('error')}")
+        if status.get("total", 0) > 0 and status.get("complete", 0) >= status["total"]:
             return status
         time.sleep(0.5)
     raise AssertionError(f"session at {url} did not complete within {timeout}s: {status}")

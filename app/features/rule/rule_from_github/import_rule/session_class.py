@@ -38,6 +38,15 @@ class Session_class:
         self._save_done    = Event()  # set once save_info() has completed
         self._workers_done = 0        # how many worker threads have exited
 
+        # 'preparing' (repo not cloned/accessed yet) -> 'scanning' (walking the
+        # repo, building the job queue) -> 'importing' (worker threads running)
+        # -> 'done'. Callers that do the clone/access step in a background
+        # thread (see rule.py's import_rules_from_github) set 'preparing' up
+        # front so the loading page can show a "Step 1" state before self.total
+        # is known, instead of misreading an empty job queue as "finished".
+        self.phase = 'preparing'
+        self.error = None
+
         # Live activity feed for the loading page — not persisted (ImporterResult
         # only stores the final counts), purely for the "what's happening right
         # now" log while the import is still running. Capped so a huge repo
@@ -45,33 +54,74 @@ class Session_class:
         self.events      = []
         self._events_lock = Lock()
 
-    def _log_event(self, kind, name, fmt):
+    def _log_event(self, kind, name, fmt, count=None):
         with self._events_lock:
-            self.events.append({"type": kind, "name": name, "format": fmt})
+            entry = {"type": kind, "name": name, "format": fmt}
+            if count is not None:
+                entry["count"] = count
+            self.events.append(entry)
             if len(self.events) > 500:
                 self.events = self.events[-500:]
 
-    def _populate_jobs(self):
-        job_index = 0
+    def _build_rule_instances(self):
+        """One instance per known rule format, shared read-only across the
+        scan workers (and the import workers right after). Also pre-populates
+        count_per_format for every format up front, since it's fixed for the
+        whole scan — this way the scan workers below never race each other
+        creating the same count_per_format[format] key."""
         load_all_rule_formats()
         rule_subclasses = RuleType.__subclasses__()
         rule_instances = [RuleClass() for RuleClass in rule_subclasses]
+        for ri in rule_instances:
+            self.count_per_format.setdefault(ri.format, {"bad_rule": 0, "skipped": 0, "imported": 0})
+        return rule_instances
+
+    def start(self, app_obj=None, user_obj=None):
+        self.phase = 'scanning'
+        rule_instances = self._build_rule_instances()
 
         if os.path.exists(self.repo_dir):
-            repo_real = os.path.realpath(self.repo_dir)
-            for root, dirs, files in os.walk(self.repo_dir, followlinks=False):
-                # Skip hidden directories and symlinked directories (a symlinked
-                # directory could otherwise be walked into via its resolved target)
-                dirs[:] = [
-                    d for d in dirs
-                    if not d.startswith(('.', '_'))
-                    and not os.path.islink(os.path.join(root, d))
-                ]
-                for file in files:
-                    if file.startswith(('.', '_')):
-                        continue
+            self._scan_repo(rule_instances)
 
-                    filepath = os.path.join(root, file)
+        if app_obj is None:
+            app_obj = current_app._get_current_object()
+        if user_obj is None:
+            user_obj = current_user._get_current_object()
+
+        self.phase = 'importing'
+        for _ in range(self.thread_count):
+            worker = Thread(target=self.process, args=[app_obj, user_obj])
+            worker.daemon = True
+            worker.start()
+            self.threads.append(worker)
+
+    def _scan_repo(self, rule_instances):
+        """Walk self.repo_dir and extract every rule, spread across a small
+        pool of worker threads instead of one file at a time.
+
+        The os.walk itself stays single-threaded (directory traversal is
+        cheap and isn't the bottleneck) and only does a cheap extension match
+        per file to decide what's worth handing off — everything that
+        actually costs time (the symlink/containment resolution, format
+        disambiguation, and extract_rules_from_file) runs concurrently across
+        self.thread_count workers, the same pool size already used for the
+        import phase right after this. Filtering non-candidate files (the
+        bulk of most repos: docs, CI config, license files...) out before
+        the expensive path-resolution checks, instead of after, also means
+        that cost is only ever paid for files that are actually rules.
+        """
+        repo_real = os.path.realpath(self.repo_dir)
+        file_queue = Queue()
+        job_lock = Lock()
+        job_index = [0]  # boxed so scan workers can bump it under job_lock
+
+        def scan_worker():
+            while True:
+                item = file_queue.get()
+                try:
+                    if item is None:
+                        return
+                    filepath, rel_path, candidates = item
 
                     # Reject symlinks outright: a cloned repo can contain a symlink
                     # (e.g. rule.yar -> /etc/passwd) whose target open() would follow
@@ -85,14 +135,9 @@ class Session_class:
                     if real_filepath != repo_real and not real_filepath.startswith(repo_real + os.sep):
                         continue
 
-                    # Collect every format that claims this file by extension
-                    candidates = [ri for ri in rule_instances if ri.get_rule_files(file)]
-                    if not candidates:
-                        continue
-
                     # When multiple formats share an extension (e.g. ATR + Sigma on .yml),
                     # use each format's detect() method on the file content to pick the
-                    # right one.  Falls back to the first candidate if none self-identify.
+                    # right one. Falls back to the first candidate if none self-identify.
                     if len(candidates) > 1:
                         try:
                             with open(filepath, 'r', encoding='utf-8', errors='replace') as _fh:
@@ -105,14 +150,6 @@ class Session_class:
                     else:
                         rule_instance = candidates[0]
 
-                    format_name = rule_instance.format
-                    if format_name not in self.count_per_format:
-                        self.count_per_format[format_name] = {
-                            "bad_rule": 0,
-                            "skipped": 0,
-                            "imported": 0
-                        }
-
                     # Read + split into individual rule texts now (once) so each queue
                     # item is one RULE, not one file — a file can hold dozens of rules,
                     # and progress must reflect rules actually processed, not files
@@ -123,36 +160,81 @@ class Session_class:
                     except Exception:
                         continue
 
-                    rel_path = os.path.relpath(filepath, self.repo_dir)
-                    for raw_text in extracted_rules:
-                        job_index += 1
-                        self.jobs.put((job_index, rel_path, rule_instance, raw_text))
+                    if not extracted_rules:
+                        continue
 
-        self.total = job_index
+                    with job_lock:
+                        base = job_index[0]
+                        job_index[0] += len(extracted_rules)
+                        # Surface progress live during the scan itself — a big
+                        # repo can take a while just to walk/parse, and
+                        # without this the loading page has nothing to show
+                        # but a spinner for that whole time. self.total is
+                        # updated as we go (not only at the end) so status()
+                        # can report a running "found so far" count while
+                        # phase == 'scanning'.
+                        self.total = job_index[0]
 
-    def start(self):
-        self._populate_jobs()
-        app_obj = current_app._get_current_object()
-        user_obj = current_user._get_current_object()
+                    for offset, raw_text in enumerate(extracted_rules, start=1):
+                        self.jobs.put((base + offset, rel_path, rule_instance, raw_text))
 
+                    self._log_event("found", rel_path, rule_instance.format, count=len(extracted_rules))
+                finally:
+                    file_queue.task_done()
+
+        workers = []
         for _ in range(self.thread_count):
-            worker = Thread(target=self.process, args=[app_obj, user_obj])
-            worker.daemon = True
-            worker.start()
-            self.threads.append(worker)
+            t = Thread(target=scan_worker)
+            t.daemon = True
+            t.start()
+            workers.append(t)
+
+        for root, dirs, files in os.walk(self.repo_dir, followlinks=False):
+            # Skip hidden directories and symlinked directories (a symlinked
+            # directory could otherwise be walked into via its resolved target)
+            dirs[:] = [
+                d for d in dirs
+                if not d.startswith(('.', '_'))
+                and not os.path.islink(os.path.join(root, d))
+            ]
+            for file in files:
+                if file.startswith(('.', '_')):
+                    continue
+
+                # Cheap extension match first — skip handing off (and later,
+                # the islink/realpath resolution) for the files that make up
+                # the bulk of any repo but are never rule candidates anyway.
+                candidates = [ri for ri in rule_instances if ri.get_rule_files(file)]
+                if not candidates:
+                    continue
+
+                filepath = os.path.join(root, file)
+                rel_path = os.path.relpath(filepath, self.repo_dir)
+                file_queue.put((filepath, rel_path, candidates))
+
+        for _ in workers:
+            file_queue.put(None)
+        for t in workers:
+            t.join()
 
     def run_sync(self, app_obj, user: User):
         """Blocking single-threaded import — for use inside a BackgroundJob.
         No daemon threads and no Flask request context needed: unlike start(),
         the acting user is passed explicitly instead of read from
         flask_login.current_user (which is unavailable in a worker thread)."""
-        self.thread_count = 1  # process() self-finalizes (calls save_info()) after 1 worker
-        self._populate_jobs()
+        self.thread_count = 1  # process() self-finalizes (calls save_info()) after 1 worker; _scan_repo also uses this as its scan-worker count
+        rule_instances = self._build_rule_instances()
+        if os.path.exists(self.repo_dir):
+            self._scan_repo(rule_instances)
+        self.phase = 'importing'
         self.process(app_obj, user)
         return self.imported, self.skipped, self.bad_rules, self.total
 
     def status(self):
-        if self.jobs.empty():
+        # Only treat an empty queue as "nothing left to do" once scanning has
+        # actually populated it — during 'preparing'/'scanning' the queue is
+        # empty simply because it hasn't been filled yet.
+        if self.phase == 'importing' and self.jobs.empty():
             self.stop()
 
         total = self.total
@@ -164,6 +246,8 @@ class Session_class:
 
         return {
             'id': self.uuid,
+            'phase': self.phase,
+            'error': self.error,
             'total': total,
             'complete': complete,
             'remaining': remaining,
@@ -183,6 +267,7 @@ class Session_class:
             if self._finalized:
                 return
             self._finalized = True
+            self.phase = 'done'
         try:
             if app_obj:
                 with app_obj.app_context():
@@ -264,6 +349,7 @@ class Session_class:
             is_last = (self._workers_done >= self.thread_count and not self._finalized)
             if is_last:
                 self._finalized = True
+                self.phase = 'done'
 
         if is_last:
             with loc_app.app_context():
