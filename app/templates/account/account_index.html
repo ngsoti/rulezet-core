@@ -199,7 +199,7 @@
                     <img src="{{ current_user.get_avatar_url() }}" class="ud-profile-avatar" alt="{{ current_user.get_username() }}">
                 {% else %}
                     <div class="ud-profile-avatar ud-profile-avatar--initials">
-                        {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
+                        [[ user.first_name[0] ]][[ user.last_name[0] ]]
                     </div>
                 {% endif %}
                 {% if current_user.is_connected %}
@@ -210,7 +210,7 @@
             <!-- Identity -->
             <div class="ud-profile-identity">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <h2 class="ud-profile-name mb-0">{{ current_user.get_username() }}</h2>
+                    <h2 class="ud-profile-name mb-0">[[ user.username ]]</h2>
                     {% if current_user.is_admin() %}
                     <span class="ud-profile-badge ud-profile-badge--admin">
                         <i class="fas fa-crown me-1"></i>Admin
@@ -223,7 +223,7 @@
                     {% endif %}
                 </div>
                 {% if current_user.bio %}
-                <p class="ud-profile-bio">{{ current_user.bio }}</p>
+                <p class="ud-profile-bio">[[ user.bio ]]</p>
                 {% endif %}
 
                 <!-- Social links -->
@@ -231,22 +231,22 @@
                 <div class="ud-profile-links">
                     {% if current_user.location %}
                     <span class="ud-profile-link">
-                        <i class="fas fa-location-dot"></i>{{ current_user.location }}
+                        <i class="fas fa-location-dot"></i>[[ user.location ]]
                     </span>
                     {% endif %}
                     {% if current_user.website_url %}
                     <a href="{{ current_user.website_url }}" target="_blank" rel="noopener" class="ud-profile-link ud-profile-link--clickable">
-                        <i class="fas fa-globe"></i>{{ current_user.website_url }}
+                        <i class="fas fa-globe"></i>[[ user.website_url ]]
                     </a>
                     {% endif %}
                     {% if current_user.github_url %}
                     <a href="{{ current_user.github_url }}" target="_blank" rel="noopener" class="ud-profile-link ud-profile-link--clickable">
-                        <i class="fab fa-github"></i>{{ current_user.github_url }}
+                        <i class="fab fa-github"></i>[[ user.github_url ]]
                     </a>
                     {% endif %}
                     {% if current_user.twitter_url %}
                     <a href="{{ current_user.twitter_url }}" target="_blank" rel="noopener" class="ud-profile-link ud-profile-link--clickable">
-                        <i class="fab fa-x-twitter"></i>{{ current_user.twitter_url }}
+                        <i class="fab fa-x-twitter"></i>[[ user.twitter_url ]]
                     </a>
                     {% endif %}
                 </div>
@@ -302,7 +302,7 @@
                 </div>
                 <div class="ud-info-cell-body">
                     <div class="ud-info-cell-label">First Name</div>
-                    <div class="ud-info-cell-value">{{ current_user.first_name }}</div>
+                    <div class="ud-info-cell-value">[[ user.first_name ]]</div>
                 </div>
             </div>
             <div class="ud-info-cell">
@@ -311,7 +311,7 @@
                 </div>
                 <div class="ud-info-cell-body">
                     <div class="ud-info-cell-label">Last Name</div>
-                    <div class="ud-info-cell-value">{{ current_user.last_name }}</div>
+                    <div class="ud-info-cell-value">[[ user.last_name ]]</div>
                 </div>
             </div>
             <div class="ud-info-cell">
@@ -320,7 +320,7 @@
                 </div>
                 <div class="ud-info-cell-body">
                     <div class="ud-info-cell-label">Username</div>
-                    <div class="ud-info-cell-value">{{ current_user.username if current_user.username else '—' }}</div>
+                    <div class="ud-info-cell-value">[[ user.username || '—' ]]</div>
                 </div>
             </div>
             <div class="ud-info-cell">
@@ -398,7 +398,7 @@
                 </div>
                 <div class="ud-info-cell-body">
                     <div class="ud-info-cell-label">Email Address</div>
-                    <div class="ud-info-cell-value">{{ current_user.email }}</div>
+                    <div class="ud-info-cell-value">[[ user.email ]]</div>
                 </div>
             </div>
             {% if current_user.location %}
@@ -408,7 +408,7 @@
                 </div>
                 <div class="ud-info-cell-body">
                     <div class="ud-info-cell-label">Location</div>
-                    <div class="ud-info-cell-value">{{ current_user.location }}</div>
+                    <div class="ud-info-cell-value">[[ user.location ]]</div>
                 </div>
             </div>
             {% endif %}
@@ -617,6 +617,7 @@
         delimiters: ['[[', ']]'],
         components: { 'user-chip': UserChip, 'comments-hub': CommentsHub },
         setup() {
+            const user            = ref({{ current_user.to_json() | tojson }})
             const activeTab      = ref('info')
             const loadingFollow  = ref(false)
             const followLoaded   = ref(false)
@@ -689,6 +690,7 @@
 
             return {
                 message_list,
+                user,
                 activeTab, loadingFollow,
                 followingList, followersList,
                 followView, followSearch,

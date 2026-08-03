@@ -30,18 +30,18 @@
                 <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
                     <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
                     {% if current_user.is_admin() %}<li class="breadcrumb-item"><a href="/account/admin/all_users" class="text-decoration-none text-muted">Users</a></li>{% endif %}
-                    <li class="breadcrumb-item active text-muted" aria-current="page">{{ user.username }}</li>
+                    <li class="breadcrumb-item active text-muted" aria-current="page">[[ user.username ]]</li>
                 </ol>
             </nav>
             <div class="d-flex align-items-center gap-3 mb-3">
                 <div class="banner-icon"><i class="fa-solid fa-user"></i></div>
                 <div>
-                    <h2 class="fw-bold mb-1">{{ user.first_name }} {{ user.last_name }}</h2>
+                    <h2 class="fw-bold mb-1">[[ user.first_name ]] [[ user.last_name ]]</h2>
                     <div class="banner-accent"></div>
                 </div>
             </div>
             <p class="text-muted mb-0" style="max-width: 600px; font-size: 0.95rem;">
-                Profile and activity overview for <strong>@{{ user.username }}</strong>{% if user.location %} · <i class="fas fa-location-dot me-1"></i>{{ user.location }}{% endif %}
+                Profile and activity overview for <strong>@[[ user.username ]]</strong>{% if user.location %} · <i class="fas fa-location-dot me-1"></i>[[ user.location ]]{% endif %}
             </p>
         </div>
 
@@ -77,7 +77,7 @@
                                 <img src="{{ user.profile_picture }}" class="ud-profile-avatar" alt="{{ user.username }}">
                             {% else %}
                                 <div class="ud-profile-avatar ud-profile-avatar--initials">
-                                    {{ user.first_name[0] }}{{ user.last_name[0] }}
+                                    [[ user.first_name[0] ]][[ user.last_name[0] ]]
                                 </div>
                             {% endif %}
                             <span class="ud-profile-online-dot" title="Status"></span>
@@ -86,7 +86,7 @@
                         <!-- Identity -->
                         <div class="ud-profile-identity">
                             <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <h2 class="ud-profile-name mb-0">{{ user.first_name }} {{ user.last_name }}</h2>
+                                <h2 class="ud-profile-name mb-0">[[ user.first_name ]] [[ user.last_name ]]</h2>
                                 {% if user.is_admin %}
                                 <span class="ud-profile-badge ud-profile-badge--admin">
                                     <i class="fas fa-crown me-1"></i>Admin
@@ -99,10 +99,10 @@
                                 {% endif %}
                             </div>
                             {% if user.username %}
-                            <div class="ud-profile-username">@{{ user.username }}</div>
+                            <div class="ud-profile-username">@[[ user.username ]]</div>
                             {% endif %}
                             {% if user.bio %}
-                            <p class="ud-profile-bio">{{ user.bio }}</p>
+                            <p class="ud-profile-bio">[[ user.bio ]]</p>
                             {% endif %}
 
                             <!-- Social links -->
@@ -110,22 +110,22 @@
                             <div class="ud-profile-links">
                                 {% if user.location %}
                                 <span class="ud-profile-link">
-                                    <i class="fas fa-location-dot"></i>{{ user.location }}
+                                    <i class="fas fa-location-dot"></i>[[ user.location ]]
                                 </span>
                                 {% endif %}
                                 {% if user.website_url %}
                                 <a href="{{ user.website_url }}" target="_blank" rel="noopener" class="ud-profile-link ud-profile-link--clickable">
-                                    <i class="fas fa-globe"></i>{{ user.website_url }}
+                                    <i class="fas fa-globe"></i>[[ user.website_url ]]
                                 </a>
                                 {% endif %}
                                 {% if user.github_url %}
                                 <a href="{{ user.github_url }}" target="_blank" rel="noopener" class="ud-profile-link ud-profile-link--clickable">
-                                    <i class="fab fa-github"></i>{{ user.github_url }}
+                                    <i class="fab fa-github"></i>[[ user.github_url ]]
                                 </a>
                                 {% endif %}
                                 {% if user.twitter_url %}
                                 <a href="{{ user.twitter_url }}" target="_blank" rel="noopener" class="ud-profile-link ud-profile-link--clickable">
-                                    <i class="fab fa-x-twitter"></i>{{ user.twitter_url }}
+                                    <i class="fab fa-x-twitter"></i>[[ user.twitter_url ]]
                                 </a>
                                 {% endif %}
                             </div>
@@ -175,7 +175,7 @@
                         </div>
                         <div class="ud-info-cell-body">
                             <div class="ud-info-cell-label">First Name</div>
-                            <div class="ud-info-cell-value">{{ user.first_name }}</div>
+                            <div class="ud-info-cell-value">[[ user.first_name ]]</div>
                         </div>
                     </div>
                     <div class="ud-info-cell">
@@ -184,7 +184,7 @@
                         </div>
                         <div class="ud-info-cell-body">
                             <div class="ud-info-cell-label">Last Name</div>
-                            <div class="ud-info-cell-value">{{ user.last_name }}</div>
+                            <div class="ud-info-cell-value">[[ user.last_name ]]</div>
                         </div>
                     </div>
                     <div class="ud-info-cell">
@@ -193,7 +193,7 @@
                         </div>
                         <div class="ud-info-cell-body">
                             <div class="ud-info-cell-label">Username</div>
-                            <div class="ud-info-cell-value">{{ user.username if user.username else '—' }}</div>
+                            <div class="ud-info-cell-value">[[ user.username || '—' ]]</div>
                         </div>
                     </div>
                     <div class="ud-info-cell">
@@ -268,7 +268,7 @@
                         </div>
                         <div class="ud-info-cell-body">
                             <div class="ud-info-cell-label">Location</div>
-                            <div class="ud-info-cell-value">{{ user.location }}</div>
+                            <div class="ud-info-cell-value">[[ user.location ]]</div>
                         </div>
                     </div>
                     {% endif %}
@@ -299,7 +299,7 @@
                                 @click="toggleRevealField('email')"
                                 :title="adminBlurEnabled && !revealedFields.has('email') ? 'Click to reveal' : ''"
                                 :style="adminBlurEnabled && !revealedFields.has('email') ? 'cursor:pointer;user-select:none' : ''">
-                                {{ user.email }}
+                                [[ user.email ]]
                             </div>
                         </div>
                     </div>
@@ -402,6 +402,7 @@
         },
         setup() {
             const isLoading = ref(false)
+            const user = ref({{ user | tojson }})
 
             /* ── Admin blur state ── */
             const adminBlurEnabled = ref(true)
@@ -424,6 +425,7 @@
             return {
                 message_list,
                 isLoading,
+                user,
                 adminBlurEnabled,
                 revealedFields,
                 toggleAdminBlur,
