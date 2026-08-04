@@ -15,7 +15,7 @@ from ...core.db_class.db import FormatRule, Rule
 class AddNewRuleForm(FlaskForm):
     format = SelectField('Format', choices=[], validators=[InputRequired()])
     # autres champs ...
-    original_uuid =  StringField('Original_uuid')
+    original_uuid =  StringField('Original UUID')
     title = StringField('Title', validators=[InputRequired()])
     license = SelectField('License', choices=[], validators=[DataRequired()])
     description = TextAreaField('Description')
@@ -93,7 +93,7 @@ class EditRuleForm(FlaskForm):
     title = StringField('Title', validators=[InputRequired()])
     format = SelectField('Format', choices=[], validators=[InputRequired()])
     license = SelectField('License', choices=[], validators=[InputRequired()])
-    original_uuid =  StringField('Original_uuid')
+    original_uuid =  StringField('Original UUID')
     description = TextAreaField('Description')
     source = StringField('Source')
     version = StringField('Version', validators=[InputRequired()])

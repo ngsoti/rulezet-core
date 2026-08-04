@@ -2,83 +2,8 @@
    Create Rule Page — mirrors detail_rule.css conventions
    ========================================================================= */
 
-/* ── Tabs ── */
-#createTabs {
-    background: var(--light-bg-color);
-    padding: 6px 6px 0 6px;
-    gap: 4px;
-    border-bottom: none !important;
-}
-
-#createTabs .nav-link {
-    color: var(--subtle-text-color);
-    border: none;
-    border-radius: 8px 8px 0 0;
-    padding: 8px 16px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    position: relative;
-    transition: color 0.25s ease, background 0.25s ease;
-    background: transparent;
-}
-
-#createTabs .nav-link::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%) scaleX(0);
-    width: 80%;
-    height: 2px;
-    background: #0d6efd;
-    border-radius: 2px 2px 0 0;
-    transition: none;
-}
-
-#createTabs .nav-link:hover {
-    color: var(--text-color);
-    background: var(--card-bg-color);
-}
-
-#createTabs .nav-link:hover::after {
-    transform: translateX(-50%) scaleX(0.5);
-}
-
-#createTabs .nav-link.active {
-    color: #0d6efd;
-    background: var(--card-bg-color);
-    font-weight: 700;
-}
-
-#createTabs .nav-link.active::after {
-    transform: translateX(-50%) scaleX(1);
-}
-
-#createTabs .nav-link i {
-    font-size: 11px;
-    margin-right: 5px;
-    opacity: 0.8;
-}
-
-/* ── Tab content ── */
-#createTabsContent {
-    border-top: 2px solid var(--border-color);
-    background-color: var(--bg-color);
-}
-
-#createTabsContent .tab-pane {
-    background-color: var(--code-bg-color);
-}
-
-#createTabsContent .tab-pane.fade {
-    transition: opacity 0.05s ease;
-}
-
-#createTabsContent .tab-pane.fade:not(.show) {
-    opacity: 0;
-    background-color: var(--code-bg-color);
-}
+/* Tabs use the global .dr-nav / .dr-nav__item pill component (core.css) —
+   nothing page-specific needed here. */
 
 /* ── Card background (matches detail_rule light/dark) ── */
 #createTabsContent .card {
@@ -225,14 +150,72 @@
     color: var(--border-color);
 }
 
-/* ── Tab sub-header icon ── */
-.tab-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+
+/* ── ZIP upload dropzone ── */
+.rf-dropzone {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: .95rem;
-    flex-shrink: 0;
+    text-align: center;
+    gap: .35rem;
+    padding: 2.5rem 1.5rem;
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    background: var(--light-bg-color);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
 }
+.rf-dropzone:hover,
+.rf-dropzone--drag {
+    border-color: #0d6efd;
+    background: rgba(13, 110, 253, .06);
+}
+.rf-dropzone--filled {
+    cursor: default;
+    border-style: solid;
+    border-color: rgba(13, 110, 253, .3);
+}
+.rf-dropzone__icon {
+    font-size: 2rem;
+    color: var(--subtle-text-color);
+    margin-bottom: .25rem;
+}
+.rf-dropzone--drag .rf-dropzone__icon,
+.rf-dropzone__icon--filled {
+    color: #0d6efd;
+}
+.rf-dropzone__text {
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+}
+.rf-dropzone__meta {
+    font-size: .76rem;
+    color: var(--subtle-text-color);
+    margin: 0;
+}
+
+/* ── "Format & Validate" JSON button ── */
+.rf-format-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .3rem .8rem;
+    font-size: .74rem;
+    font-weight: 600;
+    color: var(--subtle-text-color);
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    transition: color .15s, border-color .15s, background .15s, box-shadow .15s;
+}
+.rf-format-btn:hover {
+    color: #0d6efd;
+    border-color: rgba(13, 110, 253, .4);
+    background: rgba(13, 110, 253, .05);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, .08);
+}
+.rf-format-btn:active { transform: translateY(1px); }
+.rf-format-btn i { font-size: .72rem; }

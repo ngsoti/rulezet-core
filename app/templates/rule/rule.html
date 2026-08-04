@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 {% block head %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/rule/base/rule.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/base/detail_rule_section_card.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/smart-editor.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/license-input.css') }}">
 <style>
 .rf-label-hint {
     display: inline-flex;
@@ -117,42 +119,42 @@
 
 
 
- <ul class="nav nav-underline justify-content-center w-100 mb-3" id="createTabs" role="tablist">                                                                                       
-      <li class="nav-item flex-fill text-center">                                                                                                                                       
-        <a class="nav-link active" id="chap1-tab" data-bs-toggle="tab" href="#chap1-pane" role="tab"                                                                                    
-          aria-controls="chap1-pane" aria-selected="true" style="color: var(--text-color);">                                                                                            
-          <i class="fas fa-pen-to-square"></i> Manual                                                                                                                                   
-        </a>                                                                                                                                                                            
-      </li>                                                                                                                                                                             
-      <li class="nav-item flex-fill text-center">                                                                                                                                       
-        <a class="nav-link" id="chap2-tab" data-bs-toggle="tab" href="#chap2-pane" role="tab"                                                                                           
-          aria-controls="chap2-pane" aria-selected="false" style="color: var(--text-color);">                                                                                           
-          <i class="fas fa-wand-magic-sparkles"></i> Parse                                                                                                                              
-        </a>                                                                                                                                                                            
-      </li>                                                                                                                                                                             
-      <li class="nav-item flex-fill text-center">                                                                                                                                       
-        <a class="nav-link" id="chap3-tab" data-bs-toggle="tab" href="#chap3-pane" role="tab"                                                                                           
-          aria-controls="chap3-pane" aria-selected="false" style="color: var(--text-color);">                                                                                           
-          <i class="fab fa-github"></i> GitHub                                                                                                                                          
-        </a>                                                                                                                                                                            
-      </li>                                                                                                                                                                             
-      <li class="nav-item flex-fill text-center">                                                                                                                                       
-        <a class="nav-link" id="chap4-tab" data-bs-toggle="tab" href="#chap4-pane" role="tab"                                                                                           
-          aria-controls="chap4-pane" aria-selected="false" style="color: var(--text-color);">                                                                                           
-          <i class="fas fa-file-zipper"></i> From File                                                                                                                                  
-        </a>                                                                                                                                                                            
-      </li>                                                                                                                                                                             
-    </ul>
+  <nav class="dr-nav justify-content-center mb-3">
+    <a href="#" class="dr-nav__item flex-fill justify-content-center" :class="activeTab === 'manual' ? 'active' : ''" @click.prevent="activeTab = 'manual'">
+      <i class="fas fa-pen-to-square"></i><span>Manual</span>
+    </a>
+    <a href="#" class="dr-nav__item flex-fill justify-content-center" :class="activeTab === 'parse' ? 'active' : ''" @click.prevent="activeTab = 'parse'">
+      <i class="fas fa-wand-magic-sparkles"></i><span>Parse</span>
+    </a>
+    <a href="#" class="dr-nav__item flex-fill justify-content-center" :class="activeTab === 'github' ? 'active' : ''" @click.prevent="activeTab = 'github'">
+      <i class="fab fa-github"></i><span>GitHub</span>
+    </a>
+    <a href="#" class="dr-nav__item flex-fill justify-content-center" :class="activeTab === 'zip' ? 'active' : ''" @click.prevent="activeTab = 'zip'">
+      <i class="fas fa-file-zipper"></i><span>From File</span>
+    </a>
+    <a href="#" class="dr-nav__item flex-fill justify-content-center" :class="activeTab === 'json' ? 'active' : ''" @click.prevent="activeTab = 'json'">
+      <i class="fas fa-code"></i><span>From JSON</span>
+    </a>
+  </nav>
   <!-- ═══════════════════════════ TAB CONTENT ═══════════════════════════ -->
-  <div class="tab-content" id="createTabsContent">
+  <div id="createTabsContent">
 
     <!-- ── Tab 1 : Manual Submission ── -->
-    <div class="tab-pane fade show active" id="chap1-pane" role="tabpanel" aria-labelledby="chap1-tab">
+    <div v-show="activeTab === 'manual'">
       <div class="card border-0 card_detail border-top shadow-lg mb-4" style="border-radius: 12px;">
         <div class="card-watermark-detail"><i class="fas fa-pen-to-square"></i></div>
         <div class="card-body p-4" style="position: relative; z-index: 1;">
         <form action="" method="post" id="form">
           {{ form.hidden_tag() }}
+
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <div class="h-card__accent"></div>
+            <h6 class="mb-0 fw-bold text-uppercase" style="font-size:.78rem;letter-spacing:.04em;color:var(--text-color);">
+              <i class="fas fa-pen-to-square me-1" style="color:#0d6efd;"></i>Manual Submission
+            </h6>
+          </div>
+          <p class="text-muted mb-3" style="font-size:.83rem;margin-left:1.3rem;">Fill in the rule's metadata and paste its content — every field is validated before it's saved.</p>
+          <hr style="border-color:var(--border-color);margin:0 0 1rem;">
 
           <!-- Trash conflict warning -->
           <div v-if="trashConflictTitle" class="alert alert-warning border-warning rounded-3 d-flex align-items-start gap-3 mb-4" role="alert" style="border-left:4px solid #ffc107 !important;">
@@ -185,10 +187,10 @@
             </div>
             <div class="col-md-6">
               <div class="d-flex align-items-center gap-1 mb-1">
-                <label class="form-label-styled mb-0" for="format">{{ form.format.label.text }}<span class="req-badge">required</span></label>
+                <label class="form-label-styled mb-0" for="manual-format-select">{{ form.format.label.text }}<span class="req-badge">required</span></label>
                 <i class="rf-label-hint" data-tip="Detection format — defines which parser validates the rule content.">?</i>
               </div>
-              <select v-model="manualFormat" name="format" class="form-select">
+              <select v-model="manualFormat" name="format" id="manual-format-select" class="form-select">
                 <option v-for="fmt in rules_formats" :key="fmt.id" :value="fmt.name">[[ fmt.name ]]</option>
               </select>
               {% if form.format.errors %}
@@ -201,11 +203,8 @@
           <p class="form-section-title"><i class="fas fa-tags me-1"></i>Metadata</p>
           <div class="row g-3 mb-3">
             <div class="col-md-4">
-              <div class="d-flex align-items-center gap-1 mb-1">
-                <label class="form-label-styled mb-0" for="license-select">{{ form.license.label.text }}<span class="opt-badge">optional</span></label>
-                <i class="rf-label-hint" data-tip="Legal license for this rule (e.g. MIT, GPL-3.0).">?</i>
-              </div>
-              {{ form.license(class_="form-select", id="license-select") }}
+              <license-input v-model="manualLicense" required></license-input>
+              <input type="hidden" name="license" :value="manualLicense">
             </div>
             <div class="col-md-4">
               <div class="d-flex align-items-center gap-1 mb-1">
@@ -303,22 +302,20 @@
     </div>
 
     <!-- ── Tab 2 : Parse a Rule ── -->
-    <div class="tab-pane fade" id="chap2-pane" role="tabpanel" aria-labelledby="chap2-tab">
+    <div v-show="activeTab === 'parse'">
       <div class="card border-0 card_detail border-top shadow-lg mb-4" style="border-radius: 12px;">
         <div class="card-watermark-detail"><i class="fas fa-wand-magic-sparkles"></i></div>
         <div class="card-body p-4" style="position: relative; z-index: 1;">
         <div class="d-flex align-items-center gap-2 mb-1">
-          <div class="tab-icon" style="background:rgba(16,185,129,.12);color:#10b981;">
-            <i class="fas fa-wand-magic-sparkles"></i>
-          </div>
-          <div>
-            <h6 class="mb-0 fw-bold" style="color:var(--text-color);">Parse &amp; Auto-fill</h6>
-            <small style="color:var(--muted-text-color,#6c757d);">Paste a raw rule and Rulezet will extract its metadata automatically.</small>
-          </div>
+          <div class="h-card__accent h-card__accent--green"></div>
+          <h6 class="mb-0 fw-bold text-uppercase" style="font-size:.78rem;letter-spacing:.04em;color:var(--text-color);">
+            <i class="fas fa-wand-magic-sparkles me-1" style="color:#198754;"></i>Parse &amp; Auto-fill
+          </h6>
         </div>
-        <hr style="border-color:var(--border-color);margin:1rem 0;">
+        <p class="text-muted mb-3" style="font-size:.83rem;margin-left:1.3rem;">Paste a raw rule and Rulezet will extract its metadata automatically.</p>
+        <hr style="border-color:var(--border-color);margin:0 0 1rem;">
 
-        <form method="POST" action="{{ url_for('rule.parse_rule') }}" class="d-flex flex-column" id="github-form" novalidate>
+        <form method="POST" action="{{ url_for('rule.parse_rule') }}" class="d-flex flex-column" id="parse-form" novalidate @submit="saveParseDraft">
 
           <div id="flash-messages" class="mt-2">
             <div v-for="(fm, fmIdx) in flashMessages" :key="fmIdx" :class="`alert alert-${fm.category} alert-dismissible fade show`" role="alert">
@@ -368,20 +365,18 @@
     </div>
 
     <!-- ── Tab 3 : GitHub URL ── -->
-    <div class="tab-pane fade" id="chap3-pane" role="tabpanel" aria-labelledby="chap3-tab">
+    <div v-show="activeTab === 'github'">
       <div class="card border-0 card_detail border-top shadow-lg mb-4" style="border-radius: 12px;">
         <div class="card-watermark-detail"><i class="fab fa-github"></i></div>
         <div class="card-body p-4" style="position: relative; z-index: 1;">
         <div class="d-flex align-items-center gap-2 mb-1">
-          <div class="tab-icon" style="background:rgba(0,0,0,.07);color:var(--text-color);">
-            <i class="fab fa-github"></i>
-          </div>
-          <div>
-            <h6 class="mb-0 fw-bold" style="color:var(--text-color);">Import from GitHub</h6>
-            <small style="color:var(--muted-text-color,#6c757d);">Clone a repository and bulk-import all supported detection rules.</small>
-          </div>
+          <div class="h-card__accent"></div>
+          <h6 class="mb-0 fw-bold text-uppercase" style="font-size:.78rem;letter-spacing:.04em;color:var(--text-color);">
+            <i class="fab fa-github me-1" style="color:#0d6efd;"></i>Import from GitHub
+          </h6>
         </div>
-        <hr style="border-color:var(--border-color);margin:1rem 0;">
+        <p class="text-muted mb-3" style="font-size:.83rem;margin-left:1.3rem;">Clone a repository and bulk-import all supported detection rules.</p>
+        <hr style="border-color:var(--border-color);margin:0 0 1rem;">
 
         <!-- Info callout -->
         <div class="d-flex align-items-start gap-2 p-3 mb-4 rounded-3" style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);">
@@ -446,14 +441,7 @@
           </div>
 
           <div class="mb-4">
-            <div class="d-flex align-items-center gap-1 mb-1">
-              <label class="form-label-styled mb-0" for="license-select">License<span class="opt-badge">optional</span></label>
-              <i class="rf-label-hint" data-tip="Applied to every imported rule. Leave blank if not applicable.">?</i>
-            </div>
-            <select id="license-select" name="license" class="form-select" v-model="selectedLicense">
-              <option disabled value="">Select a license…</option>
-              <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
-            </select>
+            <license-input v-model="selectedLicense"></license-input>
           </div>
 
           <!-- Inline error -->
@@ -517,14 +505,7 @@
           </div>
 
           <div class="mb-3">
-            <div class="d-flex align-items-center gap-1 mb-1">
-              <label class="form-label-styled mb-0" for="proposal-license-select">License<span class="opt-badge">optional</span></label>
-              <i class="rf-label-hint" data-tip="Applied to every imported rule if accepted. Leave blank if not applicable.">?</i>
-            </div>
-            <select id="proposal-license-select" name="proposal-license" class="form-select" v-model="selectedLicense">
-              <option disabled value="">Select a license…</option>
-              <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
-            </select>
+            <license-input v-model="selectedLicense"></license-input>
           </div>
 
           <div class="mb-4">
@@ -572,20 +553,18 @@
     </div>
 
     <!-- ── Tab 4 : From File (ZIP) ── -->
-    <div class="tab-pane fade" id="chap4-pane" role="tabpanel" aria-labelledby="chap4-tab">
+    <div v-show="activeTab === 'zip'">
       <div class="card border-0 card_detail border-top shadow-lg mb-4" style="border-radius: 12px;">
         <div class="card-watermark-detail"><i class="fas fa-file-zipper"></i></div>
         <div class="card-body p-4" style="position: relative; z-index: 1;">
         <div class="d-flex align-items-center gap-2 mb-1">
-          <div class="tab-icon" style="background:rgba(245,158,11,.12);color:#f59e0b;">
-            <i class="fas fa-file-zipper"></i>
-          </div>
-          <div>
-            <h6 class="mb-0 fw-bold" style="color:var(--text-color);">Import from ZIP Archive</h6>
-            <small style="color:var(--muted-text-color,#6c757d);">Upload a ZIP containing a folder of detection rule files.</small>
-          </div>
+          <div class="h-card__accent h-card__accent--orange"></div>
+          <h6 class="mb-0 fw-bold text-uppercase" style="font-size:.78rem;letter-spacing:.04em;color:var(--text-color);">
+            <i class="fas fa-file-zipper me-1" style="color:#fd7e14;"></i>Import from ZIP Archive
+          </h6>
         </div>
-        <hr style="border-color:var(--border-color);margin:1rem 0;">
+        <p class="text-muted mb-3" style="font-size:.83rem;margin-left:1.3rem;">Upload a ZIP containing a folder of detection rule files.</p>
+        <hr style="border-color:var(--border-color);margin:0 0 1rem;">
 
         <!-- Info callout -->
         <div class="d-flex align-items-start gap-2 p-3 mb-4 rounded-3" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);">
@@ -600,23 +579,34 @@
         <div>
           <div class="mb-3">
             <div class="d-flex align-items-center gap-1 mb-1">
-              <label class="form-label-styled mb-0" for="zipfile">ZIP Archive<span class="req-badge">required</span></label>
+              <label class="form-label-styled mb-0">ZIP Archive<span class="req-badge">required</span></label>
               <i class="rf-label-hint" data-tip="Only .zip files are accepted. Max recommended size: 50 MB.">?</i>
             </div>
-            <input type="file" name="zipfile" id="zipfile" class="form-control"
-              accept=".zip" @change="fileZip = $event.target.files[0]">
-            <div id="zipfile-error" class="form-hint" style="color:#dc3545;"></div>
+            <div class="rf-dropzone" :class="{ 'rf-dropzone--drag': isDraggingZip, 'rf-dropzone--filled': fileZip }"
+                 @dragover.prevent="isDraggingZip = true"
+                 @dragleave.prevent="isDraggingZip = false"
+                 @drop.prevent="onZipDrop"
+                 @click="$refs.zipFileInput.click()">
+              <input type="file" name="zipfile" id="zipfile" ref="zipFileInput" accept=".zip"
+                     style="display:none" @change="onZipFileChange">
+              <template v-if="!fileZip">
+                <i class="fas fa-cloud-arrow-up rf-dropzone__icon"></i>
+                <p class="rf-dropzone__text">Drag &amp; drop your <strong>.zip</strong> here, or click to browse</p>
+              </template>
+              <template v-else>
+                <i class="fas fa-file-zipper rf-dropzone__icon rf-dropzone__icon--filled"></i>
+                <p class="rf-dropzone__text mb-1">[[ fileZip.name ]]</p>
+                <p class="rf-dropzone__meta">[[ formatFileSize(fileZip.size) ]]</p>
+                <button type="button" class="btn btn-sm btn-outline-danger mt-2" @click.stop="clearZipFile">
+                  <i class="fas fa-xmark me-1"></i>Remove
+                </button>
+              </template>
+            </div>
+            <div v-if="zipFileError" class="form-hint" style="color:#dc3545;">[[ zipFileError ]]</div>
           </div>
 
           <div class="mb-4">
-            <div class="d-flex align-items-center gap-1 mb-1">
-              <label class="form-label-styled mb-0" for="license-select-zip">License<span class="opt-badge">optional</span></label>
-              <i class="rf-label-hint" data-tip="Applied to every rule extracted from the archive.">?</i>
-            </div>
-            <select id="license-select-zip" name="license" class="form-select" v-model="selectedLicenseZip">
-              <option disabled value="">Select a license…</option>
-              <option v-for="item in license" :key="item" :value="item">[[ item ]]</option>
-            </select>
+            <license-input v-model="selectedLicenseZip"></license-input>
           </div>
 
           <div class="d-flex justify-content-end">
@@ -640,6 +630,68 @@
       </div>
     </div>
 
+    <!-- ── Tab 5 : From JSON ── -->
+    <div v-show="activeTab === 'json'">
+      <div class="card border-0 card_detail border-top shadow-lg mb-4" style="border-radius: 12px;">
+        <div class="card-watermark-detail"><i class="fas fa-code"></i></div>
+        <div class="card-body p-4" style="position: relative; z-index: 1;">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <div class="h-card__accent"></div>
+          <h6 class="mb-0 fw-bold text-uppercase" style="font-size:.78rem;letter-spacing:.04em;color:var(--text-color);">
+            <i class="fas fa-code me-1" style="color:#0d6efd;"></i>Import from JSON
+          </h6>
+        </div>
+        <p class="text-muted mb-3" style="font-size:.83rem;margin-left:1.3rem;">Paste a rule's JSON export (from the rule detail page's Download menu) to recreate it here — only the rule's own fields are read, it's saved under your account.</p>
+        <hr style="border-color:var(--border-color);margin:0 0 1rem;">
+
+        <form method="POST" action="{{ url_for('rule.import_rule_from_json') }}" class="d-flex flex-column" id="json-form" novalidate @submit="saveJsonDraft">
+
+          <div id="json-flash-messages" class="mt-2">
+            <div v-for="(fm, fmIdx) in flashMessages" :key="fmIdx" :class="`alert alert-${fm.category} alert-dismissible fade show`" role="alert">
+              [[ fm.message ]]
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          </div>
+
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+          <div class="mb-3">
+            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+              <div class="d-flex align-items-center gap-1">
+                <label class="form-label-styled mb-0" for="json-editor">Rule JSON<span class="req-badge">required</span></label>
+                <i class="rf-label-hint" data-tip="Only title, format, to_string, license, description, source, author, version, uuid and cve_id are read — everything else is ignored.">?</i>
+              </div>
+              <button type="button" class="rf-format-btn" @click="formatJsonContent">
+                <i class="fas fa-broom"></i>Format
+              </button>
+            </div>
+            <div v-if="jsonValidity.valid === false" class="alert alert-danger py-2 px-3 mb-2" style="font-size:.8rem;">
+              <i class="fas fa-circle-exclamation me-1"></i>[[ jsonValidity.message ]]
+            </div>
+            <div v-else-if="jsonValidity.valid === true" class="alert alert-success py-2 px-3 mb-2" style="font-size:.8rem;">
+              <i class="fas fa-circle-check me-1"></i>[[ jsonValidity.message ]]
+            </div>
+            <smart-editor
+              v-model="jsonContent"
+              mode="code"
+              language="json"
+              name="rule_json"
+              placeholder='{"title": "...", "format": "yara", "to_string": "..."}'
+              min-height="300px"
+              max-height="60vh">
+            </smart-editor>
+          </div>
+
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary px-4" style="border-radius:8px;">
+              <i class="fas fa-file-import me-2"></i>Import Rule
+            </button>
+          </div>
+        </form>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /tab-content -->
 </div>
 {% endblock %}
@@ -650,45 +702,24 @@
 <script>
 window.__manual_content = {{ (form.to_string.data or '') | tojson }};
 window.__manual_format  = {{ (form.format.data  or '') | tojson }};
+window.__manual_license = {{ (form.license.data or '') | tojson }};
+window.__manual_version = {{ (form.version.data or '1.0') | tojson }};
 window.__trash_conflict_title = {{ trash_conflict_title | tojson }};
 window.__flash_messages = {{ flash_messages | tojson }};
 window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) | tojson }};
 </script>
 <script type="module">
 
-      document.addEventListener('DOMContentLoaded', function () {
-            const params = new URLSearchParams(window.location.search);
-            const tab = params.get('tab');
-
-            const manualTab = document.querySelector('#chap1-tab');
-            const manualPane = document.querySelector('#chap1-pane');
-            const parseTab = document.querySelector('#chap2-tab');
-            const parsePane = document.querySelector('#chap2-pane');
-            const githubTab = document.querySelector('#chap3-tab');
-            const githubPane = document.querySelector('#chap3-pane');
-
-            [manualTab, parseTab, githubTab].forEach(t => t.classList.remove('active'));
-            [manualPane, parsePane, githubPane].forEach(p => p.classList.remove('show', 'active'));
-
-            if (tab === 'github') {
-                  githubTab.classList.add('active');
-                  githubPane.classList.add('show', 'active');
-            } else if (tab === 'parse') {
-                  parseTab.classList.add('active');
-                  parsePane.classList.add('show', 'active');
-            } else {
-                  manualTab.classList.add('active');
-                  manualPane.classList.add('show', 'active');
-            }
-      });
-
-      const { createApp, ref, onMounted, watch } = Vue;
+      const { createApp, ref, computed, onMounted, watch } = Vue;
       import { message_list, create_message } from '/static/js/toaster.js';
       import VulnerabilityInput from '/static/js/vulnerability/vulnerabilityInput.js';
       import SmartEditor from '/static/js/components/smart-editor.js';
       import TagInput from '/static/js/tags/tagInput.js';
       import VersionPicker from '/static/js/tags/utils/versionPicker.js';
       import AttackInput from '/static/js/attack/attackInput.js';
+      import LicenseInput from '/static/js/components/LicenseInput.js';
+
+      const VALID_TABS = ['manual', 'parse', 'github', 'zip', 'json'];
 
       createApp({
             delimiters: ['[[', ']]'],
@@ -698,17 +729,51 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                   'tag-input': TagInput,
                   'version-picker': VersionPicker,
                   'attack-input': AttackInput,
+                  'license-input': LicenseInput,
             },
             setup() {
+                  const requestedTab = new URLSearchParams(window.location.search).get('tab');
+                  const activeTab = ref(VALID_TABS.includes(requestedTab) ? requestedTab : 'manual');
+
+                  // Keep ?tab= in sync so a reload (or a copy-pasted link) lands
+                  // back on the same panel. replaceState, not pushState — tab
+                  // clicks shouldn't pile up in the browser's back-button history.
+                  watch(activeTab, (val) => {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('tab', val);
+                        history.replaceState(history.state, '', url);
+                  });
+
                   const manualContent = ref(window.__manual_content || '');
                   const manualFormat  = ref(window.__manual_format  || '');
+                  const manualLicense = ref(window.__manual_license || '');
                   const parseContent  = ref('');
+                  const jsonContent = ref('');
+
+                  // Re-evaluated on every keystroke (it's a computed over
+                  // jsonContent) — no separate "validate" step needed.
+                  const jsonValidity = computed(() => {
+                        if (!jsonContent.value.trim()) return { valid: null, message: '' };
+                        try {
+                              JSON.parse(jsonContent.value);
+                              return { valid: true, message: 'Valid JSON.' };
+                        } catch (e) {
+                              return { valid: false, message: 'Invalid JSON: ' + e.message };
+                        }
+                  });
+
+                  // Purely cosmetic — only re-indents, doesn't validate (the
+                  // message above already does that live). No-ops if invalid.
+                  function formatJsonContent() {
+                        try {
+                              jsonContent.value = JSON.stringify(JSON.parse(jsonContent.value), null, 2);
+                        } catch {}
+                  }
 
                   const trashConflictTitle = ref(window.__trash_conflict_title || null);
                   const flashMessages      = ref(window.__flash_messages || []);
                   const titleError         = ref(window.__title_error || null);
 
-                  const license = ref([]);
                   const selectedLicense = ref("");
                   const url              = ref("");
                   const branch           = ref("");
@@ -718,6 +783,7 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                   const importError      = ref("");
 
                   let _branchDebounce = null;
+                  let _branchRequestId = 0;
                   watch(url, (val) => {
                         availableBranches.value = [];
                         branchesError.value     = "";
@@ -725,10 +791,12 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                         const trimmed = val.trim();
                         if (!trimmed || !trimmed.includes('github.com')) return;
                         _branchDebounce = setTimeout(async () => {
+                              const requestId = ++_branchRequestId;
                               branchesLoading.value = true;
                               try {
                                     const res  = await fetch(`/rule/get_github_branches?url=${encodeURIComponent(trimmed)}`);
                                     const data = await res.json();
+                                    if (requestId !== _branchRequestId) return; // a newer request already resolved
                                     if (data.success && data.branches.length) {
                                           availableBranches.value = data.branches;
                                     } else if (!data.success) {
@@ -737,9 +805,10 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                                           branchesError.value = "No branches found for this repository.";
                                     }
                               } catch {
+                                    if (requestId !== _branchRequestId) return;
                                     branchesError.value = "Network error while fetching branches.";
                               } finally {
-                                    branchesLoading.value = false;
+                                    if (requestId === _branchRequestId) branchesLoading.value = false;
                               }
                         }, 700);
                   });
@@ -749,25 +818,6 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
 
                   const is_loading = ref(false)
                   const ruleType = ref('');
-
-                  async function fetchRules() {
-                        const res = await fetch('/rule/get_license');
-                        const data = await res.json();
-                        license.value = data.licenses;
-                  }
-
-                  function showParsingModal(event) {
-                        if (!url.value.trim()) {
-                              create_message('The URL field is required.', 'warning-subtle');
-                              return;
-                        }
-                        const modal = new bootstrap.Modal(document.getElementById('parsingModal'));
-                        modal.show();
-
-                        event.target.submit();
-                  }
-
-
 
                   async function fetchRulesFormats() {
                         const res = await fetch('/rule/get_rules_formats')
@@ -814,14 +864,43 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                   const fileZip = ref(null)
                   const selectedLicenseZip = ref("")
                   const is_loading_zip = ref(false)
+                  const isDraggingZip = ref(false)
+                  const zipFileError = ref("")
 
+                  function validateZipFile(file) {
+                        if (!file) return false;
+                        if (!file.name.toLowerCase().endsWith('.zip')) {
+                              zipFileError.value = 'Only .zip files are accepted.';
+                              return false;
+                        }
+                        zipFileError.value = '';
+                        return true;
+                  }
+                  function onZipFileChange(event) {
+                        const file = event.target.files[0];
+                        if (file && validateZipFile(file)) fileZip.value = file;
+                  }
+                  function onZipDrop(event) {
+                        isDraggingZip.value = false;
+                        const file = event.dataTransfer.files[0];
+                        if (file && validateZipFile(file)) fileZip.value = file;
+                  }
+                  function clearZipFile() {
+                        fileZip.value = null;
+                        zipFileError.value = '';
+                  }
+                  function formatFileSize(bytes) {
+                        if (bytes < 1024) return bytes + ' B';
+                        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                  }
 
                   async function import_zip() {
                         is_loading_zip.value = true;
-                        $("#zipfile-error").text("");
+                        zipFileError.value = "";
 
                         if (!fileZip.value) {
-                              $("#zipfile-error").text("You must select a ZIP file.");
+                              zipFileError.value = "You must select a ZIP file.";
                               is_loading_zip.value = false;
                               return;
                         }
@@ -851,7 +930,7 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                   const selectedAttacks = ref([]);
 
                   const formData = Vue.reactive({
-                        version: "{{ form.version.data or '1.0' }}",
+                        version: window.__manual_version || '1.0',
                   });
 
                   // ── GitHub import proposal (non-admin) ──────────────────────
@@ -916,17 +995,54 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                         if (res.ok) fetchMyProposals();
                   }
 
+                  // ── Parse tab: don't lose typed content across a server redirect ──
+                  const PARSE_DRAFT_KEY = 'rz-parse-draft';
+                  function saveParseDraft() {
+                        try {
+                              sessionStorage.setItem(PARSE_DRAFT_KEY, JSON.stringify({
+                                    content: parseContent.value,
+                                    format:  ruleType.value,
+                              }));
+                        } catch {}
+                  }
+                  function restoreParseDraft() {
+                        try {
+                              const raw = sessionStorage.getItem(PARSE_DRAFT_KEY);
+                              if (!raw) return;
+                              sessionStorage.removeItem(PARSE_DRAFT_KEY);
+                              const draft = JSON.parse(raw);
+                              if (draft.content) parseContent.value = draft.content;
+                              if (draft.format)  ruleType.value = draft.format;
+                        } catch {}
+                  }
+
+                  // ── JSON tab: same safety net as Parse ──
+                  const JSON_DRAFT_KEY = 'rz-json-draft';
+                  function saveJsonDraft() {
+                        try { sessionStorage.setItem(JSON_DRAFT_KEY, jsonContent.value); } catch {}
+                  }
+                  function restoreJsonDraft() {
+                        try {
+                              const raw = sessionStorage.getItem(JSON_DRAFT_KEY);
+                              if (!raw) return;
+                              sessionStorage.removeItem(JSON_DRAFT_KEY);
+                              jsonContent.value = raw;
+                        } catch {}
+                  }
+
                   onMounted(() => {
-                        fetchRules();
                         fetchRulesFormats();
                         if (!isAdminUser) fetchMyProposals();
+                        if (activeTab.value === 'parse') restoreParseDraft();
+                        if (activeTab.value === 'json')  restoreJsonDraft();
                   });
 
 
                   return {
+                        activeTab,
                         message_list,
                         trashConflictTitle, flashMessages, titleError,
-                        license,
+                        manualLicense,
                         selectedLicense,
                         url,
                         branch,
@@ -937,7 +1053,6 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                         rules_formats,
                         number_rules_formats,
                         is_loading,
-                        showParsingModal,
                         fetchRulesFormats,
                         import_git_url,
                         ruleType,
@@ -945,10 +1060,21 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                         selectedLicenseZip,
                         is_loading_zip,
                         import_zip,
+                        isDraggingZip,
+                        zipFileError,
+                        onZipFileChange,
+                        onZipDrop,
+                        clearZipFile,
+                        formatFileSize,
 
                         manualContent,
                         manualFormat,
                         parseContent,
+                        saveParseDraft,
+                        jsonContent,
+                        saveJsonDraft,
+                        jsonValidity,
+                        formatJsonContent,
                         detectedVulnerabilities,
                         selectedTags,
                         selectedAttacks,

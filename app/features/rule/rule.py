@@ -71,7 +71,7 @@ def rule() -> render_template:
         valide , error = verify_syntax_rule_by_format(rule_dict)
 
         if valide == False:
-                return render_template("rule/rule.html",error=error, form=form, rule=rule)
+                return render_template("rule/rule.html", error=error, form=form)
 
         v_data = request.form.get('vulnerabilities')
         form_dict['vulnerabilities'] = v_data
@@ -108,10 +108,10 @@ def rule() -> render_template:
             t_id    = parts[2] if len(parts) > 2 else ''
             t_title = parts[3] if len(parts) > 3 else 'deleted rule'
             flash(f'TRASH_CONFLICT:{t_uuid}:{t_id}:{t_title}', 'warning')
-            return render_template("rule/rule.html", form=form, tab="manuel")
+            return render_template("rule/rule.html", form=form)
         else:
-            flash(message, 'error')
-            return render_template("rule/rule.html", form=form, tab="manuel")
+            flash(message, 'danger')
+            return render_template("rule/rule.html", form=form)
     return render_template("rule/rule.html", form=form )
 
 
@@ -2687,6 +2687,96 @@ def parse_rule() -> dict:
 
     flash(f"Rules imported.", "success")
     return redirect(url_for("rule.detail_rule", rule_id=object_.id))
+
+
+@rule_blueprint.route("/import_from_json", methods=['POST'])
+@login_required
+def import_rule_from_json():
+    """Import a single rule from its pasted JSON export.
+
+    Only a strict allowlist of identity fields is read out of the parsed
+    JSON — everything else (id, user_id, votes, status, ...) is ignored.
+    `user_id` is never taken from the pasted JSON: add_rule_core() always
+    resolves it from the authenticated current_user for a live request,
+    exactly like the Manual tab. Syntax validation and content-hash
+    dedup reuse the same helpers as Manual/Parse; a uuid-based dedup
+    check is added here since add_rule_core() only dedups by content.
+    """
+    raw = request.form.get('rule_json', '')
+
+    if not raw or not raw.strip():
+        flash('Paste the rule JSON first.', 'danger')
+        return redirect(url_for('rule.rule', tab='json'))
+
+    if len(raw) > 300_000:
+        flash('That JSON is too large to import.', 'danger')
+        return redirect(url_for('rule.rule', tab='json'))
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as e:
+        flash(f'Invalid JSON: {e.msg} (line {e.lineno}, column {e.colno}).', 'danger')
+        return redirect(url_for('rule.rule', tab='json'))
+
+    if not isinstance(parsed, dict):
+        flash('The pasted JSON must be a single rule object.', 'danger')
+        return redirect(url_for('rule.rule', tab='json'))
+
+    def _clean_str(value):
+        return str(value).strip() if isinstance(value, (str, int, float)) else ''
+
+    rule_dict = {
+        'format':        _clean_str(parsed.get('format')),
+        'title':         _clean_str(parsed.get('title')),
+        'to_string':     str(parsed.get('to_string') or ''),
+        'license':       _clean_str(parsed.get('license')),
+        'description':   _clean_str(parsed.get('description')),
+        'source':        _clean_str(parsed.get('source')),
+        'author':        _clean_str(parsed.get('author')),
+        'version':       _clean_str(parsed.get('version')),
+        'original_uuid': _clean_str(parsed.get('uuid') or parsed.get('original_uuid')),
+        'cve_id':        parsed.get('cve_id') if isinstance(parsed.get('cve_id'), (str, list)) else None,
+    }
+
+    if not rule_dict['title'] or not rule_dict['format'] or not rule_dict['to_string']:
+        flash('The JSON must include at least "title", "format" and "to_string".', 'danger')
+        return redirect(url_for('rule.rule', tab='json'))
+
+    candidate_uuid = rule_dict['original_uuid']
+    if candidate_uuid:
+        from app.core.db_class.db import Rule
+        existing = RuleModel._active().filter(
+            (Rule.uuid == candidate_uuid) | (Rule.original_uuid == candidate_uuid)
+        ).first()
+        if existing:
+            flash(f'A rule with this UUID already exists: "{existing.title}".', 'danger')
+            return redirect(url_for('rule.rule', tab='json'))
+
+    valide, error = verify_syntax_rule_by_format(rule_dict)
+    if valide == False:
+        flash(error, 'danger')
+        return redirect(url_for('rule.rule', tab='json'))
+
+    rule_dict = fill_all_void_field(rule_dict)
+
+    new_rule, message = RuleModel.add_rule_core(rule_dict, current_user)
+    if new_rule:
+        profil_game_user = AccountModel.get_or_create_gamification_profile(current_user.id)
+        if profil_game_user:
+            AccountModel.update_rules_owned_gamification(profil_game_user.id, current_user.id)
+        flash('Rule imported from JSON!', 'success')
+        return redirect(url_for('rule.detail_rule', rule_id=new_rule.id))
+    elif isinstance(message, str) and message.startswith("TRASH_CONFLICT:"):
+        parts   = message.split(":", 3)
+        t_uuid  = parts[1] if len(parts) > 1 else ''
+        t_id    = parts[2] if len(parts) > 2 else ''
+        t_title = parts[3] if len(parts) > 3 else 'deleted rule'
+        flash(f'TRASH_CONFLICT:{t_uuid}:{t_id}:{t_title}', 'warning')
+        return redirect(url_for('rule.rule', tab='json'))
+    else:
+        flash(message, 'danger')
+        return redirect(url_for('rule.rule', tab='json'))
+
 
 @rule_blueprint.route("/get_github_branches", methods=['GET'])
 @login_required

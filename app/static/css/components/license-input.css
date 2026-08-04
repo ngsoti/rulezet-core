@@ -1,0 +1,88 @@
+/* ══════════════════════════════════════
+   LICENSE INPUT — searchable single-select license picker
+══════════════════════════════════════ */
+
+.license-input {
+    position: relative;
+    text-align: left;
+}
+
+.license-input__group {
+    border-width: 2px !important;
+    background: var(--card-bg-color);
+}
+.license-input__icon {
+    background: var(--card-bg-color) !important;
+    color: var(--subtle-text-color);
+}
+.license-input__field {
+    height: 46px;
+    background: var(--card-bg-color) !important;
+    color: var(--text-color) !important;
+}
+
+.license-input__selected {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    height: 46px;
+    padding: 0 .9rem;
+    border: 2px solid var(--border-color);
+    border-radius: .5rem;
+    background: var(--card-bg-color);
+    cursor: pointer;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--text-color);
+    transition: border-color .14s;
+}
+.license-input__selected:hover { border-color: #0d6efd; }
+.license-input__selected i.fa-scale-balanced { color: #0d6efd; }
+.license-input__selected span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.license-input__clear {
+    border: none;
+    background: transparent;
+    color: var(--subtle-text-color);
+    font-size: .78rem;
+    padding: 2px 4px;
+}
+.license-input__clear:hover { color: #dc3545; }
+
+.license-input__dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: .5rem;
+    z-index: 1060;
+}
+
+.license-input__option {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .5rem .7rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .85rem;
+    color: var(--text-color);
+}
+.license-input__option i.fa-scale-balanced { color: var(--subtle-text-color); font-size: .8rem; }
+.license-input__option:hover { background: var(--light-bg-color); }
+.license-input__option--active {
+    background: rgba(13, 110, 253, .1);
+    font-weight: 600;
+}
+.license-input__option--active i.fa-scale-balanced { color: #0d6efd; }
+
+.license-input__empty {
+    padding: 1rem;
+    text-align: center;
+    color: var(--subtle-text-color);
+    font-size: .82rem;
+}
