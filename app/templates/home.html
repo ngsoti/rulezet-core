@@ -54,6 +54,13 @@
     background: rgba(13,110,253,.08);
     border: 1px solid rgba(13,110,253,.22);
     border-radius: 50px; padding: .3rem .9rem;
+    text-decoration: none;
+    transition: background .15s, border-color .15s;
+}
+.hero-brand-badge:hover {
+    color: #0d6efd;
+    background: rgba(13,110,253,.14);
+    border-color: rgba(13,110,253,.35);
 }
 /* Big headline */
 .hero-big-title {
@@ -255,14 +262,15 @@
 
                 <!-- Left: brand + title + CTAs + formats -->
                 <div class="col-lg-6">
-                    <div class="hero-brand-badge mb-3">
+                    <a href="https://github.com/rulezet/rulezet-core/releases" target="_blank" rel="noopener"
+                       class="hero-brand-badge mb-3" title="View releases on GitHub">
                         <i class="fa-solid fa-shield-halved"></i>
                         RULEZET
                         <span class="badge rounded-pill border fw-normal ms-1"
                               style="font-size:.6rem;background:transparent;color:#0d6efd;border-color:rgba(13,110,253,.3)!important;">
                             v{{ app_version }}
                         </span>
-                    </div>
+                    </a>
 
                     <h1 class="hero-big-title mb-3">
                         The Open Source<br>
