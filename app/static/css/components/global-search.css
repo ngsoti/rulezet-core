@@ -1,0 +1,189 @@
+/* ══════════════════════════════════════
+   GLOBAL SEARCH — nav search box + results panel
+══════════════════════════════════════ */
+
+.gs-wrap {
+    position: relative;
+}
+
+/* ── Input ── */
+.gs-input-group {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    padding: .35rem .9rem;
+    min-width: 220px;
+    transition: border-color .16s, box-shadow .16s, background .16s;
+}
+.gs-input-group:hover,
+.gs-input-group--open {
+    border-color: rgba(13, 110, 253, .4);
+    background: rgba(13, 110, 253, .05);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, .08);
+}
+.gs-icon {
+    color: var(--subtle-text-color);
+    font-size: .82rem;
+    flex-shrink: 0;
+}
+.gs-input-group--open .gs-icon { color: #0d6efd; }
+.gs-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-color);
+    font-size: .82rem;
+    min-width: 0;
+}
+.gs-input::placeholder { color: var(--subtle-text-color); }
+.gs-clear {
+    border: none;
+    background: transparent;
+    color: var(--subtle-text-color);
+    font-size: .72rem;
+    padding: 2px 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.gs-clear:hover { color: #0d6efd; }
+
+/* ── Results panel ── */
+.gs-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: min(420px, 90vw);
+    max-height: 70vh;
+    overflow-y: auto;
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+    padding: .5rem 0;
+    z-index: 1050;
+}
+
+.gs-section { padding: .25rem 0; }
+.gs-section + .gs-section { border-top: 1px solid var(--border-color); }
+
+.gs-section-title {
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--subtle-text-color);
+    padding: .35rem 1rem;
+}
+
+.gs-item {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .5rem 1rem;
+    cursor: pointer;
+    color: var(--text-color);
+    text-decoration: none;
+    font-size: .85rem;
+}
+.gs-item:hover,
+.gs-item--active {
+    background: rgba(13, 110, 253, .08);
+}
+.gs-item-icon {
+    width: 16px;
+    text-align: center;
+    color: var(--subtle-text-color);
+    flex-shrink: 0;
+    font-size: .82rem;
+}
+.gs-item--active .gs-item-icon,
+.gs-item:hover .gs-item-icon {
+    color: #0d6efd;
+}
+.gs-item-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gs-item-meta {
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--subtle-text-color);
+    flex-shrink: 0;
+}
+.gs-item-meta--private {
+    color: #dc3545;
+}
+.gs-item-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .7rem;
+    font-weight: 700;
+    background: #0d6efd;
+    color: #fff;
+    overflow: hidden;
+}
+.gs-item-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.gs-item-remove {
+    border: none;
+    background: transparent;
+    color: var(--subtle-text-color);
+    font-size: .68rem;
+    padding: 2px 5px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity .12s;
+}
+.gs-item:hover .gs-item-remove { opacity: 1; }
+.gs-item-remove:hover { color: #dc3545; }
+
+.gs-section--shortcuts .gs-item-label { color: var(--subtle-text-color); }
+.gs-item--shortcut strong { color: #0d6efd; font-weight: 700; }
+
+.gs-empty,
+.gs-loading {
+    padding: 1.25rem 1rem;
+    text-align: center;
+    color: var(--subtle-text-color);
+    font-size: .82rem;
+}
+.gs-loading .spinner-border { margin-right: .4rem; }
+
+/* Match highlight — mirrors CodeViewer's active-match orange (cv-match--focus) */
+.gs-match {
+    background: rgba(255, 150, 0, .85);
+    outline: 2px solid rgba(255, 100, 0, .7);
+    border-radius: 2px;
+    padding: 0 1px;
+    color: #000;
+}
+
+[data-bs-theme="dark"] .gs-match,
+[data-theme="forest"]  .gs-match,
+[data-theme="midnight"].gs-match,
+[data-theme="slate"]   .gs-match {
+    background: rgba(255, 190, 0, .80);
+    outline-color: rgba(255, 150, 0, .9);
+    color: #000;
+}
+
+@media (max-width: 575.98px) {
+    .gs-input-group { min-width: 0; }
+    .gs-panel { width: 92vw; left: 50%; transform: translateX(-50%); }
+}

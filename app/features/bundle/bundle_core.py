@@ -189,6 +189,53 @@ def get_all_bundles(search: str | None, own: bool):
     }
 
 
+def search_bundles_lite(query: str, limit: int = 5) -> list[dict]:
+    """Lightweight bundle lookup for the global nav search.
+
+    Visibility mirrors get_all_bundles_page(): anonymous visitors and
+    non-admins only see public bundles (access=True) or their own; admins
+    see everything. Returns an exact id/uuid hit first, then name/uuid
+    substring matches, deduplicated.
+    """
+    like_pattern = f"%{query}%"
+
+    def _visible(q):
+        if current_user.is_authenticated:
+            if not current_user.is_admin():
+                return q.filter(or_(Bundle.access.is_(True), Bundle.user_id == current_user.id))
+            return q
+        return q.filter_by(access=True)
+
+    fuzzy = (
+        _visible(Bundle.query.filter(or_(Bundle.name.ilike(like_pattern), Bundle.uuid.ilike(like_pattern))))
+        .order_by(Bundle.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    exact = None
+    if query.isdigit():
+        exact = _visible(Bundle.query.filter(Bundle.id == int(query))).first()
+    else:
+        exact = _visible(Bundle.query.filter(Bundle.uuid == query)).first()
+
+    results = []
+    seen_ids = set()
+    for bundle in ([exact] if exact else []) + fuzzy:
+        if not bundle or bundle.id in seen_ids:
+            continue
+        seen_ids.add(bundle.id)
+        results.append({
+            "id": bundle.id,
+            "uuid": bundle.uuid,
+            "name": bundle.name,
+            "access": bundle.access,
+        })
+        if len(results) >= limit:
+            break
+    return results
+
+
 def get_total_bundles_count() -> int:
     """
     get the count of bundles

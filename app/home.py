@@ -11,6 +11,7 @@ from app.core.utils.activity_log import log_activity
 
 from .features.rule import rule_core as RuleModel
 from .features.account import account_core as AccountModel
+from . import home_core as HomeModel
 
 
 home_blueprint = Blueprint(
@@ -35,6 +36,14 @@ def inject_requests_to_validate() -> jsonify:
     except:
         count = 0
     return jsonify({"count": count})
+
+
+@home_blueprint.route("/global_search")
+def global_search() -> jsonify:
+    """Main nav search box — aggregates rules/bundles/users, respecting the
+    same visibility rules as their own list pages (see app/home_core.py)."""
+    query = request.args.get('q', '', type=str)
+    return jsonify(HomeModel.global_search(query))
 
 ###################
 #   Home section  #

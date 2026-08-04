@@ -230,11 +230,8 @@
             <!-- ── Right: search + notifications + profile ── -->
             <div class="d-flex align-items-center gap-3 ms-auto">
 
-               <button class="btn btn-search-trigger d-none d-xl-flex align-items-center rounded-pill px-3 py-1 home-btn"
-                  data-bs-toggle="offcanvas" href="#offcanvasSearch" @click="initSearch()">
-                  <i class="fa-solid fa-magnifying-glass me-2 text-muted"></i>
-                  <span class="text-muted small">Search rules...</span>
-               </button>
+               <global-search class="d-none d-xl-block" :pages="NAV_PAGES"
+                  :is-authenticated="isAuthenticated" :is-admin="isAdmin"></global-search>
 
                <!-- Settings -->
                <a href="/settings" class="nav-icon-btn" title="Settings">
@@ -311,48 +308,61 @@
       <div id="notif-panel-app" class="d-flex flex-column h-100"></div>
    </div>
    {% endif %}
-
-   <!-- ── Search offcanvas ── -->
-   <div class="offcanvas offcanvas-end border-0 shadow-lg" tabindex="-1" id="offcanvasSearch"
-      style="width: min(1000px, 92vw); background-color: var(--bg-color);">
-      <div class="offcanvas-header border-bottom py-3 px-4" style="border-color: var(--border-color) !important;">
-         <div class="d-flex align-items-center">
-            <div class="bg-primary-subtle p-2 rounded-3 me-3">
-               <i class="fa-solid fa-magnifying-glass text-primary fs-5"></i>
-            </div>
-            <div>
-               <h5 class="fw-bold mb-0">Search Rules</h5>
-               <p class="text-muted mb-0" style="font-size:.82rem;">Find specific security detections</p>
-            </div>
-         </div>
-         <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas"></button>
-      </div>
-      <div class="offcanvas-body p-0">
-         <rule-list v-if="showSearchContent"
-            mode="read"
-            default-view="table"
-            :hidden-columns="['editor', 'votes', 'created', 'cves', 'attacks']"
-            :sync-url="false"
-            :initial-per-page="15"
-            :current-user-id="currentUserId"
-            :current-user-is-admin="isAdmin"
-            :current-user-is-authenticated="isAuthenticated"
-         ></rule-list>
-      </div>
-   </div>
 </div>
 
 <script type="module">
    const { createApp, ref, onMounted } = Vue
-   import RuleList from '/static/js/rule/ruleList.js';
+   import GlobalSearch from '/static/js/components/GlobalSearch.js';
 
    const currentUserId   = {{ current_user.id if current_user.is_authenticated else 'null' }}
    const isAdmin         = {{ current_user.is_admin() | tojson if current_user.is_authenticated else 'false' }}
    const isAuthenticated = {{ current_user.is_authenticated | tojson }}
 
+   const NAV_PAGES = [
+      { label: 'Explore Rules', url: '/rule/rules_list', icon: 'fa-shield-halved', keywords: ['rules', 'security', 'detections'] },
+      { label: 'ATT&CK Heatmap', url: '/attack/heatmap', icon: 'fa-crosshairs', keywords: ['attack', 'mitre', 'heatmap'] },
+      { label: 'Explore Bundles', url: '/bundle/list', icon: 'fa-box', keywords: ['bundles'] },
+      { label: 'Blog', url: '/blog/', icon: 'fa-newspaper', keywords: ['blog', 'news'] },
+      { label: 'Insights', url: '/platform/insights', icon: 'fa-chart-pie', keywords: ['insights', 'stats'] },
+      { label: 'Contributors', url: '/account/contributor', icon: 'fa-user-group', keywords: ['contributors', 'community'] },
+      { label: 'Comments Hub', url: '/community/comments', icon: 'fa-comments', keywords: ['comments'] },
+      {% if current_user.is_authenticated %}
+      { label: 'My Rules', url: '/rule/owner_rules', icon: 'fa-user-shield', keywords: ['my rules', 'owner'] },
+      { label: 'My Tags', url: '/tags/my_tags', icon: 'fa-tags', keywords: ['my tags', 'tags'] },
+      { label: 'My Jobs', url: '/jobs/list', icon: 'fa-tasks', keywords: ['my jobs', 'jobs'] },
+      { label: 'Workspaces', url: '/workspace/my_rules', icon: 'fa-layer-group', keywords: ['workspaces'] },
+      { label: 'Notifications', url: '/notifications/', icon: 'fa-bell', keywords: ['notifications'] },
+      { label: 'Create Bundle', url: '/bundle/create', icon: 'fa-folder-plus', keywords: ['create bundle'] },
+      { label: 'Add Rules', url: '/rule/create_rule', icon: 'fa-file-circle-plus', keywords: ['create rule', 'add rule'] },
+      { label: 'Proposals', url: '/rule/rule_propose_edit', icon: 'fa-lightbulb', keywords: ['proposals'] },
+      { label: 'Bad Rules', url: '/rule/bad_rules_summary', icon: 'fa-bug', keywords: ['bad rules', 'invalid'] },
+      { label: 'Github Sources', url: '/rule/github/list_github_url', icon: 'fa-github', keywords: ['github'] },
+      { label: 'Dashboard', url: '/dashboard/', icon: 'fa-gauge-high', keywords: ['dashboard'] },
+      { label: 'Profile', url: '/account/', icon: 'fa-user-circle', keywords: ['profile', 'account'] },
+      { label: 'Settings', url: '/settings', icon: 'fa-sliders', keywords: ['settings'] },
+      {% endif %}
+      {% if current_user.is_authenticated and current_user.is_admin() %}
+      { label: 'Admin: Users', url: '/account/admin/all_users', icon: 'fa-users', keywords: ['admin users'] },
+      { label: 'Admin: Ownership Requests', url: '/requests', icon: 'fa-envelope', keywords: ['ownership requests'] },
+      { label: 'Admin: Reports', url: '/report/admin', icon: 'fa-triangle-exclamation', keywords: ['reports'] },
+      { label: 'Admin: Blog', url: '/blog/admin/', icon: 'fa-newspaper', keywords: ['admin blog'] },
+      { label: 'Admin: Formats', url: '/rule/admin/manage_format_rule', icon: 'fa-file-code', keywords: ['formats'] },
+      { label: 'Admin: Tags', url: '/tags/admin/list', icon: 'fa-tag', keywords: ['admin tags'] },
+      { label: 'Admin: ATT&CK', url: '/attack/admin/list', icon: 'fa-crosshairs', keywords: ['admin attack'] },
+      { label: 'Admin: Duplicates', url: '/admin/similar_rules', icon: 'fa-code-compare', keywords: ['duplicates'] },
+      { label: 'Trash', url: '/rule/trash', icon: 'fa-trash-can-arrow-up', keywords: ['trash', 'deleted rules'] },
+      { label: 'Bulk Tag', url: '/rule/bulk_tag', icon: 'fa-tags', keywords: ['bulk tag'] },
+      { label: 'Connectors', url: '/connector/list', icon: 'fa-plug', keywords: ['connectors'] },
+      { label: 'Velociraptor', url: '/velociraptor/list', icon: 'fa-diagram-project', keywords: ['velociraptor'] },
+      { label: 'Admin: Jobs', url: '/admin/jobs/list', icon: 'fa-gears', keywords: ['admin jobs'] },
+      { label: 'Logs', url: '/admin/logs', icon: 'fa-list-ul', keywords: ['logs'] },
+      { label: 'Server Settings', url: '/admin/settings', icon: 'fa-sliders', keywords: ['server settings'] },
+      {% endif %}
+   ]
+
    createApp({
       delimiters: ['[[', ']]'],
-      components: { RuleList },
+      components: { GlobalSearch },
       setup() {
 
          // ── Admin counters ────────────────────────────────────────────────
@@ -381,13 +391,6 @@
             try { reports_to_check.value = (await (await fetch('/report/count')).json()).count || 0 } catch {}
          }
 
-         // ── Search ──────────────────────────────────────────────────────────
-         const showSearchContent = ref(false)
-
-         function initSearch() {
-            showSearchContent.value = true
-         }
-
          // ── Init ────────────────────────────────────────────────────────────
          onMounted(() => {
             getNbRequestAdmin()
@@ -400,8 +403,7 @@
          return {
             requests_to_validate, changes_to_validate,
             update_to_validate, running_jobs_count, reports_to_check,
-            showSearchContent, initSearch,
-            currentUserId, isAdmin, isAuthenticated,
+            currentUserId, isAdmin, isAuthenticated, NAV_PAGES,
          }
       },
    }).mount('#app')

@@ -484,6 +484,40 @@ def get_user(id) -> id:
     """Return the user"""
     return User.query.get(id)
 
+
+def search_users_lite(query: str, limit: int = 5) -> list[dict]:
+    """Lightweight user lookup for the global nav search — caller must only
+    invoke this for authenticated visitors; returns only fields already
+    considered public elsewhere (see /account/user_mini/<id>): id, username,
+    avatar. Never email/admin/any other field from User.to_json().
+    """
+    like_pattern = f"%{query}%"
+    matches = (
+        User.query.filter(or_(
+            User.first_name.ilike(like_pattern),
+            User.last_name.ilike(like_pattern),
+        ))
+        .limit(limit)
+        .all()
+    )
+
+    exact = User.query.get(int(query)) if query.isdigit() else None
+
+    results = []
+    seen_ids = set()
+    for user in ([exact] if exact else []) + matches:
+        if not user or user.id in seen_ids:
+            continue
+        seen_ids.add(user.id)
+        results.append({
+            "id": user.id,
+            "username": user.get_username(),
+            "avatar": user.get_avatar_url(),
+        })
+        if len(results) >= limit:
+            break
+    return results
+
 def get_user_rules(user_id: int) -> list:
     """Return all rules created by the user."""
     return Rule.query.filter_by(user_id=user_id).all()

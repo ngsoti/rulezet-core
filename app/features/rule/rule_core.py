@@ -32,6 +32,44 @@ def _active():
     return Rule.query.filter(Rule.is_deleted == False)
 
 
+def search_rules_lite(query: str, limit: int = 5) -> list[dict]:
+    """Lightweight rule lookup for the global nav search — public, no auth gate.
+
+    Returns at most `limit` rules: an exact id/uuid hit first (if the query
+    matches one), followed by title/uuid substring matches, deduplicated.
+    """
+    like_pattern = f"%{query}%"
+    fuzzy = (
+        _active()
+        .filter(or_(Rule.title.ilike(like_pattern), Rule.uuid.ilike(like_pattern)))
+        .order_by(Rule.last_modif.desc())
+        .limit(limit)
+        .all()
+    )
+
+    exact = None
+    if query.isdigit():
+        exact = _active().filter(Rule.id == int(query)).first()
+    else:
+        exact = _active().filter(Rule.uuid == query).first()
+
+    results = []
+    seen_ids = set()
+    for rule in ([exact] if exact else []) + fuzzy:
+        if not rule or rule.id in seen_ids:
+            continue
+        seen_ids.add(rule.id)
+        results.append({
+            "id": rule.id,
+            "uuid": rule.uuid,
+            "title": rule.title,
+            "format": rule.format,
+        })
+        if len(results) >= limit:
+            break
+    return results
+
+
 # ── Soft delete / restore ──────────────────────────────────────────────────────
 
 def soft_delete_rule(rule_id: int, user_id: int, batch_uuid: str = None) -> bool:
