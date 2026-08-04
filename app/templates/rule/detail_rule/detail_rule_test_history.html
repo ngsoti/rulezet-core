@@ -22,7 +22,7 @@
         <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
         <li class="breadcrumb-item">
           <a href="/rule/detail_rule/{{ rule.id }}" class="text-decoration-none text-muted">
-            {% if rule.title|length > 40 %}{{ rule.title[:40] }}…{% else %}{{ rule.title }}{% endif %}
+            [[ RULE_TITLE_SHORT ]]
           </a>
         </li>
         <li class="breadcrumb-item active text-muted" aria-current="page">Tests</li>
@@ -31,7 +31,7 @@
     <div class="d-flex align-items-center gap-3 mb-3">
       <div class="banner-icon"><i class="fa-solid fa-flask-vial"></i></div>
       <div>
-        <h2 class="fw-bold mb-1">{% if rule.title|length > 60 %}{{ rule.title[:60] }}…{% else %}{{ rule.title }}{% endif %}</h2>
+        <h2 class="fw-bold mb-1">[[ RULE_TITLE_MEDIUM ]]</h2>
         <div class="banner-accent"></div>
       </div>
     </div>
@@ -106,6 +106,10 @@
   import InputEditorByFormat from '{{ url_for("static", filename="js/rule_tester/InputEditorByFormat.js") }}'
   import TestResultDisplay  from '{{ url_for("static", filename="js/rule_tester/TestResultDisplay.js") }}'
 
+  const RULE_TITLE = {{ rule.title | tojson }};
+  const RULE_TITLE_SHORT  = RULE_TITLE.length > 40 ? RULE_TITLE.slice(0, 40) + '…' : RULE_TITLE;
+  const RULE_TITLE_MEDIUM = RULE_TITLE.length > 60 ? RULE_TITLE.slice(0, 60) + '…' : RULE_TITLE;
+
   createApp({
     delimiters: ['[[', ']]'],
     components: {
@@ -113,6 +117,9 @@
       'rule-tester-panel':     RuleTesterPanel,
       'input-editor-by-format': InputEditorByFormat,
       'test-result-display':   TestResultDisplay,
+    },
+    data() {
+      return { RULE_TITLE_SHORT, RULE_TITLE_MEDIUM }
     },
   }).mount('#main-container')
 </script>

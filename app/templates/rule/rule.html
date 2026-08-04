@@ -141,28 +141,32 @@
           {{ form.hidden_tag() }}
 
           <!-- Trash conflict warning -->
+          {% set trash_conflict_title = none %}
+          {% set flash_messages = [] %}
           {% for category, message in get_flashed_messages(with_categories=True) %}
             {% if message.startswith('TRASH_CONFLICT:') %}
               {% set parts = message.split(':', 3) %}
-              <div class="alert alert-warning border-warning rounded-3 d-flex align-items-start gap-3 mb-4" role="alert" style="border-left:4px solid #ffc107 !important;">
-                <i class="fa-solid fa-trash-can-arrow-up fa-lg text-warning mt-1 flex-shrink-0"></i>
-                <div class="flex-grow-1">
-                  <strong>This rule exists in the trash</strong><br>
-                  <span style="font-size:.88rem;">A deleted rule named <strong>"{{ parts[3] if parts|length > 3 else 'deleted rule' }}"</strong> has the same content. You can restore it instead of creating a duplicate.</span>
-                </div>
-                {% if current_user.is_admin() %}
-                <a href="/rule/trash" class="btn btn-sm btn-warning rounded-pill ms-2 flex-shrink-0">
-                  <i class="fa-solid fa-rotate-left me-1"></i>Go to Trash
-                </a>
-                {% endif %}
-              </div>
+              {% set trash_conflict_title = parts[3] if parts|length > 3 else 'deleted rule' %}
             {% elif category != 'warning' or not message.startswith('TRASH') %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show mb-3" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-              </div>
+              {% set _ = flash_messages.append({'category': category, 'message': message}) %}
             {% endif %}
           {% endfor %}
+          <div v-if="trashConflictTitle" class="alert alert-warning border-warning rounded-3 d-flex align-items-start gap-3 mb-4" role="alert" style="border-left:4px solid #ffc107 !important;">
+            <i class="fa-solid fa-trash-can-arrow-up fa-lg text-warning mt-1 flex-shrink-0"></i>
+            <div class="flex-grow-1">
+              <strong>This rule exists in the trash</strong><br>
+              <span style="font-size:.88rem;">A deleted rule named <strong>"[[ trashConflictTitle ]]"</strong> has the same content. You can restore it instead of creating a duplicate.</span>
+            </div>
+            {% if current_user.is_admin() %}
+            <a href="/rule/trash" class="btn btn-sm btn-warning rounded-pill ms-2 flex-shrink-0">
+              <i class="fa-solid fa-rotate-left me-1"></i>Go to Trash
+            </a>
+            {% endif %}
+          </div>
+          <div v-for="(fm, fmIdx) in flashMessages" :key="fmIdx" :class="`alert alert-${fm.category} alert-dismissible fade show mb-3`" role="alert">
+            [[ fm.message ]]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
 
           <!-- Identity -->
           <p class="form-section-title"><i class="fas fa-id-card me-1"></i>Identity</p>
@@ -173,9 +177,7 @@
                 <i class="rf-label-hint" data-tip="Unique name that identifies this rule across the platform.">?</i>
               </div>
               {{ form.title(class_="form-control", placeholder="e.g. Detect_Mimikatz_Sekurlsa") }}
-              {% if form.title.errors %}
-              <div class="invalid-feedback d-block">{{ form.title.errors[0] }}</div>
-              {% endif %}
+              <div v-if="titleError" class="invalid-feedback d-block">[[ titleError ]]</div>
             </div>
             <div class="col-md-6">
               <div class="d-flex align-items-center gap-1 mb-1">
@@ -315,12 +317,10 @@
         <form method="POST" action="{{ url_for('rule.parse_rule') }}" class="d-flex flex-column" id="github-form" novalidate>
 
           <div id="flash-messages" class="mt-2">
-            {% for category, message in get_flashed_messages(with_categories=True) %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-              {{ message }}
+            <div v-for="(fm, fmIdx) in flashMessages" :key="fmIdx" :class="`alert alert-${fm.category} alert-dismissible fade show`" role="alert">
+              [[ fm.message ]]
               <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-            {% endfor %}
           </div>
 
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -646,6 +646,9 @@
 <script>
 window.__manual_content = {{ (form.to_string.data or '') | tojson }};
 window.__manual_format  = {{ (form.format.data  or '') | tojson }};
+window.__trash_conflict_title = {{ trash_conflict_title | tojson }};
+window.__flash_messages = {{ flash_messages | tojson }};
+window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) | tojson }};
 </script>
 <script type="module">
 
@@ -696,6 +699,10 @@ window.__manual_format  = {{ (form.format.data  or '') | tojson }};
                   const manualContent = ref(window.__manual_content || '');
                   const manualFormat  = ref(window.__manual_format  || '');
                   const parseContent  = ref('');
+
+                  const trashConflictTitle = ref(window.__trash_conflict_title || null);
+                  const flashMessages      = ref(window.__flash_messages || []);
+                  const titleError         = ref(window.__title_error || null);
 
                   const license = ref([]);
                   const selectedLicense = ref("");
@@ -914,6 +921,7 @@ window.__manual_format  = {{ (form.format.data  or '') | tojson }};
 
                   return {
                         message_list,
+                        trashConflictTitle, flashMessages, titleError,
                         license,
                         selectedLicense,
                         url,

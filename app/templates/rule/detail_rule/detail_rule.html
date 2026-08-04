@@ -44,7 +44,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
             <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
                 <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
                 <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
-                <li class="breadcrumb-item active text-muted" aria-current="page">{% if rule.title|length > 40 %}{{ rule.title[:40] }}…{% else %}{{ rule.title }}{% endif %}</li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">[[ currentRule.title && currentRule.title.length > 40 ? currentRule.title.slice(0, 40) + '…' : currentRule.title ]]</li>
             </ol>
         </nav>
         <div class="d-flex align-items-center gap-3 mb-3">
@@ -53,7 +53,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
             </div>
             <div>
                 <h2 class="fw-bold mb-1">
-                    {% if rule.title|length > 60 %}{{ rule.title[:60] }}…{% else %}{{ rule.title }}{% endif %}
+                    [[ currentRule.title && currentRule.title.length > 60 ? currentRule.title.slice(0, 60) + '…' : currentRule.title ]]
                 </h2>
                 <div class="banner-accent"></div>
             </div>
@@ -130,7 +130,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                             <small class="text-muted">Unknown</small>
                                         </template>
                                         <template v-else>
-                                            <small class="text-break fw-mono"> {{ rule.original_uuid }} </small>
+                                            <small class="text-break fw-mono"> [[ currentRule.original_uuid ]] </small>
                                         </template>
                                     </div>
                                     <div class="d-flex align-items-center mb-2">
@@ -1306,7 +1306,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                 if (choice == 1) {
                     var source = ""
                 } else {
-                    var source = "{{ rule.source }}"
+                    var source = currentRule.value.source || ""
                 }
 
                 const params = new URLSearchParams({

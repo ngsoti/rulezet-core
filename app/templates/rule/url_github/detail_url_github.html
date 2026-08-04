@@ -165,14 +165,14 @@
         <div class="d-flex align-items-center gap-3 mb-3">
             <div class="banner-icon"><i class="fa-brands fa-github"></i></div>
             <div class="min-width-0">
-                <h2 class="fw-bold mb-1">{{ url.replace('https://github.com/', '') }}</h2>
+                <h2 class="fw-bold mb-1">[[ repoDisplay ]]</h2>
                 <div class="banner-accent"></div>
             </div>
         </div>
         <p class="text-muted mb-3" style="max-width: 700px; font-size: 0.95rem;">
             All detection rules imported from
-            <a href="{{ url }}" target="_blank" rel="noreferrer" class="fw-semibold text-decoration-none">
-                {{ url }} <i class="fa-solid fa-arrow-up-right-from-square ms-1" style="font-size:.7rem;"></i>
+            <a :href="repoUrl" target="_blank" rel="noreferrer" class="fw-semibold text-decoration-none">
+                [[ repoUrl ]] <i class="fa-solid fa-arrow-up-right-from-square ms-1" style="font-size:.7rem;"></i>
             </a>
         </p>
         <!-- Rulezet source stats -->
@@ -465,7 +465,7 @@
         mode="manage"
         default-view="card"
         fetch-url="/rule/data_table"
-        source="{{ url }}"
+        :source="repoUrl"
         :can-vote="isAuthenticated"
         :can-favorite="isAuthenticated"
         :current-user-id="currentUserId"
@@ -500,8 +500,9 @@
     const isAdmin         = {{ current_user.is_admin()        | tojson }}
     const currentUserId   = {{ current_user.id if current_user.is_authenticated else 'null' }}
     const csrfToken       = '{{ csrf_token() }}'
-    const repoUrl         = '{{ url }}'
+    const repoUrl         = {{ url | tojson }}
     const repoPath        = repoUrl.replace('https://github.com/', '')
+    const repoDisplay     = repoPath
 
     function fmtNum(n) {
         if (n === undefined || n === null) return '—'
@@ -606,6 +607,7 @@
                 contributors, contributorsLoading,
                 fmtNum, fmtSize, fmtDate,
                 isAuthenticated, isAdmin, currentUserId, csrfToken,
+                repoUrl, repoDisplay,
             }
         }
     }).mount('#main-container')

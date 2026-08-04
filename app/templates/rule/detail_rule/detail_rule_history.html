@@ -105,7 +105,7 @@
                 <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
                 <li class="breadcrumb-item">
                     <a href="/rule/detail_rule/{{ rule.id }}" class="text-decoration-none text-muted">
-                        {% if rule.title|length > 40 %}{{ rule.title[:40] }}…{% else %}{{ rule.title }}{% endif %}
+                        [[ RULE_TITLE_SHORT ]]
                     </a>
                 </li>
                 <li class="breadcrumb-item active text-muted" aria-current="page">History</li>
@@ -114,7 +114,7 @@
         <div class="d-flex align-items-center gap-3 mb-3">
             <div class="banner-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
             <div>
-                <h2 class="fw-bold mb-1">{% if rule.title|length > 60 %}{{ rule.title[:60] }}…{% else %}{{ rule.title }}{% endif %}</h2>
+                <h2 class="fw-bold mb-1">[[ RULE_TITLE_MEDIUM ]]</h2>
                 <div class="banner-accent"></div>
             </div>
         </div>
@@ -423,6 +423,9 @@
     import MetaChangeList from '/static/js/components/meta-change-list.js';
 
     const RULE_ID     = {{ rule.id }};
+    const RULE_TITLE  = {{ rule.title | tojson }};
+    const RULE_TITLE_SHORT  = RULE_TITLE.length > 40 ? RULE_TITLE.slice(0, 40) + '…' : RULE_TITLE;
+    const RULE_TITLE_MEDIUM = RULE_TITLE.length > 60 ? RULE_TITLE.slice(0, 60) + '…' : RULE_TITLE;
     const RULE_FORMAT = '{{ rule.format or "text" }}';
     const CSRF        = '{{ csrf_token() }}';
     const CAN_DELETE  = {{ (current_user.is_authenticated and (current_user.id == rule.user_id or current_user.is_admin())) | tojson }};
@@ -628,6 +631,7 @@
             }
 
             return {
+                RULE_TITLE_SHORT, RULE_TITLE_MEDIUM,
                 items, loading, filters, activeFilters, filteredItems, updateCount, toggleFilter,
                 canDelete: CAN_DELETE, deleteActivity, deleteVersion,
                 inlineDiff, inlineDiffKey, inlineContent, onTimelineSelect, onTimelineViewContent,

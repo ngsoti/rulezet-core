@@ -43,7 +43,7 @@
             <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
                 <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
                 <li class="breadcrumb-item"><a href="/bundle/list" class="text-decoration-none text-muted">Bundles</a></li>
-                <li class="breadcrumb-item active text-muted" aria-current="page">{% if bundle_name|length > 40 %}{{ bundle_name[:40] }}…{% else %}{{ bundle_name }}{% endif %}</li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">[[ bundleNameShort ]]</li>
             </ol>
         </nav>
         <div class="d-flex align-items-center gap-3 mb-3">
@@ -51,7 +51,7 @@
                 <i class="fa-solid fa-box-archive"></i>
             </div>
             <div>
-                <h2 class="fw-bold mb-1">{% if bundle_name|length > 60 %}{{ bundle_name[:60] }}…{% else %}{{ bundle_name }}{% endif %}</h2>
+                <h2 class="fw-bold mb-1">[[ bundleNameMedium ]]</h2>
                 <div class="banner-accent"></div>
             </div>
         </div>
@@ -555,6 +555,14 @@
              */
 
             const bundle = ref(null);
+            const bundleNameShort  = computed(() => {
+                const name = bundle.value?.name || '';
+                return name.length > 40 ? name.slice(0, 40) + '…' : name;
+            });
+            const bundleNameMedium = computed(() => {
+                const name = bundle.value?.name || '';
+                return name.length > 60 ? name.slice(0, 60) + '…' : name;
+            });
             const bundleUserVote = ref(null);
             const rules = ref([]);
             const currentPage = ref(1);
@@ -974,7 +982,7 @@
 
             return {
                 csrfToken,
-                init, detail_page_1_is_loading, animateClick, dayjs, bundle, rules, message_list, bundle_id, is_admin, copyToClipboard,
+                init, detail_page_1_is_loading, animateClick, dayjs, bundle, bundleNameShort, bundleNameMedium, rules, message_list, bundle_id, is_admin, copyToClipboard,
                 vote, bundleUserVote, edit_access, deleteBundle, saveNewDescription, DownloadBundle, DownloadBundleStructure, current_user_is_connected,
                 goToRule, showFullDesc, truncateText, stats, update,
 

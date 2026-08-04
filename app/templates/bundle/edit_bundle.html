@@ -24,7 +24,7 @@
                 <li class="breadcrumb-item"><a href="/bundle/list" class="text-decoration-none text-muted">Bundles</a></li>
                 <li class="breadcrumb-item">
                     <a href="{{ url_for('bundle.detail', bundle_id=bundle.id) }}"
-                       class="text-decoration-none text-muted">{{ bundle.name | truncate(35) }}</a>
+                       class="text-decoration-none text-muted">[[ bundleNameShort ]]</a>
                 </li>
                 <li class="breadcrumb-item active text-muted" aria-current="page">Edit</li>
             </ol>
@@ -33,7 +33,7 @@
         <div class="d-flex align-items-center gap-3 mb-2">
             <div class="banner-icon"><i class="fa-solid fa-layer-group"></i></div>
             <div>
-                <h2 class="fw-bold mb-1">{{ bundle.name | truncate(50) }}</h2>
+                <h2 class="fw-bold mb-1">[[ bundleNameMedium ]]</h2>
                 <div class="banner-accent"></div>
             </div>
             
@@ -301,6 +301,7 @@ import TagCreateModal        from '/static/js/tags/tagCreateModal.js'
 
 const { createApp, ref, computed, onMounted } = Vue
 const _BUNDLE_ID = {{ bundle.id | tojson }}
+const _BUNDLE_NAME = {{ bundle.name | tojson }}
 
 createApp({
     delimiters: ['[[', ']]'],
@@ -314,6 +315,8 @@ createApp({
     setup() {
         const bundleId  = ref(_BUNDLE_ID)
         const csrfToken = "{{ csrf_token() }}"
+        const bundleNameShort  = _BUNDLE_NAME.length > 35 ? _BUNDLE_NAME.slice(0, 35) + '…' : _BUNDLE_NAME
+        const bundleNameMedium = _BUNDLE_NAME.length > 50 ? _BUNDLE_NAME.slice(0, 50) + '…' : _BUNDLE_NAME
 
         // ── Structure ──────────────────────────────────────────────
         const structureEditor = ref(null)
@@ -457,7 +460,7 @@ createApp({
         })
 
         return {
-            bundleId, csrfToken, structureEditor, bundleRuleIds,
+            bundleId, csrfToken, bundleNameShort, bundleNameMedium, structureEditor, bundleRuleIds,
             onAddRules, onPreviewRule, onTreeReady, onTreeSaved,
             tags, total_tags, total_pages_tags, current_page_tags,
             save_loading_tags, load_tags, searchQueryTags, sort_order,

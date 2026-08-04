@@ -28,14 +28,14 @@
         </li>
         {% endif %}
         <li class="breadcrumb-item active text-muted" aria-current="page">
-          {{ test.label or ((test.format | upper) + ' ' + (test.test_type | capitalize) + ' Test') }}
+          [[ testTitle ]]
         </li>
       </ol>
     </nav>
     <div class="d-flex align-items-center gap-3 mb-3">
       <div class="banner-icon"><i class="fa-solid fa-flask-vial"></i></div>
       <div>
-        <h2 class="fw-bold mb-1">{{ test.label or ((test.format | upper) + ' ' + (test.test_type | capitalize) + ' Test') }}</h2>
+        <h2 class="fw-bold mb-1">[[ testTitle ]]</h2>
         <div class="banner-accent"></div>
       </div>
     </div>
@@ -77,7 +77,7 @@
         <div>
           <div class="rtr-danger-banner__title">Dangerous sample</div>
           <div class="rtr-danger-banner__desc">
-            {{ test.danger_description or 'The submitter flagged this test\'s payload as a real malicious/dangerous artifact. Handle with care.' }}
+            [[ testMeta.dangerDescription || "The submitter flagged this test's payload as a real malicious/dangerous artifact. Handle with care." ]]
           </div>
         </div>
       </div>
@@ -113,7 +113,7 @@
         </div>
         <div class="rtr-kpi-card">
           <div class="rtr-kpi-card__label">Input</div>
-          <div class="rtr-kpi-card__value" style="font-size:.9rem;">{{ test.input_type }}</div>
+          <div class="rtr-kpi-card__value" style="font-size:.9rem;">[[ testMeta.inputType ]]</div>
         </div>
         {% if test.matched_count is not none %}
         <div class="rtr-kpi-card">
@@ -173,15 +173,13 @@
           <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
             <i class="fa-solid fa-terminal me-1"></i>Input
           </span>
-          <span class="badge ms-1" style="background:rgba(13,110,253,.1);color:#0d6efd;font-size:.65rem;">{{ test.input_type }}</span>
-          {% if test.input_label %}
-          <span class="badge bg-secondary" style="font-size:.65rem;">{{ test.input_label }}</span>
-          {% endif %}
+          <span class="badge ms-1" style="background:rgba(13,110,253,.1);color:#0d6efd;font-size:.65rem;">[[ testMeta.inputType ]]</span>
+          <span v-if="testMeta.inputLabel" class="badge bg-secondary" style="font-size:.65rem;">[[ testMeta.inputLabel ]]</span>
         </div>
         <div class="border rounded-3 overflow-hidden shadow-sm p-3">
           <details>
             <summary style="font-size:.78rem;cursor:pointer;color:var(--subtle-text-color);user-select:none;">Show input data</summary>
-            <pre class="rtr-input-preview mt-2">{{ (test.input_data or '') | truncate(2000) }}</pre>
+            <pre class="rtr-input-preview mt-2">[[ testMeta.inputData ]]</pre>
           </details>
         </div>
       </div>
@@ -312,6 +310,15 @@
   const currentUserId      = {{ current_user.id if current_user.is_authenticated else 'null' }}
   const currentUserIsAdmin = {{ current_user.is_admin() | tojson }}
   const testInputData = { type: {{ test.input_type | tojson }}, value: {{ (test.input_data or '') | tojson }} }
+  const testMeta = {
+    label:             {{ test.label | tojson }},
+    format:            {{ test.format | tojson }},
+    testType:          {{ test.test_type | tojson }},
+    dangerDescription: {{ test.danger_description | tojson }},
+    inputType:         {{ test.input_type | tojson }},
+    inputLabel:        {{ test.input_label | tojson }},
+    inputData:         {{ (test.input_data or '') | truncate(2000) | tojson }},
+  }
 
   createApp({
     delimiters: ['[[', ']]'],
@@ -329,6 +336,7 @@
         currentUserIsAdmin,
         isAuthenticated: {{ current_user.is_authenticated | tojson }},
         testInputData,
+        testMeta,
         resultData,
         jobUuid:      initJobUuid,
         jobStatus:    initJobStatus,
@@ -343,6 +351,11 @@
       }
     },
     computed: {
+      testTitle() {
+        if (this.testMeta.label) return this.testMeta.label;
+        const type = this.testMeta.testType || '';
+        return `${(this.testMeta.format || '').toUpperCase()} ${type.charAt(0).toUpperCase()}${type.slice(1)} Test`;
+      },
       jobRunning() { return this.jobStatus === 'pending' || this.jobStatus === 'running'; },
       jobStatusLabel() {
         return { pending:'Queued', running:'Running', done:'Done', failed:'Failed' }[this.jobStatus] || this.jobStatus;

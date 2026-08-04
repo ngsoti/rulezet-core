@@ -22,7 +22,7 @@
                 <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
                 <li class="breadcrumb-item">
                     <a href="/rule/detail_rule/{{ rule.id }}" class="text-decoration-none text-muted">
-                        {% if rule.title|length > 40 %}{{ rule.title[:40] }}…{% else %}{{ rule.title }}{% endif %}
+                        [[ RULE_TITLE_SHORT ]]
                     </a>
                 </li>
                 <li class="breadcrumb-item active text-muted" aria-current="page">Similarity</li>
@@ -114,6 +114,8 @@
 
     const rule_id = {{ rule.id }};
     const csrf_token = '{{ csrf_token() }}';
+    const RULE_TITLE = {{ rule.title | tojson }};
+    const RULE_TITLE_SHORT = RULE_TITLE.length > 40 ? RULE_TITLE.slice(0, 40) + '…' : RULE_TITLE;
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -186,6 +188,7 @@
             onMounted(() => fetchSimilar(1));
 
             return {
+                RULE_TITLE_SHORT,
                 similar_rules, current_page, total_pages, total_count, per_page,
                 loading, refreshing, fetchSimilar, refreshSimilarity, handlePerPageChange,
             };

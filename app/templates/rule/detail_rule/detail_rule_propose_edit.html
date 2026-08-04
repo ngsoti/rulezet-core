@@ -96,7 +96,7 @@
                 <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
                 <li class="breadcrumb-item">
                     <a href="/rule/detail_rule/{{ rule.id }}" class="text-decoration-none text-muted">
-                        {% if rule.title|length > 40 %}{{ rule.title[:40] }}…{% else %}{{ rule.title }}{% endif %}
+                        [[ RULE_TITLE_SHORT ]]
                     </a>
                 </li>
                 <li class="breadcrumb-item active text-muted" aria-current="page">Suggest an Edit</li>
@@ -277,6 +277,8 @@ import { create_message } from '/static/js/toaster.js';
 const { createApp, ref, onMounted } = Vue;
 
 const RULE_ID     = {{ rule.id }};
+const RULE_TITLE  = {{ rule.title | tojson }};
+const RULE_TITLE_SHORT = RULE_TITLE.length > 40 ? RULE_TITLE.slice(0, 40) + '…' : RULE_TITLE;
 const RULE_FORMAT = '{{ rule.format or "text" }}';
 const CSRF        = '{{ csrf_token() }}';
 
@@ -359,6 +361,7 @@ createApp({
         }
 
         return {
+            RULE_TITLE_SHORT,
             proposalContent, originalContent, ruleFormat,
             showOriginal, showDiff, editType, editTypes,
             proposalMessage, messageMode, messageModes,

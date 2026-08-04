@@ -161,7 +161,7 @@
                     <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
                     <li class="breadcrumb-item">
                         <a href="/rule/detail_rule/{{ rule.id }}/pull_request" class="text-decoration-none text-muted">
-                            {% if rule.title|length > 40 %}{{ rule.title[:40] }}…{% else %}{{ rule.title }}{% endif %}
+                            [[ RULE_TITLE_SHORT ]]
                         </a>
                     </li>
                     <li class="breadcrumb-item active text-muted" aria-current="page">Proposal #{{ rule_edit_id }}</li>
@@ -452,6 +452,8 @@
     const CAN_DECIDE  = {{ can_decide | tojson }};
     const RULE_ID     = {{ rule.id }};
     const PROPOSAL_ID = {{ rule_edit_id }};
+    const RULE_TITLE  = {{ rule.title | tojson }};
+    const RULE_TITLE_SHORT = RULE_TITLE.length > 40 ? RULE_TITLE.slice(0, 40) + '…' : RULE_TITLE;
 
     // Lazy-load marked + DOMPurify for safe message rendering
     let _marked = null;
@@ -598,6 +600,7 @@
             fetchRuleProposal();
 
             return {
+                RULE_TITLE_SHORT,
                 proposal, isFavorited, deciding,
                 showRawMessage, renderedMessage,
                 editTypeMeta, truncate, formatDate, scoreColor,

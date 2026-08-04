@@ -33,17 +33,16 @@
 <script>
 window.__bad_rule_content = {{ (new_content if new_content else rule.raw_content) | tojson }};
 window.__bad_rule_format  = {{ rule.rule_type | tojson }};
+window.__bad_rule_error   = {{ (rule.error_message or '') | tojson }};
 </script>
 
 <div id="edit-bad-rule-app">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-        {% if rule.error_message %}
-        <div class="alert alert-danger mb-3">
-            <i class="fas fa-circle-exclamation me-2"></i>{{ rule.error_message }}
+        <div v-if="errorMessage" class="alert alert-danger mb-3">
+            <i class="fas fa-circle-exclamation me-2"></i>[[ errorMessage ]]
         </div>
-        {% endif %}
 
         <div class="mb-3">
             <label class="form-label fw-bold mb-2">Content</label>
@@ -80,11 +79,13 @@ window.__bad_rule_format  = {{ rule.rule_type | tojson }};
     import SmartEditor from '/static/js/components/smart-editor.js';
 
     createApp({
+        delimiters: ['[[', ']]'],
         components: { 'smart-editor': SmartEditor },
         setup() {
-            const content  = ref(window.__bad_rule_content || '');
-            const language = ref(window.__bad_rule_format  || 'text');
-            return { content, language };
+            const content      = ref(window.__bad_rule_content || '');
+            const language     = ref(window.__bad_rule_format  || 'text');
+            const errorMessage = ref(window.__bad_rule_error   || '');
+            return { content, language, errorMessage };
         }
     }).mount('#edit-bad-rule-app');
 </script>

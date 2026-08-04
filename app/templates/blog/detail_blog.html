@@ -69,7 +69,7 @@
                 <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
                 <li class="breadcrumb-item"><a href="/blog/" class="text-decoration-none text-muted">Blog</a></li>
                 <li class="breadcrumb-item active text-muted" aria-current="page">
-                    {% if post.title|length > 40 %}{{ post.title[:40] }}…{% else %}{{ post.title }}{% endif %}
+                    [[ post.title && post.title.length > 40 ? post.title.slice(0, 40) + '…' : post.title ]]
                 </li>
             </ol>
         </nav>
@@ -77,13 +77,13 @@
             <div class="banner-icon"><i class="fa-solid fa-newspaper"></i></div>
             <div>
                 <h2 class="fw-bold mb-1">
-                    {% if post.title|length > 60 %}{{ post.title[:60] }}…{% else %}{{ post.title }}{% endif %}
+                    [[ post.title && post.title.length > 60 ? post.title.slice(0, 60) + '…' : post.title ]]
                 </h2>
                 <div class="banner-accent"></div>
             </div>
         </div>
         <p class="text-muted mb-0" style="font-size:1.05rem;line-height:1.75;">
-            {{ post.excerpt or 'Security blog post from the Rulezet team.' }}
+            [[ post.excerpt || 'Security blog post from the Rulezet team.' ]]
         </p>
     </div>
 

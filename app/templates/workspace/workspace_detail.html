@@ -21,7 +21,7 @@
             <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
                 <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
                 <li class="breadcrumb-item"><a href="/workspace/my_rules" class="text-decoration-none text-muted">My Rules</a></li>
-                <li class="breadcrumb-item active text-muted" aria-current="page">{% if workspace.name|length > 40 %}{{ workspace.name[:40] }}…{% else %}{{ workspace.name }}{% endif %}</li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">[[ wsNameShort ]]</li>
             </ol>
         </nav>
         <div class="d-flex align-items-center gap-3 mb-3">
@@ -29,7 +29,7 @@
                 <i :class="'fa-solid ' + wsIcon"></i>
             </div>
             <div>
-                <h2 class="fw-bold mb-1">{% if workspace.name|length > 60 %}{{ workspace.name[:60] }}…{% else %}{{ workspace.name }}{% endif %}</h2>
+                <h2 class="fw-bold mb-1">[[ wsNameMedium ]]</h2>
                 <div class="banner-accent"></div>
             </div>
             <div class="ms-auto d-flex gap-2">
@@ -906,6 +906,8 @@
 
     const wsUuid        = '{{ workspace.uuid }}'
     const wsName        = '{{ workspace.name | e }}'
+    const wsNameShort   = wsName.length > 40 ? wsName.slice(0, 40) + '…' : wsName
+    const wsNameMedium  = wsName.length > 60 ? wsName.slice(0, 60) + '…' : wsName
     const wsColor       = '{{ workspace.color }}'
     const wsIcon        = '{{ workspace.icon }}'
     const wsDesc        = '{{ (workspace.description or "") | e }}'
@@ -1754,6 +1756,7 @@
             })
 
             return {
+                wsNameShort, wsNameMedium,
                 wsColor: wsColorRef, wsIcon: wsIconRef, wsDesc: wsDescRef,
                 wsMeta, wsTags, wsAttacks, tagsLoading, attacksLoading,
                 urlEditing, urlDraft, startUrlEdit, saveUrl,
