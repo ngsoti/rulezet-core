@@ -72,6 +72,20 @@
 .rf-label-hint:hover::before { opacity: 1; }
 </style>
 {% endblock %}
+{# Computed at template top-level (not inside a {% block %}) so both
+   {% block content %} and {% block script %} below can see them — Jinja
+   gives {% set %} block-local scope, so this can't live inside either
+   block if the other one needs to read it too. #}
+{% set trash_conflict_title = none %}
+{% set flash_messages = [] %}
+{% for category, message in get_flashed_messages(with_categories=True) %}
+  {% if message.startswith('TRASH_CONFLICT:') %}
+    {% set parts = message.split(':', 3) %}
+    {% set trash_conflict_title = parts[3] if parts|length > 3 else 'deleted rule' %}
+  {% elif category != 'warning' or not message.startswith('TRASH') %}
+    {% set _ = flash_messages.append({'category': category, 'message': message}) %}
+  {% endif %}
+{% endfor %}
 {% block content %}
 <div class="container mt-4" v-cloak >
 
@@ -141,16 +155,6 @@
           {{ form.hidden_tag() }}
 
           <!-- Trash conflict warning -->
-          {% set trash_conflict_title = none %}
-          {% set flash_messages = [] %}
-          {% for category, message in get_flashed_messages(with_categories=True) %}
-            {% if message.startswith('TRASH_CONFLICT:') %}
-              {% set parts = message.split(':', 3) %}
-              {% set trash_conflict_title = parts[3] if parts|length > 3 else 'deleted rule' %}
-            {% elif category != 'warning' or not message.startswith('TRASH') %}
-              {% set _ = flash_messages.append({'category': category, 'message': message}) %}
-            {% endif %}
-          {% endfor %}
           <div v-if="trashConflictTitle" class="alert alert-warning border-warning rounded-3 d-flex align-items-start gap-3 mb-4" role="alert" style="border-left:4px solid #ffc107 !important;">
             <i class="fa-solid fa-trash-can-arrow-up fa-lg text-warning mt-1 flex-shrink-0"></i>
             <div class="flex-grow-1">
