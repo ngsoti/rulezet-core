@@ -351,18 +351,68 @@
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <div class="d-flex align-items-center gap-2">
                             <div style="width:3px;height:16px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
-                                <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
-                                    <i class="fa-solid fa-diagram-project me-1"></i>Visualized Bundle
-                                </span>
-                            </div>
+                            <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                                <i class="fa-solid fa-diagram-project me-1"></i>Visualized Bundle
+                            </span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
                             <button class="btn btn-sm btn-outline-secondary rounded-pill" @click="DownloadMISP" :disabled="!mispJson">
                                 <i class="fas fa-download me-1"></i> Download
                             </button>
-                            <button class="btn btn-sm btn-outline-secondary rounded-pill" @click="toggleGraphFullscreen">
-                                <i class="fa-solid" :class="isGraphFullscreen ? 'fa-compress' : 'fa-expand'"></i>
-                                <span class="ms-1">[[ isGraphFullscreen ? 'Exit fullscreen' : 'Fullscreen' ]]</span>
+                            {% if current_user.is_authenticated and current_user.is_admin() %}
+                            <button class="btn btn-sm btn-outline-primary rounded-pill" @click="mispPushPanelOpen = !mispPushPanelOpen"
+                                    :aria-expanded="mispPushPanelOpen" aria-controls="bundle-misp-push-panel">
+                                <i class="fa-solid fa-share-nodes me-1"></i>Push to MISP
+                                <i class="fa-solid ms-1" :class="mispPushPanelOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
                             </button>
+                            {% endif %}
                         </div>
+                    </div>
+
+                    {% if current_user.is_authenticated and current_user.is_admin() %}
+                    <div class="collapse mb-3" :class="{ show: mispPushPanelOpen }" id="bundle-misp-push-panel">
+                        <div v-if="!mispServersLoading && !mispServers.length"
+                             class="rounded-3 border p-3"
+                             style="background:rgba(13,110,253,.06);border-color:rgba(13,110,253,.25)!important;">
+                            <div class="d-flex align-items-center flex-wrap gap-3">
+                                <img src="{{ url_for('static', filename='custom-icon/misp.svg') }}"
+                                     alt="" style="height:28px;width:28px;object-fit:contain;flex-shrink:0;">
+                                <div class="flex-grow-1" style="min-width:200px;">
+                                    <div class="fw-semibold small mb-1">No MISP instance connected</div>
+                                    <div class="text-muted" style="font-size:.8rem;">
+                                        Push this bundle's MISP Event straight to a connected MISP instance.
+                                    </div>
+                                </div>
+                                <a href="/misp/list" class="btn btn-primary btn-sm rounded-pill px-3 flex-shrink-0">
+                                    <i class="fa-solid fa-plus me-1"></i>Create a connector to your MISP instance
+                                </a>
+                            </div>
+                        </div>
+                        <div v-else class="rounded-3 border p-3" style="background:var(--light-bg-color);">
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <span class="fw-semibold small">
+                                    <i class="fa-solid fa-share-nodes me-1 text-primary"></i>Push to MISP
+                                </span>
+                                <select v-model="selectedMispServer" class="form-select form-select-sm"
+                                        style="max-width:260px;" :disabled="mispPushBusy">
+                                    <option value="" disabled>
+                                        [[ mispServersLoading ? 'Loading instances…' : 'Choose an instance…' ]]
+                                    </option>
+                                    <option v-for="s in mispServers" :key="s.uuid" :value="s.uuid" :disabled="!s.is_active">
+                                        [[ s.name ]][[ s.is_active ? '' : ' (disabled)' ]]
+                                    </option>
+                                </select>
+                                <button class="btn btn-primary btn-sm rounded-pill px-3"
+                                        @click="pushBundleToMisp"
+                                        :disabled="!selectedMispServer || mispPushBusy">
+                                    <span v-if="mispPushBusy" class="spinner-border spinner-border-sm me-1"></span>
+                                    <i v-else class="fa-solid fa-paper-plane me-1"></i>Push as Event
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                         <div class="gap-2 p-3 rounded-3 shadow-sm border" style="background: var(--light-bg-color);">
                             <div class="border rounded-3 overflow-hidden shadow-sm">
                             <ul class="nav nav-tabs nav-fill border-bottom" id="ruleTabs" role="tablist">
@@ -733,6 +783,48 @@
                 }
             }
 
+            // ── Push this bundle's MISP Event to a connected MISP instance ──
+            const mispServers        = ref([]);
+            const mispServersLoading = ref(false);
+            const selectedMispServer = ref('');
+            const mispPushBusy       = ref(false);
+            const mispPushPanelOpen  = ref(false);
+            let _mispServersFetched  = false;
+
+            async function fetchMispServers() {
+                if (_mispServersFetched) return;
+                _mispServersFetched = true;
+                mispServersLoading.value = true;
+                try {
+                    const res = await fetch('/misp/get');
+                    if (res.ok) mispServers.value = await res.json();
+                } catch { /* admin-only widget — fail quietly if unauthorized/offline */ }
+                finally { mispServersLoading.value = false; }
+            }
+
+            async function pushBundleToMisp() {
+                if (!selectedMispServer.value || !bundle_id) return;
+                mispPushBusy.value = true;
+                try {
+                    const res = await fetch('/misp/push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify({
+                            bundle_id: bundle_id,
+                            server_uuid: selectedMispServer.value,
+                            push_type: 'event',
+                        }),
+                    });
+                    const data = await res.json();
+                    create_message(data.message || data.error || 'Push request sent.', data.success ? 'success-subtle' : 'danger-subtle');
+                    if (data.success) window.dispatchEvent(new Event('rz:job-created'));
+                } catch {
+                    create_message('Network error — push not queued.', 'danger-subtle');
+                } finally {
+                    mispPushBusy.value = false;
+                }
+            }
+
 
             async function DownloadBundleStructure() {
                 const params = new URLSearchParams({ bundle_id });
@@ -933,21 +1025,6 @@
                 initBundleGraph('misp-graph-container', JSON.stringify(_mispParsed.value), { graphType: 'bundle' });
             }
 
-            // Fullscreen toggle for the MISP graph canvas
-            const isGraphFullscreen = ref(false);
-            function toggleGraphFullscreen() {
-                const el = document.getElementById('misp-graph-container');
-                if (!el) return;
-                if (!document.fullscreenElement) {
-                    el.requestFullscreen?.();
-                } else {
-                    document.exitFullscreen?.();
-                }
-            }
-            document.addEventListener('fullscreenchange', () => {
-                isGraphFullscreen.value = document.fullscreenElement?.id === 'misp-graph-container';
-            });
-
             onMounted(async () => {
                 await init();
 
@@ -964,6 +1041,9 @@
                 // Load ATT&CK coverage and MISP data
                 fetchAttackCoverage();
                 _loadMisp().then(() => nextTick(_maybeInitGraph));
+                {% if current_user.is_authenticated and current_user.is_admin() %}
+                fetchMispServers();
+                {% endif %}
 
                 // Also init when the graph tab is first shown (data may not be ready yet above)
                 const graphTabEl = document.getElementById('misp-graph-tab');
@@ -988,7 +1068,6 @@
 
                 treeData, fileTreeNodes,
                 selectedFileNode, handleFileTreeSelect, mispJson, mispLoading, mispError, toggleContent,
-                isGraphFullscreen, toggleGraphFullscreen,
 
                 current_user_is_admin,
 
@@ -998,6 +1077,8 @@
                 currentPage, totalPages, changePage, visiblePages, DownloadMISP,
 
                 attackCoverage, attackLoading, attackStats,
+
+                mispServers, mispServersLoading, selectedMispServer, mispPushBusy, mispPushPanelOpen, pushBundleToMisp,
             };
         }
     }).mount('#main-container');

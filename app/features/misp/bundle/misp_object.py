@@ -9,14 +9,16 @@ from ..object_templates import load_object_template
 #   Get bundle in MISP Object or MISP Event   #
 ###############################################
 
-def get_bundle_misp_event(bundle_id: int) -> dict | None:
-    """
-    Build a complete MISP event for a bundle:
+def get_bundle_misp_event_object(bundle_id: int) -> MISPEvent | None:
+    """Same as get_bundle_misp_event but returns the live MISPEvent instance
+    instead of its .to_json()'d dict — needed to push it to a remote MISP
+    server without a lossy JSON round-trip (see misp_connector_core.py).
+
+    Builds a complete MISP event for a bundle:
     - bundle metadata object
     - each rule: metadata + content objects with references
     - tags at event level
     - vulnerabilities as event-level attributes
-    Returns a dict (JSON-serializable).
     """
     bundle = BundleModel.get_bundle_by_id(bundle_id)
     if not bundle:
@@ -43,6 +45,14 @@ def get_bundle_misp_event(bundle_id: int) -> dict | None:
     # 4. Vulnerabilities as event-level attributes
     _add_bundle_vulnerabilities_to_event(event, bundle, bundle_obj)
 
+    return event
+
+
+def get_bundle_misp_event(bundle_id: int) -> dict | None:
+    """Same as get_bundle_misp_event_object but returns a JSON-serializable dict."""
+    event = get_bundle_misp_event_object(bundle_id)
+    if event is None:
+        return None
     return json.loads(event.to_json())
 
 

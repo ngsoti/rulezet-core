@@ -259,32 +259,54 @@ def push_to_misp(server: MispServer, event) -> tuple[bool, str]:
         return False, f"Push failed: {e}"
 
 
-def trigger_push(server: MispServer, rule_id: int, push_type: str, triggered_by: int) -> object | None:
+def trigger_push(server: MispServer, push_type: str, triggered_by: int,
+                  rule_id: int = None, bundle_id: int = None) -> object | None:
     """Queue a background job that builds the MISP Object/Event for `rule_id`
-    and pushes it to `server`. `push_type` is 'object' or 'event'."""
+    or the MISP Event for `bundle_id` and pushes it to `server`.
+    `push_type` is 'object' or 'event' for a rule; bundles only support 'event'."""
     if not server.is_active:
         return None
+    if not rule_id and not bundle_id:
+        return None
 
-    # Fetched here (not by the route) so rule_uuid/title can be attached to the
-    # history entry — lets the server's history timeline link straight back to
-    # the pushed rule instead of only showing its opaque integer id.
-    from app.features.rule import rule_core as RuleModel
-    rule = RuleModel.get_rule(rule_id)
+    payload = {'server_id': server.id, 'push_type': push_type}
+    extra   = {'push_type': push_type}
+    target_label = None
+
+    if bundle_id:
+        # Fetched here (not by the route) so bundle_uuid/name can be attached to
+        # the history entry — lets the server's history timeline link straight
+        # back to the pushed bundle instead of only showing its opaque integer id.
+        from app.features.bundle import bundle_core as BundleModel
+        bundle = BundleModel.get_bundle_by_id(bundle_id)
+        payload['bundle_id'] = bundle_id
+        if bundle:
+            extra['bundle_id']    = bundle_id
+            extra['bundle_uuid']  = bundle.uuid
+            extra['bundle_title'] = bundle.name
+            target_label = bundle.name
+    else:
+        # Same reasoning as above, for a rule push.
+        from app.features.rule import rule_core as RuleModel
+        rule = RuleModel.get_rule(rule_id)
+        payload['rule_id'] = rule_id
+        if rule:
+            extra['rule_id']    = rule_id
+            extra['rule_uuid']  = rule.uuid
+            extra['rule_title'] = rule.title
+            target_label = rule.title
 
     job = create_job(
         job_type='misp_push',
-        payload={'server_id': server.id, 'rule_id': rule_id, 'push_type': push_type},
-        label=f"Push MISP {push_type} to server '{server.name}'",
+        payload=payload,
+        label=f"Push MISP {push_type} to server '{server.name}'" + (f" ({target_label})" if target_label else ''),
         created_by=triggered_by,
     )
     if job:
-        extra = {'rule_id': rule_id, 'push_type': push_type, 'job_uuid': job.uuid}
-        if rule:
-            extra['rule_uuid'] = rule.uuid
-            extra['rule_title'] = rule.title
+        extra['job_uuid'] = job.uuid
         log_activity('misp.push_triggered',
                      f"Triggered MISP {push_type} push to server '{server.name}'"
-                     + (f" for rule '{rule.title}'" if rule else ''),
+                     + (f" for '{target_label}'" if target_label else ''),
                      target_type='misp_server', target_id=server.id, target_uuid=server.uuid,
                      extra=extra)
     return job

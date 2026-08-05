@@ -135,13 +135,18 @@ def test_server(server_uuid):
 def push_rule():
     data        = request.get_json() or {}
     rule_id     = data.get('rule_id')
+    bundle_id   = data.get('bundle_id')
     server_uuid = data.get('server_uuid')
     push_type   = data.get('push_type', 'object')
 
-    if not rule_id or not server_uuid:
-        return jsonify({'success': False, 'error': 'rule_id and server_uuid are required.'}), 400
+    if not server_uuid or (not rule_id and not bundle_id):
+        return jsonify({'success': False, 'error': 'rule_id or bundle_id, and server_uuid are required.'}), 400
+    if rule_id and bundle_id:
+        return jsonify({'success': False, 'error': 'Provide either rule_id or bundle_id, not both.'}), 400
     if push_type not in ('object', 'event'):
         return jsonify({'success': False, 'error': "push_type must be 'object' or 'event'."}), 400
+    if bundle_id and push_type != 'event':
+        return jsonify({'success': False, 'error': "A bundle can only be pushed as an 'event'."}), 400
 
     server = MispModel.get_server_by_uuid(server_uuid)
     if not server:
@@ -149,7 +154,8 @@ def push_rule():
     if not server.is_active:
         return jsonify({'success': False, 'error': 'This server connection is disabled.'}), 400
 
-    job = MispModel.trigger_push(server, rule_id=rule_id, push_type=push_type, triggered_by=current_user.id)
+    job = MispModel.trigger_push(server, push_type=push_type, triggered_by=current_user.id,
+                                  rule_id=rule_id, bundle_id=bundle_id)
     if not job:
         return jsonify({'success': False, 'error': 'Could not queue the push job.'}), 500
 
