@@ -200,6 +200,9 @@
                               <a href="/velociraptor/list" class="dr-nav__item {% if request.path.startswith('/velociraptor') %}active{% endif %}">
                                  <img src="{{ url_for('static', filename='custom-icon/velociraptor-remove-bg.svg') }}" alt="" style="height:14px;width:14px;object-fit:contain;"><span>Velociraptor</span>
                               </a>
+                              <a href="/misp/list" class="dr-nav__item {% if request.path.startswith('/misp') %}active{% endif %}">
+                                 <img src="{{ url_for('static', filename='custom-icon/misp.svg') }}" alt="" style="height:14px;width:14px;object-fit:contain;"><span>MISP</span>
+                              </a>
                               <a href="/admin/jobs/list" class="dr-nav__item {% if request.path.startswith('/admin/jobs') or request.path.startswith('/jobs') %}active{% endif %}">
                                  <i class="fa-solid fa-gears"></i><span>Jobs</span>
                               </a>
@@ -354,6 +357,7 @@
       { label: 'Bulk Tag', url: '/rule/bulk_tag', icon: 'fa-tags', keywords: ['bulk tag'] },
       { label: 'Connectors', url: '/connector/list', icon: 'fa-plug', keywords: ['connectors'] },
       { label: 'Velociraptor', url: '/velociraptor/list', icon: 'fa-diagram-project', keywords: ['velociraptor'] },
+      { label: 'MISP', url: '/misp/list', icon: 'fa-share-nodes', keywords: ['misp', 'threat intelligence'] },
       { label: 'Admin: Jobs', url: '/admin/jobs/list', icon: 'fa-gears', keywords: ['admin jobs'] },
       { label: 'Logs', url: '/admin/logs', icon: 'fa-list-ul', keywords: ['logs'] },
       { label: 'Server Settings', url: '/admin/settings', icon: 'fa-sliders', keywords: ['server settings'] },

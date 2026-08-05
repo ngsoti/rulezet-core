@@ -410,6 +410,47 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                     </div>
                                     {% if rule_misp_object %}
                                     <div class="tab-pane fade" id="misp_object" role="tabpanel">
+                                        {% if current_user.is_authenticated and current_user.is_admin() %}
+                                        <div v-if="!mispServersLoading && !mispServers.length"
+                                             class="rounded-3 border p-3 mb-3"
+                                             style="background:rgba(13,110,253,.06);border-color:rgba(13,110,253,.25)!important;">
+                                            <div class="d-flex align-items-center flex-wrap gap-3">
+                                                <img src="{{ url_for('static', filename='custom-icon/misp.svg') }}"
+                                                     alt="" style="height:28px;width:28px;object-fit:contain;flex-shrink:0;">
+                                                <div class="flex-grow-1" style="min-width:200px;">
+                                                    <div class="fw-semibold small mb-1">No MISP instance connected</div>
+                                                    <div class="text-muted" style="font-size:.8rem;">
+                                                        Push this rule's MISP Object straight to a connected MISP instance.
+                                                    </div>
+                                                </div>
+                                                <a href="/misp/list" class="btn btn-primary btn-sm rounded-pill px-3 flex-shrink-0">
+                                                    <i class="fa-solid fa-plus me-1"></i>Create a connector to your MISP instance
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div v-else class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                                <span class="fw-semibold small">
+                                                    <i class="fa-solid fa-share-nodes me-1 text-primary"></i>Push to MISP
+                                                </span>
+                                                <select v-model="selectedMispServer" class="form-select form-select-sm"
+                                                        style="max-width:260px;" :disabled="mispPushBusy">
+                                                    <option value="" disabled>
+                                                        [[ mispServersLoading ? 'Loading instances…' : 'Choose an instance…' ]]
+                                                    </option>
+                                                    <option v-for="s in mispServers" :key="s.uuid" :value="s.uuid" :disabled="!s.is_active">
+                                                        [[ s.name ]][[ s.is_active ? '' : ' (disabled)' ]]
+                                                    </option>
+                                                </select>
+                                                <button class="btn btn-primary btn-sm rounded-pill px-3"
+                                                        @click="pushToMisp('object')"
+                                                        :disabled="!selectedMispServer || mispPushBusy">
+                                                    <span v-if="mispPushBusy" class="spinner-border spinner-border-sm me-1"></span>
+                                                    <i v-else class="fa-solid fa-paper-plane me-1"></i>Push as Object
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {% endif %}
                                         <code-viewer
                                             :code="mispObjectData"
                                             language="json"
@@ -420,6 +461,47 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                     {% endif %}
                                     {% if rule_misp_event %}
                                     <div class="tab-pane fade" id="misp_event" role="tabpanel">
+                                        {% if current_user.is_authenticated and current_user.is_admin() %}
+                                        <div v-if="!mispServersLoading && !mispServers.length"
+                                             class="rounded-3 border p-3 mb-3"
+                                             style="background:rgba(13,110,253,.06);border-color:rgba(13,110,253,.25)!important;">
+                                            <div class="d-flex align-items-center flex-wrap gap-3">
+                                                <img src="{{ url_for('static', filename='custom-icon/misp.svg') }}"
+                                                     alt="" style="height:28px;width:28px;object-fit:contain;flex-shrink:0;">
+                                                <div class="flex-grow-1" style="min-width:200px;">
+                                                    <div class="fw-semibold small mb-1">No MISP instance connected</div>
+                                                    <div class="text-muted" style="font-size:.8rem;">
+                                                        Push this rule's MISP Event straight to a connected MISP instance.
+                                                    </div>
+                                                </div>
+                                                <a href="/misp/list" class="btn btn-primary btn-sm rounded-pill px-3 flex-shrink-0">
+                                                    <i class="fa-solid fa-plus me-1"></i>Create a connector to your MISP instance
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div v-else class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                                <span class="fw-semibold small">
+                                                    <i class="fa-solid fa-share-nodes me-1 text-primary"></i>Push to MISP
+                                                </span>
+                                                <select v-model="selectedMispServer" class="form-select form-select-sm"
+                                                        style="max-width:260px;" :disabled="mispPushBusy">
+                                                    <option value="" disabled>
+                                                        [[ mispServersLoading ? 'Loading instances…' : 'Choose an instance…' ]]
+                                                    </option>
+                                                    <option v-for="s in mispServers" :key="s.uuid" :value="s.uuid" :disabled="!s.is_active">
+                                                        [[ s.name ]][[ s.is_active ? '' : ' (disabled)' ]]
+                                                    </option>
+                                                </select>
+                                                <button class="btn btn-primary btn-sm rounded-pill px-3"
+                                                        @click="pushToMisp('event')"
+                                                        :disabled="!selectedMispServer || mispPushBusy">
+                                                    <span v-if="mispPushBusy" class="spinner-border spinner-border-sm me-1"></span>
+                                                    <i v-else class="fa-solid fa-paper-plane me-1"></i>Push as Event
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {% endif %}
                                         <code-viewer
                                             :code="mispEventData"
                                             language="json"
@@ -1126,10 +1208,52 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                     });
                     const data = await res.json();
                     create_message(data.message || data.error || 'Push request sent.', data.success ? 'success-subtle' : 'danger-subtle');
+                    if (data.success) window.dispatchEvent(new Event('rz:job-created'));
                 } catch {
                     create_message('Network error — push not queued.', 'danger-subtle');
                 } finally {
                     velociraptorPushBusy.value = false;
+                }
+            }
+
+            // ── Push MISP Object/Event to a connected MISP instance ──
+            const mispServers        = ref([]);
+            const mispServersLoading = ref(false);
+            const selectedMispServer = ref('');
+            const mispPushBusy       = ref(false);
+            let _mispServersFetched  = false;
+
+            async function fetchMispServers() {
+                if (_mispServersFetched) return;
+                _mispServersFetched = true;
+                mispServersLoading.value = true;
+                try {
+                    const res = await fetch('/misp/get');
+                    if (res.ok) mispServers.value = await res.json();
+                } catch { /* admin-only widget — fail quietly if unauthorized/offline */ }
+                finally { mispServersLoading.value = false; }
+            }
+
+            async function pushToMisp(pushType) {
+                if (!selectedMispServer.value || !currentRule.value?.id) return;
+                mispPushBusy.value = true;
+                try {
+                    const res = await fetch('/misp/push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf_token },
+                        body: JSON.stringify({
+                            rule_id: currentRule.value.id,
+                            server_uuid: selectedMispServer.value,
+                            push_type: pushType,
+                        }),
+                    });
+                    const data = await res.json();
+                    create_message(data.message || data.error || 'Push request sent.', data.success ? 'success-subtle' : 'danger-subtle');
+                    if (data.success) window.dispatchEvent(new Event('rz:job-created'));
+                } catch {
+                    create_message('Network error — push not queued.', 'danger-subtle');
+                } finally {
+                    mispPushBusy.value = false;
                 }
             }
 
@@ -1166,6 +1290,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                     // attack: no fetch needed — AttackDisplay fetches independently via ruleId prop
                     {% if current_user.is_authenticated and current_user.is_admin() %}
                     fetchVelociraptorServers(),
+                    fetchMispServers(),
                     {% endif %}
 
                 ])
@@ -1639,6 +1764,11 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                 selectedVelociraptorServer,
                 velociraptorPushBusy,
                 pushToVelociraptor,
+                mispServers,
+                mispServersLoading,
+                selectedMispServer,
+                mispPushBusy,
+                pushToMisp,
                 is_lock,
                 toggleLock,
                 vizGraphLoading,

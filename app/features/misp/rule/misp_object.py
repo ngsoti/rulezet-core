@@ -14,15 +14,17 @@ def get_rule_misp_object(rule_id: int):
     event = json.loads(event.to_json())
     return {key: value for key, value in event.items() if key == "Object"}
 
-def get_rule_misp_event(rule_id: int):
+def get_rule_misp_event_object(rule_id: int):
+    """Same as get_rule_misp_event but returns the live MISPEvent instance
+    instead of its .to_json()'d dict — needed to push it to a remote MISP
+    server without a lossy JSON round-trip (see misp_connector_core.py)."""
     rule_ = RuleModel.get_rule(rule_id)
     if not rule_:
         return None
     event = get_rule_misp_object_base(rule_id)
-    event.info = f"Rule {rule_id} - {rule_.title}"
 
     if len(event.objects) < 2:
-        return json.loads(event.to_json())
+        return event
 
     rule_object = event.objects[1]
 
@@ -41,6 +43,12 @@ def get_rule_misp_event(rule_id: int):
                 continue
             event.add_tag(tag.name)
 
+    return event
+
+def get_rule_misp_event(rule_id: int):
+    event = get_rule_misp_event_object(rule_id)
+    if event is None:
+        return None
     return json.loads(event.to_json())
 
 
@@ -134,6 +142,8 @@ def get_rule_misp_object_base(rule_id: int):
     """Get a MISP object for a specific rule, including metadata and content."""
 
     event = MISPEvent()
+    rule_ = RuleModel.get_rule(rule_id)
+    event.info = f"Rule {rule_id} - {rule_.title}" if rule_ else f"Rule {rule_id}"
 
     metadata = create_rulezet_metadata_misp_object(rule_id)
     content  = content_convert_to_misp_object(rule_id)

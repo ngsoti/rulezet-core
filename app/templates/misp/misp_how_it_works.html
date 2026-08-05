@@ -1,0 +1,603 @@
+{% extends "base.html" %}
+{% import 'macros/admin_nav.html' as anav %}
+
+{% block title %}How MISP Push Works — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/misp/misp.css') }}">
+<style>
+  .hiw-section { scroll-margin-top: 80px; }
+
+  .hiw-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    color: #fff;
+    font-weight: 700;
+    font-size: .85rem;
+    flex-shrink: 0;
+  }
+
+  .hiw-endpoint {
+    font-family: monospace;
+    font-size: .82rem;
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 2px 8px;
+    color: #0d6efd;
+    word-break: break-all;
+  }
+
+  .hiw-flow-arrow {
+    font-size: 1.4rem;
+    color: #0d6efd;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .hiw-flow-box {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--card-bg-color);
+    padding: .75rem 1rem;
+    font-size: .83rem;
+    text-align: center;
+    flex: 1;
+  }
+
+  .hiw-toc-link {
+    display: block;
+    padding: .35rem .75rem;
+    color: var(--subtle-text-color);
+    text-decoration: none;
+    font-size: .82rem;
+    border-left: 2px solid transparent;
+    transition: all .15s;
+    border-radius: 0 4px 4px 0;
+  }
+  .hiw-toc-link:hover {
+    color: #0d6efd;
+    border-left-color: #0d6efd;
+    background: rgba(13,110,253,.06);
+  }
+
+  .hiw-badge-method {
+    font-family: monospace;
+    font-size: .7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: .03em;
+  }
+  .hiw-badge-rest { background: rgba(13,110,253,.15); color: #0d6efd; }
+
+  .hiw-verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: .78rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 20px;
+  }
+  .hiw-verdict--ok      { background: rgba(25,135,84,.12);  color: #198754; }
+  .hiw-verdict--warn    { background: rgba(255,193,7,.15);  color: #997404; }
+  .hiw-verdict--error   { background: rgba(220,53,69,.12);  color: #dc3545; }
+
+  .hiw-callout {
+    border-left: 3px solid;
+    border-radius: 0 8px 8px 0;
+    padding: .75rem 1rem;
+    font-size: .84rem;
+    margin-bottom: 0;
+  }
+  .hiw-callout--info    { border-color: #0d6efd; background: rgba(13,110,253,.07); }
+  .hiw-callout--warning { border-color: #ffc107; background: rgba(255,193,7,.07); }
+  .hiw-callout--success { border-color: #198754; background: rgba(25,135,84,.07); }
+  .hiw-callout--danger  { border-color: #dc3545; background: rgba(220,53,69,.07); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-4">
+
+  <!-- ── Banner ──────────────────────────────────────────────────── -->
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-share-nodes banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('misp.misp_list') }}" class="text-decoration-none text-muted">MISP</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">How it works</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="banner-icon">
+        <img src="{{ url_for('static', filename='custom-icon/misp.svg') }}"
+             alt="MISP" style="height:26px;width:26px;object-fit:contain;">
+      </div>
+      <div>
+        <h2 class="fw-bold mb-1">How MISP Push Works</h2>
+        <div class="banner-accent"></div>
+      </div>
+    </div>
+    <p class="text-muted mb-0" style="max-width:660px;font-size:.95rem;">
+      A complete walkthrough of the Rulezet → MISP integration — from instance configuration
+      to the exact mechanics used to turn a detection rule into a MISP Object or Event on a
+      connected instance.
+    </p>
+  </div>
+
+  {{ anav.admin_nav('misp') }}
+
+  <div class="row g-4">
+
+    <!-- ── Sticky Table of Contents ──────────────────────────────── -->
+    <div class="col-lg-3 d-none d-lg-block">
+      <div class="sticky-top" style="top:1.5rem;">
+        <div class="p-3 rounded-3 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;">
+          <div class="fw-bold mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle-text-color);">
+            <i class="fa-solid fa-list-ul me-2 text-primary"></i>On this page
+          </div>
+          <nav class="border-start ps-1" style="border-color:var(--border-color)!important;">
+            <a class="hiw-toc-link" href="#what-is">What is MISP?</a>
+            <a class="hiw-toc-link" href="#setup">Setting up an instance</a>
+            <a class="hiw-toc-link" href="#connection">The REST connection</a>
+            <a class="hiw-toc-link" href="#generation">Rule → Object/Event generation</a>
+            <a class="hiw-toc-link" href="#object-vs-event">Object vs Event push</a>
+            <a class="hiw-toc-link" href="#push-lifecycle">Push lifecycle</a>
+            <a class="hiw-toc-link" href="#security">Credential security</a>
+            <a class="hiw-toc-link" href="#activity">Activity &amp; history</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Main content ──────────────────────────────────────────── -->
+    <div class="col-lg-9">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 1 — What is MISP?
+      ════════════════════════════════════════════════════════════ -->
+      <section id="what-is" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;">
+            <img src="{{ url_for('static', filename='custom-icon/misp.svg') }}"
+                 alt="" style="height:20px;width:20px;object-fit:contain;">
+          </div>
+          <h4 class="fw-bold mb-0">What is MISP?</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          <a href="https://github.com/MISP/MISP" target="_blank" rel="noopener">MISP</a>
+          is an open-source threat intelligence platform (TIP) for sharing, storing and correlating
+          indicators of compromise, malware, and detection artifacts across organizations. Information
+          is organized into <strong>Events</strong> — containers grouping related <strong>Objects</strong>
+          (structured, templated bundles of attributes) and Attributes.
+        </p>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          This integration takes a Rulezet detection rule (any format) and <strong>compiles it into a
+          MISP Object</strong> using the rule's own object template (yara, sigma, suricata, …), pairs it
+          with a <code>rulezet-metadata</code> object describing the rule itself, then pushes the result
+          to a connected MISP instance via its REST API.
+        </p>
+
+        <!-- High-level diagram -->
+        <div class="d-flex align-items-center gap-3 flex-wrap mt-4 mb-2">
+          <div class="hiw-flow-box">
+            <i class="fa-solid fa-file-shield text-primary mb-1 d-block" style="font-size:1.3rem;"></i>
+            <strong>Rulezet rule</strong><br>
+            <span class="text-muted" style="font-size:.75rem;">any supported format</span>
+          </div>
+          <div class="hiw-flow-arrow text-center" style="min-width:2.5rem;">
+            <i class="fa-solid fa-arrow-right"></i><br>
+            <span style="font-size:.68rem;color:var(--subtle-text-color);">compile</span>
+          </div>
+          <div class="hiw-flow-box" style="border-color:rgba(13,110,253,.3);background:rgba(13,110,253,.04);">
+            <i class="fa-solid fa-cube text-primary mb-1 d-block" style="font-size:1.3rem;"></i>
+            <strong>MISP Object/Event</strong><br>
+            <span class="text-muted" style="font-size:.75rem;">metadata + content objects</span>
+          </div>
+          <div class="hiw-flow-arrow text-center" style="min-width:2.5rem;">
+            <i class="fa-solid fa-arrow-right"></i><br>
+            <span style="font-size:.68rem;color:var(--subtle-text-color);">REST / API key</span>
+          </div>
+          <div class="hiw-flow-box" style="border-color:rgba(25,135,84,.3);background:rgba(25,135,84,.04);">
+            <i class="fa-solid fa-share-nodes text-success mb-1 d-block" style="font-size:1.3rem;"></i>
+            <strong>MISP instance</strong><br>
+            <span class="text-muted" style="font-size:.75rem;">add_event() creates it</span>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          A push always creates a <strong>new</strong> Event on the remote instance — Rulezet never
+          modifies or merges into an existing remote Event.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 2 — Setting up an instance
+      ════════════════════════════════════════════════════════════ -->
+      <section id="setup" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-sliders" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Setting up an instance</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Adding an instance requires an <strong>admin account</strong>. You'll need the instance's
+          URL and an API key generated from your MISP user profile.
+        </p>
+
+        <div class="table-responsive rounded-3 border shadow-sm" style="border-color:var(--border-color)!important;">
+          <table class="table table-sm mb-0 align-middle" style="background:var(--card-bg-color);font-size:.83rem;">
+            <thead style="background:var(--light-bg-color);">
+              <tr>
+                <th class="fw-semibold ps-3" style="width:22%;">Field</th>
+                <th class="fw-semibold">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">Name</td>
+                <td>Display name shown in the instance table.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">URL</td>
+                <td>The base URL of your MISP instance, e.g. <code>https://misp.example.org</code> — no trailing slash.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">API key</td>
+                <td>
+                  From your MISP user profile → <strong>Auth keys</strong>. Grants full API access as that
+                  user — encrypted at rest here.
+                </td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">Verify TLS</td>
+                <td>
+                  Enabled by default. Disable only for a self-hosted instance presenting a self-signed
+                  certificate.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hiw-callout hiw-callout--success mt-3">
+          <i class="fa-solid fa-shield-check me-2 text-success"></i>
+          After creation, use the <strong>Test connection</strong> button (reads the instance's version)
+          to verify it's reachable and the API key is valid.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 3 — The REST connection
+      ════════════════════════════════════════════════════════════ -->
+      <section id="connection" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-network-wired" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">The REST connection</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          MISP's API is a standard REST/JSON API, authenticated with a bearer API key. Rulezet talks
+          to it through <strong>PyMISP</strong>'s <code>ExpandedPyMISP</code> client.
+        </p>
+
+        <div class="p-3 rounded-3 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;">
+          <div class="d-flex flex-column gap-3">
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">1</div>
+              <div style="font-size:.88rem;">
+                <strong>Build the client</strong><br>
+                <span class="text-muted">
+                  <span class="hiw-endpoint">ExpandedPyMISP(url, api_key, ssl=verify_tls)</span> is built
+                  from the stored URL and the decrypted API key.
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">2</div>
+              <div style="font-size:.88rem;">
+                <strong>Confirm connectivity</strong><br>
+                <span class="text-muted">
+                  A single <span class="hiw-badge-method hiw-badge-rest">GET</span>
+                  <span class="hiw-endpoint">servers/getVersion</span> call ("Test connection") confirms
+                  the URL and key actually authenticate before any push is attempted.
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">3</div>
+              <div style="font-size:.88rem;">
+                <strong>Push the event</strong><br>
+                <span class="text-muted">
+                  A single <span class="hiw-badge-method hiw-badge-rest">POST</span>
+                  <span class="hiw-endpoint">client.add_event(event)</span> call creates the Event
+                  (with its Objects) on the remote instance in one request.
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">4</div>
+              <div style="font-size:.88rem;">
+                <strong>Detect a rejected event</strong><br>
+                <span class="text-muted">
+                  PyMISP doesn't raise for a rejected event — <code>add_event()</code> returns the created
+                  <code>MISPEvent</code> on success, or a plain error dict otherwise. Every push checks the
+                  return type explicitly rather than assuming success.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--warning mt-3">
+          <i class="fa-solid fa-triangle-exclamation me-2" style="color:#997404;"></i>
+          An SSL verification error almost always means the instance uses a self-signed certificate —
+          disable <strong>Verify TLS</strong> for that instance if you trust it, rather than disabling
+          verification globally.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 4 — Rule → Object/Event generation
+      ════════════════════════════════════════════════════════════ -->
+      <section id="generation" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-cube" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Rule → Object/Event generation</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Before anything is sent to an instance, the rule is compiled into a <code>rulezet-metadata</code>
+          MISP object (title, version, author, license, tags, CVE/ATT&amp;CK references, …) plus a
+          format-specific content object, linked together by a <code>related-to</code> reference.
+        </p>
+
+        <div class="table-responsive rounded-3 border shadow-sm mt-3" style="border-color:var(--border-color)!important;">
+          <table class="table table-sm mb-0 align-middle" style="background:var(--card-bg-color);font-size:.83rem;">
+            <thead style="background:var(--light-bg-color);">
+              <tr>
+                <th class="fw-semibold ps-3" style="width:20%;">Rule format</th>
+                <th class="fw-semibold">MISP object template</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="ps-3 fw-semibold text-primary">YARA</td><td><code>yara</code> — raw rule + rule name.</td></tr>
+              <tr><td class="ps-3 fw-semibold text-primary">Sigma</td><td><code>sigma</code> — raw rule (typed <code>sigma</code> attribute, <code>to_ids</code>) + rule name.</td></tr>
+              <tr><td class="ps-3 fw-semibold text-primary">Suricata</td><td><code>suricata</code> — raw rule (typed <code>snort</code> attribute) + source link.</td></tr>
+              <tr><td class="ps-3 fw-semibold text-primary">Wazuh</td><td><code>wazuh-rule</code> — raw rule + rule id.</td></tr>
+              <tr><td class="ps-3 fw-semibold text-primary">NSE, CRS, NOVA, others</td><td>A dedicated or generic fallback object carrying the raw rule content.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          This is the exact same generation code already used for the read-only "MISP Object"/"MISP Event"
+          tabs on a rule's detail page — pushing doesn't change what's generated, only where it ends up.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 5 — Object vs Event push
+      ════════════════════════════════════════════════════════════ -->
+      <section id="object-vs-event" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-code-compare" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Object vs Event push</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          MISP's API has no way to push a standalone Object without an Event to contain it — an Object
+          always belongs to an Event. So both push buttons ultimately create a new remote Event; they
+          differ only in how much is included.
+        </p>
+
+        <div class="row g-3 mt-1">
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-cube text-primary me-2"></i>Push as MISP Object</div>
+              <p class="text-muted mb-2">
+                From the rule's <strong>MISP Object</strong> tab. Sends the lean Event containing just the
+                <code>rulezet-metadata</code> + content objects.
+              </p>
+              <span class="hiw-verdict hiw-verdict--warn"><i class="fa-solid fa-triangle-exclamation"></i> No event-level tags or CVE attributes</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-calendar-day text-primary me-2"></i>Push as MISP Event</div>
+              <p class="text-muted mb-2">
+                From the rule's <strong>MISP Event</strong> tab. Sends the same objects, plus the rule's
+                tags (added as Event tags) and any CVE ids (added as <code>vulnerability</code> attributes,
+                referenced from the content object).
+              </p>
+              <span class="hiw-verdict hiw-verdict--ok"><i class="fa-solid fa-check"></i> Full context included</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--warning mt-3">
+          <i class="fa-solid fa-triangle-exclamation me-2" style="color:#997404;"></i>
+          Neither push attaches to an existing remote Event — every push, of either kind, creates a
+          brand new one. Pushing the same rule twice creates two separate Events on the instance.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 6 — Push lifecycle
+      ════════════════════════════════════════════════════════════ -->
+      <section id="push-lifecycle" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-paper-plane" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Push lifecycle</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Clicking <em>Push</em> on a rule's detail page (MISP Object/Event tab, admin only) queues a
+          background job of type <code>misp_push</code> — it does not block the request.
+        </p>
+
+        <div class="d-flex flex-column gap-3 mt-2">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">1</div>
+            <div style="font-size:.88rem;">
+              <strong>Job queued</strong><br>
+              <span class="text-muted">
+                A <code>misp.push_triggered</code> activity log entry records the triggering admin, the
+                target instance, the push type, and the job UUID.
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">2</div>
+            <div style="font-size:.88rem;">
+              <strong>Instance &amp; rule lookup</strong><br>
+              <span class="text-muted">
+                The handler loads the target instance (must be active) and the rule (via the standard
+                <code>rule_core.get_rule()</code>, respecting soft-deletion).
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">3</div>
+            <div style="font-size:.88rem;">
+              <strong>Object/Event generation</strong><br>
+              <span class="text-muted">
+                The rule is compiled to a MISPEvent as described above. Failure here fails the job
+                immediately without attempting a connection.
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">4</div>
+            <div style="font-size:.88rem;">
+              <strong>Push via <code>add_event()</code></strong><br>
+              <span class="text-muted">
+                The event is sent to the instance in a single REST call.
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">5</div>
+            <div style="font-size:.88rem;">
+              <strong>Completion</strong><br>
+              <span class="text-muted">
+                <code>last_push_at</code> and <code>pushes_count</code> are updated on the instance row,
+                and a <code>misp.push_done</code> activity log entry records the outcome.
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 7 — Credential security
+      ════════════════════════════════════════════════════════════ -->
+      <section id="security" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-lock" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Credential security</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          A leaked MISP API key grants full API access to that instance as the key's owning user —
+          a much larger blast radius than a typical read-only integration. Because of that, this feature
+          deviates from the plaintext-credential convention used elsewhere in Rulezet:
+        </p>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-key text-primary me-2"></i>Encrypted at rest</div>
+              <p class="text-muted mb-0">
+                The API key is encrypted with Fernet before being stored, using a key derived from
+                <code>MISP_ENCRYPTION_KEY</code> (or, if unset, a SHA-256 of <code>SECRET_KEY</code> as a
+                zero-config fallback).
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-eye-slash text-primary me-2"></i>Never returned to the client</div>
+              <p class="text-muted mb-0">
+                The instance's <code>to_json()</code> never includes the API key — the instance table
+                and edit form only ever show the URL and status, never the secret itself.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--danger mt-3">
+          <i class="fa-solid fa-shield-halved me-2 text-danger"></i>
+          This feature is admin-only, gated by the same <code>before_request</code> pattern as Connectors
+          and Velociraptor. Only add instances you trust every admin on this instance with — anyone with
+          admin access can trigger a push.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 8 — Activity & history
+      ════════════════════════════════════════════════════════════ -->
+      <section id="activity" class="hiw-section mb-4">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-clock-rotate-left" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Activity &amp; history</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Every significant event in an instance's lifecycle is recorded in the <strong>Activity Log</strong>.
+        </p>
+
+        <div class="row g-2">
+          {% set events = [
+            ('misp.server_create',   'plug',          'primary',   'Instance added — name and URL are logged.'),
+            ('misp.server_delete',   'trash',         'danger',    'Instance deleted.'),
+            ('misp.test_ok',         'check',         'success',   'Connection test succeeded.'),
+            ('misp.push_triggered',  'paper-plane',   'info',      'Push job queued — records the triggering admin, target instance, push type, and job UUID.'),
+            ('misp.push_done',       'flag-checkered','primary',   'Push completed — records success/failure and the created remote Event.'),
+          ] %}
+          {% for action, icon, color, description in events %}
+          <div class="col-12">
+            <div class="d-flex align-items-center gap-3 p-2 rounded-2"
+                 style="background:var(--card-bg-color);border:1px solid var(--border-color);">
+              <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                   style="width:28px;height:28px;background:rgba(var(--bs-{{ color }}-rgb),.12);">
+                <i class="fa-solid fa-{{ icon }} text-{{ color }}" style="font-size:.7rem;"></i>
+              </div>
+              <div style="font-size:.82rem;">
+                <code class="text-{{ color }}">{{ action }}</code>
+                <span class="text-muted ms-2">— {{ description }}</span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- Back to MISP -->
+      <div class="text-center pt-3">
+        <a href="{{ url_for('misp.misp_list') }}" class="btn btn-primary rounded-pill px-4">
+          <i class="fa-solid fa-arrow-left me-2"></i>Back to MISP
+        </a>
+      </div>
+
+    </div><!-- /col main -->
+  </div><!-- /row -->
+</div><!-- /container -->
+{% endblock %}

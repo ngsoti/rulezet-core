@@ -3424,3 +3424,74 @@ def handle_velociraptor_push(job, app):
     log_activity('velociraptor.push_done', f"Push to '{server.name}': {msg}",
                  target_type='velociraptor_server', target_id=server.id, target_uuid=server.uuid,
                  extra={'rule_id': rule.id, 'rule_uuid': rule.uuid, 'rule_title': rule.title, 'success': ok})
+
+
+# ─── MISP: push a rule's MISP Object/Event to a connected instance ──────────
+
+@register_handler('misp_push')
+def handle_misp_push(job, app):
+    """
+    Build a rule's MISP Object or MISP Event and push it to a configured MISP
+    instance over its REST API.
+
+    Payload:
+        server_id : int — local MispServer.id to push to
+        rule_id   : int — local Rule.id to build the object/event from
+        push_type : 'object' | 'event'
+    """
+    from app.core.db_class.db import MispServer
+    from app.features.rule import rule_core as RuleModel
+    from app.features.misp import misp_connector_core as MispModel
+    from app.features.misp.rule.misp_object import (
+        get_rule_misp_object_base, get_rule_misp_event_object,
+    )
+
+    payload   = job.payload or {}
+    server_id = payload.get('server_id')
+    rule_id   = payload.get('rule_id')
+    push_type = payload.get('push_type', 'object')
+
+    server = MispServer.query.get(server_id)
+    if not server or not server.is_active:
+        log_job(job, 'MISP server not found or disabled.', level='error', event='done')
+        job.status = 'failed'
+        job.error  = 'Server not found or disabled.'
+        db.session.commit()
+        return
+
+    rule = RuleModel.get_rule(rule_id)
+    if not rule:
+        log_job(job, f'Rule {rule_id} not found (deleted?).', level='error', event='done')
+        job.status = 'failed'
+        job.error  = 'Rule not found.'
+        db.session.commit()
+        return
+
+    log_job(job, f"Building MISP {push_type} for '{rule.title}'…", level='info', event='started')
+    try:
+        event = (get_rule_misp_event_object(rule_id) if push_type == 'event'
+                 else get_rule_misp_object_base(rule_id))
+        if event is None or not event.objects:
+            raise ValueError('Could not build a MISP object for this rule.')
+    except Exception as e:
+        log_job(job, f"MISP {push_type} generation failed: {e}", level='error', event='done')
+        job.status = 'failed'
+        job.error  = str(e)
+        db.session.commit()
+        return
+
+    log_job(job, f"Pushing to '{server.name}'…", level='info', event='progress')
+    ok, msg = MispModel.push_to_misp(server, event)
+
+    job.done   = 1
+    job.total  = 1
+    job.status = 'done' if ok else 'failed'
+    if not ok:
+        job.error = msg
+    db.session.commit()
+
+    log_job(job, msg, level='success' if ok else 'error', event='done')
+    log_activity('misp.push_done', f"Push to '{server.name}': {msg}",
+                 target_type='misp_server', target_id=server.id, target_uuid=server.uuid,
+                 extra={'rule_id': rule.id, 'rule_uuid': rule.uuid, 'rule_title': rule.title,
+                        'push_type': push_type, 'success': ok})

@@ -3947,19 +3947,19 @@ def get_tags_for_rule(rule_id: int) -> List[Tag]:
         )
     )
 
-    if current_user.is_authenticated:
+    if current_user and current_user.is_authenticated:
         if not current_user.is_admin():
             query = query.filter(
                 or_(
                     Tag.visibility.ilike('public'),
                     and_(
-                        Tag.visibility.ilike('private'), 
+                        Tag.visibility.ilike('private'),
                         Tag.created_by == current_user.id
                     )
                 )
             )
     else:
-        query = query.filter(Tag.visibility.ilike('public'))    
+        query = query.filter(Tag.visibility.ilike('public'))
 
 
     return query.all()
