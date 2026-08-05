@@ -393,6 +393,7 @@ export function initBundleGraph(containerId, jsonText, opts = {}) {
             },
             UI: {
                 ...pivotickUI,
+                theme: dark ? 'dark' : 'light',
                 mainHeader: {
                     nodeHeaderMap: {
                         title:    (node) => node.getData()?.label    ?? String(node.id),

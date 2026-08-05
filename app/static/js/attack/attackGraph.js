@@ -288,6 +288,7 @@ export function initAttackGraph(containerId, coverage, opts = {}) {
             },
             UI: {
                 mode: 'full',
+                theme: dark ? 'dark' : 'light',
                 sidebar: { collapsed: 'auto' },
                 mainHeader: {
                     nodeHeaderMap: {
