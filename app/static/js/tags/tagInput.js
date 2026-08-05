@@ -117,7 +117,7 @@ const TagInput = {
 
             <div class="input-group shadow-sm rounded-3 border" style="border-width:2px; background: var(--card-bg-color)">
                 <span class="input-group-text border-0" style="background: var(--card-bg-color); cursor:pointer">
-                    <i class="fas fa-search small" style="color: var(--subtle-text-color)"></i>
+                    <i class="fas fa-tags small" style="color: #0d6efd"></i>
                 </span>
                 <input type="text" v-model="searchQuery" @focus="toggleDropdown"
                     class="form-control border-0 shadow-none px-2"
