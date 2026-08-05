@@ -28,6 +28,7 @@ from .rule_from_github.update_rule import update_class as UpdateModel
 from .utils.similar_rules import similarity_class as SimilarityModel
 from ..account import account_core as AccountModel
 from .exporters.velociraptor_exporter import generate_velociraptor_artifact, SUPPORTED_FORMATS as VELOCIRAPTOR_SUPPORTED_FORMATS
+from .exporters.sigma_convert_exporter import convert_sigma_rule, SIGMA_CONVERT_TARGETS
 
 
 ################################################################################################### 
@@ -1035,6 +1036,18 @@ def get_stix(rule_id):
     rule_stix = convert_misp_to_stix(rule_misp)
     return jsonify({"stix": json.dumps(rule_stix, indent=4) if rule_stix else None})
 
+@rule_blueprint.route("/get_sigma_convert/<int:rule_id>")
+def get_sigma_convert(rule_id):
+    target = request.args.get('target', '')
+    rule = RuleModel.get_rule(rule_id)
+    if not rule or (rule.format or '').lower() != 'sigma' or target not in SIGMA_CONVERT_TARGETS:
+        return jsonify({"success": False, "content": None})
+    try:
+        content = convert_sigma_rule(rule, target)
+        return jsonify({"success": True, "content": content})
+    except Exception as e:
+        return jsonify({"success": False, "content": None, "error": str(e)})
+
 @rule_blueprint.route("/download_rule", methods=['GET'])
 def download_rule_unified() -> Response:
     rule_id = request.args.get('rule_id', type=int)
@@ -1090,6 +1103,14 @@ def download_rule_unified() -> Response:
                 content = generate_velociraptor_artifact(rule, base_url=request.host_url)
                 filename = f"{rule.title}_velociraptor_artifact.yaml"
 
+        elif fmt in SIGMA_CONVERT_TARGETS:
+            target_meta = SIGMA_CONVERT_TARGETS[fmt]
+            if (rule.format or '').lower() != 'sigma':
+                error_mesg = f"{target_meta['label']} export is only supported for Sigma rules"
+            else:
+                content = convert_sigma_rule(rule, fmt)
+                filename = f"{rule.title}_{fmt}.{target_meta['extension']}"
+
         elif fmt == 'all':
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
@@ -1133,6 +1154,14 @@ def download_rule_unified() -> Response:
                         zip_file.writestr(f"{rule.title}_velociraptor_artifact.yaml", artifact_yaml)
                 except Exception:
                     pass
+
+                if (rule.format or '').lower() == 'sigma':
+                    for sigma_target, sigma_meta in SIGMA_CONVERT_TARGETS.items():
+                        try:
+                            converted = convert_sigma_rule(rule, sigma_target)
+                            zip_file.writestr(f"{rule.title}_{sigma_target}.{sigma_meta['extension']}", converted)
+                        except Exception:
+                            pass
 
             zip_buffer.seek(0)
             content = base64.b64encode(zip_buffer.read()).decode('utf-8')

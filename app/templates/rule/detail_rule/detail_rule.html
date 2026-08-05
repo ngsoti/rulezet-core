@@ -264,12 +264,18 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                         <button class="nav-link active small fw-bold py-2 border-0" id="normal-tab"
                                             data-bs-toggle="tab" data-bs-target="#normal" type="button" role="tab">
                                             <i class="fas fa-file-code"></i> Normal
+                                            <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                title="The rule's original content, exactly as authored."></i>
                                         </button>
                                     </li>
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link small fw-bold py-2 border-0" id="json-tab"
                                             data-bs-toggle="tab" data-bs-target="#json" type="button" role="tab">
-                                            <i class="fas fa-code"></i> JSON
+                                            <img src="{{ url_for('static', filename='custom-icon/json.svg') }}"
+                                                alt="JSON" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
+                                            JSON
+                                            <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                title="Full structured export of this rule and its metadata as JSON."></i>
                                         </button>
                                     </li>
                                     {% if rule_misp_object %}
@@ -279,6 +285,8 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                             <img src="{{ url_for('static', filename='custom-icon/misp.svg') }}"
                                                 alt="MISP" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
                                             MISP Object
+                                            <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                title="This rule represented as a MISP object, ready to import into a MISP instance."></i>
                                         </button>
                                     </li>
                                     {% endif %}
@@ -289,6 +297,8 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                             <img src="{{ url_for('static', filename='custom-icon/misp.svg') }}"
                                                 alt="MISP" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
                                             MISP Event
+                                            <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                title="This rule wrapped in a full MISP event, ready to import into MISP."></i>
                                         </button>
                                     </li>
                                     {% endif %}
@@ -299,6 +309,8 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                                 <img src="{{ url_for('static', filename='custom-icon/logo_stix.svg') }}"
                                                     alt="STIX" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
                                                 STIX Object
+                                                <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                    title="This rule converted to STIX 2.1, the OASIS standard format for sharing cyber threat intelligence."></i>
                                             </button>
                                         </li>
                                     </template>
@@ -309,9 +321,73 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                             <img src="{{ url_for('static', filename='custom-icon/velociraptor-remove-bg.svg') }}"
                                                 alt="Velociraptor" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
                                             Velociraptor
+                                            <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                title="A ready-to-deploy Velociraptor artifact (YAML) that runs this rule as an endpoint detection."></i>
                                         </button>
                                     </li>
                                     {% endif %}
+                                    <template v-if="(currentRule.format || '').toLowerCase() === 'sigma'">
+                                        <li class="nav-item" role="presentation" v-if="sigmaConvert.splunk.loading || sigmaConvert.splunk.content">
+                                            <button class="nav-link small fw-bold py-2 border-0" id="sigma_splunk-tab"
+                                                data-bs-toggle="tab" data-bs-target="#sigma_splunk" type="button" role="tab">
+                                                <img src="{{ url_for('static', filename='custom-icon/splunk.png') }}"
+                                                    alt="Splunk" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
+                                                Splunk
+                                                <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                    title="Splunk SPL (Search Processing Language) query, converted from this Sigma rule via pySigma."></i>
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation" v-if="sigmaConvert.elastic.loading || sigmaConvert.elastic.content">
+                                            <button class="nav-link small fw-bold py-2 border-0" id="sigma_elastic-tab"
+                                                data-bs-toggle="tab" data-bs-target="#sigma_elastic" type="button" role="tab">
+                                                <img src="{{ url_for('static', filename='custom-icon/elastic.svg') }}"
+                                                    alt="Elastic" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
+                                                Elastic
+                                                <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                    title="Elastic EQL (Event Query Language) query for Elastic Security, converted from this Sigma rule via pySigma."></i>
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation" v-if="sigmaConvert.sentinel.loading || sigmaConvert.sentinel.content">
+                                            <button class="nav-link small fw-bold py-2 border-0" id="sigma_sentinel-tab"
+                                                data-bs-toggle="tab" data-bs-target="#sigma_sentinel" type="button" role="tab">
+                                                <img src="{{ url_for('static', filename='custom-icon/sentinel.svg') }}"
+                                                    alt="Sentinel" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
+                                                Sentinel
+                                                <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                    title="Microsoft Sentinel KQL (Kusto Query Language) query, using the ASIM schema, converted from this Sigma rule via pySigma."></i>
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation" v-if="sigmaConvert.sumologic.loading || sigmaConvert.sumologic.content">
+                                            <button class="nav-link small fw-bold py-2 border-0" id="sigma_sumologic-tab"
+                                                data-bs-toggle="tab" data-bs-target="#sigma_sumologic" type="button" role="tab">
+                                                <img src="{{ url_for('static', filename='custom-icon/sumologic.svg') }}"
+                                                    alt="Sumo Logic" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
+                                                Sumo Logic
+                                                <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                    title="Sumo Logic Cloud SIEM Enterprise (CSE) detection rule JSON, converted from this Sigma rule via pySigma."></i>
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation" v-if="sigmaConvert.secops.loading || sigmaConvert.secops.content">
+                                            <button class="nav-link small fw-bold py-2 border-0" id="sigma_secops-tab"
+                                                data-bs-toggle="tab" data-bs-target="#sigma_secops" type="button" role="tab">
+                                                <img src="{{ url_for('static', filename='custom-icon/secops.svg') }}"
+                                                    alt="Google SecOps" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
+                                                SecOps
+                                                <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                    title="Google SecOps (Chronicle) UDM search query, converted from this Sigma rule via pySigma."></i>
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation" v-if="sigmaConvert.loki.loading || sigmaConvert.loki.content">
+                                            <button class="nav-link small fw-bold py-2 border-0" id="sigma_loki-tab"
+                                                data-bs-toggle="tab" data-bs-target="#sigma_loki" type="button" role="tab">
+                                                <img src="{{ url_for('static', filename='custom-icon/loki.svg') }}"
+                                                    alt="Grafana Loki" style="height:14px;width:14px;object-fit:contain;vertical-align:-2px;" class="me-1">
+                                                Loki
+                                                <i class="fa-solid fa-circle-question ms-1 opacity-50" style="font-size:.7rem;"
+                                                    title="Grafana Loki LogQL query, converted from this Sigma rule via pySigma."></i>
+                                            </button>
+                                        </li>
+                                    </template>
 
 
                                 </ul>
@@ -411,10 +487,48 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                         </code-viewer>
                                     </div>
                                     {% endif %}
+                                    <template v-if="(currentRule.format || '').toLowerCase() === 'sigma'">
+                                        <div v-if="sigmaConvert.splunk.loading || sigmaConvert.splunk.content" class="tab-pane fade" id="sigma_splunk" role="tabpanel">
+                                            <div v-if="sigmaConvert.splunk.loading" class="d-flex align-items-center gap-2 p-4 text-muted small">
+                                                <div class="spinner-border spinner-border-sm"></div> Converting to Splunk SPL…
+                                            </div>
+                                            <code-viewer v-else :code="sigmaConvert.splunk.content || ''" language="text" title="splunk.spl" max-height="600px"></code-viewer>
+                                        </div>
+                                        <div v-if="sigmaConvert.elastic.loading || sigmaConvert.elastic.content" class="tab-pane fade" id="sigma_elastic" role="tabpanel">
+                                            <div v-if="sigmaConvert.elastic.loading" class="d-flex align-items-center gap-2 p-4 text-muted small">
+                                                <div class="spinner-border spinner-border-sm"></div> Converting to Elastic EQL…
+                                            </div>
+                                            <code-viewer v-else :code="sigmaConvert.elastic.content || ''" language="text" title="elastic.eql" max-height="600px"></code-viewer>
+                                        </div>
+                                        <div v-if="sigmaConvert.sentinel.loading || sigmaConvert.sentinel.content" class="tab-pane fade" id="sigma_sentinel" role="tabpanel">
+                                            <div v-if="sigmaConvert.sentinel.loading" class="d-flex align-items-center gap-2 p-4 text-muted small">
+                                                <div class="spinner-border spinner-border-sm"></div> Converting to Microsoft Sentinel KQL…
+                                            </div>
+                                            <code-viewer v-else :code="sigmaConvert.sentinel.content || ''" language="text" title="sentinel.kql" max-height="600px"></code-viewer>
+                                        </div>
+                                        <div v-if="sigmaConvert.sumologic.loading || sigmaConvert.sumologic.content" class="tab-pane fade" id="sigma_sumologic" role="tabpanel">
+                                            <div v-if="sigmaConvert.sumologic.loading" class="d-flex align-items-center gap-2 p-4 text-muted small">
+                                                <div class="spinner-border spinner-border-sm"></div> Converting to Sumo Logic CSE…
+                                            </div>
+                                            <code-viewer v-else :code="sigmaConvert.sumologic.content || ''" language="json" title="sumologic.json" max-height="600px"></code-viewer>
+                                        </div>
+                                        <div v-if="sigmaConvert.secops.loading || sigmaConvert.secops.content" class="tab-pane fade" id="sigma_secops" role="tabpanel">
+                                            <div v-if="sigmaConvert.secops.loading" class="d-flex align-items-center gap-2 p-4 text-muted small">
+                                                <div class="spinner-border spinner-border-sm"></div> Converting to Google SecOps UDM…
+                                            </div>
+                                            <code-viewer v-else :code="sigmaConvert.secops.content || ''" language="text" title="secops.txt" max-height="600px"></code-viewer>
+                                        </div>
+                                        <div v-if="sigmaConvert.loki.loading || sigmaConvert.loki.content" class="tab-pane fade" id="sigma_loki" role="tabpanel">
+                                            <div v-if="sigmaConvert.loki.loading" class="d-flex align-items-center gap-2 p-4 text-muted small">
+                                                <div class="spinner-border spinner-border-sm"></div> Converting to Grafana Loki LogQL…
+                                            </div>
+                                            <code-viewer v-else :code="sigmaConvert.loki.content || ''" language="text" title="loki.logql" max-height="600px"></code-viewer>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
 
-                            
+
                         </div>
 
                         <!-- Actions bar -->
@@ -474,12 +588,20 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                                         {% if rule_misp_event %}
                                         <li><button class="dropdown-item small" @click="download_rule('misp_event')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/misp.svg') }}" alt="MISP" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">MISP Event</button></li>
                                         {% endif %}
-                                        <li><button class="dropdown-item small" @click="download_rule('json')" style="color:var(--text-color);"><i class="fas fa-code me-2 opacity-50"></i>JSON</button></li>
+                                        <li><button class="dropdown-item small" @click="download_rule('json')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/json.svg') }}" alt="JSON" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">JSON</button></li>
                                         <template v-if="rule_stix">
                                             <li><button class="dropdown-item small" @click="download_rule('stix')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/logo_stix.svg') }}" alt="STIX" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">STIX</button></li>
                                         </template>
                                         <template v-if="['yara', 'sigma'].includes((currentRule.format || '').toLowerCase())">
                                             <li><button class="dropdown-item small" @click="download_rule('velociraptor')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/velociraptor-remove-bg.svg') }}" alt="Velociraptor" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">Velociraptor Artifact</button></li>
+                                        </template>
+                                        <template v-if="(currentRule.format || '').toLowerCase() === 'sigma'">
+                                            <li v-if="sigmaConvert.splunk.content"><button class="dropdown-item small" @click="download_rule('splunk')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/splunk.png') }}" alt="Splunk" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">Splunk (SPL)</button></li>
+                                            <li v-if="sigmaConvert.elastic.content"><button class="dropdown-item small" @click="download_rule('elastic')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/elastic.svg') }}" alt="Elastic" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">Elastic (EQL)</button></li>
+                                            <li v-if="sigmaConvert.sentinel.content"><button class="dropdown-item small" @click="download_rule('sentinel')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/sentinel.svg') }}" alt="Sentinel" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">Microsoft Sentinel (KQL)</button></li>
+                                            <li v-if="sigmaConvert.sumologic.content"><button class="dropdown-item small" @click="download_rule('sumologic')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/sumologic.svg') }}" alt="Sumo Logic" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">Sumo Logic (CSE)</button></li>
+                                            <li v-if="sigmaConvert.secops.content"><button class="dropdown-item small" @click="download_rule('secops')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/secops.svg') }}" alt="Google SecOps" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">Google SecOps (UDM)</button></li>
+                                            <li v-if="sigmaConvert.loki.content"><button class="dropdown-item small" @click="download_rule('loki')" style="color:var(--text-color);"><img src="{{ url_for('static', filename='custom-icon/loki.svg') }}" alt="Grafana Loki" style="height:14px;width:14px;object-fit:contain;" class="me-2 opacity-50">Grafana Loki (LogQL)</button></li>
                                         </template>
                                         <li><hr class="dropdown-divider"></li>
                                         <li><button class="dropdown-item small" @click="download_rule('all')" style="color:var(--text-color);"><i class="fas fa-download me-2 opacity-50"></i>Download all</button></li>
@@ -908,7 +1030,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
 {% block script %}
 
 <script type="module">
-    const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
+    const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
     import { message_list, create_message } from '/static/js/toaster.js';
     const rule_id = document.getElementById('rule_id').dataset.ruleId;
 
@@ -1072,6 +1194,36 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                     create_message("Error loading STIX format", "danger");
                 }
             }
+
+            const sigmaConvert = reactive({
+                splunk:    { loading: true, content: null, error: null },
+                elastic:   { loading: true, content: null, error: null },
+                sentinel:  { loading: true, content: null, error: null },
+                sumologic: { loading: true, content: null, error: null },
+                secops:    { loading: true, content: null, error: null },
+                loki:      { loading: true, content: null, error: null },
+            });
+
+            async function fetchSigmaConvert(target) {
+                try {
+                    const res = await fetch(`/rule/get_sigma_convert/${rule_id}?target=${target}`);
+                    const data = await res.json();
+                    if (data.success) sigmaConvert[target].content = data.content;
+                    else sigmaConvert[target].error = data.error || 'Conversion not available for this rule.';
+                } catch (e) {
+                    sigmaConvert[target].error = 'Network error while converting.';
+                } finally {
+                    sigmaConvert[target].loading = false;
+                }
+            }
+            {% if rule.format and rule.format.lower() == 'sigma' %}
+            fetchSigmaConvert('splunk');
+            fetchSigmaConvert('elastic');
+            fetchSigmaConvert('sentinel');
+            fetchSigmaConvert('sumologic');
+            fetchSigmaConvert('secops');
+            fetchSigmaConvert('loki');
+            {% endif %}
 
 
             const displayTags = ref([]);
@@ -1477,6 +1629,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                 loadingDisplayTags,
                 fetchRuleTags,
                 rule_stix,
+                sigmaConvert,
                 ruleJsonData,
                 mispObjectData,
                 mispEventData,

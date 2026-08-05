@@ -34,6 +34,12 @@ faiss-cpu
 rapidfuzz
 dotenv
 pySigma
+pySigma-backend-splunk
+pySigma-backend-elasticsearch
+pySigma-backend-kusto
+pysigma-backend-sumologic
+pySigma-backend-secops
+pySigma-backend-loki
 weasyprint
 markdown
 cryptography
