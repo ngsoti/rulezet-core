@@ -8,7 +8,6 @@ from pathlib import Path
 from flask_login import current_user
 from app import db
 from app.core.db_class.db import Tag
-from app.features.tags.utils.map import _resolve_galaxy_icon
 
 
 # ─── CRUD basics ─────────────────────────────────────────────────────────────
@@ -672,7 +671,12 @@ def add_tags_from_misp_galaxy(uuid_from_misp, created_by, cluster_uuids=None):
         return None, "Galaxy not found"
 
     galaxy_type = galaxy_data.get("type", "unknown")
-    fa_icon     = _resolve_galaxy_icon(galaxy_data.get("icon", "atom"))
+    # Store the raw MISP icon name (e.g. "shield-alt"), not a resolved FA
+    # class — every display path (mapIcon() in JS, TagTable's edit UI, the
+    # taxonomy import path via "fa-tag") resolves Tag.icon at render time,
+    # so pre-resolving it here double-maps it into a nonexistent class and
+    # the icon silently disappears.
+    raw_icon    = galaxy_data.get("icon") or "atom"
 
     if cluster_uuids is None and galaxy_type in get_all_galaxies_in_db():
         return True, "Galaxy already imported."
@@ -701,7 +705,7 @@ def add_tags_from_misp_galaxy(uuid_from_misp, created_by, cluster_uuids=None):
             name=tag_name,
             description=cluster.get("description", ""),
             color="#8b5cf6",
-            icon=fa_icon,
+            icon=raw_icon,
             uuid=str(uuid.uuid4()),
             created_by=created_by.id,
             is_active=True,
@@ -915,7 +919,7 @@ def update_tags_from_misp_galaxy(uuid_from_misp, created_by):
     if galaxy_type not in get_all_galaxies_in_db():
         return None, f"'{galaxy_type}' not imported — skipped"
 
-    fa_icon = _resolve_galaxy_icon(galaxy_data.get("icon", "atom"))
+    raw_icon = galaxy_data.get("icon") or "atom"
     cluster_file = clusters_path / matched_filename
     if not cluster_file.exists():
         return None, "Cluster file not found"
@@ -935,7 +939,7 @@ def update_tags_from_misp_galaxy(uuid_from_misp, created_by):
             name=tag_name,
             description=cluster.get("description", ""),
             color="#8b5cf6",
-            icon=fa_icon,
+            icon=raw_icon,
             uuid=str(uuid.uuid4()),
             created_by=created_by.id,
             is_active=True,

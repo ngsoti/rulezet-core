@@ -385,3 +385,47 @@ def update_misp():
     log_activity("admin.update_misp", "Launched MISP data update job",
                  target_type="job", target_id=job.id, target_uuid=job.uuid)
     return jsonify({"success": True, "job": job.to_json(), "message": "Update job queued!", "toast_class": "success-subtle"}), 200
+
+
+@tags_blueprint.route('/admin/import_all_taxonomies', methods=['POST'])
+@login_required
+def import_all_taxonomies():
+    """Launch a background job that imports every MISP taxonomy on disk, new ones included."""
+    err = _admin_only()
+    if err: return err
+
+    from app.features.jobs.jobs_core import create_job
+    job = create_job(
+        job_type   = 'import_all_taxonomies',
+        payload    = {},
+        label      = 'Import all MISP taxonomies',
+        created_by = current_user.id,
+    )
+    if not job:
+        return jsonify({"success": False, "message": "Failed to create job", "toast_class": "danger-subtle"}), 500
+
+    log_activity("admin.import_all_taxonomies", "Launched import-all-taxonomies job",
+                 target_type="job", target_id=job.id, target_uuid=job.uuid)
+    return jsonify({"success": True, "job": job.to_json(), "message": "Import job queued!", "toast_class": "success-subtle"}), 200
+
+
+@tags_blueprint.route('/admin/import_all_galaxies', methods=['POST'])
+@login_required
+def import_all_galaxies():
+    """Launch a background job that imports every MISP galaxy on disk, new ones included."""
+    err = _admin_only()
+    if err: return err
+
+    from app.features.jobs.jobs_core import create_job
+    job = create_job(
+        job_type   = 'import_all_galaxies',
+        payload    = {},
+        label      = 'Import all MISP galaxies',
+        created_by = current_user.id,
+    )
+    if not job:
+        return jsonify({"success": False, "message": "Failed to create job", "toast_class": "danger-subtle"}), 500
+
+    log_activity("admin.import_all_galaxies", "Launched import-all-galaxies job",
+                 target_type="job", target_id=job.id, target_uuid=job.uuid)
+    return jsonify({"success": True, "job": job.to_json(), "message": "Import job queued!", "toast_class": "success-subtle"}), 200

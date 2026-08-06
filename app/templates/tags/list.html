@@ -117,6 +117,19 @@
 
             <!-- TAB 2 — Taxonomies -->
             <div class="tab-pane fade" id="pane-taxonomy">
+                <bulk-import-runner
+                    class="mb-3"
+                    :csrf-token="csrfToken"
+                    endpoint="/tags/admin/import_all_taxonomies"
+                    title="Add All Taxonomies"
+                    description="Imports every MISP taxonomy found on disk, including brand-new ones — already-imported namespaces are skipped automatically."
+                    icon="fas fa-list"
+                    accent-color="#0d6efd"
+                    button-label="Add All Taxonomies"
+                    item-noun="taxonomy"
+                    @notify="notify"
+                    @refresh-main="fetchTags(1)"
+                ></bulk-import-runner>
                 <div class="card border-0 shadow-sm rounded-4">
                     <div class="card-body p-3">
                         <div class="mb-3">
@@ -136,6 +149,19 @@
 
             <!-- TAB 3 — Galaxies -->
             <div class="tab-pane fade" id="pane-galaxy">
+                <bulk-import-runner
+                    class="mb-3"
+                    :csrf-token="csrfToken"
+                    endpoint="/tags/admin/import_all_galaxies"
+                    title="Add All Galaxies"
+                    description="Imports every MISP galaxy found on disk, including brand-new ones — already-imported types are skipped automatically."
+                    icon="fas fa-atom"
+                    accent-color="#8b5cf6"
+                    button-label="Add All Galaxies"
+                    item-noun="galaxy"
+                    @notify="notify"
+                    @refresh-main="fetchTags(1)"
+                ></bulk-import-runner>
                 <div class="card border-0 shadow-sm rounded-4">
                     <div class="card-body p-3">
                         <div class="mb-3">
@@ -192,6 +218,7 @@
     import BrowserPagination from '/static/js/tags/manage/BrowserPagination.js';
     import TagCreateModal    from '/static/js/tags/tagCreateModal.js';
     import MispUpdater       from '/static/js/tags/manage/MispUpdater.js';
+    import BulkImportRunner  from '/static/js/tags/manage/BulkImportRunner.js';
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -204,6 +231,7 @@
             'browser-pagination': BrowserPagination,
             'tag-create-modal':   TagCreateModal,
             'misp-updater':       MispUpdater,
+            'bulk-import-runner': BulkImportRunner,
         },
         setup() {
             const csrfToken    = '{{ csrf_token() }}';

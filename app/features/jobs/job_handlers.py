@@ -708,6 +708,100 @@ def handle_update_misp_data(job, app):
 
     log_job(job, "All done. Your imported MISP data is up to date.", level='success', event='done')
 
+
+# ─── MISP: import ALL taxonomies / galaxies (new + already-imported) ────────
+
+@register_handler('import_all_taxonomies')
+def handle_import_all_taxonomies(job, app):
+    """Import every taxonomy found on disk — brand new ones included.
+    add_tags_from_misp_taxonomy() already skips a namespace that's already
+    imported, so this is safe to re-run."""
+    from app.core.db_class.db import User
+    from app.features.tags import tags_core
+
+    user = User.query.get(job.created_by)
+    if not user:
+        log_job(job, "User not found — aborting.", level='error', event='error')
+        return
+
+    tax_list = tags_core.get_all_taxonomy_uuids_from_disk()
+    job.total = len(tax_list)
+    job.done  = 0
+    db.session.commit()
+    log_job(job, f"Found {len(tax_list)} taxonomy(ies) on disk — importing…",
+            level='info', event='start')
+
+    imported, skipped, error = 0, 0, 0
+    for i, (uid, ns) in enumerate(tax_list, start=1):
+        if _is_cancelled(job):
+            log_job(job, "Cancelled.", level='warning', event='cancelled')
+            return
+        while _should_pause(job):
+            import time; time.sleep(2)
+
+        ok, msg = tags_core.add_tags_from_misp_taxonomy(uid, user)
+        if ok is True and "already imported" in msg:
+            skipped += 1
+        elif ok is True:
+            imported += 1
+            log_job(job, f"[{ns}] {msg}", level='success', event='progress')
+        else:
+            error += 1
+            log_job(job, f"[{ns}] {msg}", level='warning', event='progress')
+
+        job.done = i
+        db.session.commit()
+
+    log_job(job,
+            f"Done — {imported} taxonomy(ies) imported, {skipped} already present, {error} errors.",
+            level='success', event='done')
+
+
+@register_handler('import_all_galaxies')
+def handle_import_all_galaxies(job, app):
+    """Import every galaxy found on disk — brand new ones included.
+    add_tags_from_misp_galaxy() already skips a type that's already
+    imported, so this is safe to re-run."""
+    from app.core.db_class.db import User
+    from app.features.tags import tags_core
+
+    user = User.query.get(job.created_by)
+    if not user:
+        log_job(job, "User not found — aborting.", level='error', event='error')
+        return
+
+    gal_list = tags_core.get_all_galaxy_uuids_from_disk()
+    job.total = len(gal_list)
+    job.done  = 0
+    db.session.commit()
+    log_job(job, f"Found {len(gal_list)} galaxy(ies) on disk — importing…",
+            level='info', event='start')
+
+    imported, skipped, error = 0, 0, 0
+    for i, (uid, gtype) in enumerate(gal_list, start=1):
+        if _is_cancelled(job):
+            log_job(job, "Cancelled.", level='warning', event='cancelled')
+            return
+        while _should_pause(job):
+            import time; time.sleep(2)
+
+        ok, msg = tags_core.add_tags_from_misp_galaxy(uid, user)
+        if ok is True and "already imported" in msg:
+            skipped += 1
+        elif ok is True:
+            imported += 1
+            log_job(job, f"[{gtype}] {msg}", level='success', event='progress')
+        else:
+            error += 1
+            log_job(job, f"[{gtype}] {msg}", level='warning', event='progress')
+
+        job.done = i
+        db.session.commit()
+
+    log_job(job,
+            f"Done — {imported} galaxy(ies) imported, {skipped} already present, {error} errors.",
+            level='success', event='done')
+
 # ─── trash_restore_bulk ───────────────────────────────────────────────────────
 
 TRASH_BATCH = 200
