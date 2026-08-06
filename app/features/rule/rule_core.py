@@ -366,7 +366,7 @@ def _find_in_trash_by_content(content: str):
     ).first()
 
 # Create
-def add_rule_core(form_dict, user) -> tuple[bool, str] | tuple[Rule, str]:
+def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, str] | tuple[Rule, str]:
     """
     Add a rule safely with error handling.
 
@@ -374,6 +374,11 @@ def add_rule_core(form_dict, user) -> tuple[bool, str] | tuple[Rule, str]:
     - If a rule with the same title AND same to_string AND same original_uuid already exists → do not add (it's an update of the same rule).
     - If title + to_string match but original_uuid is different → it's considered a different rule, allow insertion.
     - Otherwise → insert as a new rule.
+
+    record_activity=False skips the site-wide "rule.create" activity-log entry
+    (the rule's own version history is still recorded either way) — set by
+    bulk callers (GitHub/zip import, connector pull) that create many rules
+    in one go and instead log a single aggregate entry for the whole batch.
     """
     try:
         title = form_dict["title"].strip()
@@ -469,9 +474,10 @@ def add_rule_core(form_dict, user) -> tuple[bool, str] | tuple[Rule, str]:
         # caller) so every creation path (manual form, private API, auto-parse
         # import) gets consistent tracking.
         try:
-            from app.core.utils.activity_log import log_activity
-            log_activity("rule.create", f"Created rule '{new_rule.title}' [{new_rule.format}]",
-                         target_type="rule", target_id=new_rule.id, target_uuid=new_rule.uuid)
+            if record_activity:
+                from app.core.utils.activity_log import log_activity
+                log_activity("rule.create", f"Created rule '{new_rule.title}' [{new_rule.format}]",
+                             target_type="rule", target_id=new_rule.id, target_uuid=new_rule.uuid)
             create_rule_history({
                 "id": new_rule.id,
                 "title": new_rule.title,

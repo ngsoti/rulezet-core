@@ -12,15 +12,33 @@ from app.core.utils.utils import detect_cve
 #                                                                             #
 #   KQL (Kusto Query Language) detection/hunting rules are stored as plain   #
 #   .kql files — one query per file, the same convention used by the public  #
-#   Azure-Sentinel / Kusto-Query-Language GitHub repos. There is no wrapper  #
-#   schema (unlike Sigma/ATR's YAML), so metadata is optionally read from a  #
-#   leading `// Key: Value` comment header and otherwise defaulted/inferred  #
-#   from the filename.                                                       #
+#   Azure-Sentinel / Sentinel-Queries GitHub repos. There is no wrapper      #
+#   schema (unlike Sigma/ATR's YAML) and, in practice, most public KQL rule  #
+#   repos (e.g. reprise99/Sentinel-Queries, 460+ files) don't use a          #
+#   structured header at all — just a plain-English `//` comment describing #
+#   the query. Metadata is read from an optional leading `// Key: Value`    #
+#   header when present, falls back to the first free-form comment          #
+#   paragraph for the description, and to the filename for the title.       #
 ###############################################################################
 
 
-# Optional `// Key: Value` header lines at the top of the file.
+# Optional `// Key: Value` header lines at the top of the file. Only keys in
+# _KNOWN_HEADER_KEYS are treated as metadata — this keeps an ordinary
+# sentence that happens to contain a colon (e.g. "Note: this needs the AMA
+# connector") from being misread as a key/value pair.
 _HEADER_LINE_RE = re.compile(r'^//\s*([A-Za-z][\w \-]*?)\s*:\s*(.+)$')
+_KNOWN_HEADER_KEYS = {
+    'title', 'name',
+    'description', 'desc', 'summary',
+    'author', 'authors', 'created_by',
+    'license',
+    'severity',
+    'tags', 'tag',
+    'mitre', 'mitre_att&ck', 'attack', 'techniques',
+    'version',
+    'id', 'uuid', 'rule_id',
+    'source', 'reference', 'references', 'ref',
+}
 
 # Kusto control/management commands (`.show`, `.create table`, `.drop`, ...)
 # are cluster administration, not a detection query, and must be rejected.
@@ -31,28 +49,82 @@ _BRACKET_CLOSERS = {v: k for k, v in _BRACKET_PAIRS.items()}
 
 
 def _strip_comments(content: str) -> str:
-    """Return the content with blank and `//` comment lines removed."""
-    body_lines = [
-        line for line in content.splitlines()
-        if line.strip() and not line.strip().startswith('//')
-    ]
-    return "\n".join(body_lines).strip()
+    """Return the content with `//` comments removed — both whole-comment
+    lines and trailing inline comments (`SecurityEvent // main table`).
+
+    A `//` found inside a quoted string (e.g. `has "https://evil.com"`) is
+    left untouched — only a `//` outside of any string starts a comment.
+    Without this string-awareness, a trailing comment containing an
+    apostrophe (very common in plain-English notes, e.g. "// don't count
+    unknowns") would open a string that's never closed and validate() would
+    wrongly reject the query as having an unterminated string literal.
+    """
+    out_lines: List[str] = []
+    for line in content.splitlines():
+        result: List[str] = []
+        in_string = False
+        string_char = ""
+        escaped = False
+        i = 0
+        n = len(line)
+        while i < n:
+            ch = line[i]
+            if in_string:
+                result.append(ch)
+                if escaped:
+                    escaped = False
+                elif ch == '\\':
+                    escaped = True
+                elif ch == string_char:
+                    in_string = False
+                i += 1
+                continue
+            if ch in ('"', "'"):
+                in_string = True
+                string_char = ch
+                result.append(ch)
+                i += 1
+                continue
+            if ch == '/' and i + 1 < n and line[i + 1] == '/':
+                break
+            result.append(ch)
+            i += 1
+        cleaned = ''.join(result).rstrip()
+        if cleaned.strip():
+            out_lines.append(cleaned)
+    return "\n".join(out_lines).strip()
 
 
-def _parse_header(content: str) -> Dict[str, str]:
-    """Parse the leading contiguous block of `// Key: Value` comment lines."""
+def _parse_leading_comments(content: str) -> tuple[Dict[str, str], str]:
+    """Parse the leading contiguous block of `//` comment lines.
+
+    Returns (meta, freeform):
+    - meta: recognized `Key: Value` pairs (key must be in
+      _KNOWN_HEADER_KEYS), gathered from the whole leading comment block.
+    - freeform: the first comment *paragraph* (up to the first blank line),
+      with any recognized Key: Value lines excluded — this is what most
+      public KQL rule repos actually put at the top of a file instead of a
+      structured header, and is used as the description fallback.
+    """
     meta: Dict[str, str] = {}
+    freeform_parts: List[str] = []
+    in_first_paragraph = True
     for line in content.splitlines():
         stripped = line.strip()
         if not stripped:
+            in_first_paragraph = False
             continue
         if not stripped.startswith('//'):
             break
         match = _HEADER_LINE_RE.match(stripped)
-        if match:
-            key = match.group(1).strip().lower().replace(' ', '_')
+        key = match.group(1).strip().lower().replace(' ', '_') if match else None
+        if match and key in _KNOWN_HEADER_KEYS:
             meta[key] = match.group(2).strip()
-    return meta
+        elif in_first_paragraph:
+            text = stripped[2:].strip()
+            if text:
+                freeform_parts.append(text)
+    return meta, " ".join(freeform_parts)
 
 
 def _title_from_filename(filepath: Optional[str]) -> Optional[str]:
@@ -148,17 +220,23 @@ class KQLRule(RuleType):
     def parse_metadata(self, content: str, info: Dict, validation_result: ValidationResult) -> Dict[str, Any]:
         """Extract metadata from an optional leading comment header, falling back to the filename/defaults."""
         info = info or {}
-        fallback_title = _title_from_filename(info.get("filepath")) or "Untitled KQL Query"
+        # The import pipeline stores the file's path under "github_path"
+        # (see session_class.py / update_class.py); "filepath" is only used
+        # by direct/unit-test callers. Check both so the filename fallback
+        # actually fires during a real GitHub/zip import.
+        source_path = info.get("github_path") or info.get("filepath")
+        fallback_title = _title_from_filename(source_path) or "Untitled KQL Query"
 
         try:
-            meta = _parse_header(content)
+            meta, freeform_description = _parse_leading_comments(content)
 
             title = meta.get('title') or meta.get('name') or fallback_title
-            description = meta.get('description') or "No description provided"
+            description = meta.get('description') or meta.get('desc') or meta.get('summary') \
+                or freeform_description or "No description provided"
             _, cve = detect_cve(description)
 
             tags: List[str] = []
-            for key in ('tags', 'mitre', 'mitre_att&ck', 'attack'):
+            for key in ('tags', 'tag', 'mitre', 'mitre_att&ck', 'attack', 'techniques'):
                 if meta.get(key):
                     tags.extend(t.strip() for t in meta[key].split(',') if t.strip())
 
@@ -169,8 +247,8 @@ class KQLRule(RuleType):
                 "description": description,
                 "source": meta.get("source") or info.get("repo_url", "Unknown"),
                 "version": meta.get("version", "1.0"),
-                "original_uuid": meta.get("id") or meta.get("uuid") or "Unknown",
-                "author": meta.get("author") or info.get("author", "Unknown"),
+                "original_uuid": meta.get("id") or meta.get("uuid") or meta.get("rule_id") or "Unknown",
+                "author": meta.get("author") or meta.get("authors") or meta.get("created_by") or info.get("author", "Unknown"),
                 "to_string": content,
                 "cve_id": cve,
                 "severity": meta.get("severity", "unknown"),
@@ -187,6 +265,8 @@ class KQLRule(RuleType):
                 "original_uuid": "Unknown",
                 "author": info.get("author", "Unknown"),
                 "cve_id": [],
+                "severity": "unknown",
+                "tags": [],
                 "to_string": content,
             }
 
@@ -237,8 +317,8 @@ class KQLRule(RuleType):
 
         for filepath in kql_files:
             for r in self.extract_rules_from_file(filepath):
-                meta = _parse_header(r)
-                candidate_uuid = meta.get('id') or meta.get('uuid')
+                meta, _ = _parse_leading_comments(r)
+                candidate_uuid = meta.get('id') or meta.get('uuid') or meta.get('rule_id')
                 if candidate_uuid and rule.original_uuid and candidate_uuid == rule.original_uuid:
                     return r, True
 

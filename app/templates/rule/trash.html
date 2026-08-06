@@ -446,7 +446,7 @@ createApp({
     const conflictData = ref(null)
     const highlightId  = ref(parseInt(new URLSearchParams(location.search).get('highlight')) || null)
 
-    const formats = ['yara','sigma','suricata','zeek','crs','nova','nse','wazuh','elastic']
+    const formats = ['yara','sigma','suricata','zeek','crs','nova','nse','wazuh','elastic','kql']
 
     const batchRulesCount = computed(() => {
       const b = batches.value.find(b => b.batch_uuid === batchFilter.value)

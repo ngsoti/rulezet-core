@@ -171,6 +171,7 @@ const LANG_ALIASES = {
     zeek: 'text',
     crs: 'text',
     nova: 'text',
+    kql: 'sql',       // KQL syntax is SQL-like
 }
 
 function detect_language(code, hint) {

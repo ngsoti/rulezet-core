@@ -35,7 +35,7 @@ const _KNOWN_HLJS = new Set([
     'kotlin','lua','markdown','nginx','php','plaintext','python','ruby','rust',
     'shell','sql','swift','typescript','xml','yaml','text',
 ])
-const _LANG_ALIASES = { nse:'lua', sigma:'yaml', wazuh:'xml', yara:'text', suricata:'text', zeek:'text', crs:'text', nova:'text' }
+const _LANG_ALIASES = { nse:'lua', sigma:'yaml', wazuh:'xml', yara:'text', suricata:'text', zeek:'text', crs:'text', nova:'text', kql:'sql' }
 function _resolve_lang(lang) {
     const mapped = _LANG_ALIASES[lang] || lang
     return _KNOWN_HLJS.has(mapped) ? mapped : 'text'

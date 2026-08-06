@@ -2,6 +2,7 @@ import re
 from flask import url_for
 from flask_login import current_user
 from flask_wtf import FlaskForm
+from markupsafe import escape
 from wtforms import  BooleanField, ValidationError, SelectField
 from wtforms.fields import StringField, SubmitField, TextAreaField
 from wtforms.validators import  InputRequired, DataRequired
@@ -10,6 +11,7 @@ from wtforms.validators import  InputRequired, DataRequired
 from app.core.utils.utils import detect_cve
 
 from . import rule_core as RuleModel
+from .rule_core import _active
 from ...core.db_class.db import FormatRule, Rule
 
 class AddNewRuleForm(FlaskForm):
@@ -31,14 +33,16 @@ class AddNewRuleForm(FlaskForm):
         self.format.choices = [(f['name'], f['name']) for f in formats_rules_list]
 
     def validate_title(self, field):
-        existing_rule = Rule.query.filter_by(title=field.data).first()
+        existing_rule = _active().filter_by(title=field.data).first()
         if existing_rule:
             if current_user.id == existing_rule.user_id or current_user.is_admin():
-                # raise ValidationError('Rule already registered.')
                 edit_url = url_for("rule.edit_rule", rule_id=existing_rule.id)
+                # existing_rule.title is user-controlled — escape it before
+                # embedding in the raw HTML string (rendered via v-html on
+                # the frontend), only the <a> wrapper itself is trusted markup.
                 raise ValidationError(
                     f'Rule already registered. '
-                    f'Do you want to <a href="{edit_url}">edit this rule (ID: {existing_rule.title})</a> instead?'
+                    f'Do you want to <a href="{edit_url}">edit this rule (ID: {escape(existing_rule.title)})</a> instead?'
                 )
             else:
                 raise ValidationError('Rule already registered.')

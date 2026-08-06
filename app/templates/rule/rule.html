@@ -183,7 +183,7 @@
                 <i class="rf-label-hint" data-tip="Unique name that identifies this rule across the platform.">?</i>
               </div>
               {{ form.title(class_="form-control", placeholder="e.g. Detect_Mimikatz_Sekurlsa") }}
-              <div v-if="titleError" class="invalid-feedback d-block">[[ titleError ]]</div>
+              <div v-if="titleError" class="invalid-feedback d-block" v-html="titleError"></div>
             </div>
             <div class="col-md-6">
               <div class="d-flex align-items-center gap-1 mb-1">
@@ -331,7 +331,7 @@
           <div class="mb-3">
             <div class="d-flex align-items-center gap-1 mb-1">
               <label class="form-label-styled mb-0" for="content">Rule content<span class="req-badge">required</span></label>
-              <i class="rf-label-hint" data-tip="Supports YARA, Sigma, Suricata, Zeek, CRS, Wazuh, Nova, NSE, Elastic.">?</i>
+              <i class="rf-label-hint" data-tip="Supports YARA, Sigma, Suricata, Zeek, CRS, Wazuh, Nova, NSE, KQL, Elastic.">?</i>
             </div>
             <smart-editor
               v-model="parseContent"

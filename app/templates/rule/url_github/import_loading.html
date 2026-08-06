@@ -714,9 +714,27 @@
                         // and user_id, which the live status() doesn't — fetch
                         // that in the background and merge it in once it
                         // arrives, instead of blocking the report on it.
+                        //
+                        // <rule-list>/<bad-rule-list> mount (and run their own
+                        // first fetchData()) the instant is_finished flips
+                        // true above — right as the very last worker thread
+                        // is still finishing its own commit. Their first
+                        // fetch can therefore land a beat too early and show
+                        // an incomplete table until a manual reload. This
+                        // response only exists once save_info() has fully
+                        // persisted the ImporterResult, which only happens
+                        // after every rule has been committed — so re-running
+                        // fetchData() here is a guaranteed-fresh refresh, no
+                        // reload required.
                         fetch('/rule/import_loading_status/{{sid}}?is_finished=true')
                             .then(res => res.json())
-                            .then(loc => { result_data.value = { ...result_data.value, ...loc } })
+                            .then(loc => {
+                                result_data.value = { ...result_data.value, ...loc }
+                                nextTick(() => {
+                                    ruleListRef.value?.fetchData()
+                                    badRuleListRef.value?.fetchData(1)
+                                })
+                            })
                             .catch(() => {})
                     }
                 });

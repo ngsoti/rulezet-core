@@ -315,8 +315,10 @@ class Session_class:
                     local_user = db.session.merge(user)
 
                     if validation.ok:
-                        # metadata now contains 'github_path' for RuleModel.add_rule_core
-                        success, msg = RuleModel.add_rule_core(metadata, local_user)
+                        # metadata now contains 'github_path' for RuleModel.add_rule_core.
+                        # record_activity=False — a single aggregate entry is logged for
+                        # the whole import in save_info() instead of one per rule.
+                        success, msg = RuleModel.add_rule_core(metadata, local_user, record_activity=False)
                         if success:
                             self.imported += 1
                             self.count_per_format[rule_instance.format]["imported"] += 1
@@ -378,6 +380,18 @@ class Session_class:
         )
         db.session.add(result_entry)
         db.session.commit()
+
+        try:
+            from app.core.utils.activity_log import log_activity
+            source = self.info.get("repo_url") or self.info.get("url") or "unknown source"
+            log_activity(
+                "github.import_finished",
+                f"Imported {self.imported} rule(s) from '{source}' "
+                f"({self.skipped} skipped, {self.bad_rules} bad)",
+                target_type="github_import", target_uuid=self.uuid,
+            )
+        except Exception:
+            pass
 
         try:
             from app.features.notification.notification_core import notify_github_import_done
