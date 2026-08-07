@@ -17,6 +17,24 @@
 #job-widget > .jw-pos--top-right    { position: fixed; top: 1.5rem; right: 1.5rem; }
 #job-widget > .jw-pos--top-left     { position: fixed; top: 1.5rem; left: 1.5rem; }
 
+/* Free-drag position — left/top/right/bottom set inline via :style */
+#job-widget > .jw-pos--custom { position: fixed; }
+
+/* Drag handle */
+.jw-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    cursor: grab;
+    color: var(--subtle-text-color);
+    padding: 0 .15rem;
+    touch-action: none;
+}
+.jw-drag-handle:active { cursor: grabbing; }
+
+/* While dragging, avoid text selection / transition lag anywhere on the page */
+body.jw-dragging { user-select: none; cursor: grabbing; }
+body.jw-dragging .jw-panel { animation: none; }
+
 /* Expanded panel opens away from whichever edge it's pinned to, so it never
    overflows off the top or bottom of the viewport */
 .jw-pos--top-right .jw-panel,

@@ -24,12 +24,23 @@ const DISMISSED_KEY = 'rz_dismissed_jobs'
 const MAX_LOG_LINES = 10
 const POSITION_KEY   = 'rz-job-widget-position'
 const VISIBILITY_KEY = 'rz-job-widget-visibility'
+const CUSTOM_POS_KEY = 'rz-job-widget-custom-pos'
 
 function loadPosition() {
     return localStorage.getItem(POSITION_KEY) || 'bottom-right'
 }
 function loadAlwaysVisible() {
     return (localStorage.getItem(VISIBILITY_KEY) || 'active-only') === 'always'
+}
+function loadCustomPos() {
+    try {
+        const raw = localStorage.getItem(CUSTOM_POS_KEY)
+        return raw ? JSON.parse(raw) : null
+    } catch { return null }
+}
+function saveCustomPos(pos) {
+    if (pos) localStorage.setItem(CUSTOM_POS_KEY, JSON.stringify(pos))
+    else localStorage.removeItem(CUSTOM_POS_KEY)
 }
 
 function csrf() {
@@ -78,6 +89,10 @@ const JobWidget = {
         const dismissed = ref(loadDismissed())
         const position      = ref(loadPosition())
         const alwaysVisible  = ref(loadAlwaysVisible())
+        const widgetEl   = ref(null)
+        const customPos  = ref(loadCustomPos())
+        const dragging   = ref(false)
+        let dragOffset = { x: 0, y: 0 }
 
         // Per-job log storage  { uuid: [{...}] }
         const jobLogs   = ref({})
@@ -92,7 +107,10 @@ const JobWidget = {
         )
         const hasVisible = computed(() => visible.value.length > 0 || alwaysVisible.value)
         const isIdle = computed(() => visible.value.length === 0)
-        const positionClass = computed(() => `jw-pos--${position.value}`)
+        const positionClass = computed(() => customPos.value ? 'jw-pos--custom' : `jw-pos--${position.value}`)
+        const widgetStyle = computed(() => customPos.value
+            ? { left: customPos.value.x + 'px', top: customPos.value.y + 'px', right: 'auto', bottom: 'auto' }
+            : {})
         const runningCount = computed(() =>
             visible.value.filter(j => j.status === 'running').length
         )
@@ -215,6 +233,60 @@ const JobWidget = {
             return 'fa-solid fa-circle text-muted'
         }
 
+        // ── Free-drag positioning ────────────────────────────────────────────
+        function clampToViewport(x, y) {
+            const el = widgetEl.value
+            const w = el ? el.offsetWidth : 380
+            const h = el ? el.offsetHeight : 60
+            const maxX = Math.max(8, window.innerWidth - w - 8)
+            const maxY = Math.max(8, window.innerHeight - h - 8)
+            return { x: Math.min(Math.max(8, x), maxX), y: Math.min(Math.max(8, y), maxY) }
+        }
+
+        function dragPoint(e) {
+            const t = e.touches && e.touches[0]
+            return t ? { x: t.clientX, y: t.clientY } : { x: e.clientX, y: e.clientY }
+        }
+
+        function startDrag(e) {
+            if (e.button !== undefined && e.button !== 0) return
+            const el = widgetEl.value
+            if (!el) return
+            const rect = el.getBoundingClientRect()
+            const p = dragPoint(e)
+            dragOffset.x = p.x - rect.left
+            dragOffset.y = p.y - rect.top
+            dragging.value = true
+            document.body.classList.add('jw-dragging')
+            document.addEventListener('mousemove', onDrag)
+            document.addEventListener('mouseup', endDrag)
+            document.addEventListener('touchmove', onDrag, { passive: false })
+            document.addEventListener('touchend', endDrag)
+        }
+
+        function onDrag(e) {
+            if (!dragging.value) return
+            e.preventDefault()
+            const p = dragPoint(e)
+            customPos.value = clampToViewport(p.x - dragOffset.x, p.y - dragOffset.y)
+        }
+
+        function endDrag() {
+            if (!dragging.value) return
+            dragging.value = false
+            document.body.classList.remove('jw-dragging')
+            document.removeEventListener('mousemove', onDrag)
+            document.removeEventListener('mouseup', endDrag)
+            document.removeEventListener('touchmove', onDrag)
+            document.removeEventListener('touchend', endDrag)
+            saveCustomPos(customPos.value)
+        }
+
+        function resetPosition() {
+            customPos.value = null
+            saveCustomPos(null)
+        }
+
         // Live-updates position/visibility if changed on the settings page
         // without needing a full reload (settings.html dispatches this after
         // every change, same convention as 'rz:job-created' below).
@@ -246,20 +318,26 @@ const JobWidget = {
             dismiss, dismissAll,
             pauseJob, resumeJob, cancelJob,
             progress, statusIcon, statusClass, logLevelClass, logIcon,
+            widgetEl, widgetStyle, customPos, startDrag, resetPosition,
         }
     },
 
     template: `
-<div v-if="hasVisible" :class="positionClass">
+<div v-if="hasVisible" :class="positionClass" :style="widgetStyle" ref="widgetEl">
 
     <!-- ── Collapsed bar — idle (always-visible mode, nothing running) ── -->
-    <div v-if="!expanded && isIdle" class="jw-bar jw-bar--idle" title="No background jobs running">
+    <div v-if="!expanded && isIdle" class="jw-bar jw-bar--idle" title="No background jobs running"
+         @mousedown="startDrag" @touchstart="startDrag">
+        <span class="jw-drag-handle" title="Drag to move"><i class="fa-solid fa-grip-vertical"></i></span>
         <i class="fa-regular fa-circle-check text-muted" style="font-size:.85rem;"></i>
         <span class="jw-bar__label">No active jobs</span>
     </div>
 
     <!-- ── Collapsed bar ── -->
     <div v-else-if="!expanded" class="jw-bar" @click="expanded = true" title="Show background jobs">
+        <span class="jw-drag-handle" title="Drag to move" @mousedown="startDrag" @touchstart="startDrag" @click.stop>
+            <i class="fa-solid fa-grip-vertical"></i>
+        </span>
         <i v-if="allDone" class="fa-solid fa-circle-check" style="font-size:.85rem;color:#198754;"></i>
         <i v-else class="fa-solid fa-circle-notch fa-spin text-primary" style="font-size:.85rem;"></i>
         <span class="jw-bar__label">Background Jobs</span>
@@ -275,8 +353,14 @@ const JobWidget = {
 
         <!-- Header -->
         <div class="jw-header">
+            <span class="jw-drag-handle" title="Drag to move" @mousedown="startDrag" @touchstart="startDrag">
+                <i class="fa-solid fa-grip-vertical"></i>
+            </span>
             <i class="fa-solid fa-circle-notch fa-spin text-primary" style="font-size:.8rem;"></i>
             <span class="jw-header__title">Background Jobs</span>
+            <button v-if="customPos" class="jw-btn me-1" @click="resetPosition" title="Reset position">
+                <i class="fa-solid fa-anchor"></i>
+            </button>
             <a href="/jobs/list" target="_blank" class="jw-btn me-1" title="Open jobs page" @click.stop>
                 <i class="fa-solid fa-arrow-up-right-from-square"></i>
             </a>
@@ -331,7 +415,7 @@ const JobWidget = {
                     <button v-if="job.status !== 'done'" class="jw-btn jw-btn--danger" @click="cancelJob(job.uuid)" title="Cancel">
                         <i class="fa-solid fa-stop"></i>
                     </button>
-                    <a :href="'/jobs/list'" class="jw-btn ms-auto" target="_blank" title="Full details">
+                    <a :href="'/jobs/detail/' + job.uuid" class="jw-btn ms-auto" target="_blank" title="Full details">
                         <i class="fa-solid fa-arrow-up-right-from-square"></i>
                     </a>
                 </div>
