@@ -44,9 +44,20 @@ function valueOf(name) {
     if (name.includes(':')) return name.split(':').slice(1).join(':')
     return name
 }
+// Full detail: parses the RAW name directly (not via namespaceOf(), which
+// collapses "misp-galaxy:tool=..." to just "tool" for grouping purposes) so
+// every segment — including the predicate ("malware-type") and the
+// "misp-galaxy:" prefix — is shown, not silently dropped.
 function tagLabel(name) {
-    const ns = namespaceOf(name)
-    return ns ? `${ns}:${valueOf(name)}` : name
+    if (!name) return ''
+    const colonIdx = name.indexOf(':')
+    if (colonIdx === -1) return name
+    const rawNs = name.slice(0, colonIdx)
+    const rest  = name.slice(colonIdx + 1)
+    const eqIdx = rest.indexOf('=')
+    if (eqIdx === -1) return `${rawNs}:${rest}`
+    const pred = rest.slice(0, eqIdx)
+    return `${rawNs}:${pred}=${valueOf(name)}`
 }
 
 // ── Generic "add manually" input component ────────────────────────────────────

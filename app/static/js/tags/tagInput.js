@@ -46,11 +46,26 @@ const TagInput = {
             if (name.includes(':')) return name.split(':').slice(1).join(':');
             return name;
         }
+        // Full-detail label: parses the RAW tag name directly rather than
+        // going through namespaceOf() (which deliberately collapses
+        // "misp-galaxy:tool=..." to just "tool" for the browse-folder
+        // grouping). Previously this dropped the predicate entirely for
+        // taxonomy tags (showed "ms-caro-malware-full:Trojan", hiding that
+        // it's specifically the "malware-type" predicate) and dropped the
+        // "misp-galaxy:" prefix for galaxy tags. This picker is used to build
+        // a security-relevant config — the admin needs to see precisely
+        // which tag they're about to attach, not an abbreviated guess.
         function tagLabel(name) {
-            const ns = namespaceOf(name);
-            const val = valueOf(name);
-            if (props.showNamespace && ns) return `${ns}:${val}`;
-            return val;
+            if (!name) return '';
+            if (!props.showNamespace) return valueOf(name);
+            const colonIdx = name.indexOf(':');
+            if (colonIdx === -1) return name;
+            const rawNs = name.slice(0, colonIdx);
+            const rest  = name.slice(colonIdx + 1);
+            const eqIdx = rest.indexOf('=');
+            if (eqIdx === -1) return `${rawNs}:${rest}`;
+            const pred = rest.slice(0, eqIdx);
+            return `${rawNs}:${pred}=${valueOf(name)}`;
         }
 
         async function fetchAvailableTags() {

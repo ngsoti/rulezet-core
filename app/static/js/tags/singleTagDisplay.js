@@ -7,14 +7,6 @@ const SingleTagDisplay = {
     },
     delimiters: ['[[', ']]'],
     setup(props) {
-        function namespaceOf(name) {
-            if (!name || !name.includes(':')) return '';
-            if (name.startsWith('misp-galaxy:') && name.includes('=')) {
-                return name.split(':')[1].split('=')[0];
-            }
-            return name.split(':')[0];
-        }
-
         function valueOf(name) {
             if (!name) return '';
             const m = name.match(/="(.+)"$/);
@@ -23,11 +15,21 @@ const SingleTagDisplay = {
             return name;
         }
 
+        // Full detail: every segment of the raw tag name, including the
+        // predicate and the 'misp-galaxy:' prefix for galaxy tags — not
+        // collapsed down to just the type/value.
         function label(tag) {
-            const ns = namespaceOf(tag.name);
-            const val = valueOf(tag.name);
-            if (props.showNamespace && ns) return `${ns}:${val}`;
-            return val;
+            const name = tag.name;
+            if (!props.showNamespace) return valueOf(name);
+            if (!name) return '';
+            const colonIdx = name.indexOf(':');
+            if (colonIdx === -1) return name;
+            const rawNs = name.slice(0, colonIdx);
+            const rest  = name.slice(colonIdx + 1);
+            const eqIdx = rest.indexOf('=');
+            if (eqIdx === -1) return `${rawNs}:${rest}`;
+            const pred = rest.slice(0, eqIdx);
+            return `${rawNs}:${pred}=${valueOf(name)}`;
         }
 
         const wrapperEl    = Vue.ref(null);

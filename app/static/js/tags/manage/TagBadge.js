@@ -5,11 +5,12 @@ import { getTextColor, mapIcon } from '../utils/galaxie.js';
  * Renders a tag as a split pill: [icon] [label]
  *
  * The label respects the user-controlled `showNamespace` prop:
- *   showNamespace = true  → 'tlp:green'   /   'atrm:AZT705 - Azure Backup Delete'
- *   showNamespace = false → 'green'       /   'AZT705 - Azure Backup Delete'
+ *   showNamespace = true  → 'tlp:clear'   /   'ms-caro-malware-full:malware-type=Trojan'
+ *   showNamespace = false → 'clear'       /   'Trojan'
  *
- * For galaxy tags, the namespace shown is the type ('atrm', 'threat-actor'…)
- * — the noisy 'misp-galaxy:' prefix is dropped because it is always the same.
+ * Every segment of the raw tag name is shown when showNamespace is true —
+ * including the predicate and the 'misp-galaxy:' prefix for galaxy tags —
+ * so what's displayed always matches the exact tag being referenced.
  */
 const TagBadge = {
     props: {
@@ -20,14 +21,6 @@ const TagBadge = {
     setup(props) {
         const { computed } = Vue;
 
-        function namespaceOf(name) {
-            if (!name || !name.includes(':')) return '';
-            if (name.startsWith('misp-galaxy:') && name.includes('=')) {
-                return name.split(':')[1].split('=')[0];
-            }
-            return name.split(':')[0];
-        }
-
         function valueOf(name) {
             if (!name) return '';
             const m = name.match(/="(.+)"$/);
@@ -36,12 +29,19 @@ const TagBadge = {
             return name;
         }
 
-        const label = computed(() => {
-            const ns = namespaceOf(props.tag.name);
-            const val = valueOf(props.tag.name);
-            if (props.showNamespace && ns) return `${ns}:${val}`;
-            return val;
-        });
+        function fullLabel(name) {
+            if (!name) return '';
+            const colonIdx = name.indexOf(':');
+            if (colonIdx === -1) return name;
+            const rawNs = name.slice(0, colonIdx);
+            const rest  = name.slice(colonIdx + 1);
+            const eqIdx = rest.indexOf('=');
+            if (eqIdx === -1) return `${rawNs}:${rest}`;
+            const pred = rest.slice(0, eqIdx);
+            return `${rawNs}:${pred}=${valueOf(name)}`;
+        }
+
+        const label = computed(() => props.showNamespace ? fullLabel(props.tag.name) : valueOf(props.tag.name));
 
         return { getTextColor, mapIcon, label };
     },

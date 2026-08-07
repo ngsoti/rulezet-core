@@ -230,11 +230,18 @@ def validate_platform_tag_config(config: dict) -> tuple[bool, str, list[dict]]:
         seen_tag_ids.add(tag.id)
 
         resolved.append({
-            'label':   label or tag.name,
-            'tag_id':  tag.id,
-            'tag_name': tag.name,
-            'regex':   regex,
-            'enabled': bool(p.get('enabled', True)),
+            'label':     label or tag.name,
+            'tag_id':    tag.id,
+            'tag_name':  tag.name,
+            # Denormalized so the config editor can render a real tag chip
+            # (icon/color) straight from the saved config, with no extra
+            # lookup — tag_name alone isn't enough for that, and re-fetching
+            # per row on every load isn't worth it for cosmetics that rarely
+            # change once a tag exists.
+            'tag_icon':  tag.icon,
+            'tag_color': tag.color,
+            'regex':     regex,
+            'enabled':   bool(p.get('enabled', True)),
         })
 
     if errors:

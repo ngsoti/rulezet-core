@@ -39,11 +39,21 @@ const MultiTagFilter = {
             if (name.includes(':')) return name.split(':').slice(1).join(':');
             return name;
         }
+        // Full detail: parses the RAW name directly rather than via
+        // namespaceOf() above (which collapses "misp-galaxy:tool=..." down to
+        // just "tool" — kept as-is since that's still needed for the
+        // browse-folder grouping this component also does).
         function tagLabel(name) {
-            const ns = namespaceOf(name);
-            const val = valueOf(name);
-            if (props.showNamespace && ns) return `${ns}:${val}`;
-            return val;
+            if (!props.showNamespace) return valueOf(name);
+            if (!name) return '';
+            const colonIdx = name.indexOf(':');
+            if (colonIdx === -1) return name;
+            const rawNs = name.slice(0, colonIdx);
+            const rest  = name.slice(colonIdx + 1);
+            const eqIdx = rest.indexOf('=');
+            if (eqIdx === -1) return `${rawNs}:${rest}`;
+            const pred = rest.slice(0, eqIdx);
+            return `${rawNs}:${pred}=${valueOf(name)}`;
         }
 
         const isNameSelected = (name) =>

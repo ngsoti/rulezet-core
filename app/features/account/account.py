@@ -920,10 +920,14 @@ def platform_tag_configs_save():
     config = data.get('config', {})
     if not name:
         return jsonify({'success': False, 'message': 'Name is required'}), 400
-    ok, error, _resolved = validate_platform_tag_config(config)
+    ok, error, resolved = validate_platform_tag_config(config)
     if not ok:
         return jsonify({'success': False, 'message': error}), 400
-    cfg = save_config(name=name, config=config, user_id=current_user.id, config_type=CONFIG_TYPE_PLATFORM_TAGS)
+    # Persist the re-resolved patterns (tag_name/icon/color filled in fresh
+    # from the DB), not whatever the client sent — this is what the config
+    # editor needs to render a real tag chip on load without another lookup,
+    # and it's guaranteed accurate since it just came from validation above.
+    cfg = save_config(name=name, config={'patterns': resolved}, user_id=current_user.id, config_type=CONFIG_TYPE_PLATFORM_TAGS)
     return jsonify({'success': True, 'config': cfg.to_json()})
 
 
@@ -938,12 +942,12 @@ def platform_tag_configs_update(config_id):
         return jsonify({'success': False, 'message': 'Config not found'}), 404
     data = request.get_json(force=True) or {}
     new_config = data.get('config', cfg.config)
-    ok, error, _resolved = validate_platform_tag_config(new_config)
+    ok, error, resolved = validate_platform_tag_config(new_config)
     if not ok:
         return jsonify({'success': False, 'message': error}), 400
     if 'name' in data:
         cfg.name = data['name'].strip() or cfg.name
-    cfg.config = new_config
+    cfg.config = {'patterns': resolved}
     db.session.commit()
     return jsonify({'success': True, 'config': cfg.to_json()})
 
