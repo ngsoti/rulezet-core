@@ -198,6 +198,7 @@ def search_bundles_lite(query: str, limit: int = 5) -> list[dict]:
     substring matches, deduplicated.
     """
     like_pattern = f"%{query}%"
+    is_numeric = query.isdigit()
 
     def _visible(q):
         if current_user.is_authenticated:
@@ -206,15 +207,21 @@ def search_bundles_lite(query: str, limit: int = 5) -> list[dict]:
             return q
         return q.filter_by(access=True)
 
+    fuzzy_filters = [Bundle.name.ilike(like_pattern)]
+    # Same reasoning as search_rules_lite: a short/numeric query coincidentally
+    # matching somewhere inside an unrelated UUID is noise, not a real lookup.
+    if not is_numeric and len(query) >= 8:
+        fuzzy_filters.append(Bundle.uuid.ilike(like_pattern))
+
     fuzzy = (
-        _visible(Bundle.query.filter(or_(Bundle.name.ilike(like_pattern), Bundle.uuid.ilike(like_pattern))))
+        _visible(Bundle.query.filter(or_(*fuzzy_filters)))
         .order_by(Bundle.created_at.desc())
         .limit(limit)
         .all()
     )
 
     exact = None
-    if query.isdigit():
+    if is_numeric:
         exact = _visible(Bundle.query.filter(Bundle.id == int(query))).first()
     else:
         exact = _visible(Bundle.query.filter(Bundle.uuid == query)).first()

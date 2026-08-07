@@ -35,23 +35,41 @@ def _active():
 def search_rules_lite(query: str, limit: int = 5) -> list[dict]:
     """Lightweight rule lookup for the global nav search — public, no auth gate.
 
-    Returns at most `limit` rules: an exact id/uuid hit first (if the query
-    matches one), followed by title/uuid substring matches, deduplicated.
+    Returns at most `limit` rules: an exact id/uuid/original_uuid hit first
+    (if the query matches one), followed by title/uuid/original_uuid
+    substring matches, deduplicated. original_uuid is what an imported
+    rule's source repo called it before Rulezet assigned its own uuid.
     """
     like_pattern = f"%{query}%"
+    is_numeric = query.isdigit()
+
+    fuzzy_filters = [Rule.title.ilike(like_pattern)]
+    # A short numeric query (e.g. an id like "13") or a short string coincidentally
+    # matches somewhere inside plenty of unrelated UUIDs — pure noise, not a real
+    # id/uuid lookup. Only fuzzy-match against uuid for longer, uuid-shaped queries
+    # (a partial UUID paste), and never for a pure id query — that's what the exact
+    # id match below is for.
+    if not is_numeric and len(query) >= 8:
+        fuzzy_filters.append(Rule.uuid.ilike(like_pattern))
+        fuzzy_filters.append(Rule.original_uuid.ilike(like_pattern))
+
     fuzzy = (
         _active()
-        .filter(or_(Rule.title.ilike(like_pattern), Rule.uuid.ilike(like_pattern)))
+        .filter(or_(*fuzzy_filters))
         .order_by(Rule.last_modif.desc())
         .limit(limit)
         .all()
     )
 
     exact = None
-    if query.isdigit():
+    if is_numeric:
         exact = _active().filter(Rule.id == int(query)).first()
     else:
-        exact = _active().filter(Rule.uuid == query).first()
+        exact = (
+            _active()
+            .filter(or_(Rule.uuid == query, Rule.original_uuid == query))
+            .first()
+        )
 
     results = []
     seen_ids = set()
@@ -62,6 +80,7 @@ def search_rules_lite(query: str, limit: int = 5) -> list[dict]:
         results.append({
             "id": rule.id,
             "uuid": rule.uuid,
+            "original_uuid": rule.original_uuid,
             "title": rule.title,
             "format": rule.format,
         })
@@ -1573,6 +1592,12 @@ def filter_rules(search=None, search_field="all", author=None, sort_by=None, rul
                 # Case-sensitive exact substring match
                 query = query.filter(Rule.to_string.like(f"%{search}%"))
 
+            elif search_field == "uuid":
+                id_filters = [Rule.uuid == search, Rule.original_uuid == search]
+                if search.isdigit():
+                    id_filters.append(Rule.id == int(search))
+                query = query.filter(or_(*id_filters))
+
             else:
                 # If "all":
                 # Title = strict equality
@@ -1585,22 +1610,32 @@ def filter_rules(search=None, search_field="all", author=None, sort_by=None, rul
                 )
 
         search_lower = f"%{search.lower()}%"
-        
+
         if search_field == "title":
             query = query.filter(Rule.title.ilike(search_lower))
         elif search_field == "content":
             query = query.filter(Rule.to_string.ilike(search_lower))
+        elif search_field == "uuid":
+            # UUID / ID / Original UUID — original_uuid is what an imported rule's
+            # source repo called it before Rulezet assigned its own uuid, so a
+            # user pasting either identifier should find the rule.
+            id_filters = [Rule.uuid.ilike(search_lower), Rule.original_uuid.ilike(search_lower)]
+            if search.isdigit():
+                id_filters.append(Rule.id == int(search))
+            query = query.filter(or_(*id_filters))
         else:
-            query = query.filter(
-                or_(
-                    Rule.title.ilike(search_lower),
-                    Rule.description.ilike(search_lower),
-                    Rule.format.ilike(search_lower),
-                    Rule.author.ilike(search_lower),
-                    Rule.to_string.ilike(search_lower),
-                    Rule.uuid.ilike(search_lower)
-                )
-            )
+            all_filters = [
+                Rule.title.ilike(search_lower),
+                Rule.description.ilike(search_lower),
+                Rule.format.ilike(search_lower),
+                Rule.author.ilike(search_lower),
+                Rule.to_string.ilike(search_lower),
+                Rule.uuid.ilike(search_lower),
+                Rule.original_uuid.ilike(search_lower),
+            ]
+            if search.isdigit():
+                all_filters.append(Rule.id == int(search))
+            query = query.filter(or_(*all_filters))
 
     if vulnerabilities:
         vuln_filters = []

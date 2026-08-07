@@ -284,6 +284,7 @@ export default {
                             <option value="all">All fields</option>
                             <option value="title">Title only</option>
                             <option value="content">Content only</option>
+                            <option value="uuid">UUID / ID</option>
                         </select>
                     </div>
 
@@ -594,9 +595,18 @@ export default {
                             <i class="fas fa-user"></i>
                             <span>{{ rule.author }}</span>
                         </span>
+                        <span class="rl-meta-item" :title="'Rule id: ' + rule.id">
+                            <i class="fas fa-hashtag"></i>
+                            <span v-html="highlight('' + rule.id)"></span>
+                        </span>
                         <span class="rl-meta-item rl-meta-item--uuid" :title="rule.uuid">
                             <i class="fas fa-fingerprint"></i>
-                            <span>{{ rule.uuid }}</span>
+                            <span v-html="highlight(rule.uuid)"></span>
+                        </span>
+                        <span v-if="rule.original_uuid && rule.original_uuid !== 'Unknown' && rule.original_uuid !== rule.uuid"
+                              class="rl-meta-item rl-meta-item--uuid" :title="'Original UUID: ' + rule.original_uuid">
+                            <i class="fas fa-fingerprint" style="opacity:.6;"></i>
+                            <span v-html="highlight(rule.original_uuid)"></span>
                         </span>
                     </div>
 
@@ -765,6 +775,7 @@ export default {
                             </div>
                         </th>
                         <th v-if="showTestResults" class="dt-th" style="width:150px;">Result</th>
+                        <th v-show="colVisible.id" class="dt-th" style="width:90px;">ID</th>
                         <th v-show="colVisible.format"
                             class="dt-th dt-th--sortable" style="width:80px;"
                             :class="{ 'dt-th--sorted': sortKey === 'format' }"
@@ -840,6 +851,10 @@ export default {
                                 <a :href="'/rule/detail_rule/' + rule.id" class="dt-rule-title"
                                    v-html="highlight(rule.title)">
                                 </a>
+                            </td>
+
+                            <td v-show="colVisible.id" class="dt-td" :title="'Rule id: ' + rule.id">
+                                <span v-html="highlight('' + rule.id)"></span>
                             </td>
 
                             <td v-if="showTestResults" class="dt-td">
@@ -1087,6 +1102,19 @@ export default {
                                             <span class="rl-expand-k">Modified</span>
                                             <span class="rl-expand-v">{{ fromNow(rule.last_modif) }}</span>
                                         </div>
+                                        <div class="rl-expand-kv" :title="'Rule id: ' + rule.id">
+                                            <span class="rl-expand-k">ID</span>
+                                            <span class="rl-expand-v" v-html="highlight('' + rule.id)"></span>
+                                        </div>
+                                        <div class="rl-expand-kv" :title="rule.uuid">
+                                            <span class="rl-expand-k">UUID</span>
+                                            <span class="rl-expand-v" v-html="highlight(rule.uuid)"></span>
+                                        </div>
+                                        <div v-if="rule.original_uuid && rule.original_uuid !== 'Unknown' && rule.original_uuid !== rule.uuid"
+                                             class="rl-expand-kv" :title="rule.original_uuid">
+                                            <span class="rl-expand-k">Original UUID</span>
+                                            <span class="rl-expand-v" v-html="highlight(rule.original_uuid)"></span>
+                                        </div>
                                         <div v-if="rule.source" class="rl-expand-kv rl-expand-kv--source">
                                             <span class="rl-expand-k">
                                                 <i class="fas fa-link me-1"></i>Source
@@ -1289,6 +1317,7 @@ export default {
 
         // ── Column visibility (table mode) ────────────────────────────────
         const TOGGLEABLE_COLS = [
+            { key: 'id',          label: 'ID' },
             { key: 'format',      label: 'Format' },
             { key: 'editor',      label: 'Editor' },
             { key: 'description', label: 'Description' },

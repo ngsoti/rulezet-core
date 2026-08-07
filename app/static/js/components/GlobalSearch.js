@@ -93,8 +93,8 @@ const GlobalSearch = defineComponent({
         const sectionItems = computed(() => ({
             recent: recentSearches.value.map(label => ({ label })),
             page:   matchedPages.value,
-            rule:   results.value.rules.map(r => ({ label: r.title, meta: r.format, url: `/rule/detail_rule/${r.id}` })),
-            bundle: results.value.bundles.map(b => ({ label: b.name, meta: b.access ? null : 'Private', url: `/bundle/detail_bundle/${b.id}` })),
+            rule:   results.value.rules.map(r => ({ label: r.title, meta: r.format, id: r.id, uuid: r.uuid, originalUuid: r.original_uuid, url: `/rule/detail_rule/${r.id}` })),
+            bundle: results.value.bundles.map(b => ({ label: b.name, meta: b.access ? null : 'Private', id: b.id, uuid: b.uuid, url: `/bundle/detail_bundle/${b.id}` })),
             user:   results.value.users.map(u => ({ label: u.username, avatar: u.avatar, url: `/account/detail_user/${u.id}` })),
             shortcut: query.value.trim() ? [
                 { label: `See all results for “${query.value.trim()}” in`, strong: 'Rules', url: `/rule/rules_list?search=${encodeURIComponent(query.value.trim())}` },
@@ -116,6 +116,19 @@ const GlobalSearch = defineComponent({
             && results.value.bundles.length === 0
             && results.value.users.length === 0
         );
+
+        // When a rule/bundle matched by id or uuid rather than by its title
+        // (the common case when searching an id/uuid), the title text alone
+        // gives no visible clue why this result showed up — surface the
+        // matched identifier explicitly instead.
+        function idBadge(item) {
+            const q = query.value.trim().toLowerCase();
+            if (!q || (item.label || '').toLowerCase().includes(q)) return null;
+            if (item.id != null && String(item.id) === q) return '#' + item.id;
+            if (item.uuid && item.uuid.toLowerCase().includes(q)) return item.uuid;
+            if (item.originalUuid && item.originalUuid.toLowerCase().includes(q)) return item.originalUuid;
+            return null;
+        }
 
         function offsetFor(section) {
             let sum = 0;
@@ -228,7 +241,7 @@ const GlobalSearch = defineComponent({
             isEmpty, isActive,
             open, close, onInput, onFocus, onEnter, moveHighlight, clearQuery,
             goTo, runRecent, removeRecent,
-            highlight,
+            highlight, idBadge,
         };
     },
 
@@ -293,6 +306,7 @@ const GlobalSearch = defineComponent({
              @click="goTo(it.url)">
           <i class="fa-solid fa-shield-halved gs-item-icon"></i>
           <span class="gs-item-label" v-html="highlight(it.label, query)"></span>
+          <span v-if="idBadge(it)" class="gs-item-meta gs-item-meta--id">[[ idBadge(it) ]]</span>
           <span v-if="it.meta" class="gs-item-meta">[[ it.meta ]]</span>
         </div>
       </div>
@@ -304,6 +318,7 @@ const GlobalSearch = defineComponent({
              @click="goTo(it.url)">
           <i class="fa-solid fa-box gs-item-icon"></i>
           <span class="gs-item-label" v-html="highlight(it.label, query)"></span>
+          <span v-if="idBadge(it)" class="gs-item-meta gs-item-meta--id">[[ idBadge(it) ]]</span>
           <span v-if="it.meta" class="gs-item-meta gs-item-meta--private">[[ it.meta ]]</span>
         </div>
       </div>

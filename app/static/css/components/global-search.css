@@ -121,6 +121,14 @@
 .gs-item-meta--private {
     color: #dc3545;
 }
+.gs-item-meta--id {
+    font-family: 'Space Mono', monospace;
+    text-transform: none;
+    letter-spacing: 0;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .gs-item-avatar {
     width: 22px;
     height: 22px;
