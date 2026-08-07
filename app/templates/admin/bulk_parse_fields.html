@@ -21,19 +21,14 @@
                 <li class="breadcrumb-item active text-muted" aria-current="page">Bulk Field Parser</li>
             </ol>
         </nav>
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="banner-icon">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i>
-                </div>
-                <div>
-                    <h2 class="fw-bold mb-1">Bulk Field Parser</h2>
-                    <div class="banner-accent"></div>
-                </div>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
             </div>
-            <a href="/jobs/list" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-tasks me-1"></i>My Jobs
-            </a>
+            <div>
+                <h2 class="fw-bold mb-1">Bulk Field Parser</h2>
+                <div class="banner-accent"></div>
+            </div>
         </div>
         <p class="text-muted mb-0" style="max-width:680px;font-size:.95rem;">
             Extract metadata from rule content and populate fields like
@@ -42,14 +37,51 @@
         </p>
     </div>
 
-    {{ anav.admin_nav('bulk_parse_fields') }}
+    <!-- Tabs, with Admin navigation as one more item in the same row -->
+    <div class="dr-nav mb-3" role="tablist">
+        <a class="dr-nav__item active" data-bs-toggle="tab" href="#pane-base-fields" role="tab">
+            <i class="fas fa-wand-magic-sparkles"></i><span>Base Fields</span>
+        </a>
+        <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-platform-tags" role="tab">
+            <i class="fas fa-display"></i><span>Platform Tags</span>
+        </a>
+        <span class="dr-nav__sep"></span>
+        {{ anav.admin_nav_toggle() }}
 
-    <field-parser-updater
-        :csrf-token="csrfToken"
-        :field-meta="fieldMeta"
-        :parseable-fields="parseableFields"
-        @notify="notify">
-    </field-parser-updater>
+        <a href="/jobs/list" class="btn btn-primary btn-sm shadow-sm fw-bold rounded-pill px-4 ms-auto">
+            <i class="fas fa-tasks me-2"></i>My Jobs
+        </a>
+    </div>
+    {{ anav.admin_nav_panel('bulk_parse_fields') }}
+
+    <div class="tab-content">
+
+        <!-- TAB 1 — Base Fields -->
+        <div class="tab-pane fade show active" id="pane-base-fields" role="tabpanel">
+            <field-parser-updater
+                :csrf-token="csrfToken"
+                :field-meta="fieldMeta"
+                :parseable-fields="parseableFields"
+                @notify="notify">
+            </field-parser-updater>
+        </div>
+
+        <!-- TAB 2 — Platform Tags -->
+        <div class="tab-pane fade" id="pane-platform-tags" role="tabpanel">
+            <bulk-import-runner
+                :csrf-token="csrfToken"
+                endpoint="/account/admin/bulk_parse_fields/trigger_platform_tags"
+                title="Detect &amp; Tag Platforms"
+                description="Scans every rule's title, description and content for OS mentions (Windows, Linux, macOS, Android, Unix, FreeBSD, Solaris) and attaches the matching tag from the ms-caro-malware-full taxonomy — already-tagged rules are skipped, safe to re-run. Import that taxonomy from /tags/admin/list first if the tags don't exist yet."
+                icon="fa-solid fa-display"
+                accent-color="#0d6efd"
+                button-label="Re-parse All Rules"
+                item-noun="rule"
+                @notify="notify">
+            </bulk-import-runner>
+        </div>
+
+    </div>
 
 </div>
 {% endblock %}
@@ -58,6 +90,7 @@
 <script type="module">
 const { createApp } = Vue;
 import FieldParserUpdater from '/static/js/admin/bulkParseFields.js'
+import BulkImportRunner from '/static/js/tags/manage/BulkImportRunner.js'
 import { create_message } from '/static/js/toaster.js'
 
 const fieldMeta       = {{ field_meta | tojson | safe }};
@@ -65,9 +98,9 @@ const parseableFields = {{ parseable_fields | tojson | safe }};
 const csrfToken       = '{{ csrf_token() }}';
 
 createApp({
-    components: { 'field-parser-updater': FieldParserUpdater },
+    components: { 'field-parser-updater': FieldParserUpdater, 'bulk-import-runner': BulkImportRunner },
     setup() {
-        function notify(msg) { create_message(msg, 'info-subtle'); }
+        function notify(msg, cls = 'info-subtle') { create_message(msg, cls); }
         return { fieldMeta, parseableFields, csrfToken, notify };
     }
 }).mount('#main-container');

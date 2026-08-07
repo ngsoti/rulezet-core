@@ -784,6 +784,28 @@ def bulk_parse_fields_trigger():
     return jsonify({'success': True, 'job_uuid': job.uuid})
 
 
+@account_blueprint.route('/admin/bulk_parse_fields/trigger_platform_tags', methods=['POST'])
+@login_required
+def bulk_parse_fields_trigger_platform_tags():
+    """Scan every rule's title/description/content for OS mentions (Windows,
+    Linux, macOS...) and attach the matching ms-caro-malware-full platform
+    tag — see handle_bulk_tag_platforms in job_handlers.py."""
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'message': 'Admin only'}), 403
+    from app.features.jobs.jobs_core import create_job
+    job = create_job(
+        job_type='bulk_tag_platforms',
+        label='Detect & tag platforms',
+        payload={'rule_ids': 'ALL', 'format_filter': None},
+        created_by=current_user.id,
+    )
+    if not job:
+        return jsonify({'success': False, 'message': 'Failed to create job'}), 500
+    log_activity('admin.bulk_tag_platforms', 'Triggered platform-tag detection for all rules',
+                 target_type='job', target_id=job.id, target_uuid=job.uuid)
+    return jsonify({'success': True, 'job': job.to_json(), 'message': 'Platform tagging job queued!'})
+
+
 @account_blueprint.route('/admin/bulk_parse_fields/configs', methods=['GET'])
 @login_required
 def bulk_parse_fields_configs_list():

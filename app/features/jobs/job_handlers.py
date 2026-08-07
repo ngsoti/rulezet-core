@@ -16,6 +16,7 @@ Pause / Cancel support:
 import datetime
 import html as _html
 import os
+import re
 import subprocess
 import sys
 import uuid as uuid_mod
@@ -2521,6 +2522,146 @@ def handle_bulk_parse_fields(job, app):
     if rescan_cve:
         done_msg += f', {total_cve_added} rule(s) got new CVE/vulnerability ids merged in'
     log_job(job, done_msg + '.', level='success', event='done')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# bulk_tag_platforms — detect OS/platform mentions in rule content and attach
+# the matching tag from the ms-caro-malware-full taxonomy (predicate
+# "malware-platform"), which must already be imported (see /tags/admin/list).
+# ─────────────────────────────────────────────────────────────────────────────
+
+PLATFORM_TAG_TAXONOMY  = 'ms-caro-malware-full'
+PLATFORM_TAG_PREDICATE = 'malware-platform'
+
+# A deliberately small, high-confidence subset of the taxonomy's 73 values —
+# the ones that are actually operating systems (the rest are script/macro
+# types like VBS, HTA, W97M... which "windows"-style keyword matching in
+# free-text rule content would misdetect constantly).
+PLATFORM_TAG_PATTERNS = {
+    'Win32':     re.compile(r'\bwindows\b|\bwin32\b', re.IGNORECASE),
+    'Linux':     re.compile(r'\blinux\b', re.IGNORECASE),
+    'MacOS_X':   re.compile(r'\bmac ?os( ?x)?\b|\bdarwin\b', re.IGNORECASE),
+    'AndroidOS': re.compile(r'\bandroid\b', re.IGNORECASE),
+    'Unix':      re.compile(r'\bunix\b', re.IGNORECASE),
+    'FreeBSD':   re.compile(r'\bfreebsd\b', re.IGNORECASE),
+    'Solaris':   re.compile(r'\bsolaris\b', re.IGNORECASE),
+}
+
+
+@register_handler('bulk_tag_platforms')
+def handle_bulk_tag_platforms(job, app):
+    """Scan rule title/description/content for OS mentions (Windows, Linux,
+    macOS...) and attach the corresponding ms-caro-malware-full platform tag.
+    Additive only — never removes an existing tag, and never re-adds one a
+    rule already has, so re-running this job is always safe."""
+    payload       = job.payload or {}
+    rule_ids      = payload.get('rule_ids', 'ALL')
+    format_filter = payload.get('format_filter') or None
+    offset        = payload.get('_resume_offset', 0)
+    user_id       = job.created_by
+
+    tags_by_value = {}
+    missing = []
+    for value in PLATFORM_TAG_PATTERNS:
+        tag_name = f'{PLATFORM_TAG_TAXONOMY}:{PLATFORM_TAG_PREDICATE}="{value}"'
+        tag = Tag.query.filter_by(name=tag_name).first()
+        if tag:
+            tags_by_value[value] = tag
+        else:
+            missing.append(value)
+
+    if missing:
+        log_job(job,
+                f"Skipping {len(missing)} platform(s) with no matching tag in DB "
+                f"({', '.join(missing)}) — import the '{PLATFORM_TAG_TAXONOMY}' taxonomy "
+                f"from /tags/admin/list to enable them.",
+                level='warning', event='missing_tags')
+
+    if not tags_by_value:
+        log_job(job,
+                f"None of the platform tags exist yet — import the '{PLATFORM_TAG_TAXONOMY}' "
+                f"taxonomy first.", level='error', event='error')
+        job.done = job.total or 0
+        db.session.commit()
+        return
+
+    q = Rule.query.filter(Rule.is_deleted == False).order_by(Rule.id.asc())
+    if rule_ids != 'ALL':
+        q = q.filter(Rule.id.in_(rule_ids))
+    elif format_filter:
+        q = q.filter(Rule.format == format_filter)
+
+    if job.total == 0:
+        job.total = q.count()
+        db.session.commit()
+        log_job(job, f'Starting — scanning {job.total} rule(s) for platform mentions '
+                     f'({", ".join(tags_by_value)}).', level='info', event='start')
+    else:
+        log_job(job, f'Resuming from offset {offset}.', level='info', event='resume')
+
+    total_tagged       = 0
+    total_associations = 0
+    batch_num          = 0
+
+    while True:
+        if _is_cancelled(job):
+            log_job(job, 'Cancelled.', level='warning', event='cancelled')
+            return
+        while _should_pause(job):
+            import time; time.sleep(2)
+
+        rows = (
+            q.with_entities(Rule.id, Rule.title, Rule.description, Rule.to_string)
+            .offset(offset)
+            .limit(FIELD_PARSE_BATCH)
+            .all()
+        )
+        if not rows:
+            break
+
+        for rule_id, title, description, content in rows:
+            haystack = ' '.join(filter(None, [title, description, content]))
+            if not haystack:
+                continue
+            matched = [v for v, pat in PLATFORM_TAG_PATTERNS.items() if v in tags_by_value and pat.search(haystack)]
+            if not matched:
+                continue
+
+            existing_tag_ids = {
+                tid for (tid,) in db.session.query(RuleTagAssociation.tag_id)
+                    .filter(RuleTagAssociation.rule_id == rule_id).all()
+            }
+            new_assocs = 0
+            for value in matched:
+                tag = tags_by_value[value]
+                if tag.id in existing_tag_ids:
+                    continue
+                db.session.add(RuleTagAssociation(
+                    uuid=str(uuid_mod.uuid4()),
+                    rule_id=rule_id,
+                    tag_id=tag.id,
+                    user_id=user_id,
+                    added_at=_now(),
+                ))
+                new_assocs += 1
+            if new_assocs:
+                total_tagged += 1
+                total_associations += new_assocs
+
+        db.session.commit()
+        offset  += len(rows)
+        job.done = offset
+        _save_offset(job, offset)
+        db.session.commit()
+
+        batch_num += 1
+        if batch_num % FIELD_PARSE_LOG_EVERY == 0:
+            log_job(job, f'{offset}/{job.total} rules scanned, {total_tagged} rules tagged '
+                         f'({total_associations} new tag association(s)).',
+                    level='info', event='progress')
+
+    log_job(job, f'Done — {offset} rule(s) scanned, {total_tagged} rule(s) tagged with '
+                 f'{total_associations} new platform tag(s).', level='success', event='done')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
