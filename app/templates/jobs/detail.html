@@ -125,6 +125,56 @@
                     </div>
                     <div class="jobs-big-progress-pct">[[ job.progress ]]%</div>
                 </div>
+
+                <!-- Lifecycle timeline — purely visual, derived from job.status/progress -->
+                <div class="jobs-timeline">
+                    <div class="jobs-timeline-caption-wrap">
+                        <div class="jobs-timeline-caption" :class="'jobs-timeline-caption--' + job.status">
+                            <i :class="timelineCaptionIcon"></i>
+                            <span>[[ timelineCaptionText ]]</span>
+                            <i v-if="timelineDetailLines.length" class="fas fa-circle-info jobs-timeline-caption-info"></i>
+                        </div>
+                        <div v-if="timelineDetailLines.length" class="jobs-timeline-detail">
+                            <div class="jobs-timeline-detail-title"><i class="fas fa-terminal me-1"></i>Last log entries</div>
+                            <div v-for="(l, i) in timelineDetailLines" :key="i"
+                                 class="jobs-timeline-detail-line" :class="'jobs-timeline-detail-line--' + l.level"
+                                 @click="jumpToLog(l)" title="Jump to this line in the log">
+                                <span class="jobs-timeline-detail-ts">[[ l.ts ]]</span>[[ l.msg ]]
+                            </div>
+                        </div>
+                    </div>
+                    <div class="jobs-timeline-track" @click="onTimelineTrackClick" title="Click to jump to that point in the log">
+                        <div class="jobs-timeline-fill"
+                             :class="{ 'jobs-timeline-fill--stopped': timelineStopped }"
+                             :style="{ width: job.progress + '%' }"></div>
+                        <div v-for="m in timelineMilestones" :key="m.pct"
+                             class="jobs-timeline-node"
+                             :class="{ 'jobs-timeline-node--reached': job.progress >= m.pct }"
+                             :style="{ left: m.pct + '%' }"
+                             :title="m.title">
+                            <span class="jobs-timeline-dot"><i v-if="m.icon" :class="m.icon"></i></span>
+                            <span class="jobs-timeline-label">[[ m.label ]]</span>
+                        </div>
+                        <div v-if="job.status === 'running'" class="jobs-timeline-current"
+                             :style="{ left: job.progress + '%' }"
+                             :title="'Currently at ' + job.progress + '%'"></div>
+                        <div v-if="timelineStopped" class="jobs-timeline-marker"
+                             :style="{ left: job.progress + '%' }"
+                             :title="(job.status === 'failed' ? 'Failed' : 'Cancelled') + ' at ' + job.progress + '%'">
+                            <i :class="timelineStopIcon"></i>
+                        </div>
+                        <div v-if="readPct !== null" class="jobs-timeline-read"
+                             :style="{ left: readPct + '%' }"
+                             :title="'Log reading position — ' + readPct + '%'"></div>
+                        <div v-for="(marker, idx) in timelineIssueMarkers" :key="'issue-'+idx"
+                             class="jobs-timeline-issue"
+                             :class="'jobs-timeline-issue--' + marker.level"
+                             :style="{ left: marker.pct + '%' }"
+                             :title="(marker.level === 'error' ? 'Error' : 'Warning') + (marker.ts ? ' at ' + marker.ts : '') + ': ' + marker.msg"
+                             @click.stop="jumpToIssue(marker)"></div>
+                    </div>
+                </div>
+
                 <div v-if="job.error" class="alert alert-danger p-2 mt-2" style="font-size:.82rem;">
                     <i class="fas fa-circle-xmark me-1"></i> <strong>Error:</strong> [[ job.error ]]
                 </div>
@@ -135,10 +185,11 @@
         <!-- ── Execution logs ── -->
         <ansi-terminal
             ref="terminal_ref"
-            :entries="job.logs"
+            :entries="visible_logs"
             :live="is_live"
             title="Execution logs"
-            @clear="job.logs = []">
+            @clear="clearLogs"
+            @scroll="onTerminalScroll">
         </ansi-terminal>
 
     </div>
@@ -185,6 +236,102 @@
             let poll_timer = null
 
             const is_live = computed(() => !TERMINAL_STATUSES.includes(job.value.status))
+
+            const timelineMilestones = [
+                { pct: 0,   label: 'Queued', icon: 'fas fa-inbox',          title: 'Job was queued and waiting to start' },
+                { pct: 25,  label: '25%',    icon: null,                    title: 'Reached 25% completion' },
+                { pct: 50,  label: '50%',    icon: null,                    title: 'Reached 50% completion' },
+                { pct: 75,  label: '75%',    icon: null,                    title: 'Reached 75% completion' },
+                { pct: 100, label: 'Done',   icon: 'fas fa-flag-checkered', title: 'Job finished' },
+            ]
+            const timelineStopped = computed(() => ['failed', 'cancelled'].includes(job.value.status))
+            const timelineStopIcon = computed(() => job.value.status === 'failed' ? 'fas fa-circle-xmark' : 'fas fa-ban')
+
+            const TIMELINE_CAPTIONS = {
+                pending:   { icon: 'fas fa-clock text-muted',                text: () => 'Waiting in the queue…' },
+                running:   { icon: 'fas fa-circle-notch fa-spin text-primary', text: p => `Running — currently at ${p}%` },
+                paused:    { icon: 'fas fa-pause text-warning',              text: p => `Paused at ${p}%` },
+                done:      { icon: 'fas fa-circle-check text-success',       text: () => 'Completed successfully' },
+                failed:    { icon: 'fas fa-circle-xmark text-danger',        text: p => `Failed at ${p}%` },
+                cancelled: { icon: 'fas fa-ban text-danger',                 text: p => `Cancelled at ${p}%` },
+            }
+            const timelineCaptionIcon = computed(() => (TIMELINE_CAPTIONS[job.value.status] || TIMELINE_CAPTIONS.pending).icon)
+            const timelineCaptionText = computed(() => (TIMELINE_CAPTIONS[job.value.status] || TIMELINE_CAPTIONS.pending).text(job.value.progress))
+
+            // Last few log lines, shown on hover next to the caption — each one
+            // remembers its real index in job.logs so a click can jump the
+            // terminal below straight to that exact line.
+            const timelineDetailLines = computed(() => {
+                const logs  = job.value.logs || []
+                const start = Math.max(0, logs.length - 3)
+                return logs.slice(start).map((l, i) => ({
+                    ts:    l.ts ? l.ts.slice(11, 19) : '',
+                    level: l.level,
+                    msg:   l.msg,
+                    index: start + i,
+                }))
+            })
+            function jumpToLog(entry) {
+                const idx = entry.index - cleared_count.value
+                if (idx < 0) return
+                terminal_ref.value?.scroll_to(idx)
+            }
+
+            // How far along the timeline the log actually spans right now —
+            // used to translate "% scrolled through the log" into a position
+            // on the timeline, and to cap track clicks so you can't jump past
+            // where the job currently stands.
+            const timelineMaxPct = computed(() => job.value.status === 'done' ? 100 : (job.value.progress || 0))
+
+            const readPct = ref(null)  // null until the log has been scrolled at least once
+            function onTerminalScroll({ pct }) {
+                // ansi-terminal's scroll pct: 0 = oldest line (top), 100 = newest (bottom)
+                readPct.value = Math.round((pct / 100) * timelineMaxPct.value)
+            }
+
+            // Warning/error log lines placed along the timeline at their
+            // proportional position — orange/red so a problem is visible at a
+            // glance even before opening the log itself.
+            const timelineIssueMarkers = computed(() => {
+                const logs = job.value.logs || []
+                if (logs.length < 2) return []
+                const maxPct = timelineMaxPct.value
+                return logs
+                    .map((l, i) => ({ l, i }))
+                    .filter(({ l }) => l.level === 'warning' || l.level === 'error')
+                    .map(({ l, i }) => ({
+                        pct:   maxPct > 0 ? Math.round((i / (logs.length - 1)) * maxPct) : 0,
+                        level: l.level,
+                        msg:   l.msg,
+                        ts:    l.ts ? l.ts.slice(11, 19) : '',
+                        index: i,
+                    }))
+            })
+            function jumpToIssue(marker) {
+                const idx = marker.index - cleared_count.value
+                if (idx < 0) return
+                terminal_ref.value?.scroll_to(idx)
+            }
+
+            function onTimelineTrackClick(e) {
+                const logs = job.value.logs || []
+                if (!logs.length || timelineMaxPct.value <= 0) return
+                const rect      = e.currentTarget.getBoundingClientRect()
+                const clickPct  = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100))
+                if (clickPct > timelineMaxPct.value + 0.5) return
+                const fraction  = clickPct / timelineMaxPct.value
+                const idx       = Math.round(fraction * (logs.length - 1)) - cleared_count.value
+                if (idx < 0) return
+                terminal_ref.value?.scroll_to(idx)
+            }
+
+            // The server always returns the FULL log history (no since_id here), so a
+            // local "Clear" can't just empty job.logs — the next 2s poll would bring
+            // everything straight back. Instead we remember how many entries existed
+            // at clear time and only ever show what's past that mark.
+            const cleared_count = ref(0)
+            const visible_logs  = computed(() => job.value.logs.slice(cleared_count.value))
+            function clearLogs() { cleared_count.value = job.value.logs.length }
 
             async function fetchJob() {
                 const res = await apiFetch('/jobs/api/' + JOB_UUID)
@@ -260,7 +407,11 @@
 
             return {
                 message_list, page_is_loading,
-                can_manage, job, terminal_ref, is_live,
+                can_manage, job, terminal_ref, is_live, visible_logs, clearLogs,
+                timelineMilestones, timelineStopped, timelineStopIcon,
+                timelineCaptionIcon, timelineCaptionText, timelineDetailLines, jumpToLog,
+                readPct, onTerminalScroll, onTimelineTrackClick,
+                timelineIssueMarkers, jumpToIssue,
                 statusIcon, formatDuration,
                 doAction, doDelete,
             }

@@ -7,33 +7,10 @@
  * Polls /jobs/status/<uuid> and /jobs/logs/<uuid>?since_id=N every 2 s.
  */
 
+import AnsiTerminal from '/static/js/components/ansi-terminal.js';
+
 const { ref, computed, onUnmounted } = Vue;
 
-function levelColor(l) {
-    if (l === 'success') return '#3fb950';   // green
-    if (l === 'warning') return '#d29922';   // amber
-    if (l === 'error')   return '#f85149';   // red
-    return '#8b949e';                         // gray
-}
-function levelPrefix(l) {
-    if (l === 'success') return '[OK]  ';
-    if (l === 'warning') return '[WARN]';
-    if (l === 'error')   return '[ERR] ';
-    return '[INFO]';
-}
-// keep for non-terminal status icons
-function levelClass(l) {
-    if (l === 'success') return 'text-success';
-    if (l === 'warning') return 'text-warning';
-    if (l === 'error')   return 'text-danger';
-    return 'text-muted';
-}
-function levelIcon(l) {
-    if (l === 'success') return 'fa-solid fa-check';
-    if (l === 'warning') return 'fa-solid fa-triangle-exclamation';
-    if (l === 'error')   return 'fa-solid fa-xmark';
-    return 'fa-solid fa-circle-dot';
-}
 function statusIcon(s) {
     if (s === 'running') return 'fa-solid fa-spinner fa-spin text-primary';
     if (s === 'done')    return 'fa-solid fa-circle-check text-success';
@@ -61,6 +38,7 @@ function makeOperation() {
 export default {
     name: 'AttackUpdater',
     delimiters: ['[[', ']]'],
+    components: { AnsiTerminal },
     props: { csrfToken: { type: String, required: true } },
     emits: ['notify', 'refresh-main'],
 
@@ -78,6 +56,14 @@ export default {
 
         // ── update-specific state ────────────────────────────────────────────
         const updateSummary = ref('');
+
+        function toTerminalEntries(op) {
+            return computed(() =>
+                op.logs.value.map(l => ({ ts: l.created_at, level: l.level, msg: l.message }))
+            );
+        }
+        const updEntries = toTerminalEntries(upd);
+        const prsEntries = toTerminalEntries(prs);
 
         // ── shared: make a polling function for an operation ─────────────────
         function buildPoll(op, onLogEntry) {
@@ -206,10 +192,10 @@ export default {
 
         return {
             upd, prs,
+            updEntries, prsEntries,
             parseTotal, parseDone, parsePct, parseFormat,
             updateSummary,
             startUpdate, startParse,
-            levelClass, levelIcon, levelColor, levelPrefix,
             statusIcon, statusBorderClass,
         };
     },
@@ -256,17 +242,12 @@ export default {
 
         <!-- Terminal live log -->
         <template v-if="upd.logs.value.length">
-          <div class="d-flex align-items-center justify-content-between mb-1">
-            <span class="fw-semibold small" style="color:#8b949e;"><i class="fa-solid fa-terminal me-1"></i>Live log</span>
-            <span v-if="upd.uuid.value" style="font-size:.65rem;color:#8b949e;">job&nbsp;<span style="color:#58a6ff;font-family:monospace;">[[ upd.uuid.value ]]</span></span>
-          </div>
-          <div class="rounded-3 p-3" style="max-height:240px;overflow-y:auto;background:#0d1117;border:1px solid #30363d;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:.72rem;line-height:1.6;">
-            <div v-for="log in upd.logs.value" :key="log.id" style="display:flex;gap:.5rem;margin-bottom:.15rem;">
-              <span style="color:#484f58;flex-shrink:0;min-width:145px;">[[ log.created_at ]]</span>
-              <span :style="{ color: levelColor(log.level), flexShrink: 0, minWidth: '3.5rem' }">[[ levelPrefix(log.level) ]]</span>
-              <span :style="{ color: levelColor(log.level) }" style="white-space:pre-wrap;word-break:break-all;">[[ log.message ]]</span>
-            </div>
-          </div>
+          <ansi-terminal
+              :entries="updEntries"
+              :live="upd.status.value === 'running' || upd.status.value === 'pending'"
+              :title="upd.uuid.value ? 'job ' + upd.uuid.value : 'Live log'"
+              @clear="upd.logs.value = []">
+          </ansi-terminal>
         </template>
         <div v-else class="text-center py-3 text-muted">
           <i class="fa-solid fa-rotate fa-2x mb-2 d-block opacity-25"></i>
@@ -333,17 +314,12 @@ export default {
 
         <!-- Terminal live log -->
         <template v-if="prs.logs.value.length">
-          <div class="d-flex align-items-center justify-content-between mb-1">
-            <span class="fw-semibold small" style="color:#8b949e;"><i class="fa-solid fa-terminal me-1"></i>Live log</span>
-            <span v-if="prs.uuid.value" style="font-size:.65rem;color:#8b949e;">job&nbsp;<span style="color:#58a6ff;font-family:monospace;">[[ prs.uuid.value ]]</span></span>
-          </div>
-          <div class="rounded-3 p-3" style="max-height:240px;overflow-y:auto;background:#0d1117;border:1px solid #30363d;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:.72rem;line-height:1.6;">
-            <div v-for="log in prs.logs.value" :key="log.id" style="display:flex;gap:.5rem;margin-bottom:.15rem;">
-              <span style="color:#484f58;flex-shrink:0;min-width:145px;">[[ log.created_at ]]</span>
-              <span :style="{ color: levelColor(log.level), flexShrink: 0, minWidth: '3.5rem' }">[[ levelPrefix(log.level) ]]</span>
-              <span :style="{ color: levelColor(log.level) }" style="white-space:pre-wrap;word-break:break-all;">[[ log.message ]]</span>
-            </div>
-          </div>
+          <ansi-terminal
+              :entries="prsEntries"
+              :live="prs.status.value === 'running' || prs.status.value === 'pending'"
+              :title="prs.uuid.value ? 'job ' + prs.uuid.value : 'Live log'"
+              @clear="prs.logs.value = []">
+          </ansi-terminal>
         </template>
         <div v-else class="text-center py-3 text-muted">
           <i class="fa-solid fa-wand-magic-sparkles fa-2x mb-2 d-block opacity-25"></i>

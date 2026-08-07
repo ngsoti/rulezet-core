@@ -1,11 +1,12 @@
 import InputEditorByFormat from './InputEditorByFormat.js';
 import RuleList            from '/static/js/rule/ruleList.js';
+import AnsiTerminal        from '/static/js/components/ansi-terminal.js';
 import { create_message }  from '/static/js/toaster.js';
 
 const BulkTesterPanel = {
     name: 'BulkTesterPanel',
     delimiters: ['[[', ']]'],
-    components: { InputEditorByFormat, RuleList },
+    components: { InputEditorByFormat, RuleList, AnsiTerminal },
     props: {
         isAuthenticated:    { type: Boolean, default: false },
         csrfToken:          { type: String,  default: '' },
@@ -77,6 +78,9 @@ const BulkTesterPanel = {
             let color = '#0d6efd';
             if (pct === 100) color = '#198754';
             return `width:${pct}%;background:${color};transition:width .4s ease;`;
+        },
+        terminalEntries() {
+            return this.logs.map(l => ({ ts: l.created_at, level: l.level, msg: l.message }));
         },
     },
     watch: {
@@ -243,10 +247,6 @@ const BulkTesterPanel = {
                     if (newLogs.length) {
                         this.logs.push(...newLogs);
                         this.logSinceId = newLogs[newLogs.length - 1].id;
-                        this.$nextTick(() => {
-                            const el = this.$el.querySelector('.rtr-log');
-                            if (el) el.scrollTop = el.scrollHeight;
-                        });
                     }
                 }
 
@@ -342,12 +342,9 @@ const BulkTesterPanel = {
       </div>
 
       <!-- Live logs -->
-      <div v-if="logs.length" class="rtr-log mt-3" style="max-height:220px;overflow-y:auto;">
-        <div v-for="l in logs" :key="l.id"
-             class="rtr-log-line" :class="'rtr-log-line--' + l.level">
-          <span style="opacity:.5;font-size:.65rem;margin-right:.5em;">[[ l.created_at ? l.created_at.slice(11,19) : '' ]]</span>
-          [[ l.message ]]
-        </div>
+      <div v-if="logs.length" class="mt-3">
+        <ansi-terminal :entries="terminalEntries" :live="isRunning" title="Live log" @clear="logs = []">
+        </ansi-terminal>
       </div>
 
       <!-- Done summary -->

@@ -22,7 +22,13 @@
  *   submit(text)   — user submitted a command (edit mode only)
  */
 
-const { ref, computed, watch, onMounted, nextTick } = Vue
+const { ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue
+
+const THEME_KEY = 'rz-terminal-theme'
+function load_default_theme() {
+    const t = localStorage.getItem(THEME_KEY)
+    return ['dark', 'light', 'hacker'].includes(t) ? t : 'dark'
+}
 
 // ── ANSI parser ────────────────────────────────────────────────────────────────
 
@@ -94,7 +100,7 @@ export default {
         placeholder: { type: String,  default: 'Enter command…' },
     },
 
-    emits: ['clear', 'submit'],
+    emits: ['clear', 'submit', 'scroll'],
 
     setup(props, { emit, expose }) {
         const body_ref    = ref(null)
@@ -102,12 +108,27 @@ export default {
         const auto_scroll = ref(true)
         const line_count  = ref(0)
         const input_text  = ref('')
-        const theme       = ref('dark')  // 'dark' | 'light' | 'solarized'
+        const theme       = ref(load_default_theme())  // 'dark' | 'light' | 'hacker'
+        const collapsed   = ref(false)
+        const highlight_index = ref(null)
         const _THEMES = ['dark', 'light', 'hacker']
+        let highlight_timer = null
+
+        function toggle_collapse() {
+            collapsed.value = !collapsed.value
+            if (!collapsed.value && props.live && auto_scroll.value) scroll_bottom()
+        }
 
         function toggle_theme() {
             const idx = _THEMES.indexOf(theme.value)
             theme.value = _THEMES[(idx + 1) % _THEMES.length]
+            // Toggling here also updates the app-wide default (see /settings)
+            localStorage.setItem(THEME_KEY, theme.value)
+        }
+
+        // Live-updates if the default is changed from /settings in another tab/page
+        function on_theme_setting_changed() {
+            theme.value = load_default_theme()
         }
 
         const theme_icon = computed(() => {
@@ -136,8 +157,23 @@ export default {
         })
 
         function scroll_bottom() {
+            auto_scroll.value = true
             nextTick(() => {
                 if (body_ref.value) body_ref.value.scrollTop = body_ref.value.scrollHeight
+            })
+        }
+
+        // Jump to and briefly highlight a specific line — used by pages that
+        // link a summary/tooltip entry back to its exact spot in the log.
+        function scroll_to(index) {
+            if (collapsed.value) collapsed.value = false
+            nextTick(() => {
+                const el = body_ref.value?.querySelector(`[data-line-index="${index}"]`)
+                if (!el) return
+                el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+                highlight_index.value = index
+                clearTimeout(highlight_timer)
+                highlight_timer = setTimeout(() => { highlight_index.value = null }, 2000)
             })
         }
 
@@ -145,15 +181,34 @@ export default {
             nextTick(() => input_ref.value?.focus())
         }
 
+        const scroll_pct = ref(100)
+
         function on_scroll() {
             if (!body_ref.value) return
             const { scrollTop, scrollHeight, clientHeight } = body_ref.value
             auto_scroll.value = scrollHeight - scrollTop - clientHeight < 40
+            const scrollable = scrollHeight - clientHeight
+            scroll_pct.value = scrollable > 0 ? Math.round((scrollTop / scrollable) * 100) : 100
+            emit('scroll', { pct: scroll_pct.value })
         }
 
+        const clear_armed = ref(false)
+        let clear_arm_timer = null
+
         function handle_clear() {
+            if (!clear_armed.value) {
+                clear_armed.value = true
+                clearTimeout(clear_arm_timer)
+                clear_arm_timer = setTimeout(() => { clear_armed.value = false }, 3000)
+                return
+            }
+            clearTimeout(clear_arm_timer)
+            clear_armed.value = false
             emit('clear')
         }
+
+        const copied = ref(false)
+        let copied_timer = null
 
         function copy_all() {
             const text = parsed.value.map(e => {
@@ -161,7 +216,11 @@ export default {
                 const msg = e.segments.map(s => s.text).join('')
                 return ts + msg
             }).join('\n')
-            navigator.clipboard?.writeText(text)
+            navigator.clipboard?.writeText(text).then(() => {
+                copied.value = true
+                clearTimeout(copied_timer)
+                copied_timer = setTimeout(() => { copied.value = false }, 1400)
+            })
         }
 
         function submit() {
@@ -178,22 +237,31 @@ export default {
 
         onMounted(() => {
             if (props.live) scroll_bottom()
+            window.addEventListener('rz:terminal-theme-changed', on_theme_setting_changed)
         })
 
-        expose({ scroll_bottom, focus_input })
+        onUnmounted(() => {
+            window.removeEventListener('rz:terminal-theme-changed', on_theme_setting_changed)
+            clearTimeout(copied_timer)
+            clearTimeout(clear_arm_timer)
+        })
+
+        expose({ scroll_bottom, focus_input, scroll_to })
 
         return {
             body_ref, input_ref, auto_scroll, line_count, input_text,
-            theme, toggle_theme, theme_icon,
-            parsed, fmt_ts, on_scroll,
+            theme, toggle_theme, theme_icon, copied,
+            collapsed, toggle_collapse, clear_armed,
+            highlight_index, scroll_pct,
+            parsed, fmt_ts, on_scroll, scroll_bottom,
             handle_clear, copy_all, submit,
         }
     },
 
     template: `
-<div class="at" :class="'at--' + theme">
+<div class="at" :class="[ 'at--' + theme, { 'at--collapsed': collapsed } ]">
     <!-- Header -->
-    <div class="at-header">
+    <div class="at-header" :class="{ 'at-header--collapsed': collapsed }" @dblclick="toggle_collapse">
         <div class="at-header-left">
             <span class="at-dot at-dot--red"></span>
             <span class="at-dot at-dot--yellow"></span>
@@ -203,68 +271,80 @@ export default {
         </div>
         <div class="at-header-right">
             <span class="at-count">{{ line_count }} lines</span>
-            <button class="at-btn" :title="theme_icon.title" @click="toggle_theme">
+            <button v-if="!collapsed" class="at-btn" :title="theme_icon.title" @click="toggle_theme">
                 <i :class="theme_icon.icon"></i>
             </button>
-            <button class="at-btn" title="Copy all" @click="copy_all">
-                <i class="fas fa-copy"></i>
+            <button v-if="!collapsed" class="at-btn" :class="{ 'at-btn--copied': copied }" :title="copied ? 'Copied!' : 'Copy all'" @click="copy_all">
+                <i :class="copied ? 'fas fa-check' : 'fas fa-copy'"></i>
             </button>
-            <button class="at-btn" title="Scroll to bottom" @click="scroll_bottom">
+            <button v-if="!collapsed" class="at-btn" title="Scroll to bottom" @click="scroll_bottom">
                 <i class="fas fa-arrow-down"></i>
             </button>
-            <button class="at-btn at-btn--danger" title="Clear" @click="handle_clear">
-                <i class="fas fa-trash"></i>
+            <button v-if="!collapsed" class="at-btn at-btn--danger" :class="{ 'at-btn--armed': clear_armed }"
+                    :title="clear_armed ? 'Click again to confirm' : 'Clear'" @click="handle_clear">
+                <i class="fas" :class="clear_armed ? 'fa-triangle-exclamation' : 'fa-trash'"></i>
+            </button>
+            <button class="at-btn" :title="collapsed ? 'Expand' : 'Collapse'" @click="toggle_collapse">
+                <i class="fas" :class="collapsed ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
             </button>
         </div>
     </div>
 
-    <!-- Skeleton -->
-    <div v-if="loading" class="at-body">
-        <div class="at-skeleton" v-for="i in 4" :key="i"></div>
-    </div>
-
-    <!-- Empty -->
-    <div v-else-if="!parsed.length" class="at-body at-empty">
-        <i class="fas fa-terminal"></i>
-        <span>No output yet</span>
-    </div>
-
-    <!-- Lines -->
-    <div v-else class="at-body" ref="body_ref" @scroll="on_scroll">
-        <div
-            v-for="(line, i) in parsed"
-            :key="i"
-            :class="['at-line', line.cls]">
-            <span v-if="line.ts" class="at-ts">{{ fmt_ts(line.ts) }}</span>
-            <span class="at-msg">
-                <span
-                    v-for="(seg, j) in line.segments"
-                    :key="j"
-                    :style="{ color: seg.color || undefined, fontWeight: seg.bold ? '700' : undefined }">{{ seg.text }}</span>
-            </span>
+    <template v-if="!collapsed">
+        <!-- Skeleton -->
+        <div v-if="loading" class="at-body">
+            <div class="at-skeleton" v-for="i in 4" :key="i"></div>
         </div>
-    </div>
 
-    <!-- Footer: live indicator (view) or input row (edit) -->
-    <div v-if="mode === 'edit'" class="at-input-row">
-        <span class="at-prompt">❯</span>
-        <input
-            v-model="input_text"
-            ref="input_ref"
-            class="at-input"
-            type="text"
-            :placeholder="placeholder"
-            spellcheck="false"
-            autocomplete="off"
-            @keydown.enter.prevent="submit">
-        <button class="at-btn at-send-btn" @click="submit" title="Send (Enter)">
-            <i class="fas fa-arrow-right"></i>
-        </button>
-    </div>
-    <div v-else-if="live" class="at-footer">
-        <span v-if="auto_scroll" class="at-live-dot"></span>
-        <span class="at-live-label">{{ auto_scroll ? 'live' : 'paused — scroll down to resume' }}</span>
-    </div>
+        <!-- Empty -->
+        <div v-else-if="!parsed.length" class="at-body at-empty">
+            <i class="fas fa-terminal"></i>
+            <span>No output yet</span>
+        </div>
+
+        <!-- Lines -->
+        <div v-else class="at-body" ref="body_ref" @scroll="on_scroll">
+            <div
+                v-for="(line, i) in parsed"
+                :key="i"
+                :data-line-index="i"
+                :class="['at-line', line.cls, { 'at-line--highlight': highlight_index === i }]">
+                <span v-if="line.ts" class="at-ts">{{ fmt_ts(line.ts) }}</span>
+                <span class="at-msg">
+                    <span
+                        v-for="(seg, j) in line.segments"
+                        :key="j"
+                        :style="{ color: seg.color || undefined, fontWeight: seg.bold ? '700' : undefined }">{{ seg.text }}</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Scroll position — where you are relative to the full log -->
+        <div v-if="parsed.length > 0" class="at-scrollpos">
+            <div class="at-scrollpos-fill" :style="{ width: scroll_pct + '%' }"></div>
+        </div>
+
+        <!-- Footer: live indicator (view) or input row (edit) -->
+        <div v-if="mode === 'edit'" class="at-input-row">
+            <span class="at-prompt">❯</span>
+            <input
+                v-model="input_text"
+                ref="input_ref"
+                class="at-input"
+                type="text"
+                :placeholder="placeholder"
+                spellcheck="false"
+                autocomplete="off"
+                @keydown.enter.prevent="submit">
+            <button class="at-btn at-send-btn" @click="submit" title="Send (Enter)">
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+        <div v-else-if="live" class="at-footer">
+            <span v-if="auto_scroll" class="at-live-dot"></span>
+            <span class="at-live-label">{{ auto_scroll ? 'live' : 'paused — scroll down to resume' }}</span>
+        </div>
+    </template>
 </div>
     `,
 }

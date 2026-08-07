@@ -28,6 +28,8 @@
     flex-shrink: 0;
 }
 
+.at--collapsed .at-header { border-bottom: none; cursor: pointer; }
+
 .at-header-left {
     display: flex;
     align-items: center;
@@ -79,6 +81,29 @@
 .at-btn:hover       { color: #c9d1d9; border-color: #484f58; background: #1c2128; }
 .at-btn--danger:hover { color: #ef4444; border-color: #ef4444; }
 
+.at-btn--copied {
+    color: #3fb950;
+    border-color: #3fb950;
+    background: rgba(63,185,80,.12);
+    animation: at-copied-pop .28s ease;
+}
+@keyframes at-copied-pop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.22); }
+    100% { transform: scale(1); }
+}
+
+.at-btn--armed {
+    color: #fff;
+    border-color: #ef4444;
+    background: #ef4444;
+    animation: at-armed-pulse 1s ease-in-out infinite;
+}
+@keyframes at-armed-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,.55); }
+    50%      { box-shadow: 0 0 0 4px rgba(239,68,68,0); }
+}
+
 /*---AT_BODY---*/
 
 .at-body {
@@ -107,6 +132,28 @@
 }
 
 .at-line:hover { background: rgba(255,255,255,.025); }
+
+.at-line--highlight {
+    background: rgba(13,110,253,.18);
+    animation: at-highlight-fade 2s ease;
+}
+@keyframes at-highlight-fade {
+    0%   { background: rgba(13,110,253,.35); }
+    100% { background: rgba(13,110,253,.18); }
+}
+
+/*---AT_SCROLLPOS---*/
+
+.at-scrollpos {
+    height: 2px;
+    background: rgba(255,255,255,.06);
+    flex-shrink: 0;
+}
+.at-scrollpos-fill {
+    height: 100%;
+    background: #0d6efd;
+    transition: width .12s linear;
+}
 
 .at-ts {
     flex-shrink: 0;

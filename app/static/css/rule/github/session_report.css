@@ -401,8 +401,6 @@
     border-color: #0d6efd;
 }
 
-.ul-log--inline { max-height: 140px; font-size: .74rem; }
-
 .ul-job-ctrl-btn {
     flex: none;
     width: 30px;

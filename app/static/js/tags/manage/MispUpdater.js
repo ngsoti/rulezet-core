@@ -9,7 +9,9 @@
  * Polls /jobs/logs/<uuid> every 2 s and maps log events to the 3 steps.
  */
 
-const { ref, computed, watch, nextTick, onUnmounted } = Vue;
+import AnsiTerminal from '/static/js/components/ansi-terminal.js';
+
+const { ref, computed, onUnmounted } = Vue;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,6 +39,7 @@ function parseSummary(logs, step) {
 export default {
     name: 'MispUpdater',
     delimiters: ['[[', ']]'],
+    components: { AnsiTerminal },
     props: {
         csrfToken: { type: String, required: true },
     },
@@ -51,17 +54,14 @@ export default {
         const stepStatus   = ref({ 1: 'idle', 2: 'idle', 3: 'idle' });
         const gitOutputTax = ref('');
         const gitOutputGal = ref('');
-        const logBox       = ref(null);
         let   pollTimer    = null;
 
-        // auto-scroll log box whenever new lines arrive
-        watch(allLogs, () => {
-            nextTick(() => {
-                if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight;
-            });
-        }, { deep: true });
-
         // ── computed ──────────────────────────────────────────────────────────
+        const terminalEntries = computed(() =>
+            allLogs.value.map(l => ({ ts: l.created_at, level: l.level, msg: l.message }))
+        );
+        const gitOutputTaxLines = computed(() => gitOutputTax.value ? gitOutputTax.value.split('\n') : []);
+        const gitOutputGalLines = computed(() => gitOutputGal.value ? gitOutputGal.value.split('\n') : []);
         const step1Logs = computed(() => allLogs.value.filter(l => stepFromEvent(l.event) === 1));
         const step2Logs = computed(() => allLogs.value.filter(l => stepFromEvent(l.event) === 2));
         const step3Logs = computed(() => allLogs.value.filter(l => stepFromEvent(l.event) === 3));

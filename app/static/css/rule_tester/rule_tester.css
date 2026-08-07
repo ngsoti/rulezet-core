@@ -250,26 +250,6 @@
   color: var(--text-color);
 }
 
-/* ── Log lines (used while running) ──────────────────────────────────────── */
-.rtr-log {
-  margin-top: .75rem;
-  max-height: 140px;
-  overflow-y: auto;
-  padding: .5rem .75rem;
-  background: var(--light-bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-}
-.rtr-log-line {
-  font-family: monospace;
-  font-size: .72rem;
-  line-height: 1.6;
-  color: var(--subtle-text-color);
-}
-.rtr-log-line--success { color: #198754; }
-.rtr-log-line--error   { color: #dc3545; }
-.rtr-log-line--warning { color: #fd7e14; }
-
 /* ── Optional field (label / notes) ─────────────────────────────────────── */
 .rtr-meta-row {
   display: grid;

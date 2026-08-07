@@ -605,6 +605,47 @@
                 </div>
             </div>
 
+            <!-- Terminal theme -->
+            <div class="card mb-3" id="section-terminal-theme">
+                <div class="card-body">
+                    <div class="settings-card-header mb-3">
+                        <div class="settings-card-icon"><i class="fas fa-terminal"></i></div>
+                        <div>
+                            <h6 class="settings-section-title mb-0">Terminal theme</h6>
+                            <p class="text-muted small mb-0">Default colour scheme for live-log terminals (job logs, imports, updaters…).</p>
+                        </div>
+                    </div>
+                    <div class="settings-theme-group">
+                        <div v-for="opt in terminal_theme_options" :key="opt.value"
+                             class="settings-theme-card"
+                             :class="{ active: terminal_theme === opt.value }"
+                             @click="setTerminalTheme(opt.value)">
+                            <div class="term-theme-preview" :class="'term-theme-preview--' + opt.value">
+                                <div class="ttp-bar">
+                                    <span class="ttp-dot ttp-dot--red"></span>
+                                    <span class="ttp-dot ttp-dot--yellow"></span>
+                                    <span class="ttp-dot ttp-dot--green"></span>
+                                </div>
+                                <div class="ttp-body">
+                                    <div class="ttp-line ttp-l1">12:04:31 job started</div>
+                                    <div class="ttp-line ttp-l2">✓ 128 rules imported</div>
+                                    <div class="ttp-line ttp-l3">$ _</div>
+                                </div>
+                            </div>
+                            <div class="settings-theme-label">
+                                <i :class="'fas ' + opt.icon"></i>
+                                <span>[[ opt.label ]]</span>
+                                <i v-if="terminal_theme === opt.value" class="fas fa-circle-check ms-auto text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0" style="font-size:.75rem;">
+                        <i class="fas fa-info-circle me-1 text-primary opacity-75"></i>
+                        Applies to every live-log terminal across the app. Each terminal keeps its own theme button too — toggling it there updates this default.
+                    </p>
+                </div>
+            </div>
+
         </div>
 
         <!-- ── Right column: settings recap ─────────────────── -->
@@ -789,6 +830,23 @@
                             </div>
                             <div class="recap-status">
                                 <i v-if="job_widget_saved" class="fas fa-circle-check text-success"></i>
+                            </div>
+                        </div>
+
+                        <div class="recap-divider"></div>
+
+                        <!-- Terminal theme row -->
+                        <div class="recap-row">
+                            <div class="recap-icon"><i class="fas fa-terminal"></i></div>
+                            <div class="recap-body">
+                                <div class="recap-label">Terminal theme</div>
+                                <div class="recap-value">
+                                    <i :class="'fas ' + (terminal_theme_options.find(o => o.value === terminal_theme)?.icon || 'fa-terminal')" class="me-1 text-primary" style="font-size:.75rem;"></i>
+                                    [[ terminal_theme_options.find(o => o.value === terminal_theme)?.label || terminal_theme ]]
+                                </div>
+                            </div>
+                            <div class="recap-status">
+                                <i v-if="terminal_theme_saved" class="fas fa-circle-check text-success"></i>
                             </div>
                         </div>
 
@@ -1416,6 +1474,24 @@
                 create_message('JSON theme saved', 'success')
             }
 
+            // ── Terminal theme (localStorage only) — default for AnsiTerminal ──
+            const terminal_theme = ref(localStorage.getItem('rz-terminal-theme') || 'dark')
+            const terminal_theme_saved = ref(false)
+            const terminal_theme_options = [
+                { value: 'dark',   label: 'Dark',   icon: 'fa-moon' },
+                { value: 'light',  label: 'Light',  icon: 'fa-sun' },
+                { value: 'hacker', label: 'Hacker',  icon: 'fa-terminal' },
+            ]
+            function setTerminalTheme(value) {
+                if (value === terminal_theme.value) return
+                terminal_theme.value = value
+                localStorage.setItem('rz-terminal-theme', value)
+                window.dispatchEvent(new Event('rz:terminal-theme-changed'))
+                terminal_theme_saved.value = true
+                setTimeout(() => { terminal_theme_saved.value = false }, 2000)
+                create_message('Terminal theme saved', 'success')
+            }
+
             // Theme options — base built-ins
             const theme_options = reactive([
                 { value: 'system', label: 'System', icon: 'fa-circle-half-stroke' },
@@ -1700,6 +1776,8 @@
                 localStorage.removeItem('rz-job-widget-position')
                 localStorage.removeItem('rz-job-widget-visibility')
                 window.dispatchEvent(new Event('rz:job-widget-settings-changed'))
+                localStorage.removeItem('rz-terminal-theme')
+                window.dispatchEvent(new Event('rz:terminal-theme-changed'))
 
                 // Reset CSS vars / attributes immediately
                 document.documentElement.style.removeProperty('--font-mono')
@@ -1737,6 +1815,7 @@
                 selectPivotickImage, onUploadPivotickImage, onDeletePivotickImage, IS_ADMIN,
                 per_page_card, per_page_table, per_page_saved, setPerPageCard, setPerPageTable,
                 json_theme, json_theme_saved, json_theme_options, setJsonTheme,
+                terminal_theme, terminal_theme_saved, terminal_theme_options, setTerminalTheme,
                 resetAllSettings,
                 named_theme_options, custom_theme_options,
                 livePreviewStyle,

@@ -1,11 +1,12 @@
 import InputEditorByFormat from './InputEditorByFormat.js';
 import TestResultDisplay from './TestResultDisplay.js';
+import AnsiTerminal from '/static/js/components/ansi-terminal.js';
 import { create_message } from '/static/js/toaster.js';
 
 const RuleTesterPanel = {
   name: 'RuleTesterPanel',
   delimiters: ['[[', ']]'],
-  components: { InputEditorByFormat, TestResultDisplay },
+  components: { InputEditorByFormat, TestResultDisplay, AnsiTerminal },
   props: {
     ruleUuid: { type: String, required: true },
     ruleFormat: { type: String, required: true },
@@ -33,6 +34,9 @@ const RuleTesterPanel = {
     formatLower() { return (this.ruleFormat || '').toLowerCase(); },
     formatBadgeClass() { return `rtr-format-badge rtr-format-badge--${this.formatLower}`; },
     isYara() { return this.formatLower === 'yara'; },
+    terminalEntries() {
+      return this.logs.map(l => ({ level: l.level, msg: l.message }));
+    },
   },
   methods: {
     _defaultInputType() {
@@ -186,11 +190,8 @@ const RuleTesterPanel = {
     </div>
 
     <!-- Log stream -->
-    <div v-if="logs.length" class="rtr-log mt-3">
-      <div v-for="(l, i) in logs" :key="i"
-           class="rtr-log-line" :class="'rtr-log-line--' + l.level">
-        [[ l.message ]]
-      </div>
+    <div v-if="logs.length" class="mt-3">
+      <ansi-terminal :entries="terminalEntries" :live="false" title="Test log"></ansi-terminal>
     </div>
 
     <!-- Result -->

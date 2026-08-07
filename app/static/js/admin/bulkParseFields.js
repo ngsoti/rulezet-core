@@ -7,6 +7,7 @@ import TagsDisplaysList          from '/static/js/tags/tagsDisplaysList.js'
 import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js'
 import CodeViewer                from '/static/js/components/code-viewer.js'
 import SmartEditor               from '/static/js/components/smart-editor.js'
+import AnsiTerminal              from '/static/js/components/ansi-terminal.js'
 
 const { ref, reactive, computed, onMounted, onUnmounted, nextTick } = Vue;
 
@@ -29,18 +30,6 @@ const FIELD_COLORS = {
     title:         '#20c997',
 };
 
-function levelColor(l) {
-    if (l === 'success') return '#3fb950';
-    if (l === 'warning') return '#d29922';
-    if (l === 'error')   return '#f85149';
-    return '#8b949e';
-}
-function levelPrefix(l) {
-    if (l === 'success') return '[OK]  ';
-    if (l === 'warning') return '[WARN]';
-    if (l === 'error')   return '[ERR] ';
-    return '[INFO]';
-}
 function statusIcon(s) {
     if (s === 'running') return 'fa-solid fa-spinner fa-spin text-primary';
     if (s === 'done')    return 'fa-solid fa-circle-check text-success';
@@ -57,6 +46,7 @@ const FieldParserUpdater = {
         'vulnerability-displays-list': VulnerabilityDisplaysList,
         'code-viewer':                 CodeViewer,
         'smart-editor':                SmartEditor,
+        'ansi-terminal':               AnsiTerminal,
     },
     props: {
         csrfToken:      { type: String,  required: true },
@@ -309,6 +299,10 @@ const FieldParserUpdater = {
         );
         let pollTimer = null;
 
+        const jobTerminalEntries = computed(() =>
+            jobLogs.value.map(l => ({ ts: l.created_at, level: l.level, msg: l.message }))
+        );
+
         async function poll() {
             if (!jobUuid.value) return;
             try {
@@ -396,9 +390,9 @@ const FieldParserUpdater = {
             testerOpen, testContent, testResult, testCollapsed, toggleTester, editTest, runExtractionTest, matchTerms,
             savedConfigs, saveConfigName, savingConfig, loadedConfigId,
             saveCurrentConfig, updateCurrentConfig, saveAsNewConfig, clearLoadedConfig, deleteConfig, loadConfig,
-            running, jobUuid, jobStatus, jobLogs, jobDone, jobTotal, jobPct,
+            running, jobUuid, jobStatus, jobLogs, jobTerminalEntries, jobDone, jobTotal, jobPct,
             showJson, jsonPreview,
-            levelColor, levelPrefix, statusIcon,
+            statusIcon,
             FIELD_COLORS,
         };
     },
@@ -672,17 +666,12 @@ const FieldParserUpdater = {
         </div>
 
         <!-- Terminal -->
-        <div class="rounded-3 p-3"
-             style="max-height:360px;overflow-y:auto;background:#0d1117;border:1px solid #30363d;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:.72rem;line-height:1.6;">
-          <div v-if="jobLogs.length === 0" class="text-center py-2" style="color:#484f58;">
-            Waiting for job to start…
-          </div>
-          <div v-for="log in jobLogs" :key="log.id" style="display:flex;gap:.5rem;margin-bottom:.15rem;">
-            <span style="color:#484f58;flex-shrink:0;min-width:145px;">[[ log.created_at ]]</span>
-            <span :style="{ color: levelColor(log.level), flexShrink: 0, minWidth: '3.5rem' }">[[ levelPrefix(log.level) ]]</span>
-            <span :style="{ color: levelColor(log.level) }" style="white-space:pre-wrap;word-break:break-all;">[[ log.message ]]</span>
-          </div>
-        </div>
+        <ansi-terminal
+            :entries="jobTerminalEntries"
+            :live="jobStatus === 'running' || jobStatus === 'pending'"
+            :title="jobUuid ? 'job ' + jobUuid : 'Live log'"
+            @clear="jobLogs = []">
+        </ansi-terminal>
 
       </div>
     </div>

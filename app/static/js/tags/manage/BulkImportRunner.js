@@ -6,11 +6,14 @@
  * progress bar (job.total/job.done = item count, not step count).
  */
 
-const { ref, computed, watch, nextTick, onUnmounted } = Vue;
+import AnsiTerminal from '/static/js/components/ansi-terminal.js';
+
+const { ref, computed, onUnmounted } = Vue;
 
 export default {
     name: 'BulkImportRunner',
     delimiters: ['[[', ']]'],
+    components: { AnsiTerminal },
     props: {
         csrfToken:   { type: String, required: true },
         endpoint:    { type: String, required: true },   // POST route that queues the job
@@ -37,29 +40,13 @@ export default {
         const jobPct      = ref(0);
         const allLogs     = ref([]);
         const lastLogId   = ref(0);
-        const logBox      = ref(null);
         let   pollTimer   = null;
-
-        watch(allLogs, () => {
-            nextTick(() => {
-                if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight;
-            });
-        }, { deep: true });
 
         const isDone = computed(() => ['done', 'failed', 'cancelled'].includes(jobStatus.value));
 
-        function levelClass(level) {
-            if (level === 'success') return 'text-success';
-            if (level === 'warning') return 'text-warning';
-            if (level === 'error')   return 'text-danger';
-            return 'text-muted';
-        }
-        function levelIcon(level) {
-            if (level === 'success') return 'fa-solid fa-check';
-            if (level === 'warning') return 'fa-solid fa-triangle-exclamation';
-            if (level === 'error')   return 'fa-solid fa-xmark';
-            return 'fa-solid fa-circle-dot';
-        }
+        const terminalEntries = computed(() =>
+            allLogs.value.map(l => ({ ts: l.created_at, level: l.level, msg: l.message }))
+        );
 
         function processNewLogs(entries) {
             for (const log of entries) {
@@ -141,7 +128,7 @@ export default {
 
         return {
             running, jobUuid, jobStatus, jobTotal, jobDone, jobPct,
-            allLogs, logBox, isDone, levelClass, levelIcon, start,
+            allLogs, terminalEntries, isDone, start,
         };
     },
 
@@ -179,24 +166,12 @@ export default {
 
     <!-- Live log feed -->
     <template v-if="allLogs.length > 0">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="fw-semibold small text-muted">
-          <i class="fa-solid fa-terminal me-1"></i>Live log
-        </span>
-        <span v-if="jobUuid" class="text-muted" style="font-size:.7rem;">
-          job <code>[[ jobUuid ]]</code>
-        </span>
-      </div>
-      <div class="border rounded-3 p-2"
-           style="max-height:300px;overflow-y:auto;background:var(--card-bg-color,#f8f9fa);scroll-behavior:smooth;"
-           ref="logBox">
-        <div v-for="log in allLogs" :key="log.id"
-             class="d-flex align-items-start gap-2 mb-1 small">
-          <span class="text-muted text-nowrap" style="font-size:.65rem;min-width:125px;">[[ log.created_at ]]</span>
-          <i :class="[levelIcon(log.level), levelClass(log.level)]" style="font-size:.65rem;margin-top:3px;"></i>
-          <span :class="levelClass(log.level)" style="font-size:.75rem;white-space:pre-wrap;word-break:break-word;">[[ log.message ]]</span>
-        </div>
-      </div>
+      <ansi-terminal
+          :entries="terminalEntries"
+          :live="!isDone"
+          :title="jobUuid ? 'job ' + jobUuid : 'Live log'"
+          @clear="allLogs = []">
+      </ansi-terminal>
     </template>
 
     <!-- Idle placeholder -->

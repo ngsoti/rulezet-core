@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/diff-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/chart-viewer.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rule/github/session_report.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/ansi-terminal.css') }}">
 {% endblock %}
 {% block content %}
 
@@ -283,12 +284,9 @@
                         <template v-else>
                             [[ activeJobLabel ]] — [[ activeJobDone ]] / [[ activeJobTotal ]] ([[ activeJobPct ]]%)
                             <div class="ul-bar-track my-2"><div class="ul-bar-fill" :class="{ 'bg-success': activeJobStatus==='done' }" :style="'width:'+activeJobPct+'%;'"></div></div>
-                            <div class="ul-log ul-log--inline" ref="bulkJobLogEl">
-                                <div v-if="!bulkJobLogEntries.length" class="ul-log-empty"><i class="fas fa-terminal me-1"></i>Waiting for the first result…</div>
-                                <div v-for="(entry, idx) in bulkJobLogEntries" :key="idx" class="ul-log-row" :class="'ul-log-row--'+entry.type">
-                                    <i class="ul-log-icon" :class="entry.icon"></i><span class="ul-log-msg">[[ entry.msg ]]</span>
-                                </div>
-                            </div>
+                            <ansi-terminal :entries="bulkJobLogEntries" :live="activeJobStatus === 'running' || activeJobStatus === 'pending'"
+                                           title="Live log" @clear="bulkJobLogEntries = []">
+                            </ansi-terminal>
                         </template>
                     </div>
                     <button v-if="!(activeJobUuid && bulkUpdating)" class="ul-action-btn" @click="filterRuleStatus({update_available:'true'})">Review updates</button>
@@ -306,12 +304,9 @@
                         <template v-else>
                             [[ activeJobLabel ]] — [[ activeJobDone ]] / [[ activeJobTotal ]] ([[ activeJobPct ]]%)
                             <div class="ul-bar-track my-2"><div class="ul-bar-fill" :class="{ 'bg-success': activeJobStatus==='done' }" :style="'width:'+activeJobPct+'%;'"></div></div>
-                            <div class="ul-log ul-log--inline" ref="bulkJobLogEl">
-                                <div v-if="!bulkJobLogEntries.length" class="ul-log-empty"><i class="fas fa-terminal me-1"></i>Waiting for the first result…</div>
-                                <div v-for="(entry, idx) in bulkJobLogEntries" :key="idx" class="ul-log-row" :class="'ul-log-row--'+entry.type">
-                                    <i class="ul-log-icon" :class="entry.icon"></i><span class="ul-log-msg">[[ entry.msg ]]</span>
-                                </div>
-                            </div>
+                            <ansi-terminal :entries="bulkJobLogEntries" :live="activeJobStatus === 'running' || activeJobStatus === 'pending'"
+                                           title="Live log" @clear="bulkJobLogEntries = []">
+                            </ansi-terminal>
                         </template>
                     </div>
                     <button v-if="!(activeJobUuid && bulkNewRules)" class="ul-action-btn ul-action-btn--new" @click="showNewRulesTab()">Review new rules</button>
@@ -813,10 +808,11 @@
     import ChartViewer from '/static/js/components/chart-viewer.js';
     import PaginationComponent from '/static/js/rule/paginationComponent.js';
     import UserChip from '/static/js/components/UserChip.js';
+    import AnsiTerminal from '/static/js/components/ansi-terminal.js';
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { CodeViewer, DiffViewer, ChartViewer, PaginationComponent, 'user-chip': UserChip },
+        components: { CodeViewer, DiffViewer, ChartViewer, PaginationComponent, 'user-chip': UserChip, 'ansi-terminal': AnsiTerminal },
         setup() {
             const progress = ref(0)
             const progressDone = ref(0)
@@ -1036,15 +1032,7 @@
             // writes per rule (see log_job() calls in job_handlers.py), fetched
             // incrementally via /jobs/logs/<uuid>?since_id=N.
             const bulkJobLogEntries = ref([])
-            const bulkJobLogEl      = ref(null)
             let   _bulkJobLogSinceId = 0
-
-            function _describeJobLog(entry) {
-                if (entry.level === 'success') return { type: 'new',    icon: 'fas fa-check' }
-                if (entry.level === 'warning') return { type: 'update', icon: 'fas fa-triangle-exclamation' }
-                if (entry.level === 'error')   return { type: 'error',  icon: 'fas fa-circle-xmark' }
-                return { type: 'ok', icon: 'fas fa-circle-info' }
-            }
 
             async function _pollBulkJobLogs() {
                 if (!activeJobUuid.value) return
@@ -1054,12 +1042,10 @@
                     const rows = await res.json()
                     if (!rows.length) return
                     for (const row of rows) {
-                        const { type, icon } = _describeJobLog(row)
-                        bulkJobLogEntries.value.push({ type, icon, msg: row.message })
+                        bulkJobLogEntries.value.push({ ts: row.created_at, level: row.level, msg: row.message })
                         _bulkJobLogSinceId = Math.max(_bulkJobLogSinceId, row.id)
                     }
                     if (bulkJobLogEntries.value.length > 300) bulkJobLogEntries.value = bulkJobLogEntries.value.slice(-300)
-                    nextTick(() => { if (bulkJobLogEl.value) bulkJobLogEl.value.scrollTop = bulkJobLogEl.value.scrollHeight })
                 } catch {}
             }
 
@@ -1492,7 +1478,7 @@
                 loading_rule_id,
 
                 activeJobUuid, activeJobPct, activeJobStatus, activeJobLabel, activeJobDone, activeJobTotal,
-                bulkJobLogEntries, bulkJobLogEl,
+                bulkJobLogEntries,
                 pauseBulkJob, resumeBulkJob, cancelBulkJob,
 
                 rsFiltersOpen, rsFilter, rsActiveFilterCount, rsClearFilters,

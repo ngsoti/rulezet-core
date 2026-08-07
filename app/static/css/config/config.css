@@ -873,6 +873,45 @@ body.dark-mode .tsp--default .tsp-toast {
 .json-theme-preview .pv-null  { color: var(--prev-null); font-style: italic; }
 .json-theme-preview .pv-punct { color: var(--prev-punct); }
 
+/* ── Terminal theme preview ───────────────────────────── */
+.term-theme-preview {
+    height: 88px;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+}
+.term-theme-preview .ttp-bar {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 8px;
+}
+.term-theme-preview .ttp-dot { width: 7px; height: 7px; border-radius: 50%; }
+.term-theme-preview .ttp-dot--red    { background: #ff5f56; }
+.term-theme-preview .ttp-dot--yellow { background: #ffbd2e; }
+.term-theme-preview .ttp-dot--green  { background: #27c93f; }
+.term-theme-preview .ttp-body { padding: 4px 10px; font-size: .68rem; line-height: 1.65; }
+.term-theme-preview .ttp-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.term-theme-preview--dark   { background: #0d1117; }
+.term-theme-preview--dark .ttp-bar  { background: #161b22; border-bottom: 1px solid #30363d; }
+.term-theme-preview--dark .ttp-l1   { color: #484f58; }
+.term-theme-preview--dark .ttp-l2   { color: #4ade80; }
+.term-theme-preview--dark .ttp-l3   { color: #c9d1d9; }
+
+.term-theme-preview--light  { background: #f6f8fa; }
+.term-theme-preview--light .ttp-bar { background: #eaeef2; border-bottom: 1px solid #d0d7de; }
+.term-theme-preview--light .ttp-l1  { color: #8c959f; }
+.term-theme-preview--light .ttp-l2  { color: #1a7f37; }
+.term-theme-preview--light .ttp-l3  { color: #24292f; }
+
+.term-theme-preview--hacker { background: #000000; }
+.term-theme-preview--hacker .ttp-bar { background: #050f05; border-bottom: 1px solid #0d3d0d; }
+.term-theme-preview--hacker .ttp-l1  { color: #005500; }
+.term-theme-preview--hacker .ttp-l2  { color: #00ff41; text-shadow: 0 0 5px rgba(0,255,65,.5); }
+.term-theme-preview--hacker .ttp-l3  { color: #00ff41; text-shadow: 0 0 4px rgba(0,255,65,.35); }
+
 /* ── Per-page chip ────────────────────────────────────── */
 .per-page-chip {
     display: inline-flex;
