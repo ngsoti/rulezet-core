@@ -61,18 +61,29 @@ def admin_instances():
         if row.instance_uuid
     }
 
+    # Same GitHub-release cache the update banner uses (see
+    # _start_update_checker in app/__init__.py) — reused here instead of a
+    # second live GitHub call, so this list can flag a registered instance
+    # as outdated too.
+    latest_release = current_app.config.get('LATEST_RELEASE') or {}
+    latest_version = latest_release.get('version')
+
     instances_data = []
     for inst in instances:
         d = inst.to_json()
         d['pull_count'] = pull_counts.get(inst.uuid, 0)
         last = last_pulls.get(inst.uuid)
         d['last_pull'] = last.strftime('%Y-%m-%d %H:%M') if last else None
+        d['is_outdated'] = bool(
+            latest_version and inst.version and inst.version.lstrip('v') != latest_version
+        )
         instances_data.append(d)
 
     return render_template(
         "admin/instances.html",
         instances=instances_data,
         own_uuid=own_cfg.uuid if own_cfg else None,
+        latest_version=latest_version,
     )
 
 

@@ -181,6 +181,22 @@ def create_app(start_worker=True):
 
     app.jinja_env.globals['admin_jobs_running_count'] = admin_jobs_running_count
 
+    def pending_update_info():
+        """Admin-only: {version, url} of a newer GitHub release than this
+        instance's local `version` file, or None — used by base.html to show
+        the update banner. Backed by the cache _start_update_checker() keeps
+        in app.config['LATEST_RELEASE'], never a live network call from a
+        request (that cache is refreshed on its own background thread)."""
+        from flask_login import current_user as _cu
+        if not (_cu.is_authenticated and _cu.is_admin()):
+            return None
+        info = app.config.get('LATEST_RELEASE')
+        if not info or not info.get('update_available'):
+            return None
+        return info
+
+    app.jinja_env.globals['pending_update_info'] = pending_update_info
+
     @app.errorhandler(403)
     def forbidden(e):
         # API consumers and fetch() calls get JSON; browsers get the page
@@ -197,6 +213,7 @@ def create_app(start_worker=True):
     _init_instance_config(app)
     if start_worker:
         _start_telemetry(app)
+        _start_update_checker(app)
         from app.features.rule.rule_from_github.sync_schedule.scheduler_engine import start_scheduler
         start_scheduler(app)
 
@@ -288,6 +305,55 @@ def _start_telemetry(app):
             time.sleep(INTERVAL)
 
     t = threading.Thread(target=_loop, daemon=True, name='rulezet-telemetry')
+    t.start()
+
+
+def _read_local_version():
+    try:
+        vp = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'version')
+        with open(vp) as f:
+            return f.read().strip()
+    except OSError:
+        return 'unknown'
+
+
+def _start_update_checker(app):
+    """Daemon thread: check GitHub for a release newer than this instance's
+    local `version` file, so admins see an in-app notice instead of finding
+    out by accident. Read-only (GitHub releases API, no auth needed) and
+    entirely best-effort — any failure just means no banner shows, never a
+    crash or a blocked request (the result is cached in app.config and read
+    from there by every request, this thread is the only thing that hits
+    the network)."""
+    import threading
+    import time
+    import requests as _req
+
+    CHECK_URL     = os.environ.get('UPDATE_CHECK_URL', 'https://api.github.com/repos/rulezet/rulezet-core/releases/latest')
+    STARTUP_DELAY = int(os.environ.get('UPDATE_CHECK_STARTUP_DELAY', 15))
+    INTERVAL      = int(os.environ.get('UPDATE_CHECK_INTERVAL',      86400))
+
+    def _loop():
+        time.sleep(STARTUP_DELAY)
+        while True:
+            try:
+                local_version = (app.config.get('APP_VERSION') or _read_local_version()).lstrip('v')
+                resp = _req.get(CHECK_URL, timeout=8, headers={'Accept': 'application/vnd.github+json'})
+                if resp.ok:
+                    data = resp.json()
+                    latest_version = (data.get('tag_name') or '').lstrip('v')
+                    app.config['LATEST_RELEASE'] = {
+                        'version': latest_version,
+                        'url': data.get('html_url') or 'https://github.com/rulezet/rulezet-core/releases/latest',
+                        'update_available': bool(latest_version) and latest_version != local_version,
+                    }
+                    print(f"[update-checker] local={local_version} latest={latest_version} "
+                          f"update_available={app.config['LATEST_RELEASE']['update_available']}")
+            except Exception as e:
+                print(f"[update-checker] check failed: {e}")
+            time.sleep(INTERVAL)
+
+    t = threading.Thread(target=_loop, daemon=True, name='rulezet-update-checker')
     t.start()
     
     

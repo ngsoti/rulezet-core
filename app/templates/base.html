@@ -184,6 +184,31 @@
     <div class="d-flex flex-column min-vh-100">
         <div class="flex-grow-1 container" id="main-container">
             <main class="col ps-md-4 pt-2">
+                {% set _update = pending_update_info() %}
+                {% if _update %}
+                <div class="alert alert-primary d-flex align-items-center gap-2 rounded-3 shadow-sm mb-3"
+                     id="update-available-banner" data-update-version="{{ _update.version }}"
+                     style="border:1px solid #0d6efd44;">
+                    <i class="fa-solid fa-arrow-up-right-dots"></i>
+                    <div class="flex-grow-1">
+                        A new Rulezet version is available:
+                        <strong>v{{ _update.version }}</strong>.
+                        Run <code>python3 manage.py update</code> to upgrade, or see the
+                        <a href="{{ _update.url }}" target="_blank" rel="noreferrer">release notes</a>.
+                    </div>
+                    <button type="button" class="btn-close" aria-label="Dismiss"
+                            onclick="var b=document.getElementById('update-available-banner'); try{localStorage.setItem('rz-update-dismissed', b.dataset.updateVersion)}catch(e){} b.remove()"></button>
+                </div>
+                <script>
+                (function() {
+                    var b = document.getElementById('update-available-banner');
+                    if (!b) return;
+                    try {
+                        if (localStorage.getItem('rz-update-dismissed') === b.dataset.updateVersion) b.remove();
+                    } catch (e) {}
+                })();
+                </script>
+                {% endif %}
                 {% include 'macros/_flashes.html' %}
                 <!-- Scroll to top -->
                 <button id="scrollToTopBtn" title="Scroll to top" aria-label="Back to top">
