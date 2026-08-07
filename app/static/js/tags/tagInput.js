@@ -18,10 +18,14 @@ const TagInput = {
     setup(props, { emit }) {
         const searchQuery = Vue.ref('');
         const availableTags = Vue.ref([]);
+        const searchResults = Vue.ref([]);
         const isLoading = Vue.ref(false);
+        const isSearching = Vue.ref(false);
         const isDropdownOpen = Vue.ref(false);
         const activeType = Vue.ref(null);
         const activeNamespace = Vue.ref(null);
+        let searchDebounceTimer = null;
+        let searchRequestId = 0;
 
         // ── label helpers ─────────────────────────────────────────────────────
         function namespaceOf(name) {
@@ -73,11 +77,34 @@ const TagInput = {
             return groups;
         });
 
-        const filteredSuggestions = Vue.computed(() => {
-            const q = searchQuery.value.toLowerCase().trim();
-            if (!q) return [];
-            return availableTags.value.filter(t => t.name.toLowerCase().includes(q));
-        });
+        // Search is server-side (the /tags/get_all_tags `search` + `limit`
+        // params already existed but went unused) instead of a client-side
+        // .filter() over the full catalog on every keystroke — with the tag
+        // count now in the thousands after bulk MISP taxonomy/galaxy imports,
+        // that linear scan-per-keystroke was the main source of input lag.
+        const SEARCH_DEBOUNCE_MS = 300;
+        const SEARCH_LIMIT = 50;
+
+        async function runSearch(q) {
+            const myRequestId = ++searchRequestId;
+            isSearching.value = true;
+            try {
+                const params = new URLSearchParams({ search: q, limit: String(SEARCH_LIMIT) });
+                if (props.userId) params.append('user_id', String(props.userId));
+                const res = await fetch(`/tags/get_all_tags?${params}`);
+                if (myRequestId !== searchRequestId) return; // a newer keystroke already superseded this response
+                if (res.ok) {
+                    const data = await res.json();
+                    searchResults.value = data.tags || [];
+                }
+            } catch (e) {
+                console.error('TagInput search error:', e);
+            } finally {
+                if (myRequestId === searchRequestId) isSearching.value = false;
+            }
+        }
+
+        const filteredSuggestions = Vue.computed(() => searchResults.value);
 
         const isTagSelected = (tagId) => props.modelValue.some(t => t.id === tagId);
 
@@ -89,13 +116,38 @@ const TagInput = {
             }
         }
 
+        // Explicit chevron button — a dedicated, always-reliable open/close
+        // control, instead of relying only on the input's focus event.
         function toggleDropdown() {
             if (!isDropdownOpen.value && availableTags.value.length === 0) fetchAvailableTags();
             isDropdownOpen.value = !isDropdownOpen.value;
         }
 
+        // Focusing the input should only ever OPEN the panel, never close an
+        // already-open one — a toggle here misfired shut in some browsers
+        // when the input re-gained focus while already open.
+        function openDropdown() {
+            if (availableTags.value.length === 0) fetchAvailableTags();
+            isDropdownOpen.value = true;
+        }
+
         Vue.watch(searchQuery, (val) => {
-            if (val) { activeType.value = null; activeNamespace.value = null; }
+            clearTimeout(searchDebounceTimer);
+            const q = val.trim();
+            if (!q) {
+                searchRequestId++; // invalidate any in-flight search response
+                searchResults.value = [];
+                isSearching.value = false;
+                return;
+            }
+            // Typing must always surface the results panel — the "click
+            // outside closes it" listener below could otherwise leave the
+            // panel closed while the input (still focused) keeps accepting
+            // keystrokes, making it look like typing "does nothing".
+            isDropdownOpen.value = true;
+            activeType.value = null;
+            activeNamespace.value = null;
+            searchDebounceTimer = setTimeout(() => runSearch(q), SEARCH_DEBOUNCE_MS);
         });
 
         Vue.onMounted(() => {
@@ -105,8 +157,8 @@ const TagInput = {
         });
 
         return {
-            searchQuery, filteredSuggestions, isLoading, isDropdownOpen,
-            toggleTag, isTagSelected, toggleDropdown,
+            searchQuery, filteredSuggestions, isLoading, isSearching, isDropdownOpen,
+            toggleTag, isTagSelected, toggleDropdown, openDropdown,
             getTextColor, mapIcon, tagLabel,
             sortedGroupedTags, activeType, activeNamespace,
         };
@@ -119,13 +171,19 @@ const TagInput = {
                 <span class="input-group-text border-0" style="background: var(--card-bg-color); cursor:pointer">
                     <i class="fas fa-tags small" style="color: #0d6efd"></i>
                 </span>
-                <input type="text" v-model="searchQuery" @focus="toggleDropdown"
+                <input type="text" v-model="searchQuery" @focus="openDropdown"
                     class="form-control border-0 shadow-none px-2"
                     :placeholder="placeholder"
                     style="height:46px; background: var(--card-bg-color); color: var(--text-color)">
-                <div v-if="isLoading" class="input-group-text border-0" style="background: var(--card-bg-color)">
+                <div v-if="isLoading || isSearching" class="input-group-text border-0" style="background: var(--card-bg-color)">
                     <div class="spinner-border spinner-border-sm text-primary"></div>
                 </div>
+                <button type="button" @click.stop="toggleDropdown"
+                    class="input-group-text border-0" title="Show tag panel"
+                    style="background: var(--card-bg-color); cursor:pointer">
+                    <i class="fas fa-chevron-down small"
+                       :style="{ color: 'var(--subtle-text-color)', transition: 'transform .15s', transform: isDropdownOpen ? 'rotate(180deg)' : 'none' }"></i>
+                </button>
             </div>
 
             <!-- Dropdown -->
@@ -135,6 +193,9 @@ const TagInput = {
 
                 <!-- Search results -->
                 <div v-if="searchQuery">
+                    <div v-if="isSearching && !filteredSuggestions.length" class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                    </div>
                     <div v-for="tag in filteredSuggestions" :key="tag.id" @click.stop="toggleTag(tag)"
                          class="dropdown-item rounded-2 py-2 d-flex align-items-center justify-content-between cursor-pointer mb-1 border"
                          :class="{ 'border-primary bg-primary-subtle': isTagSelected(tag.id) }"
@@ -154,7 +215,7 @@ const TagInput = {
                             </small>
                         </div>
                     </div>
-                    <div v-if="filteredSuggestions.length === 0" class="text-center py-4">
+                    <div v-if="!isSearching && filteredSuggestions.length === 0" class="text-center py-4">
                         <i class="fas fa-search fa-2x mb-2 opacity-25 d-block" style="color: var(--text-color)"></i>
                         <p class="fw-bold small mb-0" style="color: var(--text-color)">No tags found.</p>
                     </div>
@@ -162,19 +223,27 @@ const TagInput = {
 
                 <!-- Type level -->
                 <div v-else-if="!activeType">
-                    <div v-for="(namespaces, type) in sortedGroupedTags" :key="type"
-                         @click.stop="activeType = type"
-                         class="p-2 rounded border d-flex align-items-center justify-content-between mb-2"
-                         style="cursor:pointer">
-                        <div class="d-flex align-items-center">
-                            <i :class="type === 'Public' ? 'fas fa-eye text-success' : 'fas fa-eye-slash text-danger'" class="me-3"></i>
-                            <span class="fw-bold" style="color: var(--text-color)">[[ type ]] Tags</span>
+                    <!-- Without this, a slow first fetch left the dropdown looking
+                         empty/broken (neither the type rows nor "No tags available"
+                         render while isLoading) — looked like clicking just did nothing. -->
+                    <div v-if="isLoading" class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                    </div>
+                    <template v-else>
+                        <div v-for="(namespaces, type) in sortedGroupedTags" :key="type"
+                             @click.stop="activeType = type"
+                             class="p-2 rounded border d-flex align-items-center justify-content-between mb-2"
+                             style="cursor:pointer">
+                            <div class="d-flex align-items-center">
+                                <i :class="type === 'Public' ? 'fas fa-eye text-success' : 'fas fa-eye-slash text-danger'" class="me-3"></i>
+                                <span class="fw-bold" style="color: var(--text-color)">[[ type ]] Tags</span>
+                            </div>
+                            <i class="fas fa-chevron-right small opacity-50" style="color: var(--text-color)"></i>
                         </div>
-                        <i class="fas fa-chevron-right small opacity-50" style="color: var(--text-color)"></i>
-                    </div>
-                    <div v-if="Object.keys(sortedGroupedTags).length === 0 && !isLoading" class="text-center py-3">
-                        <p class="text-muted small fw-bold mb-0">No tags available.</p>
-                    </div>
+                        <div v-if="Object.keys(sortedGroupedTags).length === 0" class="text-center py-3">
+                            <p class="text-muted small fw-bold mb-0">No tags available.</p>
+                        </div>
+                    </template>
                 </div>
 
                 <!-- Namespace level -->

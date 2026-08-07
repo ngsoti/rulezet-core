@@ -6,6 +6,8 @@ import uuid
 from pathlib import Path
 
 from flask_login import current_user
+from sqlalchemy import case
+from sqlalchemy.orm import joinedload
 from app import db
 from app.core.db_class.db import Tag
 
@@ -87,7 +89,10 @@ def _inject_usage_counts(tags):
 
 def get_tags(args):
     """Admin tag listing with full filter support."""
-    query = Tag.query
+    # Tag.to_json() reads self.user.first_name — without eager loading that's
+    # one extra lazy-loaded query PER TAG (up to 500/page here). joinedload
+    # folds it into the single main query instead.
+    query = Tag.query.options(joinedload(Tag.user))
 
     if args.get('search'):
         query = query.filter(Tag.name.ilike(f"%{args['search']}%"))
@@ -343,16 +348,34 @@ def get_my_tags_paged(args):
 
 
 def get_all_tags(args):
-    query = Tag.query
+    """Tag picker source (TagInput.js) + admin bulk-tag tool.
+
+    Neither caller displays rule_count/bundle_count, so this skips
+    _inject_usage_counts() entirely — it's two extra grouped-count queries
+    for data nobody reads. Tag.user is eager-loaded (joinedload) everywhere
+    below because Tag.to_json() reads self.user.first_name — without that,
+    each row lazy-loads its own separate query, which turns "return every
+    tag" into one query per tag once the catalog grows into the thousands
+    (as it now does after bulk MISP taxonomy/galaxy imports).
+
+    An optional `limit` caps how many rows come back — used by the picker's
+    live search so a broad term can't still ship thousands of rows to an
+    autocomplete dropdown. Omitted (as the admin bulk-tag tool does) to keep
+    today's "load everything" behavior there.
+    """
+    limit = args.get('limit')
+    limit = int(limit) if limit else None
+    search = args.get('search')
+
+    query = Tag.query.options(joinedload(Tag.user))
     if current_user.is_authenticated:
         if current_user.is_admin():
             query = query.filter_by(is_active=True)
         elif args.get('user_id'):
             if current_user.id == int(args.get('user_id')):
                 # UNION ALL avoids equality check on json column; dedup by id in Python
-                public_q  = Tag.query.filter_by(is_active=True, visibility='public')
-                private_q = Tag.query.filter_by(created_by=current_user.id)
-                search = args.get('search')
+                public_q  = Tag.query.options(joinedload(Tag.user)).filter_by(is_active=True, visibility='public')
+                private_q = Tag.query.options(joinedload(Tag.user)).filter_by(created_by=current_user.id)
                 if search:
                     public_q  = public_q.filter(Tag.name.ilike(f'%{search}%'))
                     private_q = private_q.filter(Tag.name.ilike(f'%{search}%'))
@@ -360,7 +383,13 @@ def get_all_tags(args):
                 for t in public_q.all() + private_q.all():
                     seen.setdefault(t.id, t)
                 tags = sorted(seen.values(), key=lambda t: t.created_at, reverse=True)
-                return _inject_usage_counts(tags)
+                if search:
+                    # A tag whose name *starts with* the search term (e.g. "tlp:clear"
+                    # for a search of "tlp") is what the user is almost always after —
+                    # rank those above a tag that merely contains the term elsewhere.
+                    needle = search.lower()
+                    tags = sorted(tags, key=lambda t: not t.name.lower().startswith(needle))
+                return tags[:limit] if limit else tags
             else:
                 query = query.filter_by(is_active=True, visibility='public')
         else:
@@ -368,12 +397,21 @@ def get_all_tags(args):
     else:
         query = query.filter_by(is_active=True, visibility='public')
 
-    if args.get('search'):
-        query = query.filter(Tag.name.ilike(f"%{args['search']}%"))
+    if search:
+        query = query.filter(Tag.name.ilike(f"%{search}%"))
+        # Same prefix-first ranking as the union branch above, done in SQL:
+        # 0 for a name starting with the search term, 1 otherwise.
+        query = query.order_by(
+            case((Tag.name.ilike(f"{search}%"), 0), else_=1),
+            Tag.name.asc(),
+        )
+    else:
+        sort_order = args.get('sort_order', 'desc')
+        query = query.order_by(Tag.created_at.desc() if sort_order == 'desc' else Tag.created_at.asc())
 
-    sort_order = args.get('sort_order', 'desc')
-    query = query.order_by(Tag.created_at.desc() if sort_order == 'desc' else Tag.created_at.asc())
-    return _inject_usage_counts(query.all())
+    if limit:
+        query = query.limit(limit)
+    return query.all()
 
 
 def get_all_tags_by_type(args):
