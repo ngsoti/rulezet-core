@@ -146,6 +146,86 @@ def insert_default_formats():
     db.session.commit()
 
 
+def insert_default_platform_tag_configs():
+    """Seed the "Platform Tags" bulk-job starter configs (Platforms, Malware
+    Type, Packers, Attacker Tools, Ransomware Families) from
+    default_platform_tag_configs.json, plus an "Everything" config combining
+    whatever configs exist.
+
+    Safe to call on every deploy/update, not just a fresh db-init:
+    - Never touches a config that already exists (by name), so an admin's own
+      edits to a seeded config, or a config they created themselves, are
+      never overwritten.
+    - Tags are matched by name, never by id (ids aren't stable across
+      instances) — a pattern whose tag isn't imported yet on this instance is
+      skipped (not the whole config), so partial taxonomy/galaxy imports
+      still get whatever does resolve instead of nothing at all.
+    """
+    from app.features.rule.field_parser_core import validate_platform_tag_config
+    from ..db_class.db import FieldParserConfig, Tag
+
+    fixture_path = Path(__file__).parent / "default_platform_tag_configs.json"
+    if not fixture_path.exists():
+        return
+
+    with open(fixture_path, "r", encoding="utf-8") as f:
+        templates = json.load(f)
+
+    user_admin = get_admin_user()
+    if not user_admin:
+        return
+
+    for name, entries in templates.items():
+        if FieldParserConfig.query.filter_by(name=name, config_type="platform_tags").first():
+            continue
+
+        patterns = []
+        for entry in entries:
+            tag = Tag.query.filter_by(name=entry["tag_name"]).first()
+            if not tag:
+                continue
+            patterns.append({
+                "label": entry["label"], "tag_id": tag.id, "tag_name": tag.name,
+                "tag_icon": tag.icon, "tag_color": tag.color,
+                "regex": entry["regex"], "enabled": entry.get("enabled", True),
+            })
+
+        if not patterns:
+            continue  # none of this template's tags are imported on this instance yet
+
+        db.session.add(FieldParserConfig(
+            name=name, config={"patterns": patterns},
+            user_id=user_admin.id, config_type="platform_tags",
+        ))
+    db.session.commit()
+
+    # "Everything" — combine all platform_tags configs that exist right now
+    # (seeded above, plus anything the admin already made), deduplicated by
+    # tag. Recomputed only if it doesn't already exist, same as the others.
+    if not FieldParserConfig.query.filter_by(name="Everything", config_type="platform_tags").first():
+        others = (FieldParserConfig.query
+                  .filter_by(config_type="platform_tags")
+                  .filter(FieldParserConfig.name != "Everything")
+                  .all())
+        combined, seen_tag_ids = [], set()
+        for cfg in others:
+            for p in (cfg.config or {}).get("patterns", []):
+                if p.get("tag_id") in seen_tag_ids:
+                    continue
+                seen_tag_ids.add(p.get("tag_id"))
+                combined.append(p)
+        # validate_platform_tag_config also drops anything whose tag was
+        # deleted between the loop above and now, and enforces the same
+        # 200-pattern cap the admin UI is held to.
+        ok, _error, resolved = validate_platform_tag_config({"patterns": combined}) if combined else (False, "", [])
+        if ok:
+            db.session.add(FieldParserConfig(
+                name="Everything", config={"patterns": resolved},
+                user_id=user_admin.id, config_type="platform_tags",
+            ))
+            db.session.commit()
+
+
 def seed_default_tags(admin_user):
     """Initialize MISP taxonomy submodule and import seed namespaces from config/default_tags.json."""
     from app.features.tags.tags_core import (

@@ -1,0 +1,306 @@
+{
+  "Platforms": [
+    {
+      "label": "Windows",
+      "tag_name": "ms-caro-malware-full:malware-platform=\"Win32\"",
+      "regex": "\\bwindows\\b|\\bwin32\\b",
+      "enabled": true
+    },
+    {
+      "label": "Linux",
+      "tag_name": "ms-caro-malware-full:malware-platform=\"Linux\"",
+      "regex": "\\blinux\\b",
+      "enabled": true
+    },
+    {
+      "label": "macOS",
+      "tag_name": "ms-caro-malware-full:malware-platform=\"MacOS_X\"",
+      "regex": "\\bmac ?os( ?x)?\\b|\\bdarwin\\b",
+      "enabled": true
+    },
+    {
+      "label": "Android",
+      "tag_name": "ms-caro-malware-full:malware-platform=\"AndroidOS\"",
+      "regex": "\\bandroid\\b",
+      "enabled": true
+    },
+    {
+      "label": "Unix",
+      "tag_name": "ms-caro-malware-full:malware-platform=\"Unix\"",
+      "regex": "\\bunix\\b",
+      "enabled": true
+    },
+    {
+      "label": "FreeBSD",
+      "tag_name": "ms-caro-malware-full:malware-platform=\"FreeBSD\"",
+      "regex": "\\bfreebsd\\b",
+      "enabled": true
+    },
+    {
+      "label": "Solaris",
+      "tag_name": "ms-caro-malware-full:malware-platform=\"Solaris\"",
+      "regex": "\\bsolaris\\b",
+      "enabled": true
+    }
+  ],
+  "Malware Type": [
+    {
+      "label": "Trojan",
+      "tag_name": "ms-caro-malware-full:malware-type=\"Trojan\"",
+      "regex": "\\btrojans?\\b",
+      "enabled": true
+    },
+    {
+      "label": "Worm",
+      "tag_name": "ms-caro-malware-full:malware-type=\"Worm\"",
+      "regex": "\\bworms?\\b",
+      "enabled": true
+    },
+    {
+      "label": "Virus",
+      "tag_name": "ms-caro-malware-full:malware-type=\"Virus\"",
+      "regex": "\\bvirus(es)?\\b",
+      "enabled": true
+    },
+    {
+      "label": "Backdoor",
+      "tag_name": "ms-caro-malware-full:malware-type=\"Backdoor\"",
+      "regex": "\\bbackdoors?\\b",
+      "enabled": true
+    },
+    {
+      "label": "Ransomware",
+      "tag_name": "ms-caro-malware-full:malware-type=\"Ransom\"",
+      "regex": "\\bransom(ware)?\\b",
+      "enabled": true
+    },
+    {
+      "label": "Spyware",
+      "tag_name": "ms-caro-malware-full:malware-type=\"Spyware\"",
+      "regex": "\\bspyware\\b",
+      "enabled": true
+    },
+    {
+      "label": "Adware",
+      "tag_name": "ms-caro-malware-full:malware-type=\"Adware\"",
+      "regex": "\\badware\\b",
+      "enabled": true
+    },
+    {
+      "label": "Trojan Downloader",
+      "tag_name": "ms-caro-malware-full:malware-type=\"TrojanDownloader\"",
+      "regex": "\\bdownloader\\b",
+      "enabled": true
+    },
+    {
+      "label": "Trojan Dropper",
+      "tag_name": "ms-caro-malware-full:malware-type=\"TrojanDropper\"",
+      "regex": "\\bdropper\\b",
+      "enabled": true
+    },
+    {
+      "label": "Hack Tool",
+      "tag_name": "ms-caro-malware-full:malware-type=\"HackTool\"",
+      "regex": "\\bhacktool\\b",
+      "enabled": true
+    },
+    {
+      "label": "Password Stealer",
+      "tag_name": "ms-caro-malware-full:malware-type=\"PWS\"",
+      "regex": "\\bpws\\b|password.?steal(er|ing)\\b",
+      "enabled": true
+    }
+  ],
+  "Packers": [
+    {
+      "label": "UPX",
+      "tag_name": "runtime-packer:pe=\"upx\"",
+      "regex": "\\bupx\\b",
+      "enabled": true
+    },
+    {
+      "label": "Themida",
+      "tag_name": "runtime-packer:pe=\"themida\"",
+      "regex": "\\bthemida\\b",
+      "enabled": true
+    },
+    {
+      "label": "VMProtect",
+      "tag_name": "runtime-packer:pe=\"vmprotect\"",
+      "regex": "\\bvmprotect\\b",
+      "enabled": true
+    },
+    {
+      "label": "ASPack",
+      "tag_name": "runtime-packer:pe=\"aspack\"",
+      "regex": "\\baspack\\b",
+      "enabled": true
+    },
+    {
+      "label": "Armadillo",
+      "tag_name": "runtime-packer:pe=\"armadillo\"",
+      "regex": "\\barmadillo\\b",
+      "enabled": true
+    },
+    {
+      "label": "MPRESS",
+      "tag_name": "runtime-packer:pe=\"mpress\"",
+      "regex": "\\bmpress\\b",
+      "enabled": true
+    },
+    {
+      "label": "PECompact",
+      "tag_name": "runtime-packer:pe=\"pecompact\"",
+      "regex": "\\bpecompact\\b",
+      "enabled": true
+    },
+    {
+      "label": "PELock",
+      "tag_name": "runtime-packer:pe=\"pelock\"",
+      "regex": "\\bpelock\\b",
+      "enabled": true
+    },
+    {
+      "label": "Enigma Protector",
+      "tag_name": "runtime-packer:pe=\"enigma-protector\"",
+      "regex": "\\benigma.?protector\\b",
+      "enabled": true
+    },
+    {
+      "label": "Obsidium",
+      "tag_name": "runtime-packer:pe=\"obsidium\"",
+      "regex": "\\bobsidium\\b",
+      "enabled": true
+    }
+  ],
+  "Attacker Tools": [
+    {
+      "label": "Mimikatz",
+      "tag_name": "misp-galaxy:tool=\"Mimikatz\"",
+      "regex": "\\bmimikatz\\b",
+      "enabled": true
+    },
+    {
+      "label": "PsExec",
+      "tag_name": "misp-galaxy:tool=\"PsExec\"",
+      "regex": "\\bpsexec\\b",
+      "enabled": true
+    },
+    {
+      "label": "Cobalt Strike",
+      "tag_name": "misp-galaxy:tool=\"Cobalt Strike\"",
+      "regex": "\\bcobalt.?strike\\b",
+      "enabled": true
+    },
+    {
+      "label": "Impacket",
+      "tag_name": "misp-galaxy:tool=\"IMPACKET\"",
+      "regex": "\\bimpacket\\b",
+      "enabled": true
+    },
+    {
+      "label": "Empire",
+      "tag_name": "misp-galaxy:tool=\"Empire\"",
+      "regex": "\\bempire\\b",
+      "enabled": true
+    },
+    {
+      "label": "LaZagne",
+      "tag_name": "misp-galaxy:tool=\"Lazagne\"",
+      "regex": "\\blazagne\\b",
+      "enabled": true
+    },
+    {
+      "label": "ProcDump",
+      "tag_name": "misp-galaxy:tool=\"ProcDump\"",
+      "regex": "\\bprocdump\\b",
+      "enabled": true
+    },
+    {
+      "label": "Netcat",
+      "tag_name": "misp-galaxy:tool=\"Netcat\"",
+      "regex": "\\bnetcat\\b|\\bnc\\.exe\\b",
+      "enabled": true
+    },
+    {
+      "label": "Metasploit",
+      "tag_name": "misp-galaxy:tool=\"metasploit\"",
+      "regex": "\\bmetasploit\\b",
+      "enabled": true
+    }
+  ],
+  "Ransomware Families": [
+    {
+      "label": "LockBit",
+      "tag_name": "misp-galaxy:ransomware=\"LockBit\"",
+      "regex": "\\blockbit\\b",
+      "enabled": true
+    },
+    {
+      "label": "Conti",
+      "tag_name": "misp-galaxy:ransomware=\"Conti\"",
+      "regex": "\\bconti\\b",
+      "enabled": true
+    },
+    {
+      "label": "Sodinokibi",
+      "tag_name": "misp-galaxy:ransomware=\"Sodinokibi\"",
+      "regex": "\\bsodinokibi\\b|\\brevil\\b",
+      "enabled": true
+    },
+    {
+      "label": "BlackCat",
+      "tag_name": "misp-galaxy:ransomware=\"BlackCat\"",
+      "regex": "\\bblackcat\\b|\\balphv\\b",
+      "enabled": true
+    },
+    {
+      "label": "Clop",
+      "tag_name": "misp-galaxy:ransomware=\"Clop\"",
+      "regex": "\\bclop\\b|\\bcl0p\\b",
+      "enabled": true
+    },
+    {
+      "label": "Hive",
+      "tag_name": "misp-galaxy:ransomware=\"Hive\"",
+      "regex": "\\bhive\\b.{0,20}ransom|\\bhive.?ransomware\\b",
+      "enabled": true
+    },
+    {
+      "label": "Ryuk",
+      "tag_name": "misp-galaxy:ransomware=\"Ryuk ransomware\"",
+      "regex": "\\bryuk\\b",
+      "enabled": true
+    },
+    {
+      "label": "WannaCry",
+      "tag_name": "misp-galaxy:ransomware=\"WannaCry\"",
+      "regex": "\\bwannacry\\b|\\bwcry\\b",
+      "enabled": true
+    },
+    {
+      "label": "DarkSide",
+      "tag_name": "misp-galaxy:ransomware=\"Darkside\"",
+      "regex": "\\bdarkside\\b",
+      "enabled": true
+    },
+    {
+      "label": "Maze",
+      "tag_name": "misp-galaxy:ransomware=\"Maze\"",
+      "regex": "\\bmaze\\b.{0,20}ransom|\\bmaze.?ransomware\\b",
+      "enabled": true
+    },
+    {
+      "label": "Egregor",
+      "tag_name": "misp-galaxy:ransomware=\"Egregor\"",
+      "regex": "\\begregor\\b",
+      "enabled": true
+    },
+    {
+      "label": "Black Basta",
+      "tag_name": "misp-galaxy:ransomware=\"BlackBasta\"",
+      "regex": "\\bblack.?basta\\b",
+      "enabled": true
+    }
+  ]
+}

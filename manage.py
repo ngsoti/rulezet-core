@@ -351,6 +351,10 @@ def cmd_update() -> None:
     run([FLASK, "db", "upgrade"], extra_env={"FLASKENV": "development"})
     ok("Database schema up to date")
 
+    info("Seeding default data (formats, platform-tag configs)…")
+    run([PYTHON, "app.py", "--seed-defaults"], extra_env={"FLASKENV": "development"})
+    ok("Default data up to date")
+
 
 def cmd_deploy() -> None:
     cmd_start_prod()
