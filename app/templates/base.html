@@ -193,8 +193,10 @@
                     <div class="flex-grow-1">
                         A new Rulezet version is available:
                         <strong>v{{ _update.version }}</strong>.
-                        Run <code>python3 manage.py update</code> to upgrade, or see the
-                        <a href="{{ _update.url }}" target="_blank" rel="noreferrer">release notes</a>.
+                        Run <code>python3 manage.py update</code> to upgrade, see the
+                        <a href="{{ _update.url }}" target="_blank" rel="noreferrer">release notes</a>,
+                        or browse all
+                        <a href="https://github.com/rulezet/rulezet-core/releases" target="_blank" rel="noreferrer">Rulezet releases</a>.
                     </div>
                     <button type="button" class="btn-close" aria-label="Dismiss"
                             onclick="var b=document.getElementById('update-available-banner'); try{localStorage.setItem('rz-update-dismissed', b.dataset.updateVersion)}catch(e){} b.remove()"></button>
