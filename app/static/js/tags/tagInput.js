@@ -12,6 +12,12 @@ const TagInput = {
         label: { type: String, default: 'Associated Tags' },
         userId: { type: [Number, String], default: null },
         showNamespace: { type: Boolean, default: true },
+        // Caps how many tags this picker holds — e.g. maxTags=1 turns it into
+        // a single-tag picker (used by the platform-tag pattern config
+        // editor, one tag per pattern row). Picking a new tag once the cap
+        // is reached replaces the current selection instead of being a no-op,
+        // which is the least surprising behavior for a "pick one" field.
+        maxTags: { type: Number, default: null },
     },
     emits: ['update:modelValue'],
     delimiters: ['[[', ']]'],
@@ -111,6 +117,8 @@ const TagInput = {
         function toggleTag(tag) {
             if (isTagSelected(tag.id)) {
                 emit('update:modelValue', props.modelValue.filter(t => t.id !== tag.id));
+            } else if (props.maxTags != null && props.modelValue.length >= props.maxTags) {
+                emit('update:modelValue', [tag]);
             } else {
                 emit('update:modelValue', [...props.modelValue, tag]);
             }

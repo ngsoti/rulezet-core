@@ -739,6 +739,28 @@ def download_backup(filename):
     return send_from_directory(BACKUP_DIR, filename, as_attachment=True)
 
 
+@home_blueprint.route('/admin/backups/trigger', methods=['POST'])
+@login_required
+def trigger_backup():
+    """Run backup/scripts/backup_rulezet.sh as a background job (live log via
+    the same job-tracking UI used everywhere else) — lets an admin take a
+    fresh dump right before testing a risky bulk operation."""
+    if not current_user.is_admin():
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+    from app.features.jobs.jobs_core import create_job
+    job = create_job(
+        job_type='db_backup',
+        label='Database backup',
+        payload={},
+        created_by=current_user.id,
+    )
+    if not job:
+        return jsonify({"success": False, "message": "Failed to create job"}), 500
+    log_activity('admin.db_backup', 'Triggered a database backup',
+                 target_type='job', target_id=job.id, target_uuid=job.uuid)
+    return jsonify({"success": True, "job": job.to_json(), "message": "Backup job queued!"})
+
+
 @home_blueprint.route('/admin/vulnerabilities/update', methods=['GET'])
 @login_required
 def UpdateVulnerabilities():

@@ -2525,65 +2525,77 @@ def handle_bulk_parse_fields(job, app):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# bulk_tag_platforms — detect OS/platform mentions in rule content and attach
-# the matching tag from the ms-caro-malware-full taxonomy (predicate
-# "malware-platform"), which must already be imported (see /tags/admin/list).
+# bulk_tag_platforms — detect OS/platform mentions (or any other admin-defined
+# regex → tag mapping) in rule content and attach the matching tag. Fully
+# config-driven: the pattern list is an admin-authored FieldParserConfig row
+# (config_type='platform_tags'), not a hardcoded dict — see
+# field_parser_core.validate_platform_tag_config() and the "Platform Tags" tab
+# on /account/admin/bulk_parse_fields.
 # ─────────────────────────────────────────────────────────────────────────────
-
-PLATFORM_TAG_TAXONOMY  = 'ms-caro-malware-full'
-PLATFORM_TAG_PREDICATE = 'malware-platform'
-
-# A deliberately small, high-confidence subset of the taxonomy's 73 values —
-# the ones that are actually operating systems (the rest are script/macro
-# types like VBS, HTA, W97M... which "windows"-style keyword matching in
-# free-text rule content would misdetect constantly).
-PLATFORM_TAG_PATTERNS = {
-    'Win32':     re.compile(r'\bwindows\b|\bwin32\b', re.IGNORECASE),
-    'Linux':     re.compile(r'\blinux\b', re.IGNORECASE),
-    'MacOS_X':   re.compile(r'\bmac ?os( ?x)?\b|\bdarwin\b', re.IGNORECASE),
-    'AndroidOS': re.compile(r'\bandroid\b', re.IGNORECASE),
-    'Unix':      re.compile(r'\bunix\b', re.IGNORECASE),
-    'FreeBSD':   re.compile(r'\bfreebsd\b', re.IGNORECASE),
-    'Solaris':   re.compile(r'\bsolaris\b', re.IGNORECASE),
-}
-
 
 @register_handler('bulk_tag_platforms')
 def handle_bulk_tag_platforms(job, app):
-    """Scan rule title/description/content for OS mentions (Windows, Linux,
-    macOS...) and attach the corresponding ms-caro-malware-full platform tag.
-    Additive only — never removes an existing tag, and never re-adds one a
-    rule already has, so re-running this job is always safe."""
+    """Scan rule title/description/content against an admin-defined config of
+    (tag, regex) patterns and attach the matching tag. Additive only — never
+    removes an existing tag, and never re-adds one a rule already has, so
+    re-running this job is always safe.
+
+    The config is re-validated here (not just trusted from when it was
+    saved) since a referenced tag could have been deleted in the meantime —
+    if that happened, the job stops immediately rather than silently running
+    with a smaller pattern set than the admin configured.
+    """
+    from app.features.rule.field_parser_core import get_config, validate_platform_tag_config, CONFIG_TYPE_PLATFORM_TAGS
+
     payload       = job.payload or {}
     rule_ids      = payload.get('rule_ids', 'ALL')
     format_filter = payload.get('format_filter') or None
     offset        = payload.get('_resume_offset', 0)
+    config_id     = payload.get('config_id')
     user_id       = job.created_by
 
-    tags_by_value = {}
-    missing = []
-    for value in PLATFORM_TAG_PATTERNS:
-        tag_name = f'{PLATFORM_TAG_TAXONOMY}:{PLATFORM_TAG_PREDICATE}="{value}"'
-        tag = Tag.query.filter_by(name=tag_name).first()
-        if tag:
-            tags_by_value[value] = tag
-        else:
-            missing.append(value)
+    if not config_id:
+        log_job(job, 'No config_id in job payload — nothing to run.', level='error', event='error')
+        job.status = 'failed'
+        job.error  = 'Missing config_id'
+        db.session.commit()
+        return
 
-    if missing:
-        log_job(job,
-                f"Skipping {len(missing)} platform(s) with no matching tag in DB "
-                f"({', '.join(missing)}) — import the '{PLATFORM_TAG_TAXONOMY}' taxonomy "
-                f"from /tags/admin/list to enable them.",
-                level='warning', event='missing_tags')
+    cfg = get_config(config_id, config_type=CONFIG_TYPE_PLATFORM_TAGS)
+    if not cfg:
+        log_job(job, f'Config #{config_id} not found (deleted?) — aborting.', level='error', event='error')
+        job.status = 'failed'
+        job.error  = 'Config not found'
+        db.session.commit()
+        return
 
-    if not tags_by_value:
-        log_job(job,
-                f"None of the platform tags exist yet — import the '{PLATFORM_TAG_TAXONOMY}' "
-                f"taxonomy first.", level='error', event='error')
+    ok, error, resolved_patterns = validate_platform_tag_config(cfg.config)
+    if not ok:
+        log_job(job, f'Config "{cfg.name}" is no longer valid — aborting without changing anything: {error}',
+                level='error', event='error')
+        job.status = 'failed'
+        job.error  = error
+        db.session.commit()
+        return
+
+    active_patterns = [p for p in resolved_patterns if p['enabled']]
+    if not active_patterns:
+        log_job(job, f'Config "{cfg.name}" has no enabled patterns — nothing to do.',
+                level='warning', event='done')
         job.done = job.total or 0
         db.session.commit()
         return
+
+    # Compile once; label kept alongside for logging.
+    compiled = []
+    for p in active_patterns:
+        try:
+            compiled.append((p, re.compile(p['regex'], re.IGNORECASE)))
+        except re.error:
+            # Already checked by validate_platform_tag_config, but a config
+            # is free-form JSON — defense in depth against it changing shape
+            # between validation and use within the same run.
+            continue
 
     q = Rule.query.filter(Rule.is_deleted == False).order_by(Rule.id.asc())
     if rule_ids != 'ALL':
@@ -2594,8 +2606,9 @@ def handle_bulk_tag_platforms(job, app):
     if job.total == 0:
         job.total = q.count()
         db.session.commit()
-        log_job(job, f'Starting — scanning {job.total} rule(s) for platform mentions '
-                     f'({", ".join(tags_by_value)}).', level='info', event='start')
+        pattern_names = ', '.join(p['label'] for p, _ in compiled)
+        log_job(job, f'Starting — scanning {job.total} rule(s) using config "{cfg.name}" ({pattern_names}).',
+                level='info', event='start')
     else:
         log_job(job, f'Resuming from offset {offset}.', level='info', event='resume')
 
@@ -2623,7 +2636,7 @@ def handle_bulk_tag_platforms(job, app):
             haystack = ' '.join(filter(None, [title, description, content]))
             if not haystack:
                 continue
-            matched = [v for v, pat in PLATFORM_TAG_PATTERNS.items() if v in tags_by_value and pat.search(haystack)]
+            matched = [p for p, pat in compiled if pat.search(haystack)]
             if not matched:
                 continue
 
@@ -2632,14 +2645,13 @@ def handle_bulk_tag_platforms(job, app):
                     .filter(RuleTagAssociation.rule_id == rule_id).all()
             }
             new_assocs = 0
-            for value in matched:
-                tag = tags_by_value[value]
-                if tag.id in existing_tag_ids:
+            for p in matched:
+                if p['tag_id'] in existing_tag_ids:
                     continue
                 db.session.add(RuleTagAssociation(
                     uuid=str(uuid_mod.uuid4()),
                     rule_id=rule_id,
-                    tag_id=tag.id,
+                    tag_id=p['tag_id'],
                     user_id=user_id,
                     added_at=_now(),
                 ))
@@ -3747,3 +3759,64 @@ def handle_misp_push(job, app):
     log_activity('misp.push_done', f"Push to '{server.name}': {msg}",
                  target_type='misp_server', target_id=server.id, target_uuid=server.uuid,
                  extra=extra)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# db_backup — run backup/scripts/backup_rulezet.sh as a background job with
+# live logs, so an admin can take a fresh backup right before testing a risky
+# bulk operation (e.g. platform tagging) without leaving the admin page.
+# ─────────────────────────────────────────────────────────────────────────────
+
+BACKUP_SCRIPT_TIMEOUT = 600  # 10 minutes — pg_dump on a very large DB could be slow
+
+
+@register_handler('db_backup')
+def handle_db_backup(job, app):
+    script_path = os.path.join(os.getcwd(), 'backup', 'scripts', 'backup_rulezet.sh')
+    if not os.path.exists(script_path):
+        log_job(job, f'Backup script not found: {script_path}', level='error', event='error')
+        job.status = 'failed'
+        job.error  = 'Backup script not found'
+        db.session.commit()
+        return
+
+    job.total = 1
+    job.done  = 0
+    db.session.commit()
+    log_job(job, f'Running {script_path} …', level='info', event='start')
+
+    try:
+        proc = subprocess.run(
+            ['bash', script_path],
+            capture_output=True, text=True, timeout=BACKUP_SCRIPT_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        log_job(job, f'Backup timed out after {BACKUP_SCRIPT_TIMEOUT}s.', level='error', event='error')
+        job.status = 'failed'
+        job.error  = 'Timed out'
+        db.session.commit()
+        return
+    except Exception as e:
+        log_job(job, f'Failed to run backup script: {e}', level='error', event='error')
+        job.status = 'failed'
+        job.error  = str(e)
+        db.session.commit()
+        return
+
+    for line in (proc.stdout or '').splitlines():
+        if line.strip():
+            log_job(job, line.strip(), level='info', event='output')
+
+    if proc.returncode != 0:
+        for line in (proc.stderr or '').splitlines():
+            if line.strip():
+                log_job(job, line.strip(), level='error', event='output')
+        log_job(job, f'Backup script exited with code {proc.returncode}.', level='error', event='error')
+        job.status = 'failed'
+        job.error  = f'Exit code {proc.returncode}'
+        db.session.commit()
+        return
+
+    job.done = 1
+    db.session.commit()
+    log_job(job, 'Backup complete — see /admin/get_backups to download it.', level='success', event='done')

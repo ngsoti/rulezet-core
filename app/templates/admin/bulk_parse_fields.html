@@ -68,17 +68,56 @@
 
         <!-- TAB 2 — Platform Tags -->
         <div class="tab-pane fade" id="pane-platform-tags" role="tabpanel">
-            <bulk-import-runner
+
+            <platform-tag-config-editor
+                class="mb-4"
                 :csrf-token="csrfToken"
-                endpoint="/account/admin/bulk_parse_fields/trigger_platform_tags"
-                title="Detect &amp; Tag Platforms"
-                description="Scans every rule's title, description and content for OS mentions (Windows, Linux, macOS, Android, Unix, FreeBSD, Solaris) and attaches the matching tag from the ms-caro-malware-full taxonomy — already-tagged rules are skipped, safe to re-run. Import that taxonomy from /tags/admin/list first if the tags don't exist yet."
-                icon="fa-solid fa-display"
-                accent-color="#0d6efd"
-                button-label="Re-parse All Rules"
-                item-noun="rule"
-                @notify="notify">
-            </bulk-import-runner>
+                @notify="notify"
+                @config-selected="onPlatformConfigSelected">
+            </platform-tag-config-editor>
+
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                        <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                            <i class="fa-solid fa-play me-1"></i>Run
+                        </span>
+                    </div>
+                    <bulk-import-runner
+                        :csrf-token="csrfToken"
+                        endpoint="/account/admin/bulk_parse_fields/trigger_platform_tags"
+                        title="Detect &amp; Tag Platforms"
+                        :description="platformRunnerDescription"
+                        icon="fa-solid fa-display"
+                        accent-color="#0d6efd"
+                        button-label="Re-parse All Rules"
+                        item-noun="rule"
+                        :payload="{ config_id: selectedPlatformConfigId }"
+                        :disabled="!selectedPlatformConfigId"
+                        @notify="notify">
+                    </bulk-import-runner>
+
+                    <!-- Backup — tucked away, not shown unless asked for -->
+                    <button class="btn btn-link btn-sm text-muted px-0 mt-3" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#backupCollapse">
+                        <i class="fa-solid fa-database me-1"></i>Backup database first
+                        <i class="fa-solid fa-chevron-down ms-1" style="font-size:.65rem;"></i>
+                    </button>
+                    <div class="collapse mt-2" id="backupCollapse">
+                        <bulk-import-runner
+                            :csrf-token="csrfToken"
+                            endpoint="/admin/backups/trigger"
+                            title="Backup Database"
+                            description="Runs backup/scripts/backup_rulezet.sh (your existing pg_dump script) right now. Download finished backups from /admin/get_backups."
+                            icon="fa-solid fa-database"
+                            accent-color="#0d6efd"
+                            button-label="Backup Now"
+                            item-noun="step">
+                        </bulk-import-runner>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -88,9 +127,10 @@
 
 {% block script %}
 <script type="module">
-const { createApp } = Vue;
+const { createApp, ref, computed } = Vue;
 import FieldParserUpdater from '/static/js/admin/bulkParseFields.js'
 import BulkImportRunner from '/static/js/tags/manage/BulkImportRunner.js'
+import PlatformTagConfigEditor from '/static/js/admin/platformTagConfigEditor.js'
 import { create_message } from '/static/js/toaster.js'
 
 const fieldMeta       = {{ field_meta | tojson | safe }};
@@ -98,10 +138,27 @@ const parseableFields = {{ parseable_fields | tojson | safe }};
 const csrfToken       = '{{ csrf_token() }}';
 
 createApp({
-    components: { 'field-parser-updater': FieldParserUpdater, 'bulk-import-runner': BulkImportRunner },
+    components: {
+        'field-parser-updater': FieldParserUpdater,
+        'bulk-import-runner': BulkImportRunner,
+        'platform-tag-config-editor': PlatformTagConfigEditor,
+    },
     setup() {
         function notify(msg, cls = 'info-subtle') { create_message(msg, cls); }
-        return { fieldMeta, parseableFields, csrfToken, notify };
+
+        const selectedPlatformConfigId = ref(null);
+        function onPlatformConfigSelected(id) { selectedPlatformConfigId.value = id; }
+
+        const platformRunnerDescription = computed(() =>
+            selectedPlatformConfigId.value
+                ? 'Scans every rule using the loaded config above — already-tagged rules are skipped, safe to re-run.'
+                : 'Load or save a config above first — the button stays disabled until one is active.'
+        );
+
+        return {
+            fieldMeta, parseableFields, csrfToken, notify,
+            selectedPlatformConfigId, onPlatformConfigSelected, platformRunnerDescription,
+        };
     }
 }).mount('#main-container');
 </script>

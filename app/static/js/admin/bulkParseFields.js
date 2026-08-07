@@ -413,9 +413,12 @@ const FieldParserUpdater = {
     <div class="card border-0 shadow-sm rounded-4">
       <div class="card-body p-4">
         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-          <h6 class="fw-bold mb-0" style="color:var(--text-color);">
-            <i class="fa-solid fa-sliders me-2" style="color:#e67e22;"></i>Field Parsing Rules
-          </h6>
+          <div class="d-flex align-items-center gap-2">
+            <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+            <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+              <i class="fa-solid fa-sliders me-1"></i>Field Parsing Rules
+            </span>
+          </div>
           <div class="d-flex gap-2">
             <button @click="toggleAll(true)"  class="btn btn-xs btn-outline-primary"  style="font-size:.72rem;padding:2px 10px;">Enable all</button>
             <button @click="toggleAll(false)" class="btn btn-xs btn-outline-secondary" style="font-size:.72rem;padding:2px 10px;">Disable all</button>
@@ -589,9 +592,12 @@ const FieldParserUpdater = {
   <div class="col-xl-4">
     <div class="card border-0 shadow-sm rounded-4 h-100">
       <div class="card-body p-4">
-        <h6 class="fw-bold mb-3" style="color:var(--text-color);">
-          <i class="fa-solid fa-bookmark me-2" style="color:#6f42c1;"></i>Saved Configs
-        </h6>
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <div style="width:3px;height:14px;background:#6f42c1;border-radius:2px;flex-shrink:0;"></div>
+          <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+            <i class="fa-solid fa-bookmark me-1"></i>Saved Configs
+          </span>
+        </div>
         <!-- name field + context badge when a config is loaded -->
         <div v-if="loadedConfigId" class="d-flex align-items-center gap-2 mb-2">
           <span class="badge rounded-pill px-2 py-1" style="background:#6f42c122;color:#6f42c1;border:1px solid #6f42c144;font-size:.72rem;">
@@ -686,12 +692,15 @@ const FieldParserUpdater = {
   <div class="col-12">
     <div class="card border-0 shadow-sm rounded-4">
       <div class="card-body p-3">
-        <h6 class="fw-bold mb-3" style="color:var(--text-color);">
-          <i class="fa-solid fa-list-check me-2 text-primary"></i>Select Rules
-          <small class="fw-normal ms-2" style="color:var(--subtle-text-color);font-size:.78rem;">
+        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+          <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+          <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+            <i class="fa-solid fa-list-check me-1"></i>Select Rules
+          </span>
+          <small style="color:var(--subtle-text-color);font-size:.78rem;">
             — filter, pick rules, click <strong>Confirm</strong> to launch the job
           </small>
-        </h6>
+        </div>
         <rule-list
           mode="select"
           default-view="table"

@@ -20,6 +20,12 @@ export default {
         accentColor: { type: String, default: '#0d6efd' },
         buttonLabel: { type: String, default: 'Add All' },
         itemNoun:    { type: String, default: 'item' },
+        // Merged as the POST body's JSON (e.g. { config_id: 3 }) — plain POST
+        // with no body when omitted, unchanged from the original MISP usage.
+        payload:     { type: Object, default: null },
+        // External gate (e.g. "no valid config picked yet") — same idea as
+        // the internal `running` disable, just driven by the parent instead.
+        disabled:    { type: Boolean, default: false },
     },
     emits: ['notify', 'refresh-main'],
     setup(props, { emit }) {
@@ -91,7 +97,7 @@ export default {
         }
 
         async function start() {
-            if (running.value) return;
+            if (running.value || props.disabled) return;
 
             running.value   = true;
             allLogs.value    = [];
@@ -103,10 +109,15 @@ export default {
             jobPct.value     = 0;
 
             try {
-                const res  = await fetch(props.endpoint, {
+                const fetchOpts = {
                     method: 'POST',
                     headers: { 'X-CSRFToken': props.csrfToken },
-                });
+                };
+                if (props.payload) {
+                    fetchOpts.headers['Content-Type'] = 'application/json';
+                    fetchOpts.body = JSON.stringify(props.payload);
+                }
+                const res  = await fetch(props.endpoint, fetchOpts);
                 const data = await res.json();
 
                 if (!data.success) {
@@ -146,7 +157,7 @@ export default {
         </h6>
         <small class="text-muted">[[ description ]]</small>
       </div>
-      <button @click="start" :disabled="running"
+      <button @click="start" :disabled="running || disabled"
               class="btn fw-semibold px-4 text-white"
               :style="'background:' + accentColor + ';border-color:' + accentColor">
         <i class="fa-solid me-2" :class="running ? 'fa-spinner fa-spin' : 'fa-play'"></i>

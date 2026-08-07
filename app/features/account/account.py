@@ -787,21 +787,44 @@ def bulk_parse_fields_trigger():
 @account_blueprint.route('/admin/bulk_parse_fields/trigger_platform_tags', methods=['POST'])
 @login_required
 def bulk_parse_fields_trigger_platform_tags():
-    """Scan every rule's title/description/content for OS mentions (Windows,
-    Linux, macOS...) and attach the matching ms-caro-malware-full platform
-    tag — see handle_bulk_tag_platforms in job_handlers.py."""
+    """Scan every rule's title/description/content for OS mentions and attach
+    the matching tag, following an admin-defined, saved pattern config — see
+    handle_bulk_tag_platforms in job_handlers.py.
+
+    config_id is required and is re-validated here (not just trusted from
+    save time): every referenced tag must still exist right now, and every
+    regex must still compile, or the job is refused outright and nothing is
+    queued. The job handler re-validates again immediately before it starts
+    scanning, since a tag could still be deleted in the gap between this
+    request and the job actually running.
+    """
     if not current_user.is_admin():
         return jsonify({'success': False, 'message': 'Admin only'}), 403
     from app.features.jobs.jobs_core import create_job
+    from app.features.rule.field_parser_core import get_config, validate_platform_tag_config, CONFIG_TYPE_PLATFORM_TAGS
+
+    data      = request.get_json(force=True) or {}
+    config_id = data.get('config_id')
+    if not config_id:
+        return jsonify({'success': False, 'message': 'config_id is required — save a platform-tag config first.'}), 400
+
+    cfg = get_config(config_id, config_type=CONFIG_TYPE_PLATFORM_TAGS)
+    if not cfg:
+        return jsonify({'success': False, 'message': 'Platform-tag config not found.'}), 404
+
+    ok, error, _resolved = validate_platform_tag_config(cfg.config)
+    if not ok:
+        return jsonify({'success': False, 'message': f'Config is invalid, not launching: {error}'}), 400
+
     job = create_job(
         job_type='bulk_tag_platforms',
-        label='Detect & tag platforms',
-        payload={'rule_ids': 'ALL', 'format_filter': None},
+        label=f'Detect & tag platforms ({cfg.name})',
+        payload={'rule_ids': 'ALL', 'format_filter': None, 'config_id': cfg.id},
         created_by=current_user.id,
     )
     if not job:
         return jsonify({'success': False, 'message': 'Failed to create job'}), 500
-    log_activity('admin.bulk_tag_platforms', 'Triggered platform-tag detection for all rules',
+    log_activity('admin.bulk_tag_platforms', f'Triggered platform-tag detection for all rules using config "{cfg.name}"',
                  target_type='job', target_id=job.id, target_uuid=job.uuid)
     return jsonify({'success': True, 'job': job.to_json(), 'message': 'Platform tagging job queued!'})
 
@@ -811,8 +834,8 @@ def bulk_parse_fields_trigger_platform_tags():
 def bulk_parse_fields_configs_list():
     if not current_user.is_admin():
         return jsonify({'success': False}), 403
-    from app.features.rule.field_parser_core import get_all_configs
-    cfgs = get_all_configs()
+    from app.features.rule.field_parser_core import get_all_configs, CONFIG_TYPE_FIELD_PARSER
+    cfgs = get_all_configs(config_type=CONFIG_TYPE_FIELD_PARSER)
     return jsonify({'configs': [c.to_json() for c in cfgs]})
 
 
@@ -821,13 +844,13 @@ def bulk_parse_fields_configs_list():
 def bulk_parse_fields_configs_save():
     if not current_user.is_admin():
         return jsonify({'success': False}), 403
-    from app.features.rule.field_parser_core import save_config
+    from app.features.rule.field_parser_core import save_config, CONFIG_TYPE_FIELD_PARSER
     data = request.get_json(force=True)
     name = (data.get('name') or '').strip()
     config = data.get('config', {})
     if not name:
         return jsonify({'success': False, 'message': 'Name is required'}), 400
-    cfg = save_config(name=name, config=config, user_id=current_user.id)
+    cfg = save_config(name=name, config=config, user_id=current_user.id, config_type=CONFIG_TYPE_FIELD_PARSER)
     return jsonify({'success': True, 'config': cfg.to_json()})
 
 
@@ -836,8 +859,8 @@ def bulk_parse_fields_configs_save():
 def bulk_parse_fields_configs_update(config_id):
     if not current_user.is_admin():
         return jsonify({'success': False}), 403
-    from app.features.rule.field_parser_core import get_config
-    cfg = get_config(config_id)
+    from app.features.rule.field_parser_core import get_config, CONFIG_TYPE_FIELD_PARSER
+    cfg = get_config(config_id, config_type=CONFIG_TYPE_FIELD_PARSER)
     if not cfg:
         return jsonify({'success': False, 'message': 'Config not found'}), 404
     data = request.get_json(force=True)
@@ -854,8 +877,84 @@ def bulk_parse_fields_configs_update(config_id):
 def bulk_parse_fields_configs_delete(config_id):
     if not current_user.is_admin():
         return jsonify({'success': False}), 403
-    from app.features.rule.field_parser_core import delete_config
-    ok = delete_config(config_id)
+    from app.features.rule.field_parser_core import delete_config, CONFIG_TYPE_FIELD_PARSER
+    ok = delete_config(config_id, config_type=CONFIG_TYPE_FIELD_PARSER)
+    return jsonify({'success': ok})
+
+
+# ── Platform-tag pattern configs ─────────────────────────────────────────────
+# Same generic FieldParserConfig table as above, scoped to config_type
+# 'platform_tags' so the two tools' saved configs never mix in either's list.
+
+@account_blueprint.route('/admin/bulk_parse_fields/platform_configs', methods=['GET'])
+@login_required
+def platform_tag_configs_list():
+    if not current_user.is_admin():
+        return jsonify({'success': False}), 403
+    from app.features.rule.field_parser_core import get_all_configs, CONFIG_TYPE_PLATFORM_TAGS
+    cfgs = get_all_configs(config_type=CONFIG_TYPE_PLATFORM_TAGS)
+    return jsonify({'configs': [c.to_json() for c in cfgs]})
+
+
+@account_blueprint.route('/admin/bulk_parse_fields/platform_configs/validate', methods=['POST'])
+@login_required
+def platform_tag_configs_validate():
+    """Validate-only, no save — lets the form show errors as the admin builds
+    the pattern list, before they even try to save or launch anything."""
+    if not current_user.is_admin():
+        return jsonify({'success': False}), 403
+    from app.features.rule.field_parser_core import validate_platform_tag_config
+    data = request.get_json(force=True) or {}
+    ok, error, resolved = validate_platform_tag_config(data.get('config', {}))
+    return jsonify({'success': True, 'valid': ok, 'message': error, 'resolved_patterns': resolved})
+
+
+@account_blueprint.route('/admin/bulk_parse_fields/platform_configs', methods=['POST'])
+@login_required
+def platform_tag_configs_save():
+    if not current_user.is_admin():
+        return jsonify({'success': False}), 403
+    from app.features.rule.field_parser_core import save_config, validate_platform_tag_config, CONFIG_TYPE_PLATFORM_TAGS
+    data   = request.get_json(force=True) or {}
+    name   = (data.get('name') or '').strip()
+    config = data.get('config', {})
+    if not name:
+        return jsonify({'success': False, 'message': 'Name is required'}), 400
+    ok, error, _resolved = validate_platform_tag_config(config)
+    if not ok:
+        return jsonify({'success': False, 'message': error}), 400
+    cfg = save_config(name=name, config=config, user_id=current_user.id, config_type=CONFIG_TYPE_PLATFORM_TAGS)
+    return jsonify({'success': True, 'config': cfg.to_json()})
+
+
+@account_blueprint.route('/admin/bulk_parse_fields/platform_configs/<int:config_id>', methods=['PATCH'])
+@login_required
+def platform_tag_configs_update(config_id):
+    if not current_user.is_admin():
+        return jsonify({'success': False}), 403
+    from app.features.rule.field_parser_core import get_config, validate_platform_tag_config, CONFIG_TYPE_PLATFORM_TAGS
+    cfg = get_config(config_id, config_type=CONFIG_TYPE_PLATFORM_TAGS)
+    if not cfg:
+        return jsonify({'success': False, 'message': 'Config not found'}), 404
+    data = request.get_json(force=True) or {}
+    new_config = data.get('config', cfg.config)
+    ok, error, _resolved = validate_platform_tag_config(new_config)
+    if not ok:
+        return jsonify({'success': False, 'message': error}), 400
+    if 'name' in data:
+        cfg.name = data['name'].strip() or cfg.name
+    cfg.config = new_config
+    db.session.commit()
+    return jsonify({'success': True, 'config': cfg.to_json()})
+
+
+@account_blueprint.route('/admin/bulk_parse_fields/platform_configs/<int:config_id>', methods=['DELETE'])
+@login_required
+def platform_tag_configs_delete(config_id):
+    if not current_user.is_admin():
+        return jsonify({'success': False}), 403
+    from app.features.rule.field_parser_core import delete_config, CONFIG_TYPE_PLATFORM_TAGS
+    ok = delete_config(config_id, config_type=CONFIG_TYPE_PLATFORM_TAGS)
     return jsonify({'success': ok})
 
 
