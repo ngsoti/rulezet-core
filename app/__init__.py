@@ -333,6 +333,8 @@ def _start_update_checker(app):
     STARTUP_DELAY = int(os.environ.get('UPDATE_CHECK_STARTUP_DELAY', 15))
     INTERVAL      = int(os.environ.get('UPDATE_CHECK_INTERVAL',      86400))
 
+    YELLOW, GREEN, RESET = "\033[93m", "\033[92m", "\033[0m"
+
     def _loop():
         time.sleep(STARTUP_DELAY)
         while True:
@@ -342,15 +344,21 @@ def _start_update_checker(app):
                 if resp.ok:
                     data = resp.json()
                     latest_version = (data.get('tag_name') or '').lstrip('v')
+                    update_available = bool(latest_version) and latest_version != local_version
+                    already_flagged = (app.config.get('LATEST_RELEASE') or {}).get('update_available')
                     app.config['LATEST_RELEASE'] = {
                         'version': latest_version,
                         'url': data.get('html_url') or 'https://github.com/rulezet/rulezet-core/releases/latest',
-                        'update_available': bool(latest_version) and latest_version != local_version,
+                        'update_available': update_available,
                     }
-                    print(f"[update-checker] local={local_version} latest={latest_version} "
-                          f"update_available={app.config['LATEST_RELEASE']['update_available']}")
-            except Exception as e:
-                print(f"[update-checker] check failed: {e}")
+                    # Quiet when there's nothing to do — only announce a newly
+                    # detected update, once, not on every subsequent 24h check.
+                    if update_available and not already_flagged:
+                        print(f"\n{YELLOW}A new Rulezet version is available: v{latest_version} "
+                              f"(you're on v{local_version}){RESET}")
+                        print(f"{GREEN}  → Run: python3 manage.py update{RESET}\n")
+            except Exception:
+                pass
             time.sleep(INTERVAL)
 
     t = threading.Thread(target=_loop, daemon=True, name='rulezet-update-checker')
