@@ -96,11 +96,11 @@ const LicenseInput = defineComponent({
 
     template: `
 <div class="license-input" ref="rootEl">
-    <label class="form-label fw-bold text-muted small text-uppercase">
-        [[ label ]]
+    <div class="d-flex align-items-center gap-1 mb-1">
+        <label class="form-label-styled mb-0">[[ label ]]</label>
         <span v-if="required" class="req-badge">required</span>
         <span v-else class="opt-badge">optional</span>
-    </label>
+    </div>
 
     <div v-if="modelValue && !isDropdownOpen" class="license-input__selected" @click="open">
         <i class="fas fa-scale-balanced"></i>

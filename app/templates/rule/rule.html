@@ -211,7 +211,7 @@
                 <label class="form-label-styled mb-0" for="source">{{ form.source.label.text }}<span class="opt-badge">optional</span></label>
                 <i class="rf-label-hint" data-tip="URL or name of the original source.">?</i>
               </div>
-              {{ form.source(class_="form-control", placeholder="https://github.com/org/repo") }}
+              {{ form.source(class_="form-control", placeholder="https://github.com/org/repo", style="height:46px;") }}
             </div>
             <div class="col-md-4">
               <version-picker v-model="formData.version" label="Version"></version-picker>

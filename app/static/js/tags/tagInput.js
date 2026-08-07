@@ -178,12 +178,12 @@ const TagInput = {
                 <div v-if="isLoading || isSearching" class="input-group-text border-0" style="background: var(--card-bg-color)">
                     <div class="spinner-border spinner-border-sm text-primary"></div>
                 </div>
-                <button type="button" @click.stop="toggleDropdown"
+                <span role="button" tabindex="0" @click.stop="toggleDropdown" @keydown.enter.stop="toggleDropdown"
                     class="input-group-text border-0" title="Show tag panel"
                     style="background: var(--card-bg-color); cursor:pointer">
                     <i class="fas fa-chevron-down small"
                        :style="{ color: 'var(--subtle-text-color)', transition: 'transform .15s', transform: isDropdownOpen ? 'rotate(180deg)' : 'none' }"></i>
-                </button>
+                </span>
             </div>
 
             <!-- Dropdown -->

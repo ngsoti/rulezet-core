@@ -3,6 +3,7 @@
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/smart-editor.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/license-input.css') }}">
 <style>
 .rf-label-hint {
     display: inline-flex; align-items: center; justify-content: center;
@@ -103,21 +104,16 @@
 
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
-                                <div class="form-group">
-                                    <div class="d-flex align-items-center gap-1 mb-1">
-                                        <label class="form-label fw-bold text-dark mb-0">{{ form.license.label.text }}</label>
-                                        <i class="rf-label-hint" data-tip="Legal license for this rule (e.g. MIT, GPL-3.0).">?</i>
-                                    </div>
-                                    {{ form.license(class_="form-control rounded-3", id="license-select") }}
-                                </div>
+                                <license-input v-model="manualLicense" required></license-input>
+                                <input type="hidden" name="license" :value="manualLicense">
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group">
                                     <div class="d-flex align-items-center gap-1 mb-1">
-                                        <label class="form-label fw-bold text-dark mb-0">{{ form.source.label.text }}</label>
+                                        <label class="form-label-styled mb-0">{{ form.source.label.text }}</label>
                                         <i class="rf-label-hint" data-tip="URL or name of the original source.">?</i>
                                     </div>
-                                    {{ form.source(class_="form-control rounded-3", placeholder="Source URL...") }}
+                                    {{ form.source(class_="form-control rounded-3", placeholder="Source URL...", style="height:46px;") }}
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -225,6 +221,7 @@
     import TagInput from '/static/js/tags/tagInput.js';
     import VersionPicker from '/static/js/tags/utils/versionPicker.js';
     import AttackInput from '/static/js/attack/attackInput.js';
+    import LicenseInput from '/static/js/components/LicenseInput.js';
 
     createApp({
         delimiters: ['[[', ']]'],
@@ -234,6 +231,7 @@
             'tag-input': TagInput,
             'version-picker': VersionPicker,
             'attack-input': AttackInput,
+            'license-input': LicenseInput,
         },
         setup() {
 
@@ -246,6 +244,7 @@
             const detectedVulnerabilities = ref([]);
             const selectedTags = ref([]);
             const selectedAttacks = ref([]);
+            const manualLicense = ref('{{ rule.license | e }}');
 
             const formData = reactive({
                 version: "{{ form.version.data or '1.0' }}",
@@ -294,28 +293,19 @@
             }
 
             onMounted(async () => {
-
                 await Promise.all([
                     fetchCurrentRule(),
                     initRuleTags(),
                     fetchFormats(),
                     initAttacks(),
                 ]);
-
-
-                if (window.$ && $.fn.select2) {
-                    $('#license-select').select2({
-                        placeholder: "Search for a license",
-                        allowClear: true,
-                        width: '100%'
-                    });
-                }
             });
 
             return {
                 message_list,
                 create_message,
                 detectedVulnerabilities,
+                manualLicense,
                 ruleId,
                 currentRule,
                 editFormat,

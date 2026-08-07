@@ -42,42 +42,9 @@
     border-bottom: 1px solid var(--border-color);
 }
 
-.form-label-styled {
-    font-size: .83rem;
-    font-weight: 600;
-    color: var(--text-color);
-    display: block;
-}
-
-.req-badge {
-    display: inline-block;
-    background: rgba(220, 53, 69, .12);
-    color: #dc3545;
-    font-size: .6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 1px 5px;
-    border-radius: 4px;
-    vertical-align: middle;
-    margin-left: .3rem;
-    font-family: 'Space Mono', monospace;
-    letter-spacing: .04em;
-}
-
-.opt-badge {
-    display: inline-block;
-    background: rgba(108, 117, 125, .1);
-    color: var(--subtle-text-color);
-    font-size: .6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 1px 5px;
-    border-radius: 4px;
-    vertical-align: middle;
-    margin-left: .3rem;
-    font-family: 'Space Mono', monospace;
-    letter-spacing: .04em;
-}
+/* .form-label-styled / .req-badge / .opt-badge moved to core.css — LicenseInput.js
+   and versionPicker.js (shared components used on edit_rule.html, which doesn't
+   load this stylesheet) need them too. */
 
 .form-hint {
     font-size: .76rem;

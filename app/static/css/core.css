@@ -2905,3 +2905,44 @@ button.dr-nav__item {
 .dr-nav-col .dr-nav__item {
     width: 100%;
 }
+
+/* ── Shared form label + badges ───────────────────────────────────────────
+   Used by form fields across templates and by shared JS components
+   (LicenseInput, versionPicker) so every field lines up to the same
+   label height/margin regardless of which page loads them. */
+.form-label-styled {
+    font-size: .83rem;
+    font-weight: 600;
+    color: var(--text-color);
+    display: block;
+}
+
+.req-badge {
+    display: inline-block;
+    background: rgba(220, 53, 69, .12);
+    color: #dc3545;
+    font-size: .6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: .3rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: .04em;
+}
+
+.opt-badge {
+    display: inline-block;
+    background: rgba(108, 117, 125, .1);
+    color: var(--subtle-text-color);
+    font-size: .6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: .3rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: .04em;
+}
