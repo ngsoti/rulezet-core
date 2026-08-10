@@ -11,7 +11,14 @@ import pytest
 @pytest.fixture
 def app():
     os.environ.setdefault("FLASKENV", "testing")
-    app = create_app()
+    # No test relies on the live background worker, telemetry, update-checker,
+    # or sync-schedule threads actually ticking — they call handlers/functions
+    # directly and assert DB state synchronously. Leaving them running just
+    # means every test process has a worker thread polling the same SQLite
+    # file every 2s for the whole suite, which occasionally collides with a
+    # test's own write and raises "database is locked" (seen in full-suite
+    # runs, never in isolated single-file runs).
+    app = create_app(start_worker=False)
     app.config.update({
         "TESTING": True,
         "SERVER_NAME": f"{app.config.get('FLASK_URL')}:{app.config.get('FLASK_PORT')}"
