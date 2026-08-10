@@ -4652,7 +4652,8 @@ def similar_detail_page(rule_id):
 def history_updater_list():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 20, type=int), 50)
-    github_importer_list = RuleModel.get_similarity_list_page(page, per_page=per_page)
+    running_uuids = {s.uuid for s in SimilarityModel.sessions}
+    github_importer_list = RuleModel.get_similarity_list_page(page, per_page=per_page, exclude_uuids=running_uuids)
 
     return {"history": [g.to_json() for g in github_importer_list], 
             "total_history": github_importer_list.total, 

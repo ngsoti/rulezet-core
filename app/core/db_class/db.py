@@ -1961,6 +1961,7 @@ class SimilarResult(db.Model):
 
     total_rules_processed = db.Column(db.Integer, default=0)
     similar_pairs_found = db.Column(db.Integer, default=0)
+    similar_pairs_skipped = db.Column(db.Integer, default=0)  # already existed — left as-is
     time_taken = db.Column(db.Integer, default=0) # in seconds
 
     def to_json(self):
@@ -1969,8 +1970,10 @@ class SimilarResult(db.Model):
             "info": self.info,
             "date": self.date.isoformat() if self.date else None,
             "mode": self.mode,
+            "user_id": self.user_id,
             "total_rules_processed": self.total_rules_processed,
             "similar_pairs_found": self.similar_pairs_found,
+            "similar_pairs_skipped": self.similar_pairs_skipped,
             "time_taken": self.time_taken
         }
 

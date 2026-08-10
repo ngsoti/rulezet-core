@@ -1,58 +1,55 @@
 {% extends 'base.html' %}
 {% block title %}Similar Rules — Rulezet{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/ansi-terminal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/chart-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/github/session_report.css') }}">
+{% endblock %}
 {% block content %}
 
+<div id="main-container" class="container mt-4" v-cloak>
 
-<div id="main-container" class="container mt-5" v-cloak>
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
-            <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
-            <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
-            <li class="breadcrumb-item active text-muted" aria-current="page">Similar Rules</li>
-        </ol>
-    </nav>
-    <div v-if="data_is_loading">
-
-
-        <div v-if="!is_finished" class="row justify-content-center">
-            <div class="text-center mb-5">
-                <h2 class="fw-bold text-primary mb-0">[[ result_data.title ]]</h2>
-
-                <div class="mx-auto mt-2 mb-4"
-                    style="width: 60px; height: 4px; background: #0d6efd; border-radius: 2px;">
-                </div>
-
-                <div class="d-flex flex-column align-items-center">
-                    <div class="mb-3">
-                        <span :class="{
-                'badge rounded-pill px-3 py-2 shadow-sm': true,
-                'bg-primary': result_data.mode === 'global',
-                'bg-warning text-dark': result_data.mode === 'filter',
-                'bg-success': result_data.mode !== 'global' && result_data.mode !== 'filter'
-            }">
-                            <i class="fas fa-layer-group me-1"></i> Mode: [[ result_data.mode || 'Unknown' ]]
-                        </span>
-                    </div>
-
-                    <div class="text-muted">
-                        <p class="mb-1">
-                            <i class="fas fa-user-circle me-1"></i> Initiated by <strong>[[ result_data.name ||
-                                'Unknown'
-                                ]]</strong>
-                        </p>
-                        <p class="mb-1 small">
-                            <i class="fas fa-fingerprint me-1"></i> ID: <span class="font-monospace">[[ result_data.id
-                                || 'Unknown'
-                                ]]</span>
-                        </p>
-                        <p class="small">
-                            <i class="fas fa-calendar-alt me-1"></i> Started at [[ result_data.time_begin ]]
-                        </p>
-                    </div>
-                </div>
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-code-compare banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Similarity Analysis</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-code-compare"></i></div>
+            <div>
+                <h2 class="fw-bold mb-1">[[ result_data.title || 'Similarity Analysis' ]]</h2>
+                <div class="banner-accent"></div>
             </div>
+        </div>
+        <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+            Finding near-duplicate rules using TF-IDF vectorization and fuzzy content matching.
+        </p>
+    </div>
 
+    <div v-if="!data_is_loading" class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" style="width:3rem;height:3rem;" role="status"></div>
+        <p class="mt-3 text-muted fw-bold">Connecting to analysis engine...</p>
+    </div>
+
+    <template v-else>
+
+        <!-- ── Running ── -->
+        <div v-if="!is_finished" class="row justify-content-center">
             <div class="col-md-9 col-lg-7">
+
+                <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 mb-4">
+                    <span :class="['badge rounded-pill px-3 py-2 shadow-sm', modeBadgeClass]">
+                        <i class="fas fa-layer-group me-1"></i> Mode: [[ modeLabel ]]
+                    </span>
+                    <span class="badge rounded-pill px-3 py-2 shadow-sm bg-light text-dark border">
+                        <i class="fas fa-user-circle me-1"></i> [[ result_data.name || 'Unknown' ]]
+                    </span>
+                </div>
 
                 <div class="step-wrapper">
                     <div class="step-box" :class="{ active: result_data.step === 'Indexing' }">
@@ -66,7 +63,7 @@
                     </div>
                 </div>
 
-                <div class="card shadow-lg border-0 rounded-4">
+                <div class="card shadow-lg border-0 rounded-4 mb-4">
                     <div class="card-body p-5">
                         <div class="text-center mb-4">
                             <h4 class="text-primary fw-bold">
@@ -75,24 +72,33 @@
                             </h4>
                         </div>
 
-                        <div class="progress mb-4 progress-glow" style="height: 25px; border-radius: 12px;">
+                        <div class="progress mb-4 progress-glow" style="height:25px;border-radius:12px;">
                             <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
                                 role="progressbar" :style="'width:' + progress + '%;'">
                                 <span class="fw-bold">[[ progress ]]%</span>
                             </div>
                         </div>
 
-                        <div v-if="result_data.total > 0" class="row g-0 text-center border rounded-3 p-3 bg-light">
-                            <div class="col-4 border-end">
-                                <small class="text-muted d-block mb-1 text-uppercase">Batches</small>
-                                <span class="h5 fw-bold mb-0">[[ result_data.complete ]] / [[ result_data.total
-                                    ]]</span>
+                        <p v-if="result_data.total > 0" class="text-center text-muted mb-2" style="font-size:.78rem;">
+                            <i class="fas fa-circle-info me-1"></i>
+                            [[ result_data.total.toLocaleString() ]] rule(s) targeted, processed in batches of ~200 —
+                            that's [[ result_data.total_jobs || '—' ]] batches total.
+                        </p>
+
+                        <div v-if="result_data.total > 0" class="row g-0 text-center border rounded-3 p-3" style="background:var(--light-bg-color);">
+                            <div class="col-3 border-end">
+                                <small class="text-muted d-block mb-1 text-uppercase">Batches done</small>
+                                <span class="h5 fw-bold mb-0">[[ result_data.complete ]] / [[ result_data.total_jobs || '—' ]]</span>
                             </div>
-                            <div class="col-4 border-end">
-                                <small class="text-muted d-block mb-1 text-uppercase">Hits Found</small>
+                            <div class="col-3 border-end">
+                                <small class="text-muted d-block mb-1 text-uppercase">New Pairs</small>
                                 <span class="h5 fw-bold mb-0 text-success">[[ result_data.similar_pairs_found ]]</span>
                             </div>
-                            <div class="col-4">
+                            <div class="col-3 border-end">
+                                <small class="text-muted d-block mb-1 text-uppercase">Skipped</small>
+                                <span class="h5 fw-bold mb-0 text-secondary">[[ result_data.similar_pairs_skipped ]]</span>
+                            </div>
+                            <div class="col-3">
                                 <small class="text-muted d-block mb-1 text-uppercase">Pending</small>
                                 <span class="h5 fw-bold mb-0 text-warning">[[ result_data.remaining ]]</span>
                             </div>
@@ -100,85 +106,180 @@
 
                         <div v-else class="text-center py-3">
                             <div class="spinner-border spinner-border-sm text-secondary me-2"></div>
-                            <span class="text-muted fst-italic">Building vector index... this might take a
-                                moment.</span>
+                            <span class="text-muted fst-italic">Building vector index... this might take a moment.</span>
                         </div>
                     </div>
                 </div>
+
+                <ansi-terminal :entries="terminalEntries" :live="true" title="Similarity engine log"></ansi-terminal>
+
             </div>
         </div>
 
-        <div v-if="is_finished" class="row justify-content-center">
-            <div class="col-md-10 col-lg-8">
-                <div class="card shadow border-0 rounded-4">
-                    <div class="card-header bg-primary text-white p-4 text-center">
-                        <h3 class="mb-0 fw-bold">Similarity Report Ready</h3>
+        <!-- ── Report ── -->
+        <div v-else>
+            <div class="ul-report-card">
+                <div class="ul-report-head">
+                    <div>
+                        <p class="ul-report-title">Similarity report</p>
+                        <p class="ul-report-sub">
+                            Mode: <strong>[[ modeLabel ]]</strong> · [[ result_data.total_rules_processed || 0 ]] rule(s) scanned
+                        </p>
                     </div>
-                    <div class="card-body p-4">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle">
+                    <div class="ul-hero">
+                        <div class="ul-hero-ring" :style="'--pct:'+newPairsRate+';'">
+                            <span class="ul-hero-ring-value">[[ newPairsRate ]]%</span>
+                        </div>
+                        <div class="ul-hero-copy">
+                            <p class="ul-hero-label">New pairs</p>
+                            <p class="ul-hero-text">[[ result_data.similar_pairs_found || 0 ]] of [[ totalPairsSeen ]] pair<span v-if="totalPairsSeen!==1">s</span> matched were newly stored — the rest already existed and were left untouched.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ul-kpi-row">
+                    <div class="ul-kpi ul-kpi--found">
+                        <div class="ul-kpi-value">[[ result_data.total_rules_processed || 0 ]]</div>
+                        <div class="ul-kpi-label"><span class="dot"></span>Rules scanned</div>
+                    </div>
+                    <div class="ul-kpi ul-kpi--ok">
+                        <div class="ul-kpi-value">[[ result_data.similar_pairs_found || 0 ]]</div>
+                        <div class="ul-kpi-label"><span class="dot"></span>New pairs found</div>
+                    </div>
+                    <div class="ul-kpi ul-kpi--update">
+                        <div class="ul-kpi-value">[[ result_data.similar_pairs_skipped || 0 ]]</div>
+                        <div class="ul-kpi-label"><span class="dot"></span>Already existed</div>
+                    </div>
+                    <div class="ul-kpi ul-kpi--error">
+                        <div class="ul-kpi-value">[[ result_data.time_taken || 0 ]]s</div>
+                        <div class="ul-kpi-label"><span class="dot"></span>Total time</div>
+                    </div>
+                </div>
+
+                <div class="ul-report-grid">
+                    <div>
+                        <p class="ul-report-grid-title">Breakdown</p>
+                        <div class="ul-repo-card ul-chart-wrap">
+                            <chart-viewer v-if="totalPairsSeen > 0" :data="summaryChartData" views="donut" height="100%" :minimal="true"></chart-viewer>
+                            <div v-else class="text-center text-muted py-4">
+                                <i class="fas fa-circle-check fa-2x mb-2 d-block opacity-50"></i>
+                                No new comparisons were needed.
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="ul-report-grid-title">Details</p>
+                        <div class="ul-repo-card">
+                            <table class="table table-sm table-borderless mb-0">
                                 <tbody>
                                     <tr>
-                                        <td class="text-muted py-3"><i class="fas fa-user me-2"></i> Requested By</td>
-                                        <td class="text-end fw-bold">Admin</td>
+                                        <td class="text-muted"><i class="fas fa-fingerprint me-2"></i>Session ID</td>
+                                        <td class="text-end font-monospace small">[[ result_data.uuid || result_data.id || '—' ]]</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted py-3"><i class="fas fa-sliders-h me-2"></i> Analysis Mode
+                                        <td class="text-muted"><i class="fas fa-calendar-alt me-2"></i>Started</td>
+                                        <td class="text-end">[[ startedAtLabel ]]</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted"><i class="fas fa-user me-2"></i>Requested by</td>
+                                        <td class="text-end">
+                                            <user-chip v-if="result_data.user_id" :user-id="Number(result_data.user_id)"
+                                                       :username="requesterInfo ? requesterInfo.username : null"
+                                                       :avatar="requesterInfo ? requesterInfo.avatar : null"
+                                                       size="xs"></user-chip>
+                                            <span v-else>[[ result_data.name || 'Unknown' ]]</span>
                                         </td>
-                                        <td class="text-end"><span class="badge bg-secondary">[[ result_data.mode ||
-                                                'Global'
-                                                ]]</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted py-3"><i class="fas fa-microchip me-2"></i> Batches
-                                            Scanned</td>
-                                        <td class="text-end fw-bold">[[ result_data.total_rules_processed ]]</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted py-3"><i class="fas fa-link me-2"></i> Pairs Identified
-                                        </td>
-                                        <td class="text-end fw-bold text-success">[[ result_data.similar_pairs_found ]]
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted py-3"><i class="fas fa-clock me-2"></i> Total Time</td>
-                                        <td class="text-end fw-bold">[[ result_data.time_taken ]] seconds</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
-
-                        <div class="text-center mt-4 pt-3">
-                            <a href="/admin/similar_rules" class="btn btn-primary"><i class="fas fa-eye me-2"></i>View
-                                Similar
-                                Rules</a>
-                        </div>
                     </div>
+                </div>
+
+                <div v-if="terminalEntries.length" class="mt-4">
+                    <p class="ul-report-grid-title">Engine log</p>
+                    <ansi-terminal :entries="terminalEntries" :live="false" title="Similarity engine log"></ansi-terminal>
+                </div>
+
+                <div class="text-center mt-4 pt-3">
+                    <a href="/admin/similar_rules" class="btn btn-primary rounded-pill px-4">
+                        <i class="fas fa-eye me-2"></i>View Similar Rules
+                    </a>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div v-else class="col-12 text-center py-5">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
-        <p class="mt-3 text-muted fw-bold">Connecting to analysis engine...</p>
-    </div>
+    </template>
 </div>
 
 {% endblock %}
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, onMounted } = Vue;
+    const { createApp, ref, computed, watch, onMounted } = Vue;
+    import AnsiTerminal from '/static/js/components/ansi-terminal.js';
+    import ChartViewer  from '/static/js/components/chart-viewer.js';
+    import UserChip     from '/static/js/components/UserChip.js';
 
     createApp({
         delimiters: ['[[', ']]'],
+        components: { AnsiTerminal, ChartViewer, 'user-chip': UserChip },
         setup() {
             const data_is_loading = ref(false);
             const progress = ref(0);
             const info_session = ref("");
-            const result_data = ref({ step: 'Initializing', title: 'Preparing...' });
+            const result_data = ref({ step: 'Initializing', title: 'Preparing...', events: [] });
             const is_finished = ref(false);
+
+            const modeLabel = computed(() => {
+                const m = result_data.value.mode;
+                if (m === 'global') return 'Global (full rescan)';
+                if (m === 'filter')  return 'Filtered selection';
+                return m || 'Unknown';
+            });
+            const modeBadgeClass = computed(() => {
+                const m = result_data.value.mode;
+                if (m === 'global') return 'bg-primary';
+                if (m === 'filter')  return 'bg-warning text-dark';
+                return 'bg-success';
+            });
+
+            const terminalEntries = computed(() =>
+                (result_data.value.events || []).map(e => ({ ts: e.ts, level: e.level, msg: e.message }))
+            );
+
+            const totalPairsSeen = computed(() =>
+                (result_data.value.similar_pairs_found || 0) + (result_data.value.similar_pairs_skipped || 0)
+            );
+            const newPairsRate = computed(() =>
+                totalPairsSeen.value > 0 ? Math.round((result_data.value.similar_pairs_found / totalPairsSeen.value) * 100) : 100
+            );
+            const summaryChartData = computed(() => ({
+                categories: ['New pairs found', 'Already existed'],
+                colors: [
+                    '#198754',
+                    document.documentElement.classList.contains('dark-mode') ? '#495057' : '#adb5bd',
+                ],
+                series: [{ name: 'Pairs', values: [result_data.value.similar_pairs_found || 0, result_data.value.similar_pairs_skipped || 0] }],
+            }));
+
+            // 'time_begin' only ever exists on the live in-memory session;
+            // once persisted, only the row's creation 'date' survives — fall
+            // back to that so "Started" is never blank once the job is done.
+            const startedAtLabel = computed(() => {
+                const d = result_data.value.time_begin || result_data.value.date;
+                return d ? new Date(d).toLocaleString() : '—';
+            });
+
+            // Full name + avatar for the "requested by" chip.
+            const requesterInfo = ref(null);
+            watch(() => result_data.value.user_id, (uid) => {
+                if (!uid || requesterInfo.value) return;
+                fetch(`/account/user_mini/${Number(uid)}`)
+                    .then(r => r.ok ? r.json() : null)
+                    .then(d => { if (d) requesterInfo.value = d; })
+                    .catch(() => {});
+            });
 
             async function fetchInfoSession() {
                 try {
@@ -199,9 +300,14 @@
                         setTimeout(pollStatus, 1500);
                     } else {
                         is_finished.value = true;
-                        // Fetch final stats
+                        // Fetch final (persisted) stats and merge them on top of
+                        // whatever we already have — the DB row only stores the
+                        // aggregate counters, not name/time_begin/events, which
+                        // only ever lived on the in-memory session while it was
+                        // running. Overwriting outright would silently blank
+                        // those the moment the job finishes.
                         const final_res = await fetch('/rule/similar_loading_status/{{sid}}?is_finished=true');
-                        result_data.value = await final_res.json();
+                        result_data.value = { ...result_data.value, ...(await final_res.json()) };
                     }
                 }).fail(() => {
                     setTimeout(pollStatus, 5000); // Retry on error
@@ -213,7 +319,11 @@
                 pollStatus();
             });
 
-            return { progress, info_session, result_data, is_finished, data_is_loading };
+            return {
+                progress, info_session, result_data, is_finished, data_is_loading,
+                modeLabel, modeBadgeClass, terminalEntries, totalPairsSeen, newPairsRate, summaryChartData,
+                startedAtLabel, requesterInfo,
+            };
         }
     }).mount('#main-container');
 </script>

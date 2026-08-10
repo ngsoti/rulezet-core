@@ -4067,12 +4067,19 @@ def get_top_global_duplicates_query(min_score=0.85, filters=None, search=None):
 
     return query.order_by(RuleSimilarity.score.desc())
 
-def get_similarity_list_page(page: int = 1, per_page: int = 20):
-    if current_user.is_admin():
-        return SimilarResult.query.paginate(page=page, per_page=per_page, max_per_page=50)
-    else :
-        return SimilarResult.query.filter_by(user_id=str(current_user.id)).paginate(page=page, per_page=per_page, max_per_page=50)
-    
+def get_similarity_list_page(page: int = 1, per_page: int = 20, exclude_uuids=None):
+    query = SimilarResult.query
+    if not current_user.is_admin():
+        query = query.filter_by(user_id=str(current_user.id))
+    if exclude_uuids:
+        # A SimilarResult row is created the moment a scan starts (not once it
+        # finishes) so its stats can be filled in at the end — while a scan is
+        # still running, its row already exists but with zeroed-out counters.
+        # Excluding it here keeps it out of History until it's actually done;
+        # it's already visible in the "Running now" panel in the meantime.
+        query = query.filter(SimilarResult.uuid.notin_(exclude_uuids))
+    return query.paginate(page=page, per_page=per_page, max_per_page=50)
+
 
 def delete_similarity_history(uuid: str):
     try:
