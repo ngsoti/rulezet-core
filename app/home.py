@@ -1240,6 +1240,7 @@ def admin_settings_instance():
         'endpoint_uuid':     cfg.uuid,
         'telemetry_enabled': cfg.telemetry_enabled,
         'chatbot_enabled':   cfg.chatbot_enabled,
+        'ai_rule_analysis_enabled': cfg.ai_rule_analysis_enabled,
         'public_url':        cfg.public_url,
         'reported_url':      reported_url,
         'version':           cfg.version,

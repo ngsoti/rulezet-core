@@ -937,6 +937,46 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="row g-4 mt-1">
+                    <div class="col-12">
+                        <div class="config-section">
+                            <div class="config-section__title">
+                                <i class="fa-solid fa-robot text-primary"></i>AI Rule Analysis
+                            </div>
+
+                            <div class="config-row">
+                                <div class="config-row__key">Analysis generation</div>
+                                <div class="config-row__value d-flex align-items-center gap-2">
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               id="aiAnalysisEnabledSwitch"
+                                               :checked="instance.ai_rule_analysis_enabled"
+                                               :disabled="aiAnalysisToggleSaving"
+                                               @change="toggleAiAnalysisEnabled($event.target.checked)">
+                                    </div>
+                                    <span :class="instance.ai_rule_analysis_enabled ? 'badge bg-success' : 'badge bg-secondary'">
+                                        [[ instance.ai_rule_analysis_enabled ? 'Enabled' : 'Disabled' ]]
+                                    </span>
+                                    <span v-if="aiAnalysisToggleSaving" class="spinner-border spinner-border-sm text-muted"></span>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
+                                <div class="text-muted" style="font-size:.78rem;line-height:1.6;">
+                                    <i class="fa-solid fa-circle-info text-primary me-1"></i>
+                                    Turning this off refuses any new analysis job for every rule — existing
+                                    reports stay visible on their rule's
+                                    <a href="/rule/ai-analysis/how-it-works">AI Analysis page</a>.
+                                    Model allowlist and full cross-rule history/bulk-delete live on the
+                                    <a href="/account/admin/ai_rule_analysis">AI Rule Analysis settings page</a>.
+                                    Uses the same self-hosted <code style="font-size:.72rem;">ollama</code> instance
+                                    as the chatbot above.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </template>
 
             <div v-else-if="!instanceLoading" class="text-center text-muted py-5">
@@ -1118,6 +1158,7 @@ createApp({
         const instanceLoaded    = ref(false)
         const instanceInitSaving = ref(false)
         const chatbotToggleSaving = ref(false)
+        const aiAnalysisToggleSaving = ref(false)
 
         /* ── CSRF ── */
         function csrf() {
@@ -1350,6 +1391,22 @@ createApp({
             }
         }
 
+        async function toggleAiAnalysisEnabled(checked) {
+            aiAnalysisToggleSaving.value = true
+            const { create_message } = await import('/static/js/toaster.js')
+            try {
+                const data = await post('/account/admin/ai_rule_analysis/toggle', { enabled: checked })
+                if (data.success) {
+                    instance.value.ai_rule_analysis_enabled = data.ai_rule_analysis_enabled
+                    create_message(data.ai_rule_analysis_enabled ? 'AI Rule Analysis enabled.' : 'AI Rule Analysis disabled.', 'success-subtle')
+                } else {
+                    create_message(data.message || 'Could not update the AI Rule Analysis setting.', 'danger-subtle')
+                }
+            } finally {
+                aiAnalysisToggleSaving.value = false
+            }
+        }
+
         function copyText(text) {
             navigator.clipboard.writeText(text).then(() => {
                 import('/static/js/toaster.js').then(({ create_message }) =>
@@ -1380,6 +1437,7 @@ createApp({
             testEmailRecipient, testEmailSending, testEmailResult, sendTestEmail,
             instance, instanceLoading, instanceInitSaving, loadInstance, initInstance, copyText,
             chatbotToggleSaving, toggleChatbotEnabled,
+            aiAnalysisToggleSaving, toggleAiAnalysisEnabled,
         }
     }
 }).mount('#settings-app')
