@@ -2313,7 +2313,7 @@ class LogActionDefinition(db.Model):
 
 class ChatbotConversation(db.Model):
     """One chatbot widget session — groups every message exchanged while it was open
-    so admins can review, on /chatbot/admin/conversations, what the assistant was
+    so admins can review, on /ia/admin, what the assistant was
     asked and how it responded."""
     __tablename__ = 'chatbot_conversation'
 

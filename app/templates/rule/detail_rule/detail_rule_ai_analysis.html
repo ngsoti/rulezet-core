@@ -100,12 +100,12 @@
                 <div v-if="!featureEnabled" class="alert alert-secondary py-2 px-3 mb-0" style="font-size:.82rem;">
                     <i class="fa-solid fa-circle-info me-1"></i>
                     AI Rule Analysis is disabled instance-wide.
-                    <a href="/account/admin/ai_rule_analysis">Enable it from the admin settings</a>.
+                    <a href="/ia/admin?tab=ai_analysis">Enable it from the admin settings</a>.
                 </div>
                 <div v-else-if="!models.length" class="alert alert-secondary py-2 px-3 mb-0" style="font-size:.82rem;">
                     <i class="fa-solid fa-circle-info me-1"></i>
                     No models are enabled.
-                    <a href="/account/admin/ai_rule_analysis">Enable one from the admin settings</a>.
+                    <a href="/ia/admin?tab=ai_analysis">Enable one from the admin settings</a>.
                 </div>
                 <div v-else class="row g-2 align-items-end">
                     <div class="col-auto">

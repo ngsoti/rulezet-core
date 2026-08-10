@@ -1,5 +1,5 @@
 /**
- * aiRuleAnalysis.js — "AI Rule Analysis" tab on /account/admin/bulk_parse_fields.
+ * aiRuleAnalysis.js — launch panel for the "AI Analysis" tab on /ia/admin.
  * Phase 1 of AI_RULE_ANALYSIS_PLAN.md: generate a detailed Markdown report
  * per rule via an admin-chosen local Ollama model. Tag/ATT&CK suggestion
  * (Phase 2/3 of the plan) are not implemented yet. Each run creates a new
@@ -161,9 +161,6 @@ export default {
           </small>
         </div>
         <div class="d-flex gap-2">
-          <a href="/account/admin/ai_rule_analysis" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-            <i class="fa-solid fa-sliders me-1"></i>Settings
-          </a>
           <a href="/rule/ai-analysis/how-it-works" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
             <i class="fa-solid fa-circle-question me-1"></i>How it works
           </a>
@@ -172,13 +169,11 @@ export default {
 
       <div v-if="!modelsLoading && !featureEnabled" class="alert alert-secondary py-2 px-3 mb-3" style="font-size:.82rem;">
         <i class="fa-solid fa-circle-info me-1"></i>
-        AI Rule Analysis is disabled instance-wide —
-        <a href="/account/admin/ai_rule_analysis">enable it from the settings page</a> first.
+        AI Rule Analysis is disabled instance-wide — enable it in the "Feature status" card above first.
       </div>
       <div v-else-if="!modelsLoading && !models.length" class="alert alert-secondary py-2 px-3 mb-3" style="font-size:.82rem;">
         <i class="fa-solid fa-circle-info me-1"></i>
-        No models are enabled —
-        <a href="/account/admin/ai_rule_analysis">enable one from the settings page</a> first.
+        No models are enabled — enable one in the "Available models" card above first.
       </div>
       <template v-else>
         <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.82rem;">

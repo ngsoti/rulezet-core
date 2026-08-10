@@ -54,6 +54,7 @@ export default {
         const stepStatus   = ref({ 1: 'idle', 2: 'idle', 3: 'idle' });
         const gitOutputTax = ref('');
         const gitOutputGal = ref('');
+        const logBox       = ref(null);     // template ref to the scrollable log container
         let   pollTimer    = null;
 
         // ── computed ──────────────────────────────────────────────────────────

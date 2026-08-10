@@ -52,7 +52,7 @@ _ROUTES = {
     'legal_notice':           ('/legal', 'user'),
     'admin_settings':         ('/admin/settings', 'admin'),
     'admin_logs':             ('/admin/logs', 'admin'),
-    'admin_chatbot_history':  ('/chatbot/admin/conversations', 'admin'),
+    'admin_ai':               ('/ia/admin', 'admin'),
     'admin_users':            ('/account/admin/all_users', 'admin'),
     'admin_reports':          ('/report/admin', 'admin'),
     'admin_formats':          ('/rule/admin/manage_format_rule', 'admin'),
@@ -501,7 +501,7 @@ def _dispatch_message(user, history: list, message: str) -> dict:
 
 def _persist_exchange(user, conversation_uuid: str, user_message: str, outcome: dict) -> str:
     """Store both sides of this exchange so admins can review, on
-    /chatbot/admin/conversations, what every user asked and how the assistant
+    /ia/admin, what every user asked and how the assistant
     responded — a fire-and-forget write, same spirit as log_activity: a DB
     hiccup here should never break the chat itself."""
     import uuid as uuid_mod

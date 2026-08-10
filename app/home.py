@@ -1104,6 +1104,19 @@ def admin_settings():
     return render_template('admin/settings.html')
 
 
+@home_blueprint.route('/ia/admin', methods=['GET'])
+@login_required
+def ia_admin():
+    """Unified AI admin hub — tabs for the chatbot's conversation history and
+    AI Rule Analysis (settings, models, trigger, history). Data for each tab
+    is still served by its own feature (chatbot / account), this is just the
+    single page they're both presented through; more AI features land here
+    as more tabs over time."""
+    if not current_user.is_admin():
+        abort(403)
+    return render_template('ia/admin.html')
+
+
 @home_blueprint.route('/admin/settings/system', methods=['GET'])
 @login_required
 def admin_settings_system():

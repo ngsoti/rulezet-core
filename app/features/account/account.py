@@ -895,10 +895,13 @@ def bulk_parse_fields_trigger_ai_analysis():
 @account_blueprint.route('/admin/ai_rule_analysis', methods=['GET'])
 @login_required
 def ai_rule_analysis_admin_page():
+    """Old standalone settings page — now the 'AI Analysis' tab of the
+    unified AI admin hub (see home.ia_admin). Kept as a redirect so any
+    existing bookmark/link still lands somewhere useful."""
     if not current_user.is_admin():
         from flask import abort
         abort(403)
-    return render_template('admin/ai_rule_analysis.html')
+    return redirect('/ia/admin?tab=ai_analysis')
 
 
 @account_blueprint.route('/admin/ai_rule_analysis/toggle', methods=['POST'])

@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, redirect, render_template, request
 from flask_login import current_user, login_required
 
 from . import chatbot_core as ChatbotModel
@@ -39,9 +39,11 @@ def send_message():
 @chatbot_blueprint.route('/admin/conversations', methods=['GET'])
 @login_required
 def admin_conversations():
+    """Moved to the unified AI admin hub (see home.ia_admin) — kept as a
+    redirect so any existing bookmark/link still lands somewhere useful."""
     if not current_user.is_admin():
         return render_template('access_denied.html')
-    return render_template('chatbot/admin_conversations.html')
+    return redirect('/ia/admin?tab=chatbot')
 
 
 @chatbot_blueprint.route('/admin/conversations/data', methods=['GET'])

@@ -465,7 +465,7 @@
               </tr>
               <tr>
                 <td class="ps-3 font-monospace text-primary">OLLAMA_MODEL_RULE_ANALYSIS</td>
-                <td>Fallback default only — the admin picks a specific model per run from the <a href="/account/admin/ai_rule_analysis">AI Rule Analysis settings page</a>, which lists whatever Ollama actually has pulled. This env var only matters for direct/manual calls that don't go through the trigger UI.</td>
+                <td>Fallback default only — the admin picks a specific model per run from the <a href="/ia/admin?tab=ai_analysis">AI Rule Analysis settings page</a>, which lists whatever Ollama actually has pulled. This env var only matters for direct/manual calls that don't go through the trigger UI.</td>
               </tr>
               <tr>
                 <td class="ps-3 font-monospace text-primary">AI_RULE_ANALYSIS_TIMEOUT</td>
@@ -477,7 +477,7 @@
 
         <div class="hiw-callout hiw-callout--info mt-3">
           <i class="fa-solid fa-circle-info me-2 text-primary"></i>
-          The <a href="/account/admin/ai_rule_analysis">admin settings page</a> is where the feature
+          The <a href="/ia/admin?tab=ai_analysis">admin settings page</a> is where the feature
           is actually managed day-to-day: an instance-wide on/off switch, a per-model enable/disable
           allowlist synced from Ollama's own model list, and a searchable history across every rule
           with bulk delete.
