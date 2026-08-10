@@ -29,10 +29,10 @@ nova-hunting
 pymisp
 flask_mail
 scikit-learn
+pyatr
 faiss-cpu
 rapidfuzz
 dotenv
 pySigma
-pyatr
 weasyprint
 markdown
