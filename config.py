@@ -34,6 +34,25 @@ class Config:
     OLLAMA_URL   = os.environ.get('OLLAMA_URL', 'http://localhost:11434')
     OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'qwen2.5:1.5b')
 
+    # The bulk "AI Rule Analysis" background job (see ai_rule_analysis_core.py)
+    # runs unattended, one rule at a time, with no user waiting on a reply —
+    # unlike the interactive chatbot above, it can afford a larger/slower
+    # model if the hardware has room for one. Falls back to OLLAMA_MODEL so
+    # there's zero required configuration to get started.
+    OLLAMA_MODEL_RULE_ANALYSIS = os.environ.get('OLLAMA_MODEL_RULE_ANALYSIS') or OLLAMA_MODEL
+
+    # Per-rule timeout for the AI Rule Analysis job — long enough for a slow
+    # local model to finish one rule, short enough that a single stuck/hung
+    # call can't stall an unattended run over potentially hundreds of
+    # thousands of rules. A timeout logs a warning and moves on; it never
+    # fails the whole job. Raised from 180s to 600s: the report format asks
+    # for a genuinely detailed multi-section writeup (plus tags/ATT&CK/CVE
+    # context) with num_predict=4096, and on CPU-only hardware a mid-size
+    # model (e.g. llama3.2) can legitimately need several minutes — 180s was
+    # observed timing out on real runs. An admin with faster/GPU hardware or
+    # only small models can lower this via the env var.
+    AI_RULE_ANALYSIS_TIMEOUT = int(os.environ.get('AI_RULE_ANALYSIS_TIMEOUT', 600))
+
     MAIL_SERVER   = os.environ.get('MAIL_SERVER',   'smtp.gmail.com')
     MAIL_PORT     = int(os.environ.get('MAIL_PORT', 587))
     MAIL_USE_TLS  = os.environ.get('MAIL_USE_TLS',  'true').lower() == 'true'

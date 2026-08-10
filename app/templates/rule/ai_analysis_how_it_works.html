@@ -1,0 +1,589 @@
+{% extends "base.html" %}
+{% import 'macros/admin_nav.html' as anav %}
+
+{% block title %}How AI Rule Analysis Works — Rulezet{% endblock %}
+
+{% block head %}
+<style>
+  .hiw-section { scroll-margin-top: 80px; }
+
+  .hiw-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    color: #fff;
+    font-weight: 700;
+    font-size: .85rem;
+    flex-shrink: 0;
+  }
+
+  .hiw-endpoint {
+    font-family: monospace;
+    font-size: .82rem;
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 2px 8px;
+    color: #0d6efd;
+    word-break: break-all;
+  }
+
+  .hiw-flow-arrow {
+    font-size: 1.4rem;
+    color: #0d6efd;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .hiw-flow-box {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--card-bg-color);
+    padding: .75rem 1rem;
+    font-size: .83rem;
+    text-align: center;
+    flex: 1;
+  }
+
+  .hiw-toc-link {
+    display: block;
+    padding: .35rem .75rem;
+    color: var(--subtle-text-color);
+    text-decoration: none;
+    font-size: .82rem;
+    border-left: 2px solid transparent;
+    transition: all .15s;
+    border-radius: 0 4px 4px 0;
+  }
+  .hiw-toc-link:hover {
+    color: #0d6efd;
+    border-left-color: #0d6efd;
+    background: rgba(13,110,253,.06);
+  }
+
+  .hiw-verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: .78rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 20px;
+  }
+  .hiw-verdict--ok      { background: rgba(25,135,84,.12);  color: #198754; }
+  .hiw-verdict--warn    { background: rgba(255,193,7,.15);  color: #997404; }
+  .hiw-verdict--error   { background: rgba(220,53,69,.12);  color: #dc3545; }
+
+  .hiw-callout {
+    border-left: 3px solid;
+    border-radius: 0 8px 8px 0;
+    padding: .75rem 1rem;
+    font-size: .84rem;
+    margin-bottom: 0;
+  }
+  .hiw-callout--info    { border-color: #0d6efd; background: rgba(13,110,253,.07); }
+  .hiw-callout--warning { border-color: #ffc107; background: rgba(255,193,7,.07); }
+  .hiw-callout--success { border-color: #198754; background: rgba(25,135,84,.07); }
+  .hiw-callout--danger  { border-color: #dc3545; background: rgba(220,53,69,.07); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-4">
+
+  <!-- ── Banner ──────────────────────────────────────────────────── -->
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-robot banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item"><a href="/rule/rules_list" class="text-decoration-none text-muted">Rules</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">How AI Rule Analysis works</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="banner-icon">
+        <i class="fa-solid fa-robot"></i>
+      </div>
+      <div>
+        <h2 class="fw-bold mb-1">How AI Rule Analysis Works</h2>
+        <div class="banner-accent"></div>
+      </div>
+    </div>
+    <p class="text-muted mb-0" style="max-width:660px;font-size:.95rem;">
+      A complete walkthrough of the AI-assisted rule summary feature — from the background job
+      that generates it, to exactly how a locally-hosted model is kept from ever leaving the
+      server or inventing facts.
+    </p>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- ── Sticky Table of Contents ──────────────────────────────── -->
+    <div class="col-lg-3 d-none d-lg-block">
+      <div class="sticky-top" style="top:1.5rem;">
+        <div class="p-3 rounded-3 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;">
+          <div class="fw-bold mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle-text-color);">
+            <i class="fa-solid fa-list-ul me-2 text-primary"></i>On this page
+          </div>
+          <nav class="border-start ps-1" style="border-color:var(--border-color)!important;">
+            <a class="hiw-toc-link" href="#what-is">What is AI Rule Analysis?</a>
+            <a class="hiw-toc-link" href="#job-lifecycle">Job lifecycle</a>
+            <a class="hiw-toc-link" href="#prompting">Prompting &amp; validation</a>
+            <a class="hiw-toc-link" href="#failure-handling">Failure handling</a>
+            <a class="hiw-toc-link" href="#scale">Built for scale</a>
+            <a class="hiw-toc-link" href="#configuration">Configuration</a>
+            <a class="hiw-toc-link" href="#security">Security &amp; privacy</a>
+            <a class="hiw-toc-link" href="#roadmap">Roadmap</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Main content ──────────────────────────────────────────── -->
+    <div class="col-lg-9">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 1 — What is AI Rule Analysis?
+      ════════════════════════════════════════════════════════════ -->
+      <section id="what-is" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-robot" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">What is AI Rule Analysis?</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          A background job (admin-triggered, same job system as GitHub imports or MISP updates) that
+          runs a <strong>locally-hosted Ollama model</strong> over a selection of rules — or every
+          rule on the instance — and writes a detailed English Markdown report explaining, in plain
+          language, what each rule does and why it matters.
+        </p>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          This is currently <strong>Phase 1</strong> of a larger plan: summary generation only. It
+          does not (yet) suggest tags or ATT&amp;CK techniques, and it never touches CVE data — see
+          <a href="#roadmap">Roadmap</a> below.
+        </p>
+
+        <div class="d-flex align-items-center gap-3 flex-wrap mt-4 mb-2">
+          <div class="hiw-flow-box">
+            <i class="fa-solid fa-file-shield text-primary mb-1 d-block" style="font-size:1.3rem;"></i>
+            <strong>Rule content</strong><br>
+            <span class="text-muted" style="font-size:.75rem;">title, description, raw content</span>
+          </div>
+          <div class="hiw-flow-arrow text-center" style="min-width:2.5rem;">
+            <i class="fa-solid fa-arrow-right"></i><br>
+            <span style="font-size:.68rem;color:var(--subtle-text-color);">prompt</span>
+          </div>
+          <div class="hiw-flow-box" style="border-color:rgba(13,110,253,.3);background:rgba(13,110,253,.04);">
+            <i class="fa-solid fa-server text-primary mb-1 d-block" style="font-size:1.3rem;"></i>
+            <strong>Local Ollama</strong><br>
+            <span class="text-muted" style="font-size:.75rem;">runs on this server only</span>
+          </div>
+          <div class="hiw-flow-arrow text-center" style="min-width:2.5rem;">
+            <i class="fa-solid fa-arrow-right"></i><br>
+            <span style="font-size:.68rem;color:var(--subtle-text-color);">validate</span>
+          </div>
+          <div class="hiw-flow-box" style="border-color:rgba(25,135,84,.3);background:rgba(25,135,84,.04);">
+            <i class="fa-solid fa-file-lines text-success mb-1 d-block" style="font-size:1.3rem;"></i>
+            <strong>RuleAiAnalysis row</strong><br>
+            <span class="text-muted" style="font-size:.75rem;">Markdown, rendered client-side</span>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          Every generation creates a <strong>new</strong> row rather than overwriting the last one —
+          the full history for a rule stays browsable, and re-running (e.g. after switching to a
+          different model) never destroys an earlier result.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 2 — Job lifecycle
+      ════════════════════════════════════════════════════════════ -->
+      <section id="job-lifecycle" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-paper-plane" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Job lifecycle</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Triggered from the <strong>AI Rule Analysis</strong> tab on
+          <code>/account/admin/bulk_parse_fields</code> (admin only) — picking rules reuses the same
+          rule selector as every other bulk admin tool, choosing a model from the admin's own
+          allowlist (see <a href="#configuration">Configuration</a>), and queues a background job
+          of type <code>ai_rule_analysis</code>.
+        </p>
+
+        <div class="p-3 rounded-3 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;">
+          <div class="d-flex flex-column gap-3">
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">1</div>
+              <div style="font-size:.88rem;">
+                <strong>Feature &amp; local-only guards</strong><br>
+                <span class="text-muted">
+                  Before touching a single rule, the job checks the instance-wide enabled switch,
+                  that the chosen model is still in the admin's enabled list, and that
+                  <code>OLLAMA_URL</code> looks like a local/private address. Any failure refuses
+                  the whole run up front — see <a href="#security">Security &amp; privacy</a>.
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">2</div>
+              <div style="font-size:.88rem;">
+                <strong>One rule at a time</strong><br>
+                <span class="text-muted">
+                  Unlike other bulk jobs (which batch hundreds of rows per commit), this job
+                  processes <strong>one rule per Ollama call</strong>, checking for pause/cancel
+                  before every single one — a local model can take tens of seconds to a few
+                  minutes per rule, so responsiveness matters far more here than raw throughput.
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">3</div>
+              <div style="font-size:.88rem;">
+                <strong>Already-analyzed rules are skipped, unless told otherwise</strong><br>
+                <span class="text-muted">
+                  Unless "regenerate existing" was checked, a rule that already has at least one
+                  analysis is skipped (counted separately in the log) rather than re-analyzed — a
+                  re-run only ever fills in gaps. Checking it doesn't overwrite anything either —
+                  it just adds another row to that rule's history.
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">4</div>
+              <div style="font-size:.88rem;">
+                <strong>Stored as a new history row</strong><br>
+                <span class="text-muted">
+                  A <code>RuleAiAnalysis</code> row is created — plain Markdown content, which
+                  model produced it, who triggered the run, and a visibility flag (public by
+                  default) — never as pre-rendered HTML. See
+                  <a href="#prompting">Prompting &amp; validation</a>.
+                </span>
+              </div>
+            </div>
+            <div class="d-flex gap-3 align-items-start">
+              <div class="hiw-step-num">5</div>
+              <div style="font-size:.88rem;">
+                <strong>Displayed on the rule's own AI Analysis page</strong><br>
+                <span class="text-muted">
+                  <code>/rule/detail_rule/&lt;id&gt;/ai_analysis</code> renders the latest analysis
+                  client-side through <code>marked.parse()</code> + <code>DOMPurify.sanitize()</code>
+                  — the exact same pipeline blog posts already use — with the full history browsable
+                  below it, and a note showing which model wrote it, when, and who requested it.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 3 — Prompting & validation
+      ════════════════════════════════════════════════════════════ -->
+      <section id="prompting" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-shield-halved" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Prompting &amp; validation</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Rule content comes from any authenticated user — it is treated as
+          <strong>untrusted, attacker-reachable data</strong> at every step, never as instructions.
+        </p>
+
+        <div class="row g-3 mt-1">
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-message text-primary me-2"></i>The system prompt</div>
+              <p class="text-muted mb-0">
+                Explicitly frames the rule content block as data to summarize, tells the model to
+                ignore anything inside it that looks like an instruction, forbids inventing facts
+                not present in the rule (no guessed CVEs, actor names, or version numbers), and
+                requires a strict JSON envelope (<code>{"summary": "..."}</code>) via Ollama's
+                <code>format: "json"</code> — a weak model rambling in free text never reaches storage.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-magnifying-glass text-primary me-2"></i>Post-generation checks</div>
+              <p class="text-muted mb-0">
+                The response must parse as JSON, contain a non-empty <code>summary</code> string,
+                and stay under a sanity length ceiling — an unusually long response is treated as a
+                degenerate repetition loop (a known small-model failure mode) and discarded, not
+                stored. Stray control characters are stripped before anything is written.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--warning mt-3">
+          <i class="fa-solid fa-triangle-exclamation me-2" style="color:#997404;"></i>
+          The rule's raw content is also truncated before it reaches the model — a local model's
+          context window is shared between the system prompt, the rule content, and the response
+          itself. An unbounded rule body would silently eat into the model's own instructions
+          instead of raising a clear error.
+        </div>
+
+        <div class="hiw-callout hiw-callout--danger mt-3">
+          <i class="fa-solid fa-shield-halved me-2 text-danger"></i>
+          The stored summary is <strong>always</strong> raw Markdown text, never HTML. Rendering
+          only ever happens in the browser through <code>marked</code> + <code>DOMPurify</code>,
+          the same as blog posts — this is what actually stops a prompt-injected rule from getting
+          a <code>&lt;script&gt;</code> tag into its own "AI summary," not escaping at storage time.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 4 — Failure handling
+      ════════════════════════════════════════════════════════════ -->
+      <section id="failure-handling" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-triangle-exclamation" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Failure handling</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Not every failure means the same thing, so the job treats them differently:
+        </p>
+
+        <div class="table-responsive rounded-3 border shadow-sm" style="border-color:var(--border-color)!important;">
+          <table class="table table-sm mb-0 align-middle" style="background:var(--card-bg-color);font-size:.83rem;">
+            <thead style="background:var(--light-bg-color);">
+              <tr>
+                <th class="fw-semibold ps-3" style="width:26%;">Situation</th>
+                <th class="fw-semibold">What happens</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">One rule times out</td>
+                <td><span class="hiw-verdict hiw-verdict--warn"><i class="fa-solid fa-forward"></i> Skip &amp; continue</span> — logged as a warning, the job moves to the next rule. A slow rule never stalls the whole run.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">Model returns invalid output</td>
+                <td><span class="hiw-verdict hiw-verdict--warn"><i class="fa-solid fa-forward"></i> Skip &amp; continue</span> — not valid JSON, missing the summary field, or absurdly long. Nothing invalid is ever stored.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">Ollama is unreachable</td>
+                <td><span class="hiw-verdict hiw-verdict--error"><i class="fa-solid fa-stop"></i> Stop the whole job</span> — every remaining rule would fail identically, so the job fails cleanly instead of burning through the rest of the run logging the same error. The current position is saved.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 fw-semibold text-primary">Job paused, cancelled, or the server restarts</td>
+                <td><span class="hiw-verdict hiw-verdict--ok"><i class="fa-solid fa-check"></i> Resumable</span> — see <a href="#scale">Built for scale</a>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 5 — Built for scale
+      ════════════════════════════════════════════════════════════ -->
+      <section id="scale" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-scale-balanced" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Built for scale</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Rulezet instances can hold hundreds of thousands of rules. A local model generating one
+          summary at a time is fundamentally slow — no application-level trick changes how fast a
+          single Ollama instance can generate text — so the engineering focus here is on
+          <strong>correctness and resumability over an unattended run that may last days</strong>,
+          not on pretending a weak local model is fast.
+        </p>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-database text-primary me-2"></i>Stable pagination</div>
+              <p class="text-muted mb-0">
+                The query behind the job is <strong>never</strong> filtered by "doesn't have a
+                summary yet" in SQL — doing so would shrink the result set as rows are processed
+                and silently skip rules under plain offset pagination. The target set is fixed for
+                the whole run; "already has one, skip it" is a per-row check in code instead.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-rotate-right text-primary me-2"></i>Survives a restart</div>
+              <p class="text-muted mb-0">
+                This runs through Rulezet's real <code>BackgroundJob</code> system, not a
+                throwaway in-memory session — its offset is persisted after every single rule.
+                If the server restarts mid-run (a deploy, a crash), the worker automatically
+                recovers the job back to <em>pending</em> and it resumes from exactly where it
+                left off, instead of losing days of progress.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          Practical advice for a large instance: start with a small selection to validate quality
+          and timing on your hardware/model before ever queuing "ALL rules" — the job's live log
+          shows a running count of generated/skipped/failed rules so you can judge throughput
+          early rather than waiting for the whole run.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 6 — Configuration
+      ════════════════════════════════════════════════════════════ -->
+      <section id="configuration" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-sliders" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Configuration</h4>
+        </div>
+        <div class="table-responsive rounded-3 border shadow-sm" style="border-color:var(--border-color)!important;">
+          <table class="table table-sm mb-0 align-middle" style="background:var(--card-bg-color);font-size:.83rem;">
+            <thead style="background:var(--light-bg-color);">
+              <tr>
+                <th class="fw-semibold ps-3" style="width:30%;">Variable</th>
+                <th class="fw-semibold">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="ps-3 font-monospace text-primary">OLLAMA_URL</td>
+                <td>Same Ollama instance the chatbot uses. Defaults to <code>http://localhost:11434</code>. Must resolve to a local/private address — see <a href="#security">Security &amp; privacy</a>.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 font-monospace text-primary">OLLAMA_MODEL_RULE_ANALYSIS</td>
+                <td>Fallback default only — the admin picks a specific model per run from the <a href="/account/admin/ai_rule_analysis">AI Rule Analysis settings page</a>, which lists whatever Ollama actually has pulled. This env var only matters for direct/manual calls that don't go through the trigger UI.</td>
+              </tr>
+              <tr>
+                <td class="ps-3 font-monospace text-primary">AI_RULE_ANALYSIS_TIMEOUT</td>
+                <td>Per-rule timeout in seconds (default <strong>600</strong> — the report format is a detailed, multi-section writeup with tag/ATT&CK/CVE context, not a one-line summary, and can take several minutes on CPU-only hardware). A rule that takes longer is skipped, not failed — see <a href="#failure-handling">Failure handling</a>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          The <a href="/account/admin/ai_rule_analysis">admin settings page</a> is where the feature
+          is actually managed day-to-day: an instance-wide on/off switch, a per-model enable/disable
+          allowlist synced from Ollama's own model list, and a searchable history across every rule
+          with bulk delete.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 7 — Security & privacy
+      ════════════════════════════════════════════════════════════ -->
+      <section id="security" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-lock" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Security &amp; privacy</h4>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-house-lock text-primary me-2"></i>Local-only, enforced</div>
+              <p class="text-muted mb-0">
+                The whole point of using Ollama locally is that rule content never leaves the
+                server. Before the job touches a single rule, it checks that <code>OLLAMA_URL</code>
+                resolves to <code>localhost</code>, a <code>.local</code> hostname, or a private
+                (<code>10.x</code>/<code>172.16-31.x</code>/<code>192.168.x</code>) address — and
+                refuses to run at all otherwise, so a misconfigured <code>OLLAMA_URL</code> can't
+                silently turn this into a data-exfiltration path.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 h-100 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;font-size:.83rem;">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-user-shield text-primary me-2"></i>Triggering &amp; moderation are admin-only</div>
+              <p class="text-muted mb-0">
+                The trigger tab, the trigger route, the settings page (feature toggle + model
+                allowlist), and every moderation action (visibility toggle, delete, bulk delete)
+                are all gated on <code>current_user.is_admin()</code> — the same pattern as every
+                other bulk admin tool. Regular users only ever see a finished, <em>public</em>
+                analysis on a rule's own page — never a way to trigger or moderate one themselves.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--warning mt-3">
+          <i class="fa-solid fa-eye-slash me-2" style="color:#997404;"></i>
+          <strong>An LLM can write something wrong, embarrassing, or worse — this is treated as a
+          real possibility, not a hypothetical.</strong> Every <code>RuleAiAnalysis</code> row has
+          its own <code>is_public</code> flag (visible by default). An admin can flip a single bad
+          generation to <em>private</em> from either the rule's own AI Analysis page or the
+          cross-rule history table on the settings page — it disappears from what regular users see
+          immediately, without deleting the row itself (so it stays reviewable). Deletion is a
+          separate, explicit action for when hiding isn't enough.
+        </div>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          Log lines never include full rule content or the model's full raw response — only the
+          rule id and a short outcome (generated / skipped / failed), so the job's log stays
+          readable and doesn't balloon into a second copy of your entire rule corpus.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 8 — Roadmap
+      ════════════════════════════════════════════════════════════ -->
+      <section id="roadmap" class="hiw-section mb-4">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-road" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Roadmap</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          What's live today vs. what's planned but not yet built:
+        </p>
+
+        <div class="d-flex flex-column gap-2">
+          <div class="d-flex align-items-center gap-3 p-2 rounded-2" style="background:var(--card-bg-color);border:1px solid var(--border-color);">
+            <span class="hiw-verdict hiw-verdict--ok"><i class="fa-solid fa-check"></i> Live</span>
+            <span style="font-size:.85rem;">Phase 1 — Markdown summary generation (this page).</span>
+          </div>
+          <div class="d-flex align-items-center gap-3 p-2 rounded-2" style="background:var(--card-bg-color);border:1px solid var(--border-color);">
+            <span class="hiw-verdict hiw-verdict--warn"><i class="fa-solid fa-hourglass-half"></i> Planned</span>
+            <span style="font-size:.85rem;">Phase 2 — tag suggestions, constrained to tags that already exist in the DB, never invented.</span>
+          </div>
+          <div class="d-flex align-items-center gap-3 p-2 rounded-2" style="background:var(--card-bg-color);border:1px solid var(--border-color);">
+            <span class="hiw-verdict hiw-verdict--warn"><i class="fa-solid fa-hourglass-half"></i> Planned</span>
+            <span style="font-size:.85rem;">Phase 3 — ATT&amp;CK technique suggestions by name, same constrained-choice approach as tags.</span>
+          </div>
+          <div class="d-flex align-items-center gap-3 p-2 rounded-2" style="background:var(--card-bg-color);border:1px solid var(--border-color);">
+            <span class="hiw-verdict hiw-verdict--error"><i class="fa-solid fa-ban"></i> Out of scope</span>
+            <span style="font-size:.85rem;">CVE detection or suggestion by the model — local LLMs are prone to inventing CVE identifiers, which is actively harmful on a real detection rule. If ever revisited, only literal-token extraction (like the existing regex-based <code>detect_cve()</code>) would qualify, never model judgment.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Back link -->
+      <div class="text-center pt-3">
+        <a href="/account/admin/bulk_parse_fields" class="btn btn-primary rounded-pill px-4">
+          <i class="fa-solid fa-arrow-left me-2"></i>Back to Bulk Field Parser
+        </a>
+      </div>
+
+    </div><!-- /col main -->
+  </div><!-- /row -->
+</div><!-- /container -->
+{% endblock %}

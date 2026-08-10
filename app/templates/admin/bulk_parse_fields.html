@@ -46,6 +46,9 @@
         <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-platform-tags" role="tab">
             <i class="fas fa-display"></i><span>Platform Tags</span>
         </a>
+        <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-ai-analysis" role="tab">
+            <i class="fas fa-robot"></i><span>AI Rule Analysis</span>
+        </a>
         <span class="dr-nav__sep"></span>
         {{ anav.admin_nav_toggle() }}
 
@@ -121,6 +124,16 @@
             </div>
         </div>
 
+        <!-- TAB 3 — AI Rule Analysis -->
+        <div class="tab-pane fade" id="pane-ai-analysis" role="tabpanel">
+            <ai-rule-analysis-panel
+                :csrf-token="csrfToken"
+                :current-user-is-authenticated="true"
+                :current-user-is-admin="true"
+                @notify="notify">
+            </ai-rule-analysis-panel>
+        </div>
+
     </div>
 
 </div>
@@ -132,6 +145,7 @@ const { createApp, ref, computed } = Vue;
 import FieldParserUpdater from '/static/js/admin/bulkParseFields.js'
 import BulkImportRunner from '/static/js/tags/manage/BulkImportRunner.js'
 import PlatformTagConfigEditor from '/static/js/admin/platformTagConfigEditor.js'
+import AiRuleAnalysisPanel from '/static/js/admin/aiRuleAnalysis.js'
 import { create_message } from '/static/js/toaster.js'
 
 const fieldMeta       = {{ field_meta | tojson | safe }};
@@ -143,6 +157,7 @@ createApp({
         'field-parser-updater': FieldParserUpdater,
         'bulk-import-runner': BulkImportRunner,
         'platform-tag-config-editor': PlatformTagConfigEditor,
+        'ai-rule-analysis-panel': AiRuleAnalysisPanel,
     },
     setup() {
         function notify(msg, cls = 'info-subtle') { create_message(msg, cls); }

@@ -1,4 +1,4 @@
-{% macro detail_rule_nav(rule, active, similarity_count=0, history_count=0, proposal_count=0, scope_count=0, test_count=0) %}
+{% macro detail_rule_nav(rule, active, similarity_count=0, history_count=0, proposal_count=0, scope_count=0, test_count=0, ai_analysis_count=0) %}
 <nav class="dr-nav">
     <a href="/rule/detail_rule/{{ rule.id }}"
        class="dr-nav__item {% if active == 'detail' %}active{% endif %}">
@@ -32,6 +32,14 @@
         <span>History</span>
         {% if history_count > 0 %}
         <span class="dr-nav__badge">{{ history_count }}</span>
+        {% endif %}
+    </a>
+    <a href="/rule/detail_rule/{{ rule.id }}/ai_analysis"
+       class="dr-nav__item {% if active == 'ai_analysis' %}active{% endif %}">
+        <i class="fa-solid fa-robot"></i>
+        <span>AI Analysis</span>
+        {% if ai_analysis_count > 0 %}
+        <span class="dr-nav__badge">{{ ai_analysis_count }}</span>
         {% endif %}
     </a>
     {% if similarity_count > 0 or active == 'similarity' %}

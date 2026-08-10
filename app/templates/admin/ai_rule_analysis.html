@@ -1,0 +1,362 @@
+{% extends 'base.html' %}
+{% import 'macros/admin_nav.html' as anav %}
+{% block title %}AI Rule Analysis — Admin — Rulezet{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<style>
+.arl-model-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .6rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.arl-model-row:last-child { border-bottom: none; }
+.arl-visibility-badge {
+    font-size: .65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 2px 8px;
+    border-radius: 20px;
+    cursor: pointer;
+}
+.arl-visibility-badge--public  { background: rgba(25,135,84,.12); color: #198754; }
+.arl-visibility-badge--private { background: rgba(220,53,69,.12); color: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4" id="main-container" v-cloak>
+
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-robot banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="/account/admin/bulk_parse_fields" class="text-decoration-none text-muted">Bulk Field Parser</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">AI Rule Analysis Settings</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-robot"></i></div>
+            <div>
+                <h2 class="fw-bold mb-1">AI Rule Analysis — Admin Settings</h2>
+                <div class="banner-accent"></div>
+            </div>
+        </div>
+        <p class="text-muted mb-0" style="max-width:660px;font-size:.95rem;">
+            Enable/disable the feature, control which locally-pulled Ollama models can be used,
+            and review or moderate every AI-generated analysis across all rules.
+        </p>
+    </div>
+
+    <!-- Feature toggle -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div>
+                    <h6 class="fw-bold mb-1"><i class="fa-solid fa-power-off me-2" style="color:#0d6efd;"></i>Feature status</h6>
+                    <small class="text-muted">Turns the whole AI Rule Analysis feature on or off, instance-wide.</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge rounded-pill" :class="featureEnabled ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'">
+                        [[ featureEnabled ? 'Enabled' : 'Disabled' ]]
+                    </span>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" role="switch" v-model="featureEnabled"
+                               @change="toggleFeature" :disabled="toggling" style="width:2.5em;height:1.4em;cursor:pointer;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model allowlist -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                <div>
+                    <h6 class="fw-bold mb-1"><i class="fa-solid fa-microchip me-2" style="color:#0d6efd;"></i>Available models</h6>
+                    <small class="text-muted">Synced from Ollama's own model list — disable any you don't want offered when launching an analysis.</small>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="fetchModels" :disabled="modelsLoading">
+                    <i class="fa-solid fa-rotate me-1" :class="{ 'fa-spin': modelsLoading }"></i>Refresh
+                </button>
+            </div>
+
+            <div v-if="ollamaError" class="alert alert-warning py-2 px-3 mb-3" style="font-size:.82rem;">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                Could not reach Ollama to refresh the model list: [[ ollamaError ]]. Showing the last known list below.
+            </div>
+
+            <div v-if="modelsLoading" class="text-center text-muted py-3">
+                <i class="fa-solid fa-circle-notch fa-spin me-2"></i>Loading…
+            </div>
+            <div v-else-if="!models.length" class="text-center text-muted py-3">
+                No models found — is Ollama running and reachable at <code>OLLAMA_URL</code>?
+            </div>
+            <div v-else class="border rounded-3" style="border-color:var(--border-color)!important;">
+                <div v-for="m in models" :key="m.id" class="arl-model-row">
+                    <div>
+                        <code>[[ m.model_name ]]</code>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" role="switch" :checked="m.is_enabled"
+                               @change="toggleModel(m)" style="cursor:pointer;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                <div>
+                    <h6 class="fw-bold mb-1"><i class="fa-solid fa-clock-rotate-left me-2" style="color:#0d6efd;"></i>History</h6>
+                    <small class="text-muted">[[ total ]] analys[[ total === 1 ? 'is' : 'es' ]] generated across all rules.</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <button v-if="selected.length" class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="bulkDeleteSelected">
+                        <i class="fa-solid fa-trash me-1"></i>Delete selected ([[ selected.length ]])
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="deleteAll">
+                        <i class="fa-solid fa-trash-can me-1"></i>Delete ALL
+                    </button>
+                </div>
+            </div>
+
+            <div class="dt-search mb-3" style="max-width:320px;">
+                <i class="fas fa-search dt-search-icon"></i>
+                <input class="dt-search-input" type="text" placeholder="Search by rule title…" v-model="search" @input="onSearchInput">
+            </div>
+
+            <div v-if="loading" class="text-center text-muted py-4">
+                <i class="fa-solid fa-circle-notch fa-spin me-2"></i>Loading…
+            </div>
+            <div v-else-if="!items.length" class="text-center text-muted py-4">
+                No AI analyses yet.
+            </div>
+            <div v-else class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width:2rem;"><input type="checkbox" @change="toggleSelectAll" :checked="allSelected"></th>
+                            <th>Rule</th>
+                            <th>Model</th>
+                            <th>Requested by</th>
+                            <th>Date</th>
+                            <th>Visibility</th>
+                            <th style="width:2rem;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="item in items" :key="item.id">
+                            <td><input type="checkbox" :value="item.id" v-model="selected"></td>
+                            <td><a :href="'/rule/detail_rule/' + item.rule_id + '/ai_analysis'" target="_blank">[[ item.rule_title || ('#' + item.rule_id) ]]</a></td>
+                            <td><code style="font-size:.75rem;">[[ item.model || '—' ]]</code></td>
+                            <td>[[ item.username || 'Unknown' ]]</td>
+                            <td style="font-size:.8rem;color:var(--subtle-text-color);">[[ item.created_at ]]</td>
+                            <td>
+                                <span :class="['arl-visibility-badge', item.is_public ? 'arl-visibility-badge--public' : 'arl-visibility-badge--private']"
+                                      @click="toggleVisibility(item)" :title="'Click to make ' + (item.is_public ? 'private' : 'public')">
+                                    [[ item.is_public ? 'Public' : 'Private' ]]
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger" style="padding:.1rem .4rem;" @click="deleteOne(item)">
+                                    <i class="fa-solid fa-trash" style="font-size:.7rem;"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <nav v-if="totalPages > 1" class="mt-3">
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    <li class="page-item" :class="{ disabled: currentPage <= 1 }">
+                        <a class="page-link" href="javascript:void(0)" @click="fetchHistory(currentPage - 1)">Previous</a>
+                    </li>
+                    <li class="page-item disabled"><span class="page-link">[[ currentPage ]] / [[ totalPages ]]</span></li>
+                    <li class="page-item" :class="{ disabled: currentPage >= totalPages }">
+                        <a class="page-link" href="javascript:void(0)" @click="fetchHistory(currentPage + 1)">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, onMounted } = Vue;
+    import { create_message } from '/static/js/toaster.js';
+
+    const csrfToken = '{{ csrf_token() }}';
+
+    function apiFetch(url, method = 'GET', body) {
+        return fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: body ? JSON.stringify(body) : undefined,
+        });
+    }
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        setup() {
+            const featureEnabled = ref(true);
+            const toggling       = ref(false);
+
+            const modelsLoading = ref(true);
+            const models        = ref([]);
+            const ollamaError   = ref(null);
+
+            const items       = ref([]);
+            const loading     = ref(true);
+            const currentPage = ref(1);
+            const totalPages  = ref(1);
+            const total       = ref(0);
+            const search      = ref('');
+            const selected    = ref([]);
+            const allSelected = ref(false);
+            let searchTimer   = null;
+
+            async function fetchModels() {
+                modelsLoading.value = true;
+                try {
+                    const res = await apiFetch('/account/admin/ai_rule_analysis/models');
+                    const data = await res.json();
+                    if (data.success) {
+                        featureEnabled.value = data.ai_rule_analysis_enabled;
+                        models.value = data.models || [];
+                        ollamaError.value = data.ollama_error;
+                    }
+                } finally {
+                    modelsLoading.value = false;
+                }
+            }
+
+            async function toggleFeature() {
+                toggling.value = true;
+                try {
+                    const res = await apiFetch('/account/admin/ai_rule_analysis/toggle', 'POST', { enabled: featureEnabled.value });
+                    const data = await res.json();
+                    if (data.success) {
+                        create_message(`AI Rule Analysis ${data.ai_rule_analysis_enabled ? 'enabled' : 'disabled'}`, 'success-subtle');
+                    } else {
+                        featureEnabled.value = !featureEnabled.value;
+                        create_message(data.message || 'Failed to update', 'danger-subtle');
+                    }
+                } finally {
+                    toggling.value = false;
+                }
+            }
+
+            async function toggleModel(m) {
+                const res = await apiFetch(`/account/admin/ai_rule_analysis/models/${m.id}/toggle`, 'POST');
+                const data = await res.json();
+                if (data.success) {
+                    m.is_enabled = data.model.is_enabled;
+                } else {
+                    create_message(data.message || 'Failed to update model', 'danger-subtle');
+                }
+            }
+
+            async function fetchHistory(page = 1) {
+                loading.value = true;
+                try {
+                    const params = new URLSearchParams({ page, per_page: 25, search: search.value });
+                    const res = await fetch(`/account/admin/ai_rule_analysis/history?${params}`);
+                    const data = await res.json();
+                    if (data.success) {
+                        items.value = data.items;
+                        currentPage.value = data.current_page;
+                        totalPages.value = data.total_pages;
+                        total.value = data.total;
+                        selected.value = [];
+                        allSelected.value = false;
+                    }
+                } finally {
+                    loading.value = false;
+                }
+            }
+
+            function onSearchInput() {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => fetchHistory(1), 300);
+            }
+
+            function toggleSelectAll() {
+                allSelected.value = !allSelected.value;
+                selected.value = allSelected.value ? items.value.map(i => i.id) : [];
+            }
+
+            async function toggleVisibility(item) {
+                const res = await apiFetch(`/account/admin/ai_rule_analysis/${item.id}/visibility`, 'POST', { is_public: !item.is_public });
+                const data = await res.json();
+                if (data.success) {
+                    item.is_public = data.analysis.is_public;
+                } else {
+                    create_message(data.message || 'Failed to update visibility', 'danger-subtle');
+                }
+            }
+
+            async function deleteOne(item) {
+                if (!confirm('Delete this analysis?')) return;
+                const res = await apiFetch(`/account/admin/ai_rule_analysis/${item.id}`, 'DELETE');
+                const data = await res.json();
+                if (data.success) {
+                    create_message('Deleted', 'success-subtle');
+                    fetchHistory(currentPage.value);
+                } else {
+                    create_message(data.message || 'Failed to delete', 'danger-subtle');
+                }
+            }
+
+            async function bulkDeleteSelected() {
+                if (!confirm(`Delete ${selected.value.length} selected analys${selected.value.length === 1 ? 'is' : 'es'}?`)) return;
+                const res = await apiFetch('/account/admin/ai_rule_analysis/bulk_delete', 'POST', { ids: selected.value });
+                const data = await res.json();
+                if (data.success) {
+                    create_message(`${data.deleted} deleted`, 'success-subtle');
+                    fetchHistory(1);
+                } else {
+                    create_message(data.message || 'Failed to delete', 'danger-subtle');
+                }
+            }
+
+            async function deleteAll() {
+                if (!confirm(`Delete ALL ${total.value} AI analyses, across every rule? This queues a background job and cannot be undone.`)) return;
+                const res = await apiFetch('/account/admin/ai_rule_analysis/bulk_delete', 'POST', { delete_all: true });
+                const data = await res.json();
+                if (data.success && data.job) {
+                    create_message('Deletion queued — see Jobs for progress.', 'success-subtle');
+                    window.location.href = '/jobs/detail/' + data.job.uuid;
+                } else {
+                    create_message(data.message || 'Failed to queue deletion', 'danger-subtle');
+                }
+            }
+
+            onMounted(() => {
+                fetchModels();
+                fetchHistory(1);
+            });
+
+            return {
+                featureEnabled, toggling, toggleFeature,
+                modelsLoading, models, ollamaError, fetchModels, toggleModel,
+                items, loading, currentPage, totalPages, total, search, onSearchInput, fetchHistory,
+                selected, allSelected, toggleSelectAll,
+                toggleVisibility, deleteOne, bulkDeleteSelected, deleteAll,
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

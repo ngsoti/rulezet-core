@@ -840,6 +840,222 @@ def bulk_parse_fields_trigger_platform_tags():
     return jsonify({'success': True, 'job': job.to_json(), 'message': 'Platform tagging job queued!'})
 
 
+@account_blueprint.route('/admin/bulk_parse_fields/trigger_ai_analysis', methods=['POST'])
+@login_required
+def bulk_parse_fields_trigger_ai_analysis():
+    """Queue an ai_rule_analysis job — see handle_ai_rule_analysis in
+    job_handlers.py. Phase 1 of AI_RULE_ANALYSIS_PLAN.md: a detailed Markdown
+    report per rule, one rule at a time, via a local Ollama model. Each run
+    creates a new RuleAiAnalysis row (history kept, never overwritten)."""
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'message': 'Admin only'}), 403
+    from app.features.jobs.jobs_core import create_job
+    from app.features.rule.utils.ai_rule_analysis.ai_rule_analysis_core import (
+        is_ai_rule_analysis_enabled, get_enabled_model_names,
+    )
+
+    if not is_ai_rule_analysis_enabled():
+        return jsonify({'success': False, 'message': 'AI Rule Analysis is disabled — enable it from the admin settings first.'}), 400
+
+    data           = request.get_json(force=True) or {}
+    rule_ids       = data.get('rule_ids', 'ALL')
+    format_filter  = (data.get('format_filter') or '').strip() or None
+    regenerate     = bool(data.get('regenerate_existing'))
+    default_public = bool(data.get('default_public', True))
+    model          = (data.get('model') or '').strip()
+
+    enabled_models = get_enabled_model_names()
+    if not enabled_models:
+        return jsonify({'success': False, 'message': 'No models are enabled — add/enable one from the admin settings first.'}), 400
+    if not model or model not in enabled_models:
+        return jsonify({'success': False, 'message': f'Pick a valid model. Enabled: {", ".join(enabled_models)}'}), 400
+
+    count = len(rule_ids) if isinstance(rule_ids, list) else (format_filter or 'ALL rules')
+    job = create_job(
+        job_type='ai_rule_analysis',
+        label=f'AI rule analysis ({count}, {model})',
+        payload={'rule_ids': rule_ids, 'format_filter': format_filter,
+                 'regenerate_existing': regenerate, 'default_public': default_public,
+                 'model': model},
+        created_by=current_user.id,
+    )
+    if not job:
+        return jsonify({'success': False, 'message': 'Failed to create job'}), 500
+    log_activity('admin.ai_rule_analysis', f'Triggered AI rule analysis for {count} rule(s) with model {model}',
+                 target_type='job', target_id=job.id, target_uuid=job.uuid)
+    return jsonify({'success': True, 'job': job.to_json(), 'message': 'AI analysis job queued!'})
+
+
+# ── AI Rule Analysis — admin settings (feature toggle, model allowlist, history) ──
+# Mirrors the chatbot's admin controls (InstanceConfig.chatbot_enabled +
+# /admin/settings/chatbot_toggle) but as its own small page rather than a
+# section of the general settings page, since this one also needs a model
+# allowlist and a cross-rule history table with bulk delete.
+
+@account_blueprint.route('/admin/ai_rule_analysis', methods=['GET'])
+@login_required
+def ai_rule_analysis_admin_page():
+    if not current_user.is_admin():
+        from flask import abort
+        abort(403)
+    return render_template('admin/ai_rule_analysis.html')
+
+
+@account_blueprint.route('/admin/ai_rule_analysis/toggle', methods=['POST'])
+@login_required
+def ai_rule_analysis_toggle():
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'message': 'Admin only'}), 403
+    from app.core.db_class.db import InstanceConfig
+    data = request.get_json(silent=True) or {}
+    enabled = bool(data.get('enabled', True))
+    cfg = InstanceConfig.query.first()
+    if not cfg:
+        return jsonify({'success': False, 'message': 'Instance config not found'}), 500
+    cfg.ai_rule_analysis_enabled = enabled
+    db.session.commit()
+    log_activity('admin.ai_rule_analysis_toggle', f'AI Rule Analysis feature {"enabled" if enabled else "disabled"}')
+    return jsonify({'success': True, 'ai_rule_analysis_enabled': cfg.ai_rule_analysis_enabled})
+
+
+@account_blueprint.route('/admin/ai_rule_analysis/models', methods=['GET'])
+@login_required
+def ai_rule_analysis_models_list():
+    """Re-syncs against Ollama's own /api/tags on every load — newly pulled
+    models show up automatically, enabled by default, without an admin
+    needing to remember to click a separate 'refresh' action."""
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'message': 'Admin only'}), 403
+    from app.core.db_class.db import InstanceConfig, AiAnalysisModelConfig
+    from app.features.rule.utils.ai_rule_analysis.ai_rule_analysis_core import (
+        sync_models_from_ollama, OllamaUnreachable,
+    )
+    ollama_error = None
+    try:
+        sync_models_from_ollama()
+    except OllamaUnreachable as e:
+        ollama_error = str(e)
+
+    cfg = InstanceConfig.query.first()
+    models = AiAnalysisModelConfig.query.order_by(AiAnalysisModelConfig.model_name.asc()).all()
+    return jsonify({
+        'success': True,
+        'ai_rule_analysis_enabled': bool(cfg and cfg.ai_rule_analysis_enabled),
+        'models': [m.to_json() for m in models],
+        'ollama_error': ollama_error,
+    })
+
+
+@account_blueprint.route('/admin/ai_rule_analysis/models/<int:model_id>/toggle', methods=['POST'])
+@login_required
+def ai_rule_analysis_model_toggle(model_id):
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'message': 'Admin only'}), 403
+    from app.core.db_class.db import AiAnalysisModelConfig
+    m = AiAnalysisModelConfig.query.get(model_id)
+    if not m:
+        return jsonify({'success': False, 'message': 'Model not found'}), 404
+    m.is_enabled = not m.is_enabled
+    db.session.commit()
+    log_activity('admin.ai_rule_analysis_model_toggle',
+                 f'Model "{m.model_name}" {"enabled" if m.is_enabled else "disabled"} for AI Rule Analysis')
+    return jsonify({'success': True, 'model': m.to_json()})
+
+
+@account_blueprint.route('/admin/ai_rule_analysis/history', methods=['GET'])
+@login_required
+def ai_rule_analysis_history():
+    """Cross-rule history — every generated analysis, newest first, admin only."""
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'message': 'Admin only'}), 403
+    from app.core.db_class.db import RuleAiAnalysis, Rule
+    page     = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 25, type=int), 100)
+    search   = (request.args.get('search') or '').strip()
+
+    q = RuleAiAnalysis.query.join(Rule, RuleAiAnalysis.rule_id == Rule.id)
+    if search:
+        q = q.filter(Rule.title.ilike(f"%{search}%"))
+    q = q.order_by(RuleAiAnalysis.created_at.desc())
+    pagination = q.paginate(page=page, per_page=per_page, max_per_page=100)
+    return jsonify({
+        'success': True,
+        'items': [a.to_json() for a in pagination.items],
+        'total': pagination.total,
+        'total_pages': pagination.pages,
+        'current_page': pagination.page,
+    })
+
+
+@account_blueprint.route('/admin/ai_rule_analysis/<int:analysis_id>/visibility', methods=['POST'])
+@login_required
+def ai_rule_analysis_set_visibility(analysis_id):
+    """Admin-only moderation lever — hide a specific generated analysis from
+    regular users (e.g. it turned out wrong or embarrassing) without
+    deleting it; it stays visible to admins in the history."""
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'message': 'Admin only'}), 403
+    from app.core.db_class.db import RuleAiAnalysis
+    a = RuleAiAnalysis.query.get(analysis_id)
+    if not a:
+        return jsonify({'success': False, 'message': 'Analysis not found'}), 404
+    data = request.get_json(silent=True) or {}
+    a.is_public = bool(data.get('is_public', not a.is_public))
+    db.session.commit()
+    log_activity('admin.ai_rule_analysis_visibility',
+                 f'AI analysis #{a.id} (rule {a.rule_id}) set to {"public" if a.is_public else "private"}')
+    return jsonify({'success': True, 'analysis': a.to_json()})
+
+
+@account_blueprint.route('/admin/ai_rule_analysis/<int:analysis_id>', methods=['DELETE'])
+@login_required
+def ai_rule_analysis_delete_one(analysis_id):
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'message': 'Admin only'}), 403
+    from app.core.db_class.db import RuleAiAnalysis
+    a = RuleAiAnalysis.query.get(analysis_id)
+    if not a:
+        return jsonify({'success': False, 'message': 'Analysis not found'}), 404
+    db.session.delete(a)
+    db.session.commit()
+    log_activity('admin.ai_rule_analysis_delete', f'Deleted AI analysis #{analysis_id} (rule {a.rule_id})')
+    return jsonify({'success': True})
+
+
+@account_blueprint.route('/admin/ai_rule_analysis/bulk_delete', methods=['POST'])
+@login_required
+def ai_rule_analysis_bulk_delete():
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'message': 'Admin only'}), 403
+    from app.core.db_class.db import RuleAiAnalysis
+    data       = request.get_json(force=True) or {}
+    ids        = data.get('ids', [])
+    delete_all = bool(data.get('delete_all'))
+
+    if delete_all:
+        # Could be the entire history across every rule on a large instance —
+        # queue it as a background job rather than block the request, same
+        # pattern as the admin Activity Log's "Delete ALL".
+        from app.features.jobs.jobs_core import create_job
+        job = create_job(
+            job_type='delete_ai_analyses',
+            label='Delete ALL AI analyses',
+            payload={'delete_all': True},
+            created_by=current_user.id,
+        )
+        log_activity('admin.ai_rule_analysis_bulk_delete', 'Queued deletion of ALL AI analyses',
+                     target_type='job', target_id=job.id if job else None)
+        return jsonify({'success': True, 'job': job.to_json() if job else None,
+                        'message': 'Deletion of all AI analyses queued as a background job.'}), 202
+
+    if not ids:
+        return jsonify({'success': False, 'message': 'No ids provided'}), 400
+    deleted = RuleAiAnalysis.query.filter(RuleAiAnalysis.id.in_(ids)).delete(synchronize_session=False)
+    db.session.commit()
+    log_activity('admin.ai_rule_analysis_bulk_delete', f'Deleted {deleted} AI analysis row(s)')
+    return jsonify({'success': True, 'deleted': deleted})
+
+
 @account_blueprint.route('/admin/bulk_parse_fields/configs', methods=['GET'])
 @login_required
 def bulk_parse_fields_configs_list():

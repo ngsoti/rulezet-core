@@ -65,7 +65,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
     </div>
 
 
-    {{ nav.detail_rule_nav(rule, 'detail', similarity_count=similarity_count, history_count=history_count, proposal_count=proposal_count, scope_count=scope_count, test_count=test_count) }}
+    {{ nav.detail_rule_nav(rule, 'detail', similarity_count=similarity_count, history_count=history_count, proposal_count=proposal_count, scope_count=scope_count, test_count=test_count, ai_analysis_count=ai_analysis_count) }}
 
     <div>
             <template v-if="detail_page_1_is_loading">

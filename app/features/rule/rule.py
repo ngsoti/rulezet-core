@@ -753,13 +753,22 @@ def _rule_test_count(rule_id):
     return TesterModel.count_visible_tests_for_rule(rule_id, current_user)
 
 
+def _rule_ai_analysis_count(rule_id):
+    from app.core.db_class.db import RuleAiAnalysis
+    q = RuleAiAnalysis.query.filter_by(rule_id=rule_id)
+    if not (current_user.is_authenticated and current_user.is_admin()):
+        q = q.filter_by(is_public=True)
+    return q.count()
+
+
 def _nav_counts(rule_id):
     return {
-        'similarity_count': _rule_similarity_count(rule_id),
-        'history_count':    _rule_history_count(rule_id),
-        'proposal_count':   _rule_proposal_count(rule_id),
-        'scope_count':      _rule_scope_count(rule_id),
-        'test_count':       _rule_test_count(rule_id),
+        'similarity_count':  _rule_similarity_count(rule_id),
+        'history_count':     _rule_history_count(rule_id),
+        'proposal_count':    _rule_proposal_count(rule_id),
+        'scope_count':       _rule_scope_count(rule_id),
+        'test_count':        _rule_test_count(rule_id),
+        'ai_analysis_count': _rule_ai_analysis_count(rule_id),
     }
 
 
@@ -870,6 +879,124 @@ def detail_rule_similarity(rule_id):
         return render_template("rule/rule_in_trash.html", rule=rule)
     return render_template("rule/detail_rule/detail_rule_similarity.html", rule=rule,
                            **_nav_counts(rule.id))
+
+
+@rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis", methods=['GET'])
+def detail_rule_ai_analysis(rule_id):
+    """AI Analysis sub-page for a rule — see AI_RULE_ANALYSIS_PLAN.md / handle_ai_rule_analysis."""
+    rule = RuleModel.get_rule(rule_id)
+    if not rule:
+        return render_template("404.html")
+    if rule.is_deleted:
+        return render_template("rule/rule_in_trash.html", rule=rule)
+    return render_template("rule/detail_rule/detail_rule_ai_analysis.html", rule=rule,
+                           **_nav_counts(rule.id))
+
+
+@rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis/list", methods=['GET'])
+def detail_rule_ai_analysis_list(rule_id):
+    """History of AI analyses for one rule, newest first. Regular users only
+    ever see is_public=True entries; admins see everything (including
+    private ones, so they can review/toggle/delete them)."""
+    from app.core.db_class.db import RuleAiAnalysis
+    q = RuleAiAnalysis.query.filter_by(rule_id=rule_id)
+    if not (current_user.is_authenticated and current_user.is_admin()):
+        q = q.filter_by(is_public=True)
+    items = q.order_by(RuleAiAnalysis.created_at.desc()).limit(50).all()
+    return jsonify({'items': [a.to_json() for a in items]})
+
+
+def _get_visible_ai_analysis_or_none(rule_id, analysis_id):
+    """A private analysis is only downloadable by an admin — same visibility
+    rule as detail_rule_ai_analysis_list above."""
+    from app.core.db_class.db import RuleAiAnalysis
+    analysis = RuleAiAnalysis.query.filter_by(id=analysis_id, rule_id=rule_id).first()
+    if not analysis:
+        return None
+    if not analysis.is_public and not (current_user.is_authenticated and current_user.is_admin()):
+        return None
+    return analysis
+
+
+def _ai_analysis_download_filename(rule, ext):
+    import re as _re
+    slug = _re.sub(r'[^a-z0-9]+', '-', (rule.title or 'rule').lower()).strip('-')[:40]
+    return f'ai-analysis-{slug}-{rule.id}.{ext}'
+
+
+@rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis/<int:analysis_id>/download/markdown", methods=['GET'])
+def detail_rule_ai_analysis_download_markdown(rule_id, analysis_id):
+    """Download a single AI analysis as a Markdown file with YAML front-matter
+    — same front-matter convention as blog post Markdown downloads."""
+    rule = RuleModel.get_rule(rule_id)
+    if not rule or rule.is_deleted:
+        return render_template("404.html")
+
+    analysis = _get_visible_ai_analysis_or_none(rule_id, analysis_id)
+    if not analysis:
+        return render_template("404.html")
+
+    requester = (analysis.user.first_name + ' ' + analysis.user.last_name).strip() if analysis.user else 'unknown'
+    source_url = f'{request.url_root.rstrip("/")}/rule/detail_rule/{rule.id}/ai_analysis'
+
+    lines = [
+        '---',
+        f'title: "AI Analysis — {rule.title}"',
+        f'rule_title: "{rule.title}"',
+        f'rule_format: "{rule.format}"',
+        f'model: "{analysis.model or "unknown"}"',
+        f'requested_by: "{requester}"',
+        f'generated_at: {analysis.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")}',
+        f'source: "{source_url}"',
+        f'exported_at: {datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}',
+        '---',
+        '',
+        analysis.content or '',
+    ]
+
+    response = current_app.response_class('\n'.join(lines), mimetype='text/markdown')
+    response.headers['Content-Disposition'] = (
+        f'attachment; filename="{_ai_analysis_download_filename(rule, "md")}"'
+    )
+    log_activity('rule.ai_analysis_download', f'Downloaded AI analysis (Markdown) for "{rule.title[:80]}"',
+                 target_type='rule', target_id=rule.id, is_public=False)
+    return response
+
+
+@rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis/<int:analysis_id>/download/pdf", methods=['GET'])
+def detail_rule_ai_analysis_download_pdf(rule_id, analysis_id):
+    """Generate a PDF of a single AI analysis — same WeasyPrint pipeline as
+    blog post PDF downloads (see blog.download_post_pdf)."""
+    import markdown as _md
+    from weasyprint import HTML as WeasyprintHTML
+
+    rule = RuleModel.get_rule(rule_id)
+    if not rule or rule.is_deleted:
+        return render_template("404.html")
+
+    analysis = _get_visible_ai_analysis_or_none(rule_id, analysis_id)
+    if not analysis:
+        return render_template("404.html")
+
+    requester = (analysis.user.first_name + ' ' + analysis.user.last_name).strip() if analysis.user else None
+    base_url = request.url_root.rstrip('/')
+    content_html = _md.markdown(analysis.content or '', extensions=['extra', 'codehilite', 'toc', 'nl2br'])
+
+    html_str = render_template(
+        'rule/detail_rule/ai_analysis_print.html',
+        rule=rule, analysis=analysis, requester=requester, content_html=content_html,
+        source_url=f'{base_url}/rule/detail_rule/{rule.id}/ai_analysis',
+        generated_at=datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC'),
+    )
+    pdf_bytes = WeasyprintHTML(string=html_str, base_url=base_url).write_pdf()
+
+    response = current_app.response_class(pdf_bytes, mimetype='application/pdf')
+    response.headers['Content-Disposition'] = (
+        f'attachment; filename="{_ai_analysis_download_filename(rule, "pdf")}"'
+    )
+    log_activity('rule.ai_analysis_download', f'Downloaded AI analysis (PDF) for "{rule.title[:80]}"',
+                 target_type='rule', target_id=rule.id, is_public=False)
+    return response
 
 
 @rule_blueprint.route("/history_activity_delete/<string:log_uuid>", methods=['DELETE'])
@@ -5003,3 +5130,9 @@ def permanent_delete_bulk():
 def rulelist_test():
     """Dev/test page for the RuleList component — showcases all modes."""
     return render_template('rule/rulelist_test.html')
+
+
+@rule_blueprint.route('/ai-analysis/how-it-works', methods=['GET'])
+def ai_analysis_how_it_works():
+    """Public documentation page — see AI_RULE_ANALYSIS_PLAN.md / handle_ai_rule_analysis."""
+    return render_template('rule/ai_analysis_how_it_works.html')

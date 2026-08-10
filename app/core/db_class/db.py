@@ -963,6 +963,79 @@ class RuleUpdateHistory(db.Model):
             "change_type": self.change_type,
         }
 
+
+class RuleAiAnalysis(db.Model):
+    """
+    One row per AI-generated analysis run for a rule — a rule can have many
+    (re-running keeps history rather than overwriting), same convention as
+    RuleUpdateHistory above. See app/features/rule/utils/ai_rule_analysis/.
+
+    content is raw Markdown, never pre-rendered to HTML server-side: the rule
+    content an analysis is built from is attacker-controlled (any
+    authenticated user can create a rule), so rendering only ever happens
+    client-side through marked() + DOMPurify.sanitize(), exactly like blog
+    posts.
+    """
+    __tablename__ = 'rule_ai_analysis'
+
+    id      = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid    = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)  # who triggered this generation
+
+    content = db.Column(db.Text, nullable=False)
+    model   = db.Column(db.String(128), nullable=True)
+
+    # Admin-only visibility switch — an LLM can produce something wrong or
+    # embarrassing on a given rule; this lets an admin hide one specific
+    # generation from regular users without deleting it (it stays visible to
+    # admins in the history). New analyses default to visible, matching how
+    # every other piece of content in Rulezet is visible by default.
+    is_public = db.Column(db.Boolean, nullable=False, default=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, index=True)
+
+    rule = db.relationship('Rule', backref=db.backref('ai_analyses', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User')
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "rule_id": self.rule_id,
+            "rule_title": self.rule.title if self.rule else None,
+            "user_id": self.user_id,
+            "username": (self.user.first_name + " " + self.user.last_name) if self.user else "Unknown",
+            "content": self.content,
+            "model": self.model,
+            "is_public": self.is_public,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else None,
+        }
+
+
+class AiAnalysisModelConfig(db.Model):
+    """Admin-curated allowlist of Ollama models selectable when launching an
+    AI Rule Analysis run. Synced against Ollama's own /api/tags (see
+    ai_rule_analysis_core.sync_models_from_ollama) — newly pulled models show
+    up here enabled by default, and an admin can disable specific ones
+    (e.g. a model that turned out to be unreliable) without needing to
+    un-pull it from Ollama."""
+    __tablename__ = 'ai_analysis_model_config'
+
+    id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    model_name = db.Column(db.String(128), unique=True, nullable=False)
+    is_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    added_at   = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "model_name": self.model_name,
+            "is_enabled": self.is_enabled,
+            "added_at": self.added_at.strftime('%Y-%m-%d %H:%M') if self.added_at else None,
+        }
+
+
 class RuleTagAssociation(db.Model):
     __tablename__ = 'rule_tag_association'
     
@@ -2658,6 +2731,7 @@ class InstanceConfig(db.Model):
     uuid              = db.Column(db.String(36), unique=True, nullable=False)
     telemetry_enabled = db.Column(db.Boolean, default=True, nullable=False)
     chatbot_enabled   = db.Column(db.Boolean, default=True, nullable=False)
+    ai_rule_analysis_enabled = db.Column(db.Boolean, default=True, nullable=False)
     public_url        = db.Column(db.String(512), nullable=True)
     version           = db.Column(db.String(64), nullable=True)
     last_started_at   = db.Column(db.DateTime, nullable=True)
@@ -2668,6 +2742,7 @@ class InstanceConfig(db.Model):
             'uuid':              self.uuid,
             'telemetry_enabled': self.telemetry_enabled,
             'chatbot_enabled':   self.chatbot_enabled,
+            'ai_rule_analysis_enabled': self.ai_rule_analysis_enabled,
             'public_url':        self.public_url,
             'version':           self.version,
             'last_started_at':   self.last_started_at.strftime('%Y-%m-%d %H:%M') if self.last_started_at else None,

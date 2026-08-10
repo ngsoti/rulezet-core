@@ -21,6 +21,7 @@ import subprocess
 import sys
 import uuid as uuid_mod
 from pathlib import Path
+from types import SimpleNamespace
 
 from app.features.jobs.job_worker import register_handler
 from app import db
@@ -2674,6 +2675,294 @@ def handle_bulk_tag_platforms(job, app):
 
     log_job(job, f'Done — {offset} rule(s) scanned, {total_tagged} rule(s) tagged with '
                  f'{total_associations} new platform tag(s).', level='success', event='done')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ai_rule_analysis — Phase 1 of AI_RULE_ANALYSIS_PLAN.md: generate a detailed
+# English Markdown report per rule using a local Ollama model, stored as a
+# new RuleAiAnalysis row (history kept — a re-run adds another row rather
+# than overwriting). Tag/ATT&CK suggestion (Phase 2/3 of the plan) are not
+# implemented yet.
+#
+# Deliberately processed one rule at a time, not in large batches like the
+# other bulk jobs above — a single Ollama call can legitimately take tens of
+# seconds to a few minutes on a "not powerful" local model, so pause/cancel
+# responsiveness and per-rule fault isolation matter far more here than raw
+# DB throughput. This is meant to run over instances with 100k+ rules, so a
+# single stuck/slow rule (timeout) or the whole model being briefly flaky
+# (invalid JSON) must never be allowed to jeopardize the rest of an
+# unattended, possibly multi-day run.
+#
+# IMPORTANT — pagination correctness at this scale: the query below only
+# ever targets the Rule table itself (filtered by rule_ids/format_filter),
+# never joined/filtered against RuleAiAnalysis. If it were, each freshly
+# analyzed rule would make a NEW RuleAiAnalysis row exist, which would
+# change what "already has one" means mid-scan under plain OFFSET/LIMIT
+# pagination (the exact bug class already called out in
+# handle_bulk_parse_fields above). Instead the query result set is the full,
+# stable target selection (never shrinks as rows are processed); "already
+# has an analysis, skip it" is decided once up front from a snapshot set of
+# rule ids, not re-checked live per row.
+# ─────────────────────────────────────────────────────────────────────────────
+
+AI_ANALYSIS_FETCH_BATCH = 20   # DB page size — unrelated to how often we commit/check pause below
+AI_ANALYSIS_LOG_EVERY   = 5    # rules, not batches — a single rule can take tens of seconds to minutes
+
+
+@register_handler('ai_rule_analysis')
+def handle_ai_rule_analysis(job, app):
+    """Generate a RuleAiAnalysis row for a selection of rules via a local
+    Ollama model. See
+    app/features/rule/utils/ai_rule_analysis/ai_rule_analysis_core.py for
+    the prompt/validation/model-list logic."""
+    import json as _json
+    import uuid as _uuid
+    from app.core.db_class.db import RuleAiAnalysis, RuleAttackAssociation, AttackTechnique
+    from app.features.rule.utils.ai_rule_analysis.ai_rule_analysis_core import (
+        call_ollama_for_summary, is_local_ollama_url,
+        is_ai_rule_analysis_enabled, get_enabled_model_names,
+        AIAnalysisTimeout, AIAnalysisConnectionError, AIAnalysisInvalidResponse,
+    )
+
+    if not is_ai_rule_analysis_enabled():
+        log_job(job, 'AI Rule Analysis is disabled instance-wide (admin setting) — refusing to run.',
+                level='error', event='error')
+        job.status = 'failed'
+        job.error  = 'Feature disabled'
+        db.session.commit()
+        return
+
+    ollama_url = app.config.get('OLLAMA_URL') or 'http://localhost:11434'
+    if not is_local_ollama_url(ollama_url):
+        # See ai_rule_analysis_core.is_local_ollama_url — refuse outright
+        # rather than silently exporting every rule's content to whatever
+        # OLLAMA_URL happens to point at.
+        log_job(job, f"OLLAMA_URL ({ollama_url}) doesn't look like a local/private "
+                     "address — refusing to run to avoid sending rule content off-server. "
+                     "Fix OLLAMA_URL if this is unexpected.", level='error', event='error')
+        job.status = 'failed'
+        job.error  = 'OLLAMA_URL is not a local/private address'
+        db.session.commit()
+        return
+
+    payload       = job.payload or {}
+    rule_ids      = payload.get('rule_ids', 'ALL')
+    format_filter = payload.get('format_filter') or None
+    regenerate    = bool(payload.get('regenerate_existing'))
+    default_public = payload.get('default_public', True)
+    model         = payload.get('model')
+    offset        = payload.get('_resume_offset', 0)
+
+    # Re-validate the chosen model against the admin's current allowlist —
+    # defense in depth, since it could have been disabled between the
+    # trigger request and this job actually starting.
+    enabled_models = get_enabled_model_names()
+    if not model or (enabled_models and model not in enabled_models):
+        log_job(job, f'Model "{model}" is not in the enabled models list — refusing to run. '
+                     f'Enabled models: {", ".join(enabled_models) or "(none configured)"}.',
+                level='error', event='error')
+        job.status = 'failed'
+        job.error  = 'Invalid or disabled model'
+        db.session.commit()
+        return
+
+    # Stable target set — see the correctness note above.
+    q = Rule.query.filter(Rule.is_deleted == False).order_by(Rule.id.asc())
+    if rule_ids != 'ALL':
+        q = q.filter(Rule.id.in_(rule_ids))
+    elif format_filter:
+        q = q.filter(Rule.format == format_filter)
+
+    # Snapshot, taken once, of which targeted rules already have at least
+    # one analysis — used only when regenerate=False. A live per-row check
+    # against RuleAiAnalysis would change size as this very job inserts new
+    # rows, which is exactly the pagination hazard described above.
+    already_analyzed_ids = set()
+    if not regenerate:
+        already_analyzed_ids = {
+            row[0] for row in db.session.query(RuleAiAnalysis.rule_id.distinct())
+            .filter(RuleAiAnalysis.rule_id.in_(q.with_entities(Rule.id)))
+            .all()
+        }
+
+    if job.total == 0:
+        job.total = q.count()
+        db.session.commit()
+        log_job(job, f'Starting — {job.total} rule(s) targeted, model "{model}", '
+                     f'regenerate existing: {regenerate}, default visibility: '
+                     f'{"public" if default_public else "private"}.', level='info', event='start')
+    else:
+        log_job(job, f'Resuming from offset {offset}.', level='info', event='resume')
+
+    total_generated = 0
+    total_skipped    = 0
+    total_failed     = 0
+    rules_since_log  = 0
+
+    while True:
+        rows = (
+            q.with_entities(Rule.id, Rule.title, Rule.format, Rule.description,
+                             Rule.to_string, Rule.cve_id)
+            .offset(offset)
+            .limit(AI_ANALYSIS_FETCH_BATCH)
+            .all()
+        )
+        if not rows:
+            break
+
+        # Bulk-fetch tags and ATT&CK techniques for the whole batch in two
+        # queries rather than per-row — same reasoning as the rest of this
+        # handler, this can run over hundreds of thousands of rules.
+        batch_ids = [r[0] for r in rows]
+        tags_by_rule = {}
+        for rid, tag_name in (
+            db.session.query(RuleTagAssociation.rule_id, Tag.name)
+            .join(Tag, RuleTagAssociation.tag_id == Tag.id)
+            .filter(RuleTagAssociation.rule_id.in_(batch_ids)).all()
+        ):
+            tags_by_rule.setdefault(rid, []).append(tag_name)
+
+        attack_by_rule = {}
+        for rid, technique_id, technique_name in (
+            db.session.query(RuleAttackAssociation.rule_id, RuleAttackAssociation.technique_id,
+                              AttackTechnique.name)
+            .join(AttackTechnique, RuleAttackAssociation.technique_id == AttackTechnique.technique_id)
+            .filter(RuleAttackAssociation.rule_id.in_(batch_ids)).all()
+        ):
+            attack_by_rule.setdefault(rid, []).append(f"{technique_id} ({technique_name})")
+
+        for row in rows:
+            if _is_cancelled(job):
+                log_job(job, 'Cancelled.', level='warning', event='cancelled')
+                return
+            while _should_pause(job):
+                import time; time.sleep(2)
+
+            rule_id, title, fmt, description, to_string, cve_id_raw = row
+            offset += 1
+
+            if rule_id in already_analyzed_ids:
+                total_skipped += 1
+            else:
+                try:
+                    cve_ids = _json.loads(cve_id_raw) if cve_id_raw else []
+                    if not isinstance(cve_ids, list):
+                        cve_ids = []
+                except (ValueError, TypeError):
+                    cve_ids = []
+
+                # Minimal stand-in with just the fields the prompt needs —
+                # avoids loading a full ORM Rule object per row. Tags/ATT&CK/
+                # CVEs are included so the report can stay grounded and
+                # substantial even when the rule's own content/description
+                # is sparse (uses associations only — never rule history).
+                stub = SimpleNamespace(id=rule_id, title=title, format=fmt,
+                                       description=description, to_string=to_string,
+                                       tags=tags_by_rule.get(rule_id, []),
+                                       attack_techniques=attack_by_rule.get(rule_id, []),
+                                       cve_ids=cve_ids)
+
+                try:
+                    summary, model_used = call_ollama_for_summary(stub, model=model)
+                    db.session.add(RuleAiAnalysis(
+                        uuid=str(_uuid.uuid4()),
+                        rule_id=rule_id,
+                        user_id=job.created_by,
+                        content=summary,
+                        model=model_used,
+                        is_public=bool(default_public),
+                    ))
+                    db.session.commit()
+                    total_generated += 1
+                except AIAnalysisConnectionError as e:
+                    # Systemic, not per-rule — every remaining rule would
+                    # fail identically. Stop entirely rather than burn
+                    # through the rest of a 250k-rule run logging the same
+                    # error over and over; the saved offset lets an admin
+                    # resume once Ollama is back.
+                    _save_offset(job, offset - 1)  # retry this rule on resume
+                    db.session.commit()
+                    log_job(job, f'Ollama unreachable, stopping: {e}', level='error', event='error')
+                    job.status = 'failed'
+                    job.error  = str(e)
+                    db.session.commit()
+                    return
+                except (AIAnalysisTimeout, AIAnalysisInvalidResponse) as e:
+                    total_failed += 1
+                    log_job(job, f'Rule #{rule_id}: {e}', level='warning', event='rule_failed')
+                except Exception as e:
+                    # Defense in depth — an unexpected error on one rule
+                    # must never take down an unattended multi-day run.
+                    db.session.rollback()
+                    total_failed += 1
+                    log_job(job, f'Rule #{rule_id}: unexpected error: {e}', level='warning', event='rule_failed')
+
+            job.done = offset
+            _save_offset(job, offset)
+            db.session.commit()
+
+            rules_since_log += 1
+            if rules_since_log >= AI_ANALYSIS_LOG_EVERY:
+                rules_since_log = 0
+                log_job(job, f'{offset}/{job.total} rule(s) processed — {total_generated} generated, '
+                             f'{total_skipped} skipped (already had an analysis), {total_failed} failed.',
+                        level='info', event='progress')
+
+    log_job(job, f'Done — {offset} rule(s) processed: {total_generated} analys{"is" if total_generated == 1 else "es"} '
+                 f'generated, {total_skipped} skipped (already had one), {total_failed} failed.',
+            level='success', event='done')
+
+
+# ─── delete_ai_analyses ─────────────────────────────────────────────────────
+# Only ever queued for the delete_all=True case (see
+# account.ai_rule_analysis_bulk_delete) — a specific id-list bulk delete is
+# small enough (one admin history-table page selection) to run inline in
+# the request instead.
+
+AI_ANALYSIS_DELETE_BATCH = 1000
+
+
+@register_handler('delete_ai_analyses')
+def handle_delete_ai_analyses(job, app):
+    from app.core.db_class.db import RuleAiAnalysis
+
+    total = RuleAiAnalysis.query.count()
+    job.total = total
+    job.done  = 0
+    db.session.commit()
+
+    if total == 0:
+        log_job(job, "Nothing to delete.", level='info', event='done')
+        return
+
+    log_job(job, f"Starting — deleting all {total} AI analysis row(s)…", level='info', event='start')
+    deleted = 0
+    while True:
+        if _is_cancelled(job):
+            log_job(job, f"Cancelled — {deleted} deleted so far.", level='warning', event='cancelled')
+            return
+        while _should_pause(job):
+            import time; time.sleep(2)
+
+        # Always take from the front — no OFFSET needed since every deleted
+        # row leaves the result set for good (unlike the ai_rule_analysis
+        # job above, this one's whole purpose IS to shrink the table).
+        batch_ids = [r.id for r in RuleAiAnalysis.query
+                     .order_by(RuleAiAnalysis.id)
+                     .limit(AI_ANALYSIS_DELETE_BATCH)
+                     .with_entities(RuleAiAnalysis.id)
+                     .all()]
+        if not batch_ids:
+            break
+
+        RuleAiAnalysis.query.filter(RuleAiAnalysis.id.in_(batch_ids)).delete(synchronize_session=False)
+        db.session.commit()
+        deleted += len(batch_ids)
+        job.done = deleted
+        db.session.commit()
+        log_job(job, f"Deleted {deleted}/{total}.", level='info', event='progress')
+
+    log_job(job, f"Done — {deleted} AI analysis row(s) deleted.", level='success', event='done')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
