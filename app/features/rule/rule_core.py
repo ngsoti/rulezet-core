@@ -478,21 +478,27 @@ def corpus_resource_collision_risk(rule_format: str, new_entries: list, extracto
     if exclude_rule_id:
         candidates = candidates.filter(Rule.id != exclude_rule_id)
 
+    # Grouped by (name -> other_rule.id -> {'rule': other, 'modes': set()}) so
+    # a rule that both sets and later checks the same resource in one
+    # submission (e.g. a two-stage flowbit rule) produces one reason per
+    # colliding rule, not one per mode it happens to use internally.
     existing_by_name: dict = {}
     for existing in candidates:
         for name, mode in extractor(existing.to_string or ''):
-            existing_by_name.setdefault(name, []).append((existing, mode))
+            by_rule = existing_by_name.setdefault(name, {})
+            by_rule.setdefault(existing.id, {'rule': existing, 'modes': set()})['modes'].add(mode)
 
     reasons_reject, reasons_warn = [], []
     for name, mode in new_entries:
-        for other, other_mode in existing_by_name.get(name, []):
+        for other_id, info in existing_by_name.get(name, {}).items():
+            other, other_modes = info['rule'], info['modes']
             if mode == 'write':
                 reasons_reject.append(
                     f"Writes to '{name}', which rule '{other.title}' (id={other.id}) already "
-                    f"{'writes to' if other_mode == 'write' else 'reads from'} — this can wipe or "
+                    f"{'writes to' if 'write' in other_modes else 'reads from'} — this can wipe or "
                     "replace that source's data."
                 )
-            elif other_mode == 'write':
+            elif 'write' in other_modes:
                 reasons_warn.append(
                     f"Reads '{name}', which rule '{other.title}' (id={other.id}) writes to — this "
                     "rule's lookups depend on another source's data."

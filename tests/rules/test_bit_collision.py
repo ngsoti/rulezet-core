@@ -103,3 +103,25 @@ def test_a2_same_name_different_bit_type_is_unaffected(client):
     )
     assert second.status_code == 200
     assert "warning" not in second.get_json()["message"].lower()
+
+
+def test_a2_two_stage_rule_produces_one_reason_per_colliding_rule(client):
+    """A rule that both sets and reads the same bit internally (e.g. a two-stage
+    detection) must produce exactly one reject reason for the colliding rule,
+    not one per internal mode (regression check for a duplicate-message bug
+    found while importing real PoC rules)."""
+    two_stage = _create(
+        client, "A2 corpus two-stage setter",
+        'alert tcp any any -> any any (msg:"a2c t10a"; flowbits:set,a2c_twostage; flowbits:noalert; sid:900210; rev:1;)\n'
+        'alert tcp any any -> any any (msg:"a2c t10b"; flowbits:isset,a2c_twostage; sid:900211; rev:1;)',
+    )
+    assert two_stage.status_code == 200
+    two_stage_id = two_stage.get_json()["rule"]["id"]
+
+    writer = _create(
+        client, "A2 corpus writer over two-stage rule",
+        'alert tcp any any -> any any (msg:"a2c t12"; flowbits:unset,a2c_twostage; sid:900212; rev:1;)',
+    )
+    assert writer.status_code == 400
+    message = writer.get_json()["message"]
+    assert message.count(f"id={two_stage_id}") == 1
