@@ -45,3 +45,4 @@ markdown
 cryptography
 grpcio
 pyvelociraptor
+pyatr
