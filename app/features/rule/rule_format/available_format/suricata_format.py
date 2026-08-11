@@ -65,6 +65,55 @@ def detect_suppression_risk(content: str) -> dict:
     return {'flagged': bool(deduped_reasons), 'rejected': rejected, 'reasons': deduped_reasons}
 
 
+# ref A2 (single-rule part): flowbits/xbits/hostbits exist purely for
+# cross-rule signalling — a rule that unsets a bit it never sets itself has
+# no legitimate single-source justification for touching that bit at all.
+_BIT_KEYWORDS = ('flowbits', 'xbits', 'hostbits')
+
+
+def detect_unset_without_set_risk(content: str) -> dict:
+    """
+    Detect a flowbit/xbit/hostbit 'unset' with no matching 'set' of the same
+    bit name in the same rule body.
+
+    Returns {'flagged': bool, 'reasons': list[str]}.
+    """
+    try:
+        rules = parse_rules(content)
+    except Exception:
+        return {'flagged': False, 'reasons': []}
+
+    reasons = []
+    for rule in rules:
+        set_bits = set()
+        unset_bits = []
+        for opt in rule.options:
+            kind = opt.name.lower()
+            if kind not in _BIT_KEYWORDS:
+                continue
+            parts = [p.strip() for p in (opt.value or '').split(',')]
+            if len(parts) < 2:
+                continue
+            action, bit_name = parts[0].lower(), parts[1]
+            if action == 'set':
+                set_bits.add((kind, bit_name))
+            elif action == 'unset':
+                unset_bits.append((kind, bit_name))
+
+        for kind, bit_name in unset_bits:
+            if (kind, bit_name) not in set_bits:
+                reasons.append(
+                    f"Uses '{kind}:unset,{bit_name}' without also setting '{bit_name}' in "
+                    "the same rule — this bit exists purely for cross-rule signalling, so "
+                    "unsetting one this rule never sets itself has no single-source "
+                    "justification."
+                )
+
+    seen = set()
+    deduped_reasons = [r for r in reasons if not (r in seen or seen.add(r))]
+    return {'flagged': bool(deduped_reasons), 'reasons': deduped_reasons}
+
+
 class SuricataRule(RuleType):
     """
     Concrete implementation of RuleType for Suricata rules.
@@ -90,9 +139,12 @@ class SuricataRule(RuleType):
             if risk['rejected']:
                 return ValidationResult(ok=False, errors=risk['reasons'], normalized_content=content)
 
+            bit_risk = detect_unset_without_set_risk(content)
+            warnings = list(risk['reasons']) + list(bit_risk['reasons'])
+
             return ValidationResult(
                 ok=True,
-                warnings=risk['reasons'] if risk['flagged'] else [],
+                warnings=warnings,
                 normalized_content="\n".join([rule.raw for rule in rules])
             )
         except Exception as e:
