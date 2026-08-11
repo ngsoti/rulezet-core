@@ -65,6 +65,19 @@ window.__rule_risk   = {{ rule_risk | tojson | safe }};
         </p>
     </div>
 
+    <div v-if="currentRule && currentRule.is_code_format" class="alert alert-danger d-flex align-items-start gap-3 mb-4 shadow-sm" role="alert">
+        <i class="fa-solid fa-code fs-4 mt-1"></i>
+        <div>
+            <strong>Executable code, not a declarative rule</strong>
+            <p class="mb-0 mt-1">
+                This submission is arbitrary [[ currentRule.format ? currentRule.format.toUpperCase() : '' ]]
+                code, not a declarative detection rule — review it as you would any script
+                before running it, and note that it cannot be safely aggregated or
+                auto-executed alongside YARA/Sigma/Suricata/CRS rules.
+            </p>
+        </div>
+    </div>
+
     <div v-if="ruleRisk && ruleRisk.flagged" class="alert d-flex align-items-start gap-3 mb-4 shadow-sm"
          :class="ruleRisk.rejected ? 'alert-danger' : 'alert-warning'" role="alert">
         <i class="fa-solid fa-triangle-exclamation fs-4 mt-1"></i>

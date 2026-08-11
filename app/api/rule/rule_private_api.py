@@ -965,6 +965,7 @@ class SearchRules(Resource):
             "to_string":     lambda r: r.to_string,
             "cve_id":        lambda r: r.cve_id if r.cve_id is not None else [],
             "github_path":   lambda r: r.github_path,
+            "is_code_format": lambda r: r.is_code_format(),
         }
 
         fields_to_use = requested_fields if requested_fields else list(ALL_FIELDS.keys())

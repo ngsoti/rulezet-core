@@ -227,6 +227,7 @@ class Rule(db.Model):
             "editor_avatar": submitter_avatar,
             "sync_instance_url": self.sync_instance_url,
             "status": self.status or 'draft',
+            "is_code_format": self.is_code_format(),
         }
 
     def get_extension(self):
@@ -244,8 +245,18 @@ class Rule(db.Model):
             'nova': 'nov'
         }
         
-        return extensions.get(format_name, 'txt') 
-    
+        return extensions.get(format_name, 'txt')
+
+    # ref A8: Zeek and NSE (Lua-based Nmap scripts) submissions are arbitrary
+    # executable code, not declarative detection rules, and used to be shown
+    # in the same undifferentiated list as YARA/Sigma/Suricata/CRS.
+    CODE_FORMATS = {'zeek', 'nse'}
+
+    def is_code_format(self) -> bool:
+        """True for formats that are executable code rather than a declarative rule."""
+        return (self.format or '').lower() in self.CODE_FORMATS
+
+
     def to_json_detail(self):
         """ Return a detailed JSON representation of the rule, including all fields. This is used for the rule detail page. """
         
@@ -321,6 +332,7 @@ class Rule(db.Model):
                 "title": self.title,
                 "version": self.version,
                 "format": self.format,
+                "is_code_format": self.is_code_format(),
             },
 
             # --- content ---

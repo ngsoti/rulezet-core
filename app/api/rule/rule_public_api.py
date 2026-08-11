@@ -129,7 +129,8 @@ class SearchRulePage(Resource):
                 "author": rule.author,
                 "creation_date": rule.creation_date.isoformat(),
                 "format": rule.format,
-                "content": rule.to_string
+                "content": rule.to_string,
+                "is_code_format": rule.is_code_format(),
             })
 
         # Final response

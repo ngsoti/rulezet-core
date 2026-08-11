@@ -500,6 +500,10 @@ export default {
                     <span v-if="currentUserIsAdmin" class="badge bg-warning shadow-sm pt-1">
                         <i class="fa-solid fa-crown me-1"></i>ADMIN
                     </span>
+                    <span v-if="rule.is_code_format" class="badge bg-danger shadow-sm pt-1"
+                          title="Executable code, not a declarative detection rule">
+                        <i class="fa-solid fa-code me-1"></i>CODE
+                    </span>
                     <span class="badge rounded-pill bg-dark pt-1 shadow-sm">
                         {{ rule.format ? rule.format.toUpperCase() : '?' }}
                     </span>
@@ -875,6 +879,10 @@ export default {
                             </td>
 
                             <td v-show="colVisible.format" class="dt-td">
+                                <span v-if="rule.is_code_format" class="badge bg-danger pt-1 shadow-sm me-1"
+                                      title="Executable code, not a declarative detection rule">
+                                    <i class="fa-solid fa-code me-1"></i>CODE
+                                </span>
                                 <span v-if="rule.format"
                                       class="badge rounded-pill bg-dark pt-1 shadow-sm">
                                     {{ rule.format.toUpperCase() }}
@@ -1074,6 +1082,10 @@ export default {
                                         <div class="rl-expand-kv">
                                             <span class="rl-expand-k">Format</span>
                                             <span class="rl-expand-v">
+                                                <span v-if="rule.is_code_format" class="badge bg-danger me-1"
+                                                      title="Executable code, not a declarative detection rule">
+                                                    <i class="fa-solid fa-code me-1"></i>CODE
+                                                </span>
                                                 <span v-if="rule.format" class="badge rounded-pill bg-dark">
                                                     {{ rule.format.toUpperCase() }}
                                                 </span>
