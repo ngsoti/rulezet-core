@@ -12,6 +12,39 @@ from app.core.utils.utils import detect_cve
 # both give a rule engine-wide suppression power over other sources' rules.
 _HASH_TRANSFORM_KEYWORDS = ('to_sha256', 'to_md5', 'to_sha1')
 
+# ref A1: a rule using dataset:...,save|state on a filename another source
+# already uses can wipe or replace that source's IOC list. 'load' only reads
+# the file; 'save'/'state' persist to it, so both count as a write.
+_DATASET_FILE_RE = re.compile(r'\b(load|save|state)\s+(\S+)', re.IGNORECASE)
+
+
+def extract_dataset_entries(content: str) -> list:
+    """
+    Extract (filename, mode) pairs from every 'dataset' option in the rule(s),
+    mode is 'read' (load) or 'write' (save/state).
+
+    Used both for the submitted rule and, by rule_core.py's corpus-wide
+    collision check (ref A1), re-applied to every existing rule's stored
+    content to compare against.
+    """
+    try:
+        rules = parse_rules(content)
+    except Exception:
+        return []
+
+    entries = []
+    for rule in rules:
+        for opt in rule.options:
+            if opt.name.lower() != 'dataset':
+                continue
+            match = _DATASET_FILE_RE.search(opt.value or '')
+            if not match:
+                continue
+            keyword, filename = match.group(1).lower(), match.group(2)
+            mode = 'read' if keyword == 'load' else 'write'
+            entries.append((filename, mode))
+    return entries
+
 
 def detect_suppression_risk(content: str) -> dict:
     """

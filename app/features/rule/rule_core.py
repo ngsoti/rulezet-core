@@ -446,6 +446,87 @@ def check_identifier_uniqueness(rule_format: str, content: str, exclude_rule_id:
     return True, ""
 
 
+# ref A1 / A2 (corpus part): shared engine for named resources that multiple
+# independently-authored rules can reference by name — Suricata dataset
+# filenames (ref A1, wired in below) and flowbit/xbit/hostbit names (ref A2
+# corpus part, Step 8) both fit this shape.
+#
+# Data model: a resource is identified by its name alone, scoped to a rule
+# format. Each rule referencing it is either a 'read' (looks up existing
+# data, e.g. dataset 'load' / flowbit 'isset') or a 'write' (creates or
+# replaces it, e.g. dataset 'save'/'state' / flowbit 'set'). This function
+# does not persist an index — it re-scans _active() rules of the given
+# format on every call, extracting each one's entries with the same
+# `extractor(content) -> list[(name, mode)]` used for the submitted rule.
+# That keeps it always in sync with live content, at the cost of a
+# full-format scan per submission; acceptable at this corpus's current
+# scale — a real index table would be the next step if that stops holding.
+#
+# A new 'write' colliding with any existing entry (read or write) on the
+# same name is rejected — writing can wipe or replace data another source
+# depends on either way. A new 'read' colliding with an existing entry
+# (read or write) is only a warning — reading doesn't destroy anything, but
+# cross-source overlap on the same name is still worth surfacing.
+def corpus_resource_collision_risk(rule_format: str, new_entries: list, extractor, exclude_rule_id: int = None) -> dict:
+    """
+    Returns {'rejected': bool, 'reasons_reject': list[str], 'reasons_warn': list[str]}.
+    """
+    if not new_entries:
+        return {'rejected': False, 'reasons_reject': [], 'reasons_warn': []}
+
+    candidates = _active().filter(Rule.format == (rule_format or '').lower())
+    if exclude_rule_id:
+        candidates = candidates.filter(Rule.id != exclude_rule_id)
+
+    existing_by_name: dict = {}
+    for existing in candidates:
+        for name, mode in extractor(existing.to_string or ''):
+            existing_by_name.setdefault(name, []).append((existing, mode))
+
+    reasons_reject, reasons_warn = [], []
+    for name, mode in new_entries:
+        for other, other_mode in existing_by_name.get(name, []):
+            if mode == 'write':
+                reasons_reject.append(
+                    f"Writes to '{name}', which rule '{other.title}' (id={other.id}) already "
+                    f"{'writes to' if other_mode == 'write' else 'reads from'} — this can wipe or "
+                    "replace that source's data."
+                )
+            elif other_mode == 'write':
+                reasons_warn.append(
+                    f"Reads '{name}', which rule '{other.title}' (id={other.id}) writes to — this "
+                    "rule's lookups depend on another source's data."
+                )
+            else:
+                reasons_warn.append(
+                    f"Reads '{name}', the same resource rule '{other.title}' (id={other.id}) also "
+                    "reads — if the overlap is coincidental rather than intentional sharing, verify "
+                    "both rules mean the same thing by it."
+                )
+
+    seen_reject, seen_warn = set(), set()
+    reasons_reject = [r for r in reasons_reject if not (r in seen_reject or seen_reject.add(r))]
+    reasons_warn = [r for r in reasons_warn if not (r in seen_warn or seen_warn.add(r))]
+
+    return {'rejected': bool(reasons_reject), 'reasons_reject': reasons_reject, 'reasons_warn': reasons_warn}
+
+
+def check_dataset_collision_risk(rule_format: str, content: str, exclude_rule_id: int = None) -> dict:
+    """
+    ref A1: corpus-wide Suricata dataset filename collision check. Only
+    applies to the 'suricata' format — other formats pass through
+    unaffected. See corpus_resource_collision_risk() above for the shared
+    comparison engine.
+    """
+    if (rule_format or '').lower() != 'suricata':
+        return {'rejected': False, 'reasons_reject': [], 'reasons_warn': []}
+
+    from app.features.rule.rule_format.available_format.suricata_format import extract_dataset_entries
+    new_entries = extract_dataset_entries(content)
+    return corpus_resource_collision_risk('suricata', new_entries, extract_dataset_entries,
+                                           exclude_rule_id=exclude_rule_id)
+
+
 # Create
 def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, str] | tuple[Rule, str]:
     """
@@ -478,6 +559,10 @@ def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, 
         unique_ok, unique_error = check_identifier_uniqueness(form_dict.get("format"), new_to_string)
         if not unique_ok:
             return False, unique_error
+
+        dataset_risk = check_dataset_collision_risk(form_dict.get("format"), new_to_string)
+        if dataset_risk['rejected']:
+            return False, "; ".join(dataset_risk['reasons_reject'])
 
         # Identify user
         if current_user and current_user.is_authenticated:
@@ -594,7 +679,11 @@ def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, 
         except Exception:
             pass
 
-        return new_rule, "rule created"
+        message = "rule created"
+        if dataset_risk['reasons_warn']:
+            message += " (warning: " + "; ".join(dataset_risk['reasons_warn']) + ")"
+
+        return new_rule, message
 
     except Exception as e:
         return False, e
