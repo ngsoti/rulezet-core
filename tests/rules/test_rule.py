@@ -151,22 +151,26 @@ def test_create_valid_yara_rule(client):
         "license": "MIT",
         "source": "UnitTest",
         "author": "Test",
-        "to_string": "rule test { condition: true }"
+        # Rule name must not be "test" — that collides with the YARA rule
+        # named "test" seeded by create_rule_test() in every test's app
+        # fixture, which the ref A6 identifier-uniqueness check (added
+        # alongside ref A4/A7) now correctly rejects as a duplicate.
+        "to_string": "rule yara_test_create_valid_rule { condition: true }"
     }
     response = client.post("/api/rule/private/create", json=myRule, headers={"X-API-KEY": API_KEY_USER})
     assert response.status_code == 200
 
 
 def test_create_duplicate_rule(client):
-    test_create_valid_yara_rule(client) 
+    test_create_valid_yara_rule(client)
     duplicate = {
-        "title": "Test YARA Rule 1",  
+        "title": "Test YARA Rule 1",
         "description": "Duplicate rule",
         "version": "1.1",
         "format": "yara",
         "license": "MIT",
         "source": "UnitTest",
-        "to_string": "rule test { condition: true }"
+        "to_string": "rule yara_test_create_valid_rule { condition: true }"
     }
     response = client.post("/api/rule/private/create", json=duplicate, headers={"X-API-KEY": API_KEY_USER})
     assert response.status_code == 409
@@ -858,6 +862,116 @@ def test_a2_flagged_unset_rule_shows_risk_banner_on_detail_page(client):
     embedded_risk = json.loads(match.group(1))
     assert embedded_risk["flagged"] is True
     assert embedded_risk["rejected"] is False
+
+
+# ---------- ref A4/A6/A7: identifier uniqueness across the corpus ----------
+
+def test_a4_duplicate_suricata_sid_is_rejected(client):
+    """A second Suricata rule reusing an existing SID is rejected at creation."""
+    first = {
+        "title": "A4 first sid rule",
+        "format": "suricata",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": 'alert tcp any any -> any any (msg:"a4 test"; sid:900401; rev:1;)',
+    }
+    response = client.post("/api/rule/private/create", json=first, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 200
+
+    duplicate = {
+        "title": "A4 duplicate sid rule",
+        "format": "suricata",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": 'alert tcp any any -> any any (msg:"a4 test 2"; sid:900401; rev:1;)',
+    }
+    response2 = client.post("/api/rule/private/create", json=duplicate, headers={"X-API-KEY": API_KEY_USER})
+    assert response2.status_code == 400
+    json_data = response2.get_json()
+    assert "SID '900401'" in json_data["message"]
+    assert "A4 first sid rule" in json_data["message"]
+
+
+def test_a6_duplicate_yara_rule_name_is_rejected(client):
+    """A second YARA rule reusing an existing rule name is rejected at creation."""
+    first = {
+        "title": "A6 first yara name rule",
+        "format": "yara",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": "rule a6_dup_test { condition: true }",
+    }
+    response = client.post("/api/rule/private/create", json=first, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 200
+
+    duplicate = {
+        "title": "A6 duplicate yara name rule",
+        "format": "yara",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": "rule a6_dup_test { condition: false }",
+    }
+    response2 = client.post("/api/rule/private/create", json=duplicate, headers={"X-API-KEY": API_KEY_USER})
+    assert response2.status_code == 400
+    json_data = response2.get_json()
+    assert "a6_dup_test" in json_data["message"]
+    assert "A6 first yara name rule" in json_data["message"]
+
+
+def test_a7_duplicate_wazuh_rule_id_is_rejected(client):
+    """A second Wazuh rule reusing an existing rule id is rejected at creation."""
+    first = {
+        "title": "A7 first wazuh id rule",
+        "format": "wazuh",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": '<rule id="900407" level="5"><description>a7 first</description></rule>',
+    }
+    response = client.post("/api/rule/private/create", json=first, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 200
+
+    duplicate = {
+        "title": "A7 duplicate wazuh id rule",
+        "format": "wazuh",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": '<rule id="900407" level="5"><description>a7 duplicate</description></rule>',
+    }
+    response2 = client.post("/api/rule/private/create", json=duplicate, headers={"X-API-KEY": API_KEY_USER})
+    assert response2.status_code == 400
+    json_data = response2.get_json()
+    assert "900407" in json_data["message"]
+    assert "A7 first wazuh id rule" in json_data["message"]
+
+
+def test_identifier_uniqueness_does_not_block_normal_submission(client):
+    """Distinct identifiers across formats are unaffected by the uniqueness check (regression check)."""
+    cases = [
+        {
+            "title": "Uniqueness ok suricata",
+            "format": "suricata",
+            "version": "1.0",
+            "license": "MIT",
+            "to_string": 'alert tcp any any -> any any (msg:"ok"; sid:900410; rev:1;)',
+        },
+        {
+            "title": "Uniqueness ok yara",
+            "format": "yara",
+            "version": "1.0",
+            "license": "MIT",
+            "to_string": "rule uniqueness_ok_test { condition: true }",
+        },
+        {
+            "title": "Uniqueness ok wazuh",
+            "format": "wazuh",
+            "version": "1.0",
+            "license": "MIT",
+            "to_string": '<rule id="900411" level="5"><description>ok</description></rule>',
+        },
+    ]
+    for data in cases:
+        response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+        assert response.status_code == 200, response.get_json()
 
 
 

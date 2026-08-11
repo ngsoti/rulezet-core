@@ -384,6 +384,68 @@ def _find_in_trash_by_content(content: str):
         Rule.content_hash == content_hash
     ).first()
 
+# ref A4/A6/A7: a duplicate Suricata SID, YARA rule name, or Wazuh rule ID
+# across independently authored rules can crash an aggregating engine at
+# load time or cause a silent overwrite, depending on the engine — reject
+# the submission at the source rather than let the corpus accumulate them.
+_CORPUS_IDENTIFIER_LABEL = {
+    'suricata': 'Suricata SID',
+    'yara': 'YARA rule name',
+    'wazuh': 'Wazuh rule ID',
+}
+
+
+def _extract_corpus_identifier(rule_format: str, content: str) -> Optional[str]:
+    """Extract the identifier that must be unique within its format's corpus."""
+    fmt = (rule_format or '').lower()
+    content = content or ''
+    if fmt == 'suricata':
+        m = re.search(r'\bsid\s*:\s*(\d+)', content, re.IGNORECASE)
+        return m.group(1) if m else None
+    if fmt == 'yara':
+        m = re.search(r'\brule\s+(\w+)', content)
+        return m.group(1) if m else None
+    if fmt == 'wazuh':
+        m = re.search(r'<rule\b[^>]*\bid\s*=\s*"([^"]+)"', content)
+        return m.group(1) if m else None
+    return None
+
+
+def check_identifier_uniqueness(rule_format: str, content: str, exclude_rule_id: int = None) -> tuple[bool, str]:
+    """
+    Reject a submission whose format-specific identifier (Suricata SID,
+    YARA rule name, Wazuh rule ID) collides with an existing, non-deleted
+    rule of the same format.
+
+    Formats with no corpus-identifier check defined, or a rule whose
+    identifier can't be extracted, pass through unchecked — this only
+    guards the case the identifier is actually present and comparable.
+
+    Returns (True, "") if unique or not applicable, (False, error_message)
+    on collision.
+    """
+    fmt = (rule_format or '').lower()
+    if fmt not in _CORPUS_IDENTIFIER_LABEL:
+        return True, ""
+
+    identifier = _extract_corpus_identifier(fmt, content)
+    if not identifier:
+        return True, ""
+
+    candidates = _active().filter(Rule.format == fmt)
+    if exclude_rule_id:
+        candidates = candidates.filter(Rule.id != exclude_rule_id)
+
+    for existing in candidates:
+        if _extract_corpus_identifier(fmt, existing.to_string) == identifier:
+            return False, (
+                f"{_CORPUS_IDENTIFIER_LABEL[fmt]} '{identifier}' is already used by rule "
+                f"'{existing.title}' (id={existing.id})."
+            )
+
+    return True, ""
+
+
 # Create
 def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, str] | tuple[Rule, str]:
     """
@@ -413,7 +475,10 @@ def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, 
         if trashed_rule is not None:
             return False, f"TRASH_CONFLICT:{trashed_rule.uuid}:{trashed_rule.id}:{trashed_rule.title}"
 
-            
+        unique_ok, unique_error = check_identifier_uniqueness(form_dict.get("format"), new_to_string)
+        if not unique_ok:
+            return False, unique_error
+
         # Identify user
         if current_user and current_user.is_authenticated:
             user_id = current_user.id
