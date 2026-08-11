@@ -147,6 +147,48 @@ def detect_unset_without_set_risk(content: str) -> dict:
     return {'flagged': bool(deduped_reasons), 'reasons': deduped_reasons}
 
 
+# ref A2 (corpus part): same shape as the ref A1 dataset-filename check,
+# generalized to flowbit/xbit/hostbit names — a shared bit name across
+# independently authored rules can be read or overwritten cross-source.
+_BIT_WRITE_ACTIONS = {'set', 'unset', 'toggle'}
+_BIT_READ_ACTIONS = {'isset', 'isnotset'}
+
+
+def extract_bit_entries(content: str) -> list:
+    """
+    Extract (resource_name, mode) pairs from every flowbits/xbits/hostbits
+    option in the rule(s). resource_name is "<kind>:<bit_name>" so the same
+    bit name used as a different bit type doesn't collide. mode is 'read'
+    (isset/isnotset) or 'write' (set/unset/toggle) — 'noalert' has no bit
+    name argument and is skipped.
+
+    Used both for the submitted rule and, by rule_core.py's corpus-wide
+    collision check, re-applied to every existing rule's stored content to
+    compare against (same mechanism as extract_dataset_entries(), ref A1).
+    """
+    try:
+        rules = parse_rules(content)
+    except Exception:
+        return []
+
+    entries = []
+    for rule in rules:
+        for opt in rule.options:
+            kind = opt.name.lower()
+            if kind not in _BIT_KEYWORDS:
+                continue
+            parts = [p.strip() for p in (opt.value or '').split(',')]
+            if len(parts) < 2:
+                continue
+            action, bit_name = parts[0].lower(), parts[1]
+            resource_name = f'{kind}:{bit_name}'
+            if action in _BIT_WRITE_ACTIONS:
+                entries.append((resource_name, 'write'))
+            elif action in _BIT_READ_ACTIONS:
+                entries.append((resource_name, 'read'))
+    return entries
+
+
 class SuricataRule(RuleType):
     """
     Concrete implementation of RuleType for Suricata rules.

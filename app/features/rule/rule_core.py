@@ -527,6 +527,22 @@ def check_dataset_collision_risk(rule_format: str, content: str, exclude_rule_id
                                            exclude_rule_id=exclude_rule_id)
 
 
+def check_bit_collision_risk(rule_format: str, content: str, exclude_rule_id: int = None) -> dict:
+    """
+    ref A2 (corpus part): corpus-wide Suricata flowbit/xbit/hostbit
+    collision check, reusing corpus_resource_collision_risk() (ref A1).
+    Only applies to the 'suricata' format — other formats pass through
+    unaffected.
+    """
+    if (rule_format or '').lower() != 'suricata':
+        return {'rejected': False, 'reasons_reject': [], 'reasons_warn': []}
+
+    from app.features.rule.rule_format.available_format.suricata_format import extract_bit_entries
+    new_entries = extract_bit_entries(content)
+    return corpus_resource_collision_risk('suricata', new_entries, extract_bit_entries,
+                                           exclude_rule_id=exclude_rule_id)
+
+
 # Create
 def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, str] | tuple[Rule, str]:
     """
@@ -563,6 +579,10 @@ def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, 
         dataset_risk = check_dataset_collision_risk(form_dict.get("format"), new_to_string)
         if dataset_risk['rejected']:
             return False, "; ".join(dataset_risk['reasons_reject'])
+
+        bit_risk = check_bit_collision_risk(form_dict.get("format"), new_to_string)
+        if bit_risk['rejected']:
+            return False, "; ".join(bit_risk['reasons_reject'])
 
         # Identify user
         if current_user and current_user.is_authenticated:
@@ -679,9 +699,10 @@ def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, 
         except Exception:
             pass
 
+        all_warnings = dataset_risk['reasons_warn'] + bit_risk['reasons_warn']
         message = "rule created"
-        if dataset_risk['reasons_warn']:
-            message += " (warning: " + "; ".join(dataset_risk['reasons_warn']) + ")"
+        if all_warnings:
+            message += " (warning: " + "; ".join(all_warnings) + ")"
 
         return new_rule, message
 
