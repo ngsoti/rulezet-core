@@ -18,6 +18,55 @@ def normalize_crs_rule(content: str) -> str:
     return re.sub(r'\\\s*\n', ' ', content)
 
 
+# ref A5: 'ctl:ruleEngine=Off' disables the engine entirely for the matching
+# request, and 'skipAfter'/'SecMarker' can jump over other rules placed in
+# between — both give a rule the same engine-wide suppression power as
+# Suricata's pass/bypass (ref A3).
+def detect_suppression_risk(content: str) -> dict:
+    """
+    Detect CRS/ModSecurity directives that can silence the engine
+    (ctl:ruleEngine=Off) or redirect control flow across other rules
+    (SecMarker / skipAfter), independent of whether the rule is otherwise
+    syntactically valid.
+
+    Returns {'flagged': bool, 'reasons': list[str]}.
+    """
+    reasons = []
+    try:
+        mparser = msc_pyparser.MSCParser()
+        mparser.parser.parse(normalize_crs_rule(content), debug=False)
+    except Exception:
+        return {'flagged': False, 'reasons': []}
+
+    for line in mparser.configlines:
+        if line.get('type') == 'SecMarker':
+            reasons.append(
+                "Declares a 'SecMarker' — a named target that another rule's "
+                "'skipAfter' can jump to, potentially skipping over rules "
+                "placed in between, including rules from other authors."
+            )
+        for action in (line.get('actions') or []):
+            act_name = (action.get('act_name') or '').lower()
+            if act_name == 'ctl' \
+                    and (action.get('act_arg') or '').lower() == 'ruleengine' \
+                    and (action.get('act_arg_val') or '').lower() == 'off':
+                reasons.append(
+                    "Uses 'ctl:ruleEngine=Off', which disables the ModSecurity "
+                    "engine entirely for the matching request, silencing every "
+                    "other rule."
+                )
+            if act_name == 'skipafter':
+                reasons.append(
+                    "Uses 'skipAfter', which skips every rule up to the named "
+                    "'SecMarker', potentially bypassing rules from other authors "
+                    "placed in between."
+                )
+
+    seen = set()
+    deduped_reasons = [r for r in reasons if not (r in seen or seen.add(r))]
+    return {'flagged': bool(deduped_reasons), 'reasons': deduped_reasons}
+
+
 class CRSRule(RuleType):
     @property
     def format(self) -> str:
@@ -35,8 +84,10 @@ class CRSRule(RuleType):
         normalized_content = normalize_crs_rule(content)
         try:
             mparser.parser.parse(normalized_content, debug=False)
+            risk = detect_suppression_risk(content)
             return ValidationResult(
                 ok=True,
+                warnings=risk['reasons'],
                 normalized_content=normalized_content
             )
         except Exception as e:
