@@ -25,6 +25,7 @@
 
 <script>
 window.__rule_json   = {{ rule_to_json | tojson | safe }};
+window.__rule_risk   = {{ rule_risk | tojson | safe }};
 {% if rule_misp_object %}window.__misp_object = {{ rule_misp_object | tojson | safe }};{% endif %}
 {% if rule_misp_event  %}window.__misp_event  = {{ rule_misp_event  | tojson | safe }};{% endif %}
 {% if rule_velociraptor_artifact %}window.__velociraptor_artifact = {{ rule_velociraptor_artifact | tojson | safe }};{% endif %}
@@ -64,6 +65,16 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
         </p>
     </div>
 
+    <div v-if="ruleRisk && ruleRisk.flagged" class="alert d-flex align-items-start gap-3 mb-4 shadow-sm"
+         :class="ruleRisk.rejected ? 'alert-danger' : 'alert-warning'" role="alert">
+        <i class="fa-solid fa-triangle-exclamation fs-4 mt-1"></i>
+        <div>
+            <strong>[[ ruleRisk.rejected ? 'Rejected pattern present' : 'Cross-rule interference risk' ]]</strong>
+            <ul class="mb-0 mt-2 ps-3">
+                <li v-for="reason in ruleRisk.reasons" :key="reason">[[ reason ]]</li>
+            </ul>
+        </div>
+    </div>
 
     {{ nav.detail_rule_nav(rule, 'detail', similarity_count=similarity_count, history_count=history_count, proposal_count=proposal_count, scope_count=scope_count, test_count=test_count) }}
 
@@ -1175,6 +1186,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
             const mispObjectData = ref(window.__misp_object ? JSON.stringify(window.__misp_object, null, 4) : '');
             const mispEventData  = ref(window.__misp_event  ? JSON.stringify(window.__misp_event,  null, 4) : '');
             const velociraptorArtifactData = ref(window.__velociraptor_artifact || '');
+            const ruleRisk = ref(window.__rule_risk || { flagged: false, rejected: false, reasons: [] });
 
             // ── Push generated artifact to a connected Velociraptor server ──
             const velociraptorServers        = ref([]);
@@ -1759,6 +1771,7 @@ window.__rule_json   = {{ rule_to_json | tojson | safe }};
                 mispObjectData,
                 mispEventData,
                 velociraptorArtifactData,
+                ruleRisk,
                 velociraptorServers,
                 velociraptorServersLoading,
                 selectedVelociraptorServer,

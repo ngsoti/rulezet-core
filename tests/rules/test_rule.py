@@ -8,6 +8,9 @@
 # 2. /Convert_MISP - searching rules and converting them to MISP objects
 # """
 
+import json
+import re
+
 import pytest
 
 # --------------------------
@@ -451,6 +454,114 @@ def test_delete_rule_missing_json(client):
 #         )
 #         assert res.status_code == 400
 #         assert "Invalid CVE ID" in res.get_json()["message"]
+
+
+# ---------- ref A3: Suricata pass/bypass suppression risk ----------
+
+def test_a3_pass_action_rule_is_created_but_flagged(client, app):
+    """A plain 'pass' rule is accepted at creation but flagged as a risk on the detail page."""
+    data = {
+        "title": "A3 pass action rule",
+        "format": "suricata",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": 'pass tcp any any -> any any (msg:"a3 test"; sid:900301; rev:1;)',
+    }
+    response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 200
+    rule_id = response.get_json()["rule"]["id"]
+
+    with app.app_context():
+        from app.features.rule import rule_core as RuleModel
+        rule = RuleModel.get_rule(rule_id)
+        risk = RuleModel.get_rule_risk_flags(rule)
+        assert risk['flagged'] is True
+        assert risk['rejected'] is False
+
+
+def test_a3_bypass_keyword_rule_is_created_but_flagged(client, app):
+    """A rule using the 'bypass' keyword is accepted at creation but flagged as a risk."""
+    data = {
+        "title": "A3 bypass keyword rule",
+        "format": "suricata",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": 'alert tcp any any -> any any (msg:"a3 test"; bypass; sid:900302; rev:1;)',
+    }
+    response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 200
+    rule_id = response.get_json()["rule"]["id"]
+
+    with app.app_context():
+        from app.features.rule import rule_core as RuleModel
+        rule = RuleModel.get_rule(rule_id)
+        risk = RuleModel.get_rule_risk_flags(rule)
+        assert risk['flagged'] is True
+        assert risk['rejected'] is False
+
+
+def test_a3_hashed_target_in_pass_rule_is_rejected_at_creation(client):
+    """A hash transform combined with a 'pass' rule is rejected outright at creation time."""
+    data = {
+        "title": "A3 hashed pass rule",
+        "format": "suricata",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": (
+            'pass tcp any any -> any any '
+            '(msg:"a3 test"; content:"x"; to_sha256; dataset:isset,d,type string; sid:900303; rev:1;)'
+        ),
+    }
+    response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 400
+    json_data = response.get_json()
+    assert json_data["message"] == "Invalid rule"
+    assert "hash transform" in json_data["error"]
+
+
+def test_a3_normal_alert_rule_is_not_flagged(client, app):
+    """An ordinary Suricata alert rule is created and shows no risk flag (regression check)."""
+    data = {
+        "title": "A3 normal alert rule",
+        "format": "suricata",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": 'alert tcp any any -> any any (msg:"a3 test"; content:"x"; sid:900304; rev:1;)',
+    }
+    response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 200
+    rule_id = response.get_json()["rule"]["id"]
+
+    with app.app_context():
+        from app.features.rule import rule_core as RuleModel
+        rule = RuleModel.get_rule(rule_id)
+        risk = RuleModel.get_rule_risk_flags(rule)
+        assert risk['flagged'] is False
+        assert risk['reasons'] == []
+
+
+def test_a3_flagged_rule_shows_risk_banner_on_detail_page(client):
+    """The rule detail page embeds the computed risk flag for a flagged rule."""
+    data = {
+        "title": "A3 detail page banner rule",
+        "format": "suricata",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": 'pass tcp any any -> any any (msg:"a3 test"; sid:900305; rev:1;)',
+    }
+    response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 200
+    rule_id = response.get_json()["rule"]["id"]
+
+    detail = client.get(f"/rule/detail_rule/{rule_id}")
+    assert detail.status_code == 200
+    body = detail.get_data(as_text=True)
+
+    match = re.search(r"window\.__rule_risk\s*=\s*(\{.*?\});", body)
+    assert match is not None, "window.__rule_risk was not embedded in the detail page"
+    embedded_risk = json.loads(match.group(1))
+    assert embedded_risk["flagged"] is True
+    assert embedded_risk["rejected"] is False
 
 
 

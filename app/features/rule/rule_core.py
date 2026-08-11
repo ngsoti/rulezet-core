@@ -3584,9 +3584,33 @@ def verify_rule_syntaxe(rule: Any , new_content) -> Optional[ValidationResult]:
     if matching_class:
         # Call the validate method on the instance, passing the rule content
         return matching_class.validate(new_content)
-    
+
     # If no matching class was found
     return None
+
+
+def get_rule_risk_flags(rule: Any) -> dict:
+    """
+    Compute cross-rule-interference risk flags for a rule's current content.
+
+    Computed on demand (not persisted) by reusing the same per-format
+    validate() that already gates rule creation/edit, so this always
+    reflects the live content and any format's validate() that populates
+    'warnings' (flagged but allowed) or 'errors' (a rejected pattern that
+    predates this check, e.g. an older or GitHub-imported rule) shows up
+    here automatically — no changes needed here when a new format adds
+    its own checks.
+
+    Returns {'flagged': bool, 'rejected': bool, 'reasons': list[str]}.
+    """
+    result = verify_rule_syntaxe(rule, rule.to_string)
+    if result is None:
+        return {'flagged': False, 'rejected': False, 'reasons': []}
+    return {
+        'flagged':  bool(result.warnings) or not result.ok,
+        'rejected': not result.ok,
+        'reasons':  list(result.errors) + list(result.warnings),
+    }
 
     
 def get_popular_rules():

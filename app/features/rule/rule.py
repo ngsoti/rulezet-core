@@ -698,11 +698,12 @@ def detail_rule_by_uuid(rule_uuid):
         _rv = _RV.query.filter_by(rule_id=rule.id, user_id=current_user.id).first()
         current_user_vote = _rv.vote_type if _rv else None
     if rule:
+        rule_risk = RuleModel.get_rule_risk_flags(rule)
         return render_template("rule/detail_rule/detail_rule.html", rule=rule, rule_content=rule.to_string,
                                rule_misp_object=rule_misp_object, rule_misp_event=rule_misp_event,
                                rule_velociraptor_artifact=rule_velociraptor_artifact,
                                rule_to_json=rule_to_json, active_tab=active_tab,
-                               current_user_vote=current_user_vote,
+                               current_user_vote=current_user_vote, rule_risk=rule_risk,
                                **_nav_counts(rule.id))
     return render_template("404.html")
 
@@ -803,11 +804,12 @@ def detail_rule(rule_id)-> render_template:
         _rv = _RV.query.filter_by(rule_id=rule.id, user_id=current_user.id).first()
         current_user_vote = _rv.vote_type if _rv else None
     if rule:
+        rule_risk = RuleModel.get_rule_risk_flags(rule)
         return render_template("rule/detail_rule/detail_rule.html", rule=rule, rule_content=rule.to_string,
                                rule_misp_object=rule_misp_object, rule_misp_event=rule_misp_event,
                                rule_velociraptor_artifact=rule_velociraptor_artifact,
                                rule_to_json=rule_to_json, active_tab=active_tab,
-                               current_user_vote=current_user_vote,
+                               current_user_vote=current_user_vote, rule_risk=rule_risk,
                                **_nav_counts(rule.id))
     return render_template("404.html")
 

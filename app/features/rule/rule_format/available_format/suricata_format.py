@@ -7,6 +7,63 @@ from app.features.rule.rule_core import get_rule
 from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import RuleType, ValidationResult
 from app.core.utils.utils import detect_cve
 
+# ref A3: 'pass' silences the engine for matching traffic without referencing
+# the rule it overrides, and 'bypass' stops further inspection for the flow —
+# both give a rule engine-wide suppression power over other sources' rules.
+_HASH_TRANSFORM_KEYWORDS = ('to_sha256', 'to_md5', 'to_sha1')
+
+
+def detect_suppression_risk(content: str) -> dict:
+    """
+    Detect Suricata constructs that can silence detection for other rules'
+    traffic, independent of whether the rule is otherwise syntactically valid.
+
+    A plain 'pass' action or 'bypass' keyword is flagged but not rejected —
+    it has legitimate uses. Combined with a hash transform (to_sha256/to_md5/
+    to_sha1) on a 'pass'/'drop' rule or one using 'bypass', it can be used to
+    silently suppress detection for one specific hashed value and is rejected.
+
+    Returns {'flagged': bool, 'rejected': bool, 'reasons': list[str]}.
+    """
+    reasons = []
+    rejected = False
+    try:
+        rules = parse_rules(content)
+    except Exception:
+        return {'flagged': False, 'rejected': False, 'reasons': []}
+
+    for rule in rules:
+        action = (rule.action or '').lower()
+        option_names = {opt.name.lower() for opt in rule.options}
+        has_bypass = 'bypass' in option_names
+        hash_keywords = option_names & set(_HASH_TRANSFORM_KEYWORDS)
+
+        if action == 'pass':
+            reasons.append(
+                "Uses the 'pass' action, which silences detection for matching "
+                "traffic without referencing the rule(s) it overrides."
+            )
+        if has_bypass:
+            reasons.append(
+                "Uses the 'bypass' keyword, which stops further inspection for "
+                "the matching flow."
+            )
+
+        if hash_keywords and (action in ('pass', 'drop') or has_bypass):
+            rejected = True
+            reasons.append(
+                f"Combines a hash transform ({', '.join(sorted(hash_keywords))}) with a "
+                f"'{action}'{' + bypass' if has_bypass else ''} rule — this pattern can "
+                "silently suppress detection for one specific hashed value and is rejected."
+            )
+
+    # de-duplicate while preserving order (multiple rules in the same
+    # submission can trigger the same reason)
+    seen = set()
+    deduped_reasons = [r for r in reasons if not (r in seen or seen.add(r))]
+
+    return {'flagged': bool(deduped_reasons), 'rejected': rejected, 'reasons': deduped_reasons}
+
 
 class SuricataRule(RuleType):
     """
@@ -16,7 +73,7 @@ class SuricataRule(RuleType):
     @property
     def format(self) -> str:
         return "suricata"
-    
+
     def get_class(self) -> str:
         return "SuricataRule"
 
@@ -29,8 +86,13 @@ class SuricataRule(RuleType):
             if not rules:
                 return ValidationResult(ok=False, errors=["No valid Suricata rules found."], normalized_content=content)
 
+            risk = detect_suppression_risk(content)
+            if risk['rejected']:
+                return ValidationResult(ok=False, errors=risk['reasons'], normalized_content=content)
+
             return ValidationResult(
                 ok=True,
+                warnings=risk['reasons'] if risk['flagged'] else [],
                 normalized_content="\n".join([rule.raw for rule in rules])
             )
         except Exception as e:
