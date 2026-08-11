@@ -1,9 +1,47 @@
+import ast
 import json
 import re
 import time
 
 from .base import BaseTesterDriver, ValidationResult, MatchDetail
 from .registry import register_driver
+
+# After group-name substitution, `expr` must contain nothing but
+# True/False/and/or/not/parentheses. Anything else (names, calls,
+# attributes, subscripts, ...) means the substitution missed a token —
+# reject it rather than ever handing it to eval()/exec().
+_ALLOWED_BOOL_NODES = (
+    ast.Expression, ast.BoolOp, ast.And, ast.Or,
+    ast.UnaryOp, ast.Not, ast.Constant,
+)
+
+
+def _safe_bool_eval(expr: str) -> bool:
+    """Evaluate a boolean expression made only of True/False/and/or/not/parens.
+
+    Raises ValueError/SyntaxError for anything else so the caller can fall
+    back safely — this function never calls eval() or exec().
+    """
+    tree = ast.parse(expr, mode='eval')
+
+    for node in ast.walk(tree):
+        if not isinstance(node, _ALLOWED_BOOL_NODES):
+            raise ValueError(f'disallowed expression node: {type(node).__name__}')
+        if isinstance(node, ast.Constant) and not isinstance(node.value, bool):
+            raise ValueError('only boolean constants are allowed')
+
+    return bool(_eval_bool_node(tree.body))
+
+
+def _eval_bool_node(node):
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        return not _eval_bool_node(node.operand)
+    if isinstance(node, ast.BoolOp):
+        values = [_eval_bool_node(v) for v in node.values]
+        return all(values) if isinstance(node.op, ast.And) else any(values)
+    raise ValueError(f'unhandled node: {type(node).__name__}')
 
 
 @register_driver('sigma')
@@ -253,7 +291,7 @@ class SigmaDriver(BaseTesterDriver):
         expr = re.sub(r'\bor\b',  ' or ',  expr, flags=re.IGNORECASE)
 
         try:
-            return bool(eval(expr, {'__builtins__': {}}, {}))  # noqa: S307
-        except Exception:
+            return _safe_bool_eval(expr)
+        except (SyntaxError, ValueError):
             # fallback: any group matches
             return any(groups.values())

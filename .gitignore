@@ -42,3 +42,5 @@ app/uploads/*
 docs/plan_rule_tester.md
 docs/plan_velociraptor_integration.md
 instance/rulezet-test.sqlite-journal
+docs/A_REPORT.md
+tests/rule_tester/
