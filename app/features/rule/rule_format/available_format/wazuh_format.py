@@ -6,6 +6,35 @@ from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import 
 from app.core.utils.utils import detect_cve
 
 
+# ref A7: overwrite="yes" replaces another rule with the same id in the
+# ruleset instead of adding a new one, silently taking over a rule that
+# may belong to a different source.
+def detect_overwrite_risk(content: str) -> dict:
+    """
+    Detect a Wazuh <rule> using overwrite="yes".
+
+    Returns {'flagged': bool, 'reasons': list[str]}.
+    """
+    try:
+        root = ET.fromstring(content)
+    except ET.ParseError:
+        return {'flagged': False, 'reasons': []}
+
+    rules = [root] if root.tag == "rule" else root.findall(".//rule")
+    reasons = []
+    for rule in rules:
+        if (rule.get("overwrite") or "").lower() == "yes":
+            rule_id = rule.get("id", "unknown")
+            reasons.append(
+                f"Rule id {rule_id} uses overwrite=\"yes\", which replaces another "
+                "rule with the same id in the ruleset instead of adding a new one."
+            )
+
+    seen = set()
+    deduped_reasons = [r for r in reasons if not (r in seen or seen.add(r))]
+    return {'flagged': bool(deduped_reasons), 'reasons': deduped_reasons}
+
+
 class WazuhRule(RuleType):
     """
     Concrete implementation of RuleType for Wazuh (XML-based) rules.
@@ -14,7 +43,7 @@ class WazuhRule(RuleType):
     @property
     def format(self) -> str:
         return "wazuh"
-    
+
     def get_class(self) -> str:
         return "WazuhRule"
 
@@ -26,7 +55,8 @@ class WazuhRule(RuleType):
             root = ET.fromstring(content)
 
             if root.tag == "rule":
-                return ValidationResult(ok=True, normalized_content=content)
+                risk = detect_overwrite_risk(content)
+                return ValidationResult(ok=True, warnings=risk['reasons'], normalized_content=content)
 
             rules = root.findall(".//rule")
             if not rules:
@@ -36,7 +66,8 @@ class WazuhRule(RuleType):
                     normalized_content=content
                 )
 
-            return ValidationResult(ok=True, normalized_content=content)
+            risk = detect_overwrite_risk(content)
+            return ValidationResult(ok=True, warnings=risk['reasons'], normalized_content=content)
 
         except ET.ParseError as e:
             return ValidationResult(
