@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import re
 
+from app.features.rule.rule_format.available_format.suricata_format import extract_dataset_entries
+
 API_KEY_USER = "user_api_key"
 
 
@@ -81,6 +83,18 @@ def test_a1_write_over_write_is_rejected(client):
     assert second_writer.status_code == 400
     json_data = second_writer.get_json()
     assert "a1_doublewrite.lst" in json_data["message"]
+
+
+def test_a1_dataset_option_with_both_load_and_save_extracts_both():
+    """A single dataset option combining 'load X,save Y' must yield both entries, not just the first (regression check)."""
+    rule = (
+        'alert http any any -> any any (msg:"a1 poison"; http.user_agent; content:"benign-ua"; '
+        'dataset:isset,parasite_poison,type string,load parasite.lst,save ioc.lst; sid:900110; rev:1;)'
+    )
+    entries = extract_dataset_entries(rule)
+    assert ('parasite.lst', 'read') in entries
+    assert ('ioc.lst', 'write') in entries
+    assert len(entries) == 2
 
 
 def test_a1_unrelated_filenames_are_unaffected(client):

@@ -14,8 +14,12 @@ _HASH_TRANSFORM_KEYWORDS = ('to_sha256', 'to_md5', 'to_sha1')
 
 # ref A1: a rule using dataset:...,save|state on a filename another source
 # already uses can wipe or replace that source's IOC list. 'load' only reads
-# the file; 'save'/'state' persist to it, so both count as a write.
-_DATASET_FILE_RE = re.compile(r'\b(load|save|state)\s+(\S+)', re.IGNORECASE)
+# the file; 'save'/'state' persist to it, so both count as a write. A single
+# dataset option can carry more than one of these (e.g.
+# "load parasite.lst,save ioc.lst" to poison a file while reading a decoy),
+# so each comma-separated sub-field is checked independently rather than
+# taking only the first load/save/state found in the whole value.
+_DATASET_FILE_RE = re.compile(r'^(load|save|state)\s+(\S+)$', re.IGNORECASE)
 
 
 def extract_dataset_entries(content: str) -> list:
@@ -37,12 +41,13 @@ def extract_dataset_entries(content: str) -> list:
         for opt in rule.options:
             if opt.name.lower() != 'dataset':
                 continue
-            match = _DATASET_FILE_RE.search(opt.value or '')
-            if not match:
-                continue
-            keyword, filename = match.group(1).lower(), match.group(2)
-            mode = 'read' if keyword == 'load' else 'write'
-            entries.append((filename, mode))
+            for part in (opt.value or '').split(','):
+                match = _DATASET_FILE_RE.match(part.strip())
+                if not match:
+                    continue
+                keyword, filename = match.group(1).lower(), match.group(2)
+                mode = 'read' if keyword == 'load' else 'write'
+                entries.append((filename, mode))
     return entries
 
 
