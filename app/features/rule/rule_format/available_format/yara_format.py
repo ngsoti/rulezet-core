@@ -26,6 +26,36 @@ def insert_import_module(rule_text, module_name):
         return f'import "{module_name}"\n' + rule_text
     return rule_text
 
+
+# ref A6: a 'global rule' declaration has its condition implicitly ANDed
+# into every other rule compiled in the same YARA namespace. It compiles
+# fine on its own, so this can't be caught by syntax validation alone —
+# it has to be flagged explicitly. Rulezet's own rule tester keeps users
+# namespace-isolated when testing, but a rule downloaded and compiled
+# elsewhere without namespacing is still exposed.
+_GLOBAL_RULE_RE = re.compile(r'^\s*((?:private|global)\s+)+rule\b', re.MULTILINE | re.IGNORECASE)
+
+
+def detect_global_rule_risk(content: str) -> dict:
+    """
+    Detect a 'global rule' declaration in YARA rule content.
+
+    Returns {'flagged': bool, 'reasons': list[str]}.
+    """
+    for match in _GLOBAL_RULE_RE.finditer(content):
+        if 'global' in match.group(1).lower():
+            return {
+                'flagged': True,
+                'reasons': [
+                    "Declares a 'global rule' — its condition is implicitly ANDed into "
+                    "every other rule compiled in the same YARA namespace, so a "
+                    "'global rule { condition: false }' can silently suppress every "
+                    "other rule compiled alongside it outside of Rulezet's own "
+                    "namespace-isolated execution."
+                ],
+            }
+    return {'flagged': False, 'reasons': []}
+
 class YaraRule(RuleType):
     @property
     def format(self) -> str:
@@ -63,8 +93,10 @@ class YaraRule(RuleType):
                     # temp_compile_text = re.sub(r'(\$\w+\s*=\s*)"(.*)"', escape_internal_quotes, temp_compile_text)
 
                     yara.compile(source=temp_compile_text, externals=externals)
-                    
-                    return ValidationResult(ok=True, errors=[], normalized_content=current_rule_text)
+
+                    risk = detect_global_rule_risk(current_rule_text)
+                    return ValidationResult(ok=True, errors=[], warnings=risk['reasons'],
+                                             normalized_content=current_rule_text)
 
                 except yara.SyntaxError as e:
                     error_msg = str(e)

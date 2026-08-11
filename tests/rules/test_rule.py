@@ -564,4 +564,72 @@ def test_a3_flagged_rule_shows_risk_banner_on_detail_page(client):
     assert embedded_risk["rejected"] is False
 
 
+# ---------- ref A6: YARA 'global rule' suppression risk ----------
+
+def test_a6_global_rule_is_created_but_flagged(client, app):
+    """A YARA 'global rule' is accepted at creation but flagged as a risk on the detail page."""
+    data = {
+        "title": "A6 global rule",
+        "format": "yara",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": "global rule a6_global_test { condition: false }",
+    }
+    response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 200
+    rule_id = response.get_json()["rule"]["id"]
+
+    with app.app_context():
+        from app.features.rule import rule_core as RuleModel
+        rule = RuleModel.get_rule(rule_id)
+        risk = RuleModel.get_rule_risk_flags(rule)
+        assert risk['flagged'] is True
+        assert risk['rejected'] is False
+
+
+def test_a6_normal_yara_rule_is_not_flagged(client, app):
+    """An ordinary YARA rule with no 'global' modifier shows no risk flag (regression check)."""
+    data = {
+        "title": "A6 normal yara rule",
+        "format": "yara",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": "rule a6_normal_test { condition: true }",
+    }
+    response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 200
+    rule_id = response.get_json()["rule"]["id"]
+
+    with app.app_context():
+        from app.features.rule import rule_core as RuleModel
+        rule = RuleModel.get_rule(rule_id)
+        risk = RuleModel.get_rule_risk_flags(rule)
+        assert risk['flagged'] is False
+        assert risk['reasons'] == []
+
+
+def test_a6_flagged_global_rule_shows_risk_banner_on_detail_page(client):
+    """The rule detail page embeds the computed risk flag for a flagged 'global rule'."""
+    data = {
+        "title": "A6 detail page banner rule",
+        "format": "yara",
+        "version": "1.0",
+        "license": "MIT",
+        "to_string": "global rule a6_detail_test { condition: false }",
+    }
+    response = client.post("/api/rule/private/create", json=data, headers={"X-API-KEY": API_KEY_USER})
+    assert response.status_code == 200
+    rule_id = response.get_json()["rule"]["id"]
+
+    detail = client.get(f"/rule/detail_rule/{rule_id}")
+    assert detail.status_code == 200
+    body = detail.get_data(as_text=True)
+
+    match = re.search(r"window\.__rule_risk\s*=\s*(\{.*?\});", body)
+    assert match is not None, "window.__rule_risk was not embedded in the detail page"
+    embedded_risk = json.loads(match.group(1))
+    assert embedded_risk["flagged"] is True
+    assert embedded_risk["rejected"] is False
+
+
 
