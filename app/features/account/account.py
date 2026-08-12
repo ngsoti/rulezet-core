@@ -513,6 +513,15 @@ def resend_verification_code(user_id):
         flash("User not found.", "error")
         return redirect("/account/login")
 
+    # Registration logs the user in immediately, pre-verification, so a
+    # logged-in caller here should only ever be resending their own code —
+    # otherwise they could reset an arbitrary unverified account's code by
+    # editing this URL. An anonymous caller (no session) is left alone since
+    # that's how a stale, pre-login "verify" page can legitimately reach this.
+    if current_user.is_authenticated and current_user.id != user_id and not current_user.is_admin():
+        flash("You can only resend a code for your own account.", "error")
+        return redirect("/account/login")
+
     success = AccountModel.resend_verification_code_core(user_id)
     if not success:
         flash("Failed to resend verification code.", "error")
