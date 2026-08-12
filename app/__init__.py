@@ -104,6 +104,15 @@ def create_app(start_worker=True):
     from app.features.pivotick.pivotick import pivotick_blueprint
     app.register_blueprint(pivotick_blueprint, url_prefix='/')
 
+    @app.after_request
+    def set_security_headers(response):
+        # Stops a browser from ever re-interpreting a served file (e.g. a
+        # blog attachment) as HTML/SVG based on sniffed content instead of
+        # its declared Content-Type — a backstop against stored-XSS-via-upload
+        # regardless of what mimetype ends up attached to a file.
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        return response
+
     from app.features.jobs import job_handlers  # noqa
     if start_worker:
         from app.features.jobs.job_worker import start_worker as _start_worker
