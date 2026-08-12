@@ -295,13 +295,19 @@ class KQLRule(RuleType):
     def get_rule_files_update(self, repo_dir: str) -> List[str]:
         """Retrieve all KQL rule files from a repository."""
         kql_files = []
-        for root, dirs, files in os.walk(repo_dir):
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+        for root, dirs, files in os.walk(repo_dir, followlinks=False):
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')
+                       and not os.path.islink(os.path.join(root, d))]
             for file in files:
                 if file.startswith('.') or file.startswith('_'):
                     continue
+                filepath = os.path.join(root, file)
+                # Reject symlinks — open() would otherwise follow one straight
+                # to its target and leak arbitrary filesystem content as a "rule".
+                if os.path.islink(filepath):
+                    continue
                 if self.get_rule_files(file):
-                    kql_files.append(os.path.join(root, file))
+                    kql_files.append(filepath)
         return kql_files
 
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:

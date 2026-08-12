@@ -147,11 +147,17 @@ class NovaRule(RuleType):
         Retrieve all Nova rule files (.nov) from a repository.
         """
         nova_files = []
-        for root, dirs, files in os.walk(repo_dir):
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+        for root, dirs, files in os.walk(repo_dir, followlinks=False):
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')
+                       and not os.path.islink(os.path.join(root, d))]
             for file in files:
                 if file.endswith(".nov"):
-                    nova_files.append(os.path.join(root, file))
+                    filepath = os.path.join(root, file)
+                    # Reject symlinks — open() would otherwise follow one straight
+                    # to its target and leak arbitrary filesystem content as a "rule".
+                    if os.path.islink(filepath):
+                        continue
+                    nova_files.append(filepath)
         return nova_files
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
             """

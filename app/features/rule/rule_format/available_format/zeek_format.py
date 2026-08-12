@@ -144,11 +144,17 @@ class ZeekRule(RuleType):
         if not os.path.exists(repo_dir):
             return rule_files
 
-        for root, dirs, files in os.walk(repo_dir):
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+        for root, dirs, files in os.walk(repo_dir, followlinks=False):
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')
+                       and not os.path.islink(os.path.join(root, d))]
             for file in files:
                 if file.endswith(".zeek") and not (file.startswith('.') or file.startswith('_')) or file.endswith(".bro") and not (file.startswith('.')):
-                    rule_files.append(os.path.join(root, file))
+                    filepath = os.path.join(root, file)
+                    # Reject symlinks — open() would otherwise follow one straight
+                    # to its target and leak arbitrary filesystem content as a "rule".
+                    if os.path.islink(filepath):
+                        continue
+                    rule_files.append(filepath)
         return rule_files
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """

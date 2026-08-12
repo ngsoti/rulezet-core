@@ -314,13 +314,19 @@ class YaraRule(RuleType):
     def get_rule_files_update(self, repo_dir: str) -> List[str]:
         """Retrieve all YARA rule files from a repository."""
         yara_files = []
-        for root, dirs, files in os.walk(repo_dir):
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+        for root, dirs, files in os.walk(repo_dir, followlinks=False):
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')
+                       and not os.path.islink(os.path.join(root, d))]
             for file in files:
                 if file.startswith('.') or file.startswith('_'):
                     continue
+                filepath = os.path.join(root, file)
+                # A symlinked "rule file" would have open() silently follow it
+                # to its target — reject before it ever reaches extract_rules_from_file.
+                if os.path.islink(filepath):
+                    continue
                 if file.endswith(('.yar', '.yara')):
-                    yara_files.append(os.path.join(root, file))
+                    yara_files.append(filepath)
         return yara_files
     def find_rule_in_repo(self, repo_url: str, rule_id: int) -> tuple[str, bool]:
         """

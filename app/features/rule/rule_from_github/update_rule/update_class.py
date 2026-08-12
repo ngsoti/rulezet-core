@@ -164,12 +164,18 @@ class Update_class:
             if os.path.exists(repo_dir):
                 load_all_rule_formats()
                 subclasses = RuleType.__subclasses__()
-                for root, dirs, files in os.walk(repo_dir):
-                    dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')]
+                for root, dirs, files in os.walk(repo_dir, followlinks=False):
+                    dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')
+                               and not os.path.islink(os.path.join(root, d))]
                     for file in files:
                         if file.startswith('.') or file.startswith('_'):
                             continue
                         filepath = os.path.join(root, file)
+                        # Reject symlinks — open() in extract_rules_from_file
+                        # would otherwise follow one straight to its target
+                        # and leak arbitrary filesystem content as a "rule".
+                        if os.path.islink(filepath):
+                            continue
                         rel_path = os.path.relpath(filepath, repo_dir)
                         if changed_files is not None and rel_path not in changed_files:
                             continue

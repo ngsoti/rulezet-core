@@ -174,7 +174,9 @@ class CRSRule(RuleType):
         files = []
         for ext in ["*.conf"]:
             files.extend(glob.glob(os.path.join(repo_dir, "**", ext), recursive=True))
-        files = [f for f in files if not os.path.basename(f).startswith(".")]
+        # Reject symlinks — open() would otherwise follow one straight to its
+        # target and leak arbitrary filesystem content as a "rule".
+        files = [f for f in files if not os.path.basename(f).startswith(".") and not os.path.islink(f)]
         return files
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """

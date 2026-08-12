@@ -117,17 +117,23 @@ class NseRule(RuleType):
 
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         rule_name = get_rule(rule_id)
-        for root, _, files in os.walk(repo_dir):
+        for root, dirs, files in os.walk(repo_dir, followlinks=False):
+            dirs[:] = [d for d in dirs if not os.path.islink(os.path.join(root, d))]
             for f in files:
                 if f.endswith(".nse"):
-                    file_name_without_ext = f[:-4] 
-                    
+                    file_name_without_ext = f[:-4]
+
                     if file_name_without_ext == rule_name:
+                        file_path = os.path.join(root, f)
+                        # Reject symlinks — open() would otherwise follow one
+                        # straight to its target and leak arbitrary filesystem
+                        # content as a "rule".
+                        if os.path.islink(file_path):
+                            continue
                         try:
-                            file_path = os.path.join(root, f)
                             with open(file_path, "r", encoding="utf-8") as f_content:
                                 return f_content.read(), True
                         except Exception:
                             pass
-                            
+
         return "Rule not found", False

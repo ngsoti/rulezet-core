@@ -3374,8 +3374,11 @@ def check_updates_by_url():
     Check for updates across multiple GitHub URLs (repositories).
     Each repo is cloned/pulled, and rules inside are checked in parallel.
     """
+    if not current_user.is_admin():
+        return {"message": "Admin access required.", "toast_class": "danger-subtle"}, 403
+
     # try:
-       
+
 
     # except Exception as e:
     #     return {"message": f"Error while checking updates: {str(e)}", "toast_class": "danger-subtle"}, 500
@@ -3442,8 +3445,11 @@ def check_updates_by_rule():
     Check for updates on specific selected rules (by rule IDs).
     Rules are matched with their GitHub source and updated if needed.
     """
+    if not current_user.is_admin():
+        return {"message": "Admin access required.", "toast_class": "danger-subtle"}, 403
+
     # try:
-        
+
 
     # except Exception as e:
     #     return {"message": f"Error while checking rule updates: {str(e)}", "toast_class": "danger-subtle"}, 500
