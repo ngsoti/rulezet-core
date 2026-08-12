@@ -106,19 +106,24 @@ class User(UserMixin, db.Model):
     def is_anonymous(self):
         return False
 
-    def to_json(self):
-        """Serialize the user object to JSON."""
-        
+    def to_json(self, include_private=True):
+        """Serialize the user object to JSON.
+
+        include_private=False strips email and admin status — use this
+        whenever the result reaches a viewer who isn't the user themselves
+        or an admin (e.g. rendered into a page any logged-in user can open).
+        """
+
         return {
             "id": self.id,
             "first_name": self.first_name,
             "last_name": self.last_name,
-            "email": self.email,
-            "admin": self.admin,
+            "email": self.email if include_private else None,
+            "admin": self.admin if include_private else False,
             "username": self.get_username(),
             "is_connected": self.is_connected,
             "is_verified": self.is_verified,
-            "is_admin": self.is_admin(),
+            "is_admin": self.is_admin() if include_private else False,
             # new
             "bio": self.bio,
             "profile_picture": self.get_avatar_url(),

@@ -117,7 +117,8 @@ def detail_user(user_id) -> render_template:
         flash("User not found.", "error")
         # redirect to the previous page
         return redirect(safe_referrer())
-    return render_template("account/detail_user.html" , user=user.to_json())
+    is_owner_or_admin = current_user.id == user.id or current_user.is_admin()
+    return render_template("account/detail_user.html" , user=user.to_json(include_private=is_owner_or_admin))
 
 @account_blueprint.route("/user_mini/<int:user_id>")
 def user_mini(user_id):
