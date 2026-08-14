@@ -319,3 +319,68 @@
     transition: background .1s;
 }
 .ul-blur-toggle:hover { background: var(--border-color); }
+
+/* ── Role picker (table + card) ── */
+.ul-role-picker {
+    position: relative;
+}
+
+.ul-role-picker-btn {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    background: transparent;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    padding: .2rem .5rem;
+    font-size: .78rem;
+    color: var(--subtle-text-color);
+    cursor: pointer;
+    max-width: 100%;
+}
+
+.ul-role-picker-btn:hover {
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+
+.ul-role-picker--card {
+    margin-top: .5rem;
+}
+
+.ul-role-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 30;
+    min-width: 180px;
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .14);
+    padding: .35rem;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.ul-role-menu-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .4rem .5rem;
+    border-radius: 6px;
+    font-size: .8rem;
+    color: var(--text-color);
+    cursor: pointer;
+    margin: 0;
+}
+
+.ul-role-menu-item:hover {
+    background: var(--light-bg-color);
+}
+
+.ul-role-menu-empty {
+    padding: .5rem;
+    font-size: .78rem;
+    color: var(--subtle-text-color);
+}

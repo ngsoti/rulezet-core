@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% import 'macros/admin_nav.html' as anav %}
+{% block title %}{{ role.name }} — Roles &amp; Permissions — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/table/data-table.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/base/detail_rule.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/account/user_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/roles/roles.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4" id="role-detail-app" v-cloak>
+
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-user-shield banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="/admin/roles/list" class="text-decoration-none text-muted">Roles &amp; Permissions</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">{{ role.name }}</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-user-shield"></i></div>
+            <div>
+                <h2 class="fw-bold mb-1">{{ role.name }}</h2>
+                <div class="banner-accent"></div>
+            </div>
+        </div>
+        <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+            {{ role.description or "No description." }}
+        </p>
+    </div>
+
+    {{ anav.admin_nav('roles') }}
+
+    <!-- ── Hero card: Details + Permissions + Assigned users, one card ── -->
+    <div class="card h-100 border-0 card_detail border-top shadow-lg position-relative mb-4" style="border-radius:12px;">
+        <div class="card-watermark-detail"><i class="fa-solid fa-user-shield"></i></div>
+        <div class="position-absolute top-0 end-0 mt-3 me-3 d-flex gap-2" style="z-index:2;">
+            <span v-if="role.is_system" class="badge bg-warning shadow-sm pt-1" title="Seeded system role — can't be deleted">
+                <i class="fa-solid fa-lock me-1"></i> SYSTEM ROLE
+            </span>
+        </div>
+        <div class="card-body p-4 p-md-5">
+
+            <!-- Details -->
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                    <i class="fa-solid fa-circle-info me-1"></i> Details
+                </span>
+            </div>
+
+            <div class="ud-info-grid mb-3">
+                <div class="ud-info-cell">
+                    <div class="ud-info-cell-icon" style="background:rgba(13,110,253,.1);color:#0d6efd;">
+                        <i class="fa-solid fa-tag"></i>
+                    </div>
+                    <div class="ud-info-cell-body">
+                        <div class="ud-info-cell-label">Name</div>
+                        <div class="ud-info-cell-value">[[ role.name ]]</div>
+                    </div>
+                </div>
+                <div class="ud-info-cell">
+                    <div class="ud-info-cell-icon" style="background:rgba(13,202,240,.1);color:#0dcaf0;">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="ud-info-cell-body">
+                        <div class="ud-info-cell-label">Users with this role</div>
+                        <div class="ud-info-cell-value">[[ role.user_count ]]</div>
+                    </div>
+                </div>
+                <div class="ud-info-cell">
+                    <div class="ud-info-cell-icon" style="background:rgba(111,66,193,.1);color:#6f42c1;">
+                        <i class="fa-solid fa-align-left"></i>
+                    </div>
+                    <div class="ud-info-cell-body">
+                        <div class="ud-info-cell-label">Description</div>
+                        <div class="ud-info-cell-value">[[ role.description || 'No description.' ]]</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="rounded-3 border p-3 mb-4" style="background:var(--light-bg-color);">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                    <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-bolt me-1"></i> Actions
+                    </span>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <button class="btn btn-outline-primary btn-sm" @click="openEditModal">
+                        <i class="fa-solid fa-pen me-1"></i> Edit
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" :disabled="role.is_system" @click="deleteRole"
+                            :title="role.is_system ? 'System roles can\'t be deleted' : ''">
+                        <i class="fa-solid fa-trash me-1"></i> Delete role
+                    </button>
+                </div>
+            </div>
+
+            <!-- Permissions -->
+            <div class="rounded-3 border p-3 mb-4" style="background:var(--light-bg-color);">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                    <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-key me-1"></i> Permissions
+                    </span>
+                </div>
+
+                <div class="roles-perm-checklist mb-3">
+                    <label v-for="perm in all_permissions" :key="perm.id"
+                           class="roles-perm-check" :class="selected_permission_ids.has(perm.id) ? 'roles-perm-check--checked' : ''">
+                        <input type="checkbox" class="form-check-input"
+                               :checked="selected_permission_ids.has(perm.id)"
+                               @change="togglePermission(perm.id)">
+                        <div>
+                            <div class="roles-perm-check-key">[[ perm.key ]]</div>
+                            <div class="roles-perm-check-desc">[[ perm.label ]]<span v-if="perm.description"> — [[ perm.description ]]</span></div>
+                        </div>
+                    </label>
+                </div>
+
+                <button class="btn btn-primary btn-sm" @click="savePermissions">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Save permissions
+                </button>
+            </div>
+
+            <!-- Assigned users -->
+            <div class="rounded-3 border p-3" style="background:var(--light-bg-color);">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                    <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-users-gear me-1"></i> Assigned users
+                    </span>
+                </div>
+
+                <data-table
+                    ref="users_table_ref"
+                    mode="read"
+                    :fetch-url="usersFetchUrl"
+                    :columns="user_columns">
+
+                    <!-- Add-user control lives in the table's own toolbar, next to its
+                         built-in search — a second full search bar was confusing. -->
+                    <template #toolbar-start>
+                        <button type="button" class="btn btn-sm btn-outline-primary" @click="openAddUserModal">
+                            <i class="fa-solid fa-user-plus me-1"></i> Add user
+                        </button>
+                    </template>
+
+                    <template #cell-username="{ item }">
+                        <user-chip :user-id="item.id" :username="item.username" :avatar="item.profile_picture"></user-chip>
+                    </template>
+
+                    <template #cell-granted_by="{ item }">
+                        <user-chip v-if="item.granted_by"
+                            :user-id="item.granted_by.id" :username="item.granted_by.username" :avatar="item.granted_by.avatar">
+                        </user-chip>
+                        <span v-else class="text-muted" style="font-size:.82rem;">—</span>
+                    </template>
+
+                    <!-- Custom action — "Remove from role", not a destructive account
+                         delete, so it doesn't borrow the table's own Delete wording/icon. -->
+                    <template #cell-actions="{ item }">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @click="removeUser(item)"
+                                title="Remove from this role">
+                            <i class="fa-solid fa-user-minus"></i>
+                        </button>
+                    </template>
+
+                </data-table>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Edit role modal ── -->
+    <div class="modal fade" id="editRoleModal" tabindex="-1" ref="edit_modal_el">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-pen me-2"></i>Edit role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" v-model="edit_role.name">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" rows="3" v-model="edit_role.description"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @click="saveRoleInfo">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Add user modal ── -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" ref="add_user_modal_el">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-user-plus me-2"></i>Add user to role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" class="form-control mb-3" placeholder="Search a user…"
+                           v-model="user_search" @input="onUserSearch" autofocus>
+                    <div v-if="user_suggestions.length === 0 && user_search" class="text-muted text-center py-3">
+                        No match.
+                    </div>
+                    <div class="roles-user-suggestion" v-for="u in user_suggestions" :key="u.id" @click="addUser(u)">
+                        <img v-if="u.profile_picture" :src="u.profile_picture" class="roles-user-avatar">
+                        <div v-else class="roles-user-avatar-fallback">[[ (u.username || '?').charAt(0).toUpperCase() ]]</div>
+                        <span style="font-size:.85rem;">[[ u.username ]]</span>
+                        <i class="fa-solid fa-plus ms-auto text-muted"></i>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, reactive, computed, onMounted } = Vue
+    import { apiFetch, TOAST } from '/static/js/constants.js'
+    import { message_list, create_message } from '/static/js/toaster.js'
+    import DataTable from '/static/js/components/table/data-table.js'
+    import UserChip  from '/static/js/components/UserChip.js'
+
+    const ROLE_ID = {{ role.id }}
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: { DataTable, UserChip },
+
+        setup() {
+            const role = reactive({{ role | tojson }})
+            const all_permissions = ref([])
+            const selected_permission_ids = ref(new Set((role.permissions || []).map(p => p.id)))
+
+            const edit_role = reactive({ name: role.name, description: role.description })
+            const edit_modal_el = ref(null)
+            let edit_modal = null
+
+            function openEditModal() {
+                edit_role.name = role.name
+                edit_role.description = role.description
+                edit_modal = edit_modal || new bootstrap.Modal(edit_modal_el.value)
+                edit_modal.show()
+            }
+
+            const users_table_ref = ref(null)
+            const usersFetchUrl = computed(() => `/admin/roles/${ROLE_ID}/users`)
+            const user_columns = [
+                { key: 'username',    label: 'User' },
+                { key: 'granted_by',  label: 'Assigned by',  width: '160px' },
+                { key: 'granted_at',  label: 'Granted at',   width: '160px' },
+                { key: 'actions',     label: '',             width: '110px' },
+            ]
+
+            const add_user_modal_el = ref(null)
+            let add_user_modal = null
+            const user_search = ref('')
+            const user_suggestions = ref([])
+            let search_debounce = null
+
+            function openAddUserModal() {
+                user_search.value = ''
+                user_suggestions.value = []
+                add_user_modal = add_user_modal || new bootstrap.Modal(add_user_modal_el.value)
+                add_user_modal.show()
+            }
+
+            async function loadPermissions() {
+                const res = await apiFetch('/admin/roles/get_all_permissions')
+                const data = await res.json()
+                if (data.success) all_permissions.value = data.permissions
+            }
+
+            function togglePermission(id) {
+                const s = new Set(selected_permission_ids.value)
+                s.has(id) ? s.delete(id) : s.add(id)
+                selected_permission_ids.value = s
+            }
+
+            async function saveRoleInfo() {
+                const res = await apiFetch(`/admin/roles/${ROLE_ID}/update`, 'POST', {
+                    name: edit_role.name, description: edit_role.description,
+                })
+                const data = await res.json()
+                if (res.ok) {
+                    role.name = data.role.name
+                    role.description = data.role.description
+                    create_message('Role updated.', TOAST.SUCCESS)
+                    edit_modal?.hide()
+                } else {
+                    create_message(data.message || 'Failed to update role.', TOAST.ERROR, true)
+                }
+            }
+
+            async function savePermissions() {
+                const res = await apiFetch(`/admin/roles/${ROLE_ID}/set_permissions`, 'POST', {
+                    permission_ids: Array.from(selected_permission_ids.value),
+                })
+                const data = await res.json()
+                if (res.ok) {
+                    create_message('Permissions updated.', TOAST.SUCCESS)
+                    role.permissions = data.role.permissions
+                } else {
+                    create_message(data.message || 'Failed to update permissions.', TOAST.ERROR, true)
+                }
+            }
+
+            async function deleteRole() {
+                if (role.is_system) return
+                if (!confirm(`Delete role "${role.name}"?`)) return
+                const res = await apiFetch(`/admin/roles/${ROLE_ID}/delete`, 'POST')
+                const data = await res.json()
+                if (res.ok) {
+                    create_message('Role deleted.', TOAST.SUCCESS)
+                    window.location.href = '/admin/roles/list'
+                } else {
+                    create_message(data.message || 'Failed to delete role.', TOAST.ERROR, true)
+                }
+            }
+
+            function onUserSearch() {
+                clearTimeout(search_debounce)
+                search_debounce = setTimeout(async () => {
+                    if (!user_search.value.trim()) { user_suggestions.value = []; return }
+                    const res = await apiFetch(`/admin/roles/${ROLE_ID}/users/search?search=${encodeURIComponent(user_search.value)}`)
+                    const data = await res.json()
+                    user_suggestions.value = data.success ? data.users : []
+                }, 250)
+            }
+
+            async function addUser(u) {
+                const res = await apiFetch(`/admin/roles/${ROLE_ID}/users/add`, 'POST', { user_id: u.id })
+                const data = await res.json()
+                if (res.ok) {
+                    create_message(`${u.username} added to this role.`, TOAST.SUCCESS)
+                    add_user_modal?.hide()
+                    users_table_ref.value?.fetchData()
+                    role.user_count += 1
+                } else {
+                    create_message(data.message || 'Failed to add user.', TOAST.ERROR, true)
+                }
+            }
+
+            async function removeUser(item) {
+                if (!confirm(`Remove ${item.username} from this role?`)) return
+                const res = await apiFetch(`/admin/roles/${ROLE_ID}/users/remove`, 'POST', { user_id: item.id })
+                const data = await res.json()
+                if (res.ok) {
+                    create_message('User removed from role.', TOAST.SUCCESS)
+                    users_table_ref.value?.fetchData()
+                    role.user_count -= 1
+                } else {
+                    create_message(data.message || 'Failed to remove user.', TOAST.ERROR, true)
+                }
+            }
+
+            onMounted(loadPermissions)
+
+            return {
+                message_list, role, all_permissions, selected_permission_ids,
+                edit_role, edit_modal_el, openEditModal,
+                users_table_ref, usersFetchUrl, user_columns,
+                add_user_modal_el, user_search, user_suggestions,
+                togglePermission, saveRoleInfo, savePermissions, deleteRole,
+                openAddUserModal, onUserSearch, addUser, removeUser,
+            }
+        }
+    }).mount('#role-detail-app')
+</script>
+{% endblock %}

@@ -1,0 +1,134 @@
+/* ==========================================================================
+   roles.css — Roles & Permissions admin feature (roles-* namespace)
+   Depends on: core.css, data-table.css, theme-bridge.css
+   ========================================================================== */
+
+.roles-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    font-size: .7rem;
+    font-weight: 600;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+.roles-badge--system {
+    background: rgba(255, 193, 7, .15);
+    color: #d4a700;
+}
+
+.roles-badge--perm {
+    background: rgba(13, 110, 253, .1);
+    color: #0d6efd;
+    font-family: var(--bs-font-monospace, monospace);
+    font-weight: 500;
+}
+
+.roles-badge--count {
+    background: rgba(13, 202, 240, .12);
+    color: #0dcaf0;
+}
+
+/* ── Role detail page ── */
+
+.roles-perm-checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: .6rem;
+}
+
+.roles-perm-check {
+    display: flex;
+    align-items: flex-start;
+    gap: .65rem;
+    padding: .75rem .9rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    cursor: pointer;
+    transition: border-color .12s, box-shadow .12s;
+}
+
+.roles-perm-check:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 3px 12px rgba(13, 110, 253, .08);
+}
+
+.roles-perm-check--checked {
+    border-color: #0d6efd;
+    background: rgba(13, 110, 253, .05);
+}
+
+.roles-perm-check input {
+    margin-top: .2rem;
+    flex-shrink: 0;
+}
+
+.roles-perm-check-key {
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.roles-perm-check-desc {
+    font-size: .75rem;
+    color: var(--subtle-text-color);
+    margin-top: .1rem;
+}
+
+.roles-user-picker {
+    position: relative;
+}
+
+.roles-user-suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.roles-user-suggestion {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .55rem .85rem;
+    cursor: pointer;
+}
+
+.roles-user-suggestion:hover {
+    background: var(--light-bg-color);
+}
+
+.roles-user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--light-bg-color);
+    flex-shrink: 0;
+}
+
+.roles-user-avatar-fallback {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(13, 110, 253, .12);
+    color: #0d6efd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}

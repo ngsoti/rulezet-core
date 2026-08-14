@@ -221,6 +221,11 @@
                         <i class="fas fa-circle-check me-1"></i>Verified
                     </span>
                     {% endif %}
+                    {% for role in user_roles %}
+                    <span class="badge bg-primary-subtle text-primary" style="font-size:.7rem;">
+                        <i class="fa-solid fa-user-shield me-1"></i>{{ role.name }}
+                    </span>
+                    {% endfor %}
                 </div>
                 {% if current_user.bio %}
                 <p class="ud-profile-bio">[[ user.bio ]]</p>

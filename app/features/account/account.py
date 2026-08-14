@@ -27,7 +27,9 @@ account_blueprint = Blueprint(
 @login_required
 def index() -> render_template:
     """Redirect to the user section"""
-    return render_template("account/account_index.html", user=current_user)
+    from app.features.roles.roles_core import get_user_roles
+    return render_template("account/account_index.html", user=current_user,
+                            user_roles=get_user_roles(current_user.id))
 
 @account_blueprint.route("/admin/instances")
 @login_required
@@ -118,7 +120,10 @@ def detail_user(user_id) -> render_template:
         # redirect to the previous page
         return redirect(safe_referrer())
     is_owner_or_admin = current_user.id == user.id or current_user.is_admin()
-    return render_template("account/detail_user.html" , user=user.to_json(include_private=is_owner_or_admin))
+    from app.features.roles.roles_core import get_user_roles
+    user_dict = user.to_json(include_private=is_owner_or_admin)
+    user_dict['roles'] = get_user_roles(user.id)
+    return render_template("account/detail_user.html" , user=user_dict)
 
 @account_blueprint.route("/user_mini/<int:user_id>")
 def user_mini(user_id):
@@ -128,6 +133,12 @@ def user_mini(user_id):
         return jsonify({"error": "not found"}), 404
     rules_count = RuleModel._active().filter_by(user_id=user.id).count()
     followers_count = user.followers.count() if hasattr(user, 'followers') else 0
+    from app.features.roles.roles_core import get_user_roles
+    # This endpoint has no @login_required — it's hit by anyone hovering a
+    # UserChip. is_admin must stay just as gated here as it is on
+    # detail_user/get_user, or it re-opens the admin-status-enumeration
+    # issue those were fixed for: only the profile owner or an admin sees it.
+    viewer_may_see_admin = current_user.is_authenticated and (current_user.id == user.id or current_user.is_admin())
     return jsonify({
         "id":        user.id,
         "username":  user.get_username(),
@@ -137,6 +148,8 @@ def user_mini(user_id):
         "created_at": user.created_at.strftime("%b %Y") if user.created_at else None,
         "rules_count": rules_count,
         "followers": followers_count,
+        "roles":     get_user_roles(user.id),
+        "is_admin":  user.is_admin() if viewer_may_see_admin else False,
     })
 
 
@@ -279,11 +292,24 @@ def users_data_table():
         .all()
     ) if user_ids else {}
 
+    from app.core.db_class.db import UserRole, Role
+    roles_by_user = {}
+    if user_ids:
+        role_rows = (
+            db.session.query(UserRole.user_id, Role.id, Role.name)
+            .join(Role, Role.id == UserRole.role_id)
+            .filter(UserRole.user_id.in_(user_ids))
+            .all()
+        )
+        for uid, rid, rname in role_rows:
+            roles_by_user.setdefault(uid, []).append({'id': rid, 'name': rname})
+
     items = []
     for u in pagination.items:
         j = u.to_json()
         j['rule_count']   = rule_counts.get(u.id, 0)
         j['bundle_count'] = bundle_counts.get(u.id, 0)
+        j['roles']        = roles_by_user.get(u.id, [])
         items.append(j)
 
     return jsonify({'items': items, 'total': pagination.total, 'total_pages': pagination.pages})
@@ -449,7 +475,9 @@ def favorite() -> render_template:
 @login_required
 def profil() -> render_template:
     """Profile page"""
-    return render_template("account/account_index.html", user=current_user)
+    from app.features.roles.roles_core import get_user_roles
+    return render_template("account/account_index.html", user=current_user,
+                            user_roles=get_user_roles(current_user.id))
 
 @account_blueprint.route("/acces_denied")
 @login_required

@@ -159,6 +159,9 @@
                               <a href="/chatbot/admin/conversations" class="dr-nav__item {% if request.path.startswith('/chatbot/admin') %}active{% endif %}">
                                  <i class="fa-solid fa-robot"></i><span>Chat History</span>
                               </a>
+                              <a href="/admin/roles/list" class="dr-nav__item {% if request.path.startswith('/admin/roles') %}active{% endif %}">
+                                 <i class="fa-solid fa-user-shield"></i><span>Roles &amp; Permissions</span>
+                              </a>
                            </div>
                         </div>
 
@@ -353,6 +356,7 @@
       { label: 'Admin: Tags', url: '/tags/admin/list', icon: 'fa-tag', keywords: ['admin tags'] },
       { label: 'Admin: ATT&CK', url: '/attack/admin/list', icon: 'fa-crosshairs', keywords: ['admin attack'] },
       { label: 'Admin: Duplicates', url: '/admin/similar_rules', icon: 'fa-code-compare', keywords: ['duplicates'] },
+      { label: 'Admin: Roles & Permissions', url: '/admin/roles/list', icon: 'fa-user-shield', keywords: ['roles', 'permissions', 'tagger'] },
       { label: 'Trash', url: '/rule/trash', icon: 'fa-trash-can-arrow-up', keywords: ['trash', 'deleted rules'] },
       { label: 'Bulk Tag', url: '/rule/bulk_tag', icon: 'fa-tags', keywords: ['bulk tag'] },
       { label: 'Connectors', url: '/connector/list', icon: 'fa-plug', keywords: ['connectors'] },

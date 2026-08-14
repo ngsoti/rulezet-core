@@ -18,6 +18,8 @@
 
 import PaginationComponent from '/static/js/rule/paginationComponent.js'
 import UserChip            from '/static/js/components/UserChip.js'
+import { apiFetch }        from '/static/js/constants.js'
+import { create_message }  from '/static/js/toaster.js'
 
 const { ref, reactive, computed, watch, onMounted, onUnmounted } = Vue
 
@@ -213,6 +215,24 @@ export default {
                     </div>
                 </div>
 
+                <!-- Role picker (non-admins only — admins bypass permissions entirely) -->
+                <div v-if="!user.admin" class="ul-role-picker ul-role-picker--card">
+                    <button class="ul-role-picker-btn" @click="toggleRoleMenu(user.id, $event)">
+                        <span v-if="user.roles && user.roles.length" class="d-flex flex-wrap gap-1">
+                            <span v-for="r in user.roles" :key="r.id" class="badge bg-primary-subtle text-primary" style="font-size:.65rem;">{{ r.name }}</span>
+                        </span>
+                        <span v-else class="text-muted small">No role</span>
+                        <i class="fas fa-caret-down ms-1"></i>
+                    </button>
+                    <div v-if="openRoleMenuUserId === user.id" class="ul-role-menu" @click.stop>
+                        <div v-if="allRoles.length === 0" class="ul-role-menu-empty">No roles defined yet.</div>
+                        <label v-for="r in allRoles" :key="r.id" class="ul-role-menu-item">
+                            <input type="checkbox" :checked="hasRole(user, r.id)" @change="toggleUserRole(user, r)">
+                            <span>{{ r.name }}</span>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Identity -->
                 <div class="ul-card-identity">
                     <a :href="'/account/detail_user/' + user.id" class="ul-card-name">
@@ -367,7 +387,22 @@ export default {
                             <span v-if="user.admin" class="badge bg-warning text-dark">
                                 <i class="fas fa-shield-halved me-1"></i>Admin
                             </span>
-                            <span v-else class="text-muted small">User</span>
+                            <div v-else class="ul-role-picker">
+                                <button class="ul-role-picker-btn" @click="toggleRoleMenu(user.id, $event)">
+                                    <span v-if="user.roles && user.roles.length" class="d-flex flex-wrap gap-1">
+                                        <span v-for="r in user.roles" :key="r.id" class="badge bg-primary-subtle text-primary" style="font-size:.65rem;">{{ r.name }}</span>
+                                    </span>
+                                    <span v-else class="text-muted small">No role</span>
+                                    <i class="fas fa-caret-down ms-1"></i>
+                                </button>
+                                <div v-if="openRoleMenuUserId === user.id" class="ul-role-menu" @click.stop>
+                                    <div v-if="allRoles.length === 0" class="ul-role-menu-empty">No roles defined yet.</div>
+                                    <label v-for="r in allRoles" :key="r.id" class="ul-role-menu-item">
+                                        <input type="checkbox" :checked="hasRole(user, r.id)" @change="toggleUserRole(user, r)">
+                                        <span>{{ r.name }}</span>
+                                    </label>
+                                </div>
+                            </div>
                         </td>
 
                         <!-- Status -->
@@ -498,6 +533,46 @@ export default {
         const blurEnabled = ref(true)
         const revealedIds = reactive(new Set())
 
+        // ── Role picker (non-admin users only) ───────────────────────────
+        const allRoles          = ref([])
+        const openRoleMenuUserId = ref(null)
+
+        async function fetchAllRoles() {
+            try {
+                const res = await fetch('/admin/roles/all')
+                if (!res.ok) return
+                const data = await res.json()
+                if (data.success) allRoles.value = data.roles
+            } catch { /* role picker just stays empty if this fails */ }
+        }
+
+        function toggleRoleMenu(userId, evt) {
+            evt.stopPropagation()
+            openRoleMenuUserId.value = openRoleMenuUserId.value === userId ? null : userId
+        }
+        function closeRoleMenu() { openRoleMenuUserId.value = null }
+
+        function hasRole(user, roleId) {
+            return (user.roles || []).some(r => r.id === roleId)
+        }
+
+        async function toggleUserRole(user, role) {
+            const has = hasRole(user, role.id)
+            const res = await apiFetch(`/admin/roles/${role.id}/users/${has ? 'remove' : 'add'}`, 'POST', { user_id: user.id })
+            const data = await res.json()
+            if (data.success) {
+                user.roles = has
+                    ? (user.roles || []).filter(r => r.id !== role.id)
+                    : [...(user.roles || []), { id: role.id, name: role.name }]
+                create_message(
+                    has ? `Removed "${role.name}" from ${user.first_name}` : `Assigned "${role.name}" to ${user.first_name}`,
+                    'success-subtle'
+                )
+            } else {
+                create_message(data.message || 'Failed to update role.', 'danger-subtle')
+            }
+        }
+
         function toggleReveal(id) {
             if (!blurEnabled.value) return
             if (revealedIds.has(id)) revealedIds.delete(id)
@@ -612,9 +687,16 @@ export default {
         }
 
         // ── Lifecycle ─────────────────────────────────────────────────────
-        onMounted(fetchData)
+        onMounted(() => {
+            fetchData()
+            fetchAllRoles()
+            document.addEventListener('click', closeRoleMenu)
+        })
         watch(viewMode, () => { page.value = 1; fetchData() })
-        onUnmounted(() => clearTimeout(_searchTimer))
+        onUnmounted(() => {
+            clearTimeout(_searchTimer)
+            document.removeEventListener('click', closeRoleMenu)
+        })
 
         return {
             items, total, totalPages, loading,
@@ -622,10 +704,12 @@ export default {
             search, adminFilter, connFilter, verifFilter,
             filtersOpen, activeFilterCount,
             blurEnabled, revealedIds,
+            allRoles, openRoleMenuUserId,
             footerInfo,
             isSelf, initials, fromNow,
             onSearchInput, clearSearch, onFilterChange, resetFilters,
             setSort, sortIcon, onCardSortChange, goToPage, toggleReveal, fetchData,
+            toggleRoleMenu, hasRole, toggleUserRole,
         }
     },
 }

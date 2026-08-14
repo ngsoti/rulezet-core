@@ -167,6 +167,18 @@ const UserChip = defineComponent({
             </div>
             <div v-else-if="!tooltipData" class="user-chip-tooltip__skeleton" style="height:10px;width:80px;margin-top:4px;"></div>
           </div>
+
+          <!-- Admin / Roles — top-right of the header row -->
+          <div v-if="tooltipData && ((tooltipData.roles && tooltipData.roles.length) || tooltipData.is_admin)"
+               class="d-flex flex-wrap justify-content-end gap-1 ms-auto" style="max-width:100px;">
+            <span v-if="tooltipData.is_admin" class="badge bg-warning text-dark" style="font-size:.65rem;">
+              <i class="fa-solid fa-crown me-1"></i>Admin
+            </span>
+            <span v-for="r in tooltipData.roles" :key="r.id"
+                  class="badge bg-primary-subtle text-primary" style="font-size:.65rem;">
+              <i class="fa-solid fa-user-shield me-1"></i>[[ r.name ]]
+            </span>
+          </div>
         </div>
 
         <!-- Bio -->

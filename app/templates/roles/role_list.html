@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% import 'macros/admin_nav.html' as anav %}
+{% block title %}Roles &amp; Permissions — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/table/data-table.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/roles/roles.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3 px-4" id="roles-list-app" v-cloak>
+
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-user-shield banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Roles &amp; Permissions</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-user-shield"></i></div>
+            <div>
+                <h2 class="fw-bold mb-1">Roles &amp; Permissions</h2>
+                <div class="banner-accent"></div>
+            </div>
+        </div>
+        <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+            Grant non-admin users specific capabilities — like tagging any rule — without making them admins.
+        </p>
+    </div>
+
+    {{ anav.admin_nav('roles') }}
+
+    <data-table
+        ref="table_ref"
+        fetch-url="/admin/roles/data_table"
+        :columns="columns"
+        :can-create="true"
+        :can-view="true"
+        :can-delete="true"
+        :bulk-actions="bulk_actions"
+        initial-sort="name"
+        initial-dir="asc"
+        @create="openCreateModal"
+        @view="handleView"
+        @delete="handleDelete"
+        @bulk-action="handleBulk">
+
+        <!-- Name cell -->
+        <template #cell-name="{ item }">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold">[[ item.name ]]</span>
+                <span v-if="item.is_system" class="roles-badge roles-badge--system" title="Seeded system role — can't be deleted">
+                    <i class="fa-solid fa-lock"></i> system
+                </span>
+            </div>
+        </template>
+
+        <!-- Permissions cell -->
+        <template #cell-permissions="{ item }">
+            <div class="d-flex flex-wrap gap-1" v-if="item.permissions && item.permissions.length">
+                <span v-for="perm in item.permissions" :key="perm.id" class="roles-badge roles-badge--perm">
+                    [[ perm.key ]]
+                </span>
+            </div>
+            <span v-else class="text-muted" style="font-size:.78rem;">no permissions</span>
+        </template>
+
+        <!-- User count cell -->
+        <template #cell-user_count="{ item }">
+            <span class="roles-badge roles-badge--count">
+                <i class="fa-solid fa-users"></i> [[ item.user_count ]]
+            </span>
+        </template>
+
+        <!-- Card body slot -->
+        <template #card-body="{ item }">
+            <p class="text-muted mb-2" style="font-size:.85rem;">[[ item.description || 'No description.' ]]</p>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+                <span v-for="perm in item.permissions" :key="perm.id" class="roles-badge roles-badge--perm">
+                    [[ perm.key ]]
+                </span>
+            </div>
+            <span class="roles-badge roles-badge--count">
+                <i class="fa-solid fa-users"></i> [[ item.user_count ]] user(s)
+            </span>
+        </template>
+
+        <!-- Expand row: raw permissions JSON, shown only here (on chevron
+             expand) — the compact cell/card view above stays badge chips. -->
+        <template #expand="{ item }">
+            <div class="p-3">
+                <div class="fw-bold mb-2" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--subtle-text-color);">
+                    Permissions — [[ item.name ]]
+                </div>
+                <code-viewer v-if="item.permissions && item.permissions.length"
+                    :code="JSON.stringify(item.permissions, null, 2)"
+                    language="json"
+                    title="permissions.json"
+                    max-height="320px"
+                    :show-lines="true"
+                    :foldable="true">
+                </code-viewer>
+                <span v-else class="text-muted" style="font-size:.85rem;">This role has no permissions yet.</span>
+            </div>
+        </template>
+
+    </data-table>
+
+    <!-- ── Create Role modal ── -->
+    <div class="modal fade" id="createRoleModal" tabindex="-1" ref="create_modal_el">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-plus me-2"></i>New role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" v-model="new_role.name" placeholder="e.g. Curator">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" rows="2" v-model="new_role.description" placeholder="What can this role do?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @click="submitCreateRole">Create role</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, reactive, onMounted } = Vue
+    import { apiFetch, TOAST } from '/static/js/constants.js'
+    import { message_list, create_message } from '/static/js/toaster.js'
+    import DataTable  from '/static/js/components/table/data-table.js'
+    import CodeViewer from '/static/js/components/code-viewer.js'
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: { DataTable, CodeViewer },
+
+        setup() {
+            const table_ref = ref(null)
+            const create_modal_el = ref(null)
+            let create_modal = null
+
+            const new_role = reactive({ name: '', description: '' })
+
+            const columns = [
+                { key: 'name',        label: 'Name',        sortable: true },
+                { key: 'description', label: 'Description', truncate: true },
+                { key: 'permissions', label: 'Permissions' },
+                { key: 'user_count',  label: 'Users',       width: '110px' },
+                { key: 'created_at',  label: 'Created',     sortable: true, type: 'date', width: '150px' },
+            ]
+
+            const bulk_actions = [
+                { key: 'delete', label: 'Delete', icon: 'fa-trash', variant: 'danger' },
+            ]
+
+            onMounted(() => {
+                create_modal = new bootstrap.Modal(create_modal_el.value)
+            })
+
+            function openCreateModal() {
+                new_role.name = ''
+                new_role.description = ''
+                create_modal?.show()
+            }
+
+            async function submitCreateRole() {
+                if (!new_role.name.trim()) {
+                    create_message('Role name is required.', TOAST.ERROR)
+                    return
+                }
+                const res = await apiFetch('/admin/roles/create', 'POST', { ...new_role })
+                const data = await res.json()
+                if (res.ok) {
+                    create_message('Role created.', TOAST.SUCCESS)
+                    create_modal?.hide()
+                    table_ref.value?.fetchData()
+                } else {
+                    create_message(data.message || 'Failed to create role.', TOAST.ERROR, true)
+                }
+            }
+
+            function handleView(role) {
+                window.location.href = '/admin/roles/detail/' + role.id
+            }
+
+            async function handleDelete(role) {
+                if (!confirm(`Delete role "${role.name}"?`)) return
+                const res = await apiFetch('/admin/roles/' + role.id + '/delete', 'POST')
+                const data = await res.json()
+                if (res.ok) {
+                    create_message('Role deleted.', TOAST.SUCCESS)
+                    table_ref.value?.fetchData()
+                } else {
+                    create_message(data.message || 'Failed to delete role.', TOAST.ERROR, true)
+                }
+            }
+
+            async function handleBulk({ action, ids }) {
+                if (action !== 'delete') return
+                const count = ids === 'ALL' ? 'all' : ids.length
+                if (!confirm(`Delete ${count} selected role(s)? System roles will be skipped.`)) return
+
+                const res = await apiFetch('/admin/roles/bulk_delete', 'POST', {
+                    role_ids: ids === 'ALL' ? null : ids,
+                })
+                const data = await res.json()
+                if (res.ok) {
+                    create_message(data.message, TOAST.SUCCESS)
+                    table_ref.value?.fetchData()
+                } else {
+                    create_message(data.message || 'Bulk delete failed.', TOAST.ERROR, true)
+                }
+            }
+
+            return {
+                message_list, table_ref, create_modal_el, new_role, columns, bulk_actions,
+                openCreateModal, submitCreateRole, handleView, handleDelete, handleBulk,
+            }
+        }
+    }).mount('#roles-list-app')
+</script>
+{% endblock %}

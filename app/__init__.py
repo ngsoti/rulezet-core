@@ -64,6 +64,7 @@ def create_app(start_worker=True):
     from app.features.dashboard.dashboard import dashboard_blueprint
     from app.features.docs.docs import docs_blueprint
     from app.features.chatbot.chatbot import chatbot_blueprint
+    from app.features.roles.roles import roles_blueprint
 
     app.register_blueprint(home_blueprint, url_prefix="/")
     app.register_blueprint(account_blueprint, url_prefix="/account")
@@ -86,6 +87,7 @@ def create_app(start_worker=True):
     app.register_blueprint(dashboard_blueprint, url_prefix='/dashboard')
     app.register_blueprint(docs_blueprint, url_prefix='/docs')
     app.register_blueprint(chatbot_blueprint, url_prefix='/chatbot')
+    app.register_blueprint(roles_blueprint, url_prefix='/admin/roles')
 
     from app.api.api import api_blueprint
 
@@ -134,6 +136,11 @@ def create_app(start_worker=True):
         try:
             from app.features.config.config_core import seed_default_themes
             seed_default_themes()
+        except Exception:
+            pass
+        try:
+            from app.features.roles.roles_core import seed_default_permissions_and_roles
+            seed_default_permissions_and_roles()
         except Exception:
             pass
 

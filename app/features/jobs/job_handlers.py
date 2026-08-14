@@ -25,7 +25,7 @@ from pathlib import Path
 from app.features.jobs.job_worker import register_handler
 from app import db
 from app.core.db_class.db import Rule, Tag, RuleTagAssociation, BackgroundJob, BackgroundJobLog, ActivityLog, RequestOwnerRule, User, GithubProposal
-from app.features.rule.rule_core import _wipe_rule_children
+from app.features.rule.rule_core import _wipe_rule_children, create_rule_history
 from app.core.utils.activity_log import log_activity
 
 BATCH_SIZE = 2000   # bulk_insert_mappings handles large batches efficiently
@@ -300,11 +300,10 @@ def handle_bulk_add_tag_to_rules(job, app):
                 level='info', event='paused')
             return
 
-        # ── Fetch next batch of rule IDs ──────────────────────────────────────
-        batch_ids = [
-            r[0] for r in
-            rule_query.with_entities(Rule.id).offset(offset).limit(BATCH_SIZE).all()
-        ]
+        # ── Fetch next batch of rule IDs (+ title/content for history entries) ──
+        batch_rows = rule_query.with_entities(Rule.id, Rule.title, Rule.to_string) \
+                                .offset(offset).limit(BATCH_SIZE).all()
+        batch_ids = [r[0] for r in batch_rows]
         if not batch_ids:
             break
 
@@ -327,6 +326,39 @@ def handle_bulk_add_tag_to_rules(job, app):
             for row in to_insert:
                 existing.add((row["rule_id"], row["tag_id"]))
             total_added += len(to_insert)
+
+            # A bulk tag operation is otherwise invisible in a rule's own
+            # history — the UI-driven quick_meta path records this, and a
+            # caller shouldn't get weaker auditing just for using the bulk
+            # job. One entry per rule that actually gained a tag here.
+            #
+            # old/new snapshot only needs the "tags" key: diff_rule_snapshots
+            # renders it as a set difference (added = new - old), so an empty
+            # old list + the names actually added to THIS rule is enough to
+            # show "Tags added: x, y" correctly — no need to fetch every tag
+            # already on the rule just to reproduce a value the diff discards.
+            tag_name_by_id = {t.id: t.name for t in tags}
+            added_names_by_rule = {}
+            for row in to_insert:
+                added_names_by_rule.setdefault(row["rule_id"], []).append(tag_name_by_id[row["tag_id"]])
+
+            for rule_id, rule_title, rule_content in batch_rows:
+                added_names = added_names_by_rule.get(rule_id)
+                if not added_names:
+                    continue
+                create_rule_history({
+                    "id": rule_id,
+                    "title": rule_title,
+                    "success": True,
+                    "manual_submit": False,
+                    "message": f"Bulk-tagged with: {tag_names}",
+                    "new_content": rule_content,
+                    "old_content": rule_content,
+                    "old_snapshot": {"tags": []},
+                    "new_snapshot": {"tags": sorted(added_names)},
+                    "change_type": "metadata",
+                    "analyzed_by_user_id": user_id,
+                })
 
         offset    += len(batch_ids)
         batch_num += 1

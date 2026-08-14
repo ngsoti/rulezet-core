@@ -134,9 +134,18 @@ from .log.log_api import log_ns  # noqa
 _hide_ns(log_ns)
 api.add_namespace(log_ns, path="/log")
 
-# Rule Tester
+# Tags
+from .tags.tags_private_api import tags_private_ns  # noqa
+api.add_namespace(tags_private_ns, path="/tags/private")
+
+# Rule Tester — hidden from Swagger: this is the same backend the in-app
+# Rule Tester UI itself calls (RuleTesterPanel.js, BulkTesterPanel.js,
+# TestHistoryPanel.js, MyTestsPanel.js), not a separate public API surface,
+# so the routes stay live — only the docs listing is suppressed.
 from .rule_tester.public_ns import rule_tester_public_ns  # noqa
 from .rule_tester.private_ns import rule_tester_private_ns  # noqa
+_hide_ns(rule_tester_public_ns)
+_hide_ns(rule_tester_private_ns)
 api.add_namespace(rule_tester_public_ns,  path="/rule_tester/public")
 api.add_namespace(rule_tester_private_ns, path="/rule_tester/private")
 

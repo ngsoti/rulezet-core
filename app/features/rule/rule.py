@@ -3780,6 +3780,9 @@ def quick_meta(rule_id):
     rule = RuleModel._active().filter(Rule.id == rule_id).first()
     if not rule:
         return jsonify({'success': False}), 404
+
+    data = request.get_json(force=True)
+
     # Allow edit if owner, admin, or the rule is in one of the user's workspaces
     if rule.user_id != current_user.id and not current_user.is_admin():
         from app.core.db_class.db import WorkspaceRule, Workspace
@@ -3788,9 +3791,12 @@ def quick_meta(rule_id):
                      .filter(WorkspaceRule.rule_id == rule_id, Workspace.user_id == current_user.id)
                      .first())
         if not in_own_ws:
-            return jsonify({'success': False}), 403
-
-    data = request.get_json(force=True)
+            # A user with rule.tag_any may still patch this rule, but ONLY
+            # its tag_ids — granting that permission must never also open
+            # up CVEs/ATT&CK on a rule this user doesn't own.
+            tag_only_patch = set(data.keys()) <= {'tag_ids'}
+            if not (tag_only_patch and current_user.has_permission('rule.tag_any')):
+                return jsonify({'success': False}), 403
     old_snapshot = RuleModel.rule_metadata_snapshot(rule)
 
     # Tags
