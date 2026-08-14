@@ -15,7 +15,9 @@ field some rules also carry.
 import uuid
 
 from app import db
-from app.core.db_class.db import BackgroundJob, Rule, RuleTagAssociation, RuleUpdateHistory, Tag, User
+from app.core.db_class.db import (
+    BackgroundJob, Rule, RuleEditContribution, RuleTagAssociation, RuleUpdateHistory, Tag, User,
+)
 from app.features.jobs.job_handlers import handle_bulk_add_tag_to_rules
 from app.features.roles import roles_core
 
@@ -189,6 +191,24 @@ def test_job_records_rule_history_entry(app, client):
         assert entry.analyzed_by_user_id == admin.id
         assert entry.old_snapshot == {"tags": []}
         assert entry.new_snapshot == {"tags": [tag.name]}
+
+
+def test_job_credits_tagger_as_contributor(app, client):
+    """Bulk-tagging via the API must credit the caller as a contributor on
+    each rule they didn't already own — same treatment the UI's quick_meta
+    tag-only edit already gets."""
+    with app.app_context():
+        rule = Rule.query.filter_by(title="test").first()  # owned by t@t.t
+        admin = User.query.filter_by(email="admin@admin.admin").first()
+        tag = _make_tag()
+
+        res = client.post("/api/tags/private/bulk_add",
+                           headers={"X-API-KEY": "admin_api_key"},
+                           json={"rule_ids": [rule.id], "tag_ids": [tag.id], "confirm": True})
+        job = BackgroundJob.query.filter_by(uuid=res.get_json()["job_uuid"]).first()
+        handle_bulk_add_tag_to_rules(job, app)
+
+        assert RuleEditContribution.query.filter_by(rule_id=rule.id, user_id=admin.id).first() is not None
 
 
 def test_bulk_tag_shows_up_correctly_on_the_rule_history_page(app, client):

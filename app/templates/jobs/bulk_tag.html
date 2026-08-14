@@ -36,7 +36,14 @@
         </p>
     </div>
 
+    {# The admin nav panel links to every other admin page (Users, Trash,
+       Connectors, Logs, ...) — a non-admin Tag Manager reaching this page
+       via their rule.tag_any permission must not see (or be able to click
+       into) any of that, so it's admin-only here, not just tied to the page
+       itself being reachable. #}
+    {% if current_user.is_admin() %}
     {{ anav.admin_nav('bulk_tag') }}
+    {% endif %}
 
     <div class="row g-4">
 

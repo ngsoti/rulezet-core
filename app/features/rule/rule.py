@@ -363,7 +363,61 @@ def edit_rule(rule_id) -> render_template:
     rule = RuleModel.get_rule(rule_id)
     user_id = RuleModel.get_rule_user_id(rule_id)
 
-    if current_user.id == user_id or current_user.is_admin():
+    is_owner_or_admin = current_user.id == user_id or current_user.is_admin()
+    # A non-owner holding rule.tag_any may still reach this page, but only to
+    # touch tags/CVEs/ATT&CK — every other field is rendered disabled and,
+    # more importantly, this branch below never reads title/format/license/
+    # description/source/version/to_string from the request at all, so a
+    # crafted POST bypassing the disabled fields client-side still can't
+    # touch anything outside that scope.
+    restricted_edit = not is_owner_or_admin and current_user.has_permission('rule.tag_any')
+
+    if restricted_edit:
+        if request.method == 'POST':
+            old_snapshot = RuleModel.rule_metadata_snapshot(rule)
+
+            RuleModel.apply_restricted_metadata_edit(
+                rule_id, current_user.id,
+                request.form.get('tags'),
+                request.form.get('vulnerabilities'),
+            )
+            RuleModel.add_contributor(current_user.id, rule_id)
+
+            new_snapshot = RuleModel.rule_metadata_snapshot(rule)
+            if new_snapshot != old_snapshot:
+                log_activity("rule.quick_meta", f"Updated tags/vulnerabilities on rule '{rule.title}' (id={rule_id})",
+                             target_type="rule", target_id=rule_id, target_uuid=rule.uuid)
+                RuleModel.create_rule_history({
+                    "id": rule_id,
+                    "title": rule.title,
+                    "success": True,
+                    "manual_submit": False,
+                    "message": "Tags/vulnerabilities updated",
+                    "new_content": rule.to_string,
+                    "old_content": rule.to_string,
+                    "old_snapshot": old_snapshot,
+                    "new_snapshot": new_snapshot,
+                    "change_type": "metadata",
+                })
+
+            flash("Tags and vulnerabilities updated!", "success")
+            return redirect(url_for('rule.detail_rule', rule_id=rule.id))
+
+        form = EditRuleForm()
+        licenses = get_licst_license()
+        form.license.choices = [(lic, lic) for lic in licenses]
+        form.format.data = rule.format
+        form.source.data = rule.source
+        form.title.data = rule.title
+        form.description.data = rule.description
+        form.license.data = rule.license
+        form.cve_id.data = rule.cve_id
+        form.version.data = rule.version
+        form.to_string.data = rule.to_string
+        form.original_uuid.data = rule.original_uuid
+        return render_template("rule/edit_rule.html", form=form, rule=rule, restricted_edit=True)
+
+    if is_owner_or_admin:
         form = EditRuleForm()
         licenses = get_licst_license()
         form.license.choices = [(lic, lic) for lic in licenses]
@@ -4726,7 +4780,7 @@ def similarity():
 @rule_blueprint.route('/bulk_tag', methods=['GET'])
 @login_required
 def bulk_tag():
-    if current_user.is_admin():
+    if current_user.is_admin() or current_user.has_permission('rule.tag_any'):
         return render_template('jobs/bulk_tag.html')
     else:
         return render_template('access_denied.html')

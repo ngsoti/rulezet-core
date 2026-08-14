@@ -5,7 +5,7 @@ this system only ever grants a non-admin extra capability, never restricts one.
 """
 
 from app import db
-from app.core.db_class.db import Permission, Role, RolePermission, UserRole, User
+from app.core.db_class.db import Notification, Permission, Role, RolePermission, UserRole, User
 from app.features.roles import roles_core
 
 
@@ -83,6 +83,36 @@ def test_get_role_users_granted_by_none_when_unattributed(app):
         result = roles_core.get_role_users(role.id)
         row = next(r for r in result["items"] if r["id"] == target.id)
         assert row["granted_by"] is None
+
+
+def test_granting_a_role_notifies_the_user(app):
+    with app.app_context():
+        roles_core.seed_default_permissions_and_roles()
+        user = User.query.filter_by(email="neo@admin.admin").first()
+        role = Role.query.filter_by(name="Tag manager").first()
+
+        ok, err = roles_core.add_user_to_role(role.id, user.id, granted_by_id=None)
+        assert ok is True, err
+
+        notif = Notification.query.filter_by(user_id=user.id, notif_type="role_granted").first()
+        assert notif is not None
+        assert "Tag manager" in notif.title
+        assert notif.is_read is False
+
+
+def test_revoking_a_role_notifies_the_user(app):
+    with app.app_context():
+        roles_core.seed_default_permissions_and_roles()
+        user = User.query.filter_by(email="neo@admin.admin").first()
+        role = Role.query.filter_by(name="Tag manager").first()
+        roles_core.add_user_to_role(role.id, user.id, granted_by_id=None)
+
+        ok, err = roles_core.remove_user_from_role(role.id, user.id)
+        assert ok is True, err
+
+        notif = Notification.query.filter_by(user_id=user.id, notif_type="role_removed").first()
+        assert notif is not None
+        assert "Tag manager" in notif.title
 
 
 def test_add_user_to_role_rejects_duplicate(app):

@@ -834,6 +834,60 @@ def edit_rule_core(form_dict, id) -> tuple[bool, Rule]:
     db.session.commit()
     return True, rule
 
+
+def apply_restricted_metadata_edit(rule_id, user_id, tags_input, vulnerabilities_input) -> Rule:
+    """Update ONLY a rule's tags + CVE/vulnerability list — the counterpart
+    to edit_rule_core's full-field update, used by the rule.tag_any-scoped
+    branch of edit_rule() so a non-owner Tag Manager visiting that page can
+    never touch title/content/format/etc no matter what a crafted POST body
+    contains, since this never reads or writes any other field.
+    """
+    rule = get_rule(rule_id)
+    if not rule:
+        return None
+
+    try:
+        tags_data_list = json.loads(tags_input) if isinstance(tags_input, str) else (tags_input or [])
+    except (json.JSONDecodeError, TypeError):
+        tags_data_list = []
+
+    new_tag_ids = set()
+    for t in tags_data_list:
+        if isinstance(t, dict) and t.get('id'):
+            new_tag_ids.add(int(t.get('id')))
+        elif isinstance(t, (int, str)):
+            new_tag_ids.add(int(t))
+
+    current_associations = RuleTagAssociation.query.filter_by(rule_id=rule.id).all()
+    current_tag_ids = {assoc.tag_id for assoc in current_associations}
+
+    for assoc in current_associations:
+        if assoc.tag_id not in new_tag_ids:
+            db.session.delete(assoc)
+    for tag_id in new_tag_ids:
+        if tag_id not in current_tag_ids:
+            db.session.add(RuleTagAssociation(
+                uuid=str(uuid.uuid4()),
+                rule_id=rule.id,
+                tag_id=tag_id,
+                user_id=user_id,
+                added_at=datetime.datetime.now(tz=datetime.timezone.utc),
+            ))
+
+    try:
+        vuln_edit = json.loads(vulnerabilities_input) if isinstance(vulnerabilities_input, str) else (vulnerabilities_input or [])
+        if not isinstance(vuln_edit, list):
+            vuln_edit = []
+    except (json.JSONDecodeError, TypeError):
+        vuln_edit = []
+    vuln_edit = [v for v in vuln_edit if isinstance(v, str) and v.strip()]
+    rule.cve_id = json.dumps(vuln_edit)
+    rule.last_modif = datetime.datetime.now(tz=datetime.timezone.utc)
+
+    db.session.commit()
+    return rule
+
+
 # Read
 
 def get_count_rules_by_user_id(user_id) -> int:

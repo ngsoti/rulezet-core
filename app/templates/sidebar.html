@@ -231,6 +231,22 @@
                </li>
                {% endif %}
 
+               <!-- ── Tag Manager (dropdown, rule.tag_any non-admins only) ── -->
+               {% if current_user.is_authenticated and not current_user.is_admin() and current_user.has_permission('rule.tag_any') %}
+               <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle custom-nav-link fw-bold {% if request.path == '/rule/bulk_tag' or request.path.startswith('/tags/admin') %}active{% endif %}"
+                     href="#" role="button" data-bs-toggle="dropdown">
+                     <i class="fa-solid fa-tags fa-fw me-1 text-primary"></i>Tag Manager
+                  </a>
+                  <ul class="dropdown-menu">
+                     <li><a href="/rule/bulk_tag" class="dropdown-item {% if request.path == '/rule/bulk_tag' %}active{% endif %}">
+                           <i class="fa-solid fa-tags me-2"></i>Bulk Tag</a></li>
+                     <li><a href="/tags/admin/list" class="dropdown-item {% if request.path.startswith('/tags/admin') %}active{% endif %}">
+                           <i class="fa-solid fa-tag me-2"></i>Manage Tags</a></li>
+                  </ul>
+               </li>
+               {% endif %}
+
             </ul>
 
             <!-- ── Right: search + notifications + profile ── -->
@@ -346,6 +362,10 @@
       { label: 'Dashboard', url: '/dashboard/', icon: 'fa-gauge-high', keywords: ['dashboard'] },
       { label: 'Profile', url: '/account/', icon: 'fa-user-circle', keywords: ['profile', 'account'] },
       { label: 'Settings', url: '/settings', icon: 'fa-sliders', keywords: ['settings'] },
+      {% endif %}
+      {% if current_user.is_authenticated and not current_user.is_admin() and current_user.has_permission('rule.tag_any') %}
+      { label: 'Bulk Tag', url: '/rule/bulk_tag', icon: 'fa-tags', keywords: ['bulk tag'] },
+      { label: 'Manage Tags', url: '/tags/admin/list', icon: 'fa-tag', keywords: ['manage tags', 'tags'] },
       {% endif %}
       {% if current_user.is_authenticated and current_user.is_admin() %}
       { label: 'Admin: Users', url: '/account/admin/all_users', icon: 'fa-users', keywords: ['admin users'] },

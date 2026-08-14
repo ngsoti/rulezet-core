@@ -64,6 +64,8 @@ _TYPE_ICON = {
     'github_proposal_approved':    'fa-solid fa-circle-check',
     'github_proposal_rejected':    'fa-solid fa-circle-xmark',
     'github_proposal_import_done': 'fa-brands fa-github',
+    'role_granted':             'fa-solid fa-user-shield',
+    'role_removed':             'fa-solid fa-user-slash',
 }
 
 
@@ -761,6 +763,27 @@ def notify_ownership_granted(new_owner_id, rule_count):
         )
     except Exception as e:
         print(f"[notification_core] notify_ownership_granted error: {e}")
+
+
+def notify_role_assignment(user_id, role_name, granted):
+    """Notify a user when an admin grants or revokes one of their roles
+    (Roles & Permissions admin page) — a role can hand out real capabilities
+    (e.g. rule.tag_any), so the affected user should know without having to
+    stumble onto it."""
+    try:
+        verb  = 'granted' if granted else 'removed'
+        title = f'Role {verb}: {role_name}'
+        body  = (f'You were given the "{role_name}" role.' if granted
+                 else f'The "{role_name}" role was removed from your account.')
+        create_notification(
+            user_id    = user_id,
+            notif_type = 'role_granted' if granted else 'role_removed',
+            title      = title,
+            body       = body,
+            link       = '/account/',
+        )
+    except Exception as e:
+        print(f"[notification_core] notify_role_assignment error: {e}")
 
 
 def notify_github_proposal_submitted(proposal, requester):

@@ -764,13 +764,15 @@ window.__rule_risk   = {{ rule_risk | tojson | safe }};
                                 {% endif %}
 
                                 <div class="ms-auto d-flex gap-2">
-                                    {% if current_user.is_authenticated and (current_user.id == rule.user_id or current_user.is_admin()) %}
+                                    {% if current_user.is_authenticated and (current_user.id == rule.user_id or current_user.is_admin() or current_user.has_permission('rule.tag_any')) %}
                                     <a :href="`/rule/edit_rule/${currentRule.id}`"
                                        class="btn btn-sm rounded-pill px-3"
                                        style="background:transparent; border:1px solid #0d6efd55; color:#0d6efd;"
-                                       title="Edit this rule">
+                                       title="{% if current_user.id == rule.user_id or current_user.is_admin() %}Edit this rule{% else %}Edit tags, vulnerabilities & ATT&CK on this rule{% endif %}">
                                         <i class="fas fa-pen me-1"></i>Edit
                                     </a>
+                                    {% endif %}
+                                    {% if current_user.is_authenticated and (current_user.id == rule.user_id or current_user.is_admin()) %}
                                     <button class="btn btn-sm rounded-pill px-3"
                                             style="background:transparent; border:1px solid #dc354555; color:#dc3545;"
                                             data-bs-toggle="modal" :data-bs-target="'#delete_rule_modal_'+currentRule.id"

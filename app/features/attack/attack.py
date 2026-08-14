@@ -80,19 +80,40 @@ def get_rule_techniques(rule_id):
 @login_required
 def add_to_rule(rule_id):
     from ...core.db_class.db import Rule
+    from app.core.utils.activity_log import log_activity
+    from app.features.rule import rule_core as RuleModel
     rule = Rule.query.get(rule_id)
     if not rule or rule.is_deleted:
         return jsonify({'error': 'Rule not found'}), 404
-    if rule.user_id != current_user.id and not current_user.is_admin():
+    is_owner_or_admin = rule.user_id == current_user.id or current_user.is_admin()
+    if not is_owner_or_admin and not current_user.has_permission('rule.tag_any'):
         return jsonify({'error': 'Forbidden'}), 403
 
     technique_id = (request.json or {}).get('technique_id', '')
     if not technique_id:
         return jsonify({'error': 'technique_id required'}), 400
 
+    old_snapshot = RuleModel.rule_metadata_snapshot(rule)
     assoc, status = AttackModel.add_technique_to_rule(rule_id, technique_id, current_user.id, 'manual')
     if status == 'technique_not_found':
         return jsonify({'error': 'Technique not found'}), 404
+
+    if not is_owner_or_admin and status == 'created':
+        # Credit + audit trail for a non-owner change — same treatment as
+        # tags/CVEs via edit_rule's restricted branch, so a Tag Manager's
+        # ATT&CK edits show up in the rule's contribution/history too.
+        RuleModel.add_contributor(current_user.id, rule_id)
+        new_snapshot = RuleModel.rule_metadata_snapshot(rule)
+        log_activity("rule.quick_meta", f"Updated ATT&CK techniques on rule '{rule.title}' (id={rule_id})",
+                     target_type="rule", target_id=rule_id, target_uuid=rule.uuid)
+        RuleModel.create_rule_history({
+            "id": rule_id, "title": rule.title, "success": True, "manual_submit": False,
+            "message": "ATT&CK techniques updated",
+            "new_content": rule.to_string, "old_content": rule.to_string,
+            "old_snapshot": old_snapshot, "new_snapshot": new_snapshot,
+            "change_type": "metadata",
+        })
+
     return jsonify({'success': True, 'status': status, 'assoc': assoc.to_json() if assoc else None})
 
 
@@ -100,13 +121,31 @@ def add_to_rule(rule_id):
 @login_required
 def remove_from_rule(rule_id, technique_id):
     from ...core.db_class.db import Rule
+    from app.core.utils.activity_log import log_activity
+    from app.features.rule import rule_core as RuleModel
     rule = Rule.query.get(rule_id)
     if not rule or rule.is_deleted:
         return jsonify({'error': 'Rule not found'}), 404
-    if rule.user_id != current_user.id and not current_user.is_admin():
+    is_owner_or_admin = rule.user_id == current_user.id or current_user.is_admin()
+    if not is_owner_or_admin and not current_user.has_permission('rule.tag_any'):
         return jsonify({'error': 'Forbidden'}), 403
 
+    old_snapshot = RuleModel.rule_metadata_snapshot(rule)
     removed = AttackModel.remove_technique_from_rule(rule_id, technique_id)
+
+    if not is_owner_or_admin and removed:
+        RuleModel.add_contributor(current_user.id, rule_id)
+        new_snapshot = RuleModel.rule_metadata_snapshot(rule)
+        log_activity("rule.quick_meta", f"Updated ATT&CK techniques on rule '{rule.title}' (id={rule_id})",
+                     target_type="rule", target_id=rule_id, target_uuid=rule.uuid)
+        RuleModel.create_rule_history({
+            "id": rule_id, "title": rule.title, "success": True, "manual_submit": False,
+            "message": "ATT&CK techniques updated",
+            "new_content": rule.to_string, "old_content": rule.to_string,
+            "old_snapshot": old_snapshot, "new_snapshot": new_snapshot,
+            "change_type": "metadata",
+        })
+
     return jsonify({'success': removed})
 
 

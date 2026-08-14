@@ -265,6 +265,11 @@ def add_user_to_role(role_id, user_id, granted_by_id):
         granted_at=datetime.datetime.now(tz=datetime.timezone.utc),
     ))
     db.session.commit()
+    try:
+        from app.features.notification.notification_core import notify_role_assignment
+        notify_role_assignment(user_id, role.name, granted=True)
+    except Exception:
+        pass
     return True, None
 
 
@@ -272,8 +277,14 @@ def remove_user_from_role(role_id, user_id):
     ur = UserRole.query.filter_by(role_id=role_id, user_id=user_id).first()
     if not ur:
         return False, "This user doesn't have this role."
+    role = Role.query.get(role_id)
     db.session.delete(ur)
     db.session.commit()
+    try:
+        from app.features.notification.notification_core import notify_role_assignment
+        notify_role_assignment(user_id, role.name if role else "role", granted=False)
+    except Exception:
+        pass
     return True, None
 
 

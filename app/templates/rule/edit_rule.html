@@ -33,6 +33,7 @@
     pointer-events: none; opacity: 0; transition: opacity .15s; z-index: 9999;
 }
 .rf-label-hint:hover::after, .rf-label-hint:hover::before { opacity: 1; }
+.rf-restricted { opacity: .45; pointer-events: none; user-select: none; }
 </style>
 {% endblock %}
 {% import 'macros/form_macros.html' as f %}
@@ -57,9 +58,20 @@
         </div>
         <code class="ms-auto text-muted" style="font-size: 0.7rem; opacity: 0.6;" >[[ currentRule.uuid ]]</code>
         <p class="text-muted mb-0" style="max-width: 600px; font-size: 0.95rem;">
+            {% if restricted_edit %}
+            You can update Tags, Vulnerabilities and ATT&CK Techniques on this rule — everything else is read-only.
+            {% else %}
             Modify the details of your rule below. Ensure all required fields are completed.
+            {% endif %}
         </p>
     </div>
+
+    {% if restricted_edit %}
+    <div class="alert alert-info rounded-3 d-flex align-items-center mb-4 border-0 shadow-sm">
+        <i class="fa-solid fa-circle-info me-3 fa-lg"></i>
+        <div>You don't own this rule — as a Tag Manager, you can only edit its Tags, Vulnerabilities and ATT&amp;CK Techniques. Every other field below is disabled.</div>
+    </div>
+    {% endif %}
 
     <div class="row justify-content-center">
         <div class="col-lg-12">
@@ -68,6 +80,7 @@
                     <form action="" method="post" id="form">
                         {{ form.hidden_tag() }}
 
+                        <fieldset {% if restricted_edit %}disabled{% endif %} class="border-0 p-0 m-0" :class="{ 'rf-restricted': restrictedEdit }">
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -122,6 +135,7 @@
                                 <input type="hidden" name="version" :value="formData.version">
                             </div>
                         </div>
+                        </fieldset>
 
                         <div class="row mb-4">
                             <div class="col-12 text-start">
@@ -153,6 +167,7 @@
                             </div>
                         </div>
 
+                        <fieldset {% if restricted_edit %}disabled{% endif %} class="border-0 p-0 m-0" :class="{ 'rf-restricted': restrictedEdit }">
                         <div class="row g-3 mb-4">
                             <div class="col-md-12 text-start">
                                 <div class="form-group">
@@ -194,6 +209,7 @@
                                 {% endif %}
                             </div>
                         </div>
+                        </fieldset>
 
                         {% if error %}
                         <div class="alert alert-danger rounded-3 d-flex align-items-center mb-4 border-0 shadow-sm">
@@ -203,7 +219,13 @@
                         {% endif %}
 
                         <div class="text-center pt-2">
+                            {% if restricted_edit %}
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">
+                                <i class="fa-solid fa-tags me-2"></i>Save Tags &amp; Vulnerabilities
+                            </button>
+                            {% else %}
                             {{ form.submit(class='btn btn-primary btn-lg rounded-pill px-5 shadow-sm') }}
+                            {% endif %}
                         </div>
                     </form>
                 </div>
@@ -239,6 +261,7 @@
             const currentRule = ref({ title: '', to_string: '' });
             const editFormat   = ref('{{ rule.format | e }}');
             const rules_formats = ref([]);
+            const restrictedEdit = ref({{ 'true' if restricted_edit else 'false' }});
 
 
             const detectedVulnerabilities = ref([]);
@@ -313,6 +336,7 @@
                 selectedTags,
                 selectedAttacks,
                 formData,
+                restrictedEdit,
             }
         },
     }).mount('#main-container');

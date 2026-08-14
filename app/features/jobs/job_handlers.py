@@ -25,7 +25,7 @@ from pathlib import Path
 from app.features.jobs.job_worker import register_handler
 from app import db
 from app.core.db_class.db import Rule, Tag, RuleTagAssociation, BackgroundJob, BackgroundJobLog, ActivityLog, RequestOwnerRule, User, GithubProposal
-from app.features.rule.rule_core import _wipe_rule_children, create_rule_history
+from app.features.rule.rule_core import _wipe_rule_children, create_rule_history, add_contributor
 from app.core.utils.activity_log import log_activity
 
 BATCH_SIZE = 2000   # bulk_insert_mappings handles large batches efficiently
@@ -300,8 +300,9 @@ def handle_bulk_add_tag_to_rules(job, app):
                 level='info', event='paused')
             return
 
-        # ── Fetch next batch of rule IDs (+ title/content for history entries) ──
-        batch_rows = rule_query.with_entities(Rule.id, Rule.title, Rule.to_string) \
+        # ── Fetch next batch of rule IDs (+ title/content/owner for history
+        #    entries and contributor crediting) ──
+        batch_rows = rule_query.with_entities(Rule.id, Rule.title, Rule.to_string, Rule.user_id) \
                                 .offset(offset).limit(BATCH_SIZE).all()
         batch_ids = [r[0] for r in batch_rows]
         if not batch_ids:
@@ -342,7 +343,7 @@ def handle_bulk_add_tag_to_rules(job, app):
             for row in to_insert:
                 added_names_by_rule.setdefault(row["rule_id"], []).append(tag_name_by_id[row["tag_id"]])
 
-            for rule_id, rule_title, rule_content in batch_rows:
+            for rule_id, rule_title, rule_content, rule_owner_id in batch_rows:
                 added_names = added_names_by_rule.get(rule_id)
                 if not added_names:
                     continue
@@ -359,6 +360,11 @@ def handle_bulk_add_tag_to_rules(job, app):
                     "change_type": "metadata",
                     "analyzed_by_user_id": user_id,
                 })
+                # Credit whoever ran the bulk tag as a contributor — same
+                # treatment a manual/quick_meta tag edit already gets — but
+                # only when they don't already own the rule (no self-credit).
+                if user_id and user_id != rule_owner_id:
+                    add_contributor(user_id, rule_id)
 
         offset    += len(batch_ids)
         batch_num += 1

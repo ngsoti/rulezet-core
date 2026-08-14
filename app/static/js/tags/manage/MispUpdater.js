@@ -11,7 +11,7 @@
 
 import AnsiTerminal from '/static/js/components/ansi-terminal.js';
 
-const { ref, computed, onUnmounted } = Vue;
+const { ref, computed, watch, nextTick, onUnmounted } = Vue;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,6 +54,7 @@ export default {
         const stepStatus   = ref({ 1: 'idle', 2: 'idle', 3: 'idle' });
         const gitOutputTax = ref('');
         const gitOutputGal = ref('');
+        const logBox       = ref(null);   // template ref to the scrollable log container
         let   pollTimer    = null;
 
         // ── computed ──────────────────────────────────────────────────────────
@@ -139,6 +140,13 @@ export default {
                 }
             }
         }
+
+        // Auto-scroll the log box to the newest entry as logs stream in.
+        watch(() => allLogs.value.length, () => {
+            nextTick(() => {
+                if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight;
+            });
+        });
 
         // ── polling ───────────────────────────────────────────────────────────
         async function pollLogs() {

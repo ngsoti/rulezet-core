@@ -388,15 +388,15 @@ def job_logs(job_uuid):
     return jsonify([l.to_json() for l in logs]), 200
 
 
+# Job types a non-admin holding rule.tag_any may create via /jobs/create —
+# every other job_type reachable through that endpoint (packages, submodules,
+# connector pulls, trash purge, db backup, ...) stays admin-only.
+_TAG_MANAGER_JOB_TYPES = {'bulk_add_tag_to_rules', 'bulk_remove_tag_from_rules'}
+
+
 @jobs_blueprint.route('/create', methods=['POST'])
 @login_required
 def create_job():
-    # Job types reachable from this endpoint (bulk tag, packages, submodules)
-    # are all administrative — user-level jobs are created server-side by
-    # their own gated routes, never through here.
-    if not current_user.is_admin():
-        return jsonify({"error": "Forbidden."}), 403
-
     data     = request.json or {}
     job_type = data.get('job_type')
     payload  = data.get('payload', {})
@@ -404,6 +404,15 @@ def create_job():
 
     if not job_type:
         return jsonify({"error": "job_type is required."}), 400
+
+    # Job types reachable from this endpoint are administrative by default —
+    # user-level jobs are created server-side by their own gated routes,
+    # never through here. The one narrow exception: a non-admin holding
+    # rule.tag_any may create the two tag job types, matching what the
+    # rule.tag_any-gated /rule/bulk_tag page itself is allowed to do.
+    is_tag_manager_job = job_type in _TAG_MANAGER_JOB_TYPES and current_user.has_permission('rule.tag_any')
+    if not current_user.is_admin() and not is_tag_manager_job:
+        return jsonify({"error": "Forbidden."}), 403
 
     payload['user_id'] = current_user.id
 

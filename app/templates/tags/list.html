@@ -49,15 +49,19 @@
             <a class="dr-nav__item" data-bs-toggle="tab" href="#pane-update" role="tab">
                 <i class="fas fa-rotate"></i><span>Update MISP</span>
             </a>
+            {% if not tag_manager_view %}
             <span class="dr-nav__sep"></span>
             {{ anav.admin_nav_toggle() }}
+            {% endif %}
 
             <button class="btn btn-primary btn-sm shadow-sm fw-bold rounded-pill px-4 ms-auto"
                     data-bs-toggle="modal" data-bs-target="#add_tag_modal_">
                 <i class="fas fa-plus me-2"></i>Add New Tag
             </button>
         </div>
+        {% if not tag_manager_view %}
         {{ anav.admin_nav_panel('tags') }}
+        {% endif %}
 
         <tag-create-modal @tag-created="handleRefreshList" csrf="{{ csrf_token() }}"></tag-create-modal>
 

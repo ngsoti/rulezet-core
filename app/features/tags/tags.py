@@ -15,7 +15,9 @@ tags_blueprint = Blueprint(
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
 def _admin_only():
-    if not current_user.is_admin():
+    # A Tag Manager (rule.tag_any) gets full management rights on this page —
+    # same treatment as everywhere else that permission is checked.
+    if not current_user.is_admin() and not current_user.has_permission('rule.tag_any'):
         return {"status": "error", "message": "Admin access required.",
                 "toast_class": "danger-subtle"}, 403
     return None
@@ -50,10 +52,10 @@ def _can_delete_tag(tag_id):
 @tags_blueprint.route('/admin/list', methods=['GET'])
 @login_required
 def list_tags():
-    if not current_user.is_admin():
+    if not current_user.is_admin() and not current_user.has_permission('rule.tag_any'):
         flash('You need to be admin to access this page.', 'danger')
         return render_template("access_denied.html")
-    return render_template('tags/list.html')
+    return render_template('tags/list.html', tag_manager_view=not current_user.is_admin())
 
 
 @tags_blueprint.route('/my_tags', methods=['GET'])
