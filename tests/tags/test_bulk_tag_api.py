@@ -199,6 +199,11 @@ def test_bulk_tag_shows_up_correctly_on_the_rule_history_page(app, client):
     generic "Checked — no change" bucket just because old_content ==
     new_content (which is the case for a tags-only change, manual or not)."""
     with app.app_context():
+        admin = User.query.filter_by(email="admin@admin.admin").first()
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(admin.id)
+            sess["_fresh"] = True
+
         rule = Rule.query.filter_by(title="test").first()
         tag = _make_tag()
 
@@ -207,11 +212,6 @@ def test_bulk_tag_shows_up_correctly_on_the_rule_history_page(app, client):
                            json={"rule_ids": [rule.id], "tag_ids": [tag.id], "confirm": True})
         job = BackgroundJob.query.filter_by(uuid=res.get_json()["job_uuid"]).first()
         handle_bulk_add_tag_to_rules(job, app)
-
-        with client.session_transaction() as sess:
-            admin = User.query.filter_by(email="admin@admin.admin").first()
-            sess["_user_id"] = str(admin.id)
-            sess["_fresh"] = True
 
         res = client.get(f"/rule/history_data/{rule.id}")
         assert res.status_code == 200
