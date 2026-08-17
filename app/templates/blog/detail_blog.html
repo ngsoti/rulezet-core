@@ -511,12 +511,8 @@
     import BundleList                from '/static/js/bundle/bundleList.js'
     import TagsDisplaysList          from '/static/js/tags/tagsDisplaysList.js'
     import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js'
-    const { createApp, ref, computed, onMounted, onUnmounted } = Vue
-
-    // Lazy-load DOMPurify to sanitize marked's HTML output before v-html
-    // (blog content can originate from auto-generated CVE data, not just admins)
-    const _purifyMod = await import('/static/js/purify.min.js')
-    const DOMPurify   = _purifyMod.default || window.DOMPurify
+    import { sanitizeHtml }          from '/static/js/sanitize.js'
+    const { createApp, ref, computed, watch, onMounted, onUnmounted } = Vue
 
     const isAuthenticated = {{ current_user.is_authenticated | tojson }}
     const isAdmin         = {{ current_user.is_admin()        | tojson }}
@@ -566,11 +562,13 @@
                 return '/bundle/data_table?' + post.value.bundle_ids.map(id => `ids[]=${id}`).join('&')
             })
 
-            const renderedContent = computed(() => {
-                if (!post.value.content) return ''
-                if (typeof marked === 'undefined') return DOMPurify.sanitize(`<pre>${post.value.content}</pre>`)
-                return DOMPurify.sanitize(marked.parse(post.value.content))
-            })
+            const renderedContent = ref('')
+            watch(() => post.value.content, async (content) => {
+                if (!content) { renderedContent.value = ''; return }
+                renderedContent.value = typeof marked === 'undefined'
+                    ? await sanitizeHtml(`<pre>${content}</pre>`)
+                    : await sanitizeHtml(marked.parse(content))
+            }, { immediate: true })
 
             async function fetchPost() {
                 isLoading.value = true

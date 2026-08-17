@@ -448,39 +448,13 @@
     import DiffViewer    from '/static/js/components/diff-viewer.js';
     import CommentThread from '/static/js/components/comments/comment-thread.js';
     import ReportModal   from '/static/js/components/ReportModal.js';
+    import { renderMarkdown } from '/static/js/sanitize.js';
 
     const CAN_DECIDE  = {{ can_decide | tojson }};
     const RULE_ID     = {{ rule.id }};
     const PROPOSAL_ID = {{ rule_edit_id }};
     const RULE_TITLE  = {{ rule.title | tojson }};
     const RULE_TITLE_SHORT = RULE_TITLE.length > 40 ? RULE_TITLE.slice(0, 40) + '…' : RULE_TITLE;
-
-    // Lazy-load marked + DOMPurify for safe message rendering
-    let _marked = null;
-    let _purify = null;
-
-    async function getMarked() {
-        if (!_marked) {
-            const m = await import('/static/js/marked.min.js');
-            _marked = m.marked || m.default || window.marked;
-        }
-        return _marked;
-    }
-
-    async function getPurify() {
-        if (!_purify) {
-            const m = await import('/static/js/purify.min.js');
-            _purify = m.default || window.DOMPurify;
-        }
-        return _purify;
-    }
-
-    async function renderMarkdown(text) {
-        const mk     = await getMarked();
-        const purify = await getPurify();
-        const html   = mk.parse ? mk.parse(text) : mk(text);
-        return purify.sanitize(html);
-    }
 
     const EDIT_TYPE_META = {
         content_update: { label: 'Content update',  icon: 'fa-code',           color: '#0d6efd' },

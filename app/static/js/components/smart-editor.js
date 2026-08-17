@@ -25,6 +25,8 @@
  *   <button type="submit">Save</button>
  */
 
+import { SANITIZE_CONFIG } from '/static/js/sanitize.js'
+
 // ── Module-level singletons ────────────────────────────────────────────────────
 
 const PAIRS   = { '{': '}', '[': ']', '(': ')', '"': '"', "'": "'", '`': '`' }
@@ -333,17 +335,18 @@ export default {
 
         // ── marked ──────────────────────────────────────────────────────
         function _sanitize_html(html) {
-            if (window.DOMPurify) return window.DOMPurify.sanitize(html)
+            if (window.DOMPurify) return window.DOMPurify.sanitize(html, SANITIZE_CONFIG)
             // DOMPurify failed to load — fall back to a minimal strip as last resort
             const tmp = document.createElement('div')
             tmp.innerHTML = html
-            tmp.querySelectorAll('script, iframe, object, embed, form').forEach(el => el.remove())
+            tmp.querySelectorAll('script, iframe, object, embed, form, style, input, button, select, textarea').forEach(el => el.remove())
             tmp.querySelectorAll('*').forEach(el => {
                 for (const attr of [...el.attributes]) {
                     const n = attr.name.toLowerCase()
                     const v = attr.value
-                    if (n.startsWith('on') ||
-                        ((n === 'href' || n === 'src' || n === 'action') && /^javascript:/i.test(v.trim()))) {
+                    if (n === 'style' || n === 'action' || n === 'formaction' ||
+                        n.startsWith('on') ||
+                        ((n === 'href' || n === 'src') && /^javascript:/i.test(v.trim()))) {
                         el.removeAttribute(attr.name)
                     }
                 }

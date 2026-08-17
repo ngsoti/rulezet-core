@@ -11,32 +11,9 @@ import { create_message } from '/static/js/toaster.js'
 import UserChip from '/static/js/components/UserChip.js'
 import ReportModal from '/static/js/components/ReportModal.js'
 import VoterPopover from '/static/js/components/VoterPopover.js'
+import { renderMarkdown } from '/static/js/sanitize.js'
 
 const TOAST = { SUCCESS: 'success', WARNING: 'warning', ERROR: 'danger', INFO: 'info' }
-
-// ── Markdown rendering (only used when allow-markdown is enabled) ──────────
-let _marked = null, _purify = null
-async function getMarked() {
-    if (!_marked) {
-        const m = await import('/static/js/marked.min.js')
-        _marked = m.marked || m.default || window.marked
-    }
-    return _marked
-}
-async function getPurify() {
-    if (!_purify) {
-        const m = await import('/static/js/purify.min.js')
-        _purify = m.default || window.DOMPurify
-    }
-    return _purify
-}
-async function renderMarkdown(text) {
-    if (!text) return ''
-    const mk = await getMarked()
-    const purify = await getPurify()
-    const html = mk.parse ? mk.parse(text) : mk(text)
-    return purify.sanitize(html)
-}
 
 // ── MarkdownComposer ─────────────────────────────────────────────────────────
 // GitHub-style "Write / Preview" tabs above a plain textarea — used by the

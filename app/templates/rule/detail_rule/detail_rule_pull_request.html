@@ -304,36 +304,11 @@
 {% block script %}
 <script type="module">
     const { createApp, ref, onMounted } = Vue;
+    import { renderMarkdown } from '/static/js/sanitize.js';
 
     const rule_id = {{ rule.id }};
     const RULE_TITLE = {{ rule.title | tojson }};
     const RULE_TITLE_SHORT = RULE_TITLE.length > 40 ? RULE_TITLE.slice(0, 40) + '…' : RULE_TITLE;
-
-    let _marked = null;
-    let _purify = null;
-
-    async function getMarked() {
-        if (!_marked) {
-            const m = await import('/static/js/marked.min.js');
-            _marked = m.marked || m.default || window.marked;
-        }
-        return _marked;
-    }
-
-    async function getPurify() {
-        if (!_purify) {
-            const m = await import('/static/js/purify.min.js');
-            _purify = m.default || window.DOMPurify;
-        }
-        return _purify;
-    }
-
-    async function renderMarkdown(text) {
-        const mk     = await getMarked();
-        const purify = await getPurify();
-        const html   = mk.parse ? mk.parse(text) : mk(text);
-        return purify.sanitize(html);
-    }
 
     createApp({
         delimiters: ['[[', ']]'],
