@@ -121,6 +121,13 @@
     text-transform: uppercase;
 }
 
+.ld-vis-switch .form-check-input {
+    cursor: pointer;
+    width: 2.1rem;
+    height: 1.15rem;
+}
+.ld-vis-switch .form-check-input:disabled { cursor: wait; opacity: .5; }
+
 .ld-modal-key {
     font-family: var(--font-mono);
     font-size: .78rem;

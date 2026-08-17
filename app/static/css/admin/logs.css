@@ -281,9 +281,38 @@
 .lt-th--cat    { width: 110px; }
 .lt-th--event  { min-width: 180px; }
 .lt-th--actor  { width: 140px; }
+.lt-th--visibility { width: 105px; }
 .lt-th--date   { width: 120px; }
 .lt-th--ua     { width: 130px; }
 .lt-th--expand { width: 80px; text-align: center; }
+
+.lt-vis-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .72rem;
+    font-weight: 700;
+    padding: .25rem .6rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background .14s, color .14s, border-color .14s;
+}
+.lt-vis-btn:disabled { cursor: wait; opacity: .5; }
+
+.lt-vis-btn--public {
+    background: rgba(25, 135, 84, .12);
+    color: #198754;
+    border-color: rgba(25, 135, 84, .3);
+}
+.lt-vis-btn--public:hover:not(:disabled) { background: rgba(25, 135, 84, .2); }
+
+.lt-vis-btn--private {
+    background: var(--light-bg-color);
+    color: var(--subtle-text-color);
+    border-color: var(--border-color);
+}
+.lt-vis-btn--private:hover:not(:disabled) { background: var(--border-color); color: var(--text-color); }
 
 /* ── LT LEVEL BAR ────────────────────────────────────────────────────────────── */
 
@@ -805,6 +834,7 @@
     .lt-search   { min-width: 0; width: 100%; }
     .lt-filter-sep { display: none; }
     .lt-th--actor, .lt-td--actor { display: none; }
+    .lt-th--visibility, .lt-td--visibility { display: none; }
 }
 
 /* ── TIMELINE CONTROLS (override from timeline.css) ─────────────────────────── */

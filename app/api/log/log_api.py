@@ -91,7 +91,7 @@ class LogList(Resource):
 
 @log_ns.route('/<string:log_uuid>')
 class LogDetail(Resource):
-    """Delete a single log entry by UUID."""
+    """Delete or update a single log entry by UUID."""
     method_decorators = [_require_admin]
 
     def delete(self, log_uuid):
@@ -101,6 +101,22 @@ class LogDetail(Resource):
         db.session.delete(entry)
         db.session.commit()
         return {'message': 'Log deleted'}, 200
+
+    def patch(self, log_uuid):
+        """Flip is_public on this one entry — independent of its action's
+        default visibility (see /admin/log_definitions), since a single
+        entry can carry more sensitive detail than the action type usually does."""
+        data      = request.get_json(silent=True) or {}
+        is_public = data.get('is_public')
+        if not isinstance(is_public, bool):
+            return {'message': 'is_public (bool) is required'}, 400
+
+        entry = ActivityLog.query.filter_by(uuid=log_uuid).first()
+        if not entry:
+            return {'message': 'Log not found'}, 404
+        entry.is_public = is_public
+        db.session.commit()
+        return {'message': 'Updated', 'log': entry.to_json()}, 200
 
 
 @log_ns.route('/bulk-delete')
@@ -119,3 +135,24 @@ class LogBulkDelete(Resource):
         ).delete(synchronize_session=False)
         db.session.commit()
         return {'message': f'Deleted {deleted} log(s)', 'deleted': deleted}, 200
+
+
+@log_ns.route('/bulk-visibility')
+class LogBulkVisibility(Resource):
+    """Set is_public on multiple log entries by UUID list."""
+    method_decorators = [_require_admin]
+
+    def post(self):
+        data      = request.get_json(silent=True) or {}
+        uuids     = data.get('uuids', [])
+        is_public = data.get('is_public')
+        if not uuids or not isinstance(uuids, list):
+            return {'message': 'No uuids provided'}, 400
+        if not isinstance(is_public, bool):
+            return {'message': 'is_public (bool) is required'}, 400
+
+        updated = ActivityLog.query.filter(
+            ActivityLog.uuid.in_(uuids)
+        ).update({'is_public': is_public}, synchronize_session=False)
+        db.session.commit()
+        return {'message': f'Updated {updated} log(s)', 'updated': updated}, 200

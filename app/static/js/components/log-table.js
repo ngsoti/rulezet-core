@@ -2,14 +2,18 @@
  * log-table.js — Specialised table component for activity logs.
  *
  * Props:
- *   fetchUrl   String  (required) — API endpoint, e.g. "/admin/get_logs_page"
- *   canDelete  Boolean (default: false) — show delete / bulk-delete controls
- *   csrfToken  String  (default: '') — CSRF token for state-changing requests
+ *   fetchUrl     String  (required) — API endpoint, e.g. "/admin/get_logs_page"
+ *   canDelete    Boolean (default: false) — show delete / bulk-delete controls
+ *   canModerate  Boolean (default: false) — show the Visibility column (per-row
+ *                public/admin-only toggle) and bulk visibility actions
+ *   csrfToken    String  (default: '') — CSRF token for state-changing requests
  *
  * Events:
- *   delete(log)            — single-row delete requested
- *   bulk-delete(uuids[])   — bulk delete requested
- *   edit(log)              — edit icon clicked
+ *   delete(log)                          — single-row delete requested
+ *   bulk-delete(uuids[])                 — bulk delete requested
+ *   edit(log)                            — edit icon clicked
+ *   toggle-visibility(log)               — per-row visibility toggle clicked
+ *   bulk-set-visibility(uuids[], isPublic) — bulk "set public/admin only" requested
  *
  * Exposed:
  *   fetchData()            — re-fetch current page
@@ -83,12 +87,13 @@ export default {
     components: { 'pagination-component': PaginationComponent, 'code-viewer': CodeViewer },
 
     props: {
-        fetchUrl:  { type: String,  required: true },
-        canDelete: { type: Boolean, default: false },
-        csrfToken: { type: String,  default: '' },
+        fetchUrl:    { type: String,  required: true },
+        canDelete:   { type: Boolean, default: false },
+        canModerate: { type: Boolean, default: false },
+        csrfToken:   { type: String,  default: '' },
     },
 
-    emits: ['delete', 'bulk-delete', 'edit'],
+    emits: ['delete', 'bulk-delete', 'edit', 'toggle-visibility', 'bulk-set-visibility'],
 
     setup(props, { emit, expose }) {
 
@@ -108,6 +113,11 @@ export default {
         const date_to      = ref('')
         const expanded_id  = ref(null)
         const selected     = ref(new Set())
+        const togglingUuid = ref(null)
+
+        const colCount = computed(() =>
+            (props.canDelete ? 8 : 7) + (props.canModerate ? 1 : 0)
+        )
 
         // ── Fetch ─────────────────────────────────────────────────────────────
         async function fetchData() {
@@ -141,6 +151,7 @@ export default {
                 console.error('[LogTable] fetch error:', e)
             } finally {
                 loading.value = false
+                togglingUuid.value = null
             }
         }
 
@@ -215,6 +226,11 @@ export default {
         function requestDelete(log) { emit('delete', log) }
         function requestBulkDelete() { emit('bulk-delete', [...selected.value]) }
         function requestEdit(log) { emit('edit', log) }
+        function requestToggleVisibility(log) {
+            togglingUuid.value = log.uuid
+            emit('toggle-visibility', log)
+        }
+        function requestBulkVisibility(isPublic) { emit('bulk-set-visibility', [...selected.value], isPublic) }
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
         onMounted(() => fetchData())
@@ -224,7 +240,7 @@ export default {
             items, total, total_pages, loading, page, per_page,
             sort_key, sort_dir, search, active_cat, active_level,
             date_from, date_to,
-            expanded_id, selected, all_page_selected,
+            expanded_id, selected, all_page_selected, togglingUuid, colCount,
             CATEGORIES, LEVELS,
             getCategoryIcon, getInitials, formatRelative, formatFull,
             fetchData, toggleSort, sortIcon,
@@ -233,6 +249,7 @@ export default {
             handlePageChange, toggleExpand,
             toggleAll, toggleOne, clearSelection,
             requestDelete, requestBulkDelete, requestEdit,
+            requestToggleVisibility, requestBulkVisibility,
         }
     },
 
@@ -322,6 +339,12 @@ export default {
     <div v-if="selected.size > 0" class="lt-bulk-bar">
         <span class="lt-bulk-bar-count">{{ selected.size }} selected</span>
         <div class="lt-bulk-bar-actions">
+            <button v-if="canModerate" class="lt-bulk-btn" @click="requestBulkVisibility(true)">
+                <i class="fa-solid fa-eye"></i> Set public
+            </button>
+            <button v-if="canModerate" class="lt-bulk-btn" @click="requestBulkVisibility(false)">
+                <i class="fa-solid fa-eye-slash"></i> Set admin only
+            </button>
             <button v-if="canDelete" class="lt-bulk-btn lt-bulk-btn--danger" @click="requestBulkDelete">
                 <i class="fas fa-trash-can"></i> Delete selected
             </button>
@@ -359,6 +382,7 @@ export default {
                         </span>
                     </th>
                     <th class="lt-th lt-th--actor">Actor</th>
+                    <th class="lt-th lt-th--visibility" v-if="canModerate">Visibility</th>
                     <th class="lt-th lt-th--date lt-th--sortable"
                         :class="{ 'lt-th--sorted': sort_key === 'created_at' }"
                         @click="toggleSort('created_at')">
@@ -376,7 +400,7 @@ export default {
 
                 <!-- Empty state -->
                 <tr v-if="!items.length && !loading">
-                    <td :colspan="canDelete ? 8 : 7" class="lt-empty">
+                    <td :colspan="colCount" class="lt-empty">
                         <i class="fas fa-scroll lt-empty-icon"></i>
                         <div class="lt-empty-text">No logs found</div>
                     </td>
@@ -430,6 +454,19 @@ export default {
                             <span v-else class="lt-actor-none">System</span>
                         </td>
 
+                        <!-- Visibility -->
+                        <td class="lt-td lt-td--visibility" v-if="canModerate">
+                            <button type="button"
+                                    class="lt-vis-btn"
+                                    :class="log.is_public ? 'lt-vis-btn--public' : 'lt-vis-btn--private'"
+                                    :disabled="togglingUuid === log.uuid"
+                                    :title="log.is_public ? 'Click to make admin-only' : 'Click to make public'"
+                                    @click="requestToggleVisibility(log)">
+                                <i :class="log.is_public ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash'"></i>
+                                {{ log.is_public ? 'Public' : 'Private' }}
+                            </button>
+                        </td>
+
                         <!-- Date -->
                         <td class="lt-td lt-td--date" :title="formatFull(log.created_at)">
                             {{ formatRelative(log.created_at) }}
@@ -465,7 +502,7 @@ export default {
 
                     <!-- Expanded detail row -->
                     <tr v-if="expanded_id === log.uuid" class="lt-row-expand">
-                        <td :colspan="canDelete ? 8 : 7" class="lt-expand-cell">
+                        <td :colspan="colCount" class="lt-expand-cell">
                             <div class="lt-expand-content">
 
                                 <div class="lt-expand-grid">

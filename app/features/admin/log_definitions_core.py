@@ -156,3 +156,47 @@ def reset_override(action_key: str) -> bool:
     db.session.commit()
     invalidate_cache()
     return True
+
+
+def set_visibility(action_key: str, is_public: bool, user_id: int | None) -> dict[str, Any]:
+    """Flip only is_public for one action — used by the inline table toggle,
+    so it never touches a custom icon/title someone already set via the edit
+    modal (unlike save_override, which overwrites all three fields)."""
+    from app.core.db_class.db import LogActionDefinition
+    from app import db
+
+    row = LogActionDefinition.query.filter_by(action_key=action_key).first()
+    if not row:
+        row = LogActionDefinition(action_key=action_key, category=_auto_category(action_key))
+        db.session.add(row)
+    row.is_public     = is_public
+    row.updated_by_id = user_id
+    db.session.commit()
+    invalidate_cache()
+    return row.to_json()
+
+
+def bulk_set_visibility(action_keys: list[str], is_public: bool, user_id: int | None) -> int:
+    """Same as set_visibility, for every action_key in one commit — backs the
+    Log Definitions table's bulk "Set public/private" action."""
+    from app.core.db_class.db import LogActionDefinition
+    from app import db
+
+    action_keys = [k for k in dict.fromkeys(action_keys) if k]
+    if not action_keys:
+        return 0
+
+    existing = {
+        r.action_key: r for r in
+        LogActionDefinition.query.filter(LogActionDefinition.action_key.in_(action_keys)).all()
+    }
+    for key in action_keys:
+        row = existing.get(key)
+        if not row:
+            row = LogActionDefinition(action_key=key, category=_auto_category(key))
+            db.session.add(row)
+        row.is_public     = is_public
+        row.updated_by_id = user_id
+    db.session.commit()
+    invalidate_cache()
+    return len(action_keys)

@@ -1092,6 +1092,48 @@ def reset_log_definition():
     return jsonify({"success": ok}), 200
 
 
+@home_blueprint.route('/admin/log_definitions/set_visibility', methods=['POST'])
+@login_required
+def set_log_definition_visibility():
+    if not current_user.is_admin():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    from app.features.admin import log_definitions_core as LogDefModel
+
+    data       = request.get_json() or {}
+    action_key = (data.get('action_key') or '').strip()
+    is_public  = data.get('is_public')
+    if not action_key or not isinstance(is_public, bool):
+        return jsonify({"success": False, "message": "action_key and is_public are required"}), 400
+
+    row = LogDefModel.set_visibility(action_key, is_public, current_user.id)
+    log_activity('admin.settings_changed',
+                 f"Set log action '{action_key}' visibility to {'public' if is_public else 'private'}",
+                 extra={'action_key': action_key, 'is_public': is_public})
+    return jsonify({"success": True, "definition": row}), 200
+
+
+@home_blueprint.route('/admin/log_definitions/bulk_set_visibility', methods=['POST'])
+@login_required
+def bulk_set_log_definition_visibility():
+    if not current_user.is_admin():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    from app.features.admin import log_definitions_core as LogDefModel
+
+    data        = request.get_json() or {}
+    action_keys = data.get('action_keys')
+    is_public   = data.get('is_public')
+    if not isinstance(action_keys, list) or not action_keys or not isinstance(is_public, bool):
+        return jsonify({"success": False, "message": "action_keys and is_public are required"}), 400
+
+    count = LogDefModel.bulk_set_visibility(action_keys, is_public, current_user.id)
+    log_activity('admin.settings_changed',
+                 f"Set {count} log action(s) visibility to {'public' if is_public else 'private'}",
+                 extra={'action_keys': action_keys, 'is_public': is_public})
+    return jsonify({"success": True, "count": count}), 200
+
+
 ###########################
 #   Admin Settings section #
 ###########################
@@ -1564,27 +1606,3 @@ def platform_insights_data():
         },
         'attack_kpi': attack_kpi,
     })
-
-
-@home_blueprint.route('/admin/logs/set_visibility', methods=['POST'])
-@login_required
-def set_logs_visibility():
-    """Bulk-set is_public on a list of activity log entries."""
-    if not current_user.is_admin():
-        return jsonify({"error": "Unauthorized"}), 401
-
-    from app.core.db_class.db import ActivityLog
-    from app import db
-
-    data      = request.get_json() or {}
-    ids       = data.get('ids', [])
-    is_public = bool(data.get('is_public', False))
-
-    if not ids:
-        return jsonify({"success": False, "message": "No IDs provided"}), 400
-
-    updated = ActivityLog.query.filter(ActivityLog.id.in_(ids)).update(
-        {"is_public": is_public}, synchronize_session=False
-    )
-    db.session.commit()
-    return jsonify({"success": True, "updated": updated}), 200

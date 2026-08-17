@@ -7,7 +7,7 @@
  */
 import PaginationComponent from '/static/js/rule/paginationComponent.js'
 
-const { ref, computed, onMounted } = Vue
+const { ref, reactive, computed, onMounted } = Vue
 
 const CATEGORIES = ['rule', 'bundle', 'comment', 'user', 'tag', 'job', 'github', 'admin', 'connector', 'api', 'system']
 
@@ -114,6 +114,10 @@ export default {
             <table class="dt-table">
                 <thead class="dt-thead">
                     <tr>
+                        <th class="dt-th dt-th--checkbox">
+                            <input type="checkbox" class="dt-checkbox" :checked="allOnPageSelected"
+                                   @change="toggleSelectPage" />
+                        </th>
                         <th class="dt-th" style="width:34px;"></th>
                         <th class="dt-th">
                             <div class="dt-th-inner dt-th--sortable"
@@ -133,7 +137,7 @@ export default {
                                 Category <i class="fas dt-sort-icon" :class="sortIcon('category')"></i>
                             </div>
                         </th>
-                        <th class="dt-th" style="width:90px;">Visibility</th>
+                        <th class="dt-th" style="width:110px;">Visibility</th>
                         <th class="dt-th" style="width:90px;">
                             <div class="dt-th-inner dt-th--sortable"
                                  :class="{'dt-th--sorted': sortKey==='usage_count'}" @click="setSort('usage_count')">
@@ -145,6 +149,10 @@ export default {
                 </thead>
                 <tbody>
                     <tr v-for="a in items" :key="a.action_key" class="dt-row">
+                        <td class="dt-td dt-td--checkbox">
+                            <input type="checkbox" class="dt-checkbox" :checked="isSelected(a)"
+                                   @change="toggleSelect(a)" />
+                        </td>
                         <td class="dt-td"><i :class="a.icon" style="color:var(--subtle-text-color);"></i></td>
                         <td class="dt-td">
                             <span class="fw-600" style="font-size:.82rem;font-family:var(--font-mono);">{{ a.action_key }}</span>
@@ -153,8 +161,12 @@ export default {
                         <td class="dt-td" style="font-size:.87rem;">{{ a.title }}</td>
                         <td class="dt-td"><span class="badge rounded-pill ld-cat-badge">{{ a.category }}</span></td>
                         <td class="dt-td">
-                            <i :class="a.is_public ? 'fas fa-eye text-success' : 'fas fa-eye-slash text-muted'"
-                               :title="a.is_public ? 'Public' : 'Admin only'"></i>
+                            <div class="form-check form-switch ld-vis-switch mb-0">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       :checked="a.is_public" :disabled="togglingKey === a.action_key"
+                                       :title="a.is_public ? 'Public — click to make admin-only' : 'Admin only — click to make public'"
+                                       @change="toggleVisibility(a)" />
+                            </div>
                         </td>
                         <td class="dt-td" style="font-weight:600;font-size:.85rem;">{{ a.usage_count }}</td>
                         <td class="dt-td dt-td--actions">
@@ -184,6 +196,24 @@ export default {
             </div>
             <div class="rl-footer-info">{{ footerInfo }}</div>
         </div>
+
+        <!-- ═══════ BULK BAR (table view only) ═══════ -->
+        <transition name="dt-bulk-slide">
+            <div v-if="viewMode === 'table' && selectedKeys.size > 0" class="dt-bulk-bar">
+                <span class="dt-bulk-count">{{ selectedKeys.size }} action{{ selectedKeys.size === 1 ? '' : 's' }} selected</span>
+                <div class="dt-bulk-actions">
+                    <button class="dt-bulk-btn" :disabled="bulkBusy" @click="bulkSetVisibility(true)">
+                        <i class="fa-solid fa-eye"></i> Set public
+                    </button>
+                    <button class="dt-bulk-btn" :disabled="bulkBusy" @click="bulkSetVisibility(false)">
+                        <i class="fa-solid fa-eye-slash"></i> Set admin only
+                    </button>
+                </div>
+                <button class="dt-bulk-clear" @click="clearSelection">
+                    <i class="fas fa-xmark"></i> Clear
+                </button>
+            </div>
+        </transition>
 
         <!-- ═══════ EDIT MODAL ═══════ -->
         <div v-if="editItem" class="modal fade show d-block" style="background:rgba(0,0,0,.5);" @click.self="editItem=null">
@@ -363,12 +393,81 @@ export default {
 
         onMounted(fetchData)
 
+        // ── Row selection + bulk visibility ─────────────────────────────────
+        const selectedKeys = reactive(new Set())
+        function isSelected(a) { return selectedKeys.has(a.action_key) }
+        function toggleSelect(a) {
+            if (selectedKeys.has(a.action_key)) selectedKeys.delete(a.action_key)
+            else selectedKeys.add(a.action_key)
+        }
+        const allOnPageSelected = computed(() =>
+            items.value.length > 0 && items.value.every(a => selectedKeys.has(a.action_key))
+        )
+        function toggleSelectPage() {
+            if (allOnPageSelected.value) items.value.forEach(a => selectedKeys.delete(a.action_key))
+            else items.value.forEach(a => selectedKeys.add(a.action_key))
+        }
+        function clearSelection() { selectedKeys.clear() }
+
+        // ── Inline per-row visibility toggle ────────────────────────────────
+        const togglingKey = ref(null)
+        async function toggleVisibility(a) {
+            togglingKey.value = a.action_key
+            try {
+                const res  = await fetch('/admin/log_definitions/set_visibility', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': props.csrfToken },
+                    body:    JSON.stringify({ action_key: a.action_key, is_public: !a.is_public }),
+                })
+                const data = await res.json()
+                if (data.success) {
+                    a.is_public = !a.is_public
+                    a.is_custom = true
+                } else if (window.create_message) {
+                    window.create_message(data.message || 'Failed', 'danger-subtle')
+                }
+            } catch (e) {
+                if (window.create_message) window.create_message('Error: ' + e, 'danger-subtle')
+            } finally {
+                togglingKey.value = null
+            }
+        }
+
+        // ── Bulk set public/admin-only ──────────────────────────────────────
+        const bulkBusy = ref(false)
+        async function bulkSetVisibility(isPublic) {
+            if (selectedKeys.size === 0 || bulkBusy.value) return
+            bulkBusy.value = true
+            try {
+                const res  = await fetch('/admin/log_definitions/bulk_set_visibility', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': props.csrfToken },
+                    body:    JSON.stringify({ action_keys: [...selectedKeys], is_public: isPublic }),
+                })
+                const data = await res.json()
+                if (data.success) {
+                    clearSelection()
+                    fetchData()
+                    if (window.create_message)
+                        window.create_message(`${data.count} action(s) set to ${isPublic ? 'public' : 'admin only'}`, 'success-subtle')
+                } else if (window.create_message) {
+                    window.create_message(data.message || 'Failed', 'danger-subtle')
+                }
+            } catch (e) {
+                if (window.create_message) window.create_message('Error: ' + e, 'danger-subtle')
+            } finally {
+                bulkBusy.value = false
+            }
+        }
+
         return {
             items, total, totalPages, loading, viewMode, page,
             perPage, perPageModel, search, category, categories, footerInfo,
             sortKey, sortDir, onSearchInput, clearSearch, onFilterChange, setSort, sortIcon, goToPage,
             levelBadge, editItem, editForm, openEdit, doSave, doReset,
             fetchData,
+            selectedKeys, isSelected, toggleSelect, allOnPageSelected, toggleSelectPage, clearSelection,
+            togglingKey, toggleVisibility, bulkBusy, bulkSetVisibility,
         }
     },
 }

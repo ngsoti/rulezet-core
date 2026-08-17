@@ -84,10 +84,13 @@
       ref="logTableRef"
       fetch-url="/admin/get_logs_page"
       :can-delete="true"
+      :can-moderate="true"
       :csrf-token="csrfToken"
       @delete="deleteOne"
       @bulk-delete="bulkDeleteByUuids"
-      @edit="openEdit">
+      @edit="openEdit"
+      @toggle-visibility="toggleLogVisibility"
+      @bulk-set-visibility="bulkSetLogsVisibility">
     </log-table>
   </div>
 
@@ -508,6 +511,37 @@ createApp({
             } catch (e) { create_message('Error: ' + e, 'danger-subtle') }
         }
 
+        // ── Visibility toggle (single row) ─────────────────────────────────────
+        async function toggleLogVisibility(log) {
+            try {
+                const res  = await fetch(`/api/log/${log.uuid}`, {
+                    method:  'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body:    JSON.stringify({ is_public: !log.is_public }),
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.message || 'Failed')
+                logTableRef.value?.fetchData()
+                create_message(`Log set to ${!log.is_public ? 'public' : 'admin only'}`, 'success-subtle')
+            } catch (e) { create_message('Error: ' + e, 'danger-subtle') }
+        }
+
+        // ── Bulk visibility (UUIDs from LogTable component) ────────────────────
+        async function bulkSetLogsVisibility(uuids, isPublic) {
+            if (!uuids.length) return
+            try {
+                const res  = await fetch('/api/log/bulk-visibility', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body:    JSON.stringify({ uuids, is_public: isPublic }),
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.message || 'Failed')
+                logTableRef.value?.fetchData()
+                create_message(data.message || 'Updated', 'success-subtle')
+            } catch (e) { create_message('Error: ' + e, 'danger-subtle') }
+        }
+
         // ── Delete ALL ────────────────────────────────────────────────────────
         async function deleteAll() {
             if (!confirm('Delete ALL activity logs? This cannot be undone. A background job will be created.')) return
@@ -539,6 +573,7 @@ createApp({
             loadMoreTl, selectTlItem, formatTlDate, tlLevelBadge,
             openEdit, saveEdit,
             deleteOne, deleteOneTl, bulkDeleteByUuids, deleteAll,
+            toggleLogVisibility, bulkSetLogsVisibility,
             JSON,
         }
     }
