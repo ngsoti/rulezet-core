@@ -279,60 +279,6 @@
                     {% endif %}
                 </div>
 
-                <!-- ── Admin Only Section ── -->
-                {% if current_user.is_admin() %}
-                <div class="ud-section-header mb-3">
-                    <i class="fas fa-lock ud-section-icon" style="background:linear-gradient(135deg,#dc3545,#b02a37);"></i>
-                    <div>
-                        <div class="ud-section-title">Administrator Information</div>
-                        <div class="ud-section-sub">Sensitive data — visible to admins only</div>
-                    </div>
-                    <button class="btn btn-sm ms-auto ud-admin-reveal-btn" @click="toggleAdminBlur">
-                        <i :class="adminBlurEnabled ? 'fas fa-eye' : 'fas fa-eye-slash'" class="me-1"></i>
-                        [[ adminBlurEnabled ? 'Reveal all' : 'Hide all' ]]
-                    </button>
-                </div>
-
-                <div class="ud-info-grid ud-info-grid--admin mb-4">
-                    <div class="ud-info-cell">
-                        <div class="ud-info-cell-icon" style="background:rgba(220,53,69,.1);color:#dc3545;">
-                            <i class="fas fa-envelope"></i>
-                        </div>
-                        <div class="ud-info-cell-body">
-                            <div class="ud-info-cell-label">Email Address</div>
-                            <div :class="['ud-info-cell-value', adminBlurEnabled && !revealedFields.has('email') ? 'admin-sensitive' : '']"
-                                @click="toggleRevealField('email')"
-                                :title="adminBlurEnabled && !revealedFields.has('email') ? 'Click to reveal' : ''"
-                                :style="adminBlurEnabled && !revealedFields.has('email') ? 'cursor:pointer;user-select:none' : ''">
-                                [[ user.email ]]
-                            </div>
-                        </div>
-                    </div>
-                    <div class="ud-info-cell">
-                        <div class="ud-info-cell-icon" style="background:rgba({% if user.is_connected %}25,135,84{% else %}108,117,125{% endif %},.1);color:{% if user.is_connected %}#198754{% else %}#6c757d{% endif %};">
-                            <i class="fas fa-circle"></i>
-                        </div>
-                        <div class="ud-info-cell-body">
-                            <div class="ud-info-cell-label">Connection Status</div>
-                            <div :class="adminBlurEnabled && !revealedFields.has('status') ? 'admin-sensitive' : ''"
-                                @click="toggleRevealField('status')"
-                                :title="adminBlurEnabled && !revealedFields.has('status') ? 'Click to reveal' : ''"
-                                :style="adminBlurEnabled && !revealedFields.has('status') ? 'cursor:pointer;user-select:none' : ''">
-                                {% if user.is_connected %}
-                                <span class="ud-profile-badge ud-profile-badge--online">
-                                    <i class="fas fa-circle me-1" style="font-size:.55rem;"></i>Connected
-                                </span>
-                                {% else %}
-                                <span class="ud-profile-badge ud-profile-badge--offline">
-                                    <i class="fas fa-circle me-1" style="font-size:.55rem;"></i>Disconnected
-                                </span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
                 <!-- ── Activity stats ── -->
                 <div class="ud-section-header mb-3">
                     <i class="fas fa-chart-bar ud-section-icon"></i>
@@ -409,32 +355,10 @@
             const isLoading = ref(false)
             const user = ref({{ user | tojson }})
 
-            /* ── Admin blur state ── */
-            const adminBlurEnabled = ref(true)
-            const revealedFields = ref(new Set())
-
-            function toggleAdminBlur() {
-                adminBlurEnabled.value = !adminBlurEnabled.value
-                /* Reset individual reveals when hiding everything again */
-                revealedFields.value = new Set()
-            }
-
-            function toggleRevealField(fieldKey) {
-                if (!adminBlurEnabled.value) return
-                const s = new Set(revealedFields.value)
-                if (s.has(fieldKey)) s.delete(fieldKey)
-                else s.add(fieldKey)
-                revealedFields.value = s
-            }
-
             return {
                 message_list,
                 isLoading,
                 user,
-                adminBlurEnabled,
-                revealedFields,
-                toggleAdminBlur,
-                toggleRevealField,
             }
         }
     }).mount('#main-container')

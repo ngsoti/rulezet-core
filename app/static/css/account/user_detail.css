@@ -160,22 +160,6 @@
     text-align: right;
 }
 
-/* Admin reveal button */
-.ud-admin-reveal-btn {
-    font-size: .76rem;
-    padding: .3rem .9rem;
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    background: transparent;
-    color: var(--subtle-text-color);
-    transition: background .14s, color .14s, border-color .14s;
-}
-.ud-admin-reveal-btn:hover {
-    border-color: #dc3545;
-    color: #dc3545;
-    background: rgba(220,53,69,.06);
-}
-
 /* ============================================================
    INFO GRID  (replacing old global-info-grid)
    ============================================================ */
@@ -183,14 +167,6 @@
 .ud-info-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: .75rem;
-}
-
-.ud-info-grid--admin {
-    border: 1px solid rgba(220,53,69,.2);
-    background: rgba(220,53,69,.03);
-    border-radius: 12px;
-    padding: .75rem;
     gap: .75rem;
 }
 
@@ -662,15 +638,6 @@ body.dark-mode .user-rules-management-component .column-filter-options {
     background-color: rgba(13, 110, 253, 0.04);
     border-bottom-color: #444;
 }
-
-.admin-sensitive {
-    filter: blur(5px);
-    user-select: none;
-    transition: filter 0.2s ease;
-    cursor: pointer;
-}
-.admin-sensitive:hover  { filter: blur(3px); }
-.admin-sensitive.revealed { filter: none; cursor: default; }
 
 /* ============================================================
    CHART COMPONENTS — shared across UserActivity & UserContrib
