@@ -431,3 +431,45 @@ def import_all_galaxies():
     log_activity("admin.import_all_galaxies", "Launched import-all-galaxies job",
                  target_type="job", target_id=job.id, target_uuid=job.uuid)
     return jsonify({"success": True, "job": job.to_json(), "message": "Import job queued!", "toast_class": "success-subtle"}), 200
+
+
+# ─── Rule validation (rulezet-validation false-positive gate) ────────────────
+
+@tags_blueprint.route('/admin/validation', methods=['GET'])
+@login_required
+def validation():
+    if not current_user.is_admin() and not current_user.has_permission('rule.tag_any'):
+        flash('You need to be admin to access this page.', 'danger')
+        return render_template("access_denied.html")
+    return render_template('tags/validation.html', tag_manager_view=not current_user.is_admin())
+
+
+@tags_blueprint.route('/admin/validation/launch', methods=['POST'])
+@login_required
+def launch_validation():
+    """Launch a rulezet-validation run: sync this instance's rules, scan them
+    against the known-clean baseline, quarantine anything that fires."""
+    err = _admin_only()
+    if err: return err
+
+    data  = request.json or {}
+    full  = bool(data.get('full', False))
+    limit = data.get('limit')
+    try:
+        limit = int(limit) if limit else None
+    except (TypeError, ValueError):
+        limit = None
+
+    from app.features.jobs.jobs_core import create_job
+    job = create_job(
+        job_type   = 'rule_validation_run',
+        payload    = {'full': full, 'limit': limit},
+        label      = 'Rule validation run' + (' (full)' if full else '') + (f' (limit={limit})' if limit else ''),
+        created_by = current_user.id,
+    )
+    if not job:
+        return jsonify({"success": False, "message": "Failed to create job", "toast_class": "danger-subtle"}), 500
+
+    log_activity("admin.launch_validation", "Launched a rule validation run",
+                 target_type="job", target_id=job.id, target_uuid=job.uuid)
+    return jsonify({"success": True, "job": job.to_json(), "message": "Validation run queued!", "toast_class": "success-subtle"}), 200

@@ -241,8 +241,10 @@
                   <ul class="dropdown-menu">
                      <li><a href="/rule/bulk_tag" class="dropdown-item {% if request.path == '/rule/bulk_tag' %}active{% endif %}">
                            <i class="fa-solid fa-tags me-2"></i>Bulk Tag</a></li>
-                     <li><a href="/tags/admin/list" class="dropdown-item {% if request.path.startswith('/tags/admin') %}active{% endif %}">
+                     <li><a href="/tags/admin/list" class="dropdown-item {% if request.path == '/tags/admin/list' %}active{% endif %}">
                            <i class="fa-solid fa-tag me-2"></i>Manage Tags</a></li>
+                     <li><a href="/tags/admin/validation" class="dropdown-item {% if request.path == '/tags/admin/validation' %}active{% endif %}">
+                           <i class="fa-solid fa-shield-virus me-2"></i>Rule Validation</a></li>
                   </ul>
                </li>
                {% endif %}
@@ -366,6 +368,7 @@
       {% if current_user.is_authenticated and not current_user.is_admin() and current_user.has_permission('rule.tag_any') %}
       { label: 'Bulk Tag', url: '/rule/bulk_tag', icon: 'fa-tags', keywords: ['bulk tag'] },
       { label: 'Manage Tags', url: '/tags/admin/list', icon: 'fa-tag', keywords: ['manage tags', 'tags'] },
+      { label: 'Rule Validation', url: '/tags/admin/validation', icon: 'fa-shield-virus', keywords: ['rule validation', 'quarantine', 'false positive'] },
       {% endif %}
       {% if current_user.is_authenticated and current_user.is_admin() %}
       { label: 'Admin: Users', url: '/account/admin/all_users', icon: 'fa-users', keywords: ['admin users'] },
@@ -374,6 +377,7 @@
       { label: 'Admin: Blog', url: '/blog/admin/', icon: 'fa-newspaper', keywords: ['admin blog'] },
       { label: 'Admin: Formats', url: '/rule/admin/manage_format_rule', icon: 'fa-file-code', keywords: ['formats'] },
       { label: 'Admin: Tags', url: '/tags/admin/list', icon: 'fa-tag', keywords: ['admin tags'] },
+      { label: 'Admin: Rule Validation', url: '/tags/admin/validation', icon: 'fa-shield-virus', keywords: ['rule validation', 'quarantine', 'false positive'] },
       { label: 'Admin: ATT&CK', url: '/attack/admin/list', icon: 'fa-crosshairs', keywords: ['admin attack'] },
       { label: 'Admin: Duplicates', url: '/admin/similar_rules', icon: 'fa-code-compare', keywords: ['duplicates'] },
       { label: 'Admin: Roles & Permissions', url: '/admin/roles/list', icon: 'fa-user-shield', keywords: ['roles', 'permissions', 'tagger'] },

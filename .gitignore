@@ -38,6 +38,9 @@ app/modules/*
 !app/modules/cti
 app/static/uploads/avatars
 app/static/uploads/pivotick_backgrounds
+
+# rulezet-validation mirror (regenerable build output, see job_handlers.py:rule_validation_run)
+data/rulezet_validation/
 app/uploads/*
 docs/plan_rule_tester.md
 docs/plan_velociraptor_integration.md

@@ -15,6 +15,7 @@ Pause / Cancel support:
 
 import datetime
 import html as _html
+import json
 import os
 import re
 import subprocess
@@ -3858,3 +3859,96 @@ def handle_db_backup(job, app):
     job.done = 1
     db.session.commit()
     log_job(job, 'Backup complete — see /admin/get_backups to download it.', level='success', event='done')
+
+
+# ─── rule_validation_run ───────────────────────────────────────────────────────
+
+RULE_VALIDATION_MIRROR_DIR = ROOT_DIR / 'data' / 'rulezet_validation'
+
+
+@register_handler('rule_validation_run')
+def handle_rule_validation_run(job, app):
+    """
+    Run rulezet-validation's sync+gate pipeline against this instance:
+    pull the rules from `INSTANCE_PUBLIC_URL` (or rulezet.org), scan them
+    against a local known-clean binary baseline, and quarantine any rule
+    that fires — a false-positive risk.
+
+    rulezet-validation is imported as a library rather than shelled out to:
+    `sync()` already accepts a `log=` callable (its own extension point for
+    exactly this), so plugging in log_job() gives structured, granular
+    progress instead of scraping CLI stdout.
+
+    Payload:
+        full  : bool — ignore the last-sync date, re-check every rule
+        limit : int  — trial run, stop after N rules fetched
+    """
+    from app.features.rule.rule_core import _active
+    from rulezet_validation import config as rv_config
+    from rulezet_validation.sync import sync as rv_sync
+
+    payload = job.payload or {}
+    full    = bool(payload.get('full', False))
+    limit   = payload.get('limit') or None
+
+    settings = rv_config.load()
+    settings['mirror_dir'] = str(RULE_VALIDATION_MIRROR_DIR)
+    settings['url'] = os.environ.get('INSTANCE_PUBLIC_URL') or settings['url']
+    paths = rv_config.paths(settings)
+
+    job.total = 1
+    job.done  = 0
+    db.session.commit()
+
+    log_job(job,
+            f"Validating rules from {settings['url']} against "
+            f"{len(settings.get('baseline_dirs', []))} baseline dir(s)"
+            f"{' (full re-sync)' if full else ''}"
+            f"{f', limit={limit}' if limit else ''} …",
+            level='info', event='started')
+
+    try:
+        rv_sync(settings, paths, full=full, limit=limit,
+                log=lambda msg: log_job(job, msg, level='info', event='progress'))
+    except Exception as e:
+        log_job(job, f'Validation run failed: {e}', level='error', event='error')
+        job.status = 'failed'
+        job.error  = str(e)
+        db.session.commit()
+        return
+
+    # ── Read the merged quarantine.json and match against local rules ─────────
+    # Read defensively (.get everywhere) — this file is owned by
+    # rulezet-validation, and its schema is free to grow keys over time.
+    try:
+        doc     = json.loads(paths['quarantine_json'].read_text())
+        entries = doc.get('quarantined') or {}
+    except (OSError, ValueError):
+        entries = {}
+
+    quarantined_uuids = [u for u, e in entries.items() if e.get('status') == 'quarantined']
+
+    quarantined = []
+    if quarantined_uuids:
+        rules_by_uuid = {
+            r.uuid: r for r in _active().filter(Rule.uuid.in_(quarantined_uuids)).all()
+        }
+        for u in quarantined_uuids:
+            e    = entries[u]
+            rule = rules_by_uuid.get(u)
+            quarantined.append({
+                'uuid':       u,
+                'rule_id':    rule.id if rule else None,
+                'title':      rule.title if rule else e.get('rule', u),
+                'hits':       e.get('hits', 0),
+                'first_seen': e.get('first_seen'),
+            })
+
+    p = dict(job.payload or {})
+    p['result'] = {'quarantined': quarantined, 'quarantined_count': len(quarantined)}
+    job.payload = p
+    job.done    = 1
+    db.session.commit()
+
+    log_job(job, f'Done — {len(quarantined)} rule(s) currently quarantined.',
+            level='success', event='done')

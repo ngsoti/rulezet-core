@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% import 'macros/admin_nav.html' as anav %}
+{% block title %}Rule Validation — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/ansi-terminal.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3 px-4" id="main-container" v-cloak>
+
+    <!-- Page header -->
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-shield-virus banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="/tags/admin/list" class="text-decoration-none text-muted">Tags</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Rule Validation</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon">
+                <i class="fa-solid fa-shield-virus"></i>
+            </div>
+            <div>
+                <h2 class="fw-bold mb-1">Rule Validation</h2>
+                <div class="banner-accent"></div>
+            </div>
+        </div>
+        <p class="text-muted mb-0" style="max-width: 600px; font-size: 0.95rem;">
+            Scan every rule against a corpus of known-clean binaries and quarantine
+            the ones that fire — false positives caught before they reach an analyst.
+        </p>
+    </div>
+
+    <!-- Tabs, with Admin navigation as one more item in the same row -->
+    <div class="dr-nav mb-3" role="tablist">
+        <a class="dr-nav__item active" href="/tags/admin/validation">
+            <i class="fas fa-shield-virus"></i><span>Validation</span>
+        </a>
+        <a class="dr-nav__item" href="/tags/admin/list">
+            <i class="fas fa-tags"></i><span>Manage Tags</span>
+        </a>
+        {% if not tag_manager_view %}
+        <span class="dr-nav__sep"></span>
+        {{ anav.admin_nav_toggle() }}
+        {% endif %}
+    </div>
+    {% if not tag_manager_view %}
+    {{ anav.admin_nav_panel('validation') }}
+    {% endif %}
+
+    <validation-runner :csrf-token="csrfToken" @notify="notify"></validation-runner>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp } = Vue;
+    import { create_message } from '/static/js/toaster.js';
+    import ValidationRunner from '/static/js/tags/manage/ValidationRunner.js';
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: { 'validation-runner': ValidationRunner },
+        setup() {
+            const csrfToken = '{{ csrf_token() }}';
+
+            function notify({ message, level }) {
+                create_message(message, level === 'error' ? 'danger-subtle' : level === 'success' ? 'success-subtle' : 'info-subtle');
+            }
+
+            return { csrfToken, notify };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}
