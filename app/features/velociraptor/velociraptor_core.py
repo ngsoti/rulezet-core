@@ -388,5 +388,6 @@ def trigger_push(server: VelociraptorServer, rule_id: int, triggered_by: int) ->
                      f"Triggered artifact push to Velociraptor server '{server.name}'"
                      + (f" for rule '{rule.title}'" if rule else ''),
                      target_type='velociraptor_server', target_id=server.id, target_uuid=server.uuid,
+                     actor_id=triggered_by,
                      extra=extra)
     return job

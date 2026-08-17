@@ -389,6 +389,7 @@ class Session_class:
                 f"Imported {self.imported} rule(s) from '{source}' "
                 f"({self.skipped} skipped, {self.bad_rules} bad)",
                 target_type="github_import", target_uuid=self.uuid,
+                actor_id=self.user_id,
             )
         except Exception:
             pass

@@ -1559,6 +1559,7 @@ def handle_connector_pull(job, app):
                      f"Connector '{connector.name}': {summary}",
                      target_type='connector', target_id=connector.id,
                      target_uuid=connector.uuid,
+                     actor_id=job.created_by,
                      extra={
                          'rules_added':         rules_created,
                          'rules_updated':       rules_updated,
@@ -1572,6 +1573,8 @@ def handle_connector_pull(job, app):
                          'had_error':           had_error,
                          'duration_s':          duration,
                          'missing_tag_families': missing_families,
+                         'job_id':              job.id,
+                         'job_uuid':            job.uuid,
                      })
 
 
@@ -2136,7 +2139,9 @@ def handle_bulk_transfer_ownership(job, app):
             log_activity("rule.ownership_transfer",
                          f"Ownership of '{old_snap.get('title') or 'Unknown Title'}' transferred to {new_owner_name} (bulk admin action)",
                          target_type="rule", target_id=rid,
-                         icon="fa-solid fa-user-shield", category="rule")
+                         icon="fa-solid fa-user-shield", category="rule",
+                         actor_id=job.created_by,
+                         extra={'job_id': job.id, 'job_uuid': job.uuid})
 
             # The dispossessed owner authored/held this rule — credit them as a contributor.
             previous_owner_id = old_snap.get("owner_id")
@@ -2170,7 +2175,8 @@ def handle_bulk_transfer_ownership(job, app):
     log_activity('admin.bulk_transfer_ownership',
                  f"Manually transferred ownership of {transferred} rule(s) to {new_owner.get_username()} (#{new_owner_id})",
                  target_type='user', target_id=new_owner_id, target_uuid=getattr(new_owner, 'uuid', None),
-                 extra={'rule_count': transferred, 'filters': filters})
+                 actor_id=job.created_by,
+                 extra={'rule_count': transferred, 'filters': filters, 'job_id': job.id, 'job_uuid': job.uuid})
 
     # Manual grants bypass the formal request/approval flow entirely, so
     # without this the History tab would show no record of them at all.
@@ -2314,6 +2320,7 @@ def handle_github_proposal_bulk_import(job, app):
     log_activity('admin.github_proposal_bulk_import',
                  f"Imported {done} accepted GitHub proposal(s) (ownership: {ownership_mode})",
                  target_type='job', target_id=job.id, target_uuid=job.uuid,
+                 actor_id=job.created_by,
                  extra={'proposal_uuids': proposal_uuids, 'ownership_mode': ownership_mode})
 
 
@@ -3709,7 +3716,9 @@ def handle_velociraptor_push(job, app):
     log_job(job, msg, level='success' if ok else 'error', event='done')
     log_activity('velociraptor.push_done', f"Push to '{server.name}': {msg}",
                  target_type='velociraptor_server', target_id=server.id, target_uuid=server.uuid,
-                 extra={'rule_id': rule.id, 'rule_uuid': rule.uuid, 'rule_title': rule.title, 'success': ok})
+                 actor_id=job.created_by,
+                 extra={'rule_id': rule.id, 'rule_uuid': rule.uuid, 'rule_title': rule.title, 'success': ok,
+                        'job_id': job.id, 'job_uuid': job.uuid})
 
 
 # ─── MISP: push a rule's MISP Object/Event to a connected instance ──────────
@@ -3795,8 +3804,10 @@ def handle_misp_push(job, app):
         extra.update({'bundle_id': target.id, 'bundle_uuid': target.uuid, 'bundle_title': target.name})
     else:
         extra.update({'rule_id': target.id, 'rule_uuid': target.uuid, 'rule_title': target.title})
+    extra.update({'job_id': job.id, 'job_uuid': job.uuid})
     log_activity('misp.push_done', f"Push to '{server.name}': {msg}",
                  target_type='misp_server', target_id=server.id, target_uuid=server.uuid,
+                 actor_id=job.created_by,
                  extra=extra)
 
 

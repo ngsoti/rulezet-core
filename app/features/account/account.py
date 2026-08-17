@@ -460,7 +460,7 @@ def add_user() -> redirect:
             return redirect("/account/register")
 
         log_activity("user.register", f"New user registered: '{user.get_username()}'",
-                     target_type="user", target_id=user.id)
+                     target_type="user", target_id=user.id, actor_id=user.id)
         flash('Registration successful. Please check your email for verification.', 'success')
         return redirect(f"/account/verify/{user.id}")
     return render_template("account/register_user.html", form=form)
@@ -523,6 +523,7 @@ def verify(user_id):
                 f"User '{user.get_username()}' verified their account",
                 target_type="user", target_id=user_id,
                 is_public=False,
+                actor_id=user_id,
             )
             flash("Account verified!", "success")
             login_user(user, remember=True)

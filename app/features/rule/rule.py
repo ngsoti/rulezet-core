@@ -2942,7 +2942,8 @@ def import_rules_from_github():
                                  target_uuid=session_th.uuid,
                                  extra={"url": repo_url, "branch": branch},
                                  is_public=True,
-                                 icon="fa-brands fa-github")
+                                 icon="fa-brands fa-github",
+                                 actor_id=user_obj.id)
                 except Exception as e:
                     session_th.error = str(e)
                     session_th.phase = 'error'

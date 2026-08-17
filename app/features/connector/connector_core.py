@@ -359,6 +359,7 @@ def trigger_pull(connector: Connector, triggered_by: int,
                  f"Pull queued for connector '{connector.name}'",
                  target_type='connector', target_id=connector.id,
                  target_uuid=connector.uuid,
+                 actor_id=triggered_by,
                  extra={'job_uuid': job.uuid if job else None})
     return job
 

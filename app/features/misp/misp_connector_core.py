@@ -308,5 +308,6 @@ def trigger_push(server: MispServer, push_type: str, triggered_by: int,
                      f"Triggered MISP {push_type} push to server '{server.name}'"
                      + (f" for '{target_label}'" if target_label else ''),
                      target_type='misp_server', target_id=server.id, target_uuid=server.uuid,
+                     actor_id=triggered_by,
                      extra=extra)
     return job

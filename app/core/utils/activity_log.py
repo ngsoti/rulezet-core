@@ -87,19 +87,34 @@ def log_activity(
     title: str | None = None,
     category: str | None = None,
     level: str | None = None,
+    actor_id: int | None = None,
 ) -> None:
+    """
+    actor_id: explicit author override for calls made outside the acting
+    user's own session — e.g. from a background job thread (no request/session
+    context, so `current_user` isn't available: pass the job's `created_by`)
+    or from a route that performs an action for a user before that user is
+    logged in (e.g. registration: pass the new user's id). Falls back to
+    `current_user` when omitted, same as before.
+    """
     with suppress(Exception):
         from app import db
         from app.core.db_class.db import ActivityLog
         from flask import request as freq
         from flask_login import current_user
 
+        actor_source = None
         user_id = None
-        with suppress(Exception):
-            if current_user.is_authenticated:
-                user_id = current_user.id
+        if actor_id is not None:
+            user_id = actor_id
+            actor_source = 'explicit'
+        else:
+            with suppress(Exception):
+                if current_user.is_authenticated:
+                    user_id = current_user.id
+                    actor_source = 'session'
 
-        ip = method = url = user_agent = None
+        ip = method = url = user_agent = referrer = endpoint = None
         remote_addr = xff = None
         with suppress(Exception):
             remote_addr = freq.remote_addr
@@ -112,6 +127,8 @@ def log_activity(
             url        = freq.path[:512]
             method     = freq.method
             user_agent = (freq.headers.get('User-Agent') or '')[:256] or None
+            referrer   = (freq.referrer or '')[:512] or None
+            endpoint   = freq.endpoint
 
         # Build extra JSON: IPs (never loopback) + named target key + caller data
         with suppress(Exception):
@@ -127,6 +144,18 @@ def log_activity(
                 base[f'{target_type}_id'] = target_id
             if target_type and target_uuid:
                 base[f'{target_type}_uuid'] = target_uuid
+            # Where the action came from — which route fired it, and which
+            # page the request was made from (helps trace multi-step flows).
+            if endpoint:
+                base['endpoint'] = endpoint
+            if referrer:
+                base['referrer'] = referrer
+            # How the author was determined — 'session' (the logged-in caller),
+            # 'explicit' (actor_id override, e.g. job owner or new registrant),
+            # or omitted entirely when nobody was attributable (a genuine
+            # system/automatic action, e.g. a cron-triggered sync).
+            if actor_source:
+                base['actor_source'] = actor_source
             # Caller-supplied data merged last — wins on key conflicts
             extra = {**base, **(extra or {})} or None
 
