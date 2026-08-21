@@ -113,6 +113,11 @@ window.__rule_risk   = {{ rule_risk | tojson | safe }};
                             <i class="fa-solid fa-crown me-1"></i> ADMIN
                         </span>
                         {% endif %}
+                        <span v-if="currentRule.quality_score === 100" class="badge rounded-pill shadow-sm pt-1"
+                              style="background:linear-gradient(135deg,#ffd700,#f5a623);color:#5a3d00;"
+                              title="Perfect quality score (100/100) — this rule is extremely well documented, traceable and valid.">
+                            <i class="fa-solid fa-medal me-1"></i> 100
+                        </span>
                         <span class="badge rounded-pill bg-dark pt-1 shadow-sm">[[ currentRule.format.toUpperCase()
                             ]]</span>
                     </div>
@@ -1053,6 +1058,9 @@ window.__rule_risk   = {{ rule_risk | tojson | safe }};
                                               :class="qualityBadgeClass(currentRule.quality_score)">
                                             [[ Math.round(currentRule.quality_score) ]] / 100
                                         </span>
+                                        <span class="fw-bold" :class="qualityLabelColor(currentRule.quality_score)">
+                                            [[ qualityLabel(currentRule.quality_score) ]]
+                                        </span>
                                         <span class="text-muted small">
                                             Last analyzed [[ currentRule.quality_score_computed_at || '—' ]]
                                             <template v-if="currentRule.quality_score_breakdown">
@@ -1852,6 +1860,20 @@ window.__rule_risk   = {{ rule_risk | tojson | safe }};
                 return 'bg-danger-subtle text-danger'
             }
 
+            function qualityLabel(score) {
+                if (score >= 90) return 'Excellent'
+                if (score > 70) return 'Good'
+                if (score >= 40) return 'Average'
+                if (score >= 20) return 'Poor'
+                return 'Bad'
+            }
+
+            function qualityLabelColor(score) {
+                if (score > 70) return 'text-success'
+                if (score >= 40) return 'text-warning-emphasis'
+                return 'text-danger'
+            }
+
             function prettyCheckLabel(key) {
                 return key.replace(/^format:/, '').replace(/_/g, ' ')
                           .replace(/^./, c => c.toUpperCase())
@@ -1920,6 +1942,8 @@ window.__rule_risk   = {{ rule_risk | tojson | safe }};
                 goToRuleDetail,
                 autoResize,
                 qualityBadgeClass,
+                qualityLabel,
+                qualityLabelColor,
                 prettyCheckLabel,
                 displayVulnerabilities,
                 loadingDisplayVulnerabilities,
