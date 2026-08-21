@@ -81,6 +81,24 @@ def _save_offset(job, offset):
     job.payload = payload
 
 
+def _refresh_quality_scores(rule_ids):
+    """Recompute quality_score for rules whose tags/ATT&CK associations just
+    changed in bulk — these bulk handlers write via bulk_insert_mappings/
+    delete() (no ORM Rule objects touched), so nothing else would trigger the
+    per-write recompute hooks that live on the interactive routes."""
+    rule_ids = [rid for rid in rule_ids if rid]
+    if not rule_ids:
+        return
+    try:
+        from app.features.rule.rule_quality.quality_score_core import build_batch_context, recompute_rule_quality_score
+        batch_context = build_batch_context(rule_ids)
+        for rule in Rule.query.filter(Rule.id.in_(rule_ids)).all():
+            recompute_rule_quality_score(rule, commit=False, batch_context=batch_context)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
 def _append_transferred_ids(job, ids):
     """Accumulate transferred rule ids in job.payload so they survive a
     pause/resume cycle (each resume calls the handler fresh, so an in-memory
@@ -367,6 +385,8 @@ def handle_bulk_add_tag_to_rules(job, app):
                 if user_id and user_id != rule_owner_id:
                     add_contributor(user_id, rule_id)
 
+            _refresh_quality_scores(added_names_by_rule.keys())
+
         offset    += len(batch_ids)
         batch_num += 1
         job.done   = offset
@@ -458,6 +478,9 @@ def handle_bulk_remove_tag_from_rules(job, app):
             RuleTagAssociation.tag_id.in_(tag_ids),
         ).delete(synchronize_session=False)
 
+        if deleted:
+            _refresh_quality_scores(chunk)
+
         offset        += len(chunk)
         batch_num     += 1
         total_removed += deleted
@@ -474,6 +497,101 @@ def handle_bulk_remove_tag_from_rules(job, app):
     log_job(job,
         f"Completed — {job.total} rule(s) processed, "
         f"{total_removed} association(s) removed.",
+        level='success', event='done')
+
+
+# ─── compute_rule_quality_score ────────────────────────────────────────────────
+
+@register_handler('compute_rule_quality_score')
+def handle_compute_rule_quality_score(job, app):
+    """Bulk (re)analyze rules for the quality-score dashboard — 'analyze all'
+    or 'analyze selection' from the admin panel. Same shape as
+    bulk_add_tag_to_rules: _build_rule_query() handles both 'rule_ids'
+    (RuleList select-mode picks) and the full filter set (RuleList
+    'select all matching filters')."""
+    from app.features.rule.rule_quality.quality_score_core import build_batch_context, recompute_rule_quality_score
+
+    payload = job.payload or {}
+    filters = payload.get('filters', {})
+    offset  = payload.get('_resume_offset', 0)
+
+    rule_query = _build_rule_query(filters)
+
+    if job.total == 0:
+        job.total = rule_query.count()
+        db.session.commit()
+
+        filter_desc = []
+        if filters.get('search'):    filter_desc.append(f"search={filters['search']}")
+        if filters.get('format'):    filter_desc.append(f"format={filters['format']}")
+        if filters.get('rule_type'): filter_desc.append(f"format={filters['rule_type']}")
+        if filters.get('author'):    filter_desc.append(f"author={filters['author']}")
+        if filters.get('sources'):   filter_desc.append(f"source={filters['sources']}")
+        if filters.get('rule_ids'):  filter_desc.append(f"{len(filters['rule_ids'])} rule(s) manually selected")
+        filter_str = ' · '.join(filter_desc) if filter_desc else 'all rules'
+
+        log_job(job,
+            f"Job started — {job.total} rule(s) targeted · filters: {filter_str}",
+            level='info', event='started')
+    elif offset > 0:
+        log_job(job,
+            f"Resuming from offset {offset} ({offset}/{job.total} already processed, "
+            f"{job.progress_pct}% done)",
+            level='info', event='resumed')
+
+    if job.total == 0:
+        log_job(job, "No rules matched the filters — nothing to do.", level='warning', event='done')
+        return
+
+    batch_num = 0
+    analyzed  = 0
+
+    while True:
+        if _is_cancelled(job):
+            log_job(job,
+                f"Job cancelled at offset {offset} ({job.progress_pct}% done — {analyzed} rule(s) analyzed so far).",
+                level='warning', event='cancelled')
+            return
+
+        if _should_pause(job):
+            _save_offset(job, offset)
+            db.session.commit()
+            log_job(job,
+                f"Job paused at offset {offset} ({job.progress_pct}% done — {analyzed} rule(s) analyzed so far). "
+                f"Click Resume to continue.",
+                level='info', event='paused')
+            return
+
+        batch = rule_query.offset(offset).limit(BATCH_SIZE).all()
+        if not batch:
+            break
+
+        # One query per signal for the whole batch instead of ~5 per rule —
+        # this is what made a full "analyze all" run take hours instead of
+        # minutes at 300k+ rules.
+        batch_context = build_batch_context([r.id for r in batch])
+        for rule in batch:
+            try:
+                recompute_rule_quality_score(rule, commit=False, batch_context=batch_context)
+                analyzed += 1
+            except Exception as e:
+                log_job(job, f"Failed to score rule #{rule.id} ({rule.title}): {e}",
+                         level='error', event='rule_error')
+        db.session.commit()
+
+        offset    += len(batch)
+        batch_num += 1
+        job.done   = offset
+        _save_offset(job, offset)
+        db.session.commit()
+
+        if batch_num % LOG_EVERY == 0:
+            log_job(job,
+                f"Progress: {job.done}/{job.total} rules ({job.progress_pct}%) — {analyzed} analyzed so far.",
+                level='info', event='progress')
+
+    log_job(job,
+        f"Completed — {analyzed}/{job.total} rule(s) analyzed.",
         level='success', event='done')
 
 
@@ -2433,6 +2551,7 @@ def handle_bulk_parse_attack_rules(job, app):
             db.session.bulk_insert_mappings(RuleAttackAssociation, new_assocs)
             db.session.commit()
             total_added += len(new_assocs)
+            _refresh_quality_scores({a['rule_id'] for a in new_assocs})
 
         offset   += len(rules)
         job.done  = offset
@@ -2678,6 +2797,7 @@ def handle_bulk_tag_platforms(job, app):
         if not rows:
             break
 
+        touched_rule_ids = []
         for rule_id, title, description, content in rows:
             haystack = ' '.join(filter(None, [title, description, content]))
             if not haystack:
@@ -2705,8 +2825,10 @@ def handle_bulk_tag_platforms(job, app):
             if new_assocs:
                 total_tagged += 1
                 total_associations += new_assocs
+                touched_rule_ids.append(rule_id)
 
         db.session.commit()
+        _refresh_quality_scores(touched_rule_ids)
         offset  += len(rows)
         job.done = offset
         _save_offset(job, offset)

@@ -137,6 +137,50 @@
     border-color: #e2e8f0;
 }
 
+/* Quality score range filter — two inline number inputs styled as one pill,
+   consistent with the format badge / search-field select next to it. */
+.rl-quality-range {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    height: 32px;
+    padding: 0 .55rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--light-bg-color);
+}
+.rl-quality-range__icon {
+    font-size: .72rem;
+    color: #0d6efd;
+    opacity: .75;
+}
+.rl-quality-range__input {
+    width: 34px;
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    font-size: .8rem;
+    text-align: center;
+    padding: 0;
+    -moz-appearance: textfield;
+}
+.rl-quality-range__input::-webkit-outer-spin-button,
+.rl-quality-range__input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.rl-quality-range__input:focus { outline: none; }
+.rl-quality-range__sep {
+    color: var(--subtle-text-color);
+    font-size: .75rem;
+}
+.rl-quality-range__label {
+    font-size: .7rem;
+    color: var(--subtle-text-color);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
 .rl-fp-switch {
     display: inline-flex;
     align-items: center;

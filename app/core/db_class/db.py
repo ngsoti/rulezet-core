@@ -330,6 +330,13 @@ class Rule(db.Model):
     # Rule lifecycle status (personal management)
     status = db.Column(db.String(20), nullable=False, default='draft', index=True)
 
+    # Quality score — objective documentation/traceability/validity signal, kept
+    # separate from vote_up/vote_down/favorites (popularity). NULL = never analyzed
+    # yet, distinct from a real low score of 0. See app/features/rule/rule_quality/.
+    quality_score             = db.Column(db.Float, nullable=True, index=True)
+    quality_score_breakdown   = db.Column(db.JSON, nullable=True)
+    quality_score_computed_at = db.Column(db.DateTime, nullable=True)
+
     #edit
     def get_rule_user_first_name_by_id(self):
         user = User.query.get(self.user_id)  
@@ -371,6 +378,9 @@ class Rule(db.Model):
             "sync_instance_url": self.sync_instance_url,
             "status": self.status or 'draft',
             "is_code_format": self.is_code_format(),
+            "quality_score": self.quality_score,
+            "quality_score_breakdown": self.quality_score_breakdown,
+            "quality_score_computed_at": self.quality_score_computed_at.strftime('%Y-%m-%d %H:%M') if self.quality_score_computed_at else None,
         }
 
     def get_extension(self):
@@ -485,6 +495,13 @@ class Rule(db.Model):
                 "source": self.source,
                 "github_path": self.github_path,
                 "extension": self.get_extension(),
+            },
+
+            # --- quality ---
+            "quality": {
+                "score": self.quality_score,
+                "breakdown": self.quality_score_breakdown,
+                "computed_at": self.quality_score_computed_at.strftime('%Y-%m-%d %H:%M') if self.quality_score_computed_at else None,
             },
 
             # --- authorship ---

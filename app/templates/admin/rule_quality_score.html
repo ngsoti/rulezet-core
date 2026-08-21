@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+{% import 'macros/admin_nav.html' as anav %}
+{% block title %}Rule Quality Score — Rulezet{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/chart-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/ansi-terminal.css') }}">
+{% endblock %}
+{% block content %}
+<div class="container-fluid mt-3 px-4" id="main-container" v-cloak>
+
+    <!-- Page header -->
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-gauge-high banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Quality Score</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon">
+                <i class="fa-solid fa-gauge-high"></i>
+            </div>
+            <div>
+                <h2 class="fw-bold mb-1">Rule Quality Score</h2>
+                <div class="banner-accent"></div>
+            </div>
+        </div>
+        <p class="text-muted mb-0" style="max-width: 650px; font-size: 0.95rem;">
+            Objective documentation / traceability / validity signal per rule — separate from votes and
+            favorites, which only add a small bonus on top. Analyze rules to find undocumented or
+            untraceable ones, individually or in bulk.
+        </p>
+    </div>
+
+    <!-- Panel switcher, with Admin navigation as one more item in the same row.
+         Plain Vue state (v-show) drives the panels below, not Bootstrap's
+         data-bs-toggle: this page mounts its own Vue app over the whole
+         panel, and Bootstrap's tab plugin proved unreliable in that setup
+         (click did nothing). -->
+    <div class="dr-nav mb-3" role="tablist">
+        <a class="dr-nav__item" :class="{ active: activePanel === 'analyze' }" href="#" role="tab"
+           @click.prevent="activePanel = 'analyze'">
+            <i class="fa-solid fa-magnifying-glass-chart"></i><span>Analyze</span>
+        </a>
+        <a class="dr-nav__item" :class="{ active: activePanel === 'history' }" href="#" role="tab"
+           @click.prevent="activePanel = 'history'">
+            <i class="fa-solid fa-clock-rotate-left"></i><span>History</span>
+        </a>
+        <span class="dr-nav__sep"></span>
+        {{ anav.admin_nav_toggle() }}
+    </div>
+    {{ anav.admin_nav_panel('quality_score') }}
+
+    <!-- KPI row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                <div class="fw-bold" style="font-size:1.6rem;color:#0d6efd;">[[ stats.avg_score ?? '—' ]]</div>
+                <div class="small text-muted mt-1">Average score</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                <div class="fw-bold" style="font-size:1.6rem;color:#198754;">[[ stats.well_documented_pct ?? 0 ]]%</div>
+                <div class="small text-muted mt-1">Well documented (&gt;70)</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                <div class="fw-bold" style="font-size:1.6rem;color:#dc3545;">[[ stats.poorly_documented_pct ?? 0 ]]%</div>
+                <div class="small text-muted mt-1">Poorly documented (&lt;40)</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                <div class="fw-bold" style="font-size:1.6rem;color:#6c757d;">[[ stats.not_analyzed_count ?? 0 ]]</div>
+                <div class="small text-muted mt-1">Never analyzed</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribution chart -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3 p-md-4">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-chart-column me-2 text-primary"></i>Score distribution</h6>
+            <chart-viewer v-if="stats.distribution" :views="['bar', 'bar-h', 'area', 'donut', 'pie']"
+                          :data="stats.distribution" height="320px"
+                          @chart-click="goToScoreBucket"></chart-viewer>
+            <p v-if="stats.distribution" class="text-muted small mb-0 mt-2">
+                <i class="fa-solid fa-arrow-pointer me-1"></i>Click a bar to browse rules in that score range.
+            </p>
+        </div>
+    </div>
+
+    <!-- Running analysis — prominent + persists across reloads (backend reports any in-flight job) -->
+    <div v-if="activeJobUuid" class="card border-0 shadow-lg rounded-4 mb-4 position-relative overflow-hidden"
+         style="border-left:4px solid #0d6efd;">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="pulse" style="width:10px;height:10px;border-radius:50%;background:#0d6efd;display:inline-block;"></span>
+                <h6 class="fw-bold mb-0">Analysis in progress</h6>
+                <span v-if="activeJobLabel" class="text-muted small">— [[ activeJobLabel ]]</span>
+            </div>
+            <job-tracker
+                :job-uuid="activeJobUuid"
+                @done="onJobDone"
+                @failed="onJobFailed"
+                @deleted="activeJobUuid = null; activeJobLabel = null">
+            </job-tracker>
+        </div>
+    </div>
+
+    <!-- Panel 1 — Analyze: browse, filter, and select rules to (re)analyze -->
+    <div v-show="activePanel === 'analyze'" class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3"
+                 style="border-bottom:1px solid var(--border-color); padding-bottom:.6rem;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:3px; height:14px; background:#0d6efd; border-radius:2px; flex-shrink:0;"></div>
+                    <span class="fw-bold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-filter me-1"></i>Browse, filter, and select rules to analyze
+                    </span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3"
+                            :disabled="resetting"
+                            @click="resetAllScores">
+                        <i class="fa-solid fa-trash-can me-1"></i> Reset all scores
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-3"
+                            :disabled="launching"
+                            @click="analyzeAll">
+                        <i class="fa-solid fa-bolt me-1"></i> Analyze all rules
+                    </button>
+                </div>
+            </div>
+
+            <rule-list
+                mode="select"
+                default-view="table"
+                fetch-url="/rule/data_table"
+                :sync-url="true"
+                :show-filters="true"
+                :show-export="false"
+                :csrf-token="csrfToken"
+                :current-user-is-authenticated="true"
+                :current-user-is-admin="true"
+                @send="submitQualityAnalysis">
+            </rule-list>
+        </div>
+    </div>
+
+    <!-- Panel 2 — History: every past analysis run -->
+    <div v-show="activePanel === 'history'" class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-3 p-md-4">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Analysis history</h6>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th style="font-size:.78rem;">Launched</th>
+                            <th style="font-size:.78rem;">Mode</th>
+                            <th style="font-size:.78rem;">Status</th>
+                            <th style="font-size:.78rem;">Progress</th>
+                            <th style="font-size:.78rem;">Finished</th>
+                            <th style="font-size:.78rem;width:1%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="job in historyItems" :key="job.uuid">
+                            <td style="white-space:nowrap;font-size:.82rem;">[[ job.created_at ]]</td>
+                            <td style="font-size:.82rem;">[[ job.mode ]]</td>
+                            <td>
+                                <span class="badge rounded-pill" :class="jobStatusBadgeClass(job.status)">
+                                    [[ job.status ]]
+                                </span>
+                            </td>
+                            <td style="font-size:.82rem;">[[ job.done.toLocaleString() ]] / [[ job.total.toLocaleString() ]] ([[ job.progress_pct ]]%)</td>
+                            <td style="white-space:nowrap;font-size:.82rem;">[[ job.finished_at || '—' ]]</td>
+                            <td style="white-space:nowrap;">
+                                <button type="button" class="btn btn-sm btn-outline-danger rounded-circle p-0 d-flex align-items-center justify-content-center"
+                                        style="width:26px;height:26px;"
+                                        title="Delete this run"
+                                        :disabled="deletingJobUuid === job.uuid"
+                                        @click="deleteHistoryJob(job.uuid)">
+                                    <span v-if="deletingJobUuid === job.uuid" class="spinner-border spinner-border-sm" style="width:.75rem;height:.75rem;"></span>
+                                    <i v-else class="fas fa-trash" style="font-size:.68rem;"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr v-if="!historyLoading && historyItems.length === 0">
+                            <td colspan="6" class="text-center text-muted py-4">No analysis has been launched yet.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div v-if="historyTotalPages > 1" class="mt-3">
+                <pagination-component
+                    :current-page="historyPage"
+                    :total-pages="historyTotalPages"
+                    @change-page="loadHistory">
+                </pagination-component>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, onMounted } = Vue;
+    import { create_message, message_list } from '/static/js/toaster.js';
+    import RuleList from '/static/js/rule/ruleList.js';
+    import ChartViewer from '/static/js/components/chart-viewer.js';
+    import JobTracker from '/static/js/jobs/JobTracker.js';
+    import PaginationComponent from '/static/js/rule/paginationComponent.js';
+    import TagsDisplaysList from '/static/js/tags/tagsDisplaysList.js';
+    import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
+
+    const csrfToken = '{{ csrf_token() }}';
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: {
+            'rule-list': RuleList,
+            'chart-viewer': ChartViewer,
+            'job-tracker': JobTracker,
+            'pagination-component': PaginationComponent,
+            'tags-displays-list': TagsDisplaysList,
+            'vulnerability-displays-list': VulnerabilityDisplaysList,
+        },
+        setup() {
+            const activePanel = ref('analyze');
+            const stats = ref({});
+            const activeJobUuid = ref(null);
+            const activeJobLabel = ref(null);
+            const launching = ref(false);
+            const resetting = ref(false);
+
+            function goToScoreBucket(item) {
+                // item.name is a bucket label like "80-90" (see the
+                // 'categories' built in /rule/quality/stats) — same shape
+                // for every series, so this works regardless of which
+                // series (count vs cumulative) the click landed on.
+                const m = /^(\d+)-(\d+)$/.exec(item && item.name);
+                if (!m) return;
+                window.location.href = `/rule/rules_list?quality_min=${m[1]}&quality_max=${m[2]}`;
+            }
+
+            async function fetchStats() {
+                const res = await fetch('/rule/quality/stats');
+                if (!res.ok) return;
+                stats.value = await res.json();
+                // Reattach to a run already in flight (survives reload/navigation-away)
+                // — never clobber a job the user just launched this same page-load.
+                if (!activeJobUuid.value && stats.value.active_job) {
+                    activeJobUuid.value = stats.value.active_job.uuid;
+                    activeJobLabel.value = stats.value.active_job.label;
+                }
+            }
+
+            async function launchJob(payload, label) {
+                if (launching.value) return;
+                launching.value = true;
+                try {
+                    const res = await fetch('/jobs/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify({ job_type: 'compute_rule_quality_score', payload, label }),
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        activeJobUuid.value = data.job.uuid;
+                        activeJobLabel.value = label;
+                        create_message('Job queued! Analyzing in background…', 'success-subtle');
+                    } else {
+                        create_message(data.error || 'Failed to create job.', 'danger-subtle');
+                    }
+                } finally {
+                    launching.value = false;
+                }
+            }
+
+            async function submitQualityAnalysis(ids, filters) {
+                const payload = ids === 'ALL'
+                    ? { filters }
+                    : { filters: { rule_ids: ids } };
+                const label = ids === 'ALL'
+                    ? 'Analyze quality — all matching rules'
+                    : `Analyze quality — ${ids.length} rule(s)`;
+                await launchJob(payload, label);
+            }
+
+            async function analyzeAll() {
+                await launchJob({ filters: {} }, 'Analyze quality — all rules');
+            }
+
+            async function resetAllScores() {
+                if (resetting.value) return;
+                const ok = window.confirm(
+                    'Reset ALL quality scores? This clears every rule\'s score, breakdown and ' +
+                    'analysis date back to "never analyzed". This cannot be undone — you would ' +
+                    'need to re-run an analysis to get scores back. Continue?'
+                );
+                if (!ok) return;
+
+                resetting.value = true;
+                try {
+                    const res = await fetch('/rule/quality/reset', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        create_message(`Reset ${data.reset_count.toLocaleString()} rule score(s).`, 'success-subtle');
+                        fetchStats();
+                    } else {
+                        create_message(data.error || 'Failed to reset scores.', 'danger-subtle');
+                    }
+                } finally {
+                    resetting.value = false;
+                }
+            }
+
+            function onJobDone(job) {
+                create_message(`Done! ${job.done.toLocaleString()} rule(s) analyzed.`, 'success-subtle');
+                fetchStats();
+                loadHistory(1);
+            }
+
+            function onJobFailed(job) {
+                create_message(`Job failed: ${job.error || 'unknown error'}`, 'danger-subtle');
+            }
+
+            // ── History ──────────────────────────────────────────────────────
+            const historyItems = ref([]);
+            const historyPage = ref(1);
+            const historyTotalPages = ref(1);
+            const historyLoading = ref(false);
+            const deletingJobUuid = ref(null);
+
+            async function loadHistory(page) {
+                historyLoading.value = true;
+                try {
+                    const res = await fetch(`/rule/quality/history?page=${page}&per_page=15`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    historyItems.value = data.items || [];
+                    historyPage.value = page;
+                    historyTotalPages.value = data.total_pages || 1;
+                } finally {
+                    historyLoading.value = false;
+                }
+            }
+
+            async function deleteHistoryJob(uuid) {
+                if (deletingJobUuid.value) return;
+                if (!window.confirm('Delete this analysis run? This only removes the history entry, not the scores it computed.')) return;
+                deletingJobUuid.value = uuid;
+                try {
+                    const res = await fetch(`/jobs/delete/${uuid}`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                    });
+                    if (res.ok) {
+                        create_message('Analysis run deleted.', 'success-subtle');
+                        loadHistory(historyPage.value);
+                    } else {
+                        const data = await res.json();
+                        create_message(data.message || 'Failed to delete.', 'danger-subtle');
+                    }
+                } finally {
+                    deletingJobUuid.value = null;
+                }
+            }
+
+            function jobStatusBadgeClass(status) {
+                return {
+                    done:      'bg-success-subtle text-success',
+                    running:   'bg-primary-subtle text-primary',
+                    pending:   'bg-secondary-subtle text-secondary',
+                    paused:    'bg-warning-subtle text-warning-emphasis',
+                    failed:    'bg-danger-subtle text-danger',
+                    cancelled: 'bg-secondary-subtle text-secondary',
+                }[status] || 'bg-secondary-subtle text-secondary';
+            }
+
+            onMounted(() => {
+                fetchStats();
+                loadHistory(1);
+            });
+
+            return {
+                activePanel,
+                stats, activeJobUuid, activeJobLabel, launching, resetting,
+                goToScoreBucket,
+                submitQualityAnalysis, analyzeAll, resetAllScores, onJobDone, onJobFailed,
+                historyItems, historyPage, historyTotalPages, historyLoading, loadHistory, jobStatusBadgeClass,
+                deletingJobUuid, deleteHistoryJob,
+                csrfToken, message_list,
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

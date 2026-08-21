@@ -157,6 +157,7 @@ def add_technique_to_rule(rule_id: int, technique_id: str, user_id: int | None =
     )
     db.session.add(assoc)
     db.session.commit()
+    _refresh_rule_quality_score(rule_id)
     return assoc, 'created'
 
 
@@ -168,7 +169,22 @@ def remove_technique_from_rule(rule_id: int, technique_id: str) -> bool:
         return False
     db.session.delete(assoc)
     db.session.commit()
+    _refresh_rule_quality_score(rule_id)
     return True
+
+
+def _refresh_rule_quality_score(rule_id: int) -> None:
+    """ATT&CK mapping is a documentation-score criterion (for the formats
+    where it's idiomatic), so this needs a full recompute, not just the
+    engagement-boost-only refresh used for votes/favorites."""
+    try:
+        from app.core.db_class.db import Rule
+        from app.features.rule.rule_quality.quality_score_core import recompute_rule_quality_score
+        rule = Rule.query.get(rule_id)
+        if rule:
+            recompute_rule_quality_score(rule)
+    except Exception:
+        pass
 
 
 # ── MITRE data import ─────────────────────────────────────────────────────────

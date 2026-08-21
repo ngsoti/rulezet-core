@@ -705,6 +705,14 @@ def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, 
         except Exception:
             pass
 
+        # Quality score — computed last so it sees the tags/ATT&CK associations
+        # attached just above, not a stale pre-attach snapshot.
+        try:
+            from app.features.rule.rule_quality.quality_score_core import recompute_rule_quality_score
+            recompute_rule_quality_score(new_rule)
+        except Exception:
+            pass
+
         all_warnings = dataset_risk['reasons_warn'] + bit_risk['reasons_warn']
         message = "rule created"
         if all_warnings:
@@ -832,6 +840,13 @@ def edit_rule_core(form_dict, id) -> tuple[bool, Rule]:
             pass
 
     db.session.commit()
+
+    try:
+        from app.features.rule.rule_quality.quality_score_core import recompute_rule_quality_score
+        recompute_rule_quality_score(rule)
+    except Exception:
+        pass
+
     return True, rule
 
 
@@ -885,6 +900,13 @@ def apply_restricted_metadata_edit(rule_id, user_id, tags_input, vulnerabilities
     rule.last_modif = datetime.datetime.now(tz=datetime.timezone.utc)
 
     db.session.commit()
+
+    try:
+        from app.features.rule.rule_quality.quality_score_core import recompute_rule_quality_score
+        recompute_rule_quality_score(rule)
+    except Exception:
+        pass
+
     return rule
 
 
@@ -1761,6 +1783,13 @@ def process_vote(rule_id, user_id, vote_type):
             like_delta = -1
 
     db.session.commit()
+
+    try:
+        from app.features.rule.rule_quality.quality_score_core import refresh_engagement_boost
+        refresh_engagement_boost(rule)
+    except Exception:
+        pass
+
     return rule.vote_up, rule.vote_down, like_delta, dislike_delta
 
 
@@ -2939,6 +2968,7 @@ _DATA_TABLE_SORT_KEYS = {
     'creation_date': Rule.creation_date,
     'last_modif':    Rule.last_modif,
     'vote_up':       Rule.vote_up,
+    'quality_score': Rule.quality_score,
 }
 
 
@@ -2948,7 +2978,7 @@ def get_rules_data_table(page=1, per_page=10, search=None, sort=None,
                          author=None, vulnerabilities=None, licenses=None,
                          tags=None, editor_names=None, bundle_id=None, attacks=None,
                          status=None, workspace_uuid=None, exclude_workspace_uuid=None,
-                         ids=None, has_cve=False):
+                         ids=None, has_cve=False, quality_score_min=None, quality_score_max=None):
     """Generic paginated / searchable / sortable rule listing consumed by the
     rule-data-table component. Filtering is delegated to filter_rules() so the
     advanced filter bar (tags, licenses, vulnerabilities, sources, exact
@@ -2983,6 +3013,11 @@ def get_rules_data_table(page=1, per_page=10, search=None, sort=None,
             Rule.cve_id.isnot(None),
             ~Rule.cve_id.in_(['', '[]', 'null', '[""]']),
         )
+
+    if quality_score_min is not None:
+        query = query.filter(Rule.quality_score.isnot(None), Rule.quality_score >= quality_score_min)
+    if quality_score_max is not None:
+        query = query.filter(Rule.quality_score.isnot(None), Rule.quality_score <= quality_score_max)
 
     col = _DATA_TABLE_SORT_KEYS.get(sort)
     if col is not None:

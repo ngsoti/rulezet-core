@@ -631,6 +631,13 @@ def add_favorite(user_id: int, rule_id: int) -> RuleFavoriteUser:
         favorite = RuleFavoriteUser(user_id=user_id, rule_id=rule_id, created_at=datetime.datetime.now(tz=datetime.timezone.utc))
         db.session.add(favorite)
         db.session.commit()
+        try:
+            from app.features.rule.rule_quality.quality_score_core import refresh_engagement_boost
+            rule = Rule.query.get(rule_id)
+            if rule:
+                refresh_engagement_boost(rule)
+        except Exception:
+            pass
         return favorite
     return exists
 
@@ -649,6 +656,13 @@ def remove_favorite(user_id: int, rule_id: int) -> bool:
     if favorite:
         db.session.delete(favorite)
         db.session.commit()
+        try:
+            from app.features.rule.rule_quality.quality_score_core import refresh_engagement_boost
+            rule = Rule.query.get(rule_id)
+            if rule:
+                refresh_engagement_boost(rule)
+        except Exception:
+            pass
         return True
     return False
 

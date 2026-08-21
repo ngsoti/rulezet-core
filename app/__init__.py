@@ -54,6 +54,7 @@ def create_app(start_worker=True):
     from app.features.misp.misp import misp_blueprint
     from app.features.rule.rule_from_github.sync_schedule.sync_schedule_routes import sync_schedule_blueprint
     from app.features.rule.rule_from_github.proposal.proposal_routes import github_proposal_blueprint
+    from app.features.rule.rule_quality.quality_score import quality_blueprint
     from app.features.notification.notification import notification_blueprint
     from app.features.report.report import report_blueprint
     from app.features.attack.attack import attack_blueprint
@@ -77,6 +78,7 @@ def create_app(start_worker=True):
     app.register_blueprint(misp_blueprint, url_prefix='/misp')
     app.register_blueprint(sync_schedule_blueprint, url_prefix='/rule/github')
     app.register_blueprint(github_proposal_blueprint, url_prefix='/rule/github_proposal')
+    app.register_blueprint(quality_blueprint, url_prefix='/rule/quality')
     app.register_blueprint(notification_blueprint, url_prefix='/notifications')
     app.register_blueprint(report_blueprint, url_prefix='/report')
     app.register_blueprint(attack_blueprint, url_prefix='/attack')

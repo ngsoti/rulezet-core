@@ -294,6 +294,18 @@ export default {
                         <span>Exact</span>
                     </label>
 
+                    <div class="rl-quality-range" v-if="!isFilterHidden('quality')" title="Filter by quality score">
+                        <i class="fa-solid fa-gauge-high rl-quality-range__icon"></i>
+                        <input type="number" min="0" max="100" step="1"
+                               v-model.number="qualityMin" @change="onQualityRangeChange"
+                               class="rl-quality-range__input" placeholder="0" aria-label="Minimum quality score">
+                        <span class="rl-quality-range__sep">–</span>
+                        <input type="number" min="0" max="100" step="1"
+                               v-model.number="qualityMax" @change="onQualityRangeChange"
+                               class="rl-quality-range__input" placeholder="100" aria-label="Maximum quality score">
+                        <span class="rl-quality-range__label">quality</span>
+                    </div>
+
                     <div v-if="currentUserIsAuthenticated && !numericUserId"
                          class="rl-scope-toggle">
                         <button :class="['rl-scope-btn', !scopeMine ? 'rl-scope-btn--active' : '']"
@@ -633,6 +645,12 @@ export default {
                             </button>
                         </div>
 
+                        <span v-if="rule.quality_score !== null && rule.quality_score !== undefined"
+                              class="badge rounded-pill" :class="qualityBadgeClass(rule.quality_score)"
+                              style="font-size:.7rem;" :title="'Quality score: ' + rule.quality_score">
+                            <i class="fa-solid fa-gauge-high me-1"></i>{{ Math.round(rule.quality_score) }}
+                        </span>
+
                         <div class="d-flex gap-2 align-items-center">
 
                             <!-- Collapse toggle -->
@@ -811,6 +829,14 @@ export default {
                                 Votes <i class="fas dt-sort-icon" :class="sortIcon('vote_up')"></i>
                             </div>
                         </th>
+                        <th v-show="colVisible.quality"
+                            class="dt-th dt-th--sortable" style="width:110px;"
+                            :class="{ 'dt-th--sorted': sortKey === 'quality_score' }"
+                            @click="setSort('quality_score')">
+                            <div class="dt-th-inner">
+                                Quality <i class="fas dt-sort-icon" :class="sortIcon('quality_score')"></i>
+                            </div>
+                        </th>
                         <th class="dt-th dt-th--actions" style="width:100px;">Actions</th>
                     </tr>
                 </thead>
@@ -957,6 +983,16 @@ export default {
                                         <span>{{ rule.vote_down }}</span>
                                     </button>
                                 </div>
+                            </td>
+
+                            <td v-show="colVisible.quality" class="dt-td">
+                                <span v-if="rule.quality_score === null || rule.quality_score === undefined"
+                                      class="badge rounded-pill bg-secondary-subtle text-secondary" style="font-size:.72rem;"
+                                      title="Not analyzed yet">—</span>
+                                <span v-else class="badge rounded-pill" :class="qualityBadgeClass(rule.quality_score)"
+                                      style="font-size:.72rem;" :title="'Quality score: ' + rule.quality_score">
+                                    <i class="fa-solid fa-gauge-high me-1"></i>{{ Math.round(rule.quality_score) }}
+                                </span>
                             </td>
 
                             <td class="dt-td dt-td--actions">
@@ -1311,6 +1347,24 @@ export default {
         })
         const scopeMine        = ref(_p('scope') === 'mine')
         const cveOnly           = ref(props.hasCveOnly || _p('has_cve') === 'true')
+        const _numOrNull = (key) => {
+            const raw = _p(key)
+            const n = raw !== '' ? Number(raw) : NaN
+            return Number.isFinite(n) ? n : null
+        }
+        const qualityMin = ref(_numOrNull('quality_min'))
+        const qualityMax = ref(_numOrNull('quality_max'))
+        function onQualityRangeChange() {
+            // Clamp + keep min <= max so the URL/query never carries a nonsensical range.
+            if (qualityMin.value !== null && qualityMin.value !== '') qualityMin.value = Math.min(100, Math.max(0, qualityMin.value))
+            else qualityMin.value = null
+            if (qualityMax.value !== null && qualityMax.value !== '') qualityMax.value = Math.min(100, Math.max(0, qualityMax.value))
+            else qualityMax.value = null
+            if (qualityMin.value !== null && qualityMax.value !== null && qualityMin.value > qualityMax.value) {
+                [qualityMin.value, qualityMax.value] = [qualityMax.value, qualityMin.value]
+            }
+            onFilterChange()
+        }
         const rulesFormats    = ref([])
 
         // Card sort shorthand (maps to sortKey/sortDir)
@@ -1338,6 +1392,7 @@ export default {
             { key: 'attacks',     label: 'ATT&CK' },
             { key: 'created',     label: 'Created' },
             { key: 'votes',       label: 'Votes' },
+            { key: 'quality',     label: 'Quality' },
         ]
         const colVisible = Vue.reactive(Object.fromEntries(TOGGLEABLE_COLS.map(c => [c.key, !props.hiddenColumns.includes(c.key)])))
         function toggleColumn(key) { colVisible[key] = !colVisible[key] }
@@ -1384,7 +1439,8 @@ export default {
             (isFilterHidden('licenses') ? 0 : selectedLicenses.value.length) +
             (isFilterHidden('vulnerabilities') ? 0 : selectedVulns.value.length) +
             (isFilterHidden('attacks') ? 0 : selectedAttacks.value.length) +
-            (isFilterHidden('person') ? 0 : personFilter.value.values.length)
+            (isFilterHidden('person') ? 0 : personFilter.value.values.length) +
+            (!isFilterHidden('quality') && (qualityMin.value !== null || qualityMax.value !== null) ? 1 : 0)
         )
 
         // ── URL sync ──────────────────────────────────────────────────────
@@ -1399,6 +1455,8 @@ export default {
             _upd('page',         page.value > 1 ? page.value : null)
             _upd('search_field', searchField.value !== 'all' ? searchField.value : null)
             _upd('exact_match',  exactMatch.value ? 'true' : null)
+            _upd('quality_min',  qualityMin.value !== null ? qualityMin.value : null)
+            _upd('quality_max',  qualityMax.value !== null ? qualityMax.value : null)
             _upd('rule_type',    ruleType.value || null)
             if (sortKey.value) { p.set('sort', sortKey.value); p.set('dir', sortDir.value) }
             else               { p.delete('sort'); p.delete('dir') }
@@ -1444,6 +1502,8 @@ export default {
                 if (selectedVulns.value.length)      params.set('vulnerabilities', selectedVulns.value.join(','))
                 if (selectedAttacks.value.length)    params.set('attacks', selectedAttacks.value.join(','))
                 if (cveOnly.value)                    params.set('has_cve', 'true')
+                if (qualityMin.value !== null)        params.set('quality_score_min', qualityMin.value)
+                if (qualityMax.value !== null)        params.set('quality_score_max', qualityMax.value)
                 if (personFilter.value.values.length) {
                     const pKey = personFilter.value.mode === 'editor' ? 'editors' : 'authors'
                     params.set(pKey, personFilter.value.values.join(','))
@@ -1501,6 +1561,7 @@ export default {
             if (!isFilterHidden('vulnerabilities')) selectedVulns.value   = []
             if (!isFilterHidden('attacks'))         selectedAttacks.value = []
             if (!isFilterHidden('person'))          personFilter.value    = { mode: 'author', values: [] }
+            if (!isFilterHidden('quality')) { qualityMin.value = null; qualityMax.value = null }
             onFilterChange()
         }
 
@@ -1837,6 +1898,13 @@ export default {
             } catch { return val }
         }
 
+        // ── Quality score badge color (red <40 / orange 40-70 / green >70) ──
+        function qualityBadgeClass(score) {
+            if (score > 70) return 'bg-success-subtle text-success'
+            if (score >= 40) return 'bg-warning-subtle text-warning-emphasis'
+            return 'bg-danger-subtle text-danger'
+        }
+
         // ── Rule format → hljs language ───────────────────────────────────
         function ruleLanguage(format) {
             if (!format) return 'auto'
@@ -1960,7 +2028,7 @@ export default {
             items, total, totalPages, loading, page, perPage, perPageModel,
             sortKey, sortDir, search,
             // Filters
-            filtersOpen, ruleType, searchField, exactMatch, cardSort,
+            filtersOpen, ruleType, searchField, exactMatch, cardSort, qualityMin, qualityMax, onQualityRangeChange,
             selectedTags, selectedSources, selectedLicenses, selectedVulns, selectedAttacks,
             personFilter, onPersonFilterChange,
             scopeMine,
@@ -1987,7 +2055,7 @@ export default {
             toggleExpand,
             handleVote, handleFavorite,
             emitBulkAction, emitSend,
-            fromNow, formatDate, ruleLanguage, highlight, matchedHighlightTerms, matchedStringCount,
+            fromNow, formatDate, ruleLanguage, qualityBadgeClass, highlight, matchedHighlightTerms, matchedStringCount,
             // Status
             statusIcon, statusLabel, canChangeStatus, cycleStatus,
             // Export

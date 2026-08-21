@@ -1,13 +1,21 @@
+import AnsiTerminal from '/static/js/components/ansi-terminal.js';
+
 /**
  * JobTracker
  * Polls job status + logs every 2s.
- * Shows a real-time activity feed with timestamps and level icons.
+ * Live log via the shared AnsiTerminal component (same one used on the
+ * GitHub update/import pages and the ATT&CK admin updater) instead of a
+ * bespoke feed, plus a slim progress bar matching that same style.
  * Supports pause, resume, cancel, delete.
+ *
+ * Requires css/components/ansi-terminal.css to be loaded on any page using
+ * this component (see AttackUpdater.js / update_loading.html for the pattern).
  *
  * Usage:
  *   <job-tracker :job-uuid="uuid" @done="onDone" @failed="onFailed"></job-tracker>
  */
 const JobTracker = {
+    components: { 'ansi-terminal': AnsiTerminal },
     props: {
         jobUuid: { type: String, required: true },
         pollInterval: { type: Number, default: 2000 },
@@ -15,13 +23,12 @@ const JobTracker = {
     emits: ['done', 'failed', 'update', 'deleted'],
     delimiters: ['[[', ']]'],
     setup(props, { emit }) {
-        const { ref, computed, onMounted, onUnmounted, nextTick } = Vue;
+        const { ref, computed, onMounted, onUnmounted } = Vue;
 
         const job = ref(null);
         const logs = ref([]);
         const loading = ref(true);
         const acting = ref(null);
-        const logsRef = ref(null);  // ref to log container for auto-scroll
         let timer = null;
         let lastLogId = 0;
 
@@ -60,28 +67,11 @@ const JobTracker = {
         const canCancel = computed(() => job.value && ['pending', 'running', 'paused'].includes(job.value.status));
         const canDelete = computed(() => job.value && ['done', 'failed', 'cancelled', 'paused'].includes(job.value.status));
 
-        // ── Log helpers ───────────────────────────────────────────────────────
+        // ── Log feed — AnsiTerminal's expected {ts, level, msg} shape ───────────
 
-        function logLevelColor(level) {
-            return { info: 'text-muted', success: 'text-success', warning: 'text-warning', error: 'text-danger' }[level] || 'text-muted';
-        }
-
-        function logLevelIcon(level) {
-            return { info: 'fas fa-circle-dot', success: 'fas fa-check-circle', warning: 'fas fa-triangle-exclamation', error: 'fas fa-times-circle' }[level] || 'fas fa-circle-dot';
-        }
-
-        function shortTime(ts) {
-            if (!ts) return '';
-            // ts = '2026-04-30 14:32:05' → '14:32:05'
-            return ts.split(' ')[1] || ts;
-        }
-
-        async function scrollToBottom() {
-            await nextTick();
-            if (logsRef.value) {
-                logsRef.value.scrollTop = logsRef.value.scrollHeight;
-            }
-        }
+        const terminalEntries = computed(() =>
+            logs.value.map(l => ({ ts: l.created_at, level: l.level, msg: l.message }))
+        );
 
         // ── Polling ───────────────────────────────────────────────────────────
 
@@ -104,7 +94,6 @@ const JobTracker = {
                 if (logRes.ok && logData.length > 0) {
                     logs.value.push(...logData);
                     lastLogId = logData[logData.length - 1].id;
-                    scrollToBottom();
                 }
 
             } catch (e) {
@@ -152,10 +141,9 @@ const JobTracker = {
         onUnmounted(stopPolling);
 
         return {
-            job, logs, loading, acting, logsRef,
+            job, logs, loading, acting, terminalEntries,
             statusColor, statusIcon, isFinished,
             canPause, canResume, canCancel, canDelete,
-            logLevelColor, logLevelIcon, shortTime,
             doAction,
         };
     },
@@ -184,6 +172,11 @@ const JobTracker = {
                           :class="'bg-' + statusColor + '-subtle text-' + statusColor">
                         [[ job.status ]]
                     </span>
+                    <a :href="'/jobs/detail/' + job.uuid" target="_blank" rel="noopener"
+                       class="btn btn-sm btn-outline-secondary py-0 px-2"
+                       style="font-size:.72rem;" title="Open this job in My Jobs">
+                        <i class="fas fa-up-right-from-square me-1"></i>My Jobs
+                    </a>
                 </div>
 
                 <!-- ── Timestamps row ── -->
@@ -199,22 +192,16 @@ const JobTracker = {
                     </span>
                 </div>
 
-                <!-- ── Progress bar ── -->
+                <!-- ── Progress bar — slim style matching update_loading.html / AttackUpdater ── -->
                 <div v-if="['running', 'done', 'paused'].includes(job.status)" class="mb-3">
-                    <div class="d-flex justify-content-between small mb-1"
-                         style="color: var(--subtle-text-color)">
-                        <span>[[ job.done.toLocaleString() ]] / [[ job.total.toLocaleString() ]] rules</span>
-                        <span class="fw-semibold">[[ job.progress_pct ]]%</span>
-                    </div>
-                    <div class="progress" style="height:10px; border-radius:5px;">
-                        <div class="progress-bar"
-                             :class="[
-                                job.status === 'running' ? 'progress-bar-animated progress-bar-striped' : '',
-                                'bg-' + statusColor
-                             ]"
+                    <div class="progress mb-1" style="height:6px;">
+                        <div class="progress-bar" :class="'bg-' + statusColor"
                              :style="{ width: job.progress_pct + '%' }">
                         </div>
                     </div>
+                    <small style="color: var(--subtle-text-color)">
+                        [[ job.done.toLocaleString() ]] / [[ job.total.toLocaleString() ]] ([[ job.progress_pct ]]%)
+                    </small>
                 </div>
 
                 <!-- ── Pending / Paused notices ── -->
@@ -234,45 +221,28 @@ const JobTracker = {
                     [[ job.error || 'An unknown error occurred.' ]]
                 </div>
 
-                <!-- ── Activity log feed ── -->
+                <!-- ── Live log — same AnsiTerminal component as the GitHub update/import pages ── -->
                 <div v-if="logs.length > 0" class="mb-3">
-                    <div class="d-flex align-items-center gap-1 mb-1"
-                         style="font-size:0.72rem; color: var(--subtle-text-color); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">
-                        <i class="fas fa-list-ul me-1"></i>Activity
-                    </div>
-                    <div ref="logsRef"
-                         class="rounded-3 p-2"
-                         style="background: var(--code-bg-color);
-                                max-height: 220px;
-                                overflow-y: auto;
-                                font-family: monospace;
-                                font-size: 0.75rem;
-                                line-height: 1.6;">
-                        <div v-for="log in logs" :key="log.id"
-                             class="d-flex gap-2 align-items-start">
-                            <!-- timestamp -->
-                            <span style="color: var(--subtle-text-color); flex-shrink:0; user-select:none">
-                                [[ shortTime(log.created_at) ]]
-                            </span>
-                            <!-- level icon -->
-                            <i :class="[logLevelIcon(log.level), logLevelColor(log.level)]"
-                               style="flex-shrink:0; margin-top:3px; font-size:0.65rem"></i>
-                            <!-- message -->
-                            <span :class="logLevelColor(log.level)">[[ log.message ]]</span>
-                        </div>
-                    </div>
+                    <ansi-terminal
+                        :entries="terminalEntries"
+                        :live="job.status === 'running' || job.status === 'pending'"
+                        title="Live log"
+                        @clear="logs = []">
+                    </ansi-terminal>
                 </div>
 
                 <!-- ── Action buttons ── -->
                 <div class="d-flex gap-2 flex-wrap">
 
                     <button v-if="canPause"
-                            class="btn btn-sm btn-outline-info flex-grow-1"
+                            class="btn btn-sm btn-outline-info rounded-circle p-0 d-flex align-items-center justify-content-center"
+                            style="width:28px;height:28px;"
+                            title="Pause"
                             @click="doAction('pause')"
                             :disabled="!!acting">
                         <span v-if="acting === 'pause'"
-                              class="spinner-border spinner-border-sm me-1"></span>
-                        <i v-else class="fas fa-pause me-1"></i>Pause
+                              class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem;"></span>
+                        <i v-else class="fas fa-pause" style="font-size:.7rem;"></i>
                     </button>
 
                     <button v-if="canResume"
@@ -285,12 +255,14 @@ const JobTracker = {
                     </button>
 
                     <button v-if="canCancel"
-                            class="btn btn-sm btn-outline-danger flex-grow-1"
+                            class="btn btn-sm btn-outline-danger rounded-circle p-0 d-flex align-items-center justify-content-center"
+                            style="width:28px;height:28px;"
+                            title="Stop"
                             @click="doAction('cancel', 'Stop this job? Progress so far will be kept.')"
                             :disabled="!!acting">
                         <span v-if="acting === 'cancel'"
-                              class="spinner-border spinner-border-sm me-1"></span>
-                        <i v-else class="fas fa-stop me-1"></i>Stop
+                              class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem;"></span>
+                        <i v-else class="fas fa-stop" style="font-size:.7rem;"></i>
                     </button>
 
                     <button v-if="canDelete"

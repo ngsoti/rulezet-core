@@ -1967,6 +1967,11 @@ def changes_decision() -> jsonify:
                 else:
                     rule.to_string = history.new_content
                     history.message = "accepted"
+                    try:
+                        from app.features.rule.rule_quality.quality_score_core import recompute_rule_quality_score
+                        recompute_rule_quality_score(rule)
+                    except Exception:
+                        pass
                     return jsonify({"success": True, "message": "Rule content modified !", "toast_class": "success-subtle"}), 200
 
             return jsonify({"success": False, "message": "Rule not found", "toast_class": "danger-subtle"}), 404
@@ -3756,6 +3761,8 @@ def rules_data_table():
         exclude_workspace_uuid=request.args.get('exclude_workspace_uuid', None, type=str),
         ids=ids,
         has_cve=request.args.get('has_cve', 'false', type=str) == 'true',
+        quality_score_min=request.args.get('quality_score_min', None, type=float),
+        quality_score_max=request.args.get('quality_score_max', None, type=float),
     )
 
     rule_ids = [r.id for r in pagination.items]
@@ -3882,6 +3889,12 @@ def quick_meta(rule_id):
                 pass
 
     db.session.commit()
+
+    try:
+        from app.features.rule.rule_quality.quality_score_core import recompute_rule_quality_score
+        recompute_rule_quality_score(rule)
+    except Exception:
+        pass
 
     new_snapshot = RuleModel.rule_metadata_snapshot(rule)
     if current_user.id != rule.user_id:

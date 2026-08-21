@@ -1027,8 +1027,142 @@ window.__rule_risk   = {{ rule_risk | tojson | safe }};
                             </div>
                         </div>
 
+                        <!-- Quality Score -->
+                        <div class="mt-3 rounded-4 overflow-hidden border position-relative mb-2" style="background:var(--light-bg-color);">
+                            <div class="contributor-watermark"><i class="fa-solid fa-gauge-high"></i></div>
+                            <div class="p-4 position-relative" style="z-index:1;">
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width:3px; height:14px; background:#0d6efd; border-radius:2px; flex-shrink:0;"></div>
+                                        <span class="fw-bold" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--subtle-text-color);">
+                                            <i class="fa-solid fa-gauge-high me-1"></i>Quality Score
+                                        </span>
+                                    </div>
+                                    <button type="button"
+                                            class="badge rounded-pill px-3 border-0"
+                                            style="background:var(--light-bg-color); color:var(--subtle-text-color); border:1px solid var(--border-color) !important; font-size:.75rem; cursor:pointer;"
+                                            data-bs-toggle="modal" :data-bs-target="'#qualityScoreDocModal' + currentRule.id"
+                                            title="How is this score calculated?">
+                                        <i class="fa-solid fa-circle-info me-1"></i>How is this calculated?
+                                    </button>
+                                </div>
+
+                                <template v-if="currentRule.quality_score !== null && currentRule.quality_score !== undefined">
+                                    <div class="d-flex align-items-center gap-3 mb-3">
+                                        <span class="badge rounded-pill px-3 py-2" style="font-size:1.1rem;"
+                                              :class="qualityBadgeClass(currentRule.quality_score)">
+                                            [[ Math.round(currentRule.quality_score) ]] / 100
+                                        </span>
+                                        <span class="text-muted small">
+                                            Last analyzed [[ currentRule.quality_score_computed_at || '—' ]]
+                                            <template v-if="currentRule.quality_score_breakdown">
+                                                · +[[ currentRule.quality_score_breakdown.engagement_boost || 0 ]] engagement boost
+                                            </template>
+                                        </span>
+                                    </div>
+
+                                    <div v-if="currentRule.quality_score_breakdown" class="row g-3">
+                                        <div class="col-md-6 col-lg-3"
+                                             v-for="(cat, catKey) in currentRule.quality_score_breakdown.categories" :key="catKey">
+                                            <div class="rounded-3 border p-3 h-100" style="background:var(--card-bg-color);">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="fw-bold text-capitalize small">[[ catKey ]]</span>
+                                                    <span class="badge bg-secondary-subtle text-secondary">[[ Math.round(cat.earned) ]]/[[ cat.total ]]</span>
+                                                </div>
+                                                <ul class="list-unstyled mb-0 small">
+                                                    <li v-for="(ok, checkKey) in cat.checks" :key="checkKey" class="mb-1">
+                                                        <i :class="ok ? 'fas fa-check text-success' : 'fas fa-xmark text-danger'" class="me-1"></i>
+                                                        <span :class="{ 'text-muted': !ok }">[[ prettyCheckLabel(checkKey) ]]</span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <p class="text-muted small mb-0">This rule hasn't been analyzed yet.</p>
+                                </template>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
+
+                <!-- Quality Score documentation modal -->
+                <div class="modal fade" :id="'qualityScoreDocModal' + currentRule.id" tabindex="-1" aria-hidden="true" style="z-index: 2000;">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+                            <div class="modal-header border-0 pb-0">
+                                <h5 class="modal-title fw-bold"><i class="fa-solid fa-gauge-high me-2 text-primary"></i>How the Quality Score is calculated</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body py-3">
+                                <p class="text-muted small">
+                                    An objective 0-100 signal — how well documented, traceable and valid a rule is.
+                                    Separate from votes/favorites/comments, which only add a small capped bonus
+                                    on top and never affect the base score below.
+                                </p>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="rounded-3 border p-3 h-100" style="background:var(--light-bg-color);">
+                                            <div class="fw-bold small mb-2"><span class="badge bg-secondary-subtle text-secondary me-1">20 pts</span>Traceability</div>
+                                            <ul class="small text-muted mb-0 ps-3">
+                                                <li>Has an original UUID (10)</li>
+                                                <li>GitHub path known (5)</li>
+                                                <li>Source repository known (5)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="rounded-3 border p-3 h-100" style="background:var(--light-bg-color);">
+                                            <div class="fw-bold small mb-2"><span class="badge bg-secondary-subtle text-secondary me-1">20 pts</span>Authorship</div>
+                                            <ul class="small text-muted mb-0 ps-3">
+                                                <li>Meaningful description, 30+ characters (10)</li>
+                                                <li>Author known (5) · License known (5)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="rounded-3 border p-3 h-100" style="background:var(--light-bg-color);">
+                                            <div class="fw-bold small mb-2"><span class="badge bg-secondary-subtle text-secondary me-1">20 pts</span>Metadata</div>
+                                            <ul class="small text-muted mb-0 ps-3">
+                                                <li>Format-specific triage fields are present — e.g. Sigma documents references, known false-positive scenarios and a severity level; YARA has a rich meta block (10)</li>
+                                                <li>Tags beyond the auto-attached defaults (5)</li>
+                                                <li>ATT&amp;CK mapping, for formats where it applies (5)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="rounded-3 border p-3 h-100" style="background:var(--light-bg-color);">
+                                            <div class="fw-bold small mb-2"><span class="badge bg-secondary-subtle text-secondary me-1">25 pts</span>Validity</div>
+                                            <ul class="small text-muted mb-0 ps-3">
+                                                <li>Passes format validation (15)</li>
+                                                <li>No pending failed GitHub update (10)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="rounded-3 border p-3 h-100" style="background:var(--light-bg-color);">
+                                            <div class="fw-bold small mb-2"><span class="badge bg-secondary-subtle text-secondary me-1">15 pts</span>Freshness</div>
+                                            <ul class="small text-muted mb-0 ps-3">
+                                                <li>Meaningfully edited/reviewed since creation (15)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="rounded-3 border p-3 mt-3" style="background:var(--light-bg-color);">
+                                    <div class="fw-bold small mb-1"><i class="fa-solid fa-star text-warning me-1"></i>Engagement boost (up to +10, shown separately)</div>
+                                    <p class="small text-muted mb-0">Favorites, net votes and comments, scaled down — a popularity bonus on the displayed score, never part of the 0-100 base score above.</p>
+                                </div>
+                                <p class="small text-muted mt-3 mb-0">
+                                    A criterion that doesn't apply to a given format (e.g. ATT&amp;CK mapping on a YARA rule)
+                                    is left out of that rule's total instead of counting against it.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="modal fade" :id="'delete_rule_modal_'+currentRule.id" tabindex="-1" aria-hidden="true"
                     style="z-index: 2000;">
                     <div class="modal-dialog modal-dialog-centered">
@@ -1712,6 +1846,17 @@ window.__rule_risk   = {{ rule_risk | tojson | safe }};
                 window.location.href = `/rule/detail_rule/${ruleId}`;
             }
 
+            function qualityBadgeClass(score) {
+                if (score > 70) return 'bg-success-subtle text-success'
+                if (score >= 40) return 'bg-warning-subtle text-warning-emphasis'
+                return 'bg-danger-subtle text-danger'
+            }
+
+            function prettyCheckLabel(key) {
+                return key.replace(/^format:/, '').replace(/_/g, ' ')
+                          .replace(/^./, c => c.toUpperCase())
+            }
+
             function autoResize(event) {
                 const element = event.target;
                 element.style.height = "auto";
@@ -1774,6 +1919,8 @@ window.__rule_risk   = {{ rule_risk | tojson | safe }};
                 animateClick,
                 goToRuleDetail,
                 autoResize,
+                qualityBadgeClass,
+                prettyCheckLabel,
                 displayVulnerabilities,
                 loadingDisplayVulnerabilities,
                 fetchBundleVulnerabilities,

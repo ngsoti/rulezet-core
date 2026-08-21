@@ -175,6 +175,21 @@ class YaraRule(RuleType):
                 "to_string": content,
             }
 
+    def documentation_signals(self, content: str) -> Dict[str, bool]:
+        """YARA-specific documentation checklist, read from the meta{} block —
+        same regex approach as parse_metadata() above."""
+        meta = {}
+        meta_block = re.search(r'meta\s*:\s*(.*?)\n\s*(?:strings|condition|private|global)\s*:', content, re.DOTALL | re.IGNORECASE)
+        if meta_block:
+            entries = re.findall(r'(\w+)\s*=\s*"(.*?)"', meta_block.group(1), re.DOTALL)
+            for key, val in entries:
+                meta[key] = val
+        return {
+            "has_date": bool(meta.get("date")),
+            "has_reference": bool(meta.get("reference") or meta.get("reference_url")),
+            "has_description": bool(meta.get("description")),
+        }
+
     def get_rule_files(self, file: str) -> bool:
         if file.endswith(('.yar', '.yara')):
             return True

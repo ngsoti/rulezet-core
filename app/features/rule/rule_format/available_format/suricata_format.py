@@ -281,6 +281,15 @@ class SuricataRule(RuleType):
                 "to_string": content,
             }
 
+    def documentation_signals(self, content: str) -> Dict[str, bool]:
+        """Suricata-specific documentation checklist — same regex approach as
+        parse_metadata() above, on the raw option keywords."""
+        return {
+            "has_reference": bool(re.search(r'\breference\s*:', content)),
+            "has_classtype": bool(re.search(r'\bclasstype\s*:', content)),
+            "has_metadata": bool(re.search(r'\bmetadata\s*:', content)),
+        }
+
     def get_rule_files(self, file: str) -> bool:
         return file.endswith(('.rule', '.rules'))
 

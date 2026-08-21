@@ -4,7 +4,8 @@ from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import 
 import os
 import yaml
 import json
-from jsonschema import validate, ValidationError
+from jsonschema import ValidationError
+from jsonschema.validators import validator_for
 
 from sigma.collection import SigmaCollection
 from sigma.validation import SigmaValidator
@@ -25,6 +26,10 @@ class SigmaRule(RuleType):
 
     def __init__(self, schema_path: str = "app/features/rule/rule_format/schema_format/sigma_format.json"):
         self.schema = self._load_schema(schema_path)
+        # Built once per instance and reused — jsonschema.validate(instance, schema)
+        # recompiles the whole schema (incl. $ref resolution) on every call, which
+        # dominated per-rule scoring cost (~15ms of ~20ms spent in validate()).
+        self._json_validator = validator_for(self.schema)(self.schema) if self.schema else None
 
     @property
     def format(self) -> str:
@@ -62,7 +67,8 @@ class SigmaRule(RuleType):
            
             rule_json_str = json.dumps(rule, indent=2, default=str)
             rule_json_obj = json.loads(rule_json_str)
-            validate(instance=rule_json_obj, schema=self.schema)
+            if self._json_validator is not None:
+                self._json_validator.validate(rule_json_obj)
 
         except ValidationError as ve:
             return ValidationResult(ok=False, errors=[ve.message], normalized_content=content)
@@ -163,6 +169,30 @@ class SigmaRule(RuleType):
             isinstance(doc.get('logsource'), dict) and
             isinstance(doc.get('detection'), dict)
         )
+
+    ##############################
+    #     DOCUMENTATION SIGNALS  #
+    ##############################
+    def documentation_signals(self, content: str) -> Dict[str, bool]:
+        """Sigma-specific documentation checklist, straight from the spec's
+        optional-but-conventional fields."""
+        try:
+            rule = yaml.safe_load(content)
+        except Exception:
+            return {}
+        if not isinstance(rule, dict):
+            return {}
+        references = rule.get("references")
+        falsepositives = rule.get("falsepositives")
+        # Named "documents_*" rather than "has_*" — this reports whether the
+        # rule's metadata DOCUMENTS these fields (e.g. lists known FP
+        # scenarios), not whether the rule itself has false positives.
+        return {
+            "documents_references": isinstance(references, list) and len(references) > 0,
+            "documents_falsepositives": isinstance(falsepositives, list) and len(falsepositives) > 0,
+            "documents_severity_level": bool(rule.get("level")),
+            "documents_taxonomy_tags": isinstance(rule.get("tags"), list) and len(rule.get("tags")) > 0,
+        }
 
     ##############################
     #         FILE LISTING       #

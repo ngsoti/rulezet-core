@@ -82,5 +82,16 @@ class RuleType(ABC):
     def find_rule_in_repo(self, repo_dir: str, rule_id: int) -> tuple[str, bool]:
         """Extract one rule with his id in a repo (to_update)."""
         ...
-        
+
+    def documentation_signals(self, content: str) -> Dict[str, bool]:
+        """Optional per-format documentation checklist (references, false
+        positives, severity level, ATT&CK-equivalent tagging, etc — whatever
+        this format conventionally documents beyond the common
+        title/description/author/license already checked generically).
+        An empty dict means "not implemented for this format" — callers must
+        not penalize a rule for lacking a signal its own format never
+        defines, only average over whatever signals ARE returned.
+        """
+        return {}
+
     # other method to do ....
