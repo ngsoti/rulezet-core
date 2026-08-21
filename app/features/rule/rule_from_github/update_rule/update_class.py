@@ -129,6 +129,19 @@ class Update_class:
             if sha_before:
                 changed_files = get_changed_files_between(repo_dir, sha_before, sha_after)
 
+            # Rules whose github_path was never recorded (matched before that field
+            # existed, or from a run that matched but didn't persist it back — see
+            # the persist-on-match fix in process() below) can't be resolved through
+            # the incremental file-diff: we don't know which file to compare them
+            # against, so an unchanged/empty diff would never give them a chance to
+            # be (re)matched and they'd be wrongly reported "not found" on every
+            # single future check. As long as any such rule exists for this source,
+            # skip the incremental optimization and walk every file so they get a
+            # real look — once matched, their github_path is backfilled and this
+            # source goes back to the fast incremental path on the next run.
+            has_unknown_path_rules = any(not r.github_path for r in rules_listes_github)
+            walk_changed_files = None if has_unknown_path_rules else changed_files
+
             # Split rules into "file changed since last check" (re-check) vs
             # "file untouched" (report as unchanged immediately, no re-parse/re-diff
             # needed). A repo with no new commits resolves its whole rule set this
@@ -137,12 +150,12 @@ class Update_class:
             unchanged_count = 0
             for r in rules_listes_github:
                 if not r.github_path:
-                    rel_path = None
-                elif os.path.isabs(r.github_path):
-                    rel_path = os.path.relpath(r.github_path, repo_dir)
-                else:
-                    rel_path = r.github_path
-                if changed_files is not None and rel_path and rel_path not in changed_files:
+                    # Unknown path — always needs a real (re)match against the walk
+                    # below, never assumed unchanged/found without evidence.
+                    self.rules_to_process[r.id] = {"title": r.title, "github_path": r.github_path}
+                    continue
+                rel_path = os.path.relpath(r.github_path, repo_dir) if os.path.isabs(r.github_path) else r.github_path
+                if changed_files is not None and rel_path not in changed_files:
                     unchanged_count += 1
                     with self.lock:
                         self.rule_status_list.append({
@@ -163,7 +176,7 @@ class Update_class:
 
             if os.path.exists(repo_dir):
                 load_all_rule_formats()
-                subclasses = RuleType.__subclasses__()
+                rule_instances = [RuleClass() for RuleClass in RuleType.__subclasses__()]
                 for root, dirs, files in os.walk(repo_dir, followlinks=False):
                     dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('_')
                                and not os.path.islink(os.path.join(root, d))]
@@ -177,25 +190,44 @@ class Update_class:
                         if os.path.islink(filepath):
                             continue
                         rel_path = os.path.relpath(filepath, repo_dir)
-                        if changed_files is not None and rel_path not in changed_files:
+                        if walk_changed_files is not None and rel_path not in walk_changed_files:
                             continue
 
-                        for RuleClass in subclasses:
-                            rule_instance = RuleClass()
-                            if not rule_instance.get_rule_files(file):
-                                continue
-
-                            # Read + split into individual rules now (once) so each
-                            # queue item is one rule, not one file — see session_class.py
-                            # for the same fix on the import side.
+                        # Multiple formats can share an extension (ATR + Sigma both
+                        # claim .yml/.yaml) — picking the first one that matches by
+                        # extension and stopping there (the old behavior) meant every
+                        # such file was permanently claimed by whichever format is
+                        # declared first, even when that format's own detect() says
+                        # it's not a match and extracts zero rules. The other format
+                        # (e.g. Sigma) never got a turn, so its rules were silently
+                        # skipped on every walk. Gather every extension match and use
+                        # detect() on the content to disambiguate, same as the import
+                        # side (session_class.py) already does.
+                        candidates = [ri for ri in rule_instances if ri.get_rule_files(file)]
+                        if not candidates:
+                            continue
+                        if len(candidates) > 1:
                             try:
-                                rules_text = rule_instance.extract_rules_from_file(filepath)
+                                with open(filepath, 'r', encoding='utf-8', errors='replace') as _fh:
+                                    _sample = _fh.read(8192)
+                                detected = [ri for ri in candidates
+                                            if hasattr(ri, 'detect') and ri.detect(_sample)]
+                                rule_instance = detected[0] if detected else candidates[0]
                             except Exception:
-                                rules_text = []
-                            for rule_text in rules_text:
-                                cp += 1
-                                self.jobs.put((cp, filepath, rule_instance, rule_text))
-                            break
+                                rule_instance = candidates[0]
+                        else:
+                            rule_instance = candidates[0]
+
+                        # Read + split into individual rules now (once) so each
+                        # queue item is one rule, not one file — see session_class.py
+                        # for the same fix on the import side.
+                        try:
+                            rules_text = rule_instance.extract_rules_from_file(filepath)
+                        except Exception:
+                            rules_text = []
+                        for rule_text in rules_text:
+                            cp += 1
+                            self.jobs.put((cp, filepath, rule_instance, rule_text))
 
             self.total = cp + unchanged_count
         elif self.mode == "by_rule":
@@ -433,6 +465,16 @@ class Update_class:
                             user = db.session.merge(user)
                             if existing_rule.user_id == user.id or user.is_admin():
 
+                                # Backfill github_path once matched so the NEXT sync's
+                                # incremental diff can map this rule to its file instead
+                                # of relying on a full re-walk (see repo_unchanged in
+                                # start() — an unknown path here is what makes every
+                                # rule read "not found" the moment the repo has no new
+                                # upstream commits to walk).
+                                if existing_rule.github_path != metadata["github_path"]:
+                                    existing_rule.github_path = metadata["github_path"]
+                                    db.session.commit()
+
                                 # Check for rule updates
                                 message_dict, success, new_rule_content = Check_for_rule_updates(existing_rule.to_string, rule_text, existing_rule.id)
 
@@ -511,6 +553,12 @@ class Update_class:
                             user = db.session.merge(user)
                             if existing_rule.user_id == user.id or user.is_admin():
 
+                                # Backfill github_path even on a failed/invalid update —
+                                # see the matching comment in the Case 1.1 branch above.
+                                if existing_rule.github_path != metadata["github_path"]:
+                                    existing_rule.github_path = metadata["github_path"]
+                                    db.session.commit()
+
                                 # --- create history for the failed update ---
                                 history_id = RuleModel.create_rule_history({
                                     "id": existing_rule.id,
@@ -588,7 +636,10 @@ class Update_class:
                                 "message": found_rule_text or "Rule not found in repository.",
                                 "found": False,
                                 "update_available": False,
-                                "rule_syntax_valid": False,
+                                # Never checked, not "checked and invalid" — leave syntax
+                                # validity unknown so the UI doesn't pair "Not found" with
+                                # a misleading "Invalid syntax" badge.
+                                "rule_syntax_valid": None,
                                 "error": True,
                                 "history_id": None
                             })
@@ -654,7 +705,9 @@ class Update_class:
                         "message": "Rule from Rulezet not found in the repository.",
                         "found": False,
                         "update_available": False,
-                        "rule_syntax_valid": False,
+                        # Never checked, not "checked and invalid" — see the matching
+                        # comment in the by_rule "not found" branch above.
+                        "rule_syntax_valid": None,
                         "error": True,
                         "history_id": None
                     })
