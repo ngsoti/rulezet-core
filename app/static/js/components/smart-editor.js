@@ -36,8 +36,9 @@ const _KNOWN_HLJS = new Set([
     'bash','c','cpp','css','diff','go','html','http','java','javascript','json',
     'kotlin','lua','markdown','nginx','php','plaintext','python','ruby','rust',
     'shell','sql','swift','typescript','xml','yaml','text',
+    'yara', // registered at runtime — see _register_extra_languages() below
 ])
-const _LANG_ALIASES = { nse:'lua', sigma:'yaml', wazuh:'xml', yara:'text', suricata:'text', zeek:'text', crs:'text', nova:'text', kql:'sql' }
+const _LANG_ALIASES = { nse:'lua', sigma:'yaml', wazuh:'xml', suricata:'text', zeek:'text', crs:'text', nova:'text', kql:'sql' }
 function _resolve_lang(lang) {
     const mapped = _LANG_ALIASES[lang] || lang
     return _KNOWN_HLJS.has(mapped) ? mapped : 'text'
@@ -47,13 +48,25 @@ let _hljs_p   = null
 let _marked_p = null
 let _purify_p = null
 
+async function _register_extra_languages(hljs) {
+    // Same YARA grammar CodeViewer registers — highlight.js ships none, and
+    // this project's hljs.min.js is a minimal custom build without it.
+    if (!hljs.getLanguage('yara')) {
+        const { default: yaraLanguage } = await import('/static/js/components/hljs-yara.js')
+        hljs.registerLanguage('yara', yaraLanguage)
+    }
+}
+
 function load_hljs() {
-    if (window.hljs)  return Promise.resolve(window.hljs)
     if (_hljs_p) return _hljs_p
+    if (window.hljs) {
+        _hljs_p = _register_extra_languages(window.hljs).then(() => window.hljs)
+        return _hljs_p
+    }
     _hljs_p = new Promise((res, rej) => {
         const s = document.createElement('script')
         s.src   = '/static/js/hljs.min.js'
-        s.onload  = () => res(window.hljs)
+        s.onload  = () => _register_extra_languages(window.hljs).then(() => res(window.hljs))
         s.onerror = rej
         document.head.appendChild(s)
     })

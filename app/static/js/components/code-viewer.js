@@ -32,13 +32,27 @@ const { ref, computed, watch, onMounted, nextTick } = Vue
 
 let _hljs_ready = null
 
+async function register_extra_languages(hljs) {
+    // Languages missing from the bundled hljs.min.js (a minimal custom build,
+    // see KNOWN_HLJS_LANGS below) that this project ships its own grammar for.
+    // Awaited before load_hljs() resolves, so callers never race a highlight
+    // call against the registration.
+    if (!hljs.getLanguage('yara')) {
+        const { default: yaraLanguage } = await import('/static/js/components/hljs-yara.js')
+        hljs.registerLanguage('yara', yaraLanguage)
+    }
+}
+
 function load_hljs() {
     if (_hljs_ready) return _hljs_ready
-    if (window.hljs) { _hljs_ready = Promise.resolve(window.hljs); return _hljs_ready }
+    if (window.hljs) {
+        _hljs_ready = register_extra_languages(window.hljs).then(() => window.hljs)
+        return _hljs_ready
+    }
     _hljs_ready = new Promise((resolve, reject) => {
         const s = document.createElement('script')
         s.src = '/static/js/hljs.min.js'
-        s.onload = () => resolve(window.hljs)
+        s.onload = () => register_extra_languages(window.hljs).then(() => resolve(window.hljs))
         s.onerror = () => reject(new Error('highlight.js failed to load'))
         document.head.appendChild(s)
     })
@@ -159,6 +173,7 @@ const KNOWN_HLJS_LANGS = new Set([
     'bash','c','cpp','css','diff','go','html','http','java','javascript','json',
     'kotlin','lua','markdown','nginx','php','plaintext','python','ruby','rust',
     'shell','sql','swift','typescript','xml','yaml','text',
+    'yara', // registered at runtime — see register_extra_languages() above
 ])
 
 const LANG_ALIASES = {
@@ -166,7 +181,6 @@ const LANG_ALIASES = {
     sigma: 'yaml',    // Sigma rules are YAML
     atr: 'yaml',      // ATR format is YAML
     wazuh: 'xml',     // Wazuh rules are XML
-    yara: 'text',     // no hljs yara grammar
     suricata: 'text',
     zeek: 'text',
     crs: 'text',
