@@ -6,6 +6,7 @@ the DB row on every mutation so a restart is never needed to pick up a
 change. See docs/design/admin_task_scheduler.md for the full design.
 """
 import datetime
+import re
 import uuid as _uuid_mod
 
 from flask import current_app
@@ -16,6 +17,18 @@ from app.features.admin.task_scheduler.task_types import TASK_TYPES
 from app.features.admin.task_scheduler.scheduler_engine import _creates_cycle
 
 VALID_TRIGGER_MODES = ('once', 'daily', 'weekly', 'monthly', 'cron', 'after_task')
+
+_EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+
+
+def _clean_notify_emails(raw):
+    """Defense-in-depth: drop anything that isn't a plausible single email
+    address before it ever reaches Message(recipients=...) — Flask-Mail
+    already rejects CRLF in a header value, but this feature shouldn't rely
+    on that alone."""
+    if not raw:
+        return []
+    return [e.strip() for e in raw if isinstance(e, str) and _EMAIL_RE.match(e.strip())]
 
 
 # ─── Workflows — the container an admin creates first, then assigns tasks into ──
@@ -51,7 +64,7 @@ def create_workflow(data, editor):
         is_active=bool(data.get('is_active', True)),
         notify_on_failure=bool(data.get('notify_on_failure', True)),
         notify_on_success=bool(data.get('notify_on_success', False)),
-        notify_emails=data.get('notify_emails') or [],
+        notify_emails=_clean_notify_emails(data.get('notify_emails')),
     )
     db.session.add(workflow)
     db.session.commit()
@@ -73,7 +86,7 @@ def update_workflow(workflow_uuid, data):
     workflow.notify_on_failure = bool(data.get('notify_on_failure', workflow.notify_on_failure))
     workflow.notify_on_success = bool(data.get('notify_on_success', workflow.notify_on_success))
     if 'notify_emails' in data:
-        workflow.notify_emails = data.get('notify_emails') or []
+        workflow.notify_emails = _clean_notify_emails(data.get('notify_emails'))
     db.session.commit()
     return workflow, None
 

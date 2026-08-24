@@ -7,6 +7,7 @@ app/features/account/account_core.py's send_verify_email) rather than
 inventing a new one.
 """
 from flask_mail import Message
+from markupsafe import escape
 
 from app import mail
 
@@ -39,7 +40,7 @@ def maybe_send_task_alert(workflow, task, job):
     if kind == 'failure' and job.error:
         error_html = f"""
                 <div style="margin-top:16px;padding:14px 16px;background:#fdf2f2;border:1px solid #f5c6cb;border-radius:8px;">
-                    <p style="margin:0;font-size:13px;color:#721c24;font-family:monospace;white-space:pre-wrap;">{job.error}</p>
+                    <p style="margin:0;font-size:13px;color:#721c24;font-family:monospace;white-space:pre-wrap;">{escape(job.error)}</p>
                 </div>"""
 
     try:
@@ -51,11 +52,11 @@ def maybe_send_task_alert(workflow, task, job):
             </div>
             <div style="padding: 30px; line-height: 1.6; color: #333333; background-color: #ffffff;">
                 <p style="font-size: 15px;">
-                    Workflow <strong>"{workflow.title}"</strong> —
+                    Workflow <strong>"{escape(workflow.title)}"</strong> —
                     <span style="color:{status_color};font-weight:bold;">{status_label}</span>
                 </p>
-                <p style="font-size: 15px;">Task: <strong>{task.title}</strong></p>
-                <p style="font-size: 13px; color: #7f8c8d;">Job type: {job.job_type}</p>
+                <p style="font-size: 15px;">Task: <strong>{escape(task.title)}</strong></p>
+                <p style="font-size: 13px; color: #7f8c8d;">Job type: {escape(job.job_type)}</p>
                 {error_html}
                 <div style="text-align:center;margin-top:24px;">
                     <a href="/admin/tasks/?workflow={workflow.uuid}"
@@ -103,7 +104,7 @@ def maybe_send_workflow_run_alert(workflow, kind, summary=None):
     heading, color, status_label = labels[kind]
     subject = f"[Rulezet] Workflow \"{workflow.title}\" {status_label}"
 
-    summary_html = f'<p style="font-size: 14px; color: #555;">{summary}</p>' if summary else ''
+    summary_html = f'<p style="font-size: 14px; color: #555;">{escape(summary)}</p>' if summary else ''
 
     try:
         msg = Message(subject, recipients=recipients)
@@ -114,7 +115,7 @@ def maybe_send_workflow_run_alert(workflow, kind, summary=None):
             </div>
             <div style="padding: 30px; line-height: 1.6; color: #333333; background-color: #ffffff;">
                 <p style="font-size: 15px;">
-                    Workflow <strong>"{workflow.title}"</strong> —
+                    Workflow <strong>"{escape(workflow.title)}"</strong> —
                     <span style="color:{color};font-weight:bold;">{status_label}</span>
                 </p>
                 {summary_html}

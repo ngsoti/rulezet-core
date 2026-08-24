@@ -1114,3 +1114,86 @@ def test_paused_child_does_not_fire_for_a_standalone_task_run(app):
         assert AdminTaskRun.query.filter_by(schedule_id=child.id).first() is None, (
             "a paused task should NOT fire outside of an explicit workflow launch"
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Security hardening — alert emails escape admin-controlled text; notify_emails
+#  is filtered to plausible addresses before ever reaching Message(recipients=)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_task_alert_email_escapes_title_and_error(app, monkeypatch):
+    from app.features.admin.task_scheduler import notifications
+
+    sent = []
+    monkeypatch.setattr(notifications.mail, 'send', lambda msg: sent.append(msg))
+
+    with app.app_context():
+        admin = User.query.filter_by(email="admin@admin.admin").first()
+        workflow, _ = TaskSchedulerModel.create_workflow({"title": "<img src=x onerror=alert(1)>"}, admin)
+        schedule, _ = TaskSchedulerModel.create_schedule({
+            "title": "<script>alert(document.cookie)</script>", "task_type": "db_backup", "target_payload": {},
+            "trigger_mode": "once",
+            "run_once_at": (datetime.datetime.utcnow() + datetime.timedelta(days=1)).isoformat(),
+            "workflow_uuid": workflow.uuid,
+        }, admin)
+        TaskSchedulerModel.run_schedule_now(schedule.uuid)
+        run = AdminTaskRun.query.filter_by(schedule_id=schedule.id).first()
+        job = BackgroundJob.query.filter_by(uuid=run.job_uuid).first()
+        job.status = 'failed'
+        job.error = '<b onmouseover=alert(1)>boom</b>'
+        db.session.commit()
+        scheduler_engine.on_job_finished(job)
+
+        assert len(sent) == 1
+        html = sent[0].html
+        assert '<script>' not in html
+        assert '<img src=x onerror=' not in html
+        assert '<b onmouseover=' not in html
+        assert '&lt;script&gt;' in html
+        assert '&lt;img src=x onerror=' in html
+
+
+def test_workflow_run_alert_email_escapes_title(app, monkeypatch):
+    from app.features.admin.task_scheduler import notifications
+
+    sent = []
+    monkeypatch.setattr(notifications.mail, 'send', lambda msg: sent.append(msg))
+
+    with app.app_context():
+        admin = User.query.filter_by(email="admin@admin.admin").first()
+        workflow, _ = TaskSchedulerModel.create_workflow(
+            {"title": "<script>alert(1)</script>", "notify_on_success": True}, admin)
+        TaskSchedulerModel.create_schedule({
+            "title": "Task", "task_type": "db_backup", "target_payload": {},
+            "trigger_mode": "daily", "hour": 3, "minute": 0,
+            "workflow_uuid": workflow.uuid,
+        }, admin)
+
+        TaskSchedulerModel.run_workflow_now(workflow.uuid, triggered_by=admin)
+        root_run = AdminTaskRun.query.filter_by(schedule_id=workflow.tasks[0].id).first()
+        root_job = BackgroundJob.query.filter_by(uuid=root_run.job_uuid).first()
+        root_job.status = 'done'
+        db.session.commit()
+        scheduler_engine.on_job_finished(root_job)
+
+        assert len(sent) == 2
+        for msg in sent:
+            assert '<script>' not in msg.html
+            assert '&lt;script&gt;' in msg.html
+
+
+def test_notify_emails_filters_out_implausible_and_crlf_entries(app):
+    with app.app_context():
+        admin = User.query.filter_by(email="admin@admin.admin").first()
+        workflow, err = TaskSchedulerModel.create_workflow({
+            "title": "Filtered recipients",
+            "notify_emails": [
+                "teammate@example.com",
+                "not-an-email",
+                "attacker@evil.com\r\nBcc: victim@example.com",
+                "",
+                None,
+            ],
+        }, admin)
+        assert err is None
+        assert workflow.notify_emails == ["teammate@example.com"]
