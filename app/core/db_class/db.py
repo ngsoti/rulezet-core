@@ -1901,10 +1901,54 @@ class GithubSyncRunRepo(db.Model):
         }
 
 
+class AdminWorkflow(db.Model):
+    """A named container of AdminTaskSchedule rows (see
+    docs/design/admin_task_scheduler.md) — the unit an admin creates first,
+    then assigns tasks into, modeled on a GitHub Actions workflow file
+    containing several jobs. A task's 'after another task' dependency is
+    always scoped to tasks within the same workflow."""
+    __tablename__ = "admin_workflow"
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid        = db.Column(db.String(36), index=True, unique=True)
+    title       = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    editor_id   = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    is_active   = db.Column(db.Boolean, default=True, index=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    editor = db.relationship("User")
+    tasks  = db.relationship("AdminTaskSchedule", backref="workflow", cascade="all, delete-orphan", lazy=True,
+                              order_by="AdminTaskSchedule.created_at")
+
+    def to_json(self):
+        task_count = len(self.tasks)
+        active_task_count = sum(1 for t in self.tasks if t.is_active)
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "title": self.title,
+            "description": self.description,
+            "editor": {
+                "id": self.editor.id,
+                "name": f"{self.editor.first_name} {self.editor.last_name}".strip(),
+                "avatar": self.editor.get_avatar_url(),
+            } if self.editor else None,
+            "is_active": self.is_active,
+            "task_count": task_count,
+            "active_task_count": active_task_count,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else None,
+            "updated_at": self.updated_at.strftime('%Y-%m-%d %H:%M') if self.updated_at else None,
+        }
+
+
 class AdminTaskSchedule(db.Model):
     """Generalized admin task scheduler (see docs/design/admin_task_scheduler.md).
-    Phase 1: a single optional parent dependency (depends_on_schedule_id /
-    depends_on_condition) — multi-parent AND/OR is a Phase 3 addition
+    Belongs to an AdminWorkflow. Phase 1: a single optional parent
+    dependency (depends_on_schedule_id / depends_on_condition), always
+    within the same workflow — multi-parent AND/OR is a Phase 3 addition
     (AdminTaskDependency) once a linear chain proves too limiting."""
     __tablename__ = "admin_task_schedule"
 
@@ -1913,6 +1957,7 @@ class AdminTaskSchedule(db.Model):
     title       = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=True)
     editor_id   = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    workflow_id = db.Column(db.Integer, db.ForeignKey("admin_workflow.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # Key into the TASK_TYPES registry (task_scheduler/task_types.py) — e.g. 'quality_score'.
     task_type = db.Column(db.String(50), nullable=False, index=True)
@@ -1968,6 +2013,8 @@ class AdminTaskSchedule(db.Model):
                 "name": f"{self.editor.first_name} {self.editor.last_name}".strip(),
                 "avatar": self.editor.get_avatar_url(),
             } if self.editor else None,
+            "workflow_id": self.workflow_id,
+            "workflow_uuid": self.workflow.uuid if self.workflow else None,
             "task_type": self.task_type,
             "target_payload": self.target_payload,
             "is_active": self.is_active,

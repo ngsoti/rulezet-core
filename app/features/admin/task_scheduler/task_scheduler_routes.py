@@ -1,9 +1,11 @@
 """
 task_scheduler_routes.py — admin-only Blueprint for the generalized Admin
-Task Scheduler (CRUD + registry + pickers + manual run). All DB/business
-logic lives in task_scheduler_core.py; execution happens through the
-existing generic BackgroundJob pipeline (job_worker.py), exactly like every
-other admin bulk action. See docs/design/admin_task_scheduler.md.
+Task Scheduler (CRUD + registry + pickers + manual run). Tasks always live
+inside a Workflow (create the workflow first, then assign tasks into it —
+modeled on a GitHub Actions workflow file containing several jobs). All
+DB/business logic lives in task_scheduler_core.py; execution happens
+through the existing generic BackgroundJob pipeline (job_worker.py), exactly
+like every other admin bulk action. See docs/design/admin_task_scheduler.md.
 """
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
@@ -27,6 +29,10 @@ def _require_admin():
         return redirect(url_for('account.login'))
     if not current_user.is_admin():
         abort(403)
+
+
+def _workflow_or_none(workflow_uuid):
+    return TaskSchedulerModel.get_workflow_by_uuid(workflow_uuid) if workflow_uuid else None
 
 
 @task_scheduler_blueprint.route('/', methods=['GET'])
@@ -61,10 +67,93 @@ def connectors():
     }), 200
 
 
-# ─── CRUD (JSON API used by the Vue app) ──────────────────────────────────────
+# ─── Workflows (JSON API used by the Vue app) ─────────────────────────────────
+
+@task_scheduler_blueprint.route('/workflows', methods=['GET'])
+def list_workflows():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    search = request.args.get('search', '', type=str).strip()
+    sort = request.args.get('sort', 'created_at', type=str)
+    direction = request.args.get('dir', 'desc', type=str)
+
+    pagination = TaskSchedulerModel.get_workflow_list_page(page, per_page, search, sort, direction)
+    return jsonify({
+        "workflows": [w.to_json() for w in pagination.items],
+        "total": pagination.total,
+        "total_pages": pagination.pages,
+    }), 200
+
+
+@task_scheduler_blueprint.route('/workflows/<uuid>', methods=['GET'])
+def get_workflow(uuid):
+    workflow = _workflow_or_none(uuid)
+    if not workflow:
+        return jsonify({"message": "Workflow not found.", "toast_class": "danger-subtle"}), 404
+    return jsonify({"workflow": workflow.to_json()}), 200
+
+
+@task_scheduler_blueprint.route('/workflows/create', methods=['POST'])
+def create_workflow():
+    data = request.get_json(silent=True) or {}
+    workflow, err = TaskSchedulerModel.create_workflow(data, current_user)
+    if err:
+        return jsonify({"message": err, "toast_class": "danger-subtle"}), 400
+
+    log_activity("admin.workflow_created",
+                 f"Created workflow '{workflow.title}'",
+                 target_type="admin_workflow",
+                 target_uuid=workflow.uuid,
+                 icon="fa-solid fa-diagram-project")
+    return jsonify({
+        "message": "Workflow created.",
+        "toast_class": "success-subtle",
+        "workflow": workflow.to_json(),
+    }), 201
+
+
+@task_scheduler_blueprint.route('/workflows/<uuid>/update', methods=['POST'])
+def update_workflow(uuid):
+    data = request.get_json(silent=True) or {}
+    workflow, err = TaskSchedulerModel.update_workflow(uuid, data)
+    if err:
+        status = 404 if err == "Workflow not found." else 400
+        return jsonify({"message": err, "toast_class": "danger-subtle"}), status
+
+    log_activity("admin.workflow_updated",
+                 f"Updated workflow '{workflow.title}'",
+                 target_type="admin_workflow",
+                 target_uuid=workflow.uuid,
+                 icon="fa-solid fa-diagram-project")
+    return jsonify({
+        "message": "Workflow updated.",
+        "toast_class": "success-subtle",
+        "workflow": workflow.to_json(),
+    }), 200
+
+
+@task_scheduler_blueprint.route('/workflows/<uuid>/delete', methods=['POST'])
+def delete_workflow(uuid):
+    ok = TaskSchedulerModel.delete_workflow(uuid)
+    if not ok:
+        return jsonify({"message": "Workflow not found.", "toast_class": "danger-subtle"}), 404
+
+    log_activity("admin.workflow_deleted",
+                 "Deleted a workflow (and its tasks)",
+                 target_type="admin_workflow",
+                 target_uuid=uuid,
+                 icon="fa-solid fa-diagram-project")
+    return jsonify({"message": "Workflow and its tasks deleted.", "toast_class": "success-subtle"}), 200
+
+
+# ─── Tasks — always scoped to a workflow (JSON API used by the Vue app) ────────
 
 @task_scheduler_blueprint.route('/list', methods=['GET'])
 def list_schedules():
+    workflow = _workflow_or_none(request.args.get('workflow_uuid'))
+    if not workflow:
+        return jsonify({"message": "Workflow not found.", "toast_class": "danger-subtle"}), 404
+
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     search = request.args.get('search', '', type=str).strip()
@@ -72,7 +161,7 @@ def list_schedules():
     direction = request.args.get('dir', 'desc', type=str)
     task_type = request.args.get('task_type', None, type=str)
 
-    pagination = TaskSchedulerModel.get_schedule_list_page(page, per_page, search, sort, direction, task_type)
+    pagination = TaskSchedulerModel.get_schedule_list_page(workflow.id, page, per_page, search, sort, direction, task_type)
     return jsonify({
         "schedules": [s.to_json() for s in pagination.items],
         "total": pagination.total,
@@ -82,12 +171,17 @@ def list_schedules():
 
 @task_scheduler_blueprint.route('/picker', methods=['GET'])
 def picker():
-    """Lightweight list for the 'after which task' dependency select —
-    excludes exclude_uuid (the schedule being edited) so it can't depend on
-    itself in the dropdown (the server still re-validates on save)."""
+    """Lightweight list for the 'after which task' dependency select, scoped
+    to one workflow — excludes exclude_uuid (the task being edited) so it
+    can't depend on itself in the dropdown (the server still re-validates
+    on save)."""
     from app.core.db_class.db import AdminTaskSchedule
+    workflow = _workflow_or_none(request.args.get('workflow_uuid'))
+    if not workflow:
+        return jsonify({"message": "Workflow not found.", "toast_class": "danger-subtle"}), 404
+
     exclude_uuid = request.args.get('exclude_uuid')
-    query = AdminTaskSchedule.query.order_by(AdminTaskSchedule.title.asc())
+    query = AdminTaskSchedule.query.filter_by(workflow_id=workflow.id).order_by(AdminTaskSchedule.title.asc())
     if exclude_uuid:
         query = query.filter(AdminTaskSchedule.uuid != exclude_uuid)
     return jsonify({
@@ -151,9 +245,13 @@ def delete(uuid):
 @task_scheduler_blueprint.route('/bulk_delete', methods=['POST'])
 def bulk_delete():
     data = request.get_json(silent=True) or {}
+    workflow = _workflow_or_none(data.get('workflow_uuid'))
+    if not workflow:
+        return jsonify({"message": "Workflow not found.", "toast_class": "danger-subtle"}), 404
+
     mode = data.get('mode', 'partial')
     count = TaskSchedulerModel.bulk_delete_schedules(
-        mode, data.get('filters'), data.get('selected_uuids'), data.get('excluded_uuids')
+        workflow.id, mode, data.get('filters'), data.get('selected_uuids'), data.get('excluded_uuids')
     )
 
     log_activity("admin.task_schedule_bulk_deleted",
@@ -166,10 +264,14 @@ def bulk_delete():
 @task_scheduler_blueprint.route('/bulk_set_active', methods=['POST'])
 def bulk_set_active():
     data = request.get_json(silent=True) or {}
+    workflow = _workflow_or_none(data.get('workflow_uuid'))
+    if not workflow:
+        return jsonify({"message": "Workflow not found.", "toast_class": "danger-subtle"}), 404
+
     mode = data.get('mode', 'partial')
     is_active = bool(data.get('is_active', True))
     count = TaskSchedulerModel.bulk_set_active_schedules(
-        mode, data.get('filters'), data.get('selected_uuids'), data.get('excluded_uuids'), is_active
+        workflow.id, mode, data.get('filters'), data.get('selected_uuids'), data.get('excluded_uuids'), is_active
     )
 
     verb = 'activated' if is_active else 'paused'

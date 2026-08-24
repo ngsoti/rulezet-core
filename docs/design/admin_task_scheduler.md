@@ -1,10 +1,24 @@
 # Admin Task Scheduler — Design Plan
 
-> Status: design only, nothing is implemented. This document is the map for
-> a future implementation — it must stay readable and actionable months from
-> now. Based on a full inspection of the existing "Sync Schedule" system
-> (`/rule/github/manage`, "Sync Schedules" tab), which this generalizes
-> rather than reinvents.
+> Status: Phase 1 (§11) is implemented at `/admin/tasks/`. This document is
+> the map for the rest of the work — it must stay readable and actionable
+> months from now. Based on a full inspection of the existing "Sync
+> Schedule" system (`/rule/github/manage`, "Sync Schedules" tab), which this
+> generalizes rather than reinvents.
+>
+> **Two decisions made during Phase 1 implementation, superseding what this
+> document originally specified:**
+> 1. **Workflows.** Tasks are not created standalone — an admin creates a
+>    named `AdminWorkflow` first, then assigns tasks into it (modeled on a
+>    GitHub Actions workflow file containing several jobs). A task's
+>    `depends_on_schedule_id` is always scoped to another task in the same
+>    workflow. This adds a model (§1) and a UI level (§6) not in the
+>    original plan below — read those two sections with that in mind.
+> 2. **No PivoTick for the graph view (§7bis).** PivoTick is a
+>    force-directed layout engine, built for organic networks (rule/tag/
+>    attack graphs) — the wrong fit for a left-to-right pipeline where read
+>    order matters, like GitHub Actions' workflow graph. §7bis now
+>    describes the lightweight custom DAG view that was built instead.
 
 ## Context
 
@@ -61,9 +75,39 @@ construction and get reused **unchanged**:
 
 ## 1. Generalized data model
 
-Three new tables replace (or coexist with, see §8) the `GithubSyncSchedule*`
+Four new tables replace (or coexist with, see §8) the `GithubSyncSchedule*`
 tables. Naming: `AdminTask*` (the word "Schedule" alone no longer covers it
 since a task can be one-shot).
+
+### `AdminWorkflow` (implemented, Phase 1) — the container created first
+
+```python
+class AdminWorkflow(db.Model):
+    __tablename__ = "admin_workflow"
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid        = db.Column(db.String(36), index=True, unique=True)
+    title       = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    editor_id   = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    is_active   = db.Column(db.Boolean, default=True, index=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    tasks = db.relationship("AdminTaskSchedule", backref="workflow",
+                             cascade="all, delete-orphan", lazy=True)
+```
+
+An admin creates a workflow first (title + description, nothing else),
+*then* assigns tasks into it — `/admin/tasks/` lists workflows; opening one
+shows its own task list, KPIs, and graph view (§6). Deleting a workflow
+cascades to every task inside it (each task's live APScheduler trigger is
+unregistered first — see `delete_workflow()` in `task_scheduler_core.py`).
+A task's `depends_on_schedule_id` (below) is validated server-side to only
+ever point at another task in the *same* workflow — cross-workflow
+dependencies are rejected, the same way GitHub Actions jobs can only depend
+on other jobs in the same workflow file.
 
 ### `AdminTaskType` — not a table, a Python registry (§2)
 
@@ -82,6 +126,10 @@ class AdminTaskSchedule(db.Model):
     title       = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=True)
     editor_id   = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    # Every task belongs to a workflow (implemented, Phase 1) — the admin
+    # creates the AdminWorkflow first, then assigns tasks into it.
+    workflow_id = db.Column(db.Integer, db.ForeignKey("admin_workflow.id", ondelete="CASCADE"), nullable=False)
 
     # Key into the AdminTaskType registry (§2) — e.g. 'github_sync', 'quality_score'.
     task_type   = db.Column(db.String(50), nullable=False, index=True)
@@ -682,51 +730,86 @@ becomes multi-select (one row per chosen parent, each with its own
 success/failure/always choice), plus a radio "ALL of these conditions must
 hold" / "ANY ONE is enough" for `dependency_logic`.
 
-## 5. Routes (new blueprint `admin_task_scheduler_blueprint`, `/admin/tasks`)
+## 5. Routes (blueprint `task_scheduler_blueprint`, `/admin/tasks`, implemented Phase 1)
 
-Same pattern as `sync_schedule_routes.py`, generalized:
+Same pattern as `sync_schedule_routes.py`, generalized, plus a workflow
+layer (§1) that didn't exist in the original plan:
 
+**Workflows:**
+- `GET /admin/tasks/workflows` — pagination/search.
+- `GET /admin/tasks/workflows/<uuid>` — single workflow (feeds the detail
+  level's header when arriving via a `?workflow=<uuid>` deep link).
+- `POST /admin/tasks/workflows/create`, `POST /admin/tasks/workflows/<uuid>/update`,
+  `POST /admin/tasks/workflows/<uuid>/delete` — the last one cascades to
+  every task inside (unregistering each one's live APScheduler trigger
+  first).
+
+**Tasks — every one of these now requires/accepts a `workflow_uuid`:**
 - `GET /admin/tasks/types` — serializes the §2 registry.
-- `GET /admin/tasks/list` — pagination/search/sort (identical to
-  `schedule_list`, additionally filterable by `task_type`).
-- `GET /admin/tasks/picker` — lightweight `{id, uuid, title}` list to fill
-  the "after which task(s)" multi-select in the form.
-- `POST /admin/tasks/create`, `POST /admin/tasks/<uuid>/update`,
-  `POST /admin/tasks/<uuid>/delete` — identical, plus cycle-guard validation
-  (§4) when `trigger_mode == 'after_task'`.
+- `GET /admin/tasks/list` — requires `workflow_uuid` (404 if not found),
+  pagination/search/sort, additionally filterable by `task_type`.
+- `GET /admin/tasks/picker` — requires `workflow_uuid`; lightweight
+  `{id, uuid, title}` list, scoped to that workflow only, to fill the
+  "after which task" select in the form.
+- `POST /admin/tasks/create` — body includes `workflow_uuid`.
+  `POST /admin/tasks/<uuid>/update`, `POST /admin/tasks/<uuid>/delete` —
+  a task's workflow is fixed at creation (Phase 1 has no "move to another
+  workflow"); cycle-guard validation (§4) and same-workflow validation
+  (§1) both apply when `trigger_mode == 'after_task'`.
 - `POST /admin/tasks/bulk_delete`, `POST /admin/tasks/bulk_set_active` —
-  identical.
-- `POST /admin/tasks/<uuid>/run_now` — identical, reuses `_fire_schedule`.
-- `GET /admin/tasks/run/<uuid>` — a run detail page, reuses `<job-tracker>`
-  (§7) instead of the dedicated multi-repo report page (that one stays
-  specific to GitHub sync via `sync_run_detail`, kept for that exact case —
-  every other task type has only ONE `BackgroundJob` per run, not a
-  multi-repo group, so `JobTracker` alone is enough).
+  body includes `workflow_uuid`, scoping the bulk action to that workflow
+  even in `mode: 'all'`.
+- `POST /admin/tasks/<uuid>/run_now` — reuses `_fire_schedule`.
 
-## 6. UI — a full standalone admin section
+Not yet built: `GET /admin/tasks/run/<uuid>` (a dedicated run detail page)
+— Phase 1 shows `last_run_at`/`last_run_status` directly in the task list
+instead and leaves deeper run history to the existing `/admin/jobs/list`,
+since every task type other than GitHub Sync has exactly one
+`BackgroundJob` per run (no multi-repo grouping to justify a dedicated page
+yet).
 
-New template `app/templates/admin/task_scheduler.html`, **not** a tab inside
-`manage_github.html` (a standalone section was explicitly requested).
-Structure identical to the CLAUDE.md style guide:
+## 6. UI — a full standalone admin section, two levels (implemented, Phase 1)
 
-- Breadcrumb + `.explorer-banner` (icon `fa-solid fa-diagram-project` or
-  `fa-solid fa-clock-rotate-left`).
-- `dr-nav` row with `{{ anav.admin_nav_toggle() }}` — new "Task Scheduler"
-  entry in `admin_nav.html` (the "System" section, next to "Jobs").
-- KPI cards: active tasks, paused tasks, next scheduled run, recent
-  failures, **tasks needing attention** (auto-disabled or currently in a
-  failing streak — §9bis, so an admin sees it at a glance even without
-  reading email).
+Single template `app/templates/admin/task_scheduler.html` at `/admin/tasks/`,
+**not** a tab inside `manage_github.html` (a standalone section was
+explicitly requested), and **not** a flat task list either — tasks are
+always created inside a workflow (§1), so the page has two client-side
+levels sharing one Vue app (no second Flask route/template — a `?workflow=
+<uuid>` query param makes the detail level bookmarkable/shareable, synced
+via `history.pushState`):
+
+**Level 1 — Workflows** (the landing view):
+- Breadcrumb + `.explorer-banner` (icon `fa-solid fa-diagram-project`).
+- `dr-nav` row with `{{ anav.admin_nav_toggle() }}` — "Task Scheduler" entry
+  in `admin_nav.html` (the "System" section, next to "Jobs").
+- KPI cards: total workflows, active workflows, total tasks across all
+  workflows.
+- Workflow list (`dt-table`): title/description, task count
+  (`active_task_count / task_count`), editor, active/paused status, created
+  date, actions (open/edit/delete — deleting cascades to every task inside).
+  Clicking a row opens that workflow's detail level.
+- Create/edit modal: title, description, active toggle — nothing else, a
+  workflow is just a named container.
+
+**Level 2 — Workflow detail** (opened by clicking a workflow):
+- A "← Back to workflows" button, and the breadcrumb/title switch to show
+  the workflow's own name and description.
+- KPI cards: total tasks, active, paused, next scheduled run (all scoped
+  to this workflow's tasks).
 - Task list — **near-verbatim copy** of the table/card block from
-  `manage_github.html`'s "Sync Schedules" section (lines 508-658), with:
-  - an extra "Type" column (registry icon + label) before "Frequency".
-  - a "Depends on" column showing the parent task title(s) when
-    `trigger_mode == 'after_task'`, otherwise "Frequency" as before.
-  - a visual flag on rows where `auto_disabled_reason` is set.
-  - the same per-row "Run now" button.
-- Creation/edit modal — §3.
-- **Dependency graph view**, using PivoTick — see §7bis (explicitly
-  requested, part of v1, not deferred).
+  `manage_github.html`'s "Sync Schedules" section (lines 508-658), with an
+  extra "Type" column (registry icon + label) and a "Trigger" column that
+  reads either the recurrence summary or "After '<parent title>' (on
+  success/failure/always)" for `after_task` tasks — plus a third view-toggle
+  button for the graph view (§7bis).
+- Creation/edit modal — §3, with the "after another task" picker
+  (`GET /admin/tasks/picker?workflow_uuid=...`) scoped to tasks in *this*
+  workflow only — a task cannot depend on a task from a different workflow
+  (rejected server-side too, not just hidden from the dropdown).
+
+Not yet built (§9bis, deferred to Phase 2 per §11): the "tasks needing
+attention" KPI and the `auto_disabled_reason` row flag — both depend on the
+circuit-breaker columns that don't exist until Phase 2's migration.
 
 ## 7. Execution tracking — reuse `JobTracker`, don't reinvent
 
@@ -738,81 +821,56 @@ report page needed. A task's run history (its list of `AdminTaskRun` rows)
 shows in an expandable panel per row of the task list — the same
 `<job-tracker>` component reused for the most recent run if still active.
 
-## 7bis. Graph visualization — PivoTick
+## 7bis. Graph visualization — a custom lightweight DAG, not PivoTick (implemented, Phase 1)
 
-Verified by inspecting the real code (not an assumption): **PivoTick is not
-a Vue component** — it's an independent force-directed graph engine, a real
-standalone TypeScript submodule (`app/modules/pivotick/`, built into
-`/static/js/pivotick.iife.js`, exposed as the global `window.Pivotick`). The
-`/admin/pivotick` page (`pivotick.py`, `pivotick_core.py`) is NOT the
-visualization itself — it's a **style editor** (colors/shapes/icons per
-node/edge type), stored in `PivotickGraphStyle` (one row per `graph_type`,
-columns `id`, `graph_type` (String(20), unique), `config` (JSON, NULL =
-default style), `updated_at`, `updated_by`).
+**Superseded decision, kept here for the record:** the original plan below
+this note called for reusing PivoTick. Verified by inspecting the real
+code: PivoTick (`app/modules/pivotick/`, built into
+`/static/js/pivotick.iife.js`, global `window.Pivotick`) is a genuine
+**force-directed** graph engine — nodes repel/attract into an organic
+layout that settles differently every render, which is exactly right for
+the rule/bundle/attack networks it already serves, and exactly wrong for a
+task pipeline where read order (what runs before what) is the entire
+point. GitHub Actions' own workflow graph is a fixed, stable, left-to-right
+DAG — not force-directed — and that's the shape actually wanted here. Since
+Phase 1's dependency model is single-parent only (a forest of trees, not a
+general graph), building that fixed layout by hand is simple: no cycle
+handling, no physics simulation, no settling time.
 
-Today only 2-3 `graph_type` values exist, hardcoded server-side
-(`GRAPH_TYPES` in `pivotick_core.py`): `'rule'`, `'bundle'`, `'attack'`.
-`save_style_config`/`get_style_config` **reject** any `graph_type` not on
-that list — `'task_schedule'` will need to be added to it.
+**What was built instead** — `app/static/js/admin/taskWorkflowGraph.js`
+(a small Vue component, `<task-workflow-graph :schedules="..." :task-types="...">`)
++ `app/static/css/admin/taskWorkflowGraph.css`:
 
-The engine itself knows nothing about MISP or rules — it just takes:
-```js
-{
-  nodes: [{ id, data: { label, sublabel, type, raw } }],
-  edges: [{ from, to, data: { label, type } }],
-}
-```
-where `type` (on both nodes and edges) is the key that maps into the
-current `graph_type`'s style config (e.g. for `'rule'`: node types
-`bundle`, `metadata`, `rule`, `tag`, `attack`, `vulnerability`; edge types
-`contains`, `related-to`, `tagged`). The current wrapper `initBundleGraph()`
-(`app/static/js/bundle/bundleMispGraph.js`) is **tightly coupled to MISP
-JSON** (`parseMispBundle`) — not reusable as-is, but that's not a problem:
-our case is simpler (no MISP to parse), we build `{nodes, edges}` directly
-from `AdminTaskSchedule` rows.
+1. **Layout**: group the workflow's tasks into columns by dependency depth
+   — roots (no parent, or `trigger_mode != 'after_task'`) in column 0, each
+   task one column to the right of its parent. A plain recursive walk from
+   each root, with a visited-set safety net (cycles are already rejected
+   server-side, so this only guards against a stale rendering edge case,
+   never triggers in practice).
+2. **Rendering**: CSS flexbox for the columns (`.twg-columns`, one
+   `.twg-column` per depth, tasks stacked vertically inside), and a plain
+   absolutely-positioned `<svg>` overlay (`pointer-events: none` so it never
+   blocks clicks) drawing one cubic-bezier `<path>` per dependency edge,
+   colored by condition (`success` = green `#198754`, `failure` = red
+   `#dc3545`, `always` = gray `#6c757d`).
+3. **Positioning the lines**: after mount (and on window resize, and
+   whenever the `schedules` prop changes), measure each node's
+   `getBoundingClientRect()` relative to the wrapping container and
+   recompute every path's endpoints — no library, just
+   `element.getBoundingClientRect()` diffing.
+4. Clicking a node emits `select` — the page opens that task's edit modal,
+   same as clicking its table row, keeping both views consistent.
+5. The graph always fetches the **full, unpaginated** task list for the
+   open workflow (`GET /admin/tasks/list?per_page=100&workflow_uuid=...`)
+   so no dependency edge ever points outside what's loaded — the 100-row
+   cap matches `get_schedule_list_page`'s existing `max_per_page`.
 
-**Integration plan**:
-
-1. `pivotick_core.py`: add `'task_schedule'` to `GRAPH_TYPES`, with a simple
-   default style — one node type per `task_type` in the registry (§2), a
-   single `depends_on` edge type (neutral color, arrow pointing in the
-   trigger direction: parent → dependent).
-2. New small JS wrapper `app/static/js/admin/taskScheduleGraph.js`
-   (parallel to `initBundleGraph`, but with no MISP parsing):
-   ```js
-   export function initTaskScheduleGraph(containerId, schedules, opts) {
-       const nodes = schedules.map(s => ({
-           id: s.uuid,
-           data: { label: s.title, sublabel: TASK_TYPES[s.task_type]?.label, type: s.task_type, raw: s },
-       }));
-       const edges = schedules.flatMap(s =>
-           (s.dependencies || []).map(dep => ({
-               from: dep.depends_on_schedule_uuid,
-               to:   s.uuid,
-               data: { label: dep.condition, type: 'depends_on' },
-           }))
-       );
-       // reuses fetchPivotickStyle/buildNodeStyleMap/edgeStyleFor/isDarkMode
-       // from app/static/js/pivotick/pivotickStyle.js as-is — same logic as
-       // bundleMispGraph.js, just without the MISP-parsing step.
-       return new window.Pivotick(document.getElementById(containerId), { nodes, edges }, opts);
-   }
-   ```
-3. In `task_scheduler.html`: a "Graph view" panel (toggled against the table
-   view, the same pattern as the existing table/card switch in
-   `manage_github.html`) calling `initTaskScheduleGraph('task-graph',
-   allSchedules, { graphType: 'task_schedule' })` — `allSchedules` comes
-   straight from the already-loaded `GET /admin/tasks/list` response (add
-   `dependencies` — schedule_id/uuid + condition — to its serialization), no
-   new route needed.
-4. Clicking a node in the graph opens that task's edit modal (the same
-   `onclick` as clicking its table row) — keeps both views consistent.
-
-Since the engine is already loaded elsewhere in the app (rule/bundle detail
-pages), no new third-party script needs to be added to the bundle — just
-`<script src="/static/js/pivotick.iife.js">` in `task_scheduler.html`'s
-`{% block head %}` if it isn't already global via `base.html` (to verify at
-implementation time).
+PivoTick itself is untouched — no new `graph_type`, no new style rows, no
+dependency added to this feature. If a future phase's multi-parent AND/OR
+graph (§4bis) turns out to need general-graph layout (cycles are still
+forbidden, but a node could have many parents *and* many children, which
+starts to look less like a clean pipeline), revisit PivoTick then — the
+custom renderer above was deliberately kept small enough to throw away.
 
 ## 8. Migrating the existing Sync Schedule
 
@@ -1091,36 +1149,38 @@ them before that feedback exists means testing against guesses instead of
 real failure modes. Ship in three phases instead, each one a usable,
 mergeable increment on its own.
 
-### Phase 1 — MVP: generalized scheduling, single linear dependency
+### Phase 1 — MVP: generalized scheduling, single linear dependency — ✅ DONE
 
 This phase alone already unlocks the concrete, immediate value: Quality
-Score, Field Parser, Similarity, MISP updates, ATT&CK updates, DB backup,
-Activity Log purge, and Connector pulls all become schedulable.
+Score, ATT&CK parsing, MISP updates, ATT&CK data updates, DB backup,
+Activity Log purge, and Connector pulls are all schedulable today. (Field
+Parser/Bulk Platform Tagging and Similarity/GitHub Import stayed out of the
+registry for now — see §9's prerequisite-work table; nothing stops adding
+them later via §2ter.)
 
-- §1: `AdminTaskSchedule` and `AdminTaskRun` **only** — skip
-  `AdminTaskDependency` for now (a single nullable
-  `depends_on_schedule_id` + `depends_on_condition` column directly on
-  `AdminTaskSchedule` is enough for a *linear* chain, exactly like the
-  original single-parent design this doc started from). Skip every §9bis
-  column too (`retry_count`, `timeout_minutes`, `concurrency_policy`,
-  `max_consecutive_failures`, `consecutive_failures`, `auto_disabled_reason`,
-  `notify_on_failure`, `notify_on_success`, `notify_emails`,
-  `on_missed_run`) — add them in Phase 2 as a follow-up migration, not now.
-- §2 + §2bis + §2ter: build the full registry as designed — this costs
-  nothing extra and is the whole point of the architecture.
-- §3: the form, but the "After another task" mode only offers **one**
-  parent (single `<select>`, not the multi-select + AND/OR radio) and only
-  the `success` / `failure` / `always` condition on that one parent.
+- §1: `AdminTaskSchedule` and `AdminTaskRun`, **plus `AdminWorkflow`** (a
+  scope addition made mid-implementation, not in the original plan — see
+  the note at the top of this document) — skip `AdminTaskDependency` for
+  now (a single nullable `depends_on_schedule_id` + `depends_on_condition`
+  column directly on `AdminTaskSchedule` is enough for a *linear* chain).
+  Skipped every §9bis column too — add them in Phase 2 as a follow-up
+  migration.
+- §2 + §2bis + §2ter: the registry, built as designed.
+- §3: the form, "After another task" mode offers **one** parent (single
+  `<select>`, scoped to the current workflow — not the multi-select + AND/OR
+  radio), with the `success` / `failure` / `always` condition on that parent.
 - §4: `on_job_finished` checks the single `depends_on_schedule_id` directly
   (no `_dependencies_satisfied()` yet, no freshness guard needed since
-  there's only ever one parent). Still add the cycle guard — trivial with
-  one parent (walk up until `None` or a repeat) and cheap insurance.
-- §5, §6, §7: routes, list/table UI, `<job-tracker>` reuse — as designed,
-  no reduction (this is where most of the day-to-day value is visible).
-- Skip §7bis (PivoTick graph) entirely for Phase 1 — a graph of straight
-  chains with no branching is barely more readable than the table.
-- §8: coexistence (option a) — do not touch `GithubSyncSchedule` yet.
-- §10: run verification steps 1-6 only.
+  there's only ever one parent). Cycle guard included.
+- §5, §6, §7: routes, the two-level Workflows → Workflow-detail UI (§6),
+  `<job-tracker>` reuse.
+- §7bis: **built**, but as a custom lightweight DAG view, not PivoTick —
+  see the superseded-decision note at the top of this document and the
+  rewritten §7bis for why.
+- §8: coexistence (option a) — `GithubSyncSchedule` untouched.
+- §10: verification steps 1-6 covered by `tests/rules/test_task_scheduler.py`
+  (workflow CRUD, task CRUD scoped to a workflow, run_now, cycle guard,
+  same-workflow dependency guard, success/failure-conditioned chaining).
 
 ### Phase 2 — Robustness (§9bis), once Phase 1 has run for a while
 

@@ -11,14 +11,81 @@ import uuid as _uuid_mod
 from flask import current_app
 
 from app import db
-from app.core.db_class.db import AdminTaskSchedule
+from app.core.db_class.db import AdminTaskSchedule, AdminWorkflow
 from app.features.admin.task_scheduler.task_types import TASK_TYPES
 from app.features.admin.task_scheduler.scheduler_engine import _creates_cycle
 
 VALID_TRIGGER_MODES = ('once', 'daily', 'weekly', 'monthly', 'cron', 'after_task')
 
 
-def _validate_trigger(data, schedule_id=None):
+# ─── Workflows — the container an admin creates first, then assigns tasks into ──
+
+def get_workflow_list_page(page=1, per_page=20, search='', sort='created_at', direction='desc'):
+    per_page = max(1, min(per_page or 20, 100))
+    query = AdminWorkflow.query
+    if search:
+        query = query.filter(AdminWorkflow.title.ilike(f"%{search}%"))
+    sort_col = {
+        'title': AdminWorkflow.title,
+        'created_at': AdminWorkflow.created_at,
+        'updated_at': AdminWorkflow.updated_at,
+    }.get(sort, AdminWorkflow.created_at)
+    query = query.order_by(sort_col.asc() if direction == 'asc' else sort_col.desc())
+    return query.paginate(page=page, per_page=per_page, max_per_page=100)
+
+
+def get_workflow_by_uuid(workflow_uuid):
+    return AdminWorkflow.query.filter_by(uuid=workflow_uuid).first()
+
+
+def create_workflow(data, editor):
+    title = (data.get('title') or '').strip()
+    if not title:
+        return None, "Title is required."
+
+    workflow = AdminWorkflow(
+        uuid=str(_uuid_mod.uuid4()),
+        title=title,
+        description=data.get('description'),
+        editor_id=editor.id,
+        is_active=bool(data.get('is_active', True)),
+    )
+    db.session.add(workflow)
+    db.session.commit()
+    return workflow, None
+
+
+def update_workflow(workflow_uuid, data):
+    workflow = AdminWorkflow.query.filter_by(uuid=workflow_uuid).first()
+    if not workflow:
+        return None, "Workflow not found."
+
+    title = (data.get('title') or '').strip()
+    if not title:
+        return None, "Title is required."
+
+    workflow.title = title
+    workflow.description = data.get('description')
+    workflow.is_active = bool(data.get('is_active', workflow.is_active))
+    db.session.commit()
+    return workflow, None
+
+
+def delete_workflow(workflow_uuid):
+    from app.features.admin.task_scheduler.scheduler_engine import unregister_schedule
+    workflow = AdminWorkflow.query.filter_by(uuid=workflow_uuid).first()
+    if not workflow:
+        return False
+    for task in workflow.tasks:
+        unregister_schedule(task.uuid)
+    db.session.delete(workflow)  # cascades to its tasks (AdminWorkflow.tasks relationship)
+    db.session.commit()
+    return True
+
+
+# ─── Tasks — always scoped to a workflow ───────────────────────────────────────
+
+def _validate_trigger(data, schedule_id=None, workflow_id=None):
     mode = data.get('trigger_mode')
     if mode not in VALID_TRIGGER_MODES:
         return False, f"Invalid trigger_mode: {mode!r}"
@@ -36,8 +103,11 @@ def _validate_trigger(data, schedule_id=None):
         depends_on_id = data.get('depends_on_schedule_id')
         if not depends_on_id:
             return False, "depends_on_schedule_id is required when trigger_mode is 'after_task'."
-        if not AdminTaskSchedule.query.get(depends_on_id):
+        parent = AdminTaskSchedule.query.get(depends_on_id)
+        if not parent:
             return False, "The parent task to depend on was not found."
+        if workflow_id is not None and parent.workflow_id != workflow_id:
+            return False, "A task can only depend on another task within the same workflow."
         if depends_on_id == schedule_id:
             return False, "A task cannot depend on itself."
         if _creates_cycle(schedule_id, depends_on_id):
@@ -124,9 +194,9 @@ def _register_live(schedule):
     db.session.commit()
 
 
-def get_schedule_list_page(page=1, per_page=20, search='', sort='created_at', direction='desc', task_type=None):
+def get_schedule_list_page(workflow_id, page=1, per_page=20, search='', sort='created_at', direction='desc', task_type=None):
     per_page = max(1, min(per_page or 20, 100))
-    query = AdminTaskSchedule.query
+    query = AdminTaskSchedule.query.filter_by(workflow_id=workflow_id)
     if search:
         query = query.filter(AdminTaskSchedule.title.ilike(f"%{search}%"))
     if task_type:
@@ -142,11 +212,15 @@ def get_schedule_list_page(page=1, per_page=20, search='', sort='created_at', di
 
 
 def create_schedule(data, editor):
+    workflow = AdminWorkflow.query.filter_by(uuid=data.get('workflow_uuid')).first()
+    if not workflow:
+        return None, "Workflow not found."
+
     task_type = data.get('task_type')
     if task_type not in TASK_TYPES:
         return None, f"Unknown task_type: {task_type!r}"
 
-    ok, err = _validate_trigger(data)
+    ok, err = _validate_trigger(data, workflow_id=workflow.id)
     if not ok:
         return None, err
 
@@ -159,6 +233,7 @@ def create_schedule(data, editor):
         title=title,
         description=data.get('description'),
         editor_id=editor.id,
+        workflow_id=workflow.id,
         task_type=task_type,
         target_payload=_build_target_payload(task_type, data.get('target_payload')),
         is_active=bool(data.get('is_active', True)),
@@ -181,7 +256,10 @@ def update_schedule(schedule_uuid, data):
     if task_type not in TASK_TYPES:
         return None, f"Unknown task_type: {task_type!r}"
 
-    ok, err = _validate_trigger(data, schedule_id=schedule.id)
+    # A task's workflow is fixed at creation — Phase 1 does not support
+    # moving a task between workflows (a cross-workflow depends_on would
+    # need to be untangled first).
+    ok, err = _validate_trigger(data, schedule_id=schedule.id, workflow_id=schedule.workflow_id)
     if not ok:
         return None, err
 
@@ -219,21 +297,21 @@ def delete_schedule(schedule_uuid):
     return True
 
 
-def _resolve_bulk_targets(mode, filters, selected_uuids, excluded_uuids):
+def _resolve_bulk_targets(workflow_id, mode, filters, selected_uuids, excluded_uuids):
     filters = filters or {}
-    query = AdminTaskSchedule.query
+    query = AdminTaskSchedule.query.filter_by(workflow_id=workflow_id)
     if filters.get('search'):
         query = query.filter(AdminTaskSchedule.title.ilike(f"%{filters['search']}%"))
 
     if mode == 'all':
         excluded = set(excluded_uuids or [])
         return [s for s in query.all() if s.uuid not in excluded]
-    return AdminTaskSchedule.query.filter(AdminTaskSchedule.uuid.in_(selected_uuids or [])).all()
+    return query.filter(AdminTaskSchedule.uuid.in_(selected_uuids or [])).all()
 
 
-def bulk_delete_schedules(mode, filters, selected_uuids, excluded_uuids):
+def bulk_delete_schedules(workflow_id, mode, filters, selected_uuids, excluded_uuids):
     from app.features.admin.task_scheduler.scheduler_engine import unregister_schedule
-    targets = _resolve_bulk_targets(mode, filters, selected_uuids, excluded_uuids)
+    targets = _resolve_bulk_targets(workflow_id, mode, filters, selected_uuids, excluded_uuids)
 
     count = 0
     for schedule in targets:
@@ -247,8 +325,8 @@ def bulk_delete_schedules(mode, filters, selected_uuids, excluded_uuids):
     return count
 
 
-def bulk_set_active_schedules(mode, filters, selected_uuids, excluded_uuids, is_active):
-    targets = _resolve_bulk_targets(mode, filters, selected_uuids, excluded_uuids)
+def bulk_set_active_schedules(workflow_id, mode, filters, selected_uuids, excluded_uuids, is_active):
+    targets = _resolve_bulk_targets(workflow_id, mode, filters, selected_uuids, excluded_uuids)
 
     count = 0
     for schedule in targets:

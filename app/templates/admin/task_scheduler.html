@@ -5,30 +5,38 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/taskWorkflowGraph.css') }}">
 {% endblock %}
 {% block content %}
 <div class="container-fluid mt-3 px-4" id="main-container" v-cloak>
 
     <div class="explorer-banner mb-4">
-        <i class="fa-solid fa-list-check banner-watermark"></i>
+        <i class="fa-solid fa-diagram-project banner-watermark"></i>
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
                 <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
                 <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
-                <li class="breadcrumb-item active text-muted" aria-current="page">Task Scheduler</li>
+                <li v-if="route === 'workflows'" class="breadcrumb-item active text-muted" aria-current="page">Task Scheduler</li>
+                <template v-else>
+                    <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted" @click.prevent="backToWorkflows">Task Scheduler</a></li>
+                    <li class="breadcrumb-item active text-muted" aria-current="page">[[ truncate(activeWorkflow ? activeWorkflow.title : '', 40) ]]</li>
+                </template>
             </ol>
         </nav>
         <div class="d-flex align-items-center gap-3 mb-3">
-            <div class="banner-icon"><i class="fa-solid fa-list-check"></i></div>
+            <div class="banner-icon"><i class="fa-solid fa-diagram-project"></i></div>
             <div>
-                <h2 class="fw-bold mb-1">Task Scheduler</h2>
+                <h2 class="fw-bold mb-1">[[ route === 'workflows' ? 'Task Scheduler' : truncate(activeWorkflow ? activeWorkflow.title : '', 60) ]]</h2>
                 <div class="banner-accent"></div>
             </div>
         </div>
         <p class="text-muted mb-0" style="max-width: 650px; font-size: 0.95rem;">
-            Schedule any admin background job — quality analysis, ATT&amp;CK parsing, MISP updates,
-            backups, connector pulls, and more — to run now, once, on a recurring cadence, or right
-            after another task finishes.
+            <template v-if="route === 'workflows'">
+                A workflow is a named pipeline of admin jobs — create one, then assign tasks into it:
+                quality analysis, ATT&amp;CK parsing, MISP updates, backups, connector pulls, and more,
+                each run now, once, on a recurring cadence, or right after another task in the same workflow.
+            </template>
+            <template v-else>[[ activeWorkflow ? (activeWorkflow.description || 'No description.') : '' ]]</template>
         </p>
     </div>
 
@@ -39,170 +47,320 @@
     </div>
     {{ anav.admin_nav_panel('task_scheduler') }}
 
-    <!-- KPI row -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
-                <div class="fw-bold" style="font-size:1.6rem;color:#0d6efd;">[[ totalSchedules ]]</div>
-                <div class="small text-muted mt-1">Total tasks</div>
+    <!-- ══════════════════════════ Level 1 — Workflows ══════════════════════════ -->
+    <template v-if="route === 'workflows'">
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                    <div class="fw-bold" style="font-size:1.6rem;color:#0d6efd;">[[ totalWorkflows ]]</div>
+                    <div class="small text-muted mt-1">Workflows</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                    <div class="fw-bold" style="font-size:1.6rem;color:#198754;">[[ activeWorkflowCount ]]</div>
+                    <div class="small text-muted mt-1">Active</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                    <div class="fw-bold" style="font-size:1.6rem;color:#6c757d;">[[ totalTasksAcrossWorkflows ]]</div>
+                    <div class="small text-muted mt-1">Total tasks</div>
+                </div>
             </div>
         </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
-                <div class="fw-bold" style="font-size:1.6rem;color:#198754;">[[ activeCount ]]</div>
-                <div class="small text-muted mt-1">Active</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
-                <div class="fw-bold" style="font-size:1.6rem;color:#6c757d;">[[ pausedCount ]]</div>
-                <div class="small text-muted mt-1">Paused</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
-                <div class="fw-bold" style="font-size:1.1rem;color:#0d6efd;">[[ nextRunSummary ]]</div>
-                <div class="small text-muted mt-1">Next scheduled run</div>
-            </div>
-        </div>
-    </div>
 
-    <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-body p-3 p-md-4">
-
-            <div class="dt-toolbar mb-3">
-                <div class="dt-toolbar-left">
-                    <div class="dt-search">
-                        <i class="fas fa-search dt-search-icon"></i>
-                        <input class="dt-search-input" type="text" placeholder="Search tasks…"
-                            v-model="search" @input="onSearchInput" aria-label="Search tasks" />
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-3 p-md-4">
+                <div class="dt-toolbar mb-3">
+                    <div class="dt-toolbar-left">
+                        <div class="dt-search">
+                            <i class="fas fa-search dt-search-icon"></i>
+                            <input class="dt-search-input" type="text" placeholder="Search workflows…"
+                                v-model="workflowSearch" @input="onWorkflowSearchInput" aria-label="Search workflows" />
+                        </div>
                     </div>
-                    <div class="dt-view-toggle">
-                        <button class="dt-view-btn" :class="{ 'dt-view-btn--active': view === 'table' }" @click="view = 'table'" title="Table view">
-                            <i class="fa-solid fa-table-list"></i>
-                        </button>
-                        <button class="dt-view-btn" :class="{ 'dt-view-btn--active': view === 'card' }" @click="view = 'card'" title="Card view">
-                            <i class="fa-solid fa-grip"></i>
+                    <div class="dt-toolbar-right">
+                        <button class="dt-toolbar-btn dt-toolbar-btn--primary" @click="openCreateWorkflow()">
+                            <i class="fa-solid fa-plus"></i><span>New Workflow</span>
                         </button>
                     </div>
                 </div>
-                <div class="dt-toolbar-right">
-                    <button class="dt-toolbar-btn dt-toolbar-btn--primary" @click="openCreate()">
-                        <i class="fa-solid fa-plus"></i><span>New Task</span>
+
+                <template v-if="workflowsLoading">
+                    <div class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading…
+                    </div>
+                </template>
+                <template v-else-if="workflows.length === 0">
+                    <div class="dt-empty">
+                        <div class="dt-empty-icon"><i class="fa-solid fa-diagram-project"></i></div>
+                        <p class="dt-empty-text">No workflows yet — create one, then assign tasks into it.</p>
+                    </div>
+                </template>
+                <div v-else class="dt-table-wrap">
+                    <table class="dt-table">
+                        <thead class="dt-thead">
+                            <tr>
+                                <th class="dt-th">Title</th>
+                                <th class="dt-th text-center">Tasks</th>
+                                <th class="dt-th">Editor</th>
+                                <th class="dt-th text-center">Status</th>
+                                <th class="dt-th">Created</th>
+                                <th class="dt-th text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="w in workflows" :key="w.uuid" class="dt-row" style="cursor:pointer;" @click="openWorkflow(w)">
+                                <td class="dt-td">
+                                    <div class="fw-bold">[[ w.title ]]</div>
+                                    <div class="text-muted" style="font-size:.78rem;" v-if="w.description">[[ w.description ]]</div>
+                                </td>
+                                <td class="dt-td text-center">[[ w.active_task_count ]] / [[ w.task_count ]]</td>
+                                <td class="dt-td">
+                                    <user-chip v-if="w.editor" :user-id="w.editor.id" :username="w.editor.name" :avatar="w.editor.avatar" size="xs"></user-chip>
+                                    <span v-else>—</span>
+                                </td>
+                                <td class="dt-td text-center">
+                                    <span class="badge" :class="w.is_active ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'">
+                                        [[ w.is_active ? 'Active' : 'Paused' ]]
+                                    </span>
+                                </td>
+                                <td class="dt-td">[[ w.created_at ]]</td>
+                                <td class="dt-td text-center" @click.stop>
+                                    <div class="dt-actions justify-content-center">
+                                        <button class="dt-action-btn" title="Open" @click="openWorkflow(w)"><i class="fa-solid fa-arrow-right"></i></button>
+                                        <button class="dt-action-btn" title="Edit" @click="openEditWorkflow(w)"><i class="fa-solid fa-pen"></i></button>
+                                        <button class="dt-action-btn dt-action-btn--danger" title="Delete" @click="deleteWorkflow(w)"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <pagination-component :current-page="workflowsPage" :total-pages="workflowsTotalPages" @change-page="fetchWorkflows"></pagination-component>
+                <p class="text-center mt-3 text-muted">Total workflows: [[ totalWorkflows ]]</p>
+            </div>
+        </div>
+    </template>
+
+    <!-- ══════════════════════════ Level 2 — Workflow detail ══════════════════════════ -->
+    <template v-else>
+        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 mb-3" @click="backToWorkflows">
+            <i class="fa-solid fa-arrow-left me-1"></i>Back to workflows
+        </button>
+
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                    <div class="fw-bold" style="font-size:1.6rem;color:#0d6efd;">[[ totalSchedules ]]</div>
+                    <div class="small text-muted mt-1">Total tasks</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                    <div class="fw-bold" style="font-size:1.6rem;color:#198754;">[[ activeCount ]]</div>
+                    <div class="small text-muted mt-1">Active</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                    <div class="fw-bold" style="font-size:1.6rem;color:#6c757d;">[[ pausedCount ]]</div>
+                    <div class="small text-muted mt-1">Paused</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                    <div class="fw-bold" style="font-size:1.1rem;color:#0d6efd;">[[ nextRunSummary ]]</div>
+                    <div class="small text-muted mt-1">Next scheduled run</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-3 p-md-4">
+
+                <div class="dt-toolbar mb-3">
+                    <div class="dt-toolbar-left">
+                        <div class="dt-search">
+                            <i class="fas fa-search dt-search-icon"></i>
+                            <input class="dt-search-input" type="text" placeholder="Search tasks…"
+                                v-model="search" @input="onSearchInput" aria-label="Search tasks" />
+                        </div>
+                        <div class="dt-view-toggle">
+                            <button class="dt-view-btn" :class="{ 'dt-view-btn--active': view === 'table' }" @click="view = 'table'" title="Table view">
+                                <i class="fa-solid fa-table-list"></i>
+                            </button>
+                            <button class="dt-view-btn" :class="{ 'dt-view-btn--active': view === 'card' }" @click="view = 'card'" title="Card view">
+                                <i class="fa-solid fa-grip"></i>
+                            </button>
+                            <button class="dt-view-btn" :class="{ 'dt-view-btn--active': view === 'graph' }" @click="switchToGraph()" title="Workflow graph">
+                                <i class="fa-solid fa-diagram-project"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dt-toolbar-right">
+                        <button class="dt-toolbar-btn dt-toolbar-btn--primary" @click="openCreate()">
+                            <i class="fa-solid fa-plus"></i><span>New Task</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="view !== 'graph' && selectedUuids.size > 0" class="dt-bulk-bar mb-3">
+                    <span class="dt-bulk-count">[[ selectedUuids.size ]] selected</span>
+                    <div class="dt-bulk-actions">
+                        <button class="dt-bulk-btn" @click="selectedUuids.clear()">Clear</button>
+                        <button class="dt-bulk-btn" @click="bulkSetActive(true)"><i class="fa-solid fa-play me-1"></i>Activate</button>
+                        <button class="dt-bulk-btn" @click="bulkSetActive(false)"><i class="fa-solid fa-pause me-1"></i>Deactivate</button>
+                        <button class="dt-bulk-btn" style="color:#dc3545;" @click="bulkDelete()"><i class="fa-solid fa-trash me-1"></i>Delete selected</button>
+                    </div>
+                </div>
+
+                <template v-if="view !== 'graph' && loading">
+                    <div class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading…
+                    </div>
+                </template>
+
+                <template v-else-if="view !== 'graph' && schedules.length === 0">
+                    <div class="dt-empty">
+                        <div class="dt-empty-icon"><i class="fa-solid fa-list-check"></i></div>
+                        <p class="dt-empty-text">No tasks in this workflow yet — create one to automate a recurring or chained admin job.</p>
+                    </div>
+                </template>
+
+                <!-- Graph view -->
+                <template v-if="view === 'graph'">
+                    <div v-if="graphLoading" class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading…
+                    </div>
+                    <task-workflow-graph v-else :schedules="graphSchedules" :task-types="taskTypes" @select="openEdit"></task-workflow-graph>
+                </template>
+
+                <!-- Table view -->
+                <div v-if="!loading && schedules.length > 0 && view === 'table'" class="dt-table-wrap">
+                    <table class="dt-table">
+                        <thead class="dt-thead">
+                            <tr>
+                                <th class="dt-th dt-th--checkbox">
+                                    <input type="checkbox" class="dt-checkbox" :checked="isFullySelected" @change="toggleAllOnPage" />
+                                </th>
+                                <th class="dt-th">Title</th>
+                                <th class="dt-th">Type</th>
+                                <th class="dt-th">Editor</th>
+                                <th class="dt-th">Trigger</th>
+                                <th class="dt-th">Next run</th>
+                                <th class="dt-th">Last run</th>
+                                <th class="dt-th text-center">Status</th>
+                                <th class="dt-th text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="s in schedules" :key="s.uuid" class="dt-row">
+                                <td class="dt-td dt-td--checkbox">
+                                    <input type="checkbox" class="dt-checkbox" :checked="selectedUuids.has(s.uuid)"
+                                        @change="toggleSelection(s.uuid, $event.target.checked)" />
+                                </td>
+                                <td class="dt-td">
+                                    <div class="fw-bold">[[ s.title ]]</div>
+                                    <div class="text-muted" style="font-size:.78rem;" v-if="s.description">[[ s.description ]]</div>
+                                </td>
+                                <td class="dt-td">
+                                    <i :class="taskTypeIcon(s.task_type)" class="me-1"></i>[[ taskTypeLabel(s.task_type) ]]
+                                </td>
+                                <td class="dt-td">
+                                    <user-chip v-if="s.editor" :user-id="s.editor.id" :username="s.editor.name" :avatar="s.editor.avatar" size="xs"></user-chip>
+                                    <span v-else>—</span>
+                                </td>
+                                <td class="dt-td">[[ triggerSummary(s) ]]</td>
+                                <td class="dt-td">[[ s.next_run_at || '—' ]]</td>
+                                <td class="dt-td">[[ s.last_run_at || 'Never' ]]</td>
+                                <td class="dt-td text-center">
+                                    <span class="badge" :class="s.is_active ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'">
+                                        [[ s.is_active ? 'Active' : 'Paused' ]]
+                                    </span>
+                                    <span v-if="s.last_run_status === 'failed'" class="badge bg-danger-subtle text-danger-emphasis ms-1">Last run failed</span>
+                                </td>
+                                <td class="dt-td text-center">
+                                    <div class="dt-actions justify-content-center">
+                                        <button class="dt-action-btn" title="Run now" @click="runNow(s)"><i class="fa-solid fa-play"></i></button>
+                                        <button class="dt-action-btn" title="Edit" @click="openEdit(s)"><i class="fa-solid fa-pen"></i></button>
+                                        <button class="dt-action-btn dt-action-btn--danger" title="Delete" @click="deleteSchedule(s)"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Card view -->
+                <div v-if="!loading && schedules.length > 0 && view === 'card'" class="dt-card-grid">
+                    <div v-for="s in schedules" :key="s.uuid" class="dt-card" :class="{ 'dt-card--selected': selectedUuids.has(s.uuid) }">
+                        <div class="dt-card-header">
+                            <input type="checkbox" class="dt-checkbox dt-card-checkbox" :checked="selectedUuids.has(s.uuid)"
+                                @change="toggleSelection(s.uuid, $event.target.checked)" />
+                            <div class="dt-card-title">[[ s.title ]]</div>
+                        </div>
+                        <div class="dt-card-body">
+                            <p class="text-muted small mb-2" v-if="s.description">[[ s.description ]]</p>
+                            <div class="small mb-1"><i :class="taskTypeIcon(s.task_type)" class="me-1"></i>[[ taskTypeLabel(s.task_type) ]]</div>
+                            <div class="small mb-1"><i class="fa-solid fa-clock me-1"></i>[[ triggerSummary(s) ]]</div>
+                            <div class="small mb-1">Next run: [[ s.next_run_at || '—' ]]</div>
+                            <span class="badge" :class="s.is_active ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'">
+                                [[ s.is_active ? 'Active' : 'Paused' ]]
+                            </span>
+                        </div>
+                        <div class="dt-card-footer">
+                            <button class="dt-action-btn" title="Run now" @click="runNow(s)"><i class="fa-solid fa-play"></i></button>
+                            <button class="dt-action-btn" title="Edit" @click="openEdit(s)"><i class="fa-solid fa-pen"></i></button>
+                            <button class="dt-action-btn dt-action-btn--danger" title="Delete" @click="deleteSchedule(s)"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <template v-if="view !== 'graph'">
+                    <pagination-component :current-page="currentPage" :total-pages="totalPages" @change-page="fetchSchedules"></pagination-component>
+                    <p class="text-center mt-3 text-muted">Total tasks: [[ totalSchedules ]]</p>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <!-- Workflow create/edit modal -->
+    <div class="modal fade" id="workflowModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius:15px;">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">[[ workflowForm.uuid ? 'Edit Workflow' : 'New Workflow' ]]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Title<span class="required-marker">*</span></label>
+                        <input type="text" class="form-control" v-model="workflowForm.title" placeholder="e.g. Nightly maintenance">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <textarea class="form-control" rows="2" v-model="workflowForm.description" placeholder="Optional notes about what this workflow does"></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="workflowActiveToggle" v-model="workflowForm.is_active">
+                        <label class="form-check-label" for="workflowActiveToggle">Active</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4" :disabled="savingWorkflow" @click="submitWorkflowForm()">
+                        <span v-if="savingWorkflow" class="spinner-border spinner-border-sm me-1"></span>
+                        [[ workflowForm.uuid ? 'Save changes' : 'Create Workflow' ]]
                     </button>
                 </div>
             </div>
-
-            <div v-if="selectedUuids.size > 0" class="dt-bulk-bar mb-3">
-                <span class="dt-bulk-count">[[ selectedUuids.size ]] selected</span>
-                <div class="dt-bulk-actions">
-                    <button class="dt-bulk-btn" @click="selectedUuids.clear()">Clear</button>
-                    <button class="dt-bulk-btn" @click="bulkSetActive(true)"><i class="fa-solid fa-play me-1"></i>Activate</button>
-                    <button class="dt-bulk-btn" @click="bulkSetActive(false)"><i class="fa-solid fa-pause me-1"></i>Deactivate</button>
-                    <button class="dt-bulk-btn" style="color:#dc3545;" @click="bulkDelete()"><i class="fa-solid fa-trash me-1"></i>Delete selected</button>
-                </div>
-            </div>
-
-            <template v-if="loading">
-                <div class="text-center py-4 text-muted">
-                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading…
-                </div>
-            </template>
-
-            <template v-else-if="schedules.length === 0">
-                <div class="dt-empty">
-                    <div class="dt-empty-icon"><i class="fa-solid fa-list-check"></i></div>
-                    <p class="dt-empty-text">No scheduled tasks yet — create one to automate a recurring or chained admin job.</p>
-                </div>
-            </template>
-
-            <!-- Table view -->
-            <div v-if="!loading && schedules.length > 0 && view === 'table'" class="dt-table-wrap">
-                <table class="dt-table">
-                    <thead class="dt-thead">
-                        <tr>
-                            <th class="dt-th dt-th--checkbox">
-                                <input type="checkbox" class="dt-checkbox" :checked="isFullySelected" @change="toggleAllOnPage" />
-                            </th>
-                            <th class="dt-th">Title</th>
-                            <th class="dt-th">Type</th>
-                            <th class="dt-th">Editor</th>
-                            <th class="dt-th">Trigger</th>
-                            <th class="dt-th">Next run</th>
-                            <th class="dt-th">Last run</th>
-                            <th class="dt-th text-center">Status</th>
-                            <th class="dt-th text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="s in schedules" :key="s.uuid" class="dt-row">
-                            <td class="dt-td dt-td--checkbox">
-                                <input type="checkbox" class="dt-checkbox" :checked="selectedUuids.has(s.uuid)"
-                                    @change="toggleSelection(s.uuid, $event.target.checked)" />
-                            </td>
-                            <td class="dt-td">
-                                <div class="fw-bold">[[ s.title ]]</div>
-                                <div class="text-muted" style="font-size:.78rem;" v-if="s.description">[[ s.description ]]</div>
-                            </td>
-                            <td class="dt-td">
-                                <i :class="taskTypeIcon(s.task_type)" class="me-1"></i>[[ taskTypeLabel(s.task_type) ]]
-                            </td>
-                            <td class="dt-td">
-                                <user-chip v-if="s.editor" :user-id="s.editor.id" :username="s.editor.name" :avatar="s.editor.avatar" size="xs"></user-chip>
-                                <span v-else>—</span>
-                            </td>
-                            <td class="dt-td">[[ triggerSummary(s) ]]</td>
-                            <td class="dt-td">[[ s.next_run_at || '—' ]]</td>
-                            <td class="dt-td">[[ s.last_run_at || 'Never' ]]</td>
-                            <td class="dt-td text-center">
-                                <span class="badge" :class="s.is_active ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'">
-                                    [[ s.is_active ? 'Active' : 'Paused' ]]
-                                </span>
-                                <span v-if="s.last_run_status === 'failed'" class="badge bg-danger-subtle text-danger-emphasis ms-1">Last run failed</span>
-                            </td>
-                            <td class="dt-td text-center">
-                                <div class="dt-actions justify-content-center">
-                                    <button class="dt-action-btn" title="Run now" @click="runNow(s)"><i class="fa-solid fa-play"></i></button>
-                                    <button class="dt-action-btn" title="Edit" @click="openEdit(s)"><i class="fa-solid fa-pen"></i></button>
-                                    <button class="dt-action-btn dt-action-btn--danger" title="Delete" @click="deleteSchedule(s)"><i class="fa-solid fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Card view -->
-            <div v-if="!loading && schedules.length > 0 && view === 'card'" class="dt-card-grid">
-                <div v-for="s in schedules" :key="s.uuid" class="dt-card" :class="{ 'dt-card--selected': selectedUuids.has(s.uuid) }">
-                    <div class="dt-card-header">
-                        <input type="checkbox" class="dt-checkbox dt-card-checkbox" :checked="selectedUuids.has(s.uuid)"
-                            @change="toggleSelection(s.uuid, $event.target.checked)" />
-                        <div class="dt-card-title">[[ s.title ]]</div>
-                    </div>
-                    <div class="dt-card-body">
-                        <p class="text-muted small mb-2" v-if="s.description">[[ s.description ]]</p>
-                        <div class="small mb-1"><i :class="taskTypeIcon(s.task_type)" class="me-1"></i>[[ taskTypeLabel(s.task_type) ]]</div>
-                        <div class="small mb-1"><i class="fa-solid fa-clock me-1"></i>[[ triggerSummary(s) ]]</div>
-                        <div class="small mb-1">Next run: [[ s.next_run_at || '—' ]]</div>
-                        <span class="badge" :class="s.is_active ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'">
-                            [[ s.is_active ? 'Active' : 'Paused' ]]
-                        </span>
-                    </div>
-                    <div class="dt-card-footer">
-                        <button class="dt-action-btn" title="Run now" @click="runNow(s)"><i class="fa-solid fa-play"></i></button>
-                        <button class="dt-action-btn" title="Edit" @click="openEdit(s)"><i class="fa-solid fa-pen"></i></button>
-                        <button class="dt-action-btn dt-action-btn--danger" title="Delete" @click="deleteSchedule(s)"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>
-            </div>
-
-            <pagination-component :current-page="currentPage" :total-pages="totalPages" @change-page="fetchSchedules"></pagination-component>
-            <p class="text-center mt-3 text-muted">Total tasks: [[ totalSchedules ]]</p>
         </div>
     </div>
 
-    <!-- Create/edit modal -->
+    <!-- Task create/edit modal -->
     <div class="modal fade" id="taskModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg" style="border-radius:15px;">
@@ -287,7 +445,7 @@
                                 @click="triggerKind = 'time'">Time-based</button>
                             <button type="button" class="btn btn-sm rounded-pill px-3"
                                 :class="triggerKind === 'after_task' ? 'btn-primary' : 'btn-outline-secondary'"
-                                @click="triggerKind = 'after_task'; loadPickerSchedules()">After another task</button>
+                                @click="triggerKind = 'after_task'; loadPickerSchedules()">After another task in this workflow</button>
                         </div>
 
                         <schedule-recurrence-picker v-if="triggerKind === 'time'" :key="formInstance"
@@ -302,6 +460,7 @@
                                     <option :value="null" disabled>Choose a task…</option>
                                     <option v-for="p in pickerSchedules" :key="p.id" :value="p.id">[[ p.title ]]</option>
                                 </select>
+                                <p v-if="pickerSchedules.length === 0" class="text-muted small mt-1 mb-0">No other tasks in this workflow yet — create one first.</p>
                             </div>
                             <div class="rl-fp-item">
                                 <label class="form-label mb-1" style="font-size:.78rem;">Condition</label>
@@ -336,6 +495,7 @@
     import PaginationComponent from '/static/js/rule/paginationComponent.js';
     import UserChip from '/static/js/components/UserChip.js';
     import ScheduleRecurrencePicker from '/static/js/rule/scheduleRecurrencePicker.js';
+    import TaskWorkflowGraph from '/static/js/admin/taskWorkflowGraph.js';
     import TagsDisplaysList from '/static/js/tags/tagsDisplaysList.js';
     import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
 
@@ -348,10 +508,119 @@
             'pagination-component': PaginationComponent,
             'user-chip': UserChip,
             'schedule-recurrence-picker': ScheduleRecurrencePicker,
+            'task-workflow-graph': TaskWorkflowGraph,
             'tags-displays-list': TagsDisplaysList,
             'vulnerability-displays-list': VulnerabilityDisplaysList,
         },
         setup() {
+            function truncate(s, n) { return (s || '').length > n ? s.slice(0, n) + '…' : (s || ''); }
+
+            // ── Level 1: Workflows ───────────────────────────────────────────────
+            const route = ref('workflows'); // 'workflows' | 'detail'
+            const activeWorkflow = ref(null);
+            const workflows = ref([]);
+            const workflowsLoading = ref(true);
+            const workflowSearch = ref('');
+            const workflowsPage = ref(1);
+            const workflowsTotalPages = ref(1);
+            const totalWorkflows = ref(0);
+            let workflowSearchDebounce = null;
+
+            const activeWorkflowCount = computed(() => workflows.value.filter(w => w.is_active).length);
+            const totalTasksAcrossWorkflows = computed(() => workflows.value.reduce((sum, w) => sum + (w.task_count || 0), 0));
+
+            async function fetchWorkflows(page) {
+                workflowsLoading.value = true;
+                try {
+                    workflowsPage.value = page || 1;
+                    const params = new URLSearchParams({ page: workflowsPage.value, per_page: 20, search: workflowSearch.value });
+                    const res = await fetch(`/admin/tasks/workflows?${params}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    workflows.value = data.workflows || [];
+                    totalWorkflows.value = data.total || 0;
+                    workflowsTotalPages.value = data.total_pages || 1;
+                } finally {
+                    workflowsLoading.value = false;
+                }
+            }
+            function onWorkflowSearchInput() {
+                clearTimeout(workflowSearchDebounce);
+                workflowSearchDebounce = setTimeout(() => fetchWorkflows(1), 300);
+            }
+
+            function pushWorkflowUrl(workflowUuid) {
+                const url = new URL(window.location.href);
+                if (workflowUuid) url.searchParams.set('workflow', workflowUuid);
+                else url.searchParams.delete('workflow');
+                window.history.pushState({}, '', url);
+            }
+
+            function openWorkflow(w) {
+                activeWorkflow.value = w;
+                route.value = 'detail';
+                pushWorkflowUrl(w.uuid);
+                resetTaskListState();
+                fetchTaskTypes();
+                fetchSchedules(1);
+            }
+
+            function backToWorkflows() {
+                route.value = 'workflows';
+                activeWorkflow.value = null;
+                pushWorkflowUrl(null);
+                fetchWorkflows(workflowsPage.value);
+            }
+
+            async function openWorkflowFromUrl(workflowUuid) {
+                const res = await fetch(`/admin/tasks/workflows/${workflowUuid}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                openWorkflow(data.workflow);
+            }
+
+            // ── Workflow create/edit modal ──────────────────────────────────────
+            const workflowForm = reactive({ uuid: null, title: '', description: '', is_active: true });
+            const savingWorkflow = ref(false);
+
+            function openCreateWorkflow() {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('workflowModal')).show();
+                Object.assign(workflowForm, { uuid: null, title: '', description: '', is_active: true });
+            }
+            function openEditWorkflow(w) {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('workflowModal')).show();
+                Object.assign(workflowForm, { uuid: w.uuid, title: w.title, description: w.description || '', is_active: w.is_active });
+            }
+            async function submitWorkflowForm() {
+                if (!workflowForm.title.trim()) { create_message('Title is required.', 'danger-subtle'); return; }
+                savingWorkflow.value = true;
+                try {
+                    const endpoint = workflowForm.uuid ? `/admin/tasks/workflows/${workflowForm.uuid}/update` : '/admin/tasks/workflows/create';
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify({ title: workflowForm.title, description: workflowForm.description, is_active: workflowForm.is_active }),
+                    });
+                    const data = await res.json();
+                    create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
+                    if (res.ok) {
+                        bootstrap.Modal.getInstance(document.getElementById('workflowModal'))?.hide();
+                        fetchWorkflows(workflowsPage.value);
+                        if (activeWorkflow.value && activeWorkflow.value.uuid === data.workflow.uuid) activeWorkflow.value = data.workflow;
+                    }
+                } finally {
+                    savingWorkflow.value = false;
+                }
+            }
+            async function deleteWorkflow(w) {
+                if (!window.confirm(`Delete workflow "${w.title}" and all ${w.task_count} of its task(s)? This cannot be undone.`)) return;
+                const res = await fetch(`/admin/tasks/workflows/${w.uuid}/delete`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+                const data = await res.json();
+                create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
+                if (res.ok) fetchWorkflows(1);
+            }
+
+            // ── Level 2: Tasks within the active workflow ───────────────────────
             const schedules = ref([]);
             const loading = ref(true);
             const search = ref('');
@@ -361,6 +630,14 @@
             const totalSchedules = ref(0);
             const selectedUuids = ref(new Set());
             let searchDebounce = null;
+
+            function resetTaskListState() {
+                schedules.value = [];
+                search.value = '';
+                view.value = 'table';
+                currentPage.value = 1;
+                selectedUuids.value.clear();
+            }
 
             const taskTypes = ref({});
 
@@ -396,10 +673,14 @@
             });
 
             async function fetchSchedules(page) {
+                if (!activeWorkflow.value) return;
                 loading.value = true;
                 try {
                     currentPage.value = page || 1;
-                    const params = new URLSearchParams({ page: currentPage.value, per_page: 20, search: search.value });
+                    const params = new URLSearchParams({
+                        page: currentPage.value, per_page: 20, search: search.value,
+                        workflow_uuid: activeWorkflow.value.uuid,
+                    });
                     const res = await fetch(`/admin/tasks/list?${params}`);
                     if (!res.ok) return;
                     const data = await res.json();
@@ -414,6 +695,34 @@
             function onSearchInput() {
                 clearTimeout(searchDebounce);
                 searchDebounce = setTimeout(() => fetchSchedules(1), 300);
+            }
+
+            // ── Graph view — needs the full (unpaginated) task list for this
+            // workflow so no dependency edge points outside what's loaded ──────
+            const graphSchedules = ref([]);
+            const graphLoading = ref(false);
+
+            async function loadGraphSchedules() {
+                if (!activeWorkflow.value) return;
+                graphLoading.value = true;
+                try {
+                    const res = await fetch(`/admin/tasks/list?per_page=100&workflow_uuid=${activeWorkflow.value.uuid}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    graphSchedules.value = data.schedules || [];
+                } finally {
+                    graphLoading.value = false;
+                }
+            }
+
+            function switchToGraph() {
+                view.value = 'graph';
+                loadGraphSchedules();
+            }
+
+            async function refreshLists(page) {
+                await fetchSchedules(page || currentPage.value);
+                if (view.value === 'graph') await loadGraphSchedules();
             }
 
             const isFullySelected = computed(() =>
@@ -431,11 +740,14 @@
                 const res = await fetch('/admin/tasks/bulk_set_active', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                    body: JSON.stringify({ mode: 'partial', selected_uuids: Array.from(selectedUuids.value), is_active: isActive }),
+                    body: JSON.stringify({
+                        workflow_uuid: activeWorkflow.value.uuid,
+                        mode: 'partial', selected_uuids: Array.from(selectedUuids.value), is_active: isActive,
+                    }),
                 });
                 const data = await res.json();
                 create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
-                if (res.ok) { selectedUuids.value.clear(); fetchSchedules(currentPage.value); }
+                if (res.ok) { selectedUuids.value.clear(); refreshLists(currentPage.value); }
             }
 
             async function bulkDelete() {
@@ -443,18 +755,21 @@
                 const res = await fetch('/admin/tasks/bulk_delete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                    body: JSON.stringify({ mode: 'partial', selected_uuids: Array.from(selectedUuids.value) }),
+                    body: JSON.stringify({
+                        workflow_uuid: activeWorkflow.value.uuid,
+                        mode: 'partial', selected_uuids: Array.from(selectedUuids.value),
+                    }),
                 });
                 const data = await res.json();
                 create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
-                if (res.ok) { selectedUuids.value.clear(); fetchSchedules(1); }
+                if (res.ok) { selectedUuids.value.clear(); refreshLists(1); }
             }
 
             async function runNow(s) {
                 const res = await fetch(`/admin/tasks/${s.uuid}/run_now`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
                 const data = await res.json();
                 create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
-                if (res.ok) fetchSchedules(currentPage.value);
+                if (res.ok) refreshLists(currentPage.value);
             }
 
             async function deleteSchedule(s) {
@@ -462,10 +777,10 @@
                 const res = await fetch(`/admin/tasks/${s.uuid}/delete`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
                 const data = await res.json();
                 create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
-                if (res.ok) fetchSchedules(currentPage.value);
+                if (res.ok) refreshLists(currentPage.value);
             }
 
-            // ── Create/edit modal ───────────────────────────────────────────────
+            // ── Task create/edit modal ───────────────────────────────────────────
             const form = reactive({
                 uuid: null, title: '', description: '', is_active: true,
                 task_type: '', recurrence: {}, depends_on_schedule_id: null, depends_on_condition: 'success',
@@ -509,8 +824,10 @@
                 if (res.ok) availableConnectors.value = (await res.json()).connectors || [];
             }
             async function loadPickerSchedules() {
-                const params = form.uuid ? `?exclude_uuid=${form.uuid}` : '';
-                const res = await fetch(`/admin/tasks/picker${params}`);
+                if (!activeWorkflow.value) return;
+                const params = new URLSearchParams({ workflow_uuid: activeWorkflow.value.uuid });
+                if (form.uuid) params.set('exclude_uuid', form.uuid);
+                const res = await fetch(`/admin/tasks/picker?${params}`);
                 if (res.ok) pickerSchedules.value = (await res.json()).schedules || [];
             }
 
@@ -609,6 +926,7 @@
                     const body = {
                         title: form.title, description: form.description, is_active: form.is_active,
                         task_type: form.task_type, target_payload: targetPayload,
+                        workflow_uuid: activeWorkflow.value.uuid,
                     };
                     if (triggerKind.value === 'after_task') {
                         if (!form.depends_on_schedule_id) { create_message('Choose a task to depend on.', 'danger-subtle'); saving.value = false; return; }
@@ -654,7 +972,7 @@
                     create_message(data2.message, res2.ok ? 'success-subtle' : 'danger-subtle');
                     if (res2.ok) {
                         bootstrap.Modal.getInstance(document.getElementById('taskModal'))?.hide();
-                        fetchSchedules(currentPage.value);
+                        refreshLists(currentPage.value);
                     }
                 } finally {
                     saving.value = false;
@@ -662,15 +980,27 @@
             }
 
             onMounted(() => {
-                fetchTaskTypes();
-                fetchSchedules(1);
+                const urlWorkflow = new URLSearchParams(window.location.search).get('workflow');
+                if (urlWorkflow) {
+                    openWorkflowFromUrl(urlWorkflow);
+                } else {
+                    fetchWorkflows(1);
+                }
             });
 
             return {
+                truncate,
+                route, activeWorkflow, openWorkflow, backToWorkflows,
+                workflows, workflowsLoading, workflowSearch, onWorkflowSearchInput,
+                workflowsPage, workflowsTotalPages, totalWorkflows, activeWorkflowCount, totalTasksAcrossWorkflows,
+                fetchWorkflows, openCreateWorkflow, openEditWorkflow, deleteWorkflow,
+                workflowForm, savingWorkflow, submitWorkflowForm,
+
                 schedules, loading, search, view, currentPage, totalPages, totalSchedules, selectedUuids,
                 taskTypes, taskTypeLabel, taskTypeIcon, triggerSummary,
                 activeCount, pausedCount, nextRunSummary,
                 fetchSchedules, onSearchInput,
+                graphSchedules, graphLoading, switchToGraph,
                 isFullySelected, toggleSelection, toggleAllOnPage,
                 bulkSetActive, bulkDelete, runNow, deleteSchedule,
                 form, formInstance, triggerKind, recurrenceMode, saving,
