@@ -48,6 +48,13 @@ def test_every_registered_task_type_points_at_a_real_handler():
 #  CRUD permissions
 # ─────────────────────────────────────────────────────────────────────────────
 
+def test_admin_panel_renders(client, app):
+    with app.app_context():
+        _admin(client)
+    res = client.get("/admin/tasks/")
+    assert res.status_code == 200
+
+
 def test_non_admin_cannot_list_or_create(client, app):
     with app.app_context():
         _plain_user(client)

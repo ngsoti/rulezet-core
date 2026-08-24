@@ -1,0 +1,686 @@
+{% extends 'base.html' %}
+{% import 'macros/admin_nav.html' as anav %}
+{% block title %}Task Scheduler — Rulezet{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+{% endblock %}
+{% block content %}
+<div class="container-fluid mt-3 px-4" id="main-container" v-cloak>
+
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-list-check banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Task Scheduler</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-list-check"></i></div>
+            <div>
+                <h2 class="fw-bold mb-1">Task Scheduler</h2>
+                <div class="banner-accent"></div>
+            </div>
+        </div>
+        <p class="text-muted mb-0" style="max-width: 650px; font-size: 0.95rem;">
+            Schedule any admin background job — quality analysis, ATT&amp;CK parsing, MISP updates,
+            backups, connector pulls, and more — to run now, once, on a recurring cadence, or right
+            after another task finishes.
+        </p>
+    </div>
+
+    <div class="dr-nav mb-3" role="tablist">
+        <span class="dr-nav__label" style="padding:.5rem .25rem;">Admin Task Scheduler</span>
+        <span class="dr-nav__sep"></span>
+        {{ anav.admin_nav_toggle() }}
+    </div>
+    {{ anav.admin_nav_panel('task_scheduler') }}
+
+    <!-- KPI row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                <div class="fw-bold" style="font-size:1.6rem;color:#0d6efd;">[[ totalSchedules ]]</div>
+                <div class="small text-muted mt-1">Total tasks</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                <div class="fw-bold" style="font-size:1.6rem;color:#198754;">[[ activeCount ]]</div>
+                <div class="small text-muted mt-1">Active</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                <div class="fw-bold" style="font-size:1.6rem;color:#6c757d;">[[ pausedCount ]]</div>
+                <div class="small text-muted mt-1">Paused</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100" style="background:var(--card-bg-color);">
+                <div class="fw-bold" style="font-size:1.1rem;color:#0d6efd;">[[ nextRunSummary ]]</div>
+                <div class="small text-muted mt-1">Next scheduled run</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-3 p-md-4">
+
+            <div class="dt-toolbar mb-3">
+                <div class="dt-toolbar-left">
+                    <div class="dt-search">
+                        <i class="fas fa-search dt-search-icon"></i>
+                        <input class="dt-search-input" type="text" placeholder="Search tasks…"
+                            v-model="search" @input="onSearchInput" aria-label="Search tasks" />
+                    </div>
+                    <div class="dt-view-toggle">
+                        <button class="dt-view-btn" :class="{ 'dt-view-btn--active': view === 'table' }" @click="view = 'table'" title="Table view">
+                            <i class="fa-solid fa-table-list"></i>
+                        </button>
+                        <button class="dt-view-btn" :class="{ 'dt-view-btn--active': view === 'card' }" @click="view = 'card'" title="Card view">
+                            <i class="fa-solid fa-grip"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="dt-toolbar-right">
+                    <button class="dt-toolbar-btn dt-toolbar-btn--primary" @click="openCreate()">
+                        <i class="fa-solid fa-plus"></i><span>New Task</span>
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="selectedUuids.size > 0" class="dt-bulk-bar mb-3">
+                <span class="dt-bulk-count">[[ selectedUuids.size ]] selected</span>
+                <div class="dt-bulk-actions">
+                    <button class="dt-bulk-btn" @click="selectedUuids.clear()">Clear</button>
+                    <button class="dt-bulk-btn" @click="bulkSetActive(true)"><i class="fa-solid fa-play me-1"></i>Activate</button>
+                    <button class="dt-bulk-btn" @click="bulkSetActive(false)"><i class="fa-solid fa-pause me-1"></i>Deactivate</button>
+                    <button class="dt-bulk-btn" style="color:#dc3545;" @click="bulkDelete()"><i class="fa-solid fa-trash me-1"></i>Delete selected</button>
+                </div>
+            </div>
+
+            <template v-if="loading">
+                <div class="text-center py-4 text-muted">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading…
+                </div>
+            </template>
+
+            <template v-else-if="schedules.length === 0">
+                <div class="dt-empty">
+                    <div class="dt-empty-icon"><i class="fa-solid fa-list-check"></i></div>
+                    <p class="dt-empty-text">No scheduled tasks yet — create one to automate a recurring or chained admin job.</p>
+                </div>
+            </template>
+
+            <!-- Table view -->
+            <div v-if="!loading && schedules.length > 0 && view === 'table'" class="dt-table-wrap">
+                <table class="dt-table">
+                    <thead class="dt-thead">
+                        <tr>
+                            <th class="dt-th dt-th--checkbox">
+                                <input type="checkbox" class="dt-checkbox" :checked="isFullySelected" @change="toggleAllOnPage" />
+                            </th>
+                            <th class="dt-th">Title</th>
+                            <th class="dt-th">Type</th>
+                            <th class="dt-th">Editor</th>
+                            <th class="dt-th">Trigger</th>
+                            <th class="dt-th">Next run</th>
+                            <th class="dt-th">Last run</th>
+                            <th class="dt-th text-center">Status</th>
+                            <th class="dt-th text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="s in schedules" :key="s.uuid" class="dt-row">
+                            <td class="dt-td dt-td--checkbox">
+                                <input type="checkbox" class="dt-checkbox" :checked="selectedUuids.has(s.uuid)"
+                                    @change="toggleSelection(s.uuid, $event.target.checked)" />
+                            </td>
+                            <td class="dt-td">
+                                <div class="fw-bold">[[ s.title ]]</div>
+                                <div class="text-muted" style="font-size:.78rem;" v-if="s.description">[[ s.description ]]</div>
+                            </td>
+                            <td class="dt-td">
+                                <i :class="taskTypeIcon(s.task_type)" class="me-1"></i>[[ taskTypeLabel(s.task_type) ]]
+                            </td>
+                            <td class="dt-td">
+                                <user-chip v-if="s.editor" :user-id="s.editor.id" :username="s.editor.name" :avatar="s.editor.avatar" size="xs"></user-chip>
+                                <span v-else>—</span>
+                            </td>
+                            <td class="dt-td">[[ triggerSummary(s) ]]</td>
+                            <td class="dt-td">[[ s.next_run_at || '—' ]]</td>
+                            <td class="dt-td">[[ s.last_run_at || 'Never' ]]</td>
+                            <td class="dt-td text-center">
+                                <span class="badge" :class="s.is_active ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'">
+                                    [[ s.is_active ? 'Active' : 'Paused' ]]
+                                </span>
+                                <span v-if="s.last_run_status === 'failed'" class="badge bg-danger-subtle text-danger-emphasis ms-1">Last run failed</span>
+                            </td>
+                            <td class="dt-td text-center">
+                                <div class="dt-actions justify-content-center">
+                                    <button class="dt-action-btn" title="Run now" @click="runNow(s)"><i class="fa-solid fa-play"></i></button>
+                                    <button class="dt-action-btn" title="Edit" @click="openEdit(s)"><i class="fa-solid fa-pen"></i></button>
+                                    <button class="dt-action-btn dt-action-btn--danger" title="Delete" @click="deleteSchedule(s)"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Card view -->
+            <div v-if="!loading && schedules.length > 0 && view === 'card'" class="dt-card-grid">
+                <div v-for="s in schedules" :key="s.uuid" class="dt-card" :class="{ 'dt-card--selected': selectedUuids.has(s.uuid) }">
+                    <div class="dt-card-header">
+                        <input type="checkbox" class="dt-checkbox dt-card-checkbox" :checked="selectedUuids.has(s.uuid)"
+                            @change="toggleSelection(s.uuid, $event.target.checked)" />
+                        <div class="dt-card-title">[[ s.title ]]</div>
+                    </div>
+                    <div class="dt-card-body">
+                        <p class="text-muted small mb-2" v-if="s.description">[[ s.description ]]</p>
+                        <div class="small mb-1"><i :class="taskTypeIcon(s.task_type)" class="me-1"></i>[[ taskTypeLabel(s.task_type) ]]</div>
+                        <div class="small mb-1"><i class="fa-solid fa-clock me-1"></i>[[ triggerSummary(s) ]]</div>
+                        <div class="small mb-1">Next run: [[ s.next_run_at || '—' ]]</div>
+                        <span class="badge" :class="s.is_active ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'">
+                            [[ s.is_active ? 'Active' : 'Paused' ]]
+                        </span>
+                    </div>
+                    <div class="dt-card-footer">
+                        <button class="dt-action-btn" title="Run now" @click="runNow(s)"><i class="fa-solid fa-play"></i></button>
+                        <button class="dt-action-btn" title="Edit" @click="openEdit(s)"><i class="fa-solid fa-pen"></i></button>
+                        <button class="dt-action-btn dt-action-btn--danger" title="Delete" @click="deleteSchedule(s)"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <pagination-component :current-page="currentPage" :total-pages="totalPages" @change-page="fetchSchedules"></pagination-component>
+            <p class="text-center mt-3 text-muted">Total tasks: [[ totalSchedules ]]</p>
+        </div>
+    </div>
+
+    <!-- Create/edit modal -->
+    <div class="modal fade" id="taskModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius:15px;">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">[[ form.uuid ? 'Edit Task' : 'New Task' ]]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Title<span class="required-marker">*</span></label>
+                        <input type="text" class="form-control" v-model="form.title" placeholder="e.g. Weekly quality re-analysis">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <textarea class="form-control" rows="2" v-model="form.description" placeholder="Optional notes about what this task does"></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="taskActiveToggle" v-model="form.is_active">
+                        <label class="form-check-label" for="taskActiveToggle">Active</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Task type<span class="required-marker">*</span></label>
+                        <select class="rl-fp-select" style="width:100%;" v-model="form.task_type" @change="onTaskTypeChange">
+                            <option value="" disabled>Choose a task type…</option>
+                            <option v-for="(t, key) in taskTypes" :key="key" :value="key">[[ t.label ]]</option>
+                        </select>
+                    </div>
+
+                    <!-- Extra options for the chosen task type -->
+                    <div v-if="selectedTaskDef && selectedTaskDef.extra_options.length" class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                        <div class="fw-bold mb-2" style="font-size:.85rem;">Options</div>
+                        <div v-for="opt in selectedTaskDef.extra_options" :key="opt.key" class="mb-2">
+                            <div v-if="opt.type === 'bool'" class="form-check">
+                                <input class="form-check-input" type="checkbox" :id="'opt_' + opt.key" v-model="form.extra_options[opt.key]">
+                                <label class="form-check-label" :for="'opt_' + opt.key" style="font-size:.85rem;">[[ opt.label ]]</label>
+                            </div>
+                            <div v-else>
+                                <label class="form-label mb-1" style="font-size:.78rem;">[[ opt.label ]]</label>
+                                <input type="text" class="form-control form-control-sm" v-model="form.extra_options[opt.key]">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target picker -->
+                    <div v-if="selectedTaskDef && selectedTaskDef.target_picker === 'format_filter_only'" class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                        <div class="fw-bold mb-2" style="font-size:.85rem;">Target — rule format</div>
+                        <select class="rl-fp-select" v-model="formatFilter">
+                            <option value="">All formats</option>
+                            <option v-for="f in availableFormats" :key="f" :value="f">[[ f ]]</option>
+                        </select>
+                    </div>
+
+                    <div v-if="selectedTaskDef && selectedTaskDef.target_picker === 'connector_select'" class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                        <div class="fw-bold mb-2" style="font-size:.85rem;">Target — connector<span class="required-marker">*</span></div>
+                        <select class="rl-fp-select" style="width:100%;" v-model="connectorId">
+                            <option value="" disabled>Choose a connector…</option>
+                            <option v-for="c in availableConnectors" :key="c.id" :value="c.id">
+                                [[ c.name ]][[ c.is_system ? ' (Official)' : '' ]]
+                            </option>
+                        </select>
+                    </div>
+
+                    <div v-if="selectedTaskDef && selectedTaskDef.target_picker === 'rule_list_select'" class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                        <div class="fw-bold mb-2" style="font-size:.85rem;">Target — rules</div>
+                        <p class="text-muted small mb-2" v-if="form.uuid && !targetJustChanged">
+                            Currently targets: [[ currentTargetSummary ]]. Use the picker below to change it, or leave as-is to keep it.
+                        </p>
+                        <rule-list mode="select" default-view="table" fetch-url="/rule/data_table"
+                            :sync-url="false" :show-filters="true" :show-export="false"
+                            :csrf-token="csrfToken" :current-user-is-authenticated="true" :current-user-is-admin="true"
+                            @send="onRuleTargetChange">
+                        </rule-list>
+                        <p v-if="targetJustChanged" class="text-success small mt-2 mb-0"><i class="fa-solid fa-check me-1"></i>[[ currentTargetSummary ]]</p>
+                    </div>
+
+                    <div class="rounded-3 border p-3 mb-3" style="background:var(--light-bg-color);">
+                        <div class="fw-bold mb-2" style="font-size:.85rem;">Trigger<span class="required-marker">*</span></div>
+                        <div class="d-flex gap-1 mb-2">
+                            <button type="button" class="btn btn-sm rounded-pill px-3"
+                                :class="triggerKind === 'time' ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="triggerKind = 'time'">Time-based</button>
+                            <button type="button" class="btn btn-sm rounded-pill px-3"
+                                :class="triggerKind === 'after_task' ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="triggerKind = 'after_task'; loadPickerSchedules()">After another task</button>
+                        </div>
+
+                        <schedule-recurrence-picker v-if="triggerKind === 'time'" :key="formInstance"
+                            allow-now allow-once
+                            :initial="form.recurrence" @recurrence-change="onRecurrenceChange">
+                        </schedule-recurrence-picker>
+
+                        <div v-if="triggerKind === 'after_task'" class="rl-fp-row">
+                            <div class="rl-fp-item" style="flex:1 1 60%;">
+                                <label class="form-label mb-1" style="font-size:.78rem;">After task<span class="required-marker">*</span></label>
+                                <select class="rl-fp-select" style="width:100%;" v-model="form.depends_on_schedule_id">
+                                    <option :value="null" disabled>Choose a task…</option>
+                                    <option v-for="p in pickerSchedules" :key="p.id" :value="p.id">[[ p.title ]]</option>
+                                </select>
+                            </div>
+                            <div class="rl-fp-item">
+                                <label class="form-label mb-1" style="font-size:.78rem;">Condition</label>
+                                <select class="rl-fp-select" v-model="form.depends_on_condition">
+                                    <option value="success">If it succeeds</option>
+                                    <option value="failure">If it fails</option>
+                                    <option value="always">No matter what</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4" :disabled="saving" @click="submitForm()">
+                        <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
+                        [[ (triggerKind === 'time' && recurrenceMode === 'now') ? 'Run now' : (form.uuid ? 'Save changes' : 'Create Task') ]]
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref, reactive, computed, onMounted } = Vue;
+    import { create_message, message_list } from '/static/js/toaster.js';
+    import RuleList from '/static/js/rule/ruleList.js';
+    import PaginationComponent from '/static/js/rule/paginationComponent.js';
+    import UserChip from '/static/js/components/UserChip.js';
+    import ScheduleRecurrencePicker from '/static/js/rule/scheduleRecurrencePicker.js';
+    import TagsDisplaysList from '/static/js/tags/tagsDisplaysList.js';
+    import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js';
+
+    const csrfToken = '{{ csrf_token() }}';
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: {
+            'rule-list': RuleList,
+            'pagination-component': PaginationComponent,
+            'user-chip': UserChip,
+            'schedule-recurrence-picker': ScheduleRecurrencePicker,
+            'tags-displays-list': TagsDisplaysList,
+            'vulnerability-displays-list': VulnerabilityDisplaysList,
+        },
+        setup() {
+            const schedules = ref([]);
+            const loading = ref(true);
+            const search = ref('');
+            const view = ref('table');
+            const currentPage = ref(1);
+            const totalPages = ref(1);
+            const totalSchedules = ref(0);
+            const selectedUuids = ref(new Set());
+            let searchDebounce = null;
+
+            const taskTypes = ref({});
+
+            async function fetchTaskTypes() {
+                const res = await fetch('/admin/tasks/types');
+                if (res.ok) taskTypes.value = await res.json();
+            }
+
+            function taskTypeLabel(key) { return (taskTypes.value[key] || {}).label || key; }
+            function taskTypeIcon(key) { return (taskTypes.value[key] || {}).icon || 'fa-solid fa-gear'; }
+
+            function triggerSummary(s) {
+                if (s.trigger_mode === 'after_task') {
+                    const cond = { success: 'on success', failure: 'on failure', always: 'always' }[s.depends_on_condition] || '';
+                    return s.depends_on_schedule_title ? `After "${s.depends_on_schedule_title}" (${cond})` : 'After a deleted task';
+                }
+                if (s.trigger_mode === 'once') return s.next_run_at ? `Once — ${s.next_run_at}` : 'Once (past due)';
+                const time = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`;
+                if (s.trigger_mode === 'daily') return `Daily at ${time}`;
+                if (s.trigger_mode === 'weekly') return `Weekly at ${time}`;
+                if (s.trigger_mode === 'monthly') return `Monthly at ${time}`;
+                if (s.trigger_mode === 'cron') return `Cron: ${s.cron_expr}`;
+                return s.trigger_mode;
+            }
+
+            const activeCount = computed(() => schedules.value.filter(s => s.is_active).length);
+            const pausedCount = computed(() => schedules.value.filter(s => !s.is_active).length);
+            const nextRunSummary = computed(() => {
+                const upcoming = schedules.value
+                    .filter(s => s.is_active && s.next_run_at)
+                    .sort((a, b) => a.next_run_at.localeCompare(b.next_run_at));
+                return upcoming.length ? upcoming[0].next_run_at : '—';
+            });
+
+            async function fetchSchedules(page) {
+                loading.value = true;
+                try {
+                    currentPage.value = page || 1;
+                    const params = new URLSearchParams({ page: currentPage.value, per_page: 20, search: search.value });
+                    const res = await fetch(`/admin/tasks/list?${params}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    schedules.value = data.schedules || [];
+                    totalSchedules.value = data.total || 0;
+                    totalPages.value = data.total_pages || 1;
+                } finally {
+                    loading.value = false;
+                }
+            }
+
+            function onSearchInput() {
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(() => fetchSchedules(1), 300);
+            }
+
+            const isFullySelected = computed(() =>
+                schedules.value.length > 0 && schedules.value.every(s => selectedUuids.value.has(s.uuid)));
+
+            function toggleSelection(uuid, checked) {
+                if (checked) selectedUuids.value.add(uuid); else selectedUuids.value.delete(uuid);
+            }
+            function toggleAllOnPage() {
+                if (isFullySelected.value) schedules.value.forEach(s => selectedUuids.value.delete(s.uuid));
+                else schedules.value.forEach(s => selectedUuids.value.add(s.uuid));
+            }
+
+            async function bulkSetActive(isActive) {
+                const res = await fetch('/admin/tasks/bulk_set_active', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ mode: 'partial', selected_uuids: Array.from(selectedUuids.value), is_active: isActive }),
+                });
+                const data = await res.json();
+                create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
+                if (res.ok) { selectedUuids.value.clear(); fetchSchedules(currentPage.value); }
+            }
+
+            async function bulkDelete() {
+                if (!window.confirm(`Delete ${selectedUuids.value.size} task(s)? This cannot be undone.`)) return;
+                const res = await fetch('/admin/tasks/bulk_delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ mode: 'partial', selected_uuids: Array.from(selectedUuids.value) }),
+                });
+                const data = await res.json();
+                create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
+                if (res.ok) { selectedUuids.value.clear(); fetchSchedules(1); }
+            }
+
+            async function runNow(s) {
+                const res = await fetch(`/admin/tasks/${s.uuid}/run_now`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+                const data = await res.json();
+                create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
+                if (res.ok) fetchSchedules(currentPage.value);
+            }
+
+            async function deleteSchedule(s) {
+                if (!window.confirm(`Delete task "${s.title}"? Any task depending on it will be paused.`)) return;
+                const res = await fetch(`/admin/tasks/${s.uuid}/delete`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+                const data = await res.json();
+                create_message(data.message, res.ok ? 'success-subtle' : 'danger-subtle');
+                if (res.ok) fetchSchedules(currentPage.value);
+            }
+
+            // ── Create/edit modal ───────────────────────────────────────────────
+            const form = reactive({
+                uuid: null, title: '', description: '', is_active: true,
+                task_type: '', recurrence: {}, depends_on_schedule_id: null, depends_on_condition: 'success',
+                extra_options: {},
+            });
+            const formInstance = ref(0);
+            const triggerKind = ref('time');
+            const recurrenceMode = ref('recurring');
+            let currentRecurrence = {};
+            const saving = ref(false);
+
+            const availableFormats = ref([]);
+            const availableConnectors = ref([]);
+            const pickerSchedules = ref([]);
+            const formatFilter = ref('');
+            const connectorId = ref('');
+            let ruleTargetPayload = null;
+            const targetJustChanged = ref(false);
+            const currentTargetSummary = ref('No target saved yet.');
+
+            const selectedTaskDef = computed(() => taskTypes.value[form.task_type] || null);
+
+            function onTaskTypeChange() {
+                formatFilter.value = '';
+                connectorId.value = '';
+                ruleTargetPayload = null;
+                targetJustChanged.value = false;
+                form.extra_options = {};
+                const def = selectedTaskDef.value;
+                if (def) (def.extra_options || []).forEach(opt => { form.extra_options[opt.key] = opt.default; });
+                if (def && def.target_picker === 'format_filter_only' && availableFormats.value.length === 0) loadFormats();
+                if (def && def.target_picker === 'connector_select' && availableConnectors.value.length === 0) loadConnectors();
+            }
+
+            async function loadFormats() {
+                const res = await fetch('/admin/tasks/formats');
+                if (res.ok) availableFormats.value = (await res.json()).formats || [];
+            }
+            async function loadConnectors() {
+                const res = await fetch('/admin/tasks/connectors');
+                if (res.ok) availableConnectors.value = (await res.json()).connectors || [];
+            }
+            async function loadPickerSchedules() {
+                const params = form.uuid ? `?exclude_uuid=${form.uuid}` : '';
+                const res = await fetch(`/admin/tasks/picker${params}`);
+                if (res.ok) pickerSchedules.value = (await res.json()).schedules || [];
+            }
+
+            function onRecurrenceChange(payload) {
+                currentRecurrence = payload;
+                recurrenceMode.value = payload.mode;
+            }
+            function onRuleTargetChange(ids, filters) {
+                ruleTargetPayload = ids === 'ALL' ? { filters } : { filters: { rule_ids: ids } };
+                currentTargetSummary.value = ids === 'ALL' ? 'all rules matching the current filters' : `${ids.length} rule(s)`;
+                targetJustChanged.value = true;
+            }
+
+            function openCreate() {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('taskModal')).show();
+                formInstance.value++;
+                Object.assign(form, {
+                    uuid: null, title: '', description: '', is_active: true,
+                    task_type: '', recurrence: {}, depends_on_schedule_id: null, depends_on_condition: 'success',
+                    extra_options: {},
+                });
+                triggerKind.value = 'time';
+                recurrenceMode.value = 'recurring';
+                currentRecurrence = {};
+                ruleTargetPayload = null;
+                targetJustChanged.value = false;
+                currentTargetSummary.value = 'No target saved yet.';
+            }
+
+            function openEdit(s) {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('taskModal')).show();
+                formInstance.value++;
+                Object.assign(form, {
+                    uuid: s.uuid, title: s.title, description: s.description || '', is_active: s.is_active,
+                    task_type: s.task_type,
+                    recurrence: {
+                        mode: s.trigger_mode === 'once' ? 'once' : 'recurring',
+                        frequency: ['daily', 'weekly', 'monthly', 'cron'].includes(s.trigger_mode) ? s.trigger_mode : 'weekly',
+                        days_of_week: s.days_of_week, day_of_month: s.day_of_month,
+                        hour: s.hour, minute: s.minute, cron_expr: s.cron_expr, timezone: s.timezone,
+                        run_once_at: s.run_once_at,
+                    },
+                    depends_on_schedule_id: s.depends_on_schedule_id,
+                    depends_on_condition: s.depends_on_condition || 'success',
+                    extra_options: {},
+                });
+                triggerKind.value = s.trigger_mode === 'after_task' ? 'after_task' : 'time';
+                if (triggerKind.value === 'after_task') loadPickerSchedules();
+                recurrenceMode.value = s.trigger_mode === 'once' ? 'once' : 'recurring';
+                ruleTargetPayload = null;
+                targetJustChanged.value = false;
+                currentTargetSummary.value = summarizeTargetPayload(s.task_type, s.target_payload);
+                onTaskTypeChange();
+                if (selectedTaskDef.value && selectedTaskDef.value.target_picker === 'connector_select') {
+                    connectorId.value = (s.target_payload || {}).connector_id || '';
+                }
+                if (selectedTaskDef.value && selectedTaskDef.value.target_picker === 'format_filter_only') {
+                    formatFilter.value = (s.target_payload || {}).format || '';
+                }
+                (selectedTaskDef.value ? selectedTaskDef.value.extra_options : []).forEach(opt => {
+                    form.extra_options[opt.key] = (s.target_payload || {})[opt.key] ?? opt.default;
+                });
+            }
+
+            function summarizeTargetPayload(taskType, payload) {
+                payload = payload || {};
+                if (payload.filters && payload.filters.rule_ids) return `${payload.filters.rule_ids.length} rule(s)`;
+                if (payload.filters) return 'all rules matching saved filters';
+                if (payload.connector_id) return `connector #${payload.connector_id}`;
+                if (payload.format) return `format = ${payload.format}`;
+                return 'no specific target (runs on everything)';
+            }
+
+            function buildTargetPayload() {
+                const def = selectedTaskDef.value;
+                if (!def) return {};
+                if (def.target_picker === 'rule_list_select') return ruleTargetPayload || {};
+                if (def.target_picker === 'format_filter_only') return formatFilter.value ? { format: formatFilter.value } : {};
+                if (def.target_picker === 'connector_select') return { connector_id: connectorId.value };
+                const payload = {};
+                Object.assign(payload, form.extra_options);
+                return payload;
+            }
+
+            async function submitForm() {
+                if (!form.title.trim()) { create_message('Title is required.', 'danger-subtle'); return; }
+                if (!form.task_type) { create_message('Choose a task type.', 'danger-subtle'); return; }
+                if (selectedTaskDef.value && selectedTaskDef.value.target_picker === 'connector_select' && !connectorId.value) {
+                    create_message('Choose a connector.', 'danger-subtle'); return;
+                }
+
+                const targetPayload = buildTargetPayload();
+
+                saving.value = true;
+                try {
+                    const body = {
+                        title: form.title, description: form.description, is_active: form.is_active,
+                        task_type: form.task_type, target_payload: targetPayload,
+                    };
+                    if (triggerKind.value === 'after_task') {
+                        if (!form.depends_on_schedule_id) { create_message('Choose a task to depend on.', 'danger-subtle'); saving.value = false; return; }
+                        body.trigger_mode = 'after_task';
+                        body.depends_on_schedule_id = form.depends_on_schedule_id;
+                        body.depends_on_condition = form.depends_on_condition;
+                    } else if (recurrenceMode.value === 'once') {
+                        body.trigger_mode = 'once';
+                        body.run_once_at = currentRecurrence.run_once_at;
+                    } else if (recurrenceMode.value === 'now') {
+                        // "Now" never creates a schedule — fire a one-off job directly.
+                        const res = await fetch('/jobs/create', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                            body: JSON.stringify({
+                                job_type: (taskTypes.value[form.task_type] || {}).job_type,
+                                payload: targetPayload,
+                                label: `${form.title || taskTypeLabel(form.task_type)} — ${taskTypeLabel(form.task_type)}`,
+                            }),
+                        });
+                        const data = await res.json();
+                        create_message(res.ok ? 'Job queued! Running in background…' : (data.message || data.error || 'Failed to queue job.'), res.ok ? 'success-subtle' : 'danger-subtle');
+                        if (res.ok) bootstrap.Modal.getInstance(document.getElementById('taskModal'))?.hide();
+                        saving.value = false;
+                        return;
+                    } else {
+                        body.trigger_mode = currentRecurrence.frequency || 'weekly';
+                        body.days_of_week = currentRecurrence.days_of_week;
+                        body.day_of_month = currentRecurrence.day_of_month;
+                        body.hour = currentRecurrence.hour;
+                        body.minute = currentRecurrence.minute;
+                        body.cron_expr = currentRecurrence.cron_expr;
+                        body.timezone = currentRecurrence.timezone;
+                    }
+
+                    const endpoint = form.uuid ? `/admin/tasks/${form.uuid}/update` : '/admin/tasks/create';
+                    const res2 = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify(body),
+                    });
+                    const data2 = await res2.json();
+                    create_message(data2.message, res2.ok ? 'success-subtle' : 'danger-subtle');
+                    if (res2.ok) {
+                        bootstrap.Modal.getInstance(document.getElementById('taskModal'))?.hide();
+                        fetchSchedules(currentPage.value);
+                    }
+                } finally {
+                    saving.value = false;
+                }
+            }
+
+            onMounted(() => {
+                fetchTaskTypes();
+                fetchSchedules(1);
+            });
+
+            return {
+                schedules, loading, search, view, currentPage, totalPages, totalSchedules, selectedUuids,
+                taskTypes, taskTypeLabel, taskTypeIcon, triggerSummary,
+                activeCount, pausedCount, nextRunSummary,
+                fetchSchedules, onSearchInput,
+                isFullySelected, toggleSelection, toggleAllOnPage,
+                bulkSetActive, bulkDelete, runNow, deleteSchedule,
+                form, formInstance, triggerKind, recurrenceMode, saving,
+                availableFormats, availableConnectors, pickerSchedules, formatFilter, connectorId,
+                targetJustChanged, currentTargetSummary, selectedTaskDef,
+                onTaskTypeChange, loadPickerSchedules, onRecurrenceChange, onRuleTargetChange,
+                openCreate, openEdit, submitForm,
+                csrfToken, message_list,
+            };
+        }
+    }).mount('#main-container');
+</script>
+{% endblock %}

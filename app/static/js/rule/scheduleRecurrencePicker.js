@@ -5,6 +5,15 @@
  * GithubSyncSchedule stores (frequency, days_of_week, day_of_month, hour,
  * minute, cron_expr, timezone) — never a raw cron string unless the user
  * deliberately picks "Custom cron expression".
+ *
+ * Optional props `allow-now` / `allow-once` (both default false, so every
+ * existing usage of this component is unaffected) add two more top-level
+ * modes on top of "Recurring": 'now' (no schedule at all — the consumer is
+ * expected to fire a one-off job immediately instead of creating a
+ * schedule row) and 'once' (a single future run at a specific date/time,
+ * via `run_once_at`). The emitted payload always carries every field; a
+ * consumer that doesn't pass either prop keeps getting exactly the same
+ * shape as before, plus two extra keys (`mode`, `run_once_at`) it can ignore.
  */
 const WEEKDAYS = [
     { value: 0, label: 'Mon' }, { value: 1, label: 'Tue' }, { value: 2, label: 'Wed' },
@@ -21,11 +30,15 @@ function supportedTimezones() {
 const ScheduleRecurrencePicker = {
     props: {
         initial: { type: Object, default: () => ({}) },
+        allowNow: { type: Boolean, default: false },
+        allowOnce: { type: Boolean, default: false },
     },
     delimiters: ['[[', ']]'],
     data() {
         const i = this.initial || {};
         return {
+            mode: i.mode || 'recurring',
+            runOnceAt: i.run_once_at ? i.run_once_at.slice(0, 16) : '',
             frequency: i.frequency || 'weekly',
             daysOfWeek: new Set(i.days_of_week && i.days_of_week.length ? i.days_of_week : [0]),
             dayOfMonth: i.day_of_month != null ? i.day_of_month : 1,
@@ -40,6 +53,10 @@ const ScheduleRecurrencePicker = {
     },
     computed: {
         summary() {
+            if (this.mode === 'now') return 'Runs immediately, once created.';
+            if (this.mode === 'once') {
+                return this.runOnceAt ? `Runs once at ${this.runOnceAt.replace('T', ' ')} (your local time)` : 'Pick a date and time';
+            }
             const time = `${String(this.hour).padStart(2, '0')}:${String(this.minute).padStart(2, '0')}`;
             if (this.frequency === 'daily') return `Every day at ${time} (${this.timezone})`;
             if (this.frequency === 'weekly') {
@@ -54,6 +71,8 @@ const ScheduleRecurrencePicker = {
         },
     },
     watch: {
+        mode() { this.emitChange(); },
+        runOnceAt() { this.emitChange(); },
         frequency() { this.emitChange(); },
         dayOfMonth() { this.emitChange(); },
         lastDayOfMonth() { this.emitChange(); },
@@ -66,6 +85,9 @@ const ScheduleRecurrencePicker = {
         this.emitChange();
     },
     methods: {
+        setMode(m) {
+            this.mode = m;
+        },
         toggleWeekday(value) {
             if (this.daysOfWeek.has(value)) this.daysOfWeek.delete(value);
             else this.daysOfWeek.add(value);
@@ -73,6 +95,8 @@ const ScheduleRecurrencePicker = {
         },
         emitChange() {
             this.$emit('recurrence-change', {
+                mode: this.mode,
+                run_once_at: (this.mode === 'once' && this.runOnceAt) ? new Date(this.runOnceAt).toISOString() : null,
                 frequency: this.frequency,
                 days_of_week: this.frequency === 'weekly' ? Array.from(this.daysOfWeek).sort() : [],
                 day_of_month: this.frequency === 'monthly' ? (this.lastDayOfMonth ? -1 : this.dayOfMonth) : null,
@@ -85,7 +109,28 @@ const ScheduleRecurrencePicker = {
     },
     template: `
     <div class="schedule-recurrence-picker">
-        <div class="rl-fp-row">
+        <div v-if="allowNow || allowOnce" class="rl-fp-row mb-2">
+            <div class="rl-fp-item">
+                <label class="form-label mb-1 d-block" style="font-size:.78rem;">When</label>
+                <div class="d-flex gap-1 flex-wrap">
+                    <button v-if="allowNow" type="button" class="btn btn-sm rounded-pill px-3"
+                        :class="mode === 'now' ? 'btn-primary' : 'btn-outline-secondary'" @click="setMode('now')">Now</button>
+                    <button v-if="allowOnce" type="button" class="btn btn-sm rounded-pill px-3"
+                        :class="mode === 'once' ? 'btn-primary' : 'btn-outline-secondary'" @click="setMode('once')">Once, at a date</button>
+                    <button type="button" class="btn btn-sm rounded-pill px-3"
+                        :class="mode === 'recurring' ? 'btn-primary' : 'btn-outline-secondary'" @click="setMode('recurring')">Recurring</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="mode === 'once'" class="rl-fp-row mt-2">
+            <div class="rl-fp-item">
+                <label class="form-label mb-1" style="font-size:.78rem;">Run at (your local time)</label>
+                <input class="rl-fp-select" type="datetime-local" v-model="runOnceAt">
+            </div>
+        </div>
+
+        <div v-if="mode === 'recurring'" class="rl-fp-row">
             <div class="rl-fp-item">
                 <label class="form-label mb-1" style="font-size:.78rem;">Frequency</label>
                 <select class="rl-fp-select" v-model="frequency">
@@ -117,7 +162,7 @@ const ScheduleRecurrencePicker = {
             </div>
         </div>
 
-        <div v-if="frequency === 'weekly'" class="rl-fp-row mt-2">
+        <div v-if="mode === 'recurring' && frequency === 'weekly'" class="rl-fp-row mt-2">
             <div class="rl-fp-item">
                 <label class="form-label mb-1 d-block" style="font-size:.78rem;">On these days</label>
                 <div class="d-flex gap-1">
@@ -131,7 +176,7 @@ const ScheduleRecurrencePicker = {
             </div>
         </div>
 
-        <div v-if="frequency === 'monthly'" class="rl-fp-row mt-2">
+        <div v-if="mode === 'recurring' && frequency === 'monthly'" class="rl-fp-row mt-2">
             <div class="rl-fp-item">
                 <label class="form-label mb-1" style="font-size:.78rem;">Day of month</label>
                 <div class="d-flex gap-2 align-items-center">
@@ -146,7 +191,7 @@ const ScheduleRecurrencePicker = {
             </div>
         </div>
 
-        <div v-if="frequency === 'cron'" class="rl-fp-row mt-2">
+        <div v-if="mode === 'recurring' && frequency === 'cron'" class="rl-fp-row mt-2">
             <div class="rl-fp-item" style="flex:1 1 100%;">
                 <label class="form-label mb-1" style="font-size:.78rem;">Cron expression (minute hour day month day_of_week)<span class="required-marker">*</span></label>
                 <input class="rl-fp-select" style="width:100%;font-family:monospace;" type="text"
