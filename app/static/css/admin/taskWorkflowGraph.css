@@ -2,6 +2,29 @@
     width: 100%;
 }
 
+.wf-progress-bar {
+    display: flex;
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--light-bg-color);
+}
+
+.wf-progress-seg {
+    height: 100%;
+    transition: width .4s ease;
+}
+
+.wf-progress-seg--done { background: #198754; }
+.wf-progress-seg--running { background: #0d6efd; animation: twg-pulse-bar 1.6s infinite; }
+.wf-progress-seg--failed { background: #dc3545; }
+
+@keyframes twg-pulse-bar {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .55; }
+}
+
 .twg-legend {
     display: flex;
     gap: 1.25rem;
@@ -55,6 +78,7 @@
 }
 
 .twg-node {
+    position: relative;
     display: flex;
     align-items: center;
     gap: .6rem;
@@ -65,7 +89,7 @@
     padding: .6rem .8rem;
     cursor: pointer;
     box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
-    transition: transform .12s ease, box-shadow .12s ease;
+    transition: transform .12s ease, box-shadow .12s ease, opacity .2s ease, filter .2s ease;
 }
 
 .twg-node:hover {
@@ -73,11 +97,79 @@
     box-shadow: 0 4px 10px rgba(0, 0, 0, .1);
 }
 
+.twg-node--dimmed {
+    opacity: .3;
+    filter: blur(.5px) grayscale(.4);
+}
+
+.twg-node--dimmed:hover {
+    opacity: .6;
+    filter: none;
+}
+
+.twg-node--focused {
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, .3), 0 4px 10px rgba(0, 0, 0, .1);
+}
+
+.twg-node-actions {
+    position: absolute;
+    top: -10px;
+    right: 6px;
+    display: flex;
+    gap: 3px;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity .12s ease, transform .12s ease;
+    pointer-events: none;
+}
+
+.twg-node:hover .twg-node-actions {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.twg-node-action-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    color: var(--subtle-text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .62rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+    cursor: pointer;
+}
+
+.twg-node-action-btn:hover { color: #0d6efd; }
+.twg-node-action-btn--danger:hover { color: #dc3545; }
+
 .twg-node--active { border-left-color: #0d6efd; }
 .twg-node--paused { border-left-color: #6c757d; opacity: .7; }
 .twg-node--failed { border-left-color: #dc3545; }
 
+.twg-node--running {
+    border-left-color: #0d6efd;
+    box-shadow: 0 0 0 0 rgba(13, 110, 253, .45);
+    animation: twg-pulse 1.6s infinite;
+}
+
+.twg-node--running .twg-node-sub {
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+@keyframes twg-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(13, 110, 253, .45); }
+    70%  { box-shadow: 0 0 0 8px rgba(13, 110, 253, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
+}
+
 .twg-node-icon {
+    position: relative;
     width: 28px;
     height: 28px;
     border-radius: 8px;
@@ -91,7 +183,33 @@
 }
 
 .twg-node--failed .twg-node-icon { background: rgba(220, 53, 69, .1); color: #dc3545; }
+
+/* Small check/cross/ban corner badge — the concluded outcome of a task's
+   most recent run, so you can trace which branch a launch actually took
+   after the fact, not just while it's live. */
+.twg-outcome-badge {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .5rem;
+    border: 2px solid var(--card-bg-color);
+}
+
+.twg-outcome-badge--done { background: #198754; color: #fff; }
+.twg-outcome-badge--failed { background: #dc3545; color: #fff; }
+.twg-outcome-badge--cancelled { background: #6c757d; color: #fff; }
 .twg-node--paused .twg-node-icon { background: rgba(108, 117, 125, .12); color: #6c757d; }
+
+.twg-node-body {
+    flex: 1 1 auto;
+    min-width: 0; /* required for the ellipsis below to actually kick in inside a flex row, instead of overflowing the card */
+}
 
 .twg-node-title {
     font-weight: 600;
@@ -100,7 +218,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 160px;
+    max-width: 100%;
+}
+
+.twg-node-sub-row {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    min-width: 0;
 }
 
 .twg-node-sub {
@@ -109,5 +234,23 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 160px;
+    min-width: 0;
+    flex: 0 1 auto;
 }
+
+/* Explicit Active/Paused readout — pausing a mid-chain task silently stops
+   the graph there, so this needs to be visible at a glance, not just
+   inferable from the node's border/icon color. */
+.twg-status-badge {
+    flex-shrink: 0;
+    font-size: .58rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding: 1px 6px;
+    border-radius: 999px;
+    line-height: 1.5;
+}
+
+.twg-status-badge--active { background: rgba(25, 135, 84, .12); color: #198754; }
+.twg-status-badge--paused { background: rgba(108, 117, 125, .15); color: #6c757d; }

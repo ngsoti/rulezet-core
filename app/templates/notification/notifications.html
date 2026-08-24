@@ -526,7 +526,7 @@
                                    @change="savePrefs" style="cursor:pointer;">
                         </div>
                     </div>
-                    <div class="notif-prefs-item" style="border-bottom:none;">
+                    <div class="notif-prefs-item" :style="{ borderBottom: isAdmin ? '' : 'none' }">
                         <div class="notif-prefs-item-info">
                             <div class="notif-prefs-item-label">
                                 <i class="fa-solid fa-clock me-1" style="color:#6c757d;"></i>
@@ -536,6 +536,19 @@
                         </div>
                         <div class="form-check form-switch mb-0">
                             <input class="form-check-input" type="checkbox" v-model="prefs.background_jobs"
+                                   @change="savePrefs" style="cursor:pointer;">
+                        </div>
+                    </div>
+                    <div v-if="isAdmin" class="notif-prefs-item" style="border-bottom:none;">
+                        <div class="notif-prefs-item-info">
+                            <div class="notif-prefs-item-label">
+                                <i class="fa-solid fa-code-branch me-1" style="color:#0d6efd;"></i>
+                                Admin workflow runs (launched &amp; finished)
+                            </div>
+                            <div class="notif-prefs-item-sub">Notified when a Task Scheduler workflow is launched and again once it finishes (admins only).</div>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" v-model="prefs.workflow_runs"
                                    @change="savePrefs" style="cursor:pointer;">
                         </div>
                     </div>
@@ -559,6 +572,7 @@ import RzPagination from '/static/js/rule/paginationComponent.js'
 import { create_message } from '/static/js/toaster.js'
 
 const { createApp, ref, computed, onMounted } = Vue
+const IS_ADMIN = {{ current_user.is_admin() | tojson }}
 
 function csrf() { return document.getElementById('csrf_token')?.value || '' }
 
@@ -606,6 +620,7 @@ const DEFAULT_PREFS = {
     job_done: true, proposal: true,
     proposal_comment: true, proposal_accepted: true,
     blog_published: true, sync_run_finished: true, background_jobs: true,
+    workflow_runs: true,
 }
 
 createApp({
@@ -632,6 +647,7 @@ createApp({
         const dropdownOpen  = ref(false)
 
         const mainTab      = ref('notifs')
+        const isAdmin      = ref(IS_ADMIN)
         const prefs        = ref({ ...DEFAULT_PREFS })
         const prefsLoading = ref(false)
         const prefsSaved   = ref(false)
@@ -767,7 +783,7 @@ createApp({
         return {
             notifications, loading, currentPage, totalPages, totalCount,
             unreadCount, unreadOnly, activeTypes, dropdownOpen,
-            TYPE_OPTIONS, mainTab, prefs, prefsLoading, prefsSaved,
+            TYPE_OPTIONS, mainTab, isAdmin, prefs, prefsLoading, prefsSaved,
             loadPage, markRead, markAllRead, deleteNotif, deleteAll,
             loadPrefs, savePrefs, resetPrefs,
             progressFillClass, progressWidth, relativeTime,

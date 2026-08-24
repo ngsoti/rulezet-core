@@ -162,6 +162,11 @@
                               <a href="/admin/roles/list" class="dr-nav__item {% if request.path.startswith('/admin/roles') %}active{% endif %}">
                                  <i class="fa-solid fa-user-shield"></i><span>Roles &amp; Permissions</span>
                               </a>
+                              {% if config.IS_OFFICIAL_INSTANCE %}
+                              <a href="/account/admin/instances" class="dr-nav__item {% if request.path == '/account/admin/instances' %}active{% endif %}">
+                                 <i class="fa-solid fa-earth-americas"></i><span>Instances</span>
+                              </a>
+                              {% endif %}
                            </div>
                         </div>
 
@@ -212,6 +217,9 @@
                               <a href="/admin/jobs/list" class="dr-nav__item {% if request.path.startswith('/admin/jobs') or request.path.startswith('/jobs') %}active{% endif %}">
                                  <i class="fa-solid fa-gears"></i><span>Jobs</span>
                               </a>
+                              <a href="/admin/tasks/" class="dr-nav__item {% if request.path.startswith('/admin/tasks') %}active{% endif %}">
+                                 <i class="fa-solid fa-code-branch"></i><span>Workflows</span>
+                              </a>
                               <a href="/admin/logs" class="dr-nav__item {% if request.path == '/admin/logs' %}active{% endif %}">
                                  <i class="fa-solid fa-list-ul"></i><span>Logs</span>
                               </a>
@@ -221,11 +229,6 @@
                               <a href="/admin/settings" class="dr-nav__item {% if request.path == '/admin/settings' %}active{% endif %}">
                                  <i class="fa-solid fa-sliders"></i><span>Server Settings</span>
                               </a>
-                              {% if config.IS_OFFICIAL_INSTANCE %}
-                              <a href="/account/admin/instances" class="dr-nav__item {% if request.path == '/account/admin/instances' %}active{% endif %}">
-                                 <i class="fa-solid fa-earth-americas"></i><span>Instances</span>
-                              </a>
-                              {% endif %}
                            </div>
                         </div>
 
@@ -390,6 +393,7 @@
       { label: 'Velociraptor', url: '/velociraptor/list', icon: 'fa-diagram-project', keywords: ['velociraptor'] },
       { label: 'MISP', url: '/misp/list', icon: 'fa-share-nodes', keywords: ['misp', 'threat intelligence'] },
       { label: 'Admin: Jobs', url: '/admin/jobs/list', icon: 'fa-gears', keywords: ['admin jobs'] },
+      { label: 'Admin: Workflows', url: '/admin/tasks/', icon: 'fa-code-branch', keywords: ['workflows', 'task scheduler', 'scheduled tasks'] },
       { label: 'Logs', url: '/admin/logs', icon: 'fa-list-ul', keywords: ['logs'] },
       { label: 'Server Settings', url: '/admin/settings', icon: 'fa-sliders', keywords: ['server settings'] },
       {% endif %}

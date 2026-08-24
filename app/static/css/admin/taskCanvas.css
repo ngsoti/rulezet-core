@@ -1,0 +1,174 @@
+/* TaskCanvas — free-form drag-and-drop pipeline editor. Reuses .twg-node*
+   node-body/icon/actions/dimmed/focused styling from taskWorkflowGraph.css
+   (same look as the fixed-column DAG) — only the container/positioning is
+   different here since nodes are absolutely placed instead of flowing in
+   flex columns. */
+
+.tc-container {
+    width: 100%;
+}
+
+.tc-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .75rem;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+.tc-toolbar-actions {
+    display: flex;
+    gap: .5rem;
+}
+
+.tc-wrap {
+    position: relative;
+    width: 100%;
+    height: 520px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background:
+        radial-gradient(circle, var(--border-color) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-color: var(--light-bg-color);
+    cursor: grab;
+}
+
+.tc-wrap:active {
+    cursor: grabbing;
+}
+
+.tc-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.tc-edges {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.tc-edge-hit {
+    pointer-events: stroke;
+    cursor: pointer;
+}
+
+.tc-node {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    width: 170px;
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid #6c757d;
+    border-radius: 10px;
+    padding: .55rem .7rem;
+    cursor: grab;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
+    user-select: none;
+    transition: opacity .2s ease, filter .2s ease, box-shadow .12s ease;
+}
+
+.tc-node:active {
+    cursor: grabbing;
+}
+
+/* .twg-node-actions (reused from taskWorkflowGraph.css) only reveals on
+   ".twg-node:hover" there — canvas nodes use ".tc-node" instead, so without
+   this the Run/Edit/Delete icons were invisible (opacity:0) and unclickable
+   here no matter how you hovered. */
+.tc-node:hover .twg-node-actions {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.tc-node-handle {
+    /* A generous strip along the card's right edge — easy to grab without
+       pixel-perfect aim, per feedback that a tiny dot was too fiddly to hit. */
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 34px;
+    border-radius: 0 9px 9px 0;
+    background: rgba(13, 110, 253, .12);
+    color: #0d6efd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .7rem;
+    cursor: crosshair;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity .12s ease, background .12s ease;
+}
+
+.tc-node:hover .tc-node-handle {
+    opacity: 1;
+}
+
+.tc-node-handle:hover {
+    background: #0d6efd;
+    color: #fff;
+}
+
+/* Right-click node menu — fixed to the viewport (not the canvas transform),
+   see the template comment in taskCanvas.js for why. */
+.tc-context-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1040;
+    background: transparent;
+}
+
+.tc-context-menu {
+    position: fixed;
+    z-index: 1041;
+    min-width: 180px;
+    background: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+    padding: .35rem;
+    transform: translate(4px, 4px);
+}
+
+.tc-context-menu-header {
+    padding: .35rem .6rem .5rem;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--subtle-text-color);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: .3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+}
+
+.tc-context-menu-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border: none;
+    background: none;
+    text-align: left;
+    padding: .45rem .6rem;
+    border-radius: 6px;
+    font-size: .85rem;
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.tc-context-menu-item:hover {
+    background: var(--light-bg-color);
+}

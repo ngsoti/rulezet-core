@@ -7,7 +7,7 @@ DB/business logic lives in task_scheduler_core.py; execution happens
 through the existing generic BackgroundJob pipeline (job_worker.py), exactly
 like every other admin bulk action. See docs/design/admin_task_scheduler.md.
 """
-from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
 
 from app.core.db_class.db import Connector, Rule
@@ -37,7 +37,20 @@ def _workflow_or_none(workflow_uuid):
 
 @task_scheduler_blueprint.route('/', methods=['GET'])
 def admin_panel():
-    return render_template('admin/task_scheduler.html')
+    # Legacy '?workflow=<uuid>' links redirect to the canonical path-based
+    # URL below, which is the one that actually 404s for a bad/deleted uuid.
+    workflow_uuid = request.args.get('workflow')
+    if workflow_uuid:
+        return redirect(url_for('task_scheduler.admin_panel_workflow', workflow_uuid=workflow_uuid))
+    return render_template('admin/task_scheduler.html', initial_workflow=None)
+
+
+@task_scheduler_blueprint.route('/<workflow_uuid>', methods=['GET'])
+def admin_panel_workflow(workflow_uuid):
+    workflow = _workflow_or_none(workflow_uuid)
+    if not workflow:
+        abort(404)
+    return render_template('admin/task_scheduler.html', initial_workflow=workflow.to_json())
 
 
 @task_scheduler_blueprint.route('/types', methods=['GET'])
@@ -65,6 +78,14 @@ def connectors():
             for c in rows
         ]
     }), 200
+
+
+@task_scheduler_blueprint.route('/config', methods=['GET'])
+def config():
+    """Feeds the workflow modal's notification section — disable those
+    checkboxes outright when this instance has no mail server configured,
+    rather than letting an admin turn on a setting that can never fire."""
+    return jsonify({"mail_configured": bool(current_app.config.get('MAIL_SERVER'))}), 200
 
 
 # ─── Workflows (JSON API used by the Vue app) ─────────────────────────────────
@@ -144,6 +165,79 @@ def delete_workflow(uuid):
                  target_uuid=uuid,
                  icon="fa-solid fa-diagram-project")
     return jsonify({"message": "Workflow and its tasks deleted.", "toast_class": "success-subtle"}), 200
+
+
+@task_scheduler_blueprint.route('/workflows/<uuid>/run_now', methods=['POST'])
+def run_workflow_now(uuid):
+    workflow_run, err = TaskSchedulerModel.run_workflow_now(uuid, triggered_by=current_user)
+    if err:
+        return jsonify({"message": err, "toast_class": "danger-subtle"}), 400
+
+    log_activity("admin.workflow_run_now",
+                 "Manually launched a workflow",
+                 target_type="admin_workflow",
+                 target_uuid=uuid,
+                 icon="fa-solid fa-diagram-project")
+    return jsonify({
+        "message": "Workflow launched.",
+        "toast_class": "success-subtle",
+        "workflow_run_uuid": workflow_run.uuid,
+    }), 202
+
+
+@task_scheduler_blueprint.route('/workflows/<uuid>/stop', methods=['POST'])
+def stop_workflow(uuid):
+    stopped, err = TaskSchedulerModel.stop_workflow_jobs(uuid)
+    if err:
+        return jsonify({"message": err, "toast_class": "danger-subtle"}), 404
+
+    log_activity("admin.workflow_stopped",
+                 f"Stopped {stopped} running job(s) for a workflow",
+                 target_type="admin_workflow",
+                 target_uuid=uuid,
+                 icon="fa-solid fa-diagram-project")
+    return jsonify({
+        "message": f"Stopped {stopped} running job(s)." if stopped else "Nothing was running.",
+        "toast_class": "success-subtle",
+        "stopped": stopped,
+    }), 200
+
+
+@task_scheduler_blueprint.route('/workflows/<uuid>/live', methods=['GET'])
+def workflow_live_status(uuid):
+    tasks = TaskSchedulerModel.get_workflow_live_status(uuid)
+    if tasks is None:
+        return jsonify({"message": "Workflow not found.", "toast_class": "danger-subtle"}), 404
+    return jsonify({"tasks": tasks}), 200
+
+
+@task_scheduler_blueprint.route('/workflows/<uuid>/runs', methods=['GET'])
+def workflow_runs(uuid):
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    pagination = TaskSchedulerModel.get_workflow_runs_page(uuid, page, per_page)
+    if pagination is None:
+        return jsonify({"message": "Workflow not found.", "toast_class": "danger-subtle"}), 404
+    return jsonify({
+        "runs": [TaskSchedulerModel.serialize_workflow_run(r) for r in pagination.items],
+        "total": pagination.total,
+        "total_pages": pagination.pages,
+    }), 200
+
+
+@task_scheduler_blueprint.route('/workflows/<uuid>/runs/bulk_delete', methods=['POST'])
+def bulk_delete_workflow_runs(uuid):
+    data = request.get_json(silent=True) or {}
+    count, err = TaskSchedulerModel.bulk_delete_workflow_runs(uuid, data.get('run_uuids'))
+    if err:
+        return jsonify({"message": err, "toast_class": "danger-subtle"}), 404
+
+    log_activity("admin.workflow_run_bulk_deleted",
+                 f"Deleted {count} launch history entr{'y' if count == 1 else 'ies'}",
+                 target_type="admin_workflow",
+                 target_uuid=uuid,
+                 icon="fa-solid fa-diagram-project")
+    return jsonify({"message": f"{count} history entr{'y' if count == 1 else 'ies'} deleted.", "toast_class": "success-subtle", "count": count}), 200
 
 
 # ─── Tasks — always scoped to a workflow (JSON API used by the Vue app) ────────
@@ -284,8 +378,8 @@ def bulk_set_active():
 
 @task_scheduler_blueprint.route('/<uuid>/run_now', methods=['POST'])
 def run_now(uuid):
-    ok, err = TaskSchedulerModel.run_schedule_now(uuid)
-    if not ok:
+    job_uuid, err = TaskSchedulerModel.run_schedule_now(uuid)
+    if not job_uuid:
         return jsonify({"message": err, "toast_class": "danger-subtle"}), 400
 
     log_activity("admin.task_schedule_run_now",
@@ -293,4 +387,61 @@ def run_now(uuid):
                  target_type="admin_task_schedule",
                  target_uuid=uuid,
                  icon="fa-solid fa-list-check")
-    return jsonify({"message": "Run started.", "toast_class": "success-subtle"}), 202
+    return jsonify({
+        "message": "Run started.",
+        "toast_class": "success-subtle",
+        "job_uuid": job_uuid if isinstance(job_uuid, str) else None,
+    }), 202
+
+
+@task_scheduler_blueprint.route('/<uuid>/position', methods=['POST'])
+def set_position(uuid):
+    """Feeds the Canvas view's drag-to-move — fired on node release, not on
+    every mousemove frame, so this is not a hot path."""
+    data = request.get_json(silent=True) or {}
+    schedule, err = TaskSchedulerModel.set_task_position(uuid, data.get('x'), data.get('y'))
+    if err:
+        return jsonify({"message": err, "toast_class": "danger-subtle"}), 404
+    return jsonify({"message": "Position saved.", "toast_class": "success-subtle"}), 200
+
+
+@task_scheduler_blueprint.route('/<uuid>/set_dependency', methods=['POST'])
+def set_dependency(uuid):
+    """Feeds the Canvas view's drag-to-connect — sets only the trigger,
+    leaving every other field on the task untouched."""
+    data = request.get_json(silent=True) or {}
+    schedule, err = TaskSchedulerModel.set_task_dependency(
+        uuid, data.get('depends_on_schedule_id'), data.get('depends_on_condition', 'success')
+    )
+    if err:
+        return jsonify({"message": err, "toast_class": "danger-subtle"}), 400
+
+    log_activity("admin.task_schedule_updated",
+                 f"Connected task '{schedule.title}' on the workflow canvas",
+                 target_type="admin_task_schedule",
+                 target_uuid=uuid,
+                 icon="fa-solid fa-list-check")
+    return jsonify({
+        "message": "Dependency set.",
+        "toast_class": "success-subtle",
+        "schedule": schedule.to_json(),
+    }), 200
+
+
+@task_scheduler_blueprint.route('/<uuid>/clear_dependency', methods=['POST'])
+def clear_dependency(uuid):
+    """Feeds the Canvas view's 'Remove connection' action."""
+    schedule, err = TaskSchedulerModel.clear_task_dependency(uuid)
+    if err:
+        return jsonify({"message": err, "toast_class": "danger-subtle"}), 400
+
+    log_activity("admin.task_schedule_updated",
+                 f"Removed a connection to task '{schedule.title}' on the workflow canvas",
+                 target_type="admin_task_schedule",
+                 target_uuid=uuid,
+                 icon="fa-solid fa-list-check")
+    return jsonify({
+        "message": "Connection removed — task paused, set its trigger via Edit.",
+        "toast_class": "success-subtle",
+        "schedule": schedule.to_json(),
+    }), 200

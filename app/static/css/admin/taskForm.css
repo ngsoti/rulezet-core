@@ -1,0 +1,59 @@
+/* Task/Workflow create-edit modal — consistent section grouping matching
+   the rest of the admin area (blue bar + uppercase label, see detail_rule.html). */
+
+.task-form-section {
+    margin-bottom: 1.25rem;
+}
+
+.task-form-section:last-child {
+    margin-bottom: 0;
+}
+
+.task-form-section__title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .75rem;
+    font-weight: 700;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--subtle-text-color);
+}
+
+.task-form-bar {
+    width: 3px;
+    height: 14px;
+    background: #0d6efd;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.task-form-subcard {
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.last-child-mb-0:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* ScheduleRecurrencePicker is shared with GitHub Sync Schedule — these
+   overrides are scoped to .task-form-subcard only, so the picker's own
+   compact filter-bar look elsewhere is untouched. Gives each field
+   (Frequency/Time/Timezone) an even minimum width so they line up in a
+   real row instead of shrink-wrapping unevenly in this wider modal. */
+.task-form-subcard .rl-fp-row {
+    row-gap: .75rem;
+}
+
+.task-form-subcard .rl-fp-item {
+    flex: 1 1 160px;
+    min-width: 140px;
+}
+
+.task-form-subcard .rl-fp-select {
+    width: 100%;
+}

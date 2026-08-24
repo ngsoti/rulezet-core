@@ -2946,3 +2946,9 @@ button.dr-nav__item {
     font-family: 'Space Mono', monospace;
     letter-spacing: .04em;
 }
+/* ── Required-field marker (global — form labels across admin pages) ── */
+.required-marker {
+    color: #dc3545;
+    margin-left: .2rem;
+    font-weight: 700;
+}

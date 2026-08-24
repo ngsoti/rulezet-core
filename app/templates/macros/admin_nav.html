@@ -56,6 +56,14 @@
         <i class="fa-solid fa-user-shield"></i>
         <span>Roles &amp; Permissions</span>
     </a>
+
+    {% if config.IS_OFFICIAL_INSTANCE %}
+    <a href="/account/admin/instances"
+       class="dr-nav__item {% if active == 'instances' %}active{% endif %}">
+        <i class="fa-solid fa-earth-americas"></i>
+        <span>Instances</span>
+    </a>
+    {% endif %}
 </nav>
 
 <!-- Row 2 — Content -->
@@ -151,8 +159,8 @@
 
     <a href="/admin/tasks/"
        class="dr-nav__item {% if active == 'task_scheduler' %}active{% endif %}">
-        <i class="fa-solid fa-list-check"></i>
-        <span>Task Scheduler</span>
+        <i class="fa-solid fa-code-branch"></i>
+        <span>Workflows</span>
     </a>
 
     <a href="/admin/logs"
@@ -166,14 +174,6 @@
         <i class="fa-solid fa-diagram-project"></i>
         <span>PivoTick</span>
     </a>
-
-    {% if config.IS_OFFICIAL_INSTANCE %}
-    <a href="/account/admin/instances"
-       class="dr-nav__item {% if active == 'instances' %}active{% endif %}">
-        <i class="fa-solid fa-earth-americas"></i>
-        <span>Instances</span>
-    </a>
-    {% endif %}
 
     <a href="/admin/settings"
        class="dr-nav__item {% if active == 'settings' %}active{% endif %}">

@@ -278,6 +278,8 @@
 .notif-icon-bubble--proposal_accepted  { background: rgba(25,135,84,.12);    color: #198754; }
 .notif-icon-bubble--proposal_rejected  { background: rgba(220,53,69,.12);    color: #dc3545; }
 .notif-icon-bubble--comment_reply      { background: rgba(139,92,246,.12);   color: #8b5cf6; }
+.notif-icon-bubble--workflow_run_started  { background: rgba(13,110,253,.12); color: #0d6efd; }
+.notif-icon-bubble--workflow_run_finished { background: rgba(13,110,253,.12); color: #0d6efd; }
 
 /* Content */
 .notif-content { flex: 1; min-width: 0; }

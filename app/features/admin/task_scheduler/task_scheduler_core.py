@@ -49,6 +49,9 @@ def create_workflow(data, editor):
         description=data.get('description'),
         editor_id=editor.id,
         is_active=bool(data.get('is_active', True)),
+        notify_on_failure=bool(data.get('notify_on_failure', True)),
+        notify_on_success=bool(data.get('notify_on_success', False)),
+        notify_emails=data.get('notify_emails') or [],
     )
     db.session.add(workflow)
     db.session.commit()
@@ -67,6 +70,10 @@ def update_workflow(workflow_uuid, data):
     workflow.title = title
     workflow.description = data.get('description')
     workflow.is_active = bool(data.get('is_active', workflow.is_active))
+    workflow.notify_on_failure = bool(data.get('notify_on_failure', workflow.notify_on_failure))
+    workflow.notify_on_success = bool(data.get('notify_on_success', workflow.notify_on_success))
+    if 'notify_emails' in data:
+        workflow.notify_emails = data.get('notify_emails') or []
     db.session.commit()
     return workflow, None
 
@@ -340,7 +347,11 @@ def bulk_set_active_schedules(workflow_id, mode, filters, selected_uuids, exclud
 def run_schedule_now(schedule_uuid):
     """Manually trigger one run immediately, outside its normal cadence —
     reuses the exact same _fire_schedule the scheduler/chaining itself
-    calls, so a manual run creates an identical AdminTaskRun + BackgroundJob."""
+    calls, so a manual run creates an identical AdminTaskRun + BackgroundJob.
+    Returns the new run's job_uuid (still truthy, like the old `True`) so the
+    caller can jump straight to that job's detail instead of waiting for the
+    next live-status poll to discover it."""
+    from app.core.db_class.db import AdminTaskRun
     from app.features.admin.task_scheduler.scheduler_engine import _fire_schedule
     schedule = AdminTaskSchedule.query.filter_by(uuid=schedule_uuid).first()
     if not schedule:
@@ -348,4 +359,305 @@ def run_schedule_now(schedule_uuid):
     if not schedule.is_active:
         return False, "Task is paused — activate it before running it manually."
     _fire_schedule(current_app._get_current_object(), schedule.uuid)
-    return True, None
+    run = AdminTaskRun.query.filter_by(schedule_id=schedule.id).order_by(AdminTaskRun.started_at.desc()).first()
+    return (run.job_uuid if run else True), None
+
+
+def run_workflow_now(workflow_uuid, triggered_by=None):
+    """Fire every 'root' task in the workflow (one not triggered by another
+    task's completion) right now — the rest of the chain follows on its own
+    via on_job_finished() as each root's job completes. Lets an admin launch
+    the whole pipeline with one click instead of running its first task.
+    Records one AdminWorkflowRun for the launch-history table; the chain's
+    workflow_run_id is propagated to every task it triggers, directly or
+    through on_job_finished()."""
+    from app.core.db_class.db import AdminWorkflowRun
+    from app.features.admin.task_scheduler.scheduler_engine import _fire_schedule
+    workflow = AdminWorkflow.query.filter_by(uuid=workflow_uuid).first()
+    if not workflow:
+        return False, "Workflow not found."
+
+    roots = [t for t in workflow.tasks if t.trigger_mode != 'after_task' and t.is_active]
+    if not roots:
+        return False, "This workflow has no independently-triggered (non-paused) task to start from."
+
+    workflow_run = AdminWorkflowRun(
+        uuid=str(_uuid_mod.uuid4()), workflow_id=workflow.id,
+        triggered_by_id=triggered_by.id if triggered_by else None,
+    )
+    db.session.add(workflow_run)
+    db.session.commit()
+
+    app = current_app._get_current_object()
+    for task in roots:
+        _fire_schedule(app, task.uuid, workflow_run_id=workflow_run.id)
+
+    try:
+        from app.features.notification.notification_core import notify_admins_workflow_run_started
+        notify_admins_workflow_run_started(workflow_run)
+    except Exception as e:
+        current_app.logger.warning(f"notify_admins_workflow_run_started failed: {e}")
+
+    try:
+        from app.features.admin.task_scheduler.notifications import maybe_send_workflow_run_alert
+        maybe_send_workflow_run_alert(workflow, 'started')
+    except Exception as e:
+        current_app.logger.warning(f"maybe_send_workflow_run_alert(started) failed: {e}")
+
+    return workflow_run, None
+
+
+def stop_workflow_jobs(workflow_uuid):
+    """Cancel every currently pending/running job among this workflow's
+    tasks — the 'Stop Workflow' button. Cooperative like every other cancel
+    in the app: a handler only actually halts at its next _is_cancelled()
+    checkpoint (see job_worker.py), it isn't a hard kill. Cancelling a job
+    directly (not via job_worker's own completion path) does NOT trigger
+    on_job_finished(), so the chain simply stops — no child task fires from
+    a cancelled run, which is exactly the intent of stopping a workflow."""
+    from app.core.db_class.db import AdminTaskRun, BackgroundJob
+    from app.features.jobs.jobs_core import cancel_job
+
+    workflow = AdminWorkflow.query.filter_by(uuid=workflow_uuid).first()
+    if not workflow:
+        return None, "Workflow not found."
+
+    stopped = 0
+    touched_run_ids = set()
+    for task in workflow.tasks:
+        run = (AdminTaskRun.query.filter_by(schedule_id=task.id)
+               .order_by(AdminTaskRun.started_at.desc()).first())
+        if not run or not run.job_uuid:
+            continue
+        job = BackgroundJob.query.filter_by(uuid=run.job_uuid).first()
+        if job and job.status in ('pending', 'running', 'paused'):
+            ok, _ = cancel_job(job)
+            if ok:
+                stopped += 1
+                touched_run_ids.add(run.workflow_run_id)
+
+    for run_id in touched_run_ids:
+        _finalize_workflow_run_if_done(run_id)
+
+    return stopped, None
+
+
+def _finalize_workflow_run_if_done(workflow_run_id):
+    """Fire the one 'workflow run finished' notification for a launch once
+    every task run tied to it has reached a terminal state — called after
+    each settling task (see on_job_finished in scheduler_engine.py) and
+    after Stop Workflow, since a cancelled job never goes through
+    on_job_finished on its own. Idempotent: skips if already notified."""
+    if not workflow_run_id:
+        return
+    from app.core.db_class.db import AdminTaskRun, AdminWorkflowRun, BackgroundJob, Notification
+
+    workflow_run = AdminWorkflowRun.query.get(workflow_run_id)
+    if not workflow_run:
+        return
+
+    task_runs = AdminTaskRun.query.filter_by(workflow_run_id=workflow_run_id).all()
+    if not task_runs:
+        return
+
+    statuses = []
+    for tr in task_runs:
+        job = BackgroundJob.query.filter_by(uuid=tr.job_uuid).first() if tr.job_uuid else None
+        statuses.append(job.status if job else tr.status)
+
+    if any(s in ('pending', 'running', 'paused') for s in statuses):
+        return  # still in flight — a chained child may still fire
+
+    already_notified = Notification.query.filter_by(
+        job_uuid=workflow_run.uuid, notif_type='workflow_run_finished').first()
+    if already_notified:
+        return
+
+    done_count = sum(1 for s in statuses if s == 'done')
+    failed_count = sum(1 for s in statuses if s == 'failed')
+    cancelled_count = sum(1 for s in statuses if s == 'cancelled')
+
+    try:
+        from app.features.notification.notification_core import notify_admins_workflow_run_finished
+        notify_admins_workflow_run_finished(
+            workflow_run, done_count=done_count, failed_count=failed_count,
+            cancelled_count=cancelled_count, task_count=len(statuses),
+        )
+    except Exception as e:
+        current_app.logger.warning(f"notify_admins_workflow_run_finished failed: {e}")
+
+    # One email for the whole launch, not one per task — cancelled-with-no-
+    # failures was a deliberate Stop Workflow, not an outcome worth emailing.
+    if failed_count or (done_count and not cancelled_count):
+        try:
+            from app.features.admin.task_scheduler.notifications import maybe_send_workflow_run_alert
+            summary = f"{done_count}/{len(statuses)} task(s) done" + (f", {failed_count} failed" if failed_count else "")
+            maybe_send_workflow_run_alert(workflow_run.workflow, 'failure' if failed_count else 'success', summary)
+        except Exception as e:
+            current_app.logger.warning(f"maybe_send_workflow_run_alert(finished) failed: {e}")
+
+
+def get_workflow_runs_page(workflow_uuid, page=1, per_page=10):
+    """Launch history — one row per 'Run Workflow' click, each summarizing
+    every task run it directly fired or chained afterwards."""
+    from app.core.db_class.db import AdminWorkflowRun
+    workflow = AdminWorkflow.query.filter_by(uuid=workflow_uuid).first()
+    if not workflow:
+        return None
+    return (AdminWorkflowRun.query.filter_by(workflow_id=workflow.id)
+            .order_by(AdminWorkflowRun.started_at.desc())
+            .paginate(page=page, per_page=min(per_page or 10, 50), max_per_page=50))
+
+
+def bulk_delete_workflow_runs(workflow_uuid, run_uuids):
+    """Delete one or more launch-history entries. Only removes the
+    bookkeeping row — the AdminTaskRun rows it grouped keep existing (their
+    workflow_run_id is set to NULL by the FK's ON DELETE SET NULL), so a
+    task's own last_run_status/logs are unaffected."""
+    from app.core.db_class.db import AdminWorkflowRun
+    workflow = AdminWorkflow.query.filter_by(uuid=workflow_uuid).first()
+    if not workflow:
+        return None, "Workflow not found."
+
+    targets = AdminWorkflowRun.query.filter(
+        AdminWorkflowRun.workflow_id == workflow.id,
+        AdminWorkflowRun.uuid.in_(run_uuids or []),
+    ).all()
+    count = len(targets)
+    for run in targets:
+        db.session.delete(run)
+    db.session.commit()
+    return count, None
+
+
+def serialize_workflow_run(run):
+    from app.core.db_class.db import AdminTaskRun, BackgroundJob
+
+    db.session.expire_all()
+    task_runs = AdminTaskRun.query.filter_by(workflow_run_id=run.id).order_by(AdminTaskRun.started_at.asc()).all()
+    tasks = []
+    for tr in task_runs:
+        job = BackgroundJob.query.filter_by(uuid=tr.job_uuid).first() if tr.job_uuid else None
+        job_status = job.status if job else tr.status
+        tasks.append({
+            "task_uuid": tr.schedule.uuid,
+            "task_title": tr.schedule.title,
+            "job_uuid": tr.job_uuid,
+            "status": job_status,
+        })
+
+    statuses = [t["status"] for t in tasks]
+    if any(s in ('pending', 'running') for s in statuses):
+        overall = 'running'
+    elif any(s == 'failed' for s in statuses):
+        overall = 'failed'
+    elif any(s == 'cancelled' for s in statuses):
+        overall = 'cancelled'
+    elif statuses:
+        overall = 'done'
+    else:
+        overall = 'pending'
+
+    return {
+        "uuid": run.uuid,
+        "started_at": run.started_at.strftime('%Y-%m-%d %H:%M') if run.started_at else None,
+        "triggered_by": {
+            "id": run.triggered_by.id,
+            "name": f"{run.triggered_by.first_name} {run.triggered_by.last_name}".strip(),
+            "avatar": run.triggered_by.get_avatar_url(),
+        } if run.triggered_by else None,
+        "status": overall,
+        "task_count": len(tasks),
+        "done_count": sum(1 for s in statuses if s == 'done'),
+        "failed_count": sum(1 for s in statuses if s == 'failed'),
+        "tasks": tasks,
+    }
+
+
+def get_workflow_live_status(workflow_uuid):
+    """One row per task in the workflow, describing its most recent run's
+    live BackgroundJob state — feeds the graph view's running/done/failed
+    node highlighting and the 'Live runs' log panel while a workflow is in
+    flight. Returns None if the workflow doesn't exist."""
+    from app.core.db_class.db import AdminTaskRun, BackgroundJob
+
+    workflow = AdminWorkflow.query.filter_by(uuid=workflow_uuid).first()
+    if not workflow:
+        return None
+
+    db.session.expire_all()  # avoid stale progress — job_worker mutates jobs on another thread
+    result = []
+    for task in workflow.tasks:
+        run = (AdminTaskRun.query.filter_by(schedule_id=task.id)
+               .order_by(AdminTaskRun.started_at.desc()).first())
+        job = BackgroundJob.query.filter_by(uuid=run.job_uuid).first() if (run and run.job_uuid) else None
+        result.append({
+            "task_uuid": task.uuid,
+            "job_uuid": job.uuid if job else None,
+            "job_status": job.status if job else None,
+            "job_label": job.label if job else None,
+            "done": job.done if job else 0,
+            "total": job.total if job else 0,
+        })
+    return result
+
+
+# ─── Canvas view — free-form node positions + drag-to-connect ─────────────────
+
+def set_task_position(schedule_uuid, x, y):
+    """Persist where this task's node sits on the workflow's Canvas view.
+    No validation beyond existence — position is purely cosmetic, never
+    read by the scheduler engine."""
+    schedule = AdminTaskSchedule.query.filter_by(uuid=schedule_uuid).first()
+    if not schedule:
+        return None, "Task not found."
+    schedule.position_x = float(x)
+    schedule.position_y = float(y)
+    db.session.commit()
+    return schedule, None
+
+
+def set_task_dependency(schedule_uuid, depends_on_schedule_id, depends_on_condition):
+    """Surgical version of update_schedule() that only ever touches the
+    trigger — used by the Canvas view's drag-to-connect: dragging from one
+    node to another must not silently reset the target's title, task_type,
+    target_payload, etc. the way re-submitting the full edit form would if
+    those fields weren't carried along. Reuses the exact same validation
+    (cycle guard, same-workflow check) as the modal-based flow."""
+    schedule = AdminTaskSchedule.query.filter_by(uuid=schedule_uuid).first()
+    if not schedule:
+        return None, "Task not found."
+
+    data = {
+        'trigger_mode': 'after_task',
+        'depends_on_schedule_id': depends_on_schedule_id,
+        'depends_on_condition': depends_on_condition,
+    }
+    ok, err = _validate_trigger(data, schedule_id=schedule.id, workflow_id=schedule.workflow_id)
+    if not ok:
+        return None, err
+
+    _apply_trigger_fields(schedule, data)
+    db.session.commit()
+    _register_live(schedule)
+    return schedule, None
+
+
+def clear_task_dependency(schedule_uuid):
+    """Remove an existing dependency (Canvas view: click an edge, choose
+    'Remove connection'). A task can't be left with no trigger at all, so it
+    falls back to a safe, inert default — daily at 03:00, paused — rather
+    than guessing a schedule the admin never asked for; they re-enable it
+    with a real cadence via Edit once they've decided what it should be."""
+    schedule = AdminTaskSchedule.query.filter_by(uuid=schedule_uuid).first()
+    if not schedule:
+        return None, "Task not found."
+    if schedule.trigger_mode != 'after_task':
+        return None, "This task has no dependency to remove."
+
+    data = {'trigger_mode': 'daily', 'hour': 3, 'minute': 0, 'timezone': schedule.timezone or 'UTC'}
+    _apply_trigger_fields(schedule, data)
+    schedule.is_active = False
+    db.session.commit()
+    _register_live(schedule)
+    return schedule, None

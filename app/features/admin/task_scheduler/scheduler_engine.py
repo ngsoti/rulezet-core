@@ -73,10 +73,21 @@ def _creates_cycle(schedule_id, depends_on_schedule_id):
     return False
 
 
-def _fire_schedule(app, schedule_uuid):
+def _fire_schedule(app, schedule_uuid, workflow_run_id=None, ignore_paused=False):
     """Runs in the APScheduler thread (or synchronously for a manual
     run_now/chained fire). Only ever creates an AdminTaskRun + BackgroundJob
-    row — the real work happens later on job_worker's thread."""
+    row — the real work happens later on job_worker's thread.
+
+    workflow_run_id: set when this firing is part of a whole-workflow launch
+    (see AdminWorkflowRun) — passed in directly for a root task by
+    run_workflow_now(), and propagated automatically to each chained child
+    by on_job_finished() below, so a launch-history entry covers the entire
+    cascade, not just the root task(s) that were fired directly.
+
+    ignore_paused: set by on_job_finished() when chaining inside a manual
+    workflow launch, so a paused mid-chain task still runs as part of that
+    explicit launch (pausing only opts a task out of firing on its own
+    schedule/automatically)."""
     from app import db
     from app.core.db_class.db import AdminTaskSchedule, AdminTaskRun
     from app.features.jobs.jobs_core import create_job
@@ -84,7 +95,10 @@ def _fire_schedule(app, schedule_uuid):
 
     with app.app_context():
         try:
-            schedule = AdminTaskSchedule.query.filter_by(uuid=schedule_uuid, is_active=True).first()
+            query = AdminTaskSchedule.query.filter_by(uuid=schedule_uuid)
+            if not ignore_paused:
+                query = query.filter_by(is_active=True)
+            schedule = query.first()
             if not schedule:
                 return
 
@@ -93,7 +107,8 @@ def _fire_schedule(app, schedule_uuid):
                 print(f"[task_scheduler] Unknown task_type '{schedule.task_type}' for schedule {schedule_uuid} — skipping.")
                 return
 
-            run = AdminTaskRun(uuid=str(_uuid_mod.uuid4()), schedule_id=schedule.id, status='pending')
+            run = AdminTaskRun(uuid=str(_uuid_mod.uuid4()), schedule_id=schedule.id, status='pending',
+                                workflow_run_id=workflow_run_id)
             db.session.add(run)
             db.session.flush()
 
@@ -185,9 +200,28 @@ def on_job_finished(job):
     run.finished_at = datetime.datetime.utcnow()
     db.session.commit()
 
-    candidates = AdminTaskSchedule.query.filter_by(
-        trigger_mode='after_task', is_active=True, depends_on_schedule_id=run.schedule_id,
-    ).all()
+    try:
+        # A task that's part of a "Run Workflow" launch gets exactly one
+        # email for the whole launch (see run_workflow_now /
+        # _finalize_workflow_run_if_done) instead of one per task here.
+        from app.features.admin.task_scheduler.notifications import maybe_send_task_alert
+        if run.schedule.workflow and not run.workflow_run_id:
+            maybe_send_task_alert(run.schedule.workflow, run.schedule, job)
+    except Exception as e:
+        print(f"[task_scheduler] failed to send task alert: {e}")
+
+    # A manual "Run Workflow" launch (workflow_run_id set) always runs the
+    # full chain top to bottom regardless of a task's paused state — pausing
+    # a task means "don't fire it on its own schedule/automatically", not
+    # "skip it when the admin explicitly launches the whole pipeline". A
+    # lone scheduled/manual single-task run (no workflow_run_id) keeps the
+    # old behavior: only an active child continues the chain.
+    candidates_query = AdminTaskSchedule.query.filter_by(
+        trigger_mode='after_task', depends_on_schedule_id=run.schedule_id,
+    )
+    if not run.workflow_run_id:
+        candidates_query = candidates_query.filter_by(is_active=True)
+    candidates = candidates_query.all()
     for candidate in candidates:
         condition = candidate.depends_on_condition
         condition_met = (
@@ -197,4 +231,12 @@ def on_job_finished(job):
         )
         if condition_met:
             from flask import current_app
-            _fire_schedule(current_app._get_current_object(), candidate.uuid)
+            _fire_schedule(current_app._get_current_object(), candidate.uuid,
+                            workflow_run_id=run.workflow_run_id, ignore_paused=bool(run.workflow_run_id))
+
+    if run.workflow_run_id:
+        # Any child this run was going to trigger has already been fired
+        # above, so if nothing tied to this launch is pending/running any
+        # more, the whole workflow run just finished.
+        from app.features.admin.task_scheduler.task_scheduler_core import _finalize_workflow_run_if_done
+        _finalize_workflow_run_if_done(run.workflow_run_id)

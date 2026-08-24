@@ -118,6 +118,7 @@ Vue: pass auth state via Jinja into `const is_admin = {{ current_user.is_admin()
 CommentThread props: `:can-create`, `:can-edit-own`, `:can-delete-own` (all = `is_authenticated`), `:can-moderate` (= `is_admin()`).
 RuleList props: `:current-user-id`, `:current-user-is-admin`, `:current-user-is-authenticated` — edit/delete buttons appear automatically when owner or admin.
 Admin-only pages: use `before_request` hook returning 403 for non-admins, not inline checks per route.
+Two separate admin navs exist and must be updated together when adding/moving an admin page: `app/templates/macros/admin_nav.html` (the collapsible `{{ anav.admin_nav_toggle() }}` / `admin_nav_panel()` quick-nav embedded inline on individual admin pages) and `app/templates/sidebar.html`'s admin mega-menu (the real, persistent "Admin" dropdown in the site's actual top nav, sitewide). Same three columns (Community/Content/System) in both, hand-duplicated markup — no shared partial.
 
 Tag tooltips use Vue `<teleport to="body">` with `position:fixed` to escape overflow:hidden parents.
 Connectors (federation sync) admin-only. Pull modes: soft (skip existing) / hard (update in place). Match by uuid only.

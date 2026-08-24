@@ -66,6 +66,9 @@ _TYPE_ICON = {
     'github_proposal_import_done': 'fa-brands fa-github',
     'role_granted':             'fa-solid fa-user-shield',
     'role_removed':             'fa-solid fa-user-slash',
+    'workflow_run_started':     'fa-solid fa-code-branch',
+    'workflow_run_finished':    'fa-solid fa-code-branch',
+    'workflow_run_failed':      'fa-solid fa-circle-xmark',
 }
 
 
@@ -467,6 +470,99 @@ def notify_admins_sync_run_finished(run):
     except Exception as e:
         db.session.rollback()
         print(f"[notification_core] notify_admins_sync_run_finished error: {e}")
+
+
+def notify_admins_workflow_run_started(workflow_run):
+    """Notify every admin (honouring pref_workflow_runs) that an Admin Task
+    Scheduler workflow launch has started. `workflow_run` is the freshly
+    created AdminWorkflowRun row. One toggle covers both this and
+    notify_admins_workflow_run_finished, same "started & finished together"
+    shape as create_job_notification/update_job_notification."""
+    try:
+        admin_ids = _get_all_admin_ids()
+        if not admin_ids:
+            return
+        workflow = workflow_run.workflow
+        triggered_by = workflow_run.triggered_by.get_username() if workflow_run.triggered_by else 'the scheduler'
+
+        notifs = []
+        for uid in admin_ids:
+            if not _get_pref(uid).pref_workflow_runs:
+                continue
+            notifs.append(Notification(
+                user_id      = uid,
+                notif_type   = 'workflow_run_started',
+                title        = f'Workflow "{workflow.title}" launched',
+                body         = f"Started by {triggered_by}",
+                link         = f'/admin/tasks/{workflow.uuid}',
+                icon         = _TYPE_ICON['workflow_run_started'],
+                job_uuid     = workflow_run.uuid,
+                job_status   = 'running',
+                job_progress = 0,
+                is_read      = False,
+                created_at   = datetime.datetime.utcnow(),
+            ))
+        if notifs:
+            db.session.add_all(notifs)
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"[notification_core] notify_admins_workflow_run_started error: {e}")
+
+
+def notify_admins_workflow_run_finished(workflow_run, done_count, failed_count, cancelled_count, task_count):
+    """Called once a workflow launch has no task left pending/running.
+    Updates any 'workflow_run_started' notification for this run in place
+    (mirrors update_job_notification) so recipients see the final result
+    without a duplicate row; anyone who didn't get a 'started' notification
+    (pref turned on since, admin added since) still gets told it's done."""
+    try:
+        workflow = workflow_run.workflow
+        overall = 'failed' if failed_count else ('cancelled' if cancelled_count else 'done')
+        icon = _TYPE_ICON['workflow_run_failed'] if overall == 'failed' else _TYPE_ICON['workflow_run_finished']
+
+        body_parts = [f"{done_count}/{task_count} task{'s' if task_count != 1 else ''} done"]
+        if failed_count:
+            body_parts.append(f"{failed_count} failed")
+        if cancelled_count:
+            body_parts.append(f"{cancelled_count} cancelled")
+        body = ' · '.join(body_parts)
+
+        started = Notification.query.filter_by(job_uuid=workflow_run.uuid, notif_type='workflow_run_started').all()
+        notified_uids = set()
+        for n in started:
+            n.notif_type   = 'workflow_run_finished'
+            n.title        = f'Workflow "{workflow.title}" finished'
+            n.body         = body
+            n.job_status   = overall
+            n.job_progress = 100
+            n.is_read      = False
+            n.icon         = icon
+            notified_uids.add(n.user_id)
+
+        notifs = []
+        for uid in _get_all_admin_ids():
+            if uid in notified_uids or not _get_pref(uid).pref_workflow_runs:
+                continue
+            notifs.append(Notification(
+                user_id      = uid,
+                notif_type   = 'workflow_run_finished',
+                title        = f'Workflow "{workflow.title}" finished',
+                body         = body,
+                link         = f'/admin/tasks/{workflow.uuid}',
+                icon         = icon,
+                job_uuid     = workflow_run.uuid,
+                job_status   = overall,
+                job_progress = 100,
+                is_read      = False,
+                created_at   = datetime.datetime.utcnow(),
+            ))
+        if notifs:
+            db.session.add_all(notifs)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"[notification_core] notify_admins_workflow_run_finished error: {e}")
 
 
 def notify_followers_new_rule(rule, author_user_id):

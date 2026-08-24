@@ -1916,6 +1916,12 @@ class AdminWorkflow(db.Model):
     editor_id   = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     is_active   = db.Column(db.Boolean, default=True, index=True)
 
+    # Email alerts — configured per workflow (not per task): the admin who
+    # created the workflow always receives it, plus any notify_emails.
+    notify_on_failure = db.Column(db.Boolean, nullable=False, default=True)
+    notify_on_success = db.Column(db.Boolean, nullable=False, default=False)
+    notify_emails     = db.Column(db.JSON, nullable=True)  # extra recipients on top of editor.email
+
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
@@ -1937,6 +1943,9 @@ class AdminWorkflow(db.Model):
                 "avatar": self.editor.get_avatar_url(),
             } if self.editor else None,
             "is_active": self.is_active,
+            "notify_on_failure": self.notify_on_failure,
+            "notify_on_success": self.notify_on_success,
+            "notify_emails": self.notify_emails or [],
             "task_count": task_count,
             "active_task_count": active_task_count,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else None,
@@ -1984,6 +1993,12 @@ class AdminTaskSchedule(db.Model):
     depends_on_schedule_id = db.Column(db.Integer,
         db.ForeignKey("admin_task_schedule.id", ondelete="SET NULL"), nullable=True)
     depends_on_condition   = db.Column(db.String(20), nullable=False, default='success')
+
+    # Free-form position on the workflow's Canvas view — null until the admin
+    # drags the node for the first time, at which point the canvas switches
+    # from its auto-layout fallback to this saved position.
+    position_x = db.Column(db.Float, nullable=True)
+    position_y = db.Column(db.Float, nullable=True)
     # 'success' | 'failure' | 'always'
 
     next_run_at = db.Column(db.DateTime, index=True, nullable=True)
@@ -2030,11 +2045,34 @@ class AdminTaskSchedule(db.Model):
             "depends_on_schedule_uuid": self.depends_on.uuid if self.depends_on else None,
             "depends_on_schedule_title": self.depends_on.title if self.depends_on else None,
             "depends_on_condition": self.depends_on_condition,
+            "position_x": self.position_x,
+            "position_y": self.position_y,
             "next_run_at": self.next_run_at.strftime('%Y-%m-%d %H:%M') if self.next_run_at else None,
             "last_run_at": self.last_run_at.strftime('%Y-%m-%d %H:%M') if self.last_run_at else None,
             "last_run_status": self.runs[0].status if self.runs else None,
+            "last_run_job_uuid": self.runs[0].job_uuid if self.runs else None,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else None,
         }
+
+
+class AdminWorkflowRun(db.Model):
+    """One 'Run Workflow' launch — groups every AdminTaskRun it directly
+    fired plus every one chained afterwards (on_job_finished propagates
+    workflow_run_id down the chain as each dependent task fires) into a
+    single launch-history entry. Feeds the workflow detail page's history
+    table; deliberately NOT created for a single task's manual 'Run now'
+    (that's a task-level action, not a workflow launch)."""
+    __tablename__ = "admin_workflow_run"
+
+    id              = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid            = db.Column(db.String(36), index=True, unique=True)
+    workflow_id     = db.Column(db.Integer, db.ForeignKey("admin_workflow.id", ondelete="CASCADE"), nullable=False)
+    triggered_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    started_at      = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    workflow     = db.relationship("AdminWorkflow", backref=db.backref(
+        "launch_runs", cascade="all, delete-orphan", lazy=True, order_by="desc(AdminWorkflowRun.started_at)"))
+    triggered_by = db.relationship("User")
 
 
 class AdminTaskRun(db.Model):
@@ -2046,6 +2084,10 @@ class AdminTaskRun(db.Model):
     uuid        = db.Column(db.String(36), index=True, unique=True)
     schedule_id = db.Column(db.Integer, db.ForeignKey("admin_task_schedule.id", ondelete="CASCADE"), nullable=False)
     job_uuid    = db.Column(db.String(36), nullable=True)   # -> BackgroundJob.uuid
+
+    # Set only when this run is part of a whole-workflow launch (see
+    # AdminWorkflowRun) — null for a standalone task 'Run now'.
+    workflow_run_id = db.Column(db.Integer, db.ForeignKey("admin_workflow_run.id", ondelete="SET NULL"), nullable=True)
 
     status      = db.Column(db.String(20), default="pending")  # pending | done | failed
     started_at  = db.Column(db.DateTime, default=datetime.datetime.utcnow)
@@ -3402,6 +3444,11 @@ class NotificationPreference(db.Model):
     # GitHub sync schedules
     pref_sync_run_finished = db.Column(db.Boolean, nullable=False, default=True)
 
+    # Admin task scheduler workflows — one toggle covers both the launch and
+    # the finish notification, same "started & finished together" shape as
+    # pref_background_jobs above.
+    pref_workflow_runs = db.Column(db.Boolean, nullable=False, default=True)
+
     user = db.relationship('User', backref=db.backref(
         'notification_preference', uselist=False, cascade='all, delete-orphan'))
 
@@ -3420,6 +3467,7 @@ class NotificationPreference(db.Model):
             'comment_reply':      self.pref_comment_reply,
             'blog_published':     self.pref_blog_published,
             'sync_run_finished':  self.pref_sync_run_finished,
+            'workflow_runs':      self.pref_workflow_runs,
         }
 
 
