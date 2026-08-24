@@ -166,19 +166,6 @@ const TaskCanvas = {
             if (s.last_run_status === 'failed') return 'twg-node--failed';
             return 'twg-node--active';
         },
-        // See TaskWorkflowGraph.outcomeStatus/outcomeIcon — same helpers,
-        // kept in sync between the two graph views.
-        outcomeStatus(s) {
-            const live = this.liveFor(s);
-            return (live && live.job_status) || s.last_run_status;
-        },
-        outcomeIcon(s) {
-            const status = this.outcomeStatus(s);
-            if (status === 'done') return 'fa-solid fa-check';
-            if (status === 'failed') return 'fa-solid fa-xmark';
-            if (status === 'cancelled') return 'fa-solid fa-ban';
-            return null;
-        },
         typeIcon(taskType) { return (this.taskTypes[taskType] || {}).icon || 'fa-solid fa-gear'; },
         typeLabel(taskType) { return (this.taskTypes[taskType] || {}).label || taskType; },
 
@@ -328,12 +315,7 @@ const TaskCanvas = {
                      :style="{ left: nodePositions[s.uuid].x + 'px', top: nodePositions[s.uuid].y + 'px' }"
                      @mousedown="startNodeDrag(s, $event)"
                      @contextmenu.prevent="onNodeContextMenu(s, $event)">
-                    <div class="twg-node-icon">
-                        <i :class="typeIcon(s.task_type)"></i>
-                        <span v-if="outcomeIcon(s)" class="twg-outcome-badge" :class="'twg-outcome-badge--' + outcomeStatus(s)">
-                            <i :class="outcomeIcon(s)"></i>
-                        </span>
-                    </div>
+                    <div class="twg-node-icon"><i :class="typeIcon(s.task_type)"></i></div>
                     <div class="twg-node-body">
                         <div class="twg-node-title">[[ s.title ]]</div>
                         <div class="twg-node-sub-row">

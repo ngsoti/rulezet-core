@@ -30,7 +30,7 @@ Rules_Github/*
 rule/output_rules/*
 
 flask_session
-node_modules
+node_modules    
 app/rule/output_rules
 /backup/dumps
 /static/uploads/*
@@ -46,3 +46,6 @@ docs/plan_rule_tester.md
 docs/plan_velociraptor_integration.md
 instance/rulezet-test.sqlite-journal
 tests/rule_tester/
+app/modules/misp-taxonomies
+app/modules/misp-taxonomies
+app/modules/misp-taxonomies

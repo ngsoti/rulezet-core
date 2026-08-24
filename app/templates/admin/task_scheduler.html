@@ -378,7 +378,7 @@
              or long concluded — see onNodeSelect() and the Run summary rows
              below. Steps aside for the Run summary when nothing is
              focused, once that run has concluded. -->
-        <div v-if="taskViewMode === 'pipeline' && lastFocusedTaskUuid" id="task-log-panel" class="card border-0 shadow-sm rounded-3 mt-4">
+        <div v-if="detailTab === 'tasks' && taskViewMode === 'pipeline' && lastFocusedTaskUuid" id="task-log-panel" class="card border-0 shadow-sm rounded-3 mt-4">
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="d-flex align-items-center gap-2">
@@ -401,7 +401,7 @@
              from History) has concluded and nothing is focused: a clean,
              static per-task breakdown of exactly what happened. Click a row
              to see that task's own log (same as clicking its graph node). -->
-        <div v-if="taskViewMode === 'pipeline' && activeRunView && activeRunView.status !== 'running' && !lastFocusedTaskUuid" id="task-run-summary-panel" class="card border-0 shadow-sm rounded-3 mt-4">
+        <div v-if="detailTab === 'tasks' && taskViewMode === 'pipeline' && activeRunView && activeRunView.status !== 'running' && !lastFocusedTaskUuid" id="task-run-summary-panel" class="card border-0 shadow-sm rounded-3 mt-4">
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="d-flex align-items-center gap-2">
@@ -428,7 +428,7 @@
 
         <!-- Clicked a task that simply never fired in the selected run —
              explain why instead of doing nothing. -->
-        <div v-if="taskViewMode === 'pipeline' && activeRunUuid && skippedTaskInfo" id="task-skipped-panel" class="card border-0 shadow-sm rounded-3 mt-4">
+        <div v-if="detailTab === 'tasks' && taskViewMode === 'pipeline' && activeRunUuid && skippedTaskInfo" id="task-skipped-panel" class="card border-0 shadow-sm rounded-3 mt-4">
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="d-flex align-items-center gap-2">
@@ -461,7 +461,7 @@
              just browsing the graph, with no specific launch selected (no
              history entry clicked, nothing just launched). A past job's log
              out of that context is confusing; what the task IS isn't. -->
-        <div v-if="taskViewMode === 'pipeline' && !activeRunUuid && selectedTaskInfo" id="task-info-panel" class="card border-0 shadow-sm rounded-3 mt-4">
+        <div v-if="detailTab === 'tasks' && taskViewMode === 'pipeline' && !activeRunUuid && selectedTaskInfo" id="task-info-panel" class="card border-0 shadow-sm rounded-3 mt-4">
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div class="d-flex align-items-center gap-2">
