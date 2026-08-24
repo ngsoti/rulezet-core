@@ -118,6 +118,13 @@ def _worker_loop(app):
 
                     print(f"[worker] Job {job.uuid} finished with status={job.status}")
 
+                    if job.status in ('done', 'failed'):
+                        try:
+                            from app.features.admin.task_scheduler.scheduler_engine import on_job_finished
+                            on_job_finished(job)
+                        except Exception as e:
+                            print(f"[task_scheduler] on_job_finished error: {e}")
+
                     # Update notification so bell shows final state
                     try:
                         from app.features.notification.notification_core import update_job_notification
@@ -142,6 +149,11 @@ def _worker_loop(app):
                                 update_job_notification(job)
                             except Exception:
                                 pass
+                            try:
+                                from app.features.admin.task_scheduler.scheduler_engine import on_job_finished
+                                on_job_finished(job)
+                            except Exception as hook_err:
+                                print(f"[task_scheduler] on_job_finished error: {hook_err}")
                     except Exception:
                         pass
                     print(f"[worker] Job {job_uuid} failed: {e}")

@@ -1901,6 +1901,121 @@ class GithubSyncRunRepo(db.Model):
         }
 
 
+class AdminTaskSchedule(db.Model):
+    """Generalized admin task scheduler (see docs/design/admin_task_scheduler.md).
+    Phase 1: a single optional parent dependency (depends_on_schedule_id /
+    depends_on_condition) — multi-parent AND/OR is a Phase 3 addition
+    (AdminTaskDependency) once a linear chain proves too limiting."""
+    __tablename__ = "admin_task_schedule"
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid        = db.Column(db.String(36), index=True, unique=True)
+    title       = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    editor_id   = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    # Key into the TASK_TYPES registry (task_scheduler/task_types.py) — e.g. 'quality_score'.
+    task_type = db.Column(db.String(50), nullable=False, index=True)
+
+    # Payload passed as-is to create_job() — already in the shape the
+    # corresponding job_type's handler expects (e.g. {"filters": {...}}).
+    target_payload = db.Column(db.JSON, nullable=False, default=dict)
+
+    is_active = db.Column(db.Boolean, default=True, index=True)
+
+    # ── Triggering: either time-based, or "after another task" — never both. ──
+    trigger_mode = db.Column(db.String(20), nullable=False, default='cron')
+    # 'once' | 'daily' | 'weekly' | 'monthly' | 'cron' | 'after_task'
+
+    run_once_at  = db.Column(db.DateTime, nullable=True)      # trigger_mode == 'once'
+    days_of_week = db.Column(db.String(20), nullable=True)    # 'weekly' only
+    day_of_month = db.Column(db.Integer, nullable=True)       # 'monthly' only
+    hour         = db.Column(db.Integer, nullable=False, default=3)
+    minute       = db.Column(db.Integer, nullable=False, default=0)
+    cron_expr    = db.Column(db.String(120), nullable=True)   # 'cron' only
+    timezone     = db.Column(db.String(60), nullable=False, default="UTC")
+
+    # Chaining — 'after_task' only.
+    depends_on_schedule_id = db.Column(db.Integer,
+        db.ForeignKey("admin_task_schedule.id", ondelete="SET NULL"), nullable=True)
+    depends_on_condition   = db.Column(db.String(20), nullable=False, default='success')
+    # 'success' | 'failure' | 'always'
+
+    next_run_at = db.Column(db.DateTime, index=True, nullable=True)
+    last_run_at = db.Column(db.DateTime, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    editor      = db.relationship("User")
+    depends_on  = db.relationship("AdminTaskSchedule", remote_side=[id])
+    runs        = db.relationship("AdminTaskRun", backref="schedule", cascade="all, delete-orphan", lazy=True,
+                                   order_by="desc(AdminTaskRun.started_at)")
+
+    def days_of_week_list(self):
+        if not self.days_of_week:
+            return []
+        return [int(d) for d in self.days_of_week.split(',') if d != '']
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "title": self.title,
+            "description": self.description,
+            "editor": {
+                "id": self.editor.id,
+                "name": f"{self.editor.first_name} {self.editor.last_name}".strip(),
+                "avatar": self.editor.get_avatar_url(),
+            } if self.editor else None,
+            "task_type": self.task_type,
+            "target_payload": self.target_payload,
+            "is_active": self.is_active,
+            "trigger_mode": self.trigger_mode,
+            "run_once_at": self.run_once_at.strftime('%Y-%m-%dT%H:%M') if self.run_once_at else None,
+            "days_of_week": self.days_of_week_list(),
+            "day_of_month": self.day_of_month,
+            "hour": self.hour,
+            "minute": self.minute,
+            "cron_expr": self.cron_expr,
+            "timezone": self.timezone,
+            "depends_on_schedule_id": self.depends_on_schedule_id,
+            "depends_on_schedule_uuid": self.depends_on.uuid if self.depends_on else None,
+            "depends_on_schedule_title": self.depends_on.title if self.depends_on else None,
+            "depends_on_condition": self.depends_on_condition,
+            "next_run_at": self.next_run_at.strftime('%Y-%m-%d %H:%M') if self.next_run_at else None,
+            "last_run_at": self.last_run_at.strftime('%Y-%m-%d %H:%M') if self.last_run_at else None,
+            "last_run_status": self.runs[0].status if self.runs else None,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else None,
+        }
+
+
+class AdminTaskRun(db.Model):
+    """One firing of an AdminTaskSchedule. Thin wrapper around the real
+    BackgroundJob — no duplication of progress/log data."""
+    __tablename__ = "admin_task_run"
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid        = db.Column(db.String(36), index=True, unique=True)
+    schedule_id = db.Column(db.Integer, db.ForeignKey("admin_task_schedule.id", ondelete="CASCADE"), nullable=False)
+    job_uuid    = db.Column(db.String(36), nullable=True)   # -> BackgroundJob.uuid
+
+    status      = db.Column(db.String(20), default="pending")  # pending | done | failed
+    started_at  = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    finished_at = db.Column(db.DateTime, nullable=True)
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "uuid": self.uuid,
+            "schedule_id": self.schedule_id,
+            "job_uuid": self.job_uuid,
+            "status": self.status,
+            "started_at": self.started_at.strftime('%Y-%m-%d %H:%M') if self.started_at else None,
+            "finished_at": self.finished_at.strftime('%Y-%m-%d %H:%M') if self.finished_at else None,
+        }
+
+
 import uuid as _uuid_mod
 
 

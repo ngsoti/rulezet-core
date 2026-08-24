@@ -66,6 +66,7 @@ def create_app(start_worker=True):
     from app.features.docs.docs import docs_blueprint
     from app.features.chatbot.chatbot import chatbot_blueprint
     from app.features.roles.roles import roles_blueprint
+    from app.features.admin.task_scheduler.task_scheduler_routes import task_scheduler_blueprint
 
     app.register_blueprint(home_blueprint, url_prefix="/")
     app.register_blueprint(account_blueprint, url_prefix="/account")
@@ -90,6 +91,7 @@ def create_app(start_worker=True):
     app.register_blueprint(docs_blueprint, url_prefix='/docs')
     app.register_blueprint(chatbot_blueprint, url_prefix='/chatbot')
     app.register_blueprint(roles_blueprint, url_prefix='/admin/roles')
+    app.register_blueprint(task_scheduler_blueprint, url_prefix='/admin/tasks')
 
     from app.api.api import api_blueprint
 
@@ -234,6 +236,8 @@ def create_app(start_worker=True):
         _start_update_checker(app)
         from app.features.rule.rule_from_github.sync_schedule.scheduler_engine import start_scheduler
         start_scheduler(app)
+        from app.features.admin.task_scheduler.scheduler_engine import start_scheduler as start_task_scheduler
+        start_task_scheduler(app)
 
     return app
 
