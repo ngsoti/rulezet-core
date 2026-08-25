@@ -13,11 +13,13 @@ Pause / Cancel support:
     _should_pause() and _is_cancelled() are checked between every batch.
 """
 
+import contextlib
 import datetime
 import html as _html
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import uuid as uuid_mod
@@ -3999,13 +4001,37 @@ def handle_db_backup(job, app):
 RULE_VALIDATION_MIRROR_DIR = ROOT_DIR / 'data' / 'rulezet_validation'
 
 
+@contextlib.contextmanager
+def _force_ipv4_resolution():
+    """rulezet.org publishes both an A and an AAAA record. urllib (used by
+    rulezet_validation to fetch the mirror) connects to whichever address
+    getaddrinfo() returns first and does not retry the other family on
+    failure like a browser would — on a host with no working IPv6 route
+    (common on cloud VMs) that means an immediate 'No route to host' even
+    though the IPv4 address is perfectly reachable. Filter AAAA results out
+    for the duration of the sync call."""
+    _orig_getaddrinfo = socket.getaddrinfo
+
+    def _ipv4_only(host, *args, **kwargs):
+        return [r for r in _orig_getaddrinfo(host, *args, **kwargs) if r[0] == socket.AF_INET]
+
+    socket.getaddrinfo = _ipv4_only
+    try:
+        yield
+    finally:
+        socket.getaddrinfo = _orig_getaddrinfo
+
+
 @register_handler('rule_validation_run')
 def handle_rule_validation_run(job, app):
     """
     Run rulezet-validation's sync+gate pipeline against this instance:
-    pull the rules from `INSTANCE_PUBLIC_URL` (or rulezet.org), scan them
-    against a local known-clean binary baseline, and quarantine any rule
-    that fires — a false-positive risk.
+    pull the rules from `INSTANCE_PUBLIC_URL`, scan them against a local
+    known-clean binary baseline, and quarantine any rule that fires — a
+    false-positive risk. Requires `INSTANCE_PUBLIC_URL` to be set — without
+    it, rulezet_validation's own default would silently target the public
+    rulezet.org instead of this instance's rules (harmless when this *is*
+    rulezet.org, wrong everywhere else).
 
     rulezet-validation is imported as a library rather than shelled out to:
     `sync()` already accepts a `log=` callable (its own extension point for
@@ -4024,9 +4050,22 @@ def handle_rule_validation_run(job, app):
     full    = bool(payload.get('full', False))
     limit   = payload.get('limit') or None
 
+    instance_url = os.environ.get('INSTANCE_PUBLIC_URL')
+    if not instance_url:
+        log_job(job,
+                "Validation run failed: INSTANCE_PUBLIC_URL is not set — refusing to "
+                "fall back to rulezet_validation's default target (the public "
+                "rulezet.org). Set INSTANCE_PUBLIC_URL in .env to this instance's own "
+                "public URL so it validates this instance's own rules.",
+                level='error', event='error')
+        job.status = 'failed'
+        job.error  = 'INSTANCE_PUBLIC_URL is not set.'
+        db.session.commit()
+        return
+
     settings = rv_config.load()
     settings['mirror_dir'] = str(RULE_VALIDATION_MIRROR_DIR)
-    settings['url'] = os.environ.get('INSTANCE_PUBLIC_URL') or settings['url']
+    settings['url'] = instance_url
     paths = rv_config.paths(settings)
 
     job.total = 1
@@ -4041,8 +4080,9 @@ def handle_rule_validation_run(job, app):
             level='info', event='started')
 
     try:
-        rv_sync(settings, paths, full=full, limit=limit,
-                log=lambda msg: log_job(job, msg, level='info', event='progress'))
+        with _force_ipv4_resolution():
+            rv_sync(settings, paths, full=full, limit=limit,
+                    log=lambda msg: log_job(job, msg, level='info', event='progress'))
     except Exception as e:
         log_job(job, f'Validation run failed: {e}', level='error', event='error')
         job.status = 'failed'
