@@ -180,6 +180,9 @@
                               <a href="/tags/admin/list" class="dr-nav__item {% if request.path.startswith('/tags/admin/list') %}active{% endif %}">
                                  <i class="fa-solid fa-tag"></i><span>Tags</span>
                               </a>
+                              <a href="/tags/admin/validation" class="dr-nav__item {% if request.path == '/tags/admin/validation' %}active{% endif %}">
+                                 <i class="fa-solid fa-shield-virus"></i><span>Rule Validation</span>
+                              </a>
                               <a href="/attack/admin/list" class="dr-nav__item {% if request.path.startswith('/attack/admin') %}active{% endif %}">
                                  <i class="fa-solid fa-crosshairs"></i><span>ATT&amp;CK</span>
                               </a>
