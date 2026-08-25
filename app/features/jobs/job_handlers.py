@@ -4028,10 +4028,10 @@ def handle_rule_validation_run(job, app):
     Run rulezet-validation's sync+gate pipeline against this instance:
     pull the rules from `INSTANCE_PUBLIC_URL`, scan them against a local
     known-clean binary baseline, and quarantine any rule that fires — a
-    false-positive risk. Requires `INSTANCE_PUBLIC_URL` to be set — without
-    it, rulezet_validation's own default would silently target the public
-    rulezet.org instead of this instance's rules (harmless when this *is*
-    rulezet.org, wrong everywhere else).
+    false-positive risk. Falls back to rulezet_validation's own default (the
+    public rulezet.org) with a loud warning when `INSTANCE_PUBLIC_URL` isn't
+    set, rather than failing outright — harmless when this instance *is*
+    rulezet.org, a useful stand-in target on a local/dev box otherwise.
 
     rulezet-validation is imported as a library rather than shelled out to:
     `sync()` already accepts a `log=` callable (its own extension point for
@@ -4050,22 +4050,24 @@ def handle_rule_validation_run(job, app):
     full    = bool(payload.get('full', False))
     limit   = payload.get('limit') or None
 
-    instance_url = os.environ.get('INSTANCE_PUBLIC_URL')
-    if not instance_url:
-        log_job(job,
-                "Validation run failed: INSTANCE_PUBLIC_URL is not set — refusing to "
-                "fall back to rulezet_validation's default target (the public "
-                "rulezet.org). Set INSTANCE_PUBLIC_URL in .env to this instance's own "
-                "public URL so it validates this instance's own rules.",
-                level='error', event='error')
-        job.status = 'failed'
-        job.error  = 'INSTANCE_PUBLIC_URL is not set.'
-        db.session.commit()
-        return
-
     settings = rv_config.load()
     settings['mirror_dir'] = str(RULE_VALIDATION_MIRROR_DIR)
-    settings['url'] = instance_url
+
+    instance_url = os.environ.get('INSTANCE_PUBLIC_URL')
+    if instance_url:
+        settings['url'] = instance_url
+    else:
+        # No INSTANCE_PUBLIC_URL configured (unset on plenty of legitimate
+        # setups: local dev boxes, instances with no public URL yet) — fall
+        # back to rulezet_validation's own default (the public rulezet.org)
+        # rather than failing the job outright, but say so loudly so nobody
+        # mistakes "rulezet.org's rules" for "this instance's rules".
+        log_job(job,
+                f"INSTANCE_PUBLIC_URL is not set — falling back to "
+                f"{settings['url']} instead of validating this instance's own "
+                f"rules. Set INSTANCE_PUBLIC_URL in .env to fix this.",
+                level='warning', event='progress')
+
     paths = rv_config.paths(settings)
 
     job.total = 1
