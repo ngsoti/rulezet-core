@@ -742,7 +742,7 @@ def add_tags_from_misp_galaxy(uuid_from_misp, created_by, cluster_uuids=None):
         db.session.add(Tag(
             name=tag_name,
             description=cluster.get("description", ""),
-            color="#8b5cf6",
+            color="#9b7ede",
             icon=raw_icon,
             uuid=str(uuid.uuid4()),
             created_by=created_by.id,
@@ -976,7 +976,7 @@ def update_tags_from_misp_galaxy(uuid_from_misp, created_by):
         db.session.add(Tag(
             name=tag_name,
             description=cluster.get("description", ""),
-            color="#8b5cf6",
+            color="#9b7ede",
             icon=raw_icon,
             uuid=str(uuid.uuid4()),
             created_by=created_by.id,

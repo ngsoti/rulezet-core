@@ -158,7 +158,7 @@ const GalaxyBrowser = {
                         <button class="btn btn-sm btn-primary" @click="load(1)">Search</button>
                     </div>
                     <span class="badge rounded-pill bg-light text-dark border px-3 py-2 text-nowrap">
-                        <i class="fas fa-atom me-1" style="color:#8b5cf6"></i>
+                        <i class="fas fa-atom me-1" style="color:#9b7ede"></i>
                         <strong>{{ total }}</strong> galaxies
                     </span>
                 </div>
@@ -176,7 +176,7 @@ const GalaxyBrowser = {
                         <tbody>
                             <tr v-if="pageLoading">
                                 <td colspan="4" class="text-center py-4">
-                                    <div class="spinner-border spinner-border-sm" style="color:#8b5cf6"></div>
+                                    <div class="spinner-border spinner-border-sm" style="color:#9b7ede"></div>
                                 </td>
                             </tr>
                             <template v-else>
@@ -184,7 +184,7 @@ const GalaxyBrowser = {
                                     <td>
                                         <span class="tag-split shadow-sm">
                                             <span class="tag-left" v-html="mapIcon(g.icon)"></span>
-                                            <span class="tag-right" style="background:#8b5cf6; color:#fff">{{ g.name }}</span>
+                                            <span class="tag-right" style="background:#9b7ede; color:#fff">{{ g.name }}</span>
                                         </span>
                                     </td>
                                     <td class="text-muted small" style="max-width:280px">{{ truncateText(g.description, 80) }}</td>
@@ -202,7 +202,7 @@ const GalaxyBrowser = {
                                             <!-- Import all -->
                                             <button
                                                 class="btn btn-sm rounded-pill"
-                                                style="background:#8b5cf6; color:#fff; border-color:#8b5cf6"
+                                                style="background:#9b7ede; color:#fff; border-color:#9b7ede"
                                                 :disabled="loadingMap[g.uuid]"
                                                 @click="importAll(g)"
                                                 title="Import all clusters"
@@ -238,7 +238,7 @@ const GalaxyBrowser = {
                         <h6 class="fw-bold mb-0" style="color: var(--text-color)">
                             <span class="tag-split shadow-sm me-2">
                                 <span class="tag-left" v-html="mapIcon(pickGalaxy.icon)"></span>
-                                <span class="tag-right" style="background:#8b5cf6; color:#fff">{{ pickGalaxy.name }}</span>
+                                <span class="tag-right" style="background:#9b7ede; color:#fff">{{ pickGalaxy.name }}</span>
                             </span>
                             Pick clusters to import
                         </h6>

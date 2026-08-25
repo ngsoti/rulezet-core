@@ -976,7 +976,7 @@
                     </p>
                     <textarea class="form-control font-mono mb-3" v-model="paste_input" rows="12"
                               style="font-size:0.78rem;resize:vertical;"
-                              placeholder="[data-theme=&quot;my-theme&quot;] {&#10;    --bg-color: #1e293b;&#10;    --text-color: #e2e8f0;&#10;    ...&#10;}"></textarea>
+                              placeholder="[data-theme=&quot;my-theme&quot;] {&#10;    --bg-color: #10151f;&#10;    --text-color: #e9edf5;&#10;    ...&#10;}"></textarea>
 
                     <div class="d-flex align-items-center gap-2 mb-3">
                         <button class="btn btn-sm btn-primary" @click="parsePaste()">
@@ -1534,9 +1534,9 @@
                 const v = modal_form.css_vars || {}
                 const dk = modal_form.is_dark
                 return {
-                    '--tp-navbar':   v['--navbar-bg-color'] || (dk ? '#1a2d42' : '#ffffff'),
-                    '--tp-body':     v['--bg-color']         || (dk ? '#1e293b' : '#f7f7f7'),
-                    '--tp-surface':  v['--card-bg-color']    || (dk ? '#2d3f55' : '#ffffff'),
+                    '--tp-navbar':   v['--navbar-bg-color'] || (dk ? '#0b0f17' : '#ffffff'),
+                    '--tp-body':     v['--bg-color']         || (dk ? '#10151f' : '#f7f7f7'),
+                    '--tp-surface':  v['--card-bg-color']    || (dk ? '#1a2130' : '#ffffff'),
                     '--tp-sidebar':  v['--sidebar-color']    || 'rgb(15,23,42)',
                     '--tp-brand':    v['--rule-name-color']  || '#0d6efd',
                     '--tp-border':   v['--border-color']     || (dk ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.08)'),
@@ -1552,9 +1552,9 @@
                 const v = option.css_vars || {}
                 const dk = option.is_dark
                 return {
-                    '--tp-navbar':   v['--navbar-bg-color'] || (dk ? '#1a2d42' : '#ffffff'),
-                    '--tp-body':     v['--bg-color']         || (dk ? '#1e293b' : '#f7f7f7'),
-                    '--tp-surface':  v['--card-bg-color']    || (dk ? '#2d3f55' : '#ffffff'),
+                    '--tp-navbar':   v['--navbar-bg-color'] || (dk ? '#0b0f17' : '#ffffff'),
+                    '--tp-body':     v['--bg-color']         || (dk ? '#10151f' : '#f7f7f7'),
+                    '--tp-surface':  v['--card-bg-color']    || (dk ? '#1a2130' : '#ffffff'),
                     '--tp-sidebar':  v['--sidebar-color']    || 'rgb(15,23,42)',
                     '--tp-brand':    v['--rule-name-color']  || '#0d6efd',
                     '--tp-border':   v['--border-color']     || (dk ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.07)'),

@@ -17,7 +17,7 @@ function familyLabel(family) {
 }
 
 function sourceColor(source) {
-    if (source === 'Galaxy') return '#8b5cf6';
+    if (source === 'Galaxy') return '#9b7ede';
     if (source === 'Taxonomy') return '#0d6efd';
     return '#198754';
 }

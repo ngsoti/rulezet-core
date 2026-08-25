@@ -23,7 +23,7 @@ const MultiTagFilter = {
         const sourceOptions = [
             { value: 'all', label: 'All', icon: 'fa-layer-group', color: '#6c757d' },
             { value: 'Taxonomy', label: 'Taxonomy', icon: 'fa-list', color: '#0d6efd' },
-            { value: 'Galaxy', label: 'Galaxy', icon: 'fa-atom', color: '#8b5cf6' },
+            { value: 'Galaxy', label: 'Galaxy', icon: 'fa-atom', color: '#9b7ede' },
             { value: 'Manual', label: 'Manual', icon: 'fa-tag', color: '#198754' },
         ];
 

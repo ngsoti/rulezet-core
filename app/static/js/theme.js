@@ -18,7 +18,7 @@ var _NAMED_KEYS    = ['ocean', 'forest', 'midnight', 'sunset'];
 var _rawPref       = 'system';
 var _BG_COLORS = {
     light:    '#f7f7f7',
-    dark:     '#1e293b',
+    dark:     '#10151f',
     ocean:    '#edf4fb',
     forest:   '#eef5ee',
     midnight: '#080d18',

@@ -40,21 +40,21 @@
 body.dark-mode,
 html.dark-mode,
 [data-bs-theme="dark"] {
-  --bg-color: #1e293b;
-  --navbar-bg-color: #1a2744;
-  --sidebar-color: #1a2744;
-  --bar-bg-color: #0f172a;
-  --card-bg-color: #2d3f55;
-  --card-header-bg-color: #2d3f55;
-  --light-bg-color: #3d5068;
-  --code-bg-color: #0f172a;
-  --border-color: #3d5068;
-  --text-color: #e2e8f0;
-  --subtle-text-color: #94a3b8;
-  --rule-name-color: #7eb3f8;
-  --selected-color: rgba(59, 130, 246, 0.2);
-  --page-selected-color: #60a5fa;
-  --navbar-text-color: #e2e8f0;
+  --bg-color: #10151f;
+  --navbar-bg-color: #0b0f17;
+  --sidebar-color: #0b0f17;
+  --bar-bg-color: #0a0e16;
+  --card-bg-color: #1a2130;
+  --card-header-bg-color: #212a3c;
+  --light-bg-color: #242e42;
+  --code-bg-color: #0a0e16;
+  --border-color: #2b3549;
+  --text-color: #e9edf5;
+  --subtle-text-color: #93a1b8;
+  --rule-name-color: #5b9dff;
+  --selected-color: rgba(91, 157, 255, 0.16);
+  --page-selected-color: #5b9dff;
+  --navbar-text-color: #e9edf5;
   --bg-color-high-similarity: #7f1d1d;
   --bg-diff-add: rgba(74, 222, 128, 0.15);
   --bg-diff-add-highlight: rgba(74, 222, 128, 0.4);

@@ -171,10 +171,10 @@ body.dark-mode .settings-card-icon {
 
 /* Dark */
 .theme-preview--dark {
-    --tp-navbar:   #1a2744;
-    --tp-body:     #1e293b;
-    --tp-surface:  #2d3f55;
-    --tp-brand:    #4fc3f7;
+    --tp-navbar:   #0b0f17;
+    --tp-body:     #10151f;
+    --tp-surface:  #1a2130;
+    --tp-brand:    #5b9dff;
     --tp-border:   rgba(255,255,255,.06);
     --tp-line:     rgba(255,255,255,.12);
     --tp-text-dim: rgba(255,255,255,.25);
@@ -182,9 +182,9 @@ body.dark-mode .settings-card-icon {
 
 /* System (half light / half dark) */
 .theme-preview--system {
-    --tp-navbar:   linear-gradient(to right, #ffffff 50%, #1a2744 50%);
-    --tp-body:     linear-gradient(to right, #f7f7f7 50%, #1e293b 50%);
-    --tp-surface:  linear-gradient(to right, #ffffff 50%, #2d3f55 50%);
+    --tp-navbar:   linear-gradient(to right, #ffffff 50%, #0b0f17 50%);
+    --tp-body:     linear-gradient(to right, #f7f7f7 50%, #10151f 50%);
+    --tp-surface:  linear-gradient(to right, #ffffff 50%, #1a2130 50%);
     --tp-brand:    transparent;
     --tp-border:   transparent;
     --tp-line:     transparent;
