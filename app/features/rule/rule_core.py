@@ -1918,9 +1918,13 @@ def filter_rules(search=None, search_field="all", author=None, sort_by=None, rul
         tag_ids = [tag.id for tag in found_tags]
 
         if tag_ids:
-            query = query.join(RuleTagAssociation).filter(
-                RuleTagAssociation.tag_id.in_(tag_ids)
-            ).distinct()
+            query = query.filter(
+                Rule.id.in_(
+                    db.session.query(RuleTagAssociation.rule_id).filter(
+                        RuleTagAssociation.tag_id.in_(tag_ids)
+                    )
+                )
+            )
         else:
             # Tag requested but doesn't exist in DB → no rules can match
             query = query.filter(False)
@@ -1928,10 +1932,11 @@ def filter_rules(search=None, search_field="all", author=None, sort_by=None, rul
     if attacks:
         from app.core.db_class.db import RuleAttackAssociation as _RAA
         upper = [a.upper() for a in attacks]
-        query = (query
-                 .join(_RAA, _RAA.rule_id == Rule.id)
-                 .filter(_RAA.technique_id.in_(upper))
-                 .distinct())
+        query = query.filter(
+            Rule.id.in_(
+                db.session.query(_RAA.rule_id).filter(_RAA.technique_id.in_(upper))
+            )
+        )
 
     if source:
         source_list = [s.strip() for s in source.split(',')] if isinstance(source, str) else source
