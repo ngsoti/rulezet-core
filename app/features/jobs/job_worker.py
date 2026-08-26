@@ -1,10 +1,28 @@
 """
 job_worker.py
-Background thread that picks up pending jobs and executes them.
+Background threads that pick up pending jobs and execute them.
 
 Start once at app startup:
     from app.features.jobs.job_worker import start_worker
     start_worker(app)
+
+Two lanes, two threads, one shared BackgroundJob state machine:
+
+- 'default' lane: everything except the job types in _BACKGROUND_LANE_TYPES
+  below (GitHub sync, connector pulls, MISP/Velociraptor updates, quality
+  score, bulk tagging, ...). Time-sensitive, expected to finish in seconds
+  to minutes.
+- 'background' lane: job types that are long-running and unattended by
+  design (currently 'ai_generate' — the AI agents' bulk job type, see
+  ~/Documents/Rulezet/IA-Integration-plan/AI_00_FOUNDATION.md §8). A
+  single shared queue would mean one multi-day AI sweep over the rule
+  catalog stalls every other job type for its entire duration, since a
+  single worker thread claims one job and runs its handler synchronously
+  to completion before looking at the next pending job. Splitting the
+  queue by lane fixes that without touching the state machine, pause/
+  cancel/resume plumbing, or any existing handler — both threads drive
+  the same BackgroundJob rows through the same contract, they just pull
+  from disjoint slices of the pending queue.
 """
 
 import threading
@@ -12,6 +30,12 @@ import time
 import datetime
 
 _HANDLERS = {}
+
+# Job types that must never share a queue with time-sensitive jobs. See the
+# module docstring above. Empty until an AI agent bulk job type actually
+# registers itself — the background-lane thread simply finds nothing to
+# claim and sleeps until one exists, so this is safe to ship ahead of time.
+_BACKGROUND_LANE_TYPES = {'ai_generate'}
 
 
 def register_handler(job_type):
@@ -38,14 +62,35 @@ def _log(job, db, BackgroundJobLog, message, level='info', event=None):
         print(f"[worker] failed to write log: {e}")
 
 
-def _worker_loop(app):
-    """Runs in a background daemon thread. Picks one pending job at a time."""
+def _scope_to_lane(query, BackgroundJob, lane):
+    """Narrow a BackgroundJob query to the given lane's job types.
+
+    'background' claims only _BACKGROUND_LANE_TYPES; 'default' claims
+    everything else. If _BACKGROUND_LANE_TYPES is empty, 'default' is
+    unfiltered and 'background' matches nothing — both lanes stay
+    well-defined regardless of whether any background-lane job type is
+    registered yet.
+    """
+    if lane == 'background':
+        if not _BACKGROUND_LANE_TYPES:
+            return query.filter(False)
+        return query.filter(BackgroundJob.job_type.in_(_BACKGROUND_LANE_TYPES))
+    if _BACKGROUND_LANE_TYPES:
+        return query.filter(BackgroundJob.job_type.notin_(_BACKGROUND_LANE_TYPES))
+    return query
+
+
+def _worker_loop(app, lane='default'):
+    """Runs in a background daemon thread. Picks one pending job (from this
+    lane only) at a time."""
     with app.app_context():
         from app import db
         from app.core.db_class.db import BackgroundJob, BackgroundJobLog
 
         # ── Recover jobs interrupted by a server restart ──────────────────────
-        interrupted = BackgroundJob.query.filter_by(status='running').all()
+        interrupted = _scope_to_lane(
+            BackgroundJob.query.filter_by(status='running'), BackgroundJob, lane
+        ).all()
         if interrupted:
             for job in interrupted:
                 job.status     = 'pending'
@@ -55,15 +100,17 @@ def _worker_loop(app):
                      "automatically queued to resume from last saved offset.",
                      level='warning', event='recovered')
             db.session.commit()
-            print(f"[worker] Recovered {len(interrupted)} interrupted job(s) → pending.")
+            print(f"[worker:{lane}] Recovered {len(interrupted)} interrupted job(s) → pending.")
 
         while True:
             try:
                 db.session.expire_all()
 
                 job = (
-                    BackgroundJob.query
-                    .filter(BackgroundJob.status.in_(['pending']))
+                    _scope_to_lane(
+                        BackgroundJob.query.filter(BackgroundJob.status.in_(['pending'])),
+                        BackgroundJob, lane
+                    )
                     .order_by(BackgroundJob.created_at.asc())
                     .first()
                 )
@@ -92,7 +139,7 @@ def _worker_loop(app):
                      f"Worker picked up job — starting execution.",
                      level='info', event='picked_up')
 
-                print(f"[worker] Starting job {job.uuid} type={job.job_type} done={job.done}")
+                print(f"[worker:{lane}] Starting job {job.uuid} type={job.job_type} done={job.done}")
 
                 try:
                     job_uuid = job.uuid  # save uuid before handler runs
@@ -104,7 +151,7 @@ def _worker_loop(app):
                     db.session.expire_all()
                     job = BackgroundJob.query.filter_by(uuid=job_uuid).first()
                     if not job:
-                        print(f"[worker] Job {job_uuid} disappeared after handler.")
+                        print(f"[worker:{lane}] Job {job_uuid} disappeared after handler.")
                         continue
 
                     if job.status not in ('cancelled', 'failed', 'paused'):
@@ -116,7 +163,7 @@ def _worker_loop(app):
                             job.payload = payload
                         db.session.commit()
 
-                    print(f"[worker] Job {job.uuid} finished with status={job.status}")
+                    print(f"[worker:{lane}] Job {job.uuid} finished with status={job.status}")
 
                     if job.status in ('done', 'failed'):
                         try:
@@ -156,10 +203,10 @@ def _worker_loop(app):
                                 print(f"[task_scheduler] on_job_finished error: {hook_err}")
                     except Exception:
                         pass
-                    print(f"[worker] Job {job_uuid} failed: {e}")
+                    print(f"[worker:{lane}] Job {job_uuid} failed: {e}")
 
             except Exception as e:
-                print(f"[worker] Unexpected error in worker loop: {e}")
+                print(f"[worker:{lane}] Unexpected error in worker loop: {e}")
                 try:
                     db.session.rollback()
                 except Exception:
@@ -168,13 +215,25 @@ def _worker_loop(app):
 
 
 def start_worker(app):
-    """Start the background worker thread. Call once at app startup."""
-    t = threading.Thread(
+    """Start the background job worker threads. Call once at app startup."""
+    default_thread = threading.Thread(
         target=_worker_loop,
         args=(app,),
+        kwargs={'lane': 'default'},
         daemon=True,
-        name='job-worker'
+        name='job-worker',
     )
-    t.start()
+    default_thread.start()
     print("[worker] Background job worker started.")
-    return t
+
+    background_thread = threading.Thread(
+        target=_worker_loop,
+        args=(app,),
+        kwargs={'lane': 'background'},
+        daemon=True,
+        name='job-worker-background',
+    )
+    background_thread.start()
+    print("[worker] Background (slow/unattended job) worker started.")
+
+    return default_thread, background_thread
