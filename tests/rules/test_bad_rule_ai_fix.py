@@ -94,6 +94,19 @@ def test_ai_fix_button_hidden_for_script_format_even_when_enabled(app, client):
     assert b"Try AI fix" not in res.data
 
 
+def test_ai_fix_button_hidden_for_non_yara_formats(app, client):
+    """rule_fixer's default model is a YARA-specific fine-tune — restricted
+    to YARA only for now, not just the script-format denylist."""
+    _set_rule_fixer_enabled(app, True)
+    owner = _owner(app)
+    for rule_type in ("sigma", "suricata", "crs"):
+        bad_rule_id = _make_bad_rule(app, owner.id, rule_type=rule_type)
+        _login(client, owner)
+        res = client.get(f"/rule/bad_rule/{bad_rule_id}/edit")
+        assert res.status_code == 200
+        assert b"Try AI fix" not in res.data, f"should be hidden for {rule_type}"
+
+
 # ── route permissions ──────────────────────────────────────────────────────────
 
 def test_ai_fix_route_requires_login(client, app):
@@ -124,6 +137,17 @@ def test_ai_fix_route_blocks_script_format(app, client):
     _set_rule_fixer_enabled(app, True)
     owner = _owner(app)
     bad_rule_id = _make_bad_rule(app, owner.id, rule_type="nse")
+    _login(client, owner)
+
+    res = client.post(f"/rule/bad_rule/{bad_rule_id}/ai_fix")
+    assert res.status_code == 400
+    assert res.get_json()["ok"] is False
+
+
+def test_ai_fix_route_blocks_non_yara_format(app, client):
+    _set_rule_fixer_enabled(app, True)
+    owner = _owner(app)
+    bad_rule_id = _make_bad_rule(app, owner.id, rule_type="sigma")
     _login(client, owner)
 
     res = client.post(f"/rule/bad_rule/{bad_rule_id}/ai_fix")

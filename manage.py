@@ -98,12 +98,32 @@ def _check_venv() -> None:
 
 OLLAMA_MODEL = "qwen2.5:1.5b"
 
+# Set as the rule_fixer agent's default_model (AIAgentConfig, set directly
+# in the DB, not here) once pulled. Kept separate from OLLAMA_MODEL since
+# that one is the chatbot's default and the two agents don't have to share
+# a model.
+#
+# Was hf.co/vtriple/threatflux-0.6B-gguf (a 0.6B YARA-specific fine-tune) —
+# swapped out after it missed an actual production bug (a string identifier
+# missing its leading '$') that qwen2.5-coder:7b caught correctly once the
+# prompt was also fixed to highlight the exact flagged line (see
+# rule_fixer_agent.py's _line_context — a small YARA-specific model is not
+# a substitute for solid general instruction-following on precise, localized
+# text edits). Larger (~4.7GB vs ~1.2GB) and slower, but confirmed to
+# actually work on real broken rules where the smaller one didn't.
+OLLAMA_RULE_FIXER_MODEL = "qwen2.5-coder:7b"
+
 # Pinned, not "latest": 0.32.1+ segfaults on every model on Intel Sapphire
-# Rapids Xeons (e.g. Xeon Silver 4410Y) — its AMX-aware CPU inference path
-# crashes on this CPU generation even with OLLAMA_LLM_LIBRARY=cpu forced and
-# a from-scratch reinstall/re-pulled model. 0.5.7 predates that code path
-# (falls back to a plain avx2 runner) and was confirmed working. Bump this
-# only after confirming a newer release fixes the Sapphire Rapids crash.
+# Rapids Xeons (e.g. Xeon Silver 4410Y — production's CPU) — its AMX-aware
+# CPU inference path crashes on this CPU generation even with
+# OLLAMA_LLM_LIBRARY=cpu forced and a from-scratch reinstall/re-pulled
+# model. 0.5.7 predates that code path (falls back to a plain avx2 runner)
+# and was confirmed working. Bump this only after confirming a newer
+# release fixes the Sapphire Rapids crash — briefly bumped to 0.33.0 for
+# Qwen3 support (a since-abandoned rule_fixer model needed it), reverted
+# once rule_fixer moved to qwen2.5-coder:7b, which needs nothing newer than
+# this — same architecture family as qwen2.5:1.5b/3b, already confirmed
+# working here.
 OLLAMA_VERSION = "0.5.7"
 
 
@@ -153,15 +173,20 @@ def _ensure_ollama() -> None:
 
     try:
         listed = subprocess.run([ollama_bin, "list"], capture_output=True, text=True, check=False)
-        if OLLAMA_MODEL not in (listed.stdout or ""):
-            info(f"Pulling the {OLLAMA_MODEL} model (used by the chat assistant)…")
-            pulled = subprocess.run([ollama_bin, "pull", OLLAMA_MODEL])
-            if pulled.returncode == 0:
-                ok(f"{OLLAMA_MODEL} pulled")
+        already_listed = listed.stdout or ""
+        for model_name, used_by in (
+            (OLLAMA_MODEL, "the chat assistant"),
+            (OLLAMA_RULE_FIXER_MODEL, "the Rule Fixer agent"),
+        ):
+            if model_name not in already_listed:
+                info(f"Pulling the {model_name} model (used by {used_by})…")
+                pulled = subprocess.run([ollama_bin, "pull", model_name])
+                if pulled.returncode == 0:
+                    ok(f"{model_name} pulled")
+                else:
+                    error(f"Could not pull {model_name} — run 'ollama pull {model_name}' manually.")
             else:
-                error(f"Could not pull {OLLAMA_MODEL} — run 'ollama pull {OLLAMA_MODEL}' manually.")
-        else:
-            ok(f"{OLLAMA_MODEL} already pulled")
+                ok(f"{model_name} already pulled")
     except OSError as e:
         error(f"Could not check/pull Ollama models: {e}")
 

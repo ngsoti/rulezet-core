@@ -2444,13 +2444,16 @@ def get_bads_rules_page_filter():
 
 def _ai_fix_available_for(bad_rule) -> bool:
     """Gate for the "Try AI fix" button — off when the rule_fixer agent is
-    disabled instance-wide, and hard-off (not admin-configurable) for
-    script-based formats (Zeek/NSE), same denylist as Rule.CODE_FORMATS:
-    a targeted edit to already-broken code is exactly as dangerous as
-    generating new code from scratch."""
+    disabled instance-wide, and restricted to YARA only for now: the prompt
+    (rule_fixer_agent.py) and the fragment/length guard (bad_rule_core.py)
+    have only been validated against real YARA rules so far, not the other
+    formats' syntax quirks. This also transitively excludes script-based
+    formats (Zeek/NSE) — a targeted edit to already-broken code would be
+    exactly as dangerous as generating new code from scratch even if it
+    were otherwise supported."""
     from app.core.db_class.db import AIAgentConfig
 
-    if (bad_rule.rule_type or '').lower() in RuleModel.Rule.CODE_FORMATS:
+    if (bad_rule.rule_type or '').lower() != 'yara':
         return False
     cfg = AIAgentConfig.query.filter_by(agent_key='rule_fixer').first()
     return cfg.enabled if cfg else True

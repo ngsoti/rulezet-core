@@ -288,8 +288,8 @@
                      <div class="avatar-circle">
                         {% if current_user.is_authenticated and current_user.profile_picture %}
                               <img src="{{ current_user.get_avatar_url() }}"
-                                 class="rounded-circle w-100 h-100"
-                                 style="object-fit:cover;">
+                                 class="w-100 h-100"
+                                 style="object-fit:cover;display:block;">
                         {% elif current_user.is_authenticated %}
                               {{ current_user.get_first_name()[0].upper() }}
                         {% else %}
