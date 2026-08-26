@@ -33,6 +33,11 @@ class Config:
     # instructions slightly more reliably; set OLLAMA_MODEL to switch back.
     OLLAMA_URL   = os.environ.get('OLLAMA_URL', 'http://localhost:11434')
     OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'qwen2.5:1.5b')
+    # How many concurrent requests this process sends to Ollama at once — see
+    # app/features/ai/ai_core.py's concurrency governor. 2 was measured
+    # (production hardware, 24 physical cores) to give genuine partial
+    # parallelism without either request slowing down too much.
+    OLLAMA_MAX_CONCURRENT = int(os.environ.get('OLLAMA_MAX_CONCURRENT', 2))
 
     MAIL_SERVER   = os.environ.get('MAIL_SERVER',   'smtp.gmail.com')
     MAIL_PORT     = int(os.environ.get('MAIL_PORT', 587))

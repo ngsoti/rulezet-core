@@ -4003,3 +4003,100 @@ class RuleTestResult(db.Model):
             'error':            self.error,
             'execution_time_ms': self.execution_time_ms,
         }
+
+
+# ─── AI foundation (app/features/ai/) ───────────────────────────────────────
+# Shared across every AI agent (chatbot, rule analysis, rule generator, rule
+# fixer) — see ~/Documents/Rulezet/IA-Integration-plan/AI_00_FOUNDATION.md §5.
+
+class AIAgentConfig(db.Model):
+    """One row per agent key. The admin kill-switch + tunables live here,
+    not scattered across InstanceConfig booleans."""
+    __tablename__ = 'ai_agent_config'
+
+    id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    agent_key     = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    enabled       = db.Column(db.Boolean, nullable=False, default=True)
+    default_model = db.Column(db.String(128), nullable=True)  # falls back to global OLLAMA_MODEL if null
+    max_per_hour  = db.Column(db.Integer, nullable=True)       # null = no per-user rate limit (batch agents)
+    timeout_s     = db.Column(db.Integer, nullable=False, default=120)
+    num_predict   = db.Column(db.Integer, nullable=False, default=2048)
+    updated_at    = db.Column(db.DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc),
+                               onupdate=lambda: datetime.datetime.now(datetime.timezone.utc))
+
+    def to_json(self):
+        return {
+            'id':            self.id,
+            'agent_key':     self.agent_key,
+            'enabled':       self.enabled,
+            'default_model': self.default_model,
+            'max_per_hour':  self.max_per_hour,
+            'timeout_s':     self.timeout_s,
+            'num_predict':   self.num_predict,
+            'updated_at':    self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class AIModelConfig(db.Model):
+    """Global model allowlist, synced from Ollama's own /api/tags — shared
+    across all agents, a model disabled here is unavailable everywhere."""
+    __tablename__ = 'ai_model_config'
+
+    id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    model_name = db.Column(db.String(128), unique=True, nullable=False)
+    is_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    added_at   = db.Column(db.DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+
+    def to_json(self):
+        return {
+            'id':         self.id,
+            'model_name': self.model_name,
+            'is_enabled': self.is_enabled,
+            'added_at':   self.added_at.isoformat() if self.added_at else None,
+        }
+
+
+class AIExecutionLog(db.Model):
+    """One row per agent invocation, every agent, success or failure — the
+    unified history + security-visibility surface the admin AI hub reads
+    from. Chatbot additionally writes its own ChatbotMessage row per turn;
+    this row is the lightweight cross-agent summary, not a replacement."""
+    __tablename__ = 'ai_execution_log'
+
+    id              = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid            = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    agent_key       = db.Column(db.String(50), nullable=False, index=True)
+    user_id         = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True, index=True)
+    rule_id         = db.Column(db.Integer, db.ForeignKey('rule.id', ondelete='CASCADE'), nullable=True, index=True)
+    input_summary   = db.Column(db.String(300), nullable=True)  # short, truncated — never full rule content
+    content         = db.Column(db.Text, nullable=True)          # the agent's output (report / rule / fix / reply)
+    model_used      = db.Column(db.String(128), nullable=True)
+    status          = db.Column(db.String(20), nullable=False)   # success | failed | rate_limited | disabled | busy
+    error_message   = db.Column(db.Text, nullable=True)
+    is_public       = db.Column(db.Boolean, nullable=False, default=True)  # admin moderation lever
+    flagged_reason  = db.Column(db.String(200), nullable=True)   # e.g. 'possible_prompt_injection'
+    iteration_count = db.Column(db.Integer, nullable=True)       # for the repair loop (rule generator/fixer)
+    latency_ms      = db.Column(db.Integer, nullable=True)
+    created_at      = db.Column(db.DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc), index=True)
+
+    user = db.relationship('User', foreign_keys=[user_id])
+    rule = db.relationship('Rule', foreign_keys=[rule_id])
+
+    def to_json(self):
+        return {
+            'id':              self.id,
+            'uuid':            self.uuid,
+            'agent_key':       self.agent_key,
+            'user_id':         self.user_id,
+            'rule_id':         self.rule_id,
+            'input_summary':   self.input_summary,
+            'content':         self.content if self.is_public else None,
+            'model_used':      self.model_used,
+            'status':          self.status,
+            'error_message':   self.error_message,
+            'is_public':       self.is_public,
+            'flagged_reason':  self.flagged_reason,
+            'iteration_count': self.iteration_count,
+            'latency_ms':      self.latency_ms,
+            'created_at':      self.created_at.isoformat() if self.created_at else None,
+        }
