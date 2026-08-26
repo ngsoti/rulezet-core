@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% import 'macros/ai_admin_nav.html' as ai_nav %}
+{% block title %}Rule Analysis — AI Admin — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/table/data-table.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4" id="ra-app" v-cloak>
+
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-magnifying-glass-chart banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">Rule Analysis</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="banner-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
+      <div>
+        <h2 class="fw-bold mb-1">Rule Analysis</h2>
+        <div class="banner-accent"></div>
+      </div>
+    </div>
+    <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+      Generate detailed, grounded reports explaining what a rule does — especially
+      valuable when a rule ships with little or no metadata of its own.
+    </p>
+  </div>
+
+  {{ ai_nav.ai_admin_nav('rule_analysis') }}
+
+  <agent-config-card agent-key="rule_analysis" :csrf-token="csrfToken" @notify="onNotify"></agent-config-card>
+
+  <system-status-card compact :csrf-token="csrfToken" :poll-ms="6000"></system-status-card>
+
+  <!-- Trigger card -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+        <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+        <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+          <i class="fa-solid fa-list-check me-1"></i>Run now
+        </span>
+        <small style="color:var(--subtle-text-color);font-size:.78rem;">
+          — pick rules, click <strong>Select</strong> to queue an <code>ai_generate</code> job. For the whole catalog,
+          use a recurring <a href="/admin/tasks/">Task Scheduler</a> entry instead of "select all" here — see
+          the plan's performance notes on why a one-shot run over everything doesn't scale.
+        </small>
+      </div>
+
+      <div class="row g-2 align-items-end mb-3">
+        <div class="col-auto">
+          <label class="form-label small mb-1">Regenerate rules that already have an analysis</label>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" v-model="regenerateExisting">
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="form-check form-switch mb-1" style="margin-top:1.6rem;">
+            <input class="form-check-input" type="checkbox" id="ra-default-public" v-model="defaultPublic">
+            <label class="form-check-label small" for="ra-default-public">Publish new reports immediately</label>
+          </div>
+        </div>
+      </div>
+
+      <rule-list
+        mode="select"
+        default-view="table"
+        :show-filters="true"
+        :show-create="false"
+        :can-vote="false"
+        :can-favorite="false"
+        :current-user-is-authenticated="true"
+        :current-user-is-admin="true"
+        :confirm-disabled="running"
+        :csrf-token="csrfToken"
+        @send="onSend">
+      </rule-list>
+
+      <div v-if="jobUuid" class="mt-3">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="small text-muted">
+            Job <span class="font-monospace">[[ jobUuid ]]</span> — [[ jobStatus ]]
+            <span v-if="jobTotal">([[ jobDone ]]/[[ jobTotal ]])</span>
+          </span>
+          <a :href="'/jobs/detail/' + jobUuid" class="small">Open job page →</a>
+        </div>
+        <ansi-terminal :entries="jobTerminalEntries" :live="jobStatus === 'running' || jobStatus === 'pending'"
+                       :title="'job ' + jobUuid"></ansi-terminal>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <data-table
+    ref="table_ref"
+    fetch-url="/ai/admin/history/rule_analysis/data"
+    :columns="columns"
+    :can-delete="true"
+    :bulk-actions="bulkActions"
+    initial-sort="created_at"
+    initial-dir="desc"
+    @delete="handleDelete"
+    @bulk-action="handleBulkAction">
+    <template #cell-rule_title="{ item }">
+      <a v-if="item.rule_id" :href="'/rule/detail_rule/' + item.rule_id" target="_blank">[[ item.rule_title || ('Rule #' + item.rule_id) ]]</a>
+      <span v-else class="text-muted">—</span>
+    </template>
+    <template #cell-username="{ item }">
+      <user-chip :user-id="item.user_id" :username="item.username || 'unknown'" size="sm"></user-chip>
+    </template>
+    <template #cell-is_public="{ item }">
+      <span class="badge rounded-pill" :class="item.is_public ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis'"
+            style="cursor:pointer;" @click="toggleVisibility(item)">
+        [[ item.is_public ? 'Public' : 'Private' ]]
+      </span>
+    </template>
+    <template #cell-view="{ item }">
+      <a :href="'/ai/admin/rule_analysis/history/' + item.uuid" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+        <i class="fa-solid fa-eye me-1"></i>View
+      </a>
+    </template>
+  </data-table>
+
+</div>
+
+<script type="module">
+import { create_message }  from '/static/js/toaster.js'
+import UserChip             from '/static/js/components/UserChip.js'
+import DataTable             from '/static/js/components/table/data-table.js'
+import AnsiTerminal          from '/static/js/components/ansi-terminal.js'
+import AgentConfigCard      from '/static/js/ai/agentConfigCard.js'
+import SystemStatusCard     from '/static/js/ai/systemStatusCard.js'
+import RuleList                  from '/static/js/rule/ruleList.js'
+import TagsDisplaysList          from '/static/js/tags/tagsDisplaysList.js'
+import VulnerabilityDisplaysList from '/static/js/vulnerability/vulnerabilityDisplayList.js'
+
+const { createApp, ref, computed, onUnmounted } = Vue
+
+function csrf() {
+    return document.querySelector('input[name="csrf_token"]')?.value || ''
+}
+
+createApp({
+    delimiters: ['[[', ']]'],
+    components: {
+        'user-chip': UserChip, 'data-table': DataTable, 'ansi-terminal': AnsiTerminal,
+        'agent-config-card': AgentConfigCard, 'system-status-card': SystemStatusCard, 'rule-list': RuleList,
+        'tags-displays-list': TagsDisplaysList, 'vulnerability-displays-list': VulnerabilityDisplaysList,
+    },
+    setup() {
+        const csrfToken = csrf()
+        const table_ref = ref(null)
+
+        const columns = [
+            { key: 'rule_title', label: 'Rule', sortable: false },
+            { key: 'model',      label: 'Model', sortable: true },
+            { key: 'username',   label: 'Requested by', sortable: false },
+            { key: 'created_at', label: 'Date', type: 'date', sortable: true },
+            { key: 'is_public',  label: 'Visibility', sortable: false },
+            { key: 'view',       label: '', sortable: false },
+        ]
+        const bulkActions = [{ key: 'delete', label: 'Delete', icon: 'fa-trash', variant: 'danger' }]
+
+        function onNotify({ message, level }) { create_message(message, level) }
+
+        async function handleDelete(item) {
+            if (!confirm('Delete this analysis? This cannot be undone.')) return
+            const res = await fetch('/ai/admin/history/rule_analysis/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ action: 'delete', ids: [item.id] }),
+            })
+            const data = await res.json()
+            if (data.success) { create_message('Deleted.', 'success-subtle'); table_ref.value?.fetchData() }
+            else create_message(data.error || 'Failed to delete', 'danger-subtle')
+        }
+
+        async function handleBulkAction({ action, ids }) {
+            if (action !== 'delete') return
+            if (!confirm(`Delete ${ids === 'ALL' ? 'ALL' : ids.length} analys${ids === 'ALL' || ids.length !== 1 ? 'es' : 'is'}? This cannot be undone.`)) return
+            const res = await fetch('/ai/admin/history/rule_analysis/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ action: 'delete', ids }),
+            })
+            const data = await res.json()
+            if (data.success) { create_message(`Deleted ${data.deleted}.`, 'success-subtle'); table_ref.value?.fetchData() }
+            else create_message(data.error || 'Failed to delete', 'danger-subtle')
+        }
+
+        async function toggleVisibility(item) {
+            const res = await fetch(`/ai/admin/history/rule_analysis/toggle_visibility/${item.id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ is_public: !item.is_public }),
+            })
+            const data = await res.json()
+            if (data.success) { create_message('Visibility updated.', 'success-subtle'); table_ref.value?.fetchData() }
+            else create_message(data.error || 'Failed to update', 'danger-subtle')
+        }
+
+        // ── Trigger ──────────────────────────────────────────────────────
+        const regenerateExisting = ref(false)
+        const defaultPublic      = ref(true)
+        const running   = ref(false)
+        const jobUuid   = ref(null)
+        const jobStatus = ref(null)
+        const jobDone   = ref(0)
+        const jobTotal  = ref(0)
+        const jobLogs   = ref([])
+        const lastLogId = ref(0)
+        let pollTimer = null
+
+        const jobTerminalEntries = computed(() => jobLogs.value.map(l => ({
+            ts: l.created_at, level: l.level, msg: l.message,
+        })))
+
+        function onSend(ids, filters) {
+            const payload = {
+                agent_key: 'rule_analysis',
+                regenerate_existing: regenerateExisting.value,
+                default_public: defaultPublic.value,
+            }
+            if (ids === 'ALL') {
+                payload.filters = filters || {}
+            } else {
+                payload.rule_ids = ids
+            }
+            runJob(payload)
+        }
+
+        async function runJob(payload) {
+            if (running.value) return
+            running.value = true
+            jobLogs.value = []
+            lastLogId.value = 0
+            jobUuid.value = null
+            jobStatus.value = 'pending'
+            jobDone.value = 0
+            jobTotal.value = 0
+
+            try {
+                const res = await fetch('/jobs/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({
+                        job_type: 'ai_generate',
+                        label: 'AI Rule Analysis (admin-triggered)',
+                        payload,
+                    }),
+                })
+                const data = await res.json()
+                if (!res.ok || !data.job) {
+                    create_message(data.error || 'Failed to queue job', 'danger-subtle')
+                    running.value = false
+                    return
+                }
+                jobUuid.value = data.job.uuid
+                jobStatus.value = 'running'
+                pollTimer = setInterval(poll, 2000)
+                poll()
+            } catch (e) {
+                create_message('Network error: ' + e, 'danger-subtle')
+                running.value = false
+            }
+        }
+
+        async function poll() {
+            if (!jobUuid.value) return
+            try {
+                const [sRes, lRes] = await Promise.all([
+                    fetch(`/jobs/status/${jobUuid.value}`),
+                    fetch(`/jobs/logs/${jobUuid.value}?since_id=${lastLogId.value}`),
+                ])
+                const sData = await sRes.json()
+                const lines = await lRes.json()
+
+                jobStatus.value = sData.status || 'running'
+                if (sData.done !== undefined) jobDone.value = sData.done
+                if (sData.total !== undefined) jobTotal.value = sData.total
+
+                for (const log of lines) {
+                    jobLogs.value.push(log)
+                    lastLogId.value = Math.max(lastLogId.value, log.id)
+                }
+
+                if (['done', 'failed', 'cancelled'].includes(jobStatus.value)) {
+                    clearInterval(pollTimer)
+                    running.value = false
+                    table_ref.value?.fetchData()
+                }
+            } catch { /* keep polling */ }
+        }
+
+        onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
+
+        return {
+            csrfToken, onNotify, table_ref, columns, bulkActions,
+            handleDelete, handleBulkAction, toggleVisibility,
+            regenerateExisting, defaultPublic, running, jobUuid, jobStatus, jobDone, jobTotal,
+            jobTerminalEntries, onSend,
+        }
+    }
+}).mount('#ra-app')
+</script>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% import 'macros/ai_admin_nav.html' as ai_nav %}
+{% block title %}Models &amp; Security — AI Admin — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/table/data-table.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4" id="ms-app" v-cloak>
+
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-shield-halved banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">Models &amp; Security</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="banner-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <div>
+        <h2 class="fw-bold mb-1">Models &amp; Security</h2>
+        <div class="banner-accent"></div>
+      </div>
+    </div>
+    <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+      One shared model allowlist for every AI feature, and every AI call on this
+      instance in one place — success, failure, and anything that looked like a
+      prompt-injection attempt.
+    </p>
+  </div>
+
+  {{ ai_nav.ai_admin_nav('models') }}
+
+  <system-status-card :csrf-token="csrfToken"></system-status-card>
+
+  <!-- Model allowlist -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+            <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+              <i class="fa-solid fa-microchip me-1"></i>Model allowlist
+            </span>
+          </div>
+          <small class="text-muted">Disabling a model here removes it from every feature's dropdown at once.</small>
+        </div>
+        <button class="btn btn-sm btn-outline-primary rounded-pill px-3" :disabled="syncing" @click="syncModels">
+          <i class="fa-solid me-1" :class="syncing ? 'fa-spinner fa-spin' : 'fa-rotate'"></i>
+          [[ syncing ? 'Syncing…' : 'Sync from Ollama' ]]
+        </button>
+      </div>
+
+      <div v-if="loadingModels" class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
+      <div v-else-if="!models.length" class="text-center py-4 text-muted small">
+        No models found — is Ollama running? Try "Sync from Ollama" above.
+      </div>
+      <table v-else class="dt-table">
+        <thead class="dt-thead"><tr><th class="dt-th">Model</th><th class="dt-th" style="width:120px;">Enabled</th></tr></thead>
+        <tbody>
+          <tr v-for="m in models" :key="m.id" class="dt-row">
+            <td class="dt-td font-monospace">[[ m.model_name ]]</td>
+            <td class="dt-td">
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" :checked="m.is_enabled" @change="toggleModel(m)">
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Cross-agent execution log -->
+  <div class="card border-0 shadow-sm rounded-4 mb-3">
+    <div class="card-body p-4 pb-2">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+        <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+          <i class="fa-solid fa-list-check me-1"></i>Cross-agent execution log
+        </span>
+      </div>
+      <small class="text-muted">Every call to every agent — filter by agent to see just one, or leave it on "All" to watch for abuse across the board.</small>
+    </div>
+  </div>
+
+  <data-table
+    :key="agentFilter"
+    :fetch-url="executionLogUrl"
+    :columns="logColumns"
+    initial-sort="created_at"
+    initial-dir="desc">
+    <template #toolbar-start>
+      <select class="form-select form-select-sm" v-model="agentFilter" style="width:auto;">
+        <option value="">All agents</option>
+        <option value="chatbot">Chatbot</option>
+        <option value="rule_analysis">Rule Analysis</option>
+        <option value="rule_generator">Rule Generator</option>
+        <option value="rule_fixer">Rule Fixer</option>
+      </select>
+    </template>
+    <template #cell-username="{ item }">
+      <user-chip v-if="item.user_id" :user-id="item.user_id" :username="item.username || 'unknown'" size="sm"></user-chip>
+      <span v-else class="text-muted">—</span>
+    </template>
+    <template #cell-status="{ item }">
+      <span class="badge rounded-pill"
+            :class="{
+              'bg-success-subtle text-success-emphasis':  item.status === 'success',
+              'bg-danger-subtle text-danger-emphasis':    item.status === 'failed',
+              'bg-warning-subtle text-warning-emphasis':  item.status === 'rate_limited' || item.status === 'busy',
+              'bg-secondary-subtle text-secondary-emphasis': item.status === 'disabled',
+            }">
+        [[ item.status ]]
+      </span>
+      <span v-if="item.flagged_reason" class="badge rounded-pill bg-danger-subtle text-danger-emphasis ms-1" :title="item.flagged_reason">
+        <i class="fa-solid fa-triangle-exclamation"></i> flagged
+      </span>
+    </template>
+  </data-table>
+
+</div>
+
+<script type="module">
+import UserChip          from '/static/js/components/UserChip.js'
+import DataTable          from '/static/js/components/table/data-table.js'
+import SystemStatusCard  from '/static/js/ai/systemStatusCard.js'
+import { create_message } from '/static/js/toaster.js'
+
+const { createApp, ref, computed } = Vue
+
+createApp({
+    delimiters: ['[[', ']]'],
+    components: { 'user-chip': UserChip, 'data-table': DataTable, 'system-status-card': SystemStatusCard },
+    setup() {
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || ''
+        const models = ref([])
+        const loadingModels = ref(true)
+        const syncing = ref(false)
+        const agentFilter = ref('')
+        const executionLogUrl = computed(() =>
+            agentFilter.value
+                ? `/ai/admin/execution_log/data?agent_key=${encodeURIComponent(agentFilter.value)}`
+                : '/ai/admin/execution_log/data'
+        )
+
+        const logColumns = [
+            { key: 'agent_key',  label: 'Agent', sortable: true },
+            { key: 'username',   label: 'User', sortable: false },
+            { key: 'input_summary', label: 'Input', truncate: true },
+            { key: 'model_used', label: 'Model', sortable: false },
+            { key: 'status',     label: 'Status', sortable: true },
+            { key: 'latency_ms', label: 'Latency (ms)', sortable: true },
+            { key: 'created_at', label: 'Date', type: 'date', sortable: true },
+        ]
+
+        async function fetchModels() {
+            loadingModels.value = true
+            try {
+                const res = await fetch('/ai/admin/models/list')
+                const data = await res.json()
+                models.value = data.models || []
+            } finally {
+                loadingModels.value = false
+            }
+        }
+
+        async function syncModels() {
+            syncing.value = true
+            try {
+                const res = await fetch('/ai/admin/models/sync', {
+                    method: 'POST', headers: { 'X-CSRFToken': csrfToken },
+                })
+                const data = await res.json()
+                if (data.success) {
+                    models.value = data.models || []
+                    create_message(`Synced — ${data.added} new model(s).`, 'success-subtle')
+                } else {
+                    create_message(data.error || 'Sync failed', 'danger-subtle')
+                }
+            } catch (e) {
+                create_message('Network error: ' + e, 'danger-subtle')
+            } finally {
+                syncing.value = false
+            }
+        }
+
+        async function toggleModel(m) {
+            const res = await fetch(`/ai/admin/models/${m.id}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ is_enabled: !m.is_enabled }),
+            })
+            const data = await res.json()
+            if (data.success) m.is_enabled = data.model.is_enabled
+            else create_message(data.error || 'Failed to update', 'danger-subtle')
+        }
+
+        fetchModels()
+
+        return { csrfToken, models, loadingModels, syncing, agentFilter, executionLogUrl, logColumns, syncModels, toggleModel }
+    }
+}).mount('#ms-app')
+</script>
+{% endblock %}

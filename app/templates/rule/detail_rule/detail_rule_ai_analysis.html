@@ -266,7 +266,11 @@
                         const data = await res.json();
                         featureEnabled.value = data.enabled;
                         models.value = data.models || [];
-                        if (models.value.length) selectedModel.value = models.value[0];
+                        if (data.default_model && models.value.includes(data.default_model)) {
+                            selectedModel.value = data.default_model;
+                        } else if (models.value.length) {
+                            selectedModel.value = models.value[0];
+                        }
                     }
                 } catch (e) { /* silent — the launch card just stays hidden/disabled */ }
             }
@@ -293,7 +297,7 @@
                     });
                     const data = await res.json();
                     if (res.ok && data.job) {
-                        window.location.href = '/jobs/detail/' + data.job.uuid;
+                        create_message('Queued — running in the background. This page will keep showing the previous result until it finishes.', 'success-subtle');
                     } else {
                         create_message(data.error || 'Failed to queue AI analysis', 'danger-subtle');
                     }

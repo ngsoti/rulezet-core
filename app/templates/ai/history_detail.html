@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% import 'macros/ai_admin_nav.html' as ai_nav %}
+{% block title %}History entry — AI Admin — Rulezet{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<style>
+.ai-summary-content { font-size: .92rem; line-height: 1.7; }
+.ai-summary-content h2 { font-size: 1.05rem; font-weight: 700; margin-top: 1.4rem; margin-bottom: .6rem; }
+.ai-summary-content p { color: var(--subtle-text-color); margin-bottom: .75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-magnifying-glass-chart banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">Entry #{{ gen.uuid[:8] }}</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="banner-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
+      <div><h2 class="fw-bold mb-1">History Entry</h2><div class="banner-accent"></div></div>
+    </div>
+  </div>
+
+  {{ ai_nav.ai_admin_nav(agent_key) }}
+
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex flex-wrap gap-4 mb-4 pb-3" style="border-bottom:1px solid var(--border-color);font-size:.85rem;">
+        <div><span class="text-muted d-block" style="font-size:.72rem;text-transform:uppercase;">Model</span><code>{{ gen.model or 'unknown' }}</code></div>
+        <div><span class="text-muted d-block" style="font-size:.72rem;text-transform:uppercase;">Requested by</span>
+          {% if gen.user %}{{ gen.user.first_name }} {{ gen.user.last_name }}{% else %}—{% endif %}</div>
+        <div><span class="text-muted d-block" style="font-size:.72rem;text-transform:uppercase;">Date</span>{{ gen.created_at }}</div>
+        <div><span class="text-muted d-block" style="font-size:.72rem;text-transform:uppercase;">Visibility</span>
+          <span class="badge rounded-pill" style="{{ 'background:rgba(25,135,84,.12);color:#198754;' if gen.is_public else 'background:rgba(220,53,69,.12);color:#dc3545;' }}">
+            {{ 'Public' if gen.is_public else 'Private' }}
+          </span>
+        </div>
+        {% if gen.rule_id %}
+        <div><span class="text-muted d-block" style="font-size:.72rem;text-transform:uppercase;">Rule</span>
+          <a href="/rule/detail_rule/{{ gen.rule_id }}">{{ gen.rule.title if gen.rule else ('#' ~ gen.rule_id) }}</a>
+        </div>
+        {% endif %}
+      </div>
+
+      <div id="hd-content" class="ai-summary-content"></div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+const _purifyMod = await import('/static/js/purify.min.js')
+const DOMPurify   = _purifyMod.default || window.DOMPurify
+
+const content = {{ gen.content | tojson }}
+const target  = document.getElementById('hd-content')
+target.innerHTML = (typeof marked !== 'undefined')
+    ? DOMPurify.sanitize(marked.parse(content || ''))
+    : DOMPurify.sanitize(`<pre>${content || ''}</pre>`)
+</script>
+{% endblock %}

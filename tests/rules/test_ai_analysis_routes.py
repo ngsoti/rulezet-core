@@ -93,6 +93,23 @@ def test_models_ok_for_admin_even_when_ollama_unreachable(app, client):
     data = res.get_json()
     assert 'enabled' in data
     assert isinstance(data['models'], list)
+    assert data['default_model'] is None
+
+
+def test_models_returns_configured_default_model(app, client):
+    from app.core.db_class.db import AIAgentConfig
+
+    with app.app_context():
+        admin = User.query.filter_by(email="admin@admin.admin").first()
+        admin_id = admin.id
+        db.session.add(AIAgentConfig(agent_key='rule_analysis', enabled=True, default_model='qwen2.5:32b'))
+        db.session.commit()
+
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(admin_id)
+        sess["_fresh"] = True
+    res = client.get("/rule/ai_analysis/models")
+    assert res.get_json()['default_model'] == 'qwen2.5:32b'
 
 
 # ── downloads ────────────────────────────────────────────────────────────────

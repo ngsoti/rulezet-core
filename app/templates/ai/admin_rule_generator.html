@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% import 'macros/ai_admin_nav.html' as ai_nav %}
+{% block title %}Rule Generator — AI Admin — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/table/data-table.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4" id="rg-app" v-cloak>
+
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-wand-magic-sparkles banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">Rule Generator</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="banner-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+      <div>
+        <h2 class="fw-bold mb-1">Rule Generator</h2>
+        <div class="banner-accent"></div>
+      </div>
+    </div>
+    <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+      Draft a new detection rule from a plain-language request or a sample — always a
+      draft for human review, never auto-published.
+    </p>
+  </div>
+
+  {{ ai_nav.ai_admin_nav('rule_generator') }}
+
+  <agent-config-card agent-key="rule_generator" :csrf-token="csrfToken" @notify="onNotify"></agent-config-card>
+
+  <div class="alert alert-secondary border-0 rounded-4 py-3 px-4 mb-4">
+    <i class="fa-solid fa-circle-info me-2"></i>
+    This agent isn't built yet — the config above is ready and waiting (enable/model/
+    timeout persist correctly), but there's no <code>RuleGeneratorAgent</code> to run
+    against it. History will start populating once it ships.
+  </div>
+
+  <data-table
+    ref="table_ref"
+    fetch-url="/ai/admin/history/rule_generator/data"
+    :columns="columns"
+    :can-delete="true"
+    :bulk-actions="bulkActions"
+    @delete="handleDelete"
+    @bulk-action="handleBulkAction">
+    <template #cell-username="{ item }">
+      <user-chip :user-id="item.user_id" :username="item.username || 'unknown'" size="sm"></user-chip>
+    </template>
+  </data-table>
+
+</div>
+
+<script type="module">
+import { create_message } from '/static/js/toaster.js'
+import UserChip            from '/static/js/components/UserChip.js'
+import DataTable            from '/static/js/components/table/data-table.js'
+import AgentConfigCard     from '/static/js/ai/agentConfigCard.js'
+
+const { createApp, ref } = Vue
+
+createApp({
+    delimiters: ['[[', ']]'],
+    components: { 'user-chip': UserChip, 'data-table': DataTable, 'agent-config-card': AgentConfigCard },
+    setup() {
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || ''
+        const table_ref = ref(null)
+        const columns = [
+            { key: 'model',      label: 'Model', sortable: true },
+            { key: 'username',   label: 'Requested by', sortable: false },
+            { key: 'created_at', label: 'Date', type: 'date', sortable: true },
+        ]
+        const bulkActions = [{ key: 'delete', label: 'Delete', icon: 'fa-trash', variant: 'danger' }]
+        function onNotify({ message, level }) { create_message(message, level) }
+
+        async function handleDelete(item) {
+            if (!confirm('Delete this entry? This cannot be undone.')) return
+            const res = await fetch('/ai/admin/history/rule_generator/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ action: 'delete', ids: [item.id] }),
+            })
+            const data = await res.json()
+            if (data.success) { create_message('Deleted.', 'success-subtle'); table_ref.value?.fetchData() }
+            else create_message(data.error || 'Failed to delete', 'danger-subtle')
+        }
+
+        async function handleBulkAction({ action, ids }) {
+            if (action !== 'delete') return
+            if (!confirm('Delete the selected entries? This cannot be undone.')) return
+            const res = await fetch('/ai/admin/history/rule_generator/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ action: 'delete', ids }),
+            })
+            const data = await res.json()
+            if (data.success) { create_message(`Deleted ${data.deleted}.`, 'success-subtle'); table_ref.value?.fetchData() }
+            else create_message(data.error || 'Failed to delete', 'danger-subtle')
+        }
+
+        return { csrfToken, table_ref, columns, bulkActions, onNotify, handleDelete, handleBulkAction }
+    }
+}).mount('#rg-app')
+</script>
+{% endblock %}

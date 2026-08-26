@@ -86,13 +86,16 @@ def test_skips_rules_with_existing_analysis_by_default(app):
         assert AIGeneration.query.filter_by(rule_id=r2.id).one().content == "new summary"
 
 
-def test_regenerate_existing_replaces_old_analysis(app):
+def test_regenerate_existing_adds_a_new_entry_without_deleting_the_old_one(app):
+    # regenerate_existing includes already-analyzed rules in the target set
+    # — it must never delete prior AIGeneration rows, since those are the
+    # browsable history the rule-detail page's History card shows.
     with app.app_context():
         admin = User.query.filter_by(email="admin@admin.admin").first()
         r1 = _make_rule("Rule A", admin.id)
         db.session.add(AIGeneration(
             uuid=str(uuid.uuid4()), agent_key='rule_analysis', rule_id=r1.id,
-            user_id=admin.id, content="stale", model="qwen2.5:1.5b",
+            user_id=admin.id, content="older analysis", model="qwen2.5:1.5b",
         ))
         db.session.commit()
 
@@ -101,9 +104,10 @@ def test_regenerate_existing_replaces_old_analysis(app):
         with patch(CHAT, return_value=_envelope("fresh summary")):
             handle_rule_analysis(job, app)
 
-        rows = AIGeneration.query.filter_by(rule_id=r1.id).all()
-        assert len(rows) == 1
-        assert rows[0].content == "fresh summary"
+        rows = AIGeneration.query.filter_by(rule_id=r1.id).order_by(AIGeneration.id).all()
+        assert len(rows) == 2
+        assert rows[0].content == "older analysis"
+        assert rows[1].content == "fresh summary"
 
 
 def test_accepts_filters_shape_from_task_scheduler_rule_list_picker(app):

@@ -1269,7 +1269,7 @@ def admin_settings_generate_key():
 def admin_settings_instance():
     if not current_user.is_admin():
         return jsonify({'error': 'Unauthorized'}), 403
-    from .core.db_class.db import InstanceConfig
+    from .core.db_class.db import AIAgentConfig, InstanceConfig
     cfg = InstanceConfig.query.first()
     if not cfg:
         return jsonify({'exists': False})
@@ -1277,11 +1277,12 @@ def admin_settings_instance():
         f"http://{current_app.config.get('FLASK_URL', '127.0.0.1')}"
         f":{current_app.config.get('FLASK_PORT', 7009)}"
     )
+    chatbot_agent_cfg = AIAgentConfig.query.filter_by(agent_key='chatbot').first()
     return jsonify({
         'exists':            True,
         'endpoint_uuid':     cfg.uuid,
         'telemetry_enabled': cfg.telemetry_enabled,
-        'chatbot_enabled':   cfg.chatbot_enabled,
+        'chatbot_enabled':   chatbot_agent_cfg.enabled if chatbot_agent_cfg else True,
         'public_url':        cfg.public_url,
         'reported_url':      reported_url,
         'version':           cfg.version,
@@ -1335,25 +1336,27 @@ def admin_settings_instance_init():
 @login_required
 def admin_settings_chatbot_toggle():
     """Enable/disable the chatbot instance-wide — hides the floating widget
-    and rejects new /chatbot/message calls server-side (not just a UI hint)."""
+    and rejects new /chatbot/message calls server-side (not just a UI hint).
+    Writes the same AIAgentConfig row the AI admin section's "Feature status"
+    switch does (/ai/admin/chatbot) — one flag, toggleable from either page."""
     if not current_user.is_admin():
         return jsonify({'error': 'Unauthorized'}), 403
     from app import db
-    from .core.db_class.db import InstanceConfig
+    from .core.db_class.db import AIAgentConfig
     from .core.utils.activity_log import log_activity
 
     data = request.get_json(silent=True) or {}
     enabled = bool(data.get('enabled', True))
 
-    cfg = InstanceConfig.query.first()
+    cfg = AIAgentConfig.query.filter_by(agent_key='chatbot').first()
     if not cfg:
-        return jsonify({'error': 'Instance config not initialized yet'}), 400
+        return jsonify({'error': 'Chatbot agent not configured yet'}), 400
 
-    cfg.chatbot_enabled = enabled
+    cfg.enabled = enabled
     db.session.commit()
     log_activity('admin.chatbot_toggle',
                  f"{'Enabled' if enabled else 'Disabled'} the chatbot instance-wide")
-    return jsonify({'success': True, 'chatbot_enabled': cfg.chatbot_enabled})
+    return jsonify({'success': True, 'chatbot_enabled': cfg.enabled})
 
 
 @home_blueprint.route('/platform/insights')

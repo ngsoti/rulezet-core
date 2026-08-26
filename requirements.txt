@@ -45,4 +45,5 @@ markdown
 cryptography
 grpcio
 pyvelociraptor
+psutil
 rulezet-validation @ git+https://github.com/rulezet/rulezet-validation.git@4853401

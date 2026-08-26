@@ -65,6 +65,7 @@ def create_app(start_worker=True):
     from app.features.dashboard.dashboard import dashboard_blueprint
     from app.features.docs.docs import docs_blueprint
     from app.features.chatbot.chatbot import chatbot_blueprint
+    from app.features.ai.ai import ai_blueprint
     from app.features.roles.roles import roles_blueprint
     from app.features.admin.task_scheduler.task_scheduler_routes import task_scheduler_blueprint
 
@@ -90,6 +91,7 @@ def create_app(start_worker=True):
     app.register_blueprint(dashboard_blueprint, url_prefix='/dashboard')
     app.register_blueprint(docs_blueprint, url_prefix='/docs')
     app.register_blueprint(chatbot_blueprint, url_prefix='/chatbot')
+    app.register_blueprint(ai_blueprint, url_prefix='/ai')
     app.register_blueprint(roles_blueprint, url_prefix='/admin/roles')
     app.register_blueprint(task_scheduler_blueprint, url_prefix='/admin/tasks')
 
@@ -170,12 +172,12 @@ def create_app(start_worker=True):
     @app.context_processor
     def inject_globals():
         from flask import current_app
-        from app.core.db_class.db import InstanceConfig
+        from app.core.db_class.db import AIAgentConfig
         chatbot_enabled = True
         try:
-            cfg = InstanceConfig.query.first()
+            cfg = AIAgentConfig.query.filter_by(agent_key='chatbot').first()
             if cfg is not None:
-                chatbot_enabled = cfg.chatbot_enabled
+                chatbot_enabled = cfg.enabled
         except Exception:
             pass  # table may not exist yet (fresh install before migrations run)
         return {

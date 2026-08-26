@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from . import chatbot_core as ChatbotModel
@@ -43,9 +43,10 @@ def send_message():
 @chatbot_blueprint.route('/admin/conversations', methods=['GET'])
 @login_required
 def admin_conversations():
-    if not current_user.is_admin():
-        return render_template('access_denied.html')
-    return render_template('chatbot/admin_conversations.html')
+    # Relocated to the unified AI admin section (AI_05_UI_UX_SPEC.md §7.4/§13)
+    # — the data endpoints below this one stay at their original URLs, the
+    # new page just calls them from a different template.
+    return redirect(url_for('ai.admin_chatbot'))
 
 
 @chatbot_blueprint.route('/admin/conversations/data', methods=['GET'])

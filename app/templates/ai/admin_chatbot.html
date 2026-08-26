@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
-{% import 'macros/admin_nav.html' as anav %}
-{% block title %}Chat History — Rulezet{% endblock %}
+{% import 'macros/ai_admin_nav.html' as ai_nav %}
+{% block title %}Chatbot — AI Admin — Rulezet{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
@@ -8,34 +8,32 @@
 {% endblock %}
 
 {% block content %}
-{% if current_user.is_admin() %}
 <div class="container-fluid my-4" id="chx-app" v-cloak>
 
   <div class="explorer-banner mb-4">
-    <i class="fa-solid fa-robot banner-watermark"></i>
+    <i class="fa-solid fa-comment-dots banner-watermark"></i>
     <nav aria-label="breadcrumb" class="mb-3">
       <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
         <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
         <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
-        <li class="breadcrumb-item active text-muted" aria-current="page">Chat History</li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">Chatbot</li>
       </ol>
     </nav>
     <div class="d-flex align-items-center gap-3 mb-3">
-      <div class="banner-icon"><i class="fa-solid fa-robot"></i></div>
+      <div class="banner-icon"><i class="fa-solid fa-comment-dots"></i></div>
       <div>
-        <h2 class="fw-bold mb-1">Chat History</h2>
+        <h2 class="fw-bold mb-1">Chatbot</h2>
         <div class="banner-accent"></div>
       </div>
     </div>
     <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
-      Every conversation held with the chatbot assistant — who asked what, and how it responded.
+      The floating assistant every user sees — configuration and full conversation history.
     </p>
   </div>
 
-  <div class="dr-nav mb-3">
-    {{ anav.admin_nav_toggle() }}
-  </div>
-  {{ anav.admin_nav_panel('chatbot') }}
+  {{ ai_nav.ai_admin_nav('chatbot') }}
+
+  <agent-config-card agent-key="chatbot" :csrf-token="csrfToken" @notify="onNotify"></agent-config-card>
 
   <!-- Toolbar -->
   <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
@@ -202,16 +200,12 @@
   </div>
 
 </div>
-{% else %}
-<div class="container my-5 text-center">
-  <h4 class="text-danger">Access denied</h4>
-</div>
-{% endif %}
 
 <script type="module">
 import { create_message }  from '/static/js/toaster.js'
 import UserChip             from '/static/js/components/UserChip.js'
 import PaginationComponent  from '/static/js/rule/paginationComponent.js'
+import AgentConfigCard      from '/static/js/ai/agentConfigCard.js'
 
 const { createApp, ref, computed } = Vue
 
@@ -221,8 +215,9 @@ function csrf() {
 
 createApp({
     delimiters: ['[[', ']]'],
-    components: { 'user-chip': UserChip, 'pagination-component': PaginationComponent },
+    components: { 'user-chip': UserChip, 'pagination-component': PaginationComponent, 'agent-config-card': AgentConfigCard },
     setup() {
+        const csrfToken = csrf()
         const items    = ref([])
         const total    = ref(0)
         const page     = ref(1)
@@ -253,6 +248,8 @@ createApp({
         const transcriptLoading  = ref(false)
 
         let searchTimer = null
+
+        function onNotify({ message, level }) { create_message(message, level) }
 
         async function fetchUserList() {
             try {
@@ -364,6 +361,7 @@ createApp({
         fetchUserList()
 
         return {
+            csrfToken, onNotify,
             items, total, page, totalPages, search, sortBy, sortDir, loading,
             userFilter, userList, userSearch, filteredUserList,
             dateFrom, dateTo, countMin, countMax, errorsOnly,

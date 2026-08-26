@@ -982,6 +982,7 @@ def ai_analysis_models():
 
     cfg = AIAgentConfig.query.filter_by(agent_key='rule_analysis').first()
     enabled = cfg.enabled if cfg else True
+    default_model = cfg.default_model if cfg else None
 
     models = []
     try:
@@ -993,7 +994,7 @@ def ai_analysis_models():
     except AgentConnectionError:
         pass
 
-    return jsonify({'enabled': enabled, 'models': models})
+    return jsonify({'enabled': enabled, 'models': models, 'default_model': default_model})
 
 
 def _get_visible_ai_generation_or_none(rule_id, analysis_id):

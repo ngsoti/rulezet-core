@@ -4266,8 +4266,12 @@ def handle_rule_analysis(job, app):
             cve_ids=cve_ids,
         )
 
-        if regenerate:
-            AIGeneration.query.filter_by(agent_key='rule_analysis', rule_id=rule_id).delete()
+        # Unlike the thousands-of-rows-per-second bulk jobs elsewhere in this
+        # file, a single rule here can take tens of seconds to minutes — log
+        # before starting, not just after finishing, or a small batch (the
+        # common case for an ad-hoc admin trigger) shows no progress at all
+        # until the very first rule completes, which reads as hung.
+        log_job(job, f'Generating rule #{rule_id} ({i + 1}/{len(rows)})…', level='info', event='progress')
 
         result = agent.run(
             user=admin_user, rule_id=rule_id,
@@ -4283,6 +4287,8 @@ def handle_rule_analysis(job, app):
             ))
             db.session.commit()
             generated += 1
+            log_job(job, f'Rule #{rule_id}: generated ({len(result.content or "")} chars, model {result.model_used}).',
+                    level='info', event='progress')
         else:
             status = result.meta.get('status')
             if status in ('disabled', 'busy'):

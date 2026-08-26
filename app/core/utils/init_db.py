@@ -244,7 +244,7 @@ def insert_default_ai_agent_configs():
         {"agent_key": "chatbot", "enabled": chatbot_enabled, "max_per_hour": 60,
          "timeout_s": 120, "num_predict": 1024},
         {"agent_key": "rule_analysis", "enabled": True, "max_per_hour": None,
-         "timeout_s": 300, "num_predict": 4096},
+         "timeout_s": 300, "num_predict": 4096, "default_model": "qwen2.5:7b"},
         {"agent_key": "rule_generator", "enabled": True, "max_per_hour": 20,
          "timeout_s": 180, "num_predict": 4096},
         {"agent_key": "rule_fixer", "enabled": True, "max_per_hour": 30,

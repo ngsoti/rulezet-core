@@ -1,0 +1,24 @@
+{% import 'macros/admin_nav.html' as anav %}
+
+{% macro ai_admin_nav(active) %}
+<div class="dr-nav mb-3" role="tablist">
+    <a href="/ai/admin/chatbot" class="dr-nav__item {% if active == 'chatbot' %}active{% endif %}">
+        <i class="fa-solid fa-comment-dots"></i><span>Chatbot</span>
+    </a>
+    <a href="/ai/admin/rule-analysis" class="dr-nav__item {% if active == 'rule_analysis' %}active{% endif %}">
+        <i class="fa-solid fa-magnifying-glass-chart"></i><span>Rule Analysis</span>
+    </a>
+    <a href="/ai/admin/rule-generator" class="dr-nav__item {% if active == 'rule_generator' %}active{% endif %}">
+        <i class="fa-solid fa-wand-magic-sparkles"></i><span>Rule Generator</span>
+    </a>
+    <a href="/ai/admin/rule-fixer" class="dr-nav__item {% if active == 'rule_fixer' %}active{% endif %}">
+        <i class="fa-solid fa-wrench"></i><span>Rule Fixer</span>
+    </a>
+    <a href="/ai/admin/models" class="dr-nav__item {% if active == 'models' %}active{% endif %}">
+        <i class="fa-solid fa-shield-halved"></i><span>Models &amp; Security</span>
+    </a>
+    <span class="dr-nav__sep"></span>
+    {{ anav.admin_nav_toggle() }}
+</div>
+{{ anav.admin_nav_panel('ai') }}
+{% endmacro %}
