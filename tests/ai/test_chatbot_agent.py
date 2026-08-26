@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from app.core.db_class.db import User
 from app.features.ai.ai_core import get_agent
-from app.features.chatbot.chatbot_core import handle_message
+from app.features.ai.chatbot.chatbot_core import handle_message
 
 CHAT = 'app.features.ai.ai_core.OllamaClient.chat'
 

@@ -27,7 +27,7 @@ class ChatbotAgent(AIAgent):
         # SYSTEM_PROMPT (with its closed _ROUTES vocabulary) stays defined in
         # chatbot_core.py — imported here rather than duplicated so there is
         # exactly one copy of it.
-        from app.features.chatbot.chatbot_core import SYSTEM_PROMPT
+        from app.features.ai.chatbot.chatbot_core import SYSTEM_PROMPT
 
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         messages.extend(history or [])
