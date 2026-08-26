@@ -11,11 +11,7 @@ another caller.
 
 import datetime
 import difflib
-import json
 import re
-
-import requests as http_requests
-from flask import current_app
 
 _VALID_FORMATS = {'yara', 'sigma', 'suricata', 'zeek', 'wazuh', 'nse', 'crs', 'nova', 'elastic'}
 
@@ -111,39 +107,10 @@ Reply with ONLY a single JSON object, no other text, in exactly one of these sha
 Never invent a rule's content or a missing required field yourself — use "ask" instead. Keep "reply" short and plain text (no markdown)."""
 
 
-def call_ollama(messages: list) -> str:
-    base = (current_app.config.get('OLLAMA_URL') or 'http://localhost:11434').rstrip('/')
-    model = current_app.config.get('OLLAMA_MODEL') or 'qwen2.5:1.5b'
-    try:
-        resp = http_requests.post(
-            f"{base}/api/chat",
-            json={
-                "model": model, "messages": messages, "stream": False, "format": "json",
-                # keep_alive: without this Ollama unloads the model after 5 min
-                # idle by default, so any pause between chat messages pays the
-                # full cold-load cost again on the next one.
-                "keep_alive": "30m",
-                # num_ctx: Ollama defaults to a 2048-token context window,
-                # which the system prompt alone (~1200+ tokens) plus history
-                # can silently exceed — the model then quietly loses part of
-                # its instructions instead of erroring. qwen2.5 supports a
-                # much larger window; make room deliberately rather than
-                # relying on the (small) default.
-                "options": {"num_ctx": 8192},
-            },
-            # The system prompt alone is now ~2000 tokens (it grew a lot
-            # across correctness fixes: disambiguation rules, the route
-            # list, few-shot examples) — on CPU-only hardware with no GPU
-            # that reprocesses on every message, 90s was cutting it close.
-            timeout=180,
-        )
-        resp.raise_for_status()
-    except http_requests.RequestException:
-        raise ConnectionError(
-            f"Could not reach Ollama at {base}. Is it running? "
-            f"Try `ollama serve` and make sure `{model}` is pulled (`ollama pull {model}`)."
-        )
-    return resp.json().get('message', {}).get('content', '')
+# Calling Ollama directly used to happen here (call_ollama()) — now routed
+# through ChatbotAgent + the shared OllamaClient (app/features/ai/ai_core.py),
+# see _dispatch_message() below, so the concurrency governor, rate limiting,
+# and unified execution logging apply here too instead of being reimplemented.
 
 
 def _looks_like_rule_content(content: str) -> bool:
@@ -437,21 +404,23 @@ def _dispatch_message(user, history: list, message: str) -> dict:
         if shortcut is not None:
             return shortcut
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    messages.extend(history[-10:])  # keep the prompt small — this is a prototype, not a full memory system
-    messages.append({"role": "user", "content": message})
+    from app.features.ai.ai_core import get_agent
 
-    raw = call_ollama(messages)
-    try:
-        parsed = json.loads(raw)
-        if not isinstance(parsed, dict):
-            raise ValueError
-    except (ValueError, TypeError):
-        return {"action": "chat", "reply": raw.strip() or "Sorry, I didn't quite catch that.", "success": True}
+    # keep the prompt small — this is a prototype, not a full memory system
+    result = get_agent('chatbot').run(
+        user=user, history=history[-10:], message=message, input_summary=message[:300],
+    )
+    if not result.ok:
+        return {
+            "action": "chat",
+            "reply": result.error or "Sorry, something went wrong.",
+            "success": False,
+            "_agent_status": result.meta.get('status'),
+        }
 
-    action = parsed.get('action', 'chat')
-    params = parsed.get('params') or {}
-    reply = parsed.get('reply') or ''
+    action = result.meta.get('action', 'chat')
+    params = result.meta.get('params') or {}
+    reply = result.content or ''
 
     if action == 'create_rule':
         # The model sometimes defaults to create_rule on garbage/unclear input

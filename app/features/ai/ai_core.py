@@ -285,7 +285,7 @@ def check_rate_limit(user_id, agent_key, max_per_hour):
     """True if under the limit (or no limit configured). Only meaningful
     for interactive agents — batch/admin-triggered agents pass
     max_per_hour=None and are governed by the concurrency slot instead."""
-    if not max_per_hour or not user_id:
+    if max_per_hour is None or not user_id:
         return True
     from app.core.db_class.db import AIExecutionLog
     cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
@@ -362,6 +362,10 @@ class AIAgent(ABC):
         agent_config = AIAgentConfig.query.filter_by(agent_key=self.config_key).first()
 
         def _finish(result, status, flagged_reason=None):
+            # Every caller can tell success/disabled/rate_limited/busy/failed
+            # apart without re-deriving it from `error` text — the chatbot
+            # route uses this to pick an HTTP status, for example.
+            result.meta.setdefault('status', status)
             try:
                 db.session.add(AIExecutionLog(
                     uuid=str(uuid_mod.uuid4()),

@@ -9,11 +9,6 @@ chatbot_blueprint = Blueprint('chatbot', __name__)
 @chatbot_blueprint.route('/message', methods=['POST'])
 @login_required
 def send_message():
-    from app.core.db_class.db import InstanceConfig
-    cfg = InstanceConfig.query.first()
-    if cfg and not cfg.chatbot_enabled:
-        return jsonify({"success": False, "reply": "The chatbot is disabled on this instance."}), 403
-
     data = request.get_json(force=True) or {}
     message = (data.get('message') or '').strip()
     history = data.get('history') or []
@@ -23,12 +18,21 @@ def send_message():
     if not isinstance(history, list):
         history = []
 
-    try:
-        result = ChatbotModel.handle_message(current_user, history, message, conversation_id)
-    except ConnectionError as e:
-        return jsonify({"success": False, "reply": str(e)}), 502
+    result = ChatbotModel.handle_message(current_user, history, message, conversation_id)
 
-    return jsonify(result), 200
+    # ChatbotAgent.run() (app/features/ai/ai_core.py) enforces the
+    # enabled/rate-limit checks now — AIAgentConfig(agent_key='chatbot')
+    # is the one source of truth, not a bespoke InstanceConfig column.
+    status_code = 200
+    agent_status = result.pop('_agent_status', None)
+    if agent_status == 'disabled':
+        status_code = 403
+    elif agent_status == 'rate_limited':
+        status_code = 429
+    elif agent_status in ('failed', 'busy'):
+        status_code = 502
+
+    return jsonify(result), status_code
 
 
 # ── Admin: conversation history ────────────────────────────────────────────

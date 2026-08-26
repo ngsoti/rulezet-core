@@ -226,6 +226,37 @@ def insert_default_platform_tag_configs():
             db.session.commit()
 
 
+def insert_default_ai_agent_configs():
+    """Seed one AIAgentConfig row per known agent key, idempotently — never
+    touches a row that already exists, so an admin's own tuning (timeout,
+    model, rate limit) is never overwritten on redeploy. 'chatbot' migrates
+    its enabled state from the legacy InstanceConfig.chatbot_enabled boolean
+    one time, so an instance that already disabled the chatbot doesn't get
+    it silently re-enabled by this migration. Only 'chatbot' has a concrete
+    AIAgent today — the other three keys are pre-seeded so the admin AI hub
+    has something to show/edit as each one ships (AI_02/AI_03/AI_04)."""
+    from ..db_class.db import AIAgentConfig, InstanceConfig
+
+    cfg = InstanceConfig.query.first()
+    chatbot_enabled = cfg.chatbot_enabled if cfg else True
+
+    defaults = [
+        {"agent_key": "chatbot", "enabled": chatbot_enabled, "max_per_hour": 60,
+         "timeout_s": 120, "num_predict": 1024},
+        {"agent_key": "rule_analysis", "enabled": True, "max_per_hour": None,
+         "timeout_s": 300, "num_predict": 4096},
+        {"agent_key": "rule_generator", "enabled": True, "max_per_hour": 20,
+         "timeout_s": 180, "num_predict": 4096},
+        {"agent_key": "rule_fixer", "enabled": True, "max_per_hour": 30,
+         "timeout_s": 120, "num_predict": 2048},
+    ]
+    for entry in defaults:
+        if AIAgentConfig.query.filter_by(agent_key=entry["agent_key"]).first():
+            continue
+        db.session.add(AIAgentConfig(**entry))
+    db.session.commit()
+
+
 def seed_default_tags(admin_user):
     """Initialize MISP taxonomy submodule and import seed namespaces from config/default_tags.json."""
     from app.features.tags.tags_core import (

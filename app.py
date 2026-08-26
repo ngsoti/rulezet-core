@@ -9,7 +9,7 @@ import os
 
 
 from app.features.rule.rule_format.utils_format.utils_import_update import delete_existing_repo_folder
-from app.core.utils.init_db import create_admin, create_default_user, insert_default_formats, insert_default_platform_tag_configs, seed_default_tags, show_admin_first_connection
+from app.core.utils.init_db import create_admin, create_default_user, insert_default_ai_agent_configs, insert_default_formats, insert_default_platform_tag_configs, seed_default_tags, show_admin_first_connection
 from app.features.connector.connector_core import seed_official_connector
 from app import _init_instance_config
 
@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--init_db", help="Initialise the db if it not exist", action="store_true")
 parser.add_argument("-r", "--recreate_db", help="Delete and initialise the db", action="store_true")
 parser.add_argument("-d", "--delete_db", help="Delete the db", action="store_true")
-parser.add_argument("--seed-defaults", help="Idempotently (re)seed default data (formats, platform-tag configs) on an existing DB — run after 'manage.py update' on an already-deployed instance", action="store_true")
+parser.add_argument("--seed-defaults", help="Idempotently (re)seed default data (formats, platform-tag configs, AI agent configs) on an existing DB — run after 'manage.py update' on an already-deployed instance", action="store_true")
 args = parser.parse_args()
 
 
@@ -49,6 +49,7 @@ if args.init_db:
         insert_default_platform_tag_configs()
         seed_official_connector()
         _init_instance_config(app)
+        insert_default_ai_agent_configs()
         seed_default_tags(admin)
         show_admin_first_connection(admin, raw_password)
 
@@ -63,6 +64,7 @@ elif args.recreate_db:
         insert_default_platform_tag_configs()
         seed_official_connector()
         _init_instance_config(app)
+        insert_default_ai_agent_configs()
         seed_default_tags(admin)
         show_admin_first_connection(admin, raw_password)
 elif args.delete_db:
@@ -73,6 +75,7 @@ elif args.seed_defaults:
     with app.app_context():
         insert_default_formats()
         insert_default_platform_tag_configs()
+        insert_default_ai_agent_configs()
         print("Default data seeded (idempotent — existing rows untouched).")
 else:
     port = int(os.environ.get("PORT", app.config.get("FLASK_PORT", 7009)))
