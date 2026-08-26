@@ -4127,3 +4127,178 @@ def handle_rule_validation_run(job, app):
 
     log_job(job, f'Done — {len(quarantined)} rule(s) currently quarantined.',
             level='success', event='done')
+
+
+# ─── ai_generate (rule_analysis) ────────────────────────────────────────────
+# AI_02_RULE_ANALYSIS.md Phase 1. Runs in the background worker lane
+# (job_worker.py's _BACKGROUND_LANE_TYPES) — see AI_00_FOUNDATION.md §8 and
+# AI_02 §5/§9 for why: at production-measured throughput
+# (~110s/rule on qwen2.5:7b), a one-shot sweep over the whole catalog would
+# take months and, on the old single-lane worker, would have stalled every
+# other job type for that entire time.
+#
+# Deliberately bounded per invocation (batch_size / max_seconds) instead of
+# processing the full target set — meant to run as a small recurring task
+# via the Admin Task Scheduler (e.g. nightly), not as one unbounded job.
+# Resumability falls out for free: the target query always excludes rules
+# that already have an AIGeneration row, so a later invocation (or one
+# resumed after a mid-batch server restart) naturally continues wherever
+# the last one left off — no _resume_offset bookkeeping needed, unlike the
+# OFFSET-based bulk jobs elsewhere in this file (whose target set doesn't
+# shrink as they run).
+
+AI_GENERATE_LOG_EVERY = 5  # rules, not batches — a single rule can take tens of seconds
+
+
+@register_handler('ai_generate')
+def handle_rule_analysis(job, app):
+    """Generate an AIGeneration Markdown report for a bounded batch of
+    rules via RuleAnalysisAgent. See app/features/ai/agents/
+    rule_analysis_agent.py for the prompt/validation logic."""
+    import time as _time
+    from types import SimpleNamespace
+
+    from app.core.db_class.db import AIGeneration, AttackTechnique, RuleAttackAssociation
+    from app.features.ai.ai_core import get_agent
+
+    payload        = job.payload or {}
+    rule_ids       = payload.get('rule_ids', 'ALL')
+    format_filter  = payload.get('format_filter') or None
+    regenerate     = bool(payload.get('regenerate_existing'))
+    default_public = payload.get('default_public', True)
+    model          = payload.get('model')
+    batch_size_raw  = payload.get('batch_size')
+    max_seconds_raw = payload.get('max_seconds')
+    batch_size      = int(batch_size_raw) if batch_size_raw is not None else 50
+    max_seconds     = int(max_seconds_raw) if max_seconds_raw is not None else 900
+
+    q = Rule.query.filter(Rule.is_deleted == False)
+    if rule_ids != 'ALL':
+        q = q.filter(Rule.id.in_(rule_ids))
+    elif format_filter:
+        q = q.filter(Rule.format == format_filter)
+
+    if not regenerate:
+        already = db.session.query(AIGeneration.rule_id).filter(AIGeneration.agent_key == 'rule_analysis')
+        q = q.filter(~Rule.id.in_(already))
+
+    q = q.order_by(Rule.id.asc())
+    remaining = q.count()
+
+    job.total = min(remaining, batch_size)
+    job.done  = 0
+    db.session.commit()
+
+    if job.total == 0:
+        log_job(job, 'Nothing to do — every targeted rule already has an analysis.',
+                level='info', event='done')
+        return
+
+    log_job(job,
+            f'Starting — up to {job.total} rule(s) this run ({remaining} left in the '
+            f'backlog), model "{model}", max {max_seconds}s …',
+            level='info', event='start')
+
+    rows = (
+        q.with_entities(Rule.id, Rule.title, Rule.format, Rule.description,
+                         Rule.to_string, Rule.cve_id)
+        .limit(batch_size)
+        .all()
+    )
+    batch_ids = [r[0] for r in rows]
+
+    tags_by_rule = {}
+    for rid, tag_name in (
+        db.session.query(RuleTagAssociation.rule_id, Tag.name)
+        .join(Tag, RuleTagAssociation.tag_id == Tag.id)
+        .filter(RuleTagAssociation.rule_id.in_(batch_ids)).all()
+    ):
+        tags_by_rule.setdefault(rid, []).append(tag_name)
+
+    attack_by_rule = {}
+    for rid, technique_id, technique_name in (
+        db.session.query(RuleAttackAssociation.rule_id, RuleAttackAssociation.technique_id,
+                          AttackTechnique.name)
+        .join(AttackTechnique, RuleAttackAssociation.technique_id == AttackTechnique.technique_id)
+        .filter(RuleAttackAssociation.rule_id.in_(batch_ids)).all()
+    ):
+        attack_by_rule.setdefault(rid, []).append(f"{technique_id} ({technique_name})")
+
+    agent          = get_agent('rule_analysis')
+    admin_user     = User.query.get(job.created_by)
+    started        = _time.monotonic()
+    generated      = 0
+    failed         = 0
+    rules_since_log = 0
+
+    for i, row in enumerate(rows):
+        if _is_cancelled(job):
+            log_job(job, 'Cancelled.', level='warning', event='cancelled')
+            return
+        while _should_pause(job):
+            _time.sleep(2)
+
+        if _time.monotonic() - started > max_seconds:
+            log_job(job,
+                    f'Time budget ({max_seconds}s) reached — stopping early, '
+                    f'{len(rows) - i} rule(s) in this batch left for the next scheduled run.',
+                    level='info', event='progress')
+            break
+
+        rule_id, title, fmt, description, to_string, cve_id_raw = row
+        try:
+            cve_ids = json.loads(cve_id_raw) if cve_id_raw else []
+            if not isinstance(cve_ids, list):
+                cve_ids = []
+        except (ValueError, TypeError):
+            cve_ids = []
+
+        stub = SimpleNamespace(
+            id=rule_id, title=title, format=fmt, description=description, to_string=to_string,
+            tags=tags_by_rule.get(rule_id, []),
+            attack_techniques=attack_by_rule.get(rule_id, []),
+            cve_ids=cve_ids,
+        )
+
+        if regenerate:
+            AIGeneration.query.filter_by(agent_key='rule_analysis', rule_id=rule_id).delete()
+
+        result = agent.run(
+            user=admin_user, rule_id=rule_id,
+            input_summary=f"Rule #{rule_id}: {title or '(untitled)'}",
+            rule_stub=stub, acquire_timeout=max_seconds,
+        )
+
+        if result.ok:
+            db.session.add(AIGeneration(
+                uuid=str(uuid_mod.uuid4()), agent_key='rule_analysis', rule_id=rule_id,
+                user_id=job.created_by, content=result.content, model=result.model_used,
+                is_public=bool(default_public),
+            ))
+            db.session.commit()
+            generated += 1
+        else:
+            status = result.meta.get('status')
+            if status in ('disabled', 'busy'):
+                # Systemic, not per-rule — every remaining rule would fail
+                # identically this run. Stop entirely; nothing to resume,
+                # the next scheduled run just tries again.
+                log_job(job, f'Stopping: {result.error}', level='error', event='error')
+                job.status = 'failed'
+                job.error  = result.error
+                db.session.commit()
+                return
+            failed += 1
+            log_job(job, f'Rule #{rule_id}: {result.error}', level='warning', event='rule_failed')
+
+        job.done = i + 1
+        db.session.commit()
+
+        rules_since_log += 1
+        if rules_since_log >= AI_GENERATE_LOG_EVERY:
+            rules_since_log = 0
+            log_job(job, f'{i + 1}/{job.total} rule(s) processed — {generated} generated, {failed} failed.',
+                    level='info', event='progress')
+
+    log_job(job, f'Done — {generated} generated, {failed} failed this run.',
+            level='success', event='done')

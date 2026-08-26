@@ -4100,3 +4100,39 @@ class AIExecutionLog(db.Model):
             'latency_ms':      self.latency_ms,
             'created_at':      self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class AIGeneration(db.Model):
+    """Display history for agents whose output is meant to be browsed/
+    regenerated/compared per rule (rule analysis reports now, generator/
+    fixer output later — see AI_02_RULE_ANALYSIS.md §3). Distinct from
+    AIExecutionLog: this is the actual kept output, one row per generation,
+    forever; AIExecutionLog is the lightweight per-call audit trail written
+    alongside it on every run."""
+    __tablename__ = 'ai_generation'
+
+    id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uuid       = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    agent_key  = db.Column(db.String(50), nullable=False, index=True)
+    rule_id    = db.Column(db.Integer, db.ForeignKey('rule.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    content    = db.Column(db.Text, nullable=False)
+    model      = db.Column(db.String(128), nullable=True)
+    is_public  = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc), index=True)
+
+    user = db.relationship('User', foreign_keys=[user_id])
+    rule = db.relationship('Rule', foreign_keys=[rule_id])
+
+    def to_json(self):
+        return {
+            'id':         self.id,
+            'uuid':       self.uuid,
+            'agent_key':  self.agent_key,
+            'rule_id':    self.rule_id,
+            'user_id':    self.user_id,
+            'content':    self.content if self.is_public else None,
+            'model':      self.model,
+            'is_public':  self.is_public,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
