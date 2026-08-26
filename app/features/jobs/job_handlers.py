@@ -1036,7 +1036,14 @@ def handle_trash_restore_bulk(job, app):
 @register_handler('trash_permanent_delete_bulk')
 def handle_trash_permanent_delete_bulk(job, app):
     """
-    Permanently delete soft-deleted rules in batches (irreversible).
+    Permanently delete soft-deleted rules (irreversible) — single-shot, not
+    chunked. This used to process TRASH_BATCH (200) rows at a time with a
+    commit + progress log line per chunk, for incremental progress/pause/
+    resume — nobody actually needs to watch this one, and the chunking made
+    a large purge far slower than necessary for no benefit. Still runs as a
+    background job so the triggering request returns immediately, but does
+    the whole thing in one pass: one _wipe_rule_children() call, one DELETE,
+    one commit.
 
     Payload:
         ids          : list[int]  — specific rule IDs
@@ -1059,37 +1066,23 @@ def handle_trash_permanent_delete_bulk(job, app):
         log_job(job, "No target specified.", level='warning', event='done')
         return
 
-    total = query.count()
-    if job.total == 0:
-        job.total = total
-        db.session.commit()
-        log_job(job, f"Job started — {total} rule(s) to permanently delete.", level='info', event='started')
+    all_ids = [r[0] for r in query.with_entities(Rule.id).all()]
+    total = len(all_ids)
+    job.total = total
+    db.session.commit()
 
     if total == 0:
         log_job(job, "No rules found.", level='warning', event='done')
         return
 
-    offset  = payload.get('_resume_offset', 0)
-    deleted = 0
-    all_ids = [r[0] for r in query.with_entities(Rule.id).all()]
+    log_job(job, f"Permanently deleting {total} rule(s)…", level='info', event='started')
 
-    for i in range(offset, len(all_ids), TRASH_BATCH):
-        if _is_cancelled(job):
-            log_job(job, "Cancelled.", level='warning', event='cancelled')
-            return
-        while _should_pause(job):
-            import time; time.sleep(2)
-        chunk = all_ids[i:i + TRASH_BATCH]
-        _wipe_rule_children(chunk)
-        Rule.query.filter(Rule.id.in_(chunk), Rule.is_deleted == True).delete(synchronize_session=False)
-        db.session.commit()
-        deleted  += len(chunk)
-        job.done  = deleted
-        _save_offset(job, i + TRASH_BATCH)
-        db.session.commit()
-        log_job(job, f"{deleted}/{total} rule(s) permanently deleted.", level='info', event='progress')
+    _wipe_rule_children(all_ids)
+    Rule.query.filter(Rule.id.in_(all_ids), Rule.is_deleted == True).delete(synchronize_session=False)
+    job.done = total
+    db.session.commit()
 
-    log_job(job, f"Done — {deleted} rule(s) permanently deleted.", level='success', event='done')
+    log_job(job, f"Done — {total} rule(s) permanently deleted.", level='success', event='done')
 
 
 # ─── Connector pull ───────────────────────────────────────────────────────────
