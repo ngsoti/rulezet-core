@@ -45,7 +45,11 @@ def test_generates_analysis_for_targeted_rules(app):
         admin = User.query.filter_by(email="admin@admin.admin").first()
         r1 = _make_rule("Rule A", admin.id)
         r2 = _make_rule("Rule B", admin.id)
-        job = _make_job({'rule_ids': [r1.id, r2.id], 'model': 'qwen2.5:1.5b'}, admin.id)
+        # A model that differs from config.py's OLLAMA_MODEL default
+        # ('qwen2.5:1.5b') — proves the payload's model actually reaches
+        # the agent, not just the log line (AIAgent.run() previously
+        # ignored it and always used the config-derived default).
+        job = _make_job({'rule_ids': [r1.id, r2.id], 'model': 'qwen2.5:7b'}, admin.id)
 
         with patch(CHAT, return_value=_envelope("## Overview\nDoes a thing.")):
             handle_rule_analysis(job, app)
@@ -58,7 +62,7 @@ def test_generates_analysis_for_targeted_rules(app):
         assert len(gens) == 2
         assert all(g.content == "## Overview\nDoes a thing." for g in gens)
         assert all(g.agent_key == 'rule_analysis' for g in gens)
-        assert all(g.model == 'qwen2.5:1.5b' for g in gens)
+        assert all(g.model == 'qwen2.5:7b' for g in gens)
 
 
 def test_skips_rules_with_existing_analysis_by_default(app):
@@ -100,6 +104,36 @@ def test_regenerate_existing_replaces_old_analysis(app):
         rows = AIGeneration.query.filter_by(rule_id=r1.id).all()
         assert len(rows) == 1
         assert rows[0].content == "fresh summary"
+
+
+def test_accepts_filters_shape_from_task_scheduler_rule_list_picker(app):
+    # The Admin Task Scheduler's <rule-list mode="select"> target picker
+    # (same convention as compute_rule_quality_score) nests rule_ids/format
+    # under 'filters' instead of at the payload's top level.
+    with app.app_context():
+        admin = User.query.filter_by(email="admin@admin.admin").first()
+        r1 = _make_rule("Rule A", admin.id, fmt="sigma")
+        r2 = _make_rule("Rule B", admin.id, fmt="yara")
+        job = _make_job({'filters': {'rule_ids': [r1.id, r2.id]}}, admin.id)
+
+        with patch(CHAT, return_value=_envelope("summary")):
+            handle_rule_analysis(job, app)
+
+        assert AIGeneration.query.filter(AIGeneration.rule_id.in_([r1.id, r2.id])).count() == 2
+
+
+def test_accepts_format_filter_from_task_scheduler_filters(app):
+    with app.app_context():
+        admin = User.query.filter_by(email="admin@admin.admin").first()
+        sigma_rule = _make_rule("Sigma rule", admin.id, fmt="sigma")
+        yara_rule  = _make_rule("Yara rule", admin.id, fmt="yara")
+        job = _make_job({'filters': {'format': 'sigma'}}, admin.id)
+
+        with patch(CHAT, return_value=_envelope("summary")):
+            handle_rule_analysis(job, app)
+
+        assert AIGeneration.query.filter_by(rule_id=sigma_rule.id).count() == 1
+        assert AIGeneration.query.filter_by(rule_id=yara_rule.id).count() == 0
 
 
 def test_batch_size_caps_rules_processed_this_run(app):

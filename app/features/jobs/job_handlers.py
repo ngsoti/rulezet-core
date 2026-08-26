@@ -4161,9 +4161,15 @@ def handle_rule_analysis(job, app):
     from app.core.db_class.db import AIGeneration, AttackTechnique, RuleAttackAssociation
     from app.features.ai.ai_core import get_agent
 
-    payload        = job.payload or {}
-    rule_ids       = payload.get('rule_ids', 'ALL')
-    format_filter  = payload.get('format_filter') or None
+    payload = job.payload or {}
+    # rule_ids/format live under 'filters' when this job comes from the Admin
+    # Task Scheduler's <rule-list mode="select"> picker (same convention as
+    # compute_rule_quality_score) — also accepted at the top level for a
+    # direct/manual trigger (e.g. the rule-detail page's own "Regenerate"
+    # button), which only ever needs a single rule id.
+    filters        = payload.get('filters') or {}
+    rule_ids       = filters.get('rule_ids', payload.get('rule_ids', 'ALL'))
+    format_filter  = filters.get('format') or filters.get('rule_type') or payload.get('format_filter') or None
     regenerate     = bool(payload.get('regenerate_existing'))
     default_public = payload.get('default_public', True)
     model          = payload.get('model')
@@ -4176,7 +4182,7 @@ def handle_rule_analysis(job, app):
     if rule_ids != 'ALL':
         q = q.filter(Rule.id.in_(rule_ids))
     elif format_filter:
-        q = q.filter(Rule.format == format_filter)
+        q = q.filter(Rule.format.ilike(f"%{format_filter}%"))
 
     if not regenerate:
         already = db.session.query(AIGeneration.rule_id).filter(AIGeneration.agent_key == 'rule_analysis')
@@ -4266,7 +4272,7 @@ def handle_rule_analysis(job, app):
         result = agent.run(
             user=admin_user, rule_id=rule_id,
             input_summary=f"Rule #{rule_id}: {title or '(untitled)'}",
-            rule_stub=stub, acquire_timeout=max_seconds,
+            rule_stub=stub, acquire_timeout=max_seconds, model=model or None,
         )
 
         if result.ok:

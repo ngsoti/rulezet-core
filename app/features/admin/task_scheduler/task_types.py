@@ -90,6 +90,24 @@ TASK_TYPES = {
         'job_type': 'connector_pull',
         'target_picker': 'connector_select',
     },
+    'ai_rule_analysis': {
+        'label': 'AI Rule Analysis — generate reports',
+        'icon': 'fa-solid fa-robot',
+        'job_type': 'ai_generate',
+        'target_picker': 'rule_list_select',
+        # This job runs in job_worker.py's background lane (see AI_00
+        # FOUNDATION.md §8) and is deliberately bounded per invocation
+        # (batch_size/max_seconds below) — scheduling it to recur (e.g.
+        # nightly) is the intended way to run it, not a one-shot "ALL" pick.
+        'fixed_payload': {'agent_key': 'rule_analysis'},
+        'extra_options': [
+            {'key': 'model', 'type': 'text', 'label': 'Ollama model (e.g. qwen2.5:7b) — blank uses the agent default', 'default': ''},
+            {'key': 'batch_size', 'type': 'text', 'label': 'Rules per run', 'default': '50'},
+            {'key': 'max_seconds', 'type': 'text', 'label': 'Max seconds per run', 'default': '900'},
+            {'key': 'regenerate_existing', 'type': 'bool', 'label': 'Regenerate rules that already have an analysis', 'default': False},
+            {'key': 'default_public', 'type': 'bool', 'label': 'Publish new reports immediately', 'default': True},
+        ],
+    },
 }
 
 

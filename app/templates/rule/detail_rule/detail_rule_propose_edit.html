@@ -114,7 +114,7 @@
         </p>
     </div>
 
-    {{ nav.detail_rule_nav(rule, 'propose_edit', similarity_count=similarity_count, history_count=history_count, proposal_count=proposal_count, scope_count=scope_count, test_count=test_count) }}
+    {{ nav.detail_rule_nav(rule, 'propose_edit', similarity_count=similarity_count, history_count=history_count, proposal_count=proposal_count, scope_count=scope_count, test_count=test_count, ai_analysis_count=ai_analysis_count) }}
 
     {% if current_user.is_authenticated %}
     <form id="proposalForm" action="{{ url_for('rule.propose_edit', rule_id=rule.id) }}" method="post" @submit.prevent>

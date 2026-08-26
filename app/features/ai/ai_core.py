@@ -345,7 +345,7 @@ class AIAgent(ABC):
         """Turns validated raw model output into an AgentResult."""
 
     def run(self, *, user=None, acquire_timeout=10, rule_id=None,
-            input_summary=None, **kwargs) -> AgentResult:
+            input_summary=None, model=None, **kwargs) -> AgentResult:
         """The one orchestration method every caller uses:
         1. Checks AIAgentConfig.enabled — refuses immediately if off.
         2. Checks the per-user/per-agent rate limit.
@@ -354,6 +354,11 @@ class AIAgent(ABC):
         4. Writes one AIExecutionLog row regardless of outcome.
         5. Returns AgentResult — never raises the low-level Ollama
            exceptions to the caller.
+
+        `model` lets a caller override AIAgentConfig.default_model /
+        OLLAMA_MODEL for this one call (e.g. an admin picking a model at
+        launch time) — falls through to the usual config chain when None
+        or empty.
         """
         from app import db
         from app.core.db_class.db import AIAgentConfig, AIExecutionLog
@@ -406,7 +411,8 @@ class AIAgent(ABC):
 
         base_url = current_app.config.get('OLLAMA_URL') or 'http://localhost:11434'
         model = (
-            (agent_config.default_model if agent_config else None)
+            model
+            or (agent_config.default_model if agent_config else None)
             or current_app.config.get('OLLAMA_MODEL')
             or 'qwen2.5:1.5b'
         )

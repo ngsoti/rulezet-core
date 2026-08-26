@@ -146,3 +146,48 @@ def test_agent_result_defaults():
     assert result.content == 'hello'
     assert result.error is None
     assert result.meta == {}
+
+
+# ── AIAgent.run() model override ─────────────────────────────────────────────
+
+def test_run_honors_explicit_model_override(app):
+    import json
+    from unittest.mock import patch
+
+    captured = {}
+
+    class _FakeClient:
+        def __init__(self, base_url, model, timeout, **kw):
+            captured['model'] = model
+
+        def chat(self, messages, json_schema=None, acquire_timeout=10):
+            return json.dumps({"reply": "hi"})
+
+    with app.app_context():
+        agent = get_agent('chatbot')
+        with patch('app.features.ai.ai_core.OllamaClient', _FakeClient):
+            agent.run(user=None, history=[], message="hello", model='qwen2.5:7b')
+
+    assert captured['model'] == 'qwen2.5:7b'
+
+
+def test_run_falls_back_to_config_default_when_no_model_given(app):
+    import json
+    from unittest.mock import patch
+
+    captured = {}
+
+    class _FakeClient:
+        def __init__(self, base_url, model, timeout, **kw):
+            captured['model'] = model
+
+        def chat(self, messages, json_schema=None, acquire_timeout=10):
+            return json.dumps({"reply": "hi"})
+
+    with app.app_context():
+        agent = get_agent('chatbot')
+        with patch('app.features.ai.ai_core.OllamaClient', _FakeClient):
+            agent.run(user=None, history=[], message="hello")
+
+    assert captured['model'] == app.config.get('OLLAMA_MODEL')
+

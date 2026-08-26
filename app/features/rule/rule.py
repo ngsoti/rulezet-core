@@ -808,13 +808,22 @@ def _rule_test_count(rule_id):
     return TesterModel.count_visible_tests_for_rule(rule_id, current_user)
 
 
+def _rule_ai_analysis_count(rule_id):
+    from app.core.db_class.db import AIGeneration
+    q = AIGeneration.query.filter_by(agent_key='rule_analysis', rule_id=rule_id)
+    if not (current_user.is_authenticated and current_user.is_admin()):
+        q = q.filter_by(is_public=True)
+    return q.count()
+
+
 def _nav_counts(rule_id):
     return {
-        'similarity_count': _rule_similarity_count(rule_id),
-        'history_count':    _rule_history_count(rule_id),
-        'proposal_count':   _rule_proposal_count(rule_id),
-        'scope_count':      _rule_scope_count(rule_id),
-        'test_count':       _rule_test_count(rule_id),
+        'similarity_count':  _rule_similarity_count(rule_id),
+        'history_count':     _rule_history_count(rule_id),
+        'proposal_count':    _rule_proposal_count(rule_id),
+        'scope_count':       _rule_scope_count(rule_id),
+        'test_count':        _rule_test_count(rule_id),
+        'ai_analysis_count': _rule_ai_analysis_count(rule_id),
     }
 
 
@@ -926,6 +935,207 @@ def detail_rule_similarity(rule_id):
         return render_template("rule/rule_in_trash.html", rule=rule)
     return render_template("rule/detail_rule/detail_rule_similarity.html", rule=rule,
                            **_nav_counts(rule.id))
+
+
+@rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis", methods=['GET'])
+def detail_rule_ai_analysis(rule_id):
+    """AI Analysis sub-page for a rule — see AI_02_RULE_ANALYSIS.md."""
+    rule = RuleModel.get_rule(rule_id)
+    if not rule:
+        return render_template("404.html"), 404
+    if rule.is_deleted:
+        return render_template("rule/rule_in_trash.html", rule=rule)
+    return render_template("rule/detail_rule/detail_rule_ai_analysis.html", rule=rule,
+                           **_nav_counts(rule.id))
+
+
+@rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis/list", methods=['GET'])
+def detail_rule_ai_analysis_list(rule_id):
+    """History of AI analyses for one rule, newest first. Regular users only
+    ever see is_public=True entries; admins see everything (including
+    private ones, so they can review/toggle/delete them)."""
+    from app.core.db_class.db import AIGeneration
+    q = AIGeneration.query.filter_by(agent_key='rule_analysis', rule_id=rule_id)
+    if not (current_user.is_authenticated and current_user.is_admin()):
+        q = q.filter_by(is_public=True)
+    items = q.order_by(AIGeneration.created_at.desc()).limit(50).all()
+    out = []
+    for a in items:
+        row = a.to_json()
+        row['username'] = (f"{a.user.first_name} {a.user.last_name}".strip() or a.user.email) if a.user else None
+        out.append(row)
+    return jsonify({'items': out})
+
+
+@rule_blueprint.route("/ai_analysis/models", methods=['GET'])
+@login_required
+def ai_analysis_models():
+    """Model allowlist for the launch card — queries Ollama directly rather
+    than a separate admin-curated table, since none exists yet. Admin-only:
+    the launch card itself is admin-only in the template, this is just
+    defense in depth."""
+    from app.core.db_class.db import AIAgentConfig
+    from app.features.ai.ai_core import AgentConnectionError, OllamaClient
+
+    if not current_user.is_admin():
+        return jsonify({"error": "Forbidden."}), 403
+
+    cfg = AIAgentConfig.query.filter_by(agent_key='rule_analysis').first()
+    enabled = cfg.enabled if cfg else True
+
+    models = []
+    try:
+        client = OllamaClient(
+            base_url=current_app.config.get('OLLAMA_URL') or 'http://localhost:11434',
+            model='', timeout=5,
+        )
+        models = client.list_models()
+    except AgentConnectionError:
+        pass
+
+    return jsonify({'enabled': enabled, 'models': models})
+
+
+def _get_visible_ai_generation_or_none(rule_id, analysis_id):
+    """A private analysis is only visible to an admin — same rule as
+    detail_rule_ai_analysis_list above."""
+    from app.core.db_class.db import AIGeneration
+    analysis = AIGeneration.query.filter_by(
+        id=analysis_id, rule_id=rule_id, agent_key='rule_analysis',
+    ).first()
+    if not analysis:
+        return None
+    if not analysis.is_public and not (current_user.is_authenticated and current_user.is_admin()):
+        return None
+    return analysis
+
+
+def _ai_analysis_download_filename(rule, ext):
+    import re as _re
+    slug = _re.sub(r'[^a-z0-9]+', '-', (rule.title or 'rule').lower()).strip('-')[:40]
+    return f'ai-analysis-{slug}-{rule.id}.{ext}'
+
+
+@rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis/<int:analysis_id>/download/markdown", methods=['GET'])
+def detail_rule_ai_analysis_download_markdown(rule_id, analysis_id):
+    """Download a single AI analysis as a Markdown file with YAML front-matter
+    — same front-matter convention as blog post Markdown downloads."""
+    rule = RuleModel.get_rule(rule_id)
+    if not rule or rule.is_deleted:
+        return render_template("404.html"), 404
+
+    analysis = _get_visible_ai_generation_or_none(rule_id, analysis_id)
+    if not analysis:
+        return render_template("404.html"), 404
+
+    requester = (f"{analysis.user.first_name} {analysis.user.last_name}".strip()) if analysis.user else 'unknown'
+    source_url = f'{request.url_root.rstrip("/")}/rule/detail_rule/{rule.id}/ai_analysis'
+
+    lines = [
+        '---',
+        f'title: "AI Analysis — {rule.title}"',
+        f'rule_title: "{rule.title}"',
+        f'rule_format: "{rule.format}"',
+        f'model: "{analysis.model or "unknown"}"',
+        f'requested_by: "{requester}"',
+        f'generated_at: {analysis.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")}',
+        f'source: "{source_url}"',
+        f'exported_at: {datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}',
+        '---',
+        '',
+        analysis.content or '',
+    ]
+
+    response = current_app.response_class('\n'.join(lines), mimetype='text/markdown')
+    response.headers['Content-Disposition'] = (
+        f'attachment; filename="{_ai_analysis_download_filename(rule, "md")}"'
+    )
+    log_activity('rule.ai_analysis_download', f'Downloaded AI analysis (Markdown) for "{rule.title[:80]}"',
+                 target_type='rule', target_id=rule.id, is_public=False)
+    return response
+
+
+@rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis/<int:analysis_id>/download/pdf", methods=['GET'])
+def detail_rule_ai_analysis_download_pdf(rule_id, analysis_id):
+    """Generate a PDF of a single AI analysis — same WeasyPrint pipeline as
+    blog post PDF downloads (see blog.download_post_pdf)."""
+    import markdown as _md
+    from weasyprint import HTML as WeasyprintHTML
+
+    rule = RuleModel.get_rule(rule_id)
+    if not rule or rule.is_deleted:
+        return render_template("404.html"), 404
+
+    analysis = _get_visible_ai_generation_or_none(rule_id, analysis_id)
+    if not analysis:
+        return render_template("404.html"), 404
+
+    requester = (f"{analysis.user.first_name} {analysis.user.last_name}".strip()) if analysis.user else None
+    base_url = request.url_root.rstrip('/')
+    content_html = _md.markdown(analysis.content or '', extensions=['extra', 'codehilite', 'toc', 'nl2br'])
+
+    html_str = render_template(
+        'rule/detail_rule/ai_analysis_print.html',
+        rule=rule, analysis=analysis, requester=requester, content_html=content_html,
+        source_url=f'{base_url}/rule/detail_rule/{rule.id}/ai_analysis',
+        generated_at=datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC'),
+    )
+    pdf_bytes = WeasyprintHTML(string=html_str, base_url=base_url).write_pdf()
+
+    response = current_app.response_class(pdf_bytes, mimetype='application/pdf')
+    response.headers['Content-Disposition'] = (
+        f'attachment; filename="{_ai_analysis_download_filename(rule, "pdf")}"'
+    )
+    log_activity('rule.ai_analysis_download', f'Downloaded AI analysis (PDF) for "{rule.title[:80]}"',
+                 target_type='rule', target_id=rule.id, is_public=False)
+    return response
+
+
+@rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis/<int:analysis_id>/visibility", methods=['POST'])
+@login_required
+def detail_rule_ai_analysis_visibility(rule_id, analysis_id):
+    """Admin-only moderation lever: an AI-generated report can be wrong on a
+    given rule — hide it without losing it."""
+    from app.core.db_class.db import AIGeneration
+
+    if not current_user.is_admin():
+        return jsonify({"success": False, "message": "Forbidden."}), 403
+
+    analysis = AIGeneration.query.filter_by(
+        id=analysis_id, rule_id=rule_id, agent_key='rule_analysis',
+    ).first()
+    if not analysis:
+        return jsonify({"success": False, "message": "Not found."}), 404
+
+    data = request.get_json(force=True) or {}
+    analysis.is_public = bool(data.get('is_public'))
+    db.session.commit()
+    log_activity('rule.ai_analysis_visibility',
+                 f'Set AI analysis visibility to {"public" if analysis.is_public else "private"} '
+                 f'on rule #{rule_id}', target_type='rule', target_id=rule_id, is_public=False)
+    return jsonify({"success": True, "analysis": analysis.to_json()})
+
+
+@rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis/<int:analysis_id>", methods=['DELETE'])
+@login_required
+def detail_rule_ai_analysis_delete(rule_id, analysis_id):
+    """Admin-only delete of a single AI analysis entry."""
+    from app.core.db_class.db import AIGeneration
+
+    if not current_user.is_admin():
+        return jsonify({"success": False, "message": "Forbidden."}), 403
+
+    analysis = AIGeneration.query.filter_by(
+        id=analysis_id, rule_id=rule_id, agent_key='rule_analysis',
+    ).first()
+    if not analysis:
+        return jsonify({"success": False, "message": "Not found."}), 404
+
+    db.session.delete(analysis)
+    db.session.commit()
+    log_activity('rule.ai_analysis_delete', f'Deleted an AI analysis on rule #{rule_id}',
+                 target_type='rule', target_id=rule_id, is_public=False)
+    return jsonify({"success": True})
 
 
 @rule_blueprint.route("/history_activity_delete/<string:log_uuid>", methods=['DELETE'])
