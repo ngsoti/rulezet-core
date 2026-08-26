@@ -4,6 +4,8 @@
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/smart-editor.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/diff-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/ansi-terminal.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -34,9 +36,83 @@
 window.__bad_rule_content = {{ (new_content if new_content else rule.raw_content) | tojson }};
 window.__bad_rule_format  = {{ rule.rule_type | tojson }};
 window.__bad_rule_error   = {{ (rule.error_message or '') | tojson }};
+window.__bad_rule_ai_fix_url = {{ url_for('rule.bad_rule_ai_fix', rule_id=rule.id) | tojson }};
+window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
 </script>
 
 <div id="edit-bad-rule-app">
+
+    {% if ai_fix_available %}
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                    <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-wrench me-1"></i>Try AI fix
+                    </span>
+                </div>
+                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3" :disabled="fixing" @click="tryAiFix">
+                    <i class="fa-solid me-1" :class="fixing ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'"></i>
+                    [[ fixing ? 'Analyzing…' : 'Try AI fix' ]]
+                </button>
+            </div>
+            <p class="text-muted mb-0" style="font-size:.82rem;">
+                Looks at the exact validator error above and proposes the smallest edit that fixes it —
+                nothing is applied until you review the diff and click Save yourself.
+            </p>
+
+            <div v-if="liveLog.length" class="mt-3">
+                <ansi-terminal :entries="liveLog" :live="fixing" title="Rule Fixer" :max-lines="50"></ansi-terminal>
+            </div>
+
+            <div v-if="attempts.length" class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
+                <div v-for="a in attempts" :key="a.attempt" class="d-flex align-items-start gap-2 mb-2" style="font-size:.85rem;">
+                    <span class="badge rounded-pill mt-1"
+                          :class="a.outcome === 'valid' ? 'bg-success-subtle text-success-emphasis' : (a.outcome === 'failed' ? 'bg-secondary-subtle text-secondary-emphasis' : 'bg-warning-subtle text-warning-emphasis')">
+                        [[ a.attempt ]]
+                    </span>
+                    <div>
+                        <span v-if="a.outcome === 'valid'"><i class="fa-solid fa-check text-success me-1"></i>Valid — this fix passes validation.</span>
+                        <span v-else-if="a.outcome === 'still_invalid'"><i class="fa-solid fa-triangle-exclamation text-warning me-1"></i>Still invalid: <code>[[ a.message ]]</code></span>
+                        <span v-else class="text-muted"><i class="fa-solid fa-xmark me-1"></i>[[ a.message ]]</span>
+                        <div v-if="a.explanation" class="text-muted mt-1">[[ a.explanation ]]</div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="fixError" class="alert py-2 px-3 mt-3 mb-0" :class="proposedContent ? 'alert-warning' : 'alert-secondary'" style="font-size:.82rem;">
+                <i class="fa-solid fa-circle-info me-1"></i>[[ fixError ]]
+            </div>
+
+            <div v-if="proposedContent" class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
+                <p class="fw-semibold small mb-1">
+                    <span v-if="proposedValid === null" class="text-muted"><i class="fa-solid fa-spinner fa-spin me-1"></i>Validating…</span>
+                    <span v-else-if="proposedValid" class="text-success"><i class="fa-solid fa-check-circle me-1"></i>This fix passes validation.</span>
+                    <span v-else class="text-warning"><i class="fa-solid fa-triangle-exclamation me-1"></i>This fix did not pass automatic validation — review carefully, you may need to adjust it further.</span>
+                </p>
+                <p v-if="proposedExplanation" class="text-muted small mb-2">[[ proposedExplanation ]]</p>
+                <diff-viewer
+                    :key="proposedContent"
+                    :initial-left="content"
+                    :initial-right="proposedContent"
+                    left-label="Current"
+                    right-label="AI-fixed"
+                    mode="read">
+                </diff-viewer>
+                <div class="d-flex gap-2 mt-3">
+                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3" @click="useProposedFix">
+                        <i class="fa-solid fa-check me-1"></i>Use this fix
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="proposedContent = ''">
+                        <i class="fa-solid fa-xmark me-1"></i>Discard, I'll edit manually
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
@@ -76,16 +152,110 @@ window.__bad_rule_error   = {{ (rule.error_message or '') | tojson }};
 {% block script %}
 <script type="module">
     const { createApp, ref } = Vue;
-    import SmartEditor from '/static/js/components/smart-editor.js';
+    import SmartEditor  from '/static/js/components/smart-editor.js';
+    import DiffViewer    from '/static/js/components/diff-viewer.js';
+    import AnsiTerminal  from '/static/js/components/ansi-terminal.js';
+    import { create_message } from '/static/js/toaster.js';
+
+    function csrf() {
+        return document.querySelector('input[name="csrf_token"]')?.value || '';
+    }
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { 'smart-editor': SmartEditor },
+        components: { 'smart-editor': SmartEditor, 'diff-viewer': DiffViewer, 'ansi-terminal': AnsiTerminal },
         setup() {
-            const content      = ref(window.__bad_rule_content || '');
-            const language     = ref(window.__bad_rule_format  || 'text');
-            const errorMessage = ref(window.__bad_rule_error   || '');
-            return { content, language, errorMessage };
+            const content         = ref(window.__bad_rule_content || '');
+            const language        = ref(window.__bad_rule_format  || 'text');
+            const errorMessage    = ref(window.__bad_rule_error   || '');
+            const fixing              = ref(false);
+            const liveLog             = ref([]);
+            const attempts            = ref([]);
+            const fixError            = ref('');
+            const proposedContent     = ref('');
+            const proposedExplanation = ref('');
+            const proposedValid       = ref(null); // null = pending, true = valid, false = still invalid
+
+            function pushLog(message) {
+                liveLog.value = [...liveLog.value, { ts: Date.now(), level: 'info', msg: message }];
+            }
+
+            async function tryAiFix() {
+                fixing.value = true;
+                fixError.value = '';
+                liveLog.value = [];
+                attempts.value = [];
+                proposedContent.value = '';
+                proposedExplanation.value = '';
+                proposedValid.value = null;
+
+                try {
+                    const res = await fetch(window.__bad_rule_ai_fix_url, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrf() },
+                    });
+                    if (!res.ok || !res.body) {
+                        const data = await res.json().catch(() => ({}));
+                        fixError.value = data.error || `Request failed (${res.status}).`;
+                        return;
+                    }
+
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        buffer += decoder.decode(value, { stream: true });
+
+                        let newlineIndex;
+                        while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+                            const line = buffer.slice(0, newlineIndex).trim();
+                            buffer = buffer.slice(newlineIndex + 1);
+                            if (!line) continue;
+
+                            const event = JSON.parse(line);
+                            if (event.type === 'log') {
+                                pushLog(event.message);
+                            } else if (event.type === 'candidate') {
+                                // Show what the model actually proposed as soon as it exists —
+                                // don't make the human wait for the whole loop to see it.
+                                proposedContent.value = event.content;
+                                proposedExplanation.value = event.explanation || '';
+                                proposedValid.value = null; // pending — validated event follows right after
+                            } else if (event.type === 'validated') {
+                                proposedValid.value = event.valid;
+                            } else if (event.type === 'result') {
+                                attempts.value = event.attempts || [];
+                                if (event.fixed_content) {
+                                    proposedContent.value = event.fixed_content;
+                                    proposedExplanation.value = event.explanation || '';
+                                    proposedValid.value = !!event.ok;
+                                }
+                                if (!event.ok) {
+                                    fixError.value = event.error || 'Could not propose a fix.';
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    fixError.value = 'Network error: ' + e;
+                } finally {
+                    fixing.value = false;
+                }
+            }
+
+            function useProposedFix() {
+                content.value = proposedContent.value;
+                proposedContent.value = '';
+                create_message('Fix applied to the editor below — review it, then click Save to commit.', 'success-subtle');
+            }
+
+            return {
+                content, language, errorMessage, fixing, liveLog, attempts, fixError,
+                proposedContent, proposedExplanation, proposedValid, tryAiFix, useProposedFix,
+            };
         }
     }).mount('#edit-bad-rule-app');
 </script>

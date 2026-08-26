@@ -29,7 +29,8 @@
     <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
       Propose a fix for a rule that failed validation — re-validates its own attempt
       and retries, always ending in an explicit human accept/reject, never an
-      auto-applied change.
+      auto-applied change. Triggered from the "Try AI fix" button on a bad rule's
+      own edit page, not from here.
     </p>
   </div>
 
@@ -37,23 +38,23 @@
 
   <agent-config-card agent-key="rule_fixer" :csrf-token="csrfToken" @notify="onNotify"></agent-config-card>
 
-  <div class="alert alert-secondary border-0 rounded-4 py-3 px-4 mb-4">
-    <i class="fa-solid fa-circle-info me-2"></i>
-    This agent isn't built yet — the config above is ready and waiting (enable/model/
-    timeout persist correctly), but there's no <code>RuleFixerAgent</code> to run
-    against it. History will start populating once it ships.
-  </div>
-
   <data-table
     ref="table_ref"
     fetch-url="/ai/admin/history/rule_fixer/data"
     :columns="columns"
     :can-delete="true"
     :bulk-actions="bulkActions"
+    initial-sort="created_at"
+    initial-dir="desc"
     @delete="handleDelete"
     @bulk-action="handleBulkAction">
     <template #cell-username="{ item }">
       <user-chip :user-id="item.user_id" :username="item.username || 'unknown'" size="sm"></user-chip>
+    </template>
+    <template #cell-view="{ item }">
+      <a :href="'/ai/admin/rule_fixer/history/' + item.uuid" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+        <i class="fa-solid fa-eye me-1"></i>View
+      </a>
     </template>
   </data-table>
 
@@ -77,6 +78,7 @@ createApp({
             { key: 'model',      label: 'Model', sortable: true },
             { key: 'username',   label: 'Requested by', sortable: false },
             { key: 'created_at', label: 'Date', type: 'date', sortable: true },
+            { key: 'view',       label: '', sortable: false },
         ]
         const bulkActions = [{ key: 'delete', label: 'Delete', icon: 'fa-trash', variant: 'danger' }]
         function onNotify({ message, level }) { create_message(message, level) }

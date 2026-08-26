@@ -7,6 +7,7 @@
 
 # Update
 
+import uuid as uuid_mod
 from typing import Optional, Tuple
 
 from flask_login import current_user
@@ -388,5 +389,154 @@ def get_filtered_bad_rules_query(params) -> tuple:
     per_page = params.get('per_page', 12, type=int) or 12
     per_page = max(1, min(per_page, 100))  # same bound RuleList's own rows-per-page picker offers (10/25/50/100)
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-    
+
     return paginated, total_rules
+
+# AI fix (Rule Fixer agent)
+
+MAX_AI_FIX_ATTEMPTS = 3
+
+# A "fix" shorter than this fraction of the original rule is almost certainly
+# the model returning just the changed line/section instead of the full rule
+# (a real failure mode of smaller local models despite explicit instructions
+# not to) — never validate, save, or forward a candidate like that.
+MIN_FIX_LENGTH_RATIO = 0.5
+
+
+def run_ai_fix_streaming(bad_rule: 'InvalidRuleModel', user, max_attempts: int = MAX_AI_FIX_ATTEMPTS):
+    """Generator version of the fix loop — yields one dict per step so the
+    route can stream them to the browser as they happen (small "what the AI
+    is doing" log lines instead of a silent spinner), then a final
+    {"type": "result", ...} event with the same shape run_ai_fix() returns.
+
+    Never mutates `bad_rule` — the InvalidRuleModel row and its error_message
+    are left exactly as they are, so a human always sees the real last
+    validator error, never an AI attempt's intermediate failed guess. A
+    human still has to explicitly click "Save" on the existing edit form to
+    commit any proposed content — this only proposes.
+    """
+    from app.features.ai.ai_core import get_agent
+    from app.features.rule.rule_format.main_format import verify_syntax_rule_by_format
+
+    agent = get_agent('rule_fixer')
+    if agent is None:
+        yield {"type": "result", "ok": False, "error": "Rule Fixer agent is unavailable.", "attempts": []}
+        return
+
+    current_content = bad_rule.raw_content or ''
+    current_error = bad_rule.error_message or ''
+    attempts = []
+    last_candidate = None
+    last_explanation = ''
+
+    for i in range(max_attempts):
+        yield {"type": "log", "message": f"Attempt {i + 1}/{max_attempts}: asking the model for a fix…"}
+        result = agent.run(
+            user=user,
+            input_summary=f"Fix attempt {i + 1} for invalid {bad_rule.rule_type} rule (id={bad_rule.id})",
+            content=current_content, format_name=bad_rule.rule_type, error_message=current_error,
+        )
+        if not result.ok:
+            attempts.append({"attempt": i + 1, "outcome": "failed", "message": result.error})
+            yield {"type": "log", "message": f"Attempt {i + 1}/{max_attempts}: {result.error}"}
+            yield {
+                "type": "result", "ok": False, "error": result.error, "attempts": attempts,
+                "fixed_content": last_candidate, "explanation": last_explanation,
+            }
+            return
+
+        candidate = result.content
+        last_explanation = result.meta.get("explanation") or ""
+        yield {"type": "log", "message": f"Attempt {i + 1}/{max_attempts}: got a candidate fix, validating it…"}
+        # Show the actual proposed content as soon as it exists, before
+        # validation even runs — the human can see what changed without
+        # waiting for the whole loop (and every prior loop's "final" event
+        # only carried the last candidate; this way each attempt updates
+        # the diff live).
+        yield {"type": "candidate", "attempt": i + 1, "content": candidate, "explanation": last_explanation}
+
+        original_len = len(bad_rule.raw_content or '')
+        if original_len > 80 and len(candidate) < original_len * MIN_FIX_LENGTH_RATIO:
+            # The model returned a fragment/snippet, not the full rule — never
+            # accept this as a candidate (it would corrupt the rule if saved)
+            # or feed it forward as the next attempt's "current content" (that
+            # would make every subsequent attempt try to fix a truncated rule
+            # instead of the real one). Retry from the same starting point.
+            message = "Returned a partial fragment instead of the full rule content."
+            attempts.append({
+                "attempt": i + 1, "outcome": "still_invalid", "message": message,
+                "explanation": last_explanation, "content": candidate,
+            })
+            yield {"type": "validated", "attempt": i + 1, "valid": False, "message": message}
+            yield {"type": "log", "message": f"Attempt {i + 1}/{max_attempts}: {message} Retrying…"}
+            continue
+
+        last_candidate = candidate
+        is_valid, validate_error = verify_syntax_rule_by_format({
+            "format": bad_rule.rule_type, "to_string": candidate,
+        })
+        attempts.append({
+            "attempt": i + 1,
+            "outcome": "valid" if is_valid else "still_invalid",
+            "message": None if is_valid else validate_error,
+            "explanation": last_explanation,
+            "content": candidate,
+        })
+        yield {
+            "type": "validated", "attempt": i + 1, "valid": is_valid,
+            "message": None if is_valid else validate_error,
+        }
+        if is_valid:
+            yield {"type": "log", "message": f"Attempt {i + 1}/{max_attempts}: valid — this fix passes validation."}
+            db.session.add(AIGeneration(
+                uuid=str(uuid_mod.uuid4()), agent_key='rule_fixer', rule_id=None,
+                user_id=getattr(user, 'id', None), content=candidate,
+                model=result.model_used, is_public=True,
+            ))
+            db.session.commit()
+            yield {
+                "type": "result", "ok": True,
+                "fixed_content": candidate,
+                "explanation": last_explanation,
+                "attempts": attempts,
+            }
+            return
+
+        yield {"type": "log", "message": f"Attempt {i + 1}/{max_attempts}: still invalid — {validate_error}"}
+        current_content = candidate
+        current_error = validate_error
+
+    # Exhausted every attempt without a candidate that passed validation —
+    # still hand back the last one instead of a dead end: it may well be a
+    # genuine improvement (or the validator's error message may itself be
+    # imprecise about what's actually still wrong), and the human is in a
+    # far better position to finish it by hand than to start from scratch.
+    yield {"type": "log", "message": f"Exhausted {max_attempts} attempt(s) without a fully valid fix."}
+    yield {
+        "type": "result",
+        "ok": False,
+        "error": f"None of {max_attempts} attempt(s) fully passed validation — "
+                 "showing the last one below so you can review and finish it yourself.",
+        "attempts": attempts,
+        "fixed_content": last_candidate,
+        "explanation": last_explanation,
+    }
+
+
+def run_ai_fix(bad_rule: 'InvalidRuleModel', user, max_attempts: int = MAX_AI_FIX_ATTEMPTS) -> dict:
+    """Non-streaming convenience wrapper around run_ai_fix_streaming() — runs
+    the loop to completion and returns just the final result dict. Used by
+    tests and any non-HTTP caller; the live HTTP route streams the
+    generator's events directly instead.
+
+    Returns {"ok": bool, "fixed_content": str, "explanation": str,
+    "attempts": [...], "error": str}. `fixed_content`/`explanation` are
+    present whenever the model produced at least one candidate — even one
+    that never passed validation — so the human always has something
+    concrete to review and finish by hand instead of a dead end; `ok` is
+    only true for a candidate that actually passed verify_syntax_rule_by_format.
+    """
+    for event in run_ai_fix_streaming(bad_rule, user, max_attempts=max_attempts):
+        if event.get("type") == "result":
+            return {k: v for k, v in event.items() if k != "type"}
+    return {"ok": False, "error": "The fix loop ended without a result.", "attempts": []}

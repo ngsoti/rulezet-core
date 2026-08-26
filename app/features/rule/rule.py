@@ -38,7 +38,7 @@ from .rules_core import bad_rule_core as BadRuleModel
 
 ################################################################################################### 
 
-from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for
+from flask import Blueprint, Response, jsonify, redirect, request, render_template, flash, url_for, stream_with_context
 from flask_login import current_user, login_required
 
 rule_blueprint = Blueprint(
@@ -2442,6 +2442,20 @@ def get_bads_rules_page_filter():
         "user": current_user.first_name
     })
 
+def _ai_fix_available_for(bad_rule) -> bool:
+    """Gate for the "Try AI fix" button — off when the rule_fixer agent is
+    disabled instance-wide, and hard-off (not admin-configurable) for
+    script-based formats (Zeek/NSE), same denylist as Rule.CODE_FORMATS:
+    a targeted edit to already-broken code is exactly as dangerous as
+    generating new code from scratch."""
+    from app.core.db_class.db import AIAgentConfig
+
+    if (bad_rule.rule_type or '').lower() in RuleModel.Rule.CODE_FORMATS:
+        return False
+    cfg = AIAgentConfig.query.filter_by(agent_key='rule_fixer').first()
+    return cfg.enabled if cfg else True
+
+
 @rule_blueprint.route('/bad_rule/<int:rule_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_bad_rule(rule_id):
@@ -2449,6 +2463,7 @@ def edit_bad_rule(rule_id):
     bad_rule = BadRuleModel.get_invalid_rule_by_id(rule_id)
     if bad_rule:
         if current_user.is_admin() or current_user.id == bad_rule.user_id:
+            ai_fix_available = _ai_fix_available_for(bad_rule)
             if request.method == 'POST':
                 new_content = request.form.get('raw_content')
                 # success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content )
@@ -2469,11 +2484,52 @@ def edit_bad_rule(rule_id):
                 else:
                     flash(f"Error: {error}", "danger")
                     bad_rule.error_message = error
-                    return render_template('rule/edit_bad_rule.html', rule=bad_rule, new_content=new_content)
+                    return render_template('rule/edit_bad_rule.html', rule=bad_rule, new_content=new_content,
+                                           ai_fix_available=ai_fix_available)
 
-            return render_template('rule/edit_bad_rule.html', rule=bad_rule)
+            return render_template('rule/edit_bad_rule.html', rule=bad_rule, ai_fix_available=ai_fix_available)
         return render_template("access_denied.html")
     return render_template('404.html')
+
+
+@rule_blueprint.route('/bad_rule/<int:rule_id>/ai_fix', methods=['POST'])
+@login_required
+def bad_rule_ai_fix(rule_id):
+    """Runs the Rule Fixer agent against a bad rule's existing content and
+    error message, proposing (never applying) a targeted fix — the human
+    still has to explicitly click Save on the existing edit form above to
+    commit it, same as a manual fix.
+
+    Streams newline-delimited JSON events as the loop progresses (one
+    {"type": "log", "message": "..."} line per step, then a final
+    {"type": "result", ...} line) instead of one response at the end — the
+    "Try AI fix" button otherwise just spins silently for the entire loop,
+    which reads as hung, not working."""
+    bad_rule = BadRuleModel.get_invalid_rule_by_id(rule_id)
+    if not bad_rule:
+        return jsonify({"ok": False, "error": "Not found."}), 404
+    if not (current_user.is_admin() or current_user.id == bad_rule.user_id):
+        return jsonify({"ok": False, "error": "Forbidden."}), 403
+    if not _ai_fix_available_for(bad_rule):
+        return jsonify({"ok": False, "error": "AI fix isn't available for this rule."}), 400
+
+    # The generator body runs later, once werkzeug actually starts iterating
+    # the streamed response — by then the request context that created
+    # `bad_rule`/`current_user` has already been torn down (stream_with_context
+    # pushes a fresh one just for iteration), so anything fetched via the old
+    # session is detached. Re-fetch by plain id inside the generator instead
+    # of carrying the ORM objects across that boundary.
+    bad_rule_id = bad_rule.id
+    user_id = current_user.id
+
+    def generate():
+        from app.core.db_class.db import User
+        fresh_bad_rule = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
+        fresh_user = User.query.get(user_id)
+        for event in BadRuleModel.run_ai_fix_streaming(fresh_bad_rule, fresh_user):
+            yield json.dumps(event) + "\n"
+
+    return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 
 @rule_blueprint.route('/bad_rule/<int:rule_id>/delete', methods=['GET', 'POST'])
 @login_required

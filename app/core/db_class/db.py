@@ -4114,7 +4114,10 @@ class AIGeneration(db.Model):
     id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
     uuid       = db.Column(db.String(36), unique=True, nullable=False, index=True)
     agent_key  = db.Column(db.String(50), nullable=False, index=True)
-    rule_id    = db.Column(db.Integer, db.ForeignKey('rule.id', ondelete='CASCADE'), nullable=False, index=True)
+    # Nullable: a rule_fixer generation is attached to an InvalidRuleModel row
+    # (not a Rule) until a human accepts it and it gets imported — there's no
+    # rule_id yet at the time it's recorded.
+    rule_id    = db.Column(db.Integer, db.ForeignKey('rule.id', ondelete='CASCADE'), nullable=True, index=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     content    = db.Column(db.Text, nullable=False)
     model      = db.Column(db.String(128), nullable=True)
