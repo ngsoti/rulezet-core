@@ -115,7 +115,8 @@ def admin_edit(post_uuid):
     if not post:
         abort(404)
     files_json = [f.to_json() for f in post.files]
-    return render_template('blog/create_edit.html', is_edit=True, post=post, files_json=files_json)
+    tags_json = [assoc.tag.to_json() for assoc in post.tags if assoc.tag]
+    return render_template('blog/create_edit.html', is_edit=True, post=post, files_json=files_json, tags_json=tags_json)
 
 
 # ── Admin JSON action routes ───────────────────────────────────────────────────
@@ -603,14 +604,15 @@ def create_from_cve():
 @blog_blueprint.route('/admin/resolve_import_refs', methods=['POST'])
 @login_required
 def resolve_import_refs():
-    """Resolve rule/bundle UUIDs to their local integer IDs for JSON import."""
+    """Resolve rule/bundle UUIDs and tag names for JSON import."""
     err = _admin_required()
     if err:
         return err
-    from app.core.db_class.db import Rule, Bundle
+    from app.core.db_class.db import Rule, Bundle, Tag
     data        = request.get_json(silent=True) or {}
     rule_uuids  = [str(u) for u in (data.get('rule_uuids')  or [])[:100]]
     bundle_uuids= [str(u) for u in (data.get('bundle_uuids') or [])[:50]]
+    tag_names   = [str(t) for t in (data.get('tag_names') or [])[:100]]
 
     rules = []
     for uuid in rule_uuids:
@@ -624,7 +626,13 @@ def resolve_import_refs():
         if b:
             bundles.append({'id': b.id, 'uuid': b.uuid, 'name': b.name})
 
-    return jsonify({'rules': rules, 'bundles': bundles})
+    tags = []
+    for name in tag_names:
+        t = Tag.query.filter_by(name=name).first()
+        if t:
+            tags.append(t.to_json())
+
+    return jsonify({'rules': rules, 'bundles': bundles, 'tags': tags})
 
 
 @blog_blueprint.route('/admin/upload_cover/<string:post_uuid>', methods=['POST'])

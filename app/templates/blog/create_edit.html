@@ -695,14 +695,14 @@
         cve_ids:         {{ (post.cve_ids or []) | tojson }},
         cover_image_url: {{ (post.cover_image_url or '') | tojson }},
         external_links:  {{ (post.external_links or []) | tojson }},
-        tag_names:       {{ post.tags | map(attribute='tag') | map(attribute='name') | list | tojson }},
+        tags:            {{ tags_json | tojson }},
         technique_ids:   {{ post.attacks | map(attribute='technique_id') | list | tojson }},
         rule_ids:        {{ post.rules | map(attribute='rule_id') | list | tojson }},
         bundle_ids:      {{ post.bundles | map(attribute='bundle_id') | list | tojson }},
         files:           {{ files_json | tojson }},
     }
     {% else %}
-    const INIT_DATA = { title:'', excerpt:'', content:'', is_public:false, is_draft:true, cve_ids:[], cover_image_url:'', external_links:[], tag_names:[], technique_ids:[], rule_ids:[], bundle_ids:[], files:[] }
+    const INIT_DATA = { title:'', excerpt:'', content:'', is_public:false, is_draft:true, cve_ids:[], cover_image_url:'', external_links:[], tags:[], technique_ids:[], rule_ids:[], bundle_ids:[], files:[] }
     {% endif %}
 
     createApp({
@@ -732,7 +732,7 @@
             const isUploading      = ref(false)
             const coverMode        = ref('url')
             const isCoverUploading = ref(false)
-            const selectedTags    = ref(INIT_DATA.tag_names.map(n => n))
+            const selectedTags    = ref(INIT_DATA.tags.map(t => ({ ...t })))
             const selectedAttacks = ref(INIT_DATA.technique_ids.map(id => ({ technique_id: id, name: id, tactic_keys: [] })))
             const isSaving    = ref(false)
             const lastSavedAt = ref(null)
@@ -929,7 +929,7 @@
                     })
                     const data = await res.json()
                     if (res.ok && data.url) {
-                        form.cover_image_url = data.url
+                        form.value.cover_image_url = data.url
                         coverMode.value = 'url'
                         create_message('Cover image uploaded.', 'success-subtle')
                         if (IS_EDIT) autoSave()
@@ -944,7 +944,7 @@
             }
 
             function removeCover() {
-                form.cover_image_url = ''
+                form.value.cover_image_url = ''
                 if (IS_EDIT) autoSave()
             }
 
@@ -976,7 +976,7 @@
                 const payload = {
                     ...form.value,
                     uuid:          EDIT_UUID || undefined,
-                    tag_names:     selectedTags.value,
+                    tag_names:     selectedTags.value.map(t => t.name),
                     technique_ids: selectedAttacks.value.map(a => a.technique_id),
                     is_public:     form.value.is_draft ? false : form.value.is_public,
                 }
@@ -1168,7 +1168,6 @@
         if (d.content)         vm.form.content         = d.content
         if (d.cover_image_url) vm.form.cover_image_url = d.cover_image_url
 
-        if (Array.isArray(d.tags))            vm.selectedTags   = [...d.tags]
         if (Array.isArray(d.vulnerabilities)) vm.form.cve_ids   = [...d.vulnerabilities]
         if (Array.isArray(d.attack_techniques))
             vm.selectedAttacks = d.attack_techniques.map(id => ({ technique_id: id, name: id, tactic_keys: [] }))
@@ -1179,10 +1178,11 @@
         ;(d.attachments   || []).forEach(a => { if (a.url && !existingUrls.has(a.url)) newLinks.push({ url: a.url, label: a.name || 'Attachment' }) })
         vm.form.external_links = newLinks
 
-        // ── Resolve rule / bundle UUIDs → local integer IDs ────────────────
+        // ── Resolve rule/bundle UUIDs and tag names → local records ────────
         const refRules   = d.referenced_rules   || []
         const refBundles = d.referenced_bundles || []
-        if (refRules.length || refBundles.length) {
+        const tagNames    = Array.isArray(d.tags) ? d.tags : []
+        if (refRules.length || refBundles.length || tagNames.length) {
             try {
                 const res = await fetch('/blog/admin/resolve_import_refs', {
                     method:  'POST',
@@ -1190,6 +1190,7 @@
                     body:    JSON.stringify({
                         rule_uuids:   refRules.map(r => r.uuid),
                         bundle_uuids: refBundles.map(b => b.uuid),
+                        tag_names:    tagNames,
                     }),
                 })
                 const resolved = await res.json()
@@ -1197,8 +1198,10 @@
                     vm.form.rule_ids   = resolved.rules.map(r => r.id)
                 if (resolved.bundles && resolved.bundles.length)
                     vm.form.bundle_ids = resolved.bundles.map(b => b.id)
+                if (resolved.tags && resolved.tags.length)
+                    vm.selectedTags = resolved.tags
             } catch (e) {
-                console.warn('[import] could not resolve rule/bundle refs:', e)
+                console.warn('[import] could not resolve rule/bundle/tag refs:', e)
             }
         }
 
