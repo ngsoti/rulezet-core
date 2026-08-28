@@ -1,15 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Invalid Rules — Rulezet{% endblock %}
 {% block head %}
-<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/rule/bad_rule/bad_rule_summary.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/dataTable.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/ruleList.css') }}">
 {% endblock %}
 
 {% block content %}
 <div id="main-container" class="container mt-5" v-cloak>
+
     <div class="explorer-banner mb-4">
-        <i class="fa-solid fa-bug banner-watermark"></i>
+        <i class="fa-solid fa-code banner-watermark"></i>
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb mb-0" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
                 <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
@@ -17,246 +18,47 @@
                 <li class="breadcrumb-item active text-muted" aria-current="page">Invalid Rules</li>
             </ol>
         </nav>
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="banner-icon">
-                    <i class="fa-solid fa-bug"></i>
-                </div>
-                <div>
-                    <h2 class="fw-bold mb-1">Invalid Rules <span class="badge bg-danger-subtle text-danger ms-2" style="font-size: 0.8rem; vertical-align: middle;">[[ total_rules ]]</span></h2>
-                    <div class="banner-accent"></div>
-                </div>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon">
+                <i class="fa-solid fa-code"></i>
             </div>
-            <button class="btn btn-outline-danger btn-sm rounded-pill px-3" data-bs-toggle="modal"
-                data-bs-target="#confirmDeleteAllModal">
-                <i class="fas fa-trash-alt me-2"></i>Clear All Bads
-            </button>
+            <div>
+                <h2 class="fw-bold mb-1">Invalid Rules <span class="badge bg-danger-subtle text-danger ms-2" style="font-size: 0.8rem; vertical-align: middle;">[[ totalRules ]]</span></h2>
+                <div class="banner-accent"></div>
+            </div>
         </div>
         <p class="text-muted mb-0" style="max-width: 600px; font-size: 0.95rem;">
             Syntax validation failed for the following assets. Fix or remove them to keep your rule base clean.
         </p>
     </div>
 
-    <bad-rule-filter-bar ref="filterBar" api-endpoint="/rule/get_bads_rules_page_filter"
-        @update:results="onRulesUpdated" @loading="search_is_loading = $event" :user-id="null">
-    </bad-rule-filter-bar>
+    <bad-rule-list
+        mode="manage"
+        :sync-url="true"
+        :csrf-token="csrfToken"
+        :current-user-id="{{ current_user.id if current_user.is_authenticated else 'null' }}"
+        :current-user-is-admin="{{ current_user.is_admin() | tojson }}"
+        @count-loaded="totalRules = $event">
+    </bad-rule-list>
 
-    <div v-if="rules_list.length > 0">
-        <div class="row g-4">
-            <div class="col-12 col-xl-6" v-for="(rule, index) in rules_list" :key="rule.id">
-                <div class="card rule-item border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div class="d-flex align-items-center overflow-hidden">
-                                <div class="bg-danger bg-opacity-10 p-2 rounded-3 me-3">
-                                    <i class="fas fa-file-code text-danger"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h6 class="text-dark fw-bold mb-0 text-truncate">[[ rule.file_name ]]</h6>
-                                    <span v-if="rule.rule_type" class="badge rounded-pill bg-dark pt-1 shadow-sm">[[
-                                        rule.rule_type.toUpperCase() ]]</span>
-
-                                </div>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <a :href="'/rule/bad_rule/' + rule.id + '/edit'" class="btn btn-action-round text-dark"
-                                    title="Edit">
-                                    <i class="fas fa-pen"></i>
-                                </a>
-                                <button @click="deleteRule(rule.id, index)" class="btn btn-action-round text-danger"
-                                    title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="error-box mb-3">
-                            <div class="small fw-bold text-danger mb-1">
-                                <i class="fas fa-circle-exclamation me-1"></i> Parsing Error
-                            </div>
-                            <div class="small text-dark fw-medium">[[ rule.error_message ]]</div>
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <div class="text-muted" style="font-size: 0.75rem;">DATE DETECTED</div>
-                                <div class="small fw-semibold">[[ rule.created_at ]]</div>
-                            </div>
-                            <div class="col-6" v-if="rule.license">
-                                <div class="text-muted" style="font-size: 0.75rem;">LICENSE</div>
-                                <div class="small fw-semibold">[[ rule.license ]]</div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="text-muted" style="font-size: 0.75rem;">SOURCE ORIGIN</div>
-                            <a :href="rule.url" rel="noreferrer" target="_blank"
-                                class="small text-primary text-decoration-none d-block text-truncate">
-                                <i class="fas fa-external-link-alt me-1" style="font-size: 0.7rem;"></i>[[ rule.url ]]
-                            </a>
-                        </div>
-
-                        <details class="mt-3">
-                            <summary class="text-secondary small fw-bold" style="cursor: pointer;">
-                                <i class="fas fa-chevron-right me-1 shadow-none"></i> RAW CONTENT
-                            </summary>
-                            <div class="mt-2">
-                                <code-viewer
-                                    :code="rule.raw_content || ''"
-                                    :language="rule.rule_type || 'auto'"
-                                    max-height="400px">
-                                </code-viewer>
-                            </div>
-                        </details>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-5">
-            <pagination-component :current-page="current_page" :total-pages="total_pages" @change-page="changePage">
-            </pagination-component>
-        </div>
-    </div>
-
-    <template v-else>
-        <div class="text-center py-5 mt-5">
-            <div class="bg-success bg-opacity-10 d-inline-block p-4 rounded-circle mb-3">
-                <i class="fas fa-check-circle text-success fa-3x"></i>
-            </div>
-            <h4 class="fw-bold">All clear!</h4>
-            <p class="text-muted">No invalid rules were found in the database.</p>
-        </div>
-    </template>
-
-    <div class="modal fade" id="confirmDeleteAllModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold text-danger">Confirm Bulk Delete</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body text-center py-4">
-                    <i class="fas fa-exclamation-circle text-danger fa-3x mb-3"></i>
-                    <p class="fs-5">Delete all <strong>[[ total_rules ]]</strong> invalid rules permanently?</p>
-                    <div v-if="isDeleting" class="mt-3">
-                        <div class="spinner-border text-danger me-2" role="status"></div>
-                        <span class="fw-bold">Deleting...</span>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 rounded-bottom" v-if="!isDeleting">
-                    <button type="button" class="btn btn-secondary px-4 rounded-pill"
-                        data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger px-4 rounded-pill" @click="confirmDeleteAll">Delete
-                        Everything</button>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock %}
 
 {% block script %}
 <script type="module">
-    const { createApp, ref, computed } = Vue
-    import { message_list, create_message } from '/static/js/toaster.js'
-    import BadRuleFilterBar from '/static/js/rule/bad/badRuleFilter.js';
-    import PaginationComponent from '/static/js/rule/paginationComponent.js';
-    import CodeViewer from '/static/js/components/code-viewer.js';
+    const { createApp, ref } = Vue
+    import BadRuleList from '/static/js/rule/badRuleList.js'
+
+    const csrfToken = '{{ csrf_token() }}'
 
     createApp({
         delimiters: ['[[', ']]'],
         components: {
-            'bad-rule-filter-bar': BadRuleFilterBar,
-            'pagination-component': PaginationComponent,
-            'code-viewer': CodeViewer,
+            'bad-rule-list': BadRuleList,
         },
         setup() {
-            const csrf_token = '{{ csrf_token() }}';
-            const rules_list = ref([])
-            const total_rules = ref(0)
-            const current_page = ref(1)
-            const total_pages = ref(1)
-            const search_is_loading = ref(false)
-            const filterBar = ref(null)
-            const isDeleting = ref(false)
-
-            const onRulesUpdated = (results) => {
-                rules_list.value = results.rules.rule || [];
-                total_pages.value = results.total_pages || 1;
-                current_page.value = results.current_page || 1;
-                total_rules.value = results.total_rules || 0;
-            };
-
-            const changePage = (page) => {
-                if (filterBar.value) {
-                    filterBar.value.fetchRules(page);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            };
-
-            async function deleteAllRule() {
-                if (rules_list.value.length === 0) {
-                    create_message('No rules to delete.', 'info-subtle')
-                    return;
-                }
-                const params = new URLSearchParams({
-                    'params': filterBar.value.getParams().toString()
-                });
-
-
-                const res = await fetch('/rule/bad_rule/delete_all_bad_rule?' + params.toString())
-                if (res.status === 200) {
-                    rules_list.value = []
-                    total_rules.value = 0
-                }
-                create_message('All invalid rules have been deleted.', 'success-subtle')
-            }
-
-            async function confirmDeleteAll() {
-                isDeleting.value = true
-                await deleteAllRule()
-                isDeleting.value = false
-                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteAllModal'))
-                if (modal) modal.hide()
-            }
-
-            async function deleteRule(id, index) {
-                const res = await fetch(`/rule/bad_rule/${id}/delete`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrf_token
-                    },
-                    body: JSON.stringify({ id: id })
-                })
-
-                const data = await res.json()
-                if (data.success) {
-                    rules_list.value.splice(index, 1)
-                    total_rules.value -= 1
-                    if (rules_list.value.length === 0 && current_page.value > 1) {
-                        changePage(current_page.value - 1)
-                    }
-                    create_message('Rule deleted.', 'success-subtle')
-                }
-            }
-
-            return {
-                message_list,
-                csrf_token,
-                rules_list,
-                total_rules,
-                current_page,
-                total_pages,
-                search_is_loading,
-                filterBar,
-                deleteRule,
-                onRulesUpdated,
-                changePage,
-                confirmDeleteAll,
-                isDeleting,
-            }
+            const totalRules = ref(0)
+            return { csrfToken, totalRules }
         }
     }).mount('#main-container')
 </script>

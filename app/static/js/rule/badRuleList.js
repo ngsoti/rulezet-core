@@ -5,6 +5,8 @@
     fetchUrl        (String)  — paginated+filtered endpoint, default
                                  '/rule/get_bads_rules_page_filter'
     deleteAllUrl    (String)  — default '/rule/bad_rule/delete_all_bad_rule'
+    deleteListUrl   (String)  — bulk-delete-by-id endpoint for the selection
+                                 bulk bar, default '/rule/bad_rule/delete_list'
     source          (String)  — locked source filter (e.g. the GitHub repo url
                                  this page is scoped to) — hidden from the UI,
                                  always sent as `sources`.
@@ -16,10 +18,28 @@
     currentUserIsAdmin (Boolean)
     deletable       (Boolean) — show per-row Delete + toolbar "Delete all",
                                  default true.
+    mode            (String)  — 'read' | 'manage'. 'manage' adds row/page
+                                 checkboxes and the selection bulk bar, same
+                                 convention as RuleList's mode prop.
+                                 Default 'read' (no change vs. before).
+    syncUrl         (Boolean) — mirror search/filters/sort/page/view into the
+                                 URL query string (history.replaceState, no
+                                 reload), same convention as RuleList's
+                                 syncUrl. Default false — opt in for a page
+                                 where this list IS the page (e.g.
+                                 bad_rules_summary.html); leave off when
+                                 embedded inside a larger page (e.g. the
+                                 GitHub import report).
+    bulkActions     (Array)   — [{key,label,icon?,variant?}], shown in the
+                                 bulk bar. Default just a Delete action.
+                                 Non-'delete' keys are re-emitted as
+                                 'bulk-action' for the parent to handle.
 
   Emits:
-    count-loaded (total) — fired after every fetch, so a parent tab/badge can
-                            show how many bad rules exist for this scope.
+    count-loaded (total)      — fired after every fetch, so a parent tab/badge
+                                 can show how many bad rules exist for this scope.
+    bulk-action ({action, ids, count}) — a bulkActions entry other than the
+                                 built-in 'delete' was clicked.
 */
 
 import PaginationComponent from '/static/js/rule/paginationComponent.js'
@@ -35,30 +55,63 @@ export default {
     props: {
         fetchUrl:        { type: String,  default: '/rule/get_bads_rules_page_filter' },
         deleteAllUrl:    { type: String,  default: '/rule/bad_rule/delete_all_bad_rule' },
+        deleteListUrl:   { type: String,  default: '/rule/bad_rule/delete_list' },
         source:          { type: String,  default: null },
         ruleTypeFilter:  { type: String,  default: '' },
         csrfToken:       { type: String,  default: '' },
         currentUserId:   { type: Number,  default: null },
         currentUserIsAdmin: { type: Boolean, default: false },
         deletable:       { type: Boolean, default: true },
+        mode:            { type: String,  default: 'read' },
+        syncUrl:         { type: Boolean, default: false },
+        bulkActions:     { type: Array,   default: () => [{ key: 'delete', label: 'Delete selected', icon: 'fa-trash-can', variant: 'danger' }] },
     },
-    emits: ['count-loaded'],
+    emits: ['count-loaded', 'bulk-action'],
     setup(props, { emit }) {
+        // ── URL param helpers (only consulted when props.syncUrl is on) ──
+        const _url = new URLSearchParams(window.location.search)
+        const _p   = (key, fallback = '') => _url.get(key) ?? fallback
+
         const items       = ref([])
         const loading     = ref(true)
-        const currentPage = ref(1)
+        const currentPage = ref(props.syncUrl ? (Number(_p('page', '1')) || 1) : 1)
         const totalPages  = ref(1)
         const totalRules  = ref(0)
-        const viewMode    = ref('table')
+        const viewMode    = ref(props.syncUrl ? _p('view', 'table') : 'table')
         const expandedIds = ref(new Set())
-        const filtersOpen = ref(false)
-        const perPage     = ref(20)
+        const filtersOpen = ref(props.syncUrl && ['rule_type', 'search_field', 'user_id'].some(k => _url.has(k)))
+        const perPage     = ref(props.syncUrl ? (Number(_p('per_page', '20')) || 20) : 20)
 
-        const search      = ref('')
-        const searchField = ref('all')
-        const formatFilter = ref(props.ruleTypeFilter || '')
-        const userFilter  = ref('')
+        const search      = ref(props.syncUrl ? _p('search', '') : '')
+        const searchField = ref(props.syncUrl ? _p('search_field', 'all') : 'all')
+        const formatFilter = ref(props.ruleTypeFilter || (props.syncUrl ? _p('rule_type', '') : ''))
+        const userFilter  = ref(props.syncUrl ? _p('user_id', '') : '')
         let searchTimer = null
+
+        // ── Selection (mode='manage' only) ──────────────────────────────
+        const selectedIds  = reactive(new Set())
+        const isSelectable = computed(() => props.mode === 'manage')
+
+        function isSelected(rule) { return selectedIds.has(rule.id) }
+        function toggleItem(rule) {
+            if (selectedIds.has(rule.id)) selectedIds.delete(rule.id)
+            else selectedIds.add(rule.id)
+        }
+        const allOnPageSelected = computed(() =>
+            isSelectable.value && items.value.length > 0 && items.value.every(r => selectedIds.has(r.id))
+        )
+        const someOnPageSelected = computed(() => {
+            if (!isSelectable.value) return false
+            const n = items.value.filter(r => selectedIds.has(r.id)).length
+            return n > 0 && n < items.value.length
+        })
+        function togglePageSelection() {
+            if (allOnPageSelected.value) items.value.forEach(r => selectedIds.delete(r.id))
+            else items.value.forEach(r => selectedIds.add(r.id))
+        }
+        function clearSelection() { selectedIds.clear() }
+        const selectionCount = computed(() => selectedIds.size)
+        const showBulkBar = computed(() => isSelectable.value && selectedIds.size > 0)
 
         // ── Editor (user) filter — single-select, scoped to the same
         // source/format the list itself is scoped to, refetched whenever
@@ -81,8 +134,8 @@ export default {
         if (props.currentUserIsAdmin) watch(formatFilter, fetchUserList)
 
         // ── Sort — server-side, same setSort/sortIcon convention as RuleList ──
-        const sortKey = ref('created_at')
-        const sortDir = ref('desc')
+        const sortKey = ref(props.syncUrl ? _p('sort', 'created_at') : 'created_at')
+        const sortDir = ref(props.syncUrl ? _p('dir', 'desc') : 'desc')
         function setSort(key) {
             if (sortKey.value === key) {
                 sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
@@ -108,9 +161,12 @@ export default {
         const colVisible = reactive(Object.fromEntries(TOGGLEABLE_COLS.map(c => [c.key, true])))
         function toggleColumn(key) { colVisible[key] = !colVisible[key] }
 
-        // File + Actions columns are always shown; colspan for the expand row
-        // must track however many toggleable columns are currently visible.
-        const tableColspan = computed(() => 2 + TOGGLEABLE_COLS.filter(c => colVisible[c.key]).length)
+        // File + Actions columns are always shown (+1 more when the selection
+        // checkbox column is on) — colspan for the expand row must track
+        // however many toggleable columns are currently visible.
+        const tableColspan = computed(() =>
+            2 + (isSelectable.value ? 1 : 0) + TOGGLEABLE_COLS.filter(c => colVisible[c.key]).length
+        )
 
         const allExpanded = computed(() => items.value.length > 0 && items.value.every(r => expandedIds.value.has(r.id)))
         function expandAll()   { expandedIds.value = new Set(items.value.map(r => r.id)) }
@@ -130,6 +186,32 @@ export default {
         function canManage(rule) {
             return props.deletable && (props.currentUserIsAdmin || isOwner(rule))
         }
+
+        // ── URL sync — mirrors RuleList's syncToUrl() convention ──────────
+        // Starts from the current params so external ones are preserved.
+        function syncToUrl() {
+            if (!props.syncUrl) return
+            const p = new URLSearchParams(window.location.search)
+            const _upd = (key, val) => val ? p.set(key, val) : p.delete(key)
+
+            _upd('search',       search.value.trim() || null)
+            _upd('search_field', searchField.value !== 'all' ? searchField.value : null)
+            _upd('rule_type',    formatFilter.value || null)
+            _upd('user_id',      userFilter.value || null)
+            _upd('page',         currentPage.value > 1 ? currentPage.value : null)
+            _upd('per_page',     perPage.value !== 20 ? perPage.value : null)
+            _upd('view',         viewMode.value !== 'table' ? viewMode.value : null)
+            if (sortKey.value !== 'created_at' || sortDir.value !== 'desc') {
+                p.set('sort', sortKey.value); p.set('dir', sortDir.value)
+            } else {
+                p.delete('sort'); p.delete('dir')
+            }
+
+            const qs = p.toString()
+            history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
+        }
+
+        watch(viewMode, syncToUrl)
 
         async function fetchData(page) {
             loading.value = true
@@ -152,6 +234,7 @@ export default {
                     totalRules.value  = data.total_rules || 0
                     currentPage.value = page || 1
                     emit('count-loaded', totalRules.value)
+                    syncToUrl()
                 } else {
                     items.value = []
                     totalRules.value = 0
@@ -236,6 +319,33 @@ export default {
             }
         }
 
+        // ── Bulk delete (selection-based, complements deleteAll's filter-based one) ──
+        async function _bulkDelete(ids) {
+            try {
+                const res = await fetch(props.deleteListUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': props.csrfToken },
+                    body: JSON.stringify({ ids }),
+                })
+                const data = await res.json()
+                create_message(data.message, data.toast_class)
+                if (res.ok) { clearSelection(); fetchData(1) }
+            } catch {
+                create_message('Could not delete the selected rules.', 'danger-subtle')
+            }
+        }
+
+        function emitBulkAction(actionKey) {
+            const ids   = Array.from(selectedIds)
+            const count = selectionCount.value
+            if (actionKey === 'delete') {
+                if (confirm(`Delete ${count} selected invalid rule(s)? This cannot be undone.`)) _bulkDelete(ids)
+            } else {
+                emit('bulk-action', { action: actionKey, ids, count })
+                clearSelection()
+            }
+        }
+
         onMounted(() => {
             fetchData(1)
             if (props.currentUserIsAdmin) fetchUserList()
@@ -244,6 +354,8 @@ export default {
         return {
             items, loading, currentPage, totalPages, totalRules, viewMode, expandedIds,
             filtersOpen, perPage,
+            isSelectable, selectedIds, isSelected, toggleItem, allOnPageSelected, someOnPageSelected,
+            togglePageSelection, clearSelection, selectionCount, showBulkBar, emitBulkAction,
             search, searchField, formatFilter, userFilter, userList, hasActiveFilters,
             TOGGLEABLE_COLS, colVisible, toggleColumn, tableColspan,
             allExpanded, expandAll, collapseAll,
@@ -401,6 +513,20 @@ export default {
                 <span class="badge rounded-pill bg-dark pt-1 shadow-sm">{{ (rule.rule_type||'?').toUpperCase() }}</span>
             </div>
             <div class="card-body d-flex flex-column p-4" style="z-index:1;">
+                <!-- Selection row -->
+                <div v-if="isSelectable"
+                     class="rl-card-check-row mb-3"
+                     :class="{ 'rl-card-check-row--on': isSelected(rule) }"
+                     @click.stop="toggleItem(rule)">
+                    <input type="checkbox" class="rl-card-check-input"
+                           :checked="isSelected(rule)"
+                           @click.stop="toggleItem(rule)"
+                           :aria-label="'Select ' + rule.file_name" />
+                    <span class="rl-card-check-text">
+                        {{ isSelected(rule) ? 'Selected' : 'Select this rule' }}
+                    </span>
+                    <i v-if="isSelected(rule)" class="fas fa-check ms-auto text-primary" style="font-size:.78rem;"></i>
+                </div>
                 <div class="mb-3 pe-5">
                     <h5 class="fw-bold mb-1 border-start border-danger border-4 ps-3">{{ rule.file_name }}</h5>
                     <div class="d-flex align-items-center gap-2 mt-2">
@@ -446,6 +572,13 @@ export default {
         <table class="dt-table" role="grid">
             <thead class="dt-thead">
                 <tr>
+                    <th v-if="isSelectable" class="dt-th dt-th--checkbox">
+                        <input type="checkbox" class="dt-checkbox"
+                               :checked="allOnPageSelected"
+                               :indeterminate="someOnPageSelected"
+                               @change="togglePageSelection"
+                               aria-label="Select all on page" />
+                    </th>
                     <th v-if="colVisible.format" class="dt-th dt-th--sortable" style="width:90px;" @click="setSort('rule_type')">
                         <div class="dt-th-inner">Format <i class="fas dt-sort-icon" :class="sortIcon('rule_type')"></i></div>
                     </th>
@@ -467,7 +600,13 @@ export default {
             </thead>
             <tbody>
                 <template v-for="rule in items" :key="rule.id">
-                    <tr class="dt-row">
+                    <tr class="dt-row" :class="{ 'dt-row--selected': isSelected(rule) }">
+                        <td v-if="isSelectable" class="dt-td dt-td--checkbox">
+                            <input type="checkbox" class="dt-checkbox"
+                                   :checked="isSelected(rule)"
+                                   @change="toggleItem(rule)"
+                                   :aria-label="'Select ' + rule.file_name" />
+                        </td>
                         <td v-if="colVisible.format" class="dt-td"><span class="badge rounded-pill bg-dark pt-1 shadow-sm">{{ (rule.rule_type||'?').toUpperCase() }}</span></td>
                         <td class="dt-td" style="max-width:220px;word-break:break-word;">{{ rule.file_name }}</td>
                         <td v-if="colVisible.editor" class="dt-td"><user-chip :user-id="rule.user_id" :username="rule.editor_name" :avatar="rule.editor_avatar" size="xs"></user-chip></td>
@@ -504,6 +643,27 @@ export default {
     <pagination-component v-if="!loading && items.length" :current-page="currentPage" :total-pages="totalPages"
         @change-page="fetchData">
     </pagination-component>
+
+    <!-- ── Bulk bar (sticky bottom, mode='manage' only) ── -->
+    <transition name="rl-bulk-slide">
+        <div v-if="showBulkBar" class="rl-bulk-bar">
+            <span class="rl-bulk-count">
+                {{ selectionCount }} {{ selectionCount === 1 ? 'rule' : 'rules' }} selected
+            </span>
+            <div class="rl-bulk-actions">
+                <button v-for="action in bulkActions" :key="action.key"
+                        class="rl-bulk-btn"
+                        :class="{ 'rl-bulk-btn--danger': action.variant === 'danger' }"
+                        @click="emitBulkAction(action.key)">
+                    <i v-if="action.icon" :class="'fas ' + action.icon"></i>
+                    {{ action.label }}
+                </button>
+            </div>
+            <button class="rl-bulk-clear" @click="clearSelection">
+                <i class="fas fa-xmark"></i> Clear
+            </button>
+        </div>
+    </transition>
 </div>
     `,
 }

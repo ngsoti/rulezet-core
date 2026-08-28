@@ -241,6 +241,24 @@ def delete_all_bad_rules(filters):
         db.session.rollback()
         return None
 
+def delete_bad_rules_by_ids(rule_ids: list) -> int:
+    """Delete a specific set of invalid rules by id (selection-based bulk
+    delete, complements delete_all_bad_rules's filter-based one). Same
+    admin-vs-owner scoping as delete_all_bad_rules — a non-admin can only
+    ever delete their own rows, regardless of what ids were requested."""
+    if not rule_ids:
+        return 0
+    try:
+        query = InvalidRuleModel.query.filter(InvalidRuleModel.id.in_(rule_ids))
+        if not current_user.is_admin():
+            query = query.filter(InvalidRuleModel.user_id == current_user.id)
+        deleted_count = query.delete(synchronize_session=False)
+        db.session.commit()
+        return deleted_count
+    except Exception:
+        db.session.rollback()
+        return 0
+
 def get_sources_usage(user_id=None):
     query = db.session.query(
         InvalidRuleModel.url,

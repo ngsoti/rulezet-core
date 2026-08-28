@@ -2608,6 +2608,32 @@ def delete_all_bad_rule() -> jsonify:
         }), 500
 
 
+@rule_blueprint.route('/bad_rule/delete_list', methods=['POST'])
+@login_required
+def delete_bad_rule_list() -> jsonify:
+    """Bulk-delete a specific set of invalid rules by id — the selection-based
+    counterpart to delete_all_bad_rule's filter-based bulk delete, used by
+    BadRuleList's mode='manage' bulk bar."""
+    data = request.get_json() or {}
+    rule_ids = data.get('ids', [])
+    if not rule_ids:
+        return jsonify({"success": False, "message": "No rules selected.", "toast_class": "danger"}), 400
+
+    deleted_count = BadRuleModel.delete_bad_rules_by_ids(rule_ids)
+
+    log_activity(
+        "rule.bad_rule_deleted",
+        f"Bulk deleted {deleted_count} invalid rule(s) by selection",
+        extra={"bad_rule_ids": rule_ids, "deleted_count": deleted_count},
+        is_public=False,
+    )
+    return jsonify({
+        "success": True,
+        "toast_class": "success-subtle",
+        "message": f"Deleted {deleted_count} rule(s)." if deleted_count else "No matching rules to delete."
+    }), 200
+
+
 @rule_blueprint.route('/get_bad_rules_sources_usage', methods=['GET'])
 def get_bad_rules_sources_usage():
     user_id = request.args.get('user_id', type=int)
