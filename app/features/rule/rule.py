@@ -3212,6 +3212,15 @@ def import_rules_from_github():
         def _run_github_import():
             with app_obj.app_context():
                 try:
+                    # user_obj was loaded on the request's own (now-torn-down)
+                    # session — re-merge it into this thread's fresh session
+                    # before touching any attribute (id, username, …), same
+                    # as Session_class.process() already does for its own
+                    # worker thread. Skipping this raises DetachedInstanceError
+                    # on first attribute access, which used to abort the whole
+                    # import (surfaced to the loading page as "Import failed").
+                    local_user = db.session.merge(user_obj)
+
                     repo_dir, _ = clone_or_access_repo(repo_url, branch=branch)
                     if not repo_dir:
                         raise Exception("Failed to clone or access the repository.")
@@ -3222,12 +3231,12 @@ def import_rules_from_github():
                     session_th.repo_dir = repo_dir
                     session_th.info = full_info
 
-                    session_th.start(app_obj=app_obj, user_obj=user_obj)
+                    session_th.start(app_obj=app_obj, user_obj=local_user)
 
                     try:
                         from app.features.notification.notification_core import notify_admins_session_started
                         notify_admins_session_started(
-                            user         = user_obj,
+                            user         = local_user,
                             session_type = 'github_import',
                             session_uuid = session_th.uuid,
                             label        = f'GitHub import running — {repo_url}',
@@ -3244,7 +3253,7 @@ def import_rules_from_github():
                                  extra={"url": repo_url, "branch": branch},
                                  is_public=True,
                                  icon="fa-brands fa-github",
-                                 actor_id=user_obj.id)
+                                 actor_id=local_user.id)
                 except Exception as e:
                     session_th.error = str(e)
                     session_th.phase = 'error'
