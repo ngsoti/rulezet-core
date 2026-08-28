@@ -56,6 +56,13 @@ def error(text: str) -> None:
     print(f"\033[1;31m  ✗ {text}\033[0m", file=sys.stderr)
 
 
+def app_version() -> str:
+    try:
+        return (ROOT / "version").read_text().strip() or "unknown"
+    except OSError:
+        return "unknown"
+
+
 def _venv_env() -> dict:
     """Build an environment dict that activates the virtualenv."""
     env = os.environ.copy()
@@ -289,7 +296,10 @@ def cmd_init() -> None:
 
 def cmd_start() -> None:
     _check_venv()
-    header("Starting Rulezet (development)")
+    url = f"http://{os.environ.get('FLASK_URL', '127.0.0.1')}:{os.environ.get('FLASK_PORT', 7009)}"
+    header(f"Starting Rulezet v{app_version()} (development)")
+    info(f"Serving at {url}")
+    info("Press CTRL+C to stop")
     try:
         run([PYTHON, "app.py"], extra_env={"FLASKENV": "development"})
     except KeyboardInterrupt:
@@ -319,7 +329,10 @@ def cmd_start_prod() -> None:
     ok("Database schema up to date")
 
     # 3. Start
-    header("Starting Rulezet (production — 0.0.0.0:80)")
+    public_url = os.environ.get("INSTANCE_PUBLIC_URL") or "http://0.0.0.0:80"
+    header(f"Starting Rulezet v{app_version()} (production)")
+    info(f"Serving at {public_url}")
+    info("Press CTRL+C to stop")
     try:
         run([FLASK, "run", "--host=0.0.0.0", "--port=80"], extra_env={"FLASKENV": "production"})
     except KeyboardInterrupt:

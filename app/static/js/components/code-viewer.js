@@ -41,6 +41,10 @@ async function register_extra_languages(hljs) {
         const { default: yaraLanguage } = await import('/static/js/components/hljs-yara.js')
         hljs.registerLanguage('yara', yaraLanguage)
     }
+    if (!hljs.getLanguage('suricata')) {
+        const { default: suricataLanguage } = await import('/static/js/components/hljs-suricata.js')
+        hljs.registerLanguage('suricata', suricataLanguage)
+    }
 }
 
 function load_hljs() {
@@ -173,7 +177,8 @@ const KNOWN_HLJS_LANGS = new Set([
     'bash','c','cpp','css','diff','go','html','http','java','javascript','json',
     'kotlin','lua','markdown','nginx','php','plaintext','python','ruby','rust',
     'shell','sql','swift','typescript','xml','yaml','text',
-    'yara', // registered at runtime — see register_extra_languages() above
+    'yara',     // registered at runtime — see register_extra_languages() above
+    'suricata', // registered at runtime — see register_extra_languages() above
 ])
 
 const LANG_ALIASES = {
@@ -181,7 +186,6 @@ const LANG_ALIASES = {
     sigma: 'yaml',    // Sigma rules are YAML
     atr: 'yaml',      // ATR format is YAML
     wazuh: 'xml',     // Wazuh rules are XML
-    suricata: 'text',
     zeek: 'text',
     crs: 'text',
     nova: 'text',

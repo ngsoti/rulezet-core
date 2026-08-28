@@ -36,9 +36,10 @@ const _KNOWN_HLJS = new Set([
     'bash','c','cpp','css','diff','go','html','http','java','javascript','json',
     'kotlin','lua','markdown','nginx','php','plaintext','python','ruby','rust',
     'shell','sql','swift','typescript','xml','yaml','text',
-    'yara', // registered at runtime — see _register_extra_languages() below
+    'yara',     // registered at runtime — see _register_extra_languages() below
+    'suricata', // registered at runtime — see _register_extra_languages() below
 ])
-const _LANG_ALIASES = { nse:'lua', sigma:'yaml', wazuh:'xml', suricata:'text', zeek:'text', crs:'text', nova:'text', kql:'sql' }
+const _LANG_ALIASES = { nse:'lua', sigma:'yaml', wazuh:'xml', zeek:'text', crs:'text', nova:'text', kql:'sql' }
 function _resolve_lang(lang) {
     const mapped = _LANG_ALIASES[lang] || lang
     return _KNOWN_HLJS.has(mapped) ? mapped : 'text'
@@ -54,6 +55,10 @@ async function _register_extra_languages(hljs) {
     if (!hljs.getLanguage('yara')) {
         const { default: yaraLanguage } = await import('/static/js/components/hljs-yara.js')
         hljs.registerLanguage('yara', yaraLanguage)
+    }
+    if (!hljs.getLanguage('suricata')) {
+        const { default: suricataLanguage } = await import('/static/js/components/hljs-suricata.js')
+        hljs.registerLanguage('suricata', suricataLanguage)
     }
 }
 
