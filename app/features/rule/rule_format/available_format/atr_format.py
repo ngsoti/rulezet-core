@@ -38,11 +38,26 @@ _ATR_CATEGORIES = frozenset(
     }
 )
 
-# Valid ATR severities. Same shape as Sigma's severity enum.
-_ATR_SEVERITIES = frozenset({"critical", "high", "medium", "low"})
+# Valid ATR severities, per the ATR schema severity enum.
+_ATR_SEVERITIES = frozenset({"critical", "high", "medium", "low", "informational"})
 
-# Valid agent_source.type values per ATR's evolving schema (additive).
-_ATR_AGENT_SOURCE_TYPES = frozenset({"llm_io", "tool_call", "skill_manifest", "agent_loop"})
+# Valid agent_source.type values, per the ATR schema agent_source.type enum
+# (spec/atr-schema.yaml). ATR's schema is additive; this mirrors the current set.
+_ATR_AGENT_SOURCE_TYPES = frozenset(
+    {
+        "llm_io",           # LLM input/output (prompts and completions)
+        "tool_call",        # Function/tool call requests
+        "mcp_exchange",     # MCP protocol messages
+        "agent_behavior",   # Agent behavioral metrics and patterns
+        "multi_agent_comm", # Inter-agent communication
+        "context_window",   # Context window contents
+        "memory_access",    # Agent memory read/write operations
+        "skill_lifecycle",  # MCP skill registration, update, removal events
+        "skill_permission", # Skill permission requests and boundary checks
+        "skill_chain",      # Multi-skill invocation sequences
+        "agent_trace",      # Agent execution trace (OpenInference/OTel GenAI spans)
+    }
+)
 
 
 class ATRRule(RuleType):
@@ -57,7 +72,7 @@ class ATRRule(RuleType):
     model-security, privilege-escalation.
 
     Upstream: https://github.com/Agent-Threat-Rule/agent-threat-rules
-    npm:      `agent-threat-rules` (MIT, currently v3.5.0 / 652 rules).
+    npm:      `agent-threat-rules` (MIT, currently v3.5.6 / 713 rules).
     """
 
     @property

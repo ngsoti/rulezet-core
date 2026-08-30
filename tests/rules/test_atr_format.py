@@ -235,6 +235,16 @@ def test_validate_accepts_canonical_atr_rule(atr: ATRRule) -> None:
     assert result.normalized_content == _VALID_ATR_RULE
 
 
+def test_validate_accepts_current_agent_source_types(atr: ATRRule) -> None:
+    # These agent_source.type values are all in the current ATR schema enum.
+    # mcp_exchange in particular backs the largest share of upstream rules,
+    # so rejecting it here silently dropped most of the ruleset on import.
+    for source_type in ("mcp_exchange", "multi_agent_comm", "agent_trace", "memory_access"):
+        rule = _VALID_ATR_RULE.replace("type: llm_io", f"type: {source_type}")
+        result = atr.validate(rule)
+        assert result.ok is True, (source_type, result.errors)
+
+
 def test_validate_rejects_bad_id(atr: ATRRule) -> None:
     result = atr.validate(_INVALID_ATR_BAD_ID)
     assert result.ok is False
