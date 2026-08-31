@@ -110,6 +110,86 @@
     align-items: center;
 }
 .notif-active-tag-rm:hover { opacity: 1; }
+
+/* ── Search box ─────────────────────────────────────────────────────────── */
+.notif-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--card-bg-color);
+    min-width: 220px;
+}
+.notif-search-wrap i.fa-magnifying-glass { color: var(--subtle-text-color); font-size: .78rem; }
+.notif-search-wrap input {
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-color);
+    font-size: .83rem;
+    flex: 1;
+    min-width: 0;
+}
+.notif-search-wrap .notif-search-clear {
+    border: none;
+    background: none;
+    color: var(--subtle-text-color);
+    padding: 0;
+    font-size: .72rem;
+    cursor: pointer;
+}
+.notif-search-wrap .notif-search-clear:hover { color: var(--text-color); }
+
+/* ── Date range ─────────────────────────────────────────────────────────── */
+.notif-date-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--card-bg-color);
+}
+.notif-date-wrap input[type="date"] {
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-color);
+    font-size: .78rem;
+    max-width: 128px;
+}
+
+/* ── Group headers ──────────────────────────────────────────────────────── */
+.notif-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--subtle-text-color);
+    background: var(--light-bg-color);
+    border-bottom: 1px solid var(--border-color);
+}
+.notif-group-header .notif-group-count {
+    margin-left: auto;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+/* ── Search hit highlight ───────────────────────────────────────────────── */
+mark.notif-search-hit {
+    background: #ffb020;
+    color: #1a1a1a;
+    padding: 0 2px;
+    border-radius: 3px;
+    font-weight: 700;
+}
 </style>
 {% endblock %}
 
@@ -150,7 +230,18 @@
     <div v-if="mainTab === 'notifs'">
 
         <!-- Toolbar row -->
-        <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+        <div class="d-flex flex-wrap align-items-start gap-3 mb-3">
+
+            <!-- Search -->
+            <div class="notif-search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" v-model="searchQuery" @input="onSearchInput"
+                       placeholder="Search notifications…">
+                <button v-if="searchQuery" class="notif-search-clear" title="Clear search"
+                        @click="searchQuery = ''; loadPage(1)">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
 
             <!-- Type filter dropdown -->
             <div class="notif-type-wrap" v-click-outside="closeDropdown">
@@ -168,6 +259,25 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Date range -->
+            <div class="notif-date-wrap">
+                <i class="fa-regular fa-calendar" style="font-size:.75rem;color:var(--subtle-text-color);"></i>
+                <input type="date" v-model="dateFrom" :max="dateTo || undefined" @change="loadPage(1)" title="From date">
+                <span style="color:var(--subtle-text-color);font-size:.75rem;">→</span>
+                <input type="date" v-model="dateTo" :min="dateFrom || undefined" @change="loadPage(1)" title="To date">
+            </div>
+
+            <!-- Group by type -->
+            <div class="form-check form-switch mb-0 d-flex align-items-center gap-2">
+                <input class="form-check-input" type="checkbox" id="groupSwitch"
+                       v-model="groupByType" style="cursor:pointer;">
+                <label class="form-check-label small fw-semibold" for="groupSwitch">Group by type</label>
+            </div>
+
+            <button class="btn btn-sm btn-outline-secondary" @click="clearFilters" v-if="hasActiveFilters">
+                <i class="fa-solid fa-filter-circle-xmark me-1"></i>Clear filters
+            </button>
 
             <!-- Active type chips -->
             <div v-if="activeTypes.length" class="notif-active-tags">
@@ -222,77 +332,83 @@
 
             <!-- Notifications -->
             <template v-else>
-                <div v-for="notif in notifications" :key="notif.id"
-                     :class="['notif-page-item', !notif.is_read ? 'unread' : '']">
-
-                    <!-- Icon bubble -->
-                    <div :class="['notif-icon-bubble', `notif-icon-bubble--${notif.notif_type}`]"
-                         style="width:42px;height:42px;flex-shrink:0;">
-                        <i :class="notif.icon || 'fa-solid fa-bell'"></i>
+                <template v-for="entry in displayList" :key="entry.notif.id">
+                    <div v-if="entry.header" class="notif-group-header">
+                        <i :class="entry.header.icon"></i>
+                        <span>[[ entry.header.label ]]</span>
+                        <span class="notif-group-count">[[ entry.header.count ]]</span>
                     </div>
+                    <div :class="['notif-page-item', !entry.notif.is_read ? 'unread' : '']">
 
-                    <!-- Content -->
-                    <div class="flex-grow-1 min-width-0">
-                        <div class="d-flex align-items-start gap-2">
-                            <span class="notif-page-title">[[ notif.title ]]</span>
-                            <span v-if="!notif.is_read"
-                                  class="badge rounded-pill ms-auto flex-shrink-0"
-                                  style="background:#0d6efd;font-size:.6rem;padding:3px 7px;">NEW</span>
+                        <!-- Icon bubble -->
+                        <div :class="['notif-icon-bubble', `notif-icon-bubble--${entry.notif.notif_type}`]"
+                             style="width:42px;height:42px;flex-shrink:0;">
+                            <i :class="entry.notif.icon || 'fa-solid fa-bell'"></i>
                         </div>
-                        <div class="notif-page-body" v-if="notif.body">[[ notif.body ]]</div>
 
-                        <!-- Job progress -->
-                        <template v-if="notif.notif_type?.startsWith('job')">
-                            <div class="notif-progress mt-2" style="max-width:320px;">
-                                <div :class="['notif-progress__fill', progressFillClass(notif)]"
-                                     :style="progressWidth(notif) ? `width:${progressWidth(notif)}` : ''">
+                        <!-- Content -->
+                        <div class="flex-grow-1 min-width-0">
+                            <div class="d-flex align-items-start gap-2">
+                                <span class="notif-page-title" v-html="highlightText(entry.notif.title)"></span>
+                                <span v-if="!entry.notif.is_read"
+                                      class="badge rounded-pill ms-auto flex-shrink-0"
+                                      style="background:#0d6efd;font-size:.6rem;padding:3px 7px;">NEW</span>
+                            </div>
+                            <div class="notif-page-body" v-if="entry.notif.body" v-html="highlightText(entry.notif.body)"></div>
+
+                            <!-- Job progress -->
+                            <template v-if="entry.notif.notif_type?.startsWith('job')">
+                                <div class="notif-progress mt-2" style="max-width:320px;">
+                                    <div :class="['notif-progress__fill', progressFillClass(entry.notif)]"
+                                         :style="progressWidth(entry.notif) ? `width:${progressWidth(entry.notif)}` : ''">
+                                    </div>
                                 </div>
-                            </div>
-                            <div style="font-size:.73rem;color:var(--subtle-text-color);margin-top:4px;">
-                                <span v-if="notif.job_status === 'done'" class="text-success fw-semibold">
-                                    <i class="fa-solid fa-circle-check me-1"></i>Completed — 100%
-                                </span>
-                                <span v-else-if="notif.job_status === 'failed'" class="text-danger fw-semibold">
-                                    <i class="fa-solid fa-circle-xmark me-1"></i>Failed
-                                </span>
-                                <span v-else-if="notif.job_status === 'cancelled'" class="text-muted">
-                                    <i class="fa-solid fa-ban me-1"></i>Cancelled
-                                </span>
-                                <span v-else class="text-primary">
-                                    <i class="fa-solid fa-circle-notch fa-spin me-1"></i>
-                                    [[ notif.job_progress ? notif.job_progress + '%' : 'Running…' ]]
-                                </span>
-                            </div>
-                        </template>
+                                <div style="font-size:.73rem;color:var(--subtle-text-color);margin-top:4px;">
+                                    <span v-if="entry.notif.job_status === 'done'" class="text-success fw-semibold">
+                                        <i class="fa-solid fa-circle-check me-1"></i>Completed — 100%
+                                    </span>
+                                    <span v-else-if="entry.notif.job_status === 'failed'" class="text-danger fw-semibold">
+                                        <i class="fa-solid fa-circle-xmark me-1"></i>Failed
+                                    </span>
+                                    <span v-else-if="entry.notif.job_status === 'cancelled'" class="text-muted">
+                                        <i class="fa-solid fa-ban me-1"></i>Cancelled
+                                    </span>
+                                    <span v-else class="text-primary">
+                                        <i class="fa-solid fa-circle-notch fa-spin me-1"></i>
+                                        [[ entry.notif.job_progress ? entry.notif.job_progress + '%' : 'Running…' ]]
+                                    </span>
+                                </div>
+                            </template>
 
-                        <div class="notif-page-time">
-                            <i class="fa-regular fa-clock me-1"></i>[[ relativeTime(notif.created_at) ]]
+                            <div class="notif-page-time">
+                                <i class="fa-regular fa-clock me-1"></i>[[ relativeTime(entry.notif.created_at) ]]
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="notif-page-actions">
+                            <a v-if="entry.notif.link" :href="entry.notif.link"
+                               class="btn btn-sm btn-outline-primary"
+                               style="font-size:.75rem;border-radius:8px;"
+                               @click="markRead(entry.notif)">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </a>
+                            <button v-if="!entry.notif.is_read"
+                                    class="btn btn-sm btn-outline-success"
+                                    style="font-size:.75rem;border-radius:8px;"
+                                    title="Mark as read"
+                                    @click="markRead(entry.notif)">
+                                <i class="fa-solid fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    style="font-size:.75rem;border-radius:8px;"
+                                    title="Delete"
+                                    @click="deleteNotif(entry.notif)">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
                         </div>
                     </div>
-
-                    <!-- Actions -->
-                    <div class="notif-page-actions">
-                        <a v-if="notif.link" :href="notif.link"
-                           class="btn btn-sm btn-outline-primary"
-                           style="font-size:.75rem;border-radius:8px;"
-                           @click="markRead(notif)">
-                            <i class="fa-solid fa-arrow-right"></i>
-                        </a>
-                        <button v-if="!notif.is_read"
-                                class="btn btn-sm btn-outline-success"
-                                style="font-size:.75rem;border-radius:8px;"
-                                title="Mark as read"
-                                @click="markRead(notif)">
-                            <i class="fa-solid fa-check"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger"
-                                style="font-size:.75rem;border-radius:8px;"
-                                title="Delete"
-                                @click="deleteNotif(notif)">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
-                </div>
+                </template>
             </template>
         </div>
 
@@ -595,23 +711,34 @@ function relativeTime(isoStr) {
     } catch { return '' }
 }
 
+// Each option is a logical category mapped to every backend `notif_type` string
+// it covers — notifications that get rewritten in place on completion (jobs,
+// sessions, workflow runs) must list every state, otherwise they silently drop
+// out of the filtered view as soon as their status changes.
 const TYPE_OPTIONS = [
-    { key: 'new_rule',            label: 'New Rules',           icon: 'fa-solid fa-shield-halved' },
-    { key: 'follow_new_bundle',   label: 'New Bundles',         icon: 'fa-solid fa-layer-group' },
-    { key: 'follow_new_comment',  label: 'Follow comment',      icon: 'fa-solid fa-comment' },
-    { key: 'rule_comment',        label: 'Rule comment',        icon: 'fa-solid fa-comment-dots' },
-    { key: 'bundle_comment',      label: 'Bundle comment',      icon: 'fa-solid fa-comment-dots' },
-    { key: 'comment_reply',       label: 'Reply',               icon: 'fa-solid fa-reply' },
-    { key: 'proposal_submitted',  label: 'Proposal submitted',  icon: 'fa-solid fa-code-pull-request' },
-    { key: 'proposal_comment',    label: 'Proposal comment',    icon: 'fa-solid fa-message-lines' },
-    { key: 'proposal_accepted',   label: 'Proposal accepted',   icon: 'fa-solid fa-circle-check' },
-    { key: 'proposal_rejected',   label: 'Proposal rejected',   icon: 'fa-solid fa-circle-xmark' },
-    { key: 'rule_update_found',   label: 'Rule updates',        icon: 'fa-solid fa-rotate' },
-    { key: 'job_created',         label: 'Jobs',                icon: 'fa-solid fa-tasks' },
-    { key: 'session_running',     label: 'Sessions',            icon: 'fa-solid fa-spinner' },
-    { key: 'github_import_done',  label: 'Imports',             icon: 'fa-brands fa-github' },
-    { key: 'github_update_done',  label: 'GitHub Updates',      icon: 'fa-solid fa-code-branch' },
-    { key: 'report_submitted',    label: 'Reports',             icon: 'fa-solid fa-triangle-exclamation' },
+    { key: 'new_rule',            label: 'New Rules',              icon: 'fa-solid fa-shield-halved',     types: ['new_rule'] },
+    { key: 'follow_new_bundle',   label: 'New Bundles',            icon: 'fa-solid fa-layer-group',       types: ['follow_new_bundle'] },
+    { key: 'follow_new_comment',  label: 'Follow comment',         icon: 'fa-solid fa-comment',           types: ['follow_new_comment'] },
+    { key: 'rule_comment',        label: 'Rule comment',           icon: 'fa-solid fa-comment-dots',      types: ['rule_comment'] },
+    { key: 'bundle_comment',      label: 'Bundle comment',         icon: 'fa-solid fa-comment-dots',      types: ['bundle_comment'] },
+    { key: 'comment_reply',       label: 'Reply',                  icon: 'fa-solid fa-reply',             types: ['comment_reply'] },
+    { key: 'proposal_submitted',  label: 'Proposal submitted',     icon: 'fa-solid fa-code-pull-request', types: ['proposal_submitted'] },
+    { key: 'proposal_comment',    label: 'Proposal comment',       icon: 'fa-solid fa-message-lines',     types: ['proposal_comment'] },
+    { key: 'proposal_accepted',   label: 'Proposal accepted',      icon: 'fa-solid fa-circle-check',      types: ['proposal_accepted'] },
+    { key: 'proposal_rejected',   label: 'Proposal rejected',      icon: 'fa-solid fa-circle-xmark',      types: ['proposal_rejected'] },
+    { key: 'rule_update_found',   label: 'Rule updates',           icon: 'fa-solid fa-rotate',            types: ['rule_update_found'] },
+    { key: 'jobs',                label: 'Jobs',                   icon: 'fa-solid fa-tasks',             types: ['job_created', 'job_finished', 'job_failed'] },
+    { key: 'sessions',            label: 'Sessions',               icon: 'fa-solid fa-spinner',           types: ['session_running', 'session_done'] },
+    { key: 'github_import_done',  label: 'Imports',                icon: 'fa-brands fa-github',           types: ['github_import_done'] },
+    { key: 'github_update_done',  label: 'GitHub Updates',         icon: 'fa-solid fa-code-branch',       types: ['github_update_done'] },
+    { key: 'github_proposal',     label: 'GitHub Proposals',       icon: 'fa-brands fa-github',           types: ['github_proposal_submitted', 'github_proposal_approved', 'github_proposal_rejected', 'github_proposal_import_done'] },
+    { key: 'github_token_invalid',label: 'GitHub Token',           icon: 'fa-solid fa-key',               types: ['github_token_invalid'] },
+    { key: 'sync_run_finished',   label: 'Sync Runs',              icon: 'fa-solid fa-arrows-rotate',     types: ['sync_run_finished'] },
+    { key: 'ownership',           label: 'Ownership',              icon: 'fa-solid fa-user-shield',       types: ['ownership_requested', 'ownership_approved', 'ownership_rejected'] },
+    { key: 'roles',               label: 'Roles',                  icon: 'fa-solid fa-user-tag',          types: ['role_granted', 'role_removed'] },
+    { key: 'blog_published',      label: 'Blog',                   icon: 'fa-solid fa-newspaper',         types: ['blog_published'] },
+    { key: 'workflows',           label: 'Workflows',              icon: 'fa-solid fa-diagram-project',   types: ['workflow_run_started', 'workflow_run_finished', 'workflow_run_failed'] },
+    { key: 'report_submitted',    label: 'Reports',                icon: 'fa-solid fa-triangle-exclamation', types: ['report_submitted'] },
 ]
 
 const DEFAULT_PREFS = {
@@ -645,6 +772,11 @@ createApp({
         const unreadOnly    = ref(false)
         const activeTypes   = ref([])    // multi-select
         const dropdownOpen  = ref(false)
+        const searchQuery   = ref('')
+        const dateFrom      = ref('')
+        const dateTo        = ref('')
+        const groupByType   = ref(false)
+        let   searchTimer   = null
 
         const mainTab      = ref('notifs')
         const isAdmin      = ref(IS_ADMIN)
@@ -669,14 +801,83 @@ createApp({
         }
         function closeDropdown() { dropdownOpen.value = false }
 
+        // ── Search / date / group helpers ──────────────────────────────────────
+        function onSearchInput() {
+            clearTimeout(searchTimer)
+            searchTimer = setTimeout(() => loadPage(1), 400)
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+            }[c]))
+        }
+        function escapeRegExp(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        }
+        // Escapes the text first, then wraps matches of the (also escaped)
+        // query in <mark> — safe against injection since every character that
+        // reaches the DOM either came through escapeHtml or is a literal tag
+        // we wrote ourselves.
+        function highlightText(text) {
+            const safe = escapeHtml(text || '')
+            const q = searchQuery.value.trim()
+            if (!q) return safe
+            const re = new RegExp(escapeRegExp(escapeHtml(q)), 'gi')
+            return safe.replace(re, m => `<mark class="notif-search-hit">${m}</mark>`)
+        }
+
+        const hasActiveFilters = computed(() =>
+            activeTypes.value.length > 0 || unreadOnly.value ||
+            !!searchQuery.value || !!dateFrom.value || !!dateTo.value
+        )
+
+        function clearFilters() {
+            activeTypes.value = []
+            unreadOnly.value  = false
+            searchQuery.value = ''
+            dateFrom.value    = ''
+            dateTo.value      = ''
+            loadPage(1)
+        }
+
+        // Flattens `notifications` into { notif, header } entries — `header` is
+        // set only on the first item of each type-category when groupByType is
+        // on, so the template can render one v-for with inline section headers
+        // instead of a nested loop.
+        const displayList = computed(() => {
+            if (!groupByType.value) return notifications.value.map(n => ({ notif: n, header: null }))
+            const counts = {}
+            for (const n of notifications.value) {
+                const key = TYPE_OPTIONS.find(o => o.types.includes(n.notif_type))?.key || n.notif_type
+                counts[key] = (counts[key] || 0) + 1
+            }
+            const seen = new Set()
+            return notifications.value.map(n => {
+                const opt = TYPE_OPTIONS.find(o => o.types.includes(n.notif_type))
+                const key = opt?.key || n.notif_type
+                let header = null
+                if (!seen.has(key)) {
+                    seen.add(key)
+                    header = { label: opt?.label || n.notif_type, icon: opt?.icon || 'fa-solid fa-bell', count: counts[key] }
+                }
+                return { notif: n, header }
+            })
+        })
+
         // ── Data loading ─────────────────────────────────────────────────────
         async function loadPage(page = 1) {
             loading.value = true
             currentPage.value = page
             const params = new URLSearchParams({ page, per_page: 20, unread_only: unreadOnly.value })
-            if (activeTypes.value.length === 1) params.set('type', activeTypes.value[0])
-            // multi-type: send comma-separated; backend handles single type via existing param
-            if (activeTypes.value.length > 1)  params.set('type', activeTypes.value.join(','))
+            // Each selected category can map to several backend notif_type values
+            // (e.g. "Jobs" -> job_created/job_finished/job_failed) — flatten them
+            // all into the single comma-separated `type` param the backend expects.
+            const notifTypes = activeTypes.value.flatMap(key => TYPE_OPTIONS.find(o => o.key === key)?.types || [])
+            if (notifTypes.length) params.set('type', notifTypes.join(','))
+            if (searchQuery.value.trim()) params.set('search', searchQuery.value.trim())
+            if (dateFrom.value) params.set('date_from', dateFrom.value)
+            if (dateTo.value)   params.set('date_to', dateTo.value)
             const data = await apiFetch(`/notifications/list?${params}`)
             if (data) {
                 notifications.value = data.notifications
@@ -783,9 +984,10 @@ createApp({
         return {
             notifications, loading, currentPage, totalPages, totalCount,
             unreadCount, unreadOnly, activeTypes, dropdownOpen,
+            searchQuery, dateFrom, dateTo, groupByType, displayList, hasActiveFilters,
             TYPE_OPTIONS, mainTab, isAdmin, prefs, prefsLoading, prefsSaved,
             loadPage, markRead, markAllRead, deleteNotif, deleteAll,
-            loadPrefs, savePrefs, resetPrefs,
+            loadPrefs, savePrefs, resetPrefs, onSearchInput, clearFilters, highlightText,
             progressFillClass, progressWidth, relativeTime,
             toggleType, removeType, closeDropdown, typeIcon, typeLabel,
         }

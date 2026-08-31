@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, render_template, abort
 from flask_login import current_user, login_required
 
 from app.features.notification.notification_core import (
-    get_notifications, get_unread_count, get_bell_items,
+    get_notifications, get_unread_count, get_bell_items, get_recent_job_notifications,
     mark_read, mark_all_read, delete_notification,
     follow_user, unfollow_user, is_following,
     get_follower_count, get_following_count,
@@ -33,6 +33,13 @@ def api_bell():
     return jsonify([n.to_json() for n in items])
 
 
+@notification_blueprint.get('/bell/jobs')
+@login_required
+def api_bell_jobs():
+    items = get_recent_job_notifications(current_user.id)
+    return jsonify([n.to_json() for n in items])
+
+
 # ── Full list API ──────────────────────────────────────────────────────────────
 
 @notification_blueprint.get('/list')
@@ -42,7 +49,11 @@ def api_list():
     per_page    = request.args.get('per_page', 20, type=int)
     unread_only = request.args.get('unread_only', 'false').lower() == 'true'
     notif_type  = request.args.get('type', None)
-    pagination  = get_notifications(current_user.id, page, per_page, unread_only, notif_type)
+    date_from   = request.args.get('date_from', None)
+    date_to     = request.args.get('date_to', None)
+    search      = request.args.get('search', None)
+    pagination  = get_notifications(current_user.id, page, per_page, unread_only, notif_type,
+                                     date_from, date_to, search)
     return jsonify({
         'notifications': [n.to_json() for n in pagination.items],
         'total':         pagination.total,

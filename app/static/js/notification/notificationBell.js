@@ -192,6 +192,7 @@ const NotificationBell = {
             }
             fetchBell()
             window.addEventListener('rz:job-created', () => { fetchBell(); startPolling() })
+            window.addEventListener('rz:notif-read', fetchBell)
         })
 
         onUnmounted(() => {
@@ -240,6 +241,7 @@ const NotificationPanel = {
 
     setup() {
         const items       = ref([])
+        const jobItems    = ref([])
         const loading     = ref(true)
         const activeTab   = ref('all')
         let timer         = null
@@ -252,19 +254,32 @@ const NotificationPanel = {
             loading.value = false
         }
 
-        const unreadCount  = computed(() => items.value.filter(n => !n.is_read).length)
+        // The "Jobs" tab has its own feed: get_bell_items() purges a job
+        // notification as soon as it's both finished AND read, so filtering
+        // `items` client-side left this tab empty most of the time. This
+        // dedicated feed keeps recent jobs visible regardless of read status.
+        async function fetchJobs() {
+            try {
+                const data = await apiFetch('/notifications/bell/jobs')
+                if (data) jobItems.value = data
+            } catch {}
+        }
+
+        const unreadCount    = computed(() => items.value.filter(n => !n.is_read).length)
+        const unreadJobCount = computed(() => jobItems.value.filter(n => !n.is_read).length)
         const filteredItems = computed(() => {
-            if (activeTab.value === 'unread') return items.value.filter(n => !n.is_read)
-            if (activeTab.value === 'jobs')   return items.value.filter(n => n.notif_type?.startsWith('job'))
+            if (activeTab.value === 'jobs') return jobItems.value
             return items.value
         })
         const hasActiveJobs = computed(() =>
             items.value.some(n => n.is_job_active || n.notif_type === 'session_running')
         )
 
+        function fetchAll() { fetchBell(); fetchJobs() }
+
         function startPolling() {
             if (timer) return
-            timer = setInterval(fetchBell, POLL_INTERVAL)
+            timer = setInterval(fetchAll, POLL_INTERVAL)
         }
         function stopPolling() {
             if (timer) { clearInterval(timer); timer = null }
@@ -275,16 +290,24 @@ const NotificationPanel = {
             if (notif.is_read) return
             await apiFetch(`/notifications/${notif.id}/read`, { method: 'POST' })
             notif.is_read = true
-            window._notifBellApp && window._notifBellApp.refreshCount()
+            // Read notifications drop out of the bell immediately, so the
+            // panel visibly empties out as things get handled.
+            items.value = items.value.filter(n => n.id !== notif.id)
+            jobItems.value = jobItems.value.filter(n => n.id !== notif.id)
+            window.dispatchEvent(new Event('rz:notif-read'))
         }
         async function deleteNotif(notif, event) {
             event.stopPropagation(); event.preventDefault()
             await apiFetch(`/notifications/${notif.id}`, { method: 'DELETE' })
             items.value = items.value.filter(n => n.id !== notif.id)
+            jobItems.value = jobItems.value.filter(n => n.id !== notif.id)
+            window.dispatchEvent(new Event('rz:notif-read'))
         }
         async function markAllRead() {
             await apiFetch('/notifications/read_all', { method: 'POST' })
-            items.value.forEach(n => { n.is_read = true })
+            items.value = []
+            jobItems.value = []
+            window.dispatchEvent(new Event('rz:notif-read'))
         }
         async function clickNotif(notif) {
             await markRead(notif)
@@ -306,16 +329,16 @@ const NotificationPanel = {
         onMounted(() => {
             const el = document.getElementById('notifOffcanvas')
             if (el) {
-                el.addEventListener('show.bs.offcanvas', () => { fetchBell(); startPolling() })
+                el.addEventListener('show.bs.offcanvas', () => { fetchAll(); startPolling() })
                 el.addEventListener('hide.bs.offcanvas', () => { if (!hasActiveJobs.value) stopPolling() })
             }
-            fetchBell()
-            window.addEventListener('rz:job-created', () => { fetchBell(); startPolling() })
+            fetchAll()
+            window.addEventListener('rz:job-created', () => { fetchAll(); startPolling() })
         })
         onUnmounted(stopPolling)
 
         return {
-            items, loading, activeTab, unreadCount, filteredItems, hasActiveJobs,
+            items, jobItems, loading, activeTab, unreadCount, unreadJobCount, filteredItems, hasActiveJobs,
             markRead, deleteNotif, markAllRead, clickNotif,
             progressFillClass, progressWidth,
             bubbleClass, typeLabel: t => TYPE_LABEL[t] || t, relativeTime,
@@ -354,14 +377,11 @@ const NotificationPanel = {
     <div class="notif-tabs">
         <button class="notif-tab" :class="{active: activeTab==='all'}"    @click="activeTab='all'">
             <i class="fa-solid fa-list me-1" style="font-size:.7rem;"></i>All
-        </button>
-        <button class="notif-tab" :class="{active: activeTab==='unread'}" @click="activeTab='unread'">
-            <i class="fa-solid fa-circle me-1" style="font-size:.5rem;color:#dc3545;" v-if="unreadCount > 0"></i>
-            Unread
             <span v-if="unreadCount > 0" class="notif-tab-badge">[[ unreadCount ]]</span>
         </button>
         <button class="notif-tab" :class="{active: activeTab==='jobs'}"   @click="activeTab='jobs'">
             <i class="fa-solid fa-gears me-1" style="font-size:.7rem;"></i>Jobs
+            <span v-if="unreadJobCount > 0" class="notif-tab-badge">[[ unreadJobCount ]]</span>
         </button>
     </div>
 

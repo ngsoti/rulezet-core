@@ -1030,7 +1030,8 @@ def notify_github_update_done(user_id, updated, found, result_id=None, result_uu
 
 # ── Read / fetch ───────────────────────────────────────────────────────────────
 
-def get_notifications(user_id, page=1, per_page=20, unread_only=False, notif_type=None):
+def get_notifications(user_id, page=1, per_page=20, unread_only=False, notif_type=None,
+                       date_from=None, date_to=None, search=None):
     q = Notification.query.filter_by(user_id=user_id)
     if unread_only:
         q = q.filter_by(is_read=False)
@@ -1041,6 +1042,20 @@ def get_notifications(user_id, page=1, per_page=20, unread_only=False, notif_typ
             q = q.filter(Notification.notif_type == types[0])
         elif len(types) > 1:
             q = q.filter(Notification.notif_type.in_(types))
+    if date_from:
+        try:
+            q = q.filter(Notification.created_at >= datetime.datetime.strptime(date_from, '%Y-%m-%d'))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            end = datetime.datetime.strptime(date_to, '%Y-%m-%d') + datetime.timedelta(days=1)
+            q = q.filter(Notification.created_at < end)
+        except ValueError:
+            pass
+    if search:
+        like = f'%{search.strip()}%'
+        q = q.filter(db.or_(Notification.title.ilike(like), Notification.body.ilike(like)))
     return q.order_by(Notification.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
 
@@ -1097,6 +1112,20 @@ def get_bell_items(user_id, limit=15):
 
     merged.sort(key=lambda n: n.created_at, reverse=True)
     return merged[:limit]
+
+
+def get_recent_job_notifications(user_id, limit=15):
+    """
+    Dedicated feed for the bell's "Jobs" tab. Unlike get_bell_items(), this
+    ignores read/active status so finished-and-read jobs keep showing up here
+    even though they've already dropped out of the ephemeral "All" feed.
+    """
+    return (Notification.query
+            .filter(Notification.user_id == user_id,
+                    Notification.notif_type.in_(['job_created', 'job_finished', 'job_failed']))
+            .order_by(Notification.created_at.desc())
+            .limit(limit)
+            .all())
 
 
 # ── Mutations ──────────────────────────────────────────────────────────────────
