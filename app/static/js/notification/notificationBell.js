@@ -249,7 +249,9 @@ const NotificationPanel = {
         async function fetchBell() {
             try {
                 const data = await apiFetch('/notifications/bell')
-                if (data) items.value = data
+                // Jobs live exclusively in the "Jobs" tab (via fetchJobs below) —
+                // keep them out of "All" so they're not shown in both places.
+                if (data) items.value = data.filter(n => !n.notif_type?.startsWith('job'))
             } catch {}
             loading.value = false
         }
@@ -272,7 +274,8 @@ const NotificationPanel = {
             return items.value
         })
         const hasActiveJobs = computed(() =>
-            items.value.some(n => n.is_job_active || n.notif_type === 'session_running')
+            items.value.some(n => n.notif_type === 'session_running') ||
+            jobItems.value.some(n => n.is_job_active)
         )
 
         function fetchAll() { fetchBell(); fetchJobs() }
