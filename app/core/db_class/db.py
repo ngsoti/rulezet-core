@@ -611,7 +611,7 @@ class RuleFavoriteUser(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'))
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), index=True)
     created_at = db.Column(db.DateTime, default=datetime.datetime)
 
     # Define the relationships with cascade option
@@ -632,7 +632,7 @@ class Comment(db.Model):
 
     id       = db.Column(db.Integer, primary_key=True, autoincrement=True)
     uuid     = db.Column(db.String(36), unique=True, nullable=True, index=True)
-    rule_id  = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    rule_id  = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False, index=True)
     user_id  = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user_name = db.Column(db.Text, nullable=False)
     content  = db.Column(db.Text, nullable=False)
@@ -685,7 +685,7 @@ class RuleCommentReaction(db.Model):
 
     id           = db.Column(db.Integer, primary_key=True, autoincrement=True)
     uuid         = db.Column(db.String(36), unique=True, nullable=False, index=True)
-    rule_id      = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    rule_id      = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False, index=True)
     comment_id   = db.Column(db.Integer, db.ForeignKey('comment.id', ondelete='CASCADE'), nullable=False)
     user_id      = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     reaction_type = db.Column(db.String(50), nullable=False)
@@ -712,7 +712,7 @@ class RequestOwnerRule(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     uuid = db.Column(db.String(36), index=True)
 
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True, index=True)
     rule_source = db.Column(db.String, nullable=True)
     # Snapshot of every rule id covered by this entry — only set for manual
     # bulk ownership grants (bulk_transfer_ownership), which span many rules
@@ -790,8 +790,8 @@ class RequestOwnerRule(db.Model):
 class RuleVote(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
-    vote_type = db.Column(db.String(10), nullable=False)  
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False, index=True)
+    vote_type = db.Column(db.String(10), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
 
     user = db.relationship('User', backref=db.backref('rule_votes', lazy='dynamic', cascade='all, delete-orphan'))
@@ -847,8 +847,8 @@ class RuleEditProposal(db.Model):
     __tablename__ = 'rule_edit_proposal'
 
     id = db.Column(db.Integer, primary_key=True)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) 
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     proposed_content = db.Column(db.Text, nullable=False)
     old_content = db.Column(db.Text) 
@@ -922,7 +922,7 @@ class RuleEditProposal(db.Model):
 
 class RuleEditComment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    proposal_id = db.Column(db.Integer, db.ForeignKey('rule_edit_proposal.id'), nullable=False)
+    proposal_id = db.Column(db.Integer, db.ForeignKey('rule_edit_proposal.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
@@ -947,7 +947,7 @@ class RuleEditContribution(db.Model):
     # NULL for a direct credit (admin/non-owner editing the rule, or the
     # previous owner after an ownership transfer) with no proposal involved.
     proposal_id = db.Column(db.Integer, db.ForeignKey('rule_edit_proposal.id'), nullable=True)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
 
     user = db.relationship('User', backref=db.backref('contributions', lazy='dynamic', cascade='all, delete-orphan'))
@@ -971,7 +971,7 @@ class RuleEditContribution(db.Model):
 class RepportRule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # the user who made the repport
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False) # the rule which has repport
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False, index=True) # the rule which has repport
     message = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
     reason = db.Column(db.Text) # list (....differents reasons)
@@ -1076,7 +1076,7 @@ class Report(db.Model):
 
 class RuleUpdateHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False, index=True)
     rule_title = db.Column(db.String(255), nullable=False)
     success = db.Column(db.Boolean, nullable=False)
     message = db.Column(db.Text, nullable=True)
@@ -1140,7 +1140,7 @@ class RuleTagAssociation(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     uuid = db.Column(db.String(36), unique=True, nullable=False, index=True)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False, index=True)
     tag_id = db.Column(db.Integer, db.ForeignKey('tag.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # the user who added the tag to the bundle
 
@@ -1485,7 +1485,7 @@ class BundleRuleAssociation(db.Model):
     # rule can be in many bundles and a bundle can have many rules
     id = db.Column(db.Integer, primary_key=True)
     bundle_id = db.Column(db.Integer, db.ForeignKey('bundle.id'), nullable=False)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False, index=True)
     description = db.Column(db.Text)
 
     added_at = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
@@ -2362,7 +2362,7 @@ class RuleSimilarity(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     rule_id = db.Column(db.Integer, db.ForeignKey("rule.id", ondelete='CASCADE'), index=True)
-    similar_rule_id = db.Column(db.Integer, db.ForeignKey("rule.id", ondelete='CASCADE'))
+    similar_rule_id = db.Column(db.Integer, db.ForeignKey("rule.id", ondelete='CASCADE'), index=True)
     
     # score between 0.0 and 1.0
     score = db.Column(db.Float, index=True) 
@@ -3546,7 +3546,7 @@ class RuleAttackAssociation(db.Model):
 
     id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
     uuid        = db.Column(db.String(36), unique=True, nullable=False, index=True)
-    rule_id     = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
+    rule_id     = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False, index=True)
     technique_id = db.Column(db.String(20), db.ForeignKey('attack_technique.technique_id'), nullable=False)
     user_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)   # null = auto-parsed
     added_at    = db.Column(db.DateTime, default=datetime.datetime.now(tz=datetime.timezone.utc))
