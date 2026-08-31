@@ -1911,7 +1911,7 @@ export default {
             const map = {
                 yara:     'yara',
                 sigma:    'yaml',
-                suricata: 'text',
+                suricata: 'suricata',
                 zeek:     'zeek',
                 elastic:  'json',
                 wazuh:    'xml',
