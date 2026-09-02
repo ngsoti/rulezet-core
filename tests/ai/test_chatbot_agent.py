@@ -155,11 +155,14 @@ def test_create_bundle_shortcut_requires_create_verb(app):
 
 
 def test_create_bundle_shortcut_never_hijacks_create_rule_requests(app):
+    # Not a bundle request at all — the create-rule-intent shortcut now
+    # handles this deterministically instead (asks for content).
     with app.app_context():
         user = User.query.filter_by(email="admin@admin.admin").first()
-        with patch(CHAT, return_value=_envelope(reply="What should it detect?")) as mock_chat:
-            handle_message(user, [], "can you create a yara rule?")
-        mock_chat.assert_called_once()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "can you create a yara rule?")
+        mock_chat.assert_not_called()
+        assert result['action'] == 'ask'
 
 
 def test_handle_message_falls_back_to_plain_text_on_invalid_json(app):
@@ -499,6 +502,55 @@ def test_search_shortcut_combines_several_fields_at_once(app):
         assert result['redirect'] == '/rule/rules_list?rule_type=yara&vulnerabilities=CVE-2024-1234&authors=jdoe'
 
 
+# ── create-rule-intent shortcut — "I want you to create a new yara rule"
+#    (no content yet) confirmed live to get an inconsistent model reply —
+#    sometimes a proper ask for content, sometimes "Creating a new yara
+#    rule..." with no ask at all and nothing actually created. Ask
+#    deterministically instead of leaving this to chance. ────────────────────
+
+def test_create_rule_intent_shortcut_asks_for_content_never_calls_ollama(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "I want you to create a new yara rule")
+        mock_chat.assert_not_called()
+        assert result['action'] == 'ask'
+        assert 'content' in result['reply'].lower()
+        assert 'yara' in result['reply'].lower()
+
+
+def test_create_rule_intent_shortcut_asks_for_format_too_when_unnamed(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "create a rule for me")
+        mock_chat.assert_not_called()
+        assert result['action'] == 'ask'
+        assert 'format' in result['reply'].lower()
+
+
+def test_create_rule_intent_shortcut_defers_to_content_shortcut_when_content_present(app):
+    # A message that's already real rule content must go to the
+    # content-handling shortcut, not get treated as a bare intent-only ask.
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        history = [{"role": "user", "content": "create a yara rule"}]
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, history, _YARA_RULE_CONTENT)
+        mock_chat.assert_not_called()
+        assert result['action'] == 'create_rule'
+        assert result['success'] is True
+
+
+def test_create_rule_intent_shortcut_ignores_search_and_bundle_requests(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "I want yara rules with a CVE")
+        # falls through to the model's own "ask" handling for this vague case
+        mock_chat.assert_called_once()
+
+
 # ── create_rule shortcut — a multi-turn "create a X rule" -> paste content
 #    flow confirmed live to fail: handed the exact rule text as the message,
 #    the model replied "Please provide the content of the rule" (it had
@@ -578,16 +630,16 @@ def test_create_rule_shortcut_offers_a_link_when_the_rule_already_exists(app):
 
 
 def test_search_shortcut_never_hijacks_create_rule_requests(app):
-    # The create-verb guard must send this to the model instead of the
-    # search shortcut — whatever the model/downstream validation then does
-    # with it is out of scope here, only that it wasn't silently redirected.
+    # The create-verb guard must keep this out of the search shortcut — it's
+    # not a search at all. It's now handled by the create-rule-intent
+    # shortcut instead (asks for content, deterministically, never the model).
     with app.app_context():
         user = User.query.filter_by(email="admin@admin.admin").first()
-        envelope = _envelope(action='create_rule', params={'format': 'yara', 'content': ''})
-        with patch(CHAT, return_value=envelope) as mock_chat:
+        with patch(CHAT) as mock_chat:
             result = handle_message(user, [], "create a yara rule that detects CVE-2024-1234")
-        mock_chat.assert_called_once()
+        mock_chat.assert_not_called()
         assert 'redirect' not in result
+        assert result['action'] == 'ask'
 
 
 def test_search_shortcut_never_hijacks_plain_format_question(app):

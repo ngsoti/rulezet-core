@@ -679,6 +679,33 @@ def _maybe_who_are_you(message: str):
     return {"action": "chat", "reply": _WHO_ARE_YOU_REPLY, "success": True}
 
 
+# "I want you to create a new yara rule" — a create-rule REQUEST with no
+# content yet. Confirmed live: the model is inconsistent here — sometimes
+# it correctly asks for the content, sometimes it replies as if it were
+# already doing something ("Creating a new yara rule...") without asking
+# for the one thing it actually needs. Ask deterministically instead of
+# leaving this to chance, same rationale as the other shortcuts.
+def _maybe_create_rule_intent_shortcut(message: str):
+    if not _CREATE_VERBS_RE.search(message):
+        return None
+    if not _RULE_MENTION_RE.search(message):
+        return None
+    if _looks_like_rule_content(message):
+        return None  # real content is already here — a later shortcut handles this
+    fmt = _extract_rule_type_from_message(message)
+    if fmt:
+        return {
+            "action": "ask",
+            "reply": f"Sure — paste the {fmt} rule content you'd like me to create, and I'll validate and save it.",
+            "success": True,
+        }
+    return {
+        "action": "ask",
+        "reply": f"Sure — which format ({', '.join(sorted(_VALID_FORMATS))}), and paste the rule content you'd like me to create?",
+        "success": True,
+    }
+
+
 def _maybe_format_question(message: str):
     """This question has exactly one correct, context-free answer — answer it in
     code instead of trusting a small local model to reproduce a fixed list verbatim
@@ -804,7 +831,8 @@ def _dispatch_message(user, history: list, message: str) -> dict:
     if gate is not None:
         return gate
 
-    for shortcut_fn in (_maybe_greeting, _maybe_who_are_you, _maybe_format_question, _maybe_explain_question, _maybe_search_rules_shortcut):
+    for shortcut_fn in (_maybe_greeting, _maybe_who_are_you, _maybe_format_question, _maybe_explain_question,
+                        _maybe_search_rules_shortcut, _maybe_create_rule_intent_shortcut):
         shortcut = shortcut_fn(message)
         if shortcut is not None:
             return shortcut
