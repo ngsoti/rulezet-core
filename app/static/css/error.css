@@ -67,6 +67,12 @@
     color: #0d6efd;
 }
 
+.error-icon--mascot {
+    width: 84%;
+    height: 84%;
+    object-fit: contain;
+}
+
 @keyframes errFloat {
     0%, 100% { transform: translateY(0); }
     50%       { transform: translateY(-9px); }

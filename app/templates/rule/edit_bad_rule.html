@@ -45,25 +45,25 @@ window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
     {% if ai_fix_available %}
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-4">
-            <div class="d-flex align-items-start gap-3 mb-2">
-                <div class="rulezy-say" tabindex="0">
-                    <img src="{{ url_for('static', filename='images/rulezy/rule-fixer.png') }}" alt="Rulezy" class="rulezy-say__avatar">
-                    <div class="rulezy-say__bubble">Hi, I'm Rulezy! I look at your rule and its exact error, then propose the smallest fix — I don't re-check my own work, so please review the diff before using it.</div>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                    <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-wrench me-1"></i>Try AI fix
+                    </span>
                 </div>
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 flex-grow-1">
-                    <div class="d-flex align-items-center gap-2">
-                        <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
-                        <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
-                            <i class="fa-solid fa-wrench me-1"></i>Try AI fix
-                        </span>
-                    </div>
+                <div class="d-flex align-items-center gap-3">
                     <button type="button" class="btn btn-sm btn-primary rounded-pill px-3" :disabled="fixing" @click="tryAiFix">
                         <i class="fa-solid me-1" :class="fixing ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'"></i>
                         [[ fixing ? 'Analyzing…' : 'Try AI fix' ]]
                     </button>
+                    <div class="rulezy-say rulezy-say--left" tabindex="0">
+                        <img src="{{ url_for('static', filename='images/rulezy/rule-fixer.png') }}" alt="Rulezy" class="rulezy-say__avatar">
+                        <div class="rulezy-say__bubble">Hi, I'm Rulezy! I look at your rule and its exact error, then propose the smallest fix — I don't re-check my own work, so please review the diff before using it.</div>
+                    </div>
                 </div>
             </div>
-            <p class="text-muted mb-0" style="font-size:.82rem;margin-left:calc(56px + 1rem);">
+            <p class="text-muted mb-0" style="font-size:.82rem;">
                 Looks at the exact validator error above and proposes the smallest edit that fixes it —
                 nothing is applied until you review the diff and click Save yourself.
             </p>

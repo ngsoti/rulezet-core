@@ -2761,15 +2761,24 @@ body.dark-mode .table .opacity-50 {
   cursor: help;
 }
 .rulezy-say__avatar {
-  width: 56px;
-  height: 56px;
+  width: 76px;
+  height: 76px;
   object-fit: contain;
   transition: transform .15s ease;
+  animation: rulezy-bob 3.2s ease-in-out infinite;
 }
 .rulezy-say:hover .rulezy-say__avatar,
 .rulezy-say:focus .rulezy-say__avatar,
 .rulezy-say:focus-within .rulezy-say__avatar {
-  transform: scale(1.08);
+  transform: scale(1.1);
+  animation-play-state: paused;
+}
+@keyframes rulezy-bob {
+  0%, 100% { transform: translateY(0)    rotate(0deg); }
+  50%      { transform: translateY(-5px) rotate(-3deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rulezy-say__avatar { animation: none; }
 }
 .rulezy-say__bubble {
   position: absolute;

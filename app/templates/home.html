@@ -262,8 +262,9 @@
 
                 <!-- Left: brand + title + CTAs + formats -->
                 <div class="col-lg-6">
+                    <div class="d-flex align-items-center gap-2 mb-3">
                     <a href="https://github.com/rulezet/rulezet-core/releases" target="_blank" rel="noopener"
-                       class="hero-brand-badge mb-3" title="View releases on GitHub">
+                       class="hero-brand-badge" title="View releases on GitHub">
                         <i class="fa-solid fa-shield-halved"></i>
                         RULEZET
                         <span class="badge rounded-pill border fw-normal ms-1"
@@ -271,6 +272,11 @@
                             v{{ app_version }}
                         </span>
                     </a>
+                    <div class="rulezy-say" tabindex="0">
+                        <img src="{{ url_for('static', filename='images/rulezy/simple.png') }}" alt="Rulezy" class="rulezy-say__avatar" style="width:52px;height:52px;">
+                        <div class="rulezy-say__bubble">Hi, I'm Rulezy! I'll help you create rules, search the platform, and answer questions about Rulezet — just click the chat bubble in the corner anytime.</div>
+                    </div>
+                    </div>
 
                     <h1 class="hero-big-title mb-3">
                         The Open Source<br>

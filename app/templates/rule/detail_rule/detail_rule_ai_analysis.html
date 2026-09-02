@@ -89,16 +89,16 @@
         <!-- Admin: launch a new analysis -->
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-body p-4">
-                <div class="d-flex align-items-start gap-3 mb-3">
-                    <div class="rulezy-say" tabindex="0">
-                        <img src="{{ url_for('static', filename='images/rulezy/analyseRule.png') }}" alt="Rulezy" class="rulezy-say__avatar">
-                        <div class="rulezy-say__bubble">Hi, I'm Rulezy! I read this rule's content, tags, and ATT&amp;CK mapping, then write a plain-English report explaining what it does and why it matters.</div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-2">
                         <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
                         <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
                             <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Generate a new analysis
                         </span>
+                    </div>
+                    <div class="rulezy-say rulezy-say--left" tabindex="0">
+                        <img src="{{ url_for('static', filename='images/rulezy/analyseRule.png') }}" alt="Rulezy" class="rulezy-say__avatar">
+                        <div class="rulezy-say__bubble">Hi, I'm Rulezy! I read this rule's content, tags, and ATT&amp;CK mapping, then write a plain-English report explaining what it does and why it matters.</div>
                     </div>
                 </div>
 
