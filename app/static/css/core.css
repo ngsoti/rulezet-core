@@ -2766,6 +2766,64 @@ body.dark-mode .table .opacity-50 {
 .rulezy-say[role="button"] {
   cursor: pointer;
 }
+
+/* Rulezy AS the trigger — a full-width row, avatar + speech text + arrow,
+   the whole thing clickable (not a separate button next to a label). Used
+   where the entire point of the card is "click Rulezy to run the AI
+   action" (Rule Fixer's "Try AI fix" card). */
+.rulezy-trigger {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  background: var(--light-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: .85rem 1.15rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, transform .1s ease;
+}
+.rulezy-trigger:hover:not(:disabled) {
+  border-color: #0d6efd;
+  background: rgba(13, 110, 253, .06);
+}
+.rulezy-trigger:active:not(:disabled) { transform: scale(.99); }
+.rulezy-trigger:disabled { cursor: default; }
+.rulezy-trigger__avatar {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  flex-shrink: 0;
+  animation: rulezy-bob 3.2s ease-in-out infinite;
+}
+.rulezy-trigger__avatar--busy {
+  animation: rulezy-think-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rulezy-think-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.1) rotate(-4deg); }
+}
+.rulezy-trigger__text {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  flex: 1;
+  min-width: 0;
+}
+.rulezy-trigger__text span {
+  font-size: .85rem;
+  color: var(--text-color);
+  line-height: 1.4;
+}
+.rulezy-trigger__arrow {
+  color: #0d6efd;
+  font-size: .95rem;
+  flex-shrink: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rulezy-trigger__avatar, .rulezy-trigger__avatar--busy { animation: none; }
+}
 .rulezy-say__avatar {
   width: 76px;
   height: 76px;

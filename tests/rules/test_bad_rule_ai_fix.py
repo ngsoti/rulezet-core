@@ -69,7 +69,7 @@ def test_ai_fix_button_shown_when_agent_enabled(app, client):
 
     res = client.get(f"/rule/bad_rule/{bad_rule_id}/edit")
     assert res.status_code == 200
-    assert b"Try AI fix" in res.data
+    assert b"rulezy-trigger" in res.data
 
 
 def test_ai_fix_button_hidden_when_agent_disabled(app, client):
@@ -80,7 +80,7 @@ def test_ai_fix_button_hidden_when_agent_disabled(app, client):
 
     res = client.get(f"/rule/bad_rule/{bad_rule_id}/edit")
     assert res.status_code == 200
-    assert b"Try AI fix" not in res.data
+    assert b"rulezy-trigger" not in res.data
 
 
 def test_ai_fix_button_hidden_for_script_format_even_when_enabled(app, client):
@@ -91,7 +91,7 @@ def test_ai_fix_button_hidden_for_script_format_even_when_enabled(app, client):
 
     res = client.get(f"/rule/bad_rule/{bad_rule_id}/edit")
     assert res.status_code == 200
-    assert b"Try AI fix" not in res.data
+    assert b"rulezy-trigger" not in res.data
 
 
 def test_ai_fix_button_hidden_for_non_yara_formats(app, client):
@@ -104,7 +104,7 @@ def test_ai_fix_button_hidden_for_non_yara_formats(app, client):
         _login(client, owner)
         res = client.get(f"/rule/bad_rule/{bad_rule_id}/edit")
         assert res.status_code == 200
-        assert b"Try AI fix" not in res.data, f"should be hidden for {rule_type}"
+        assert b"rulezy-trigger" not in res.data, f"should be hidden for {rule_type}"
 
 
 # ── route permissions ──────────────────────────────────────────────────────────
