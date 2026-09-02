@@ -76,10 +76,16 @@ def history_detail(agent_key, uuid):
 @ai_blueprint.route('/admin/config', methods=['GET'])
 def list_configs():
     """All 4 agents' configs in one call — feeds the Overview tab's
-    per-feature toggle list without 4 round-trips."""
+    per-feature toggle list without 4 round-trips. Includes the instance's
+    global default model too, since a null default_model on an agent falls
+    back to it (ai_core.py) — the Overview page needs it to show what model
+    a feature is actually running, not just the raw (possibly empty) field."""
     configs = AIAgentConfig.query.filter(AIAgentConfig.agent_key.in_(_KNOWN_AGENT_KEYS)).all()
     by_key = {c.agent_key: c.to_json() for c in configs}
-    return jsonify({'configs': [by_key.get(k) for k in sorted(_KNOWN_AGENT_KEYS) if by_key.get(k)]})
+    return jsonify({
+        'configs': [by_key.get(k) for k in sorted(_KNOWN_AGENT_KEYS) if by_key.get(k)],
+        'global_default_model': current_app.config.get('OLLAMA_MODEL'),
+    })
 
 
 @ai_blueprint.route('/admin/config/<string:agent_key>', methods=['GET'])

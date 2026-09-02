@@ -80,7 +80,7 @@ export default {
             return stage === 'error'
         }
         function displayText(step) {
-            return isError(step.stage) ? `Aieeee, j'ai eu ça : ${step.text}` : step.text
+            return isError(step.stage) ? `Yikes, here's what I got: ${step.text}` : step.text
         }
         return { isCurrent, toneClass, iconClass, imageFor, isError, displayText }
     },

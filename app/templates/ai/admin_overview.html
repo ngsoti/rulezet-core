@@ -65,10 +65,15 @@
               <small class="text-muted">[[ agent.enabled ? 'Available to users right now.' : 'Turned off — hidden from users.' ]]</small>
             </div>
           </div>
-          <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" role="switch"
-                   :checked="agent.enabled" :disabled="agent.busy"
-                   @change="toggleAgent(agent)">
+          <div class="d-flex align-items-center gap-3">
+            <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis font-monospace" style="font-size:.72rem;" :title="agent.default_model ? 'Set explicitly for this feature' : 'Using the instance-wide default model'">
+              <i class="fa-solid fa-microchip me-1"></i>[[ agent.default_model || globalDefaultModel || '—' ]]
+            </span>
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" role="switch"
+                     :checked="agent.enabled" :disabled="agent.busy"
+                     @change="toggleAgent(agent)">
+            </div>
           </div>
         </div>
       </div>
@@ -125,6 +130,7 @@ createApp({
     setup() {
         const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || ''
         const agents = ref([])
+        const globalDefaultModel = ref('')
         const loading = ref(true)
         const bulkBusy = ref(false)
         const mascotEnabled = ref({{ mascot_enabled | tojson }})
@@ -139,6 +145,7 @@ createApp({
                 const data = await res.json()
                 const byKey = Object.fromEntries((data.configs || []).map(c => [c.agent_key, c]))
                 agents.value = AGENT_ORDER.filter(k => byKey[k]).map(k => ({ ...byKey[k], busy: false }))
+                globalDefaultModel.value = data.global_default_model || ''
             } catch (e) {
                 create_message('Failed to load AI feature status.', 'danger-subtle')
             } finally {
@@ -208,7 +215,7 @@ createApp({
 
         fetchAgents()
 
-        return { AGENT_META, agents, loading, bulkBusy, allEnabled, toggleAgent, toggleAll, mascotEnabled, mascotBusy, toggleMascot }
+        return { AGENT_META, agents, globalDefaultModel, loading, bulkBusy, allEnabled, toggleAgent, toggleAll, mascotEnabled, mascotBusy, toggleMascot }
     }
 }).mount('#ov-app')
 </script>
