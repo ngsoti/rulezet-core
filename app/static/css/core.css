@@ -2832,6 +2832,17 @@ body.dark-mode .table .opacity-50 {
 .rulezy-say--left .rulezy-say__bubble::before { left: 100%; border-left-color: var(--border-color); border-right-color: transparent; }
 .rulezy-say--left .rulezy-say__bubble::after  { left: calc(100% - 1px); border-left-color: var(--card-bg-color); border-right-color: transparent; border-width: 6px; }
 
+/* Pulled out of the flex flow entirely and pinned to the card's corner —
+   the avatar got big enough (76px) that sharing a flex row with a title/
+   description block was distorting that block's own height/alignment.
+   Needs a positioned ancestor (the card-body must have position:relative). */
+.rulezy-say--corner {
+  position: absolute;
+  top: -10px;
+  right: 4px;
+  z-index: 5;
+}
+
 @media (max-width: 576px) {
   /* Not enough room for a rightward bubble beside a narrow card — open
      it below the avatar instead of clipping off the viewport edge. */
