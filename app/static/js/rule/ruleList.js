@@ -104,6 +104,10 @@ export default {
         currentUserIsAdmin: { type: Boolean,          default: false },
         showFilters:        { type: Boolean,          default: true },
         showCreate:         { type: Boolean,          default: false },
+        // Small toolbar toggle, next to "New Rule" — filters the listing to
+        // rules that already have a Rulezy (Rule Analysis) report. Off by
+        // default so every other RuleList consumer is unaffected.
+        showRulezyFilter:   { type: Boolean,          default: false },
         canVote:            { type: Boolean,          default: false },
         canFavorite:        { type: Boolean,          default: false },
         canEdit:            { type: Boolean,          default: false },
@@ -238,6 +242,20 @@ export default {
                     <i class="fas fa-file-circle-plus"></i>
                     <span>New Rule</span>
                 </button>
+
+                <!-- Rulezy's picks (rules with an AI analysis) — just him, no
+                     button chrome. Negative vertical margin keeps the bigger
+                     avatar from stretching the toolbar row's height. -->
+                <span v-if="showRulezyFilter" class="rulezy-say rulezy-say--left" role="button" tabindex="0"
+                      style="margin:-8px 0;"
+                      @click="aiAnalysisOnly = !aiAnalysisOnly"
+                      @keydown.enter="aiAnalysisOnly = !aiAnalysisOnly"
+                      :title="aiAnalysisOnly ? 'Showing only rules I analyzed' : ''">
+                    <img :src="aiAnalysisOnly ? '/static/images/rulezy/analyseRule.png' : '/static/images/rulezy/lookup.png'" alt="Rulezy"
+                         class="rulezy-say__avatar" style="width:38px;height:38px;"
+                         :class="{ 'rulezy-say__avatar--active': aiAnalysisOnly }">
+                    <span class="rulezy-say__bubble">{{ aiAnalysisOnly ? "Showing you the rules I've analyzed. Click me again to see everything." : "I've got my eye on a few of these. Click me to see which ones!" }}</span>
+                </span>
 
                 <!-- Select-all / send (mode=select) -->
                 <button v-if="mode === 'select'"
@@ -1347,6 +1365,7 @@ export default {
         })
         const scopeMine        = ref(_p('scope') === 'mine')
         const cveOnly           = ref(props.hasCveOnly || _p('has_cve') === 'true')
+        const aiAnalysisOnly    = ref(_p('has_ai_analysis') === 'true')
         const _numOrNull = (key) => {
             const raw = _p(key)
             const n = raw !== '' ? Number(raw) : NaN
@@ -1474,6 +1493,7 @@ export default {
                 p.delete('authors'); p.delete('editors'); p.delete('person_mode')
             }
             _upd('scope', scopeMine.value ? 'mine' : null)
+            _upd('has_ai_analysis', aiAnalysisOnly.value ? 'true' : null)
 
             const qs = p.toString()
             history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
@@ -1502,6 +1522,7 @@ export default {
                 if (selectedVulns.value.length)      params.set('vulnerabilities', selectedVulns.value.join(','))
                 if (selectedAttacks.value.length)    params.set('attacks', selectedAttacks.value.join(','))
                 if (cveOnly.value)                    params.set('has_cve', 'true')
+                if (aiAnalysisOnly.value)             params.set('has_ai_analysis', 'true')
                 if (qualityMin.value !== null)        params.set('quality_score_min', qualityMin.value)
                 if (qualityMax.value !== null)        params.set('quality_score_max', qualityMax.value)
                 if (personFilter.value.values.length) {
@@ -2011,6 +2032,7 @@ export default {
 
         // Re-fetch when switching views (per-page may have changed)
         watch(viewMode, () => { page.value = 1; fetchData() })
+        watch(aiAnalysisOnly, () => { page.value = 1; fetchData() })
 
         // Auto-expand all items when search field is "content"
         watch(items, (newItems) => {
@@ -2031,7 +2053,7 @@ export default {
             filtersOpen, ruleType, searchField, exactMatch, cardSort, qualityMin, qualityMax, onQualityRangeChange,
             selectedTags, selectedSources, selectedLicenses, selectedVulns, selectedAttacks,
             personFilter, onPersonFilterChange,
-            scopeMine,
+            scopeMine, aiAnalysisOnly,
             rulesFormats, activeFilterCount,
             // UI
             viewMode, expandedIds,

@@ -2985,7 +2985,8 @@ def get_rules_data_table(page=1, per_page=10, search=None, sort=None,
                          author=None, vulnerabilities=None, licenses=None,
                          tags=None, editor_names=None, bundle_id=None, attacks=None,
                          status=None, workspace_uuid=None, exclude_workspace_uuid=None,
-                         ids=None, has_cve=False, quality_score_min=None, quality_score_max=None):
+                         ids=None, has_cve=False, quality_score_min=None, quality_score_max=None,
+                         has_ai_analysis=False):
     """Generic paginated / searchable / sortable rule listing consumed by the
     rule-data-table component. Filtering is delegated to filter_rules() so the
     advanced filter bar (tags, licenses, vulnerabilities, sources, exact
@@ -3025,6 +3026,14 @@ def get_rules_data_table(page=1, per_page=10, search=None, sort=None,
         query = query.filter(Rule.quality_score.isnot(None), Rule.quality_score >= quality_score_min)
     if quality_score_max is not None:
         query = query.filter(Rule.quality_score.isnot(None), Rule.quality_score <= quality_score_max)
+
+    if has_ai_analysis:
+        from app.core.db_class.db import AIGeneration
+        analyzed_rule_ids = db.session.query(AIGeneration.rule_id).filter(
+            AIGeneration.agent_key == 'rule_analysis',
+            AIGeneration.rule_id.isnot(None),
+        ).distinct()
+        query = query.filter(Rule.id.in_(analyzed_rule_ids))
 
     col = _DATA_TABLE_SORT_KEYS.get(sort)
     if col is not None:

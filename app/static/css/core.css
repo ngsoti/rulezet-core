@@ -2844,6 +2844,14 @@ body.dark-mode .table .opacity-50 {
 @media (prefers-reduced-motion: reduce) {
   .rulezy-say__avatar { animation: none; }
 }
+/* Toggled "on" state (e.g. RuleList's Rulezy filter) — a blue ring + glow
+   so the active/inactive state reads at a glance without any button chrome. */
+.rulezy-say__avatar--active {
+  filter: drop-shadow(0 0 6px rgba(13, 110, 253, .55));
+  border-radius: 50%;
+  outline: 2px solid #0d6efd;
+  outline-offset: 3px;
+}
 .rulezy-say__bubble {
   position: absolute;
   left: calc(100% + 12px);

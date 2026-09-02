@@ -4113,6 +4113,7 @@ def rules_data_table():
         has_cve=request.args.get('has_cve', 'false', type=str) == 'true',
         quality_score_min=request.args.get('quality_score_min', None, type=float),
         quality_score_max=request.args.get('quality_score_max', None, type=float),
+        has_ai_analysis=request.args.get('has_ai_analysis', 'false', type=str) == 'true',
     )
 
     rule_ids = [r.id for r in pagination.items]

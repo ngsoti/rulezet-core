@@ -53,6 +53,7 @@
         :current-user-id="{{ current_user.id if current_user.is_authenticated else 'null' }}"
         :current-user-is-admin="{{ current_user.is_admin() | tojson }}"
         :show-create="{{ current_user.is_authenticated | tojson }}"
+        :show-rulezy-filter="true"
         :current-user-is-authenticated="{{ current_user.is_authenticated | tojson }}"
         :csrf-token="csrfToken"
         :sync-url="true"

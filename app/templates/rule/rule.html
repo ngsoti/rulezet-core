@@ -712,7 +712,7 @@
         <div class="card-body p-4" style="position: relative; z-index: 1;">
         <div class="rulezy-say rulezy-say--left rulezy-say--corner" tabindex="0" role="button" @click="fillAiGenExample" @keydown.enter="fillAiGenExample">
           <img src="{{ url_for('static', filename='images/rulezy/rule-generator.png') }}" alt="Rulezy" class="rulezy-say__avatar">
-          <div class="rulezy-say__bubble">Hi, I'm Rulezy! Describe what you want to detect and I'll draft a YARA rule for it — always just a draft, you review and edit it before it becomes a real rule. Click me for an example!</div>
+          <div class="rulezy-say__bubble">I'll draft a YARA rule from whatever you describe below — always just a draft, you review and edit it before it becomes real. Click me for an example, or click again for another one!</div>
         </div>
         <div class="d-flex align-items-center gap-2 mb-1">
           <div class="h-card__accent"></div>
@@ -957,10 +957,39 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
 
                   // Click Rulezy for a worked example — shows what a good
                   // description/sample pair looks like, doesn't submit anything.
+                  // A different one each click (never the one currently shown).
+                  const AI_GEN_EXAMPLES = [
+                        {
+                              description: 'Detect a Windows executable (PE file) that imports the function CredEnumerateW from advapi32.dll and also contains the string "Mimikatz" — commonly used for credential dumping.',
+                              sample: 'Mimikatz',
+                        },
+                        {
+                              description: 'Detect a ransom note text file containing phrases like "your files have been encrypted" alongside a bitcoin wallet address or payment instructions.',
+                              sample: 'your files have been encrypted',
+                        },
+                        {
+                              description: 'Detect a script that combines PowerShell\'s -EncodedCommand flag with an Invoke-Expression (IEX) call — a common way to run an obfuscated payload.',
+                              sample: '-EncodedCommand',
+                        },
+                        {
+                              description: 'Detect a Windows executable with an unusually high number of PE sections and no digital signature — a pattern often seen in packed or obfuscated malware.',
+                              sample: '',
+                        },
+                        {
+                              description: 'Detect a file that contains a hardcoded IP address followed by an uncommon port such as 4444 or 8080, a pattern often seen in hardcoded C2 configuration.',
+                              sample: ':4444',
+                        },
+                  ];
+                  let _lastExampleIndex = -1;
                   function fillAiGenExample() {
-                        aiGenDescription.value = 'Detect a Windows executable (PE file) that imports the function CredEnumerateW from advapi32.dll and also contains the string "Mimikatz" — commonly used for credential dumping.';
-                        aiGenSample.value = 'Mimikatz';
-                        create_message('Example filled in — feel free to edit it, then click Generate.', 'success-subtle');
+                        let idx = Math.floor(Math.random() * AI_GEN_EXAMPLES.length);
+                        if (AI_GEN_EXAMPLES.length > 1 && idx === _lastExampleIndex) {
+                              idx = (idx + 1) % AI_GEN_EXAMPLES.length;
+                        }
+                        _lastExampleIndex = idx;
+                        aiGenDescription.value = AI_GEN_EXAMPLES[idx].description;
+                        aiGenSample.value = AI_GEN_EXAMPLES[idx].sample;
+                        create_message('Example filled in — feel free to edit it, then click Generate. Click me again for a different one!', 'success-subtle');
                   }
 
                   async function generateWithAi() {

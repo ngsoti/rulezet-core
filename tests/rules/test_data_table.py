@@ -100,3 +100,38 @@ def test_export_download_by_ids(client):
     res = client.get(f"/rule/export/download?ids={item['id']}&export_format=json_each")
     assert res.status_code == 200
     assert res.data[:2] == b'PK'  # zip magic bytes
+
+
+def test_data_table_has_ai_analysis_filter(app, client):
+    """The "Rulezy's picks" toggle on RuleList — rules with a real
+    AIGeneration(agent_key='rule_analysis', rule_id=...) row match, a rule
+    with no analysis at all is excluded."""
+    import uuid as uuid_mod
+    from app import db
+    from app.core.db_class.db import AIGeneration, Rule, User
+
+    with app.app_context():
+        rule = Rule.query.first()
+        user_id = User.query.first().id
+        db.session.add(AIGeneration(
+            uuid=str(uuid_mod.uuid4()), agent_key='rule_analysis', rule_id=rule.id,
+            user_id=user_id, content='report', is_public=True,
+        ))
+        db.session.commit()
+        analyzed_id = rule.id
+
+    unfiltered = client.get('/rule/data_table?per_page=100').get_json()
+    filtered = client.get('/rule/data_table?has_ai_analysis=true&per_page=100').get_json()
+
+    assert filtered['total'] <= unfiltered['total']
+    assert any(r['id'] == analyzed_id for r in filtered['items'])
+    # A rule_fixer/rule_generator AIGeneration row (rule_id always null for
+    # those) must never make an unrelated rule match this filter.
+    with app.app_context():
+        db.session.add(AIGeneration(
+            uuid=str(uuid_mod.uuid4()), agent_key='rule_fixer', rule_id=None,
+            user_id=user_id, content='x', is_public=True,
+        ))
+        db.session.commit()
+    refiltered = client.get('/rule/data_table?has_ai_analysis=true&per_page=100').get_json()
+    assert refiltered['total'] == filtered['total']
