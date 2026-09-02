@@ -710,12 +710,18 @@
       <div class="card border-0 card_detail border-top shadow-lg mb-4" style="border-radius: 12px;">
         <div class="card-watermark-detail"><i class="fas fa-robot"></i></div>
         <div class="card-body p-4" style="position: relative; z-index: 1;">
-        <div class="d-flex align-items-center gap-2 mb-1">
-          <div class="h-card__accent"></div>
-          <h6 class="mb-0 fw-bold text-uppercase" style="font-size:.78rem;letter-spacing:.04em;color:var(--text-color);">
-            <i class="fas fa-robot me-1" style="color:#0d6efd;"></i>Generate with AI
-            <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill ms-1" style="font-size:.6rem;vertical-align:middle;">BETA</span>
-          </h6>
+        <div class="d-flex align-items-center justify-content-between gap-3 mb-1">
+          <div class="d-flex align-items-center gap-2">
+            <div class="h-card__accent"></div>
+            <h6 class="mb-0 fw-bold text-uppercase" style="font-size:.78rem;letter-spacing:.04em;color:var(--text-color);">
+              <i class="fas fa-robot me-1" style="color:#0d6efd;"></i>Generate with AI
+              <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill ms-1" style="font-size:.6rem;vertical-align:middle;">BETA</span>
+            </h6>
+          </div>
+          <div class="rulezy-say rulezy-say--left" tabindex="0">
+            <img src="{{ url_for('static', filename='images/rulezy/rule-generator.png') }}" alt="Rulezy" class="rulezy-say__avatar">
+            <div class="rulezy-say__bubble">Hi, I'm Rulezy! Describe what you want to detect and I'll draft a YARA rule for it — always just a draft, you review and edit it before it becomes a real rule.</div>
+          </div>
         </div>
         <p class="text-muted mb-3" style="font-size:.83rem;margin-left:1.3rem;">
           Describe what you want to detect and get a YARA draft — always reviewed here before it becomes a real rule. YARA only, for now.

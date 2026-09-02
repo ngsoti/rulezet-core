@@ -2748,6 +2748,108 @@ body.dark-mode .table .opacity-50 {
   object-fit: contain;
 }
 
+/* Rulezy avatar + hover speech bubble — sits to the left of an AI feature's
+   controls, says a short first-person blurb about what it does on hover/
+   focus. Same mechanism as .rf-label-hint (rule.html) — a CSS-only tooltip
+   off a data attribute, no JS needed — just bigger, for an avatar image
+   instead of a "?" glyph, and opening rightward (the avatar sits at the
+   left edge of its section, a leftward bubble would run off-screen). */
+.rulezy-say {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  cursor: help;
+}
+.rulezy-say__avatar {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  transition: transform .15s ease;
+}
+.rulezy-say:hover .rulezy-say__avatar,
+.rulezy-say:focus .rulezy-say__avatar,
+.rulezy-say:focus-within .rulezy-say__avatar {
+  transform: scale(1.08);
+}
+.rulezy-say__bubble {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  padding: .65rem .85rem;
+  font-size: .78rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-color);
+  width: max-content;
+  max-width: 260px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .15s ease;
+  z-index: 20;
+}
+.rulezy-say__bubble::before,
+.rulezy-say__bubble::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 7px solid transparent;
+}
+.rulezy-say__bubble::before { right: 100%;      border-right-color: var(--border-color); }
+.rulezy-say__bubble::after  { right: calc(100% - 1px); border-right-color: var(--card-bg-color); border-width: 6px; }
+.rulezy-say:hover .rulezy-say__bubble,
+.rulezy-say:focus .rulezy-say__bubble,
+.rulezy-say:focus-within .rulezy-say__bubble {
+  opacity: 1;
+  visibility: visible;
+}
+/* Avatar sitting at the right edge of its row (e.g. level with a section
+   title) — the default rightward-opening bubble would run off the card's
+   edge, so flip it to open leftward instead. */
+.rulezy-say--left .rulezy-say__bubble {
+  left: auto;
+  right: calc(100% + 12px);
+}
+.rulezy-say--left .rulezy-say__bubble::before,
+.rulezy-say--left .rulezy-say__bubble::after {
+  right: auto;
+}
+.rulezy-say--left .rulezy-say__bubble::before { left: 100%; border-left-color: var(--border-color); border-right-color: transparent; }
+.rulezy-say--left .rulezy-say__bubble::after  { left: calc(100% - 1px); border-left-color: var(--card-bg-color); border-right-color: transparent; border-width: 6px; }
+
+@media (max-width: 576px) {
+  /* Not enough room for a rightward bubble beside a narrow card — open
+     it below the avatar instead of clipping off the viewport edge. */
+  .rulezy-say__bubble,
+  .rulezy-say--left .rulezy-say__bubble {
+    left: 50%;
+    top: calc(100% + 12px);
+    transform: translateX(-50%);
+  }
+  .rulezy-say__bubble::before,
+  .rulezy-say__bubble::after,
+  .rulezy-say--left .rulezy-say__bubble::before,
+  .rulezy-say--left .rulezy-say__bubble::after {
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: 100%;
+    transform: translateX(-50%);
+    border-left-color: transparent !important;
+    border-right-color: transparent !important;
+  }
+  .rulezy-say__bubble::before,
+  .rulezy-say--left .rulezy-say__bubble::before { border-bottom-color: var(--border-color); }
+  .rulezy-say__bubble::after,
+  .rulezy-say--left .rulezy-say__bubble::after  { border-bottom-color: var(--card-bg-color); bottom: calc(100% - 1px); }
+}
+
 .banner-accent {
   width: 36px;
   height: 3px;
