@@ -213,6 +213,40 @@ def test_greeting_followed_by_a_real_request_is_not_swallowed(app):
         mock_chat.assert_called_once()
 
 
+# ── identity — confirmed live: even after the system prompt was told the
+#    assistant's name is Rulezy, "who are you"/"what's your name" still got
+#    "I am Rulezet" (the platform's name, one line later in the same
+#    prompt) back instead of its own. Fixed identity answer for this. ───────
+
+def test_who_are_you_gets_the_right_identity_never_calls_ollama(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "who are you?")
+        mock_chat.assert_not_called()
+        assert "Rulezy" in result['reply']
+        assert not result['reply'].startswith("I am Rulezet")
+
+
+def test_whats_your_name_gets_the_right_identity(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "what's your name")
+        mock_chat.assert_not_called()
+        assert "Rulezy" in result['reply']
+
+
+def test_who_are_you_does_not_collide_with_what_is_rulezet(app):
+    # "what is rulezet" is a different, pre-existing question (about the
+    # platform) that must still reach the model, not the identity shortcut.
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT, return_value=_envelope(reply="Rulezet is a rule-sharing platform.")) as mock_chat:
+            handle_message(user, [], "what is rulezet?")
+        mock_chat.assert_called_once()
+
+
 # ── "I don't know, whatever you want" after being asked what a rule should
 #    detect — confirmed live: the model just gets confused. This chatbot
 #    never invents rule content on its own, so answer honestly instead. ─────

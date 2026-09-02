@@ -63,7 +63,8 @@ _ROUTES = {
     # Not a permission bug to fix, a destination that's intentionally absent.
 }
 
-SYSTEM_PROMPT = """Rulezet: open-source platform for cybersecurity detection rules (""" + ', '.join(sorted(_VALID_FORMATS)) + """). Users write/import rules, group into bundles, tag them (MISP/ATT&CK), propose edits, comment/vote, sync via connectors.
+SYSTEM_PROMPT = """You are Rulezy, Rulezet's assistant — that IS your name. When addressed by name ("hi Rulezy", "are you good, Rulezy?") or asked how you are, respond naturally in first person as yourself (e.g. "Doing great, thanks for asking!") — never talk about "Rulezy" as if it were someone else, and never echo the name back confused about who it refers to.
+Rulezet: open-source platform for cybersecurity detection rules (""" + ', '.join(sorted(_VALID_FORMATS)) + """). Users write/import rules, group into bundles, tag them (MISP/ATT&CK), propose edits, comment/vote, sync via connectors.
 Always reply in English, even if the user writes in another language or in gibberish.
 If the message is gibberish/unclear/off-topic -> action "ask", reply politely asking them to rephrase what they'd like to do — never leave "reply" blank.
 If asked "what is Rulezet" -> brief chat summary of the above, nothing invented.
@@ -86,7 +87,7 @@ Rules:
 
 Examples:
 "I want yara rules with a CVE" -> ask: "Which CVE?"
-"yara rules tagged ransomware, CVE-2024-1234, by jdoe" -> search_rules {"rule_type":"yara","tags":["ransomware"],"vulnerabilities":["CVE-2024-1234"],"authors":["jdoe"]}
+"yara rules tagged ransomware, CVE-2024-1234, by Florian Roth" -> search_rules {"rule_type":"yara","tags":["ransomware"],"vulnerabilities":["CVE-2024-1234"],"authors":["Florian Roth"]}
 "rules for CVE-2026-15155?" -> search_rules {"vulnerabilities":["CVE-2026-15155"]}  (search, not create — no write/create verb)
 ...then "no just this param" -> search_rules {"vulnerabilities":["CVE-2026-15155"]}  (run it now, don't re-ask)
 "found ayara rules" -> search_rules {"rule_type":"ayara"}  (pass through, backend fixes the typo)
@@ -656,6 +657,28 @@ def _maybe_greeting(message: str):
     return {"action": "chat", "reply": _GREETING_REPLY, "success": True}
 
 
+# "who are you" / "what's your name" — confirmed live: even with the system
+# prompt now stating the assistant's name is Rulezy, the model still answers
+# "I am Rulezet" (the platform's name, mentioned one line later in the same
+# prompt) instead of its own. A fixed identity answer, same rationale as
+# _maybe_format_question below — don't trust a small model to keep two
+# similar-looking proper nouns straight.
+_WHO_ARE_YOU_RE = re.compile(
+    r"\b(who are you|what'?s your name|what is your name|who'?s rulezy|what is rulezy)\b",
+    re.IGNORECASE,
+)
+_WHO_ARE_YOU_REPLY = (
+    "I'm Rulezy — Rulezet's assistant. I can create a rule or a bundle for you, "
+    "or dig through the rule list by tag, CVE, ATT&CK technique, author, and more."
+)
+
+
+def _maybe_who_are_you(message: str):
+    if not _WHO_ARE_YOU_RE.search(message):
+        return None
+    return {"action": "chat", "reply": _WHO_ARE_YOU_REPLY, "success": True}
+
+
 def _maybe_format_question(message: str):
     """This question has exactly one correct, context-free answer — answer it in
     code instead of trusting a small local model to reproduce a fixed list verbatim
@@ -781,7 +804,7 @@ def _dispatch_message(user, history: list, message: str) -> dict:
     if gate is not None:
         return gate
 
-    for shortcut_fn in (_maybe_greeting, _maybe_format_question, _maybe_explain_question, _maybe_search_rules_shortcut):
+    for shortcut_fn in (_maybe_greeting, _maybe_who_are_you, _maybe_format_question, _maybe_explain_question, _maybe_search_rules_shortcut):
         shortcut = shortcut_fn(message)
         if shortcut is not None:
             return shortcut

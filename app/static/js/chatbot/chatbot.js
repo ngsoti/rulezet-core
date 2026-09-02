@@ -30,26 +30,33 @@ const CHAT_EXAMPLES = [
     'Show me yara rules',
     'Do you have rules to detect Mimikatz?',
     'Take me to my rules',
+    'Find rules by Florian Roth',
+    'Do you have sigma rules for CVE-2023-23397?',
+    'Take me to the dashboard',
+    'Create a bundle called Weekly Threat Digest',
+    'What formats does Rulezet support?',
+    'What is a detection rule?',
+    'Go to my tags',
 ]
 
 const ChatbotWidget = {
     delimiters: ['[[', ']]'],
     setup() {
-        const open     = ref(false)
-        const draft    = ref('')
-        const loading  = ref(false)
+        const open = ref(false)
+        const draft = ref('')
+        const loading = ref(false)
         const messages = ref([
             { role: 'assistant', content: "Hey, I'm Rulezy! Tell me to whip up a rule or a bundle, or send me hunting through the rule list — by tag, CVE, ATT&CK technique, author, a GitHub source, you name it. Or just say hi." },
         ])
         const messagesEl = ref(null)
-        const inputEl    = ref(null)
+        const inputEl = ref(null)
         // Groups every message sent during this widget session into one row on
         // the admin conversation-history page — assigned by the backend on the
         // first reply, then reused for every message after that.
         const conversationId = ref(null)
 
         // Sent-message recall (Up/Down, like a shell history) — oldest first.
-        const sentHistory  = ref([])
+        const sentHistory = ref([])
         const historyCursor = ref(null)  // null = live typing; 0 = most recent sent message, 1 = one before that, ...
 
         let lastExampleIndex = null
