@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from app.core.db_class.db import User
 from app.features.ai.ai_core import get_agent
+from app.features.ai.chatbot import chatbot_core
 from app.features.ai.chatbot.chatbot_core import handle_message
 
 CHAT = 'app.features.ai.ai_core.OllamaClient.chat'
@@ -61,6 +62,55 @@ def test_handle_message_navigate_admin_page_denied_for_non_admin(app):
         assert 'admin' in result['reply'].lower()
 
 
+# ── navigate shortcut — confirmed live: "I want to go to my tag" got action
+#    "chat" with the reply literally being the raw destination key
+#    ("my_tags") as text, never an actual redirect. ───────────────────────────
+
+def test_navigate_shortcut_handles_reported_case_never_calls_ollama(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "I want to go to my tag")
+        mock_chat.assert_not_called()
+        assert result['action'] == 'navigate'
+        assert result['redirect'] == '/tags/my_tags'
+
+
+def test_navigate_shortcut_handles_several_phrasings(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        cases = {
+            "take me to the dashboard": '/dashboard/',
+            "go to my rules": '/rule/owner_rules',
+            "open the admin logs": '/admin/logs',
+        }
+        for message, expected_path in cases.items():
+            with patch(CHAT) as mock_chat:
+                result = handle_message(user, [], message)
+            mock_chat.assert_not_called()
+            assert result['redirect'] == expected_path, message
+
+
+def test_navigate_shortcut_still_enforces_admin_permission(app):
+    with app.app_context():
+        user = User.query.filter_by(email="neo@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "go to the admin logs")
+        mock_chat.assert_not_called()
+        assert result['success'] is False
+        assert 'admin' in result['reply'].lower()
+
+
+def test_navigate_shortcut_ignores_unrelated_go_to_phrasing(app):
+    # "go to" with no recognized destination keyword must defer to the model
+    # rather than silently doing nothing or guessing.
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT, return_value=_envelope(reply="Sweet dreams!")) as mock_chat:
+            handle_message(user, [], "go to sleep")
+        mock_chat.assert_called_once()
+
+
 def test_handle_message_falls_back_to_plain_text_on_invalid_json(app):
     with app.app_context():
         user = User.query.filter_by(email="admin@admin.admin").first()
@@ -77,6 +127,79 @@ def test_handle_message_deterministic_shortcut_never_calls_ollama(app):
             result = handle_message(user, [], "what formats are supported?")
         mock_chat.assert_not_called()
         assert 'yara' in result['reply'].lower()
+
+
+# ── bare greeting — confirmed live: a small model on the simplest possible
+#    input ("hi") sometimes just echoes it back verbatim instead of replying.
+
+def test_bare_greeting_gets_a_real_reply_never_calls_ollama(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "hi")
+        mock_chat.assert_not_called()
+        assert result['reply'] == chatbot_core._GREETING_REPLY
+
+
+def test_greeting_with_punctuation_still_matches(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            handle_message(user, [], "Hello!")
+        mock_chat.assert_not_called()
+
+
+def test_greeting_followed_by_a_real_request_is_not_swallowed(app):
+    # "hi, can you create a rule?" must reach the model/other logic, not get
+    # short-circuited into the plain greeting reply.
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT, return_value=_envelope(reply="Sure, what should it detect?")) as mock_chat:
+            handle_message(user, [], "hi, can you create a rule?")
+        mock_chat.assert_called_once()
+
+
+# ── "I don't know, whatever you want" after being asked what a rule should
+#    detect — confirmed live: the model just gets confused. This chatbot
+#    never invents rule content on its own, so answer honestly instead. ─────
+
+def test_punt_reply_during_create_rule_flow_never_calls_ollama(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        history = [
+            {"role": "user", "content": "can you create me a yara rule ?"},
+            {"role": "assistant", "content": "Sure, what would you like the rule to detect?"},
+        ]
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, history, "I don't know as you want")
+        mock_chat.assert_not_called()
+        assert 'prototype' in result['reply'].lower()
+        assert 'Generate with AI' in result['reply']
+
+
+def test_punt_reply_requires_create_verb_in_recent_history(app):
+    # A punt phrase with no ongoing create-rule flow behind it isn't
+    # necessarily about rule creation — defer to the model as usual.
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT, return_value=_envelope(reply="ok")) as mock_chat:
+            handle_message(user, [], "I don't know, what do you think?")
+        mock_chat.assert_called_once()
+
+
+def test_punt_reply_does_not_fire_during_bundle_creation(app):
+    # The beta-limitation message is specifically about RULE content — a
+    # punt during bundle creation (which just needs a name) is different.
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        history = [
+            {"role": "user", "content": "create a bundle for me"},
+            {"role": "assistant", "content": "Sure, what should it be called?"},
+        ]
+        with patch(CHAT, return_value=_envelope(action='ask', reply="What should I call it?")) as mock_chat:
+            result = handle_message(user, history, "I don't know, whatever you want")
+        mock_chat.assert_called_once()
+        assert 'prototype' not in result['reply'].lower()
 
 
 # ── search_rules shortcut — small local models are unreliable at this,
@@ -318,6 +441,28 @@ def test_create_rule_shortcut_requires_a_named_format(app):
         with patch(CHAT, return_value=_envelope(reply="Which format?")) as mock_chat:
             result = handle_message(user, history, _YARA_RULE_CONTENT)
         mock_chat.assert_called_once()
+
+
+def test_create_rule_shortcut_offers_a_link_when_the_rule_already_exists(app):
+    # Creating the exact same rule content twice must not be a dead-end
+    # error — the second attempt should point back at the rule that's
+    # already there (parse_rule_by_format now resolves add_rule_core's
+    # DUPLICATE: message back into a real Rule for this).
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        history = [{"role": "user", "content": "create a yara rule"}]
+
+        with patch(CHAT) as mock_chat:
+            first = handle_message(user, history, _YARA_RULE_CONTENT)
+        assert first['success'] is True
+        first_link = first['link']
+
+        with patch(CHAT) as mock_chat:
+            second = handle_message(user, history, _YARA_RULE_CONTENT)
+        mock_chat.assert_not_called()  # still the deterministic shortcut, not the model
+        assert second['success'] is False
+        assert 'already exists' in second['reply'].lower()
+        assert second['link'] == first_link
 
 
 def test_search_shortcut_never_hijacks_create_rule_requests(app):

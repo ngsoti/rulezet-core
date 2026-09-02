@@ -571,7 +571,7 @@ def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, 
 
         existing_rule = get_rule_by_content(new_to_string)
         if existing_rule is not None:
-            return False, "Rule already exists (content matches)"
+            return False, f"DUPLICATE:{existing_rule.uuid}:{existing_rule.id}:{existing_rule.title}"
 
         # Check if the same content exists in the trash — offer restore instead
         trashed_rule = _find_in_trash_by_content(new_to_string)

@@ -253,7 +253,7 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
             else:
                 msg_str = str(msg)
                 # Duplicate — not an invalid rule, clean up the bad_rule entry
-                if "already exists" in msg_str.lower() or msg_str.startswith("TRASH_CONFLICT"):
+                if msg_str.startswith("DUPLICATE:") or "already exists" in msg_str.lower() or msg_str.startswith("TRASH_CONFLICT"):
                     db.session.delete(bad_rule_obj)
                     db.session.commit()
                 return False, msg_str or "Failed to insert rule.", None
@@ -313,7 +313,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
     exists, rule_id = RuleModel.rule_exists(metadata)
     if exists == True:
         rule = RuleModel.get_rule(rule_id)
-        return False, "Rule already exists with id " + str(rule_id) + ".", rule
+        return False, f'A rule with this exact content already exists: "{rule.title}".', rule
 
     if github_path:
         metadata["github_path"] = github_path
@@ -323,7 +323,16 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
         return True, "Rule created", rule
     else:
         msg_str = str(msg)
-        # Duplicate — silently skip, no bad_rule entry needed
+        # Duplicate — silently skip, no bad_rule entry needed. DUPLICATE:
+        # embeds the existing rule's uuid/id/title (add_rule_core) — resolve
+        # it back to a real Rule so callers (e.g. the chatbot) can offer a
+        # link to it, same as the rule_exists() case just above.
+        if msg_str.startswith("DUPLICATE:"):
+            parts = msg_str.split(":", 3)
+            dup_id = parts[2] if len(parts) > 2 else ''
+            dup_title = parts[3] if len(parts) > 3 else 'this rule'
+            dup_rule = RuleModel.get_rule(int(dup_id)) if dup_id.isdigit() else None
+            return False, f'A rule with this exact content already exists: "{dup_title}".', dup_rule
         if "already exists" in msg_str.lower() or msg_str.startswith("TRASH_CONFLICT"):
             return False, msg_str, None
         if github_path:

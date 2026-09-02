@@ -110,6 +110,26 @@ def test_duplicate_uuid_is_rejected(client, app):
         assert Rule.query.filter_by(original_uuid=VALID_PAYLOAD["uuid"]).count() == 1
 
 
+def test_duplicate_content_redirects_to_the_existing_rule(client, app):
+    # Same to_string, different uuid — add_rule_core's own content-based
+    # dedup (not the route's uuid pre-check) is what catches this one, and
+    # should redirect straight to the existing rule instead of a dead end.
+    login_user(client)
+    first = import_json(client, VALID_PAYLOAD)
+    with app.app_context():
+        existing_id = Rule.query.filter_by(title=VALID_PAYLOAD["title"]).first().id
+
+    again = dict(VALID_PAYLOAD, title="Same Content Different Uuid",
+                 uuid="11111111-2222-3333-4444-555555555555")
+    resp = import_json(client, again)
+    assert resp.status_code == 200
+    assert resp.request.path == f"/rule/detail_rule/{existing_id}"
+    assert b"already exists" in resp.data
+
+    with app.app_context():
+        assert Rule.query.filter_by(title="Same Content Different Uuid").first() is None
+
+
 def test_duplicate_content_is_rejected(client, app):
     login_user(client)
     import_json(client, VALID_PAYLOAD)  # first import succeeds

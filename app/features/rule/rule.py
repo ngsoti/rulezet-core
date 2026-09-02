@@ -122,6 +122,17 @@ def rule() -> render_template:
             t_title = parts[3] if len(parts) > 3 else 'deleted rule'
             flash(f'TRASH_CONFLICT:{t_uuid}:{t_id}:{t_title}', 'warning')
             return render_template("rule/rule.html", form=form, ai_generate_available=ai_generate_available)
+        elif isinstance(message, str) and message.startswith("DUPLICATE:"):
+            # An active rule with this exact content already exists — go
+            # straight to it instead of leaving the user with a dead-end error.
+            parts    = message.split(":", 3)
+            dup_id   = parts[2] if len(parts) > 2 else ''
+            dup_title = parts[3] if len(parts) > 3 else 'this rule'
+            if dup_id.isdigit():
+                flash(f'A rule with this exact content already exists: "{dup_title}".', 'info')
+                return redirect(url_for('rule.detail_rule', rule_id=int(dup_id)))
+            flash(f'A rule with this exact content already exists: "{dup_title}".', 'danger')
+            return render_template("rule/rule.html", form=form, ai_generate_available=ai_generate_available)
         else:
             flash(message, 'danger')
             return render_template("rule/rule.html", form=form, ai_generate_available=ai_generate_available)
@@ -3203,6 +3214,17 @@ def import_rule_from_json():
         t_id    = parts[2] if len(parts) > 2 else ''
         t_title = parts[3] if len(parts) > 3 else 'deleted rule'
         flash(f'TRASH_CONFLICT:{t_uuid}:{t_id}:{t_title}', 'warning')
+        return redirect(url_for('rule.rule', tab='json'))
+    elif isinstance(message, str) and message.startswith("DUPLICATE:"):
+        # An active rule with this exact content already exists — go
+        # straight to it instead of leaving the user with a dead-end error.
+        parts    = message.split(":", 3)
+        dup_id   = parts[2] if len(parts) > 2 else ''
+        dup_title = parts[3] if len(parts) > 3 else 'this rule'
+        if dup_id.isdigit():
+            flash(f'A rule with this exact content already exists: "{dup_title}".', 'info')
+            return redirect(url_for('rule.detail_rule', rule_id=int(dup_id)))
+        flash(f'A rule with this exact content already exists: "{dup_title}".', 'danger')
         return redirect(url_for('rule.rule', tab='json'))
     else:
         flash(message, 'danger')

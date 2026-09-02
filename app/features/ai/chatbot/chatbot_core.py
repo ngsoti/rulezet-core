@@ -503,11 +503,101 @@ def _navigate(user, params: dict) -> dict:
     return {"success": True, "reply": f"Opening {dest.replace('_', ' ')}.", "redirect": path}
 
 
+# "go to my tags" / "take me to the dashboard" — confirmed live: the model
+# sometimes just chats the raw destination KEY back as text ("my_tags")
+# instead of wrapping it in a real navigate action, so nothing ever
+# redirects. Checked in order — first phrase match wins, most specific first.
+_NAVIGATE_VERB_RE = re.compile(
+    r'\b(?:go\s+to|take\s+me\s+to|navigate\s+to|bring\s+me\s+to|open\s+the|show\s+me\s+(?:the\s+)?)\b',
+    re.IGNORECASE,
+)
+_NAVIGATE_KEYWORDS = (
+    ('my_rules', ('my rule',)),
+    ('rules_list', ('rule list', 'all rules', 'browse rules', 'the rules page')),
+    ('my_tags', ('my tag',)),
+    ('create_bundle_page', ('create a bundle', 'new bundle page', 'add a bundle')),
+    ('bundles_list', ('bundle list', 'all bundles', 'my bundles', 'the bundles')),
+    ('create_rule_page', ('create a rule', 'new rule page', 'add a rule')),
+    ('workspaces', ('workspace',)),
+    ('dashboard', ('dashboard',)),
+    ('notifications', ('notification',)),
+    ('blog', ('blog',)),
+    ('comments_hub', ('comment',)),
+    ('leaderboard', ('leaderboard', 'contributor', 'top contributors')),
+    ('profile', ('my profile', 'my account', 'account settings')),
+    ('ownership_requests', ('ownership request',)),
+    ('attack_heatmap', ('attack heatmap', 'att&ck heatmap', 'attack matrix')),
+    ('docs_full', ('full docs', 'full documentation')),
+    ('docs', ('docs', 'documentation')),
+    ('settings', ('settings',)),
+    ('my_jobs', ('my job', 'job list', 'jobs page')),
+    ('activity_feed', ('activity feed', 'recent activity')),
+    ('about', ('about page', 'about rulezet')),
+    ('privacy_policy', ('privacy policy',)),
+    ('legal_notice', ('legal notice',)),
+    ('trash', ('trash', 'deleted rule')),
+    ('connectors', ('connector list', 'the connectors')),
+    ('connector_how_it_works', ('how connectors work', 'connector documentation')),
+    ('velociraptor_how_it_works', ('how velociraptor works',)),
+    ('velociraptor', ('velociraptor',)),
+    ('admin_settings', ('admin settings', 'instance settings')),
+    ('admin_logs', ('admin logs', 'activity logs', 'the logs')),
+    ('admin_chatbot_history', ('chatbot conversations', 'chatbot history')),
+    ('admin_users', ('all users', 'manage users', 'user list')),
+    ('admin_reports', ('admin reports', 'the reports')),
+    ('admin_formats', ('manage formats', 'rule formats page')),
+    ('admin_similar_rules', ('similar rules',)),
+    ('home', ('the home page', 'the homepage')),
+)
+
+
+def _maybe_navigate_shortcut(message: str):
+    if not _NAVIGATE_VERB_RE.search(message):
+        return None
+    msg_lower = message.lower()
+    for dest, phrases in _NAVIGATE_KEYWORDS:
+        if any(p in msg_lower for p in phrases):
+            return dest
+    return None
+
+
 _CREATE_VERBS_RE = re.compile(r'\b(write|create|generate|make|build)\b', re.IGNORECASE)
+
+# "I don't know, whatever you want" — a user punting the "what should it
+# detect?" question back to the bot instead of answering it.
+_PUNT_RE = re.compile(
+    r"\b(i\s*don'?t\s*know|idk|whatever\s+you\s+want|whatever\s+works|you\s+decide|"
+    r"up\s+to\s+you|your\s+choice|you\s+choose|surprise\s+me|no\s+preference|"
+    r"don'?t\s+care|anything\s+you\s+want|as\s+you\s+(?:want|wish|like))\b",
+    re.IGNORECASE,
+)
+_BETA_CANNOT_INVENT_REPLY = (
+    "I'm just a prototype, so I can't freely invent a rule out of nothing — "
+    "I need you to paste the actual rule content, or at least describe exactly "
+    "what it should detect. If you'd rather I draft one from a description, "
+    "try the \"Generate with AI\" tab on the create-rule page instead — that "
+    "tool is actually built for it."
+)
+
 _FORMAT_QUESTION_RE = re.compile(
     r'\b(what|which|list)\b.{0,30}\bformats?\b|\bformats?\b.{0,30}\b(available|supported|exist|do you support|can you use|are there)\b',
     re.IGNORECASE,
 )
+
+# A bare "hi"/"hello" with nothing else has one obvious reply — a small
+# model on the simplest possible input still confirmed live to sometimes
+# just echo the greeting back verbatim instead of actually replying.
+_GREETING_ONLY_RE = re.compile(
+    r'^\s*(?:hi+|hello+|hey+|yo+|sup|howdy|greetings|good\s*(?:morning|afternoon|evening))\s*[!.,]*\s*$',
+    re.IGNORECASE,
+)
+_GREETING_REPLY = "Hi! What can I do for you — create a rule, put together a bundle, or go dig through the rule list?"
+
+
+def _maybe_greeting(message: str):
+    if not _GREETING_ONLY_RE.match(message):
+        return None
+    return {"action": "chat", "reply": _GREETING_REPLY, "success": True}
 
 
 def _maybe_format_question(message: str):
@@ -575,10 +665,19 @@ def _maybe_explain_question(message: str):
 
 def _dispatch_message(user, history: list, message: str) -> dict:
     """history: list of {"role": "user"|"assistant", "content": "..."} from the current session only."""
-    for shortcut_fn in (_maybe_format_question, _maybe_explain_question, _maybe_search_rules_shortcut):
+    for shortcut_fn in (_maybe_greeting, _maybe_format_question, _maybe_explain_question, _maybe_search_rules_shortcut):
         shortcut = shortcut_fn(message)
         if shortcut is not None:
             return shortcut
+
+    # "go to my tags" / "take me to the dashboard" — confirmed live: the
+    # model sometimes chats the raw destination key back as plain text
+    # instead of a real navigate action, so nothing ever redirects. Needs
+    # user for the admin-permission check, so it can't join the loop above.
+    nav_dest = _maybe_navigate_shortcut(message)
+    if nav_dest:
+        outcome = _navigate(user, {'destination': nav_dest})
+        return {"action": "navigate", **outcome}
 
     # A message that's just pasted rule content, with a create-verb somewhere
     # in recent history, is unambiguous — but confirmed live: handed the
@@ -597,6 +696,21 @@ def _dispatch_message(user, history: list, message: str) -> dict:
             if fmt:
                 outcome = _create_rule(user, {'format': fmt, 'content': message})
                 return {"action": "create_rule", **outcome}
+
+    # "I don't know, whatever you want" after being asked what a rule should
+    # detect — confirmed live: the model just gets confused and gives a
+    # generic non-answer. This chatbot deliberately never invents rule
+    # content on its own (create_rule requires the content to really appear
+    # in what the user typed — a prior fix for hallucinated content slipping
+    # past the validator), so answer honestly about that limit instead of
+    # leaving the user with a reply that doesn't explain anything.
+    if _PUNT_RE.search(message):
+        recent_user_text = message + ' ' + ' '.join(
+            h.get('content', '') for h in history[-6:] if h.get('role') == 'user'
+        )
+        if (_CREATE_VERBS_RE.search(recent_user_text) and _RULE_MENTION_RE.search(recent_user_text)
+                and not re.search(r'\bbundles?\b', recent_user_text, re.IGNORECASE)):
+            return {"action": "chat", "reply": _BETA_CANNOT_INVENT_REPLY, "success": True}
 
     from app.features.ai.ai_core import get_agent
 
