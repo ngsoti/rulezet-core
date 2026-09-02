@@ -77,9 +77,9 @@ window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
             <div v-if="proposedContent" class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
                 <p class="fw-semibold small mb-1 text-warning">
                     <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                    This is a single, unchecked proposal — not syntax-validated. Review it carefully before saving.
+                    Here's what I came up with — I didn't double-check it compiles, so have a good look at the diff before you save it.
                 </p>
-                <p v-if="proposedExplanation" class="text-muted small mb-2">[[ proposedExplanation ]]</p>
+                <p v-if="proposedExplanation" class="text-muted small mb-2 fst-italic">"[[ proposedExplanation ]]"</p>
                 <diff-viewer
                     :key="proposedContent"
                     :initial-left="content"

@@ -176,11 +176,11 @@
 
         <template v-else>
             <div class="card border-0 shadow-sm rounded-4 p-5 text-center mb-4">
-                <div class="rulezy-say d-inline-flex mb-2" tabindex="0">
+                <div class="rulezy-say rulezy-say--below mb-2" tabindex="0">
                     <img src="{{ url_for('static', filename='images/rulezy/analyseRule.png') }}" alt="Rulezy" class="rulezy-say__avatar">
-                    <div class="rulezy-say__bubble">Hi, I'm Rulezy! I haven't looked at this rule yet — an admin can ask me to, or check back later.</div>
+                    <div class="rulezy-say__bubble">I read the rule's content, tags, and ATT&amp;CK mapping, then write up what I find in plain English — an admin just has to ask me to.</div>
                 </div>
-                <p class="mb-0" style="color: var(--subtle-text-color);">No AI analysis has been generated for this rule yet.</p>
+                <p class="mb-0 fst-italic" style="color: var(--subtle-text-color);">"I haven't had a chance to look at this one yet."</p>
             </div>
         </template>
 

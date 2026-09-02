@@ -2849,6 +2849,29 @@ body.dark-mode .table .opacity-50 {
   z-index: 5;
 }
 
+/* Avatar horizontally centered in its container (e.g. an empty-state card)
+   rather than sitting at a known left/right edge — a sideways bubble has an
+   unpredictable amount of room in either direction depending on the card's
+   width, so open it centered below the avatar instead, which works the
+   same regardless of how wide the card is. */
+.rulezy-say--below .rulezy-say__bubble {
+  left: 50%;
+  top: calc(100% + 12px);
+  transform: translateX(-50%);
+}
+.rulezy-say--below .rulezy-say__bubble::before,
+.rulezy-say--below .rulezy-say__bubble::after {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 100%;
+  transform: translateX(-50%);
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+}
+.rulezy-say--below .rulezy-say__bubble::before { border-bottom-color: var(--border-color); }
+.rulezy-say--below .rulezy-say__bubble::after  { border-bottom-color: var(--card-bg-color); bottom: calc(100% - 1px); }
+
 @media (max-width: 576px) {
   /* Not enough room for a rightward bubble beside a narrow card — open
      it below the avatar instead of clipping off the viewport edge. */

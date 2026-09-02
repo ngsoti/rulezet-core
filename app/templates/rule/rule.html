@@ -768,9 +768,9 @@
         <div v-if="aiGenDraft" class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
           <p class="fw-semibold small mb-1" :class="aiGenValid ? 'text-success' : 'text-warning'">
             <i class="fa-solid me-1" :class="aiGenValid ? 'fa-circle-check' : 'fa-triangle-exclamation'"></i>
-            [[ aiGenValid ? 'This draft passes syntax validation.' : 'This draft did not pass syntax validation — review carefully before using it.' ]]
+            [[ aiGenValid ? "Here's my draft — it compiles cleanly, but give it a read before you use it." : "Here's my draft — it didn't pass a quick compile check, so you'll likely need to tweak it." ]]
           </p>
-          <p v-if="aiGenExplanation" class="text-muted small mb-2">[[ aiGenExplanation ]]</p>
+          <p v-if="aiGenExplanation" class="text-muted small mb-2 fst-italic">"[[ aiGenExplanation ]]"</p>
 
           <div class="mb-2">
             <label class="form-label-styled mb-1" for="ai-gen-title">Title</label>
