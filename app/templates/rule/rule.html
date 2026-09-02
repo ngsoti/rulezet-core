@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/smart-editor.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/license-input.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/ai-thinking-steps.css') }}">
 <style>
 .rf-label-hint {
     display: inline-flex;
@@ -72,6 +73,11 @@
 }
 .rf-label-hint:hover::after,
 .rf-label-hint:hover::before { opacity: 1; }
+
+.ai-gen-form--busy {
+    opacity: .55;
+    transition: opacity .15s ease;
+}
 </style>
 {% endblock %}
 {# Computed at template top-level (not inside a {% block %}) so both
@@ -119,22 +125,28 @@
 
 
 
-  <nav class="dr-nav justify-content-center mb-3">
-    <a href="#" class="dr-nav__item flex-fill justify-content-center" :class="activeTab === 'manual' ? 'active' : ''" @click.prevent="activeTab = 'manual'">
+  <nav class="dr-nav mb-3">
+    <a href="#" class="dr-nav__item" :class="activeTab === 'manual' ? 'active' : ''" @click.prevent="activeTab = 'manual'">
       <i class="fas fa-pen-to-square"></i><span>Manual</span>
     </a>
-    <a href="#" class="dr-nav__item flex-fill justify-content-center" :class="activeTab === 'parse' ? 'active' : ''" @click.prevent="activeTab = 'parse'">
+    <a href="#" class="dr-nav__item" :class="activeTab === 'parse' ? 'active' : ''" @click.prevent="activeTab = 'parse'">
       <i class="fas fa-wand-magic-sparkles"></i><span>Parse</span>
     </a>
-    <a href="#" class="dr-nav__item flex-fill justify-content-center" :class="activeTab === 'github' ? 'active' : ''" @click.prevent="activeTab = 'github'">
+    <a href="#" class="dr-nav__item" :class="activeTab === 'github' ? 'active' : ''" @click.prevent="activeTab = 'github'">
       <i class="fab fa-github"></i><span>GitHub</span>
     </a>
-    <a href="#" class="dr-nav__item flex-fill justify-content-center" :class="activeTab === 'zip' ? 'active' : ''" @click.prevent="activeTab = 'zip'">
-      <i class="fas fa-file-zipper"></i><span>From File</span>
+    <a href="#" class="dr-nav__item" :class="activeTab === 'zip' ? 'active' : ''" @click.prevent="activeTab = 'zip'">
+      <i class="fas fa-file-zipper"></i><span>Zip</span>
     </a>
-    <a href="#" class="dr-nav__item flex-fill justify-content-center" :class="activeTab === 'json' ? 'active' : ''" @click.prevent="activeTab = 'json'">
-      <i class="fas fa-code"></i><span>From JSON</span>
+    <a href="#" class="dr-nav__item" :class="activeTab === 'json' ? 'active' : ''" @click.prevent="activeTab = 'json'">
+      <i class="fas fa-code"></i><span>Json</span>
     </a>
+    {% if ai_generate_available %}
+    <a href="#" class="dr-nav__item" :class="activeTab === 'ai_generate' ? 'active' : ''" @click.prevent="activeTab = 'ai_generate'">
+      <i class="fas fa-robot"></i><span>AI</span>
+      <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill ms-1" style="font-size:.6rem;">BETA</span>
+    </a>
+    {% endif %}
   </nav>
   <!-- ═══════════════════════════ TAB CONTENT ═══════════════════════════ -->
   <div id="createTabsContent">
@@ -692,6 +704,98 @@
       </div>
     </div>
 
+    {% if ai_generate_available %}
+    <!-- ── Tab 6 : Generate with AI (Beta) ── -->
+    <div v-show="activeTab === 'ai_generate'">
+      <div class="card border-0 card_detail border-top shadow-lg mb-4" style="border-radius: 12px;">
+        <div class="card-watermark-detail"><i class="fas fa-robot"></i></div>
+        <div class="card-body p-4" style="position: relative; z-index: 1;">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <div class="h-card__accent"></div>
+          <h6 class="mb-0 fw-bold text-uppercase" style="font-size:.78rem;letter-spacing:.04em;color:var(--text-color);">
+            <i class="fas fa-robot me-1" style="color:#0d6efd;"></i>Generate with AI
+            <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill ms-1" style="font-size:.6rem;vertical-align:middle;">BETA</span>
+          </h6>
+        </div>
+        <p class="text-muted mb-3" style="font-size:.83rem;margin-left:1.3rem;">
+          Describe what you want to detect and get a YARA draft — always reviewed here before it becomes a real rule. YARA only, for now.
+        </p>
+        <hr style="border-color:var(--border-color);margin:0 0 1rem;">
+
+        <!-- Live progress — shown FIRST, above the form, the moment a generation starts -->
+        <div v-if="aiGenSteps.length" class="mb-4 pb-3" style="border-bottom:1px solid var(--border-color);">
+          <ai-thinking-steps :steps="aiGenSteps" :active="aiGenBusy"></ai-thinking-steps>
+        </div>
+
+        <fieldset :disabled="aiGenBusy" :class="{ 'ai-gen-form--busy': aiGenBusy }">
+        <div class="mb-3">
+          <div class="d-flex align-items-center gap-1 mb-1">
+            <label class="form-label-styled mb-0" for="ai-gen-description">What do you want to detect?<span class="req-badge">required</span></label>
+            <i class="rf-label-hint" data-tip="Plain language — e.g. 'a PE file that imports CredEnumerateW and contains the string Mimikatz'.">?</i>
+          </div>
+          <textarea id="ai-gen-description" class="form-control" rows="3"
+                    placeholder="e.g. Detect a Windows executable that imports CredEnumerateW and contains the string &quot;Mimikatz&quot;…"
+                    v-model="aiGenDescription"></textarea>
+        </div>
+
+        <div class="mb-3">
+          <div class="d-flex align-items-center gap-1 mb-1">
+            <label class="form-label-styled mb-0" for="ai-gen-sample">Sample <span class="opt-badge">optional</span></label>
+            <i class="rf-label-hint" data-tip="A string, hex pattern, or short excerpt to ground the rule in — used as-is, never executed.">?</i>
+          </div>
+          <textarea id="ai-gen-sample" class="form-control" rows="2"
+                    placeholder="A distinctive string, hex pattern, or short excerpt…"
+                    v-model="aiGenSample" style="font-family:var(--font-mono);font-size:.85rem;"></textarea>
+        </div>
+
+        <div class="d-flex justify-content-end mb-1">
+          <button type="button" class="btn btn-primary px-4" style="border-radius:8px;"
+                  :disabled="aiGenBusy || !aiGenDescription.trim()" @click="generateWithAi">
+            <i class="fa-solid me-2" :class="aiGenBusy ? 'fa-spinner fa-spin' : 'fa-sparkles'"></i>
+            [[ aiGenBusy ? 'Generating…' : 'Generate' ]]
+          </button>
+        </div>
+        </fieldset>
+
+        <div v-if="aiGenError" class="alert alert-secondary py-2 px-3 mt-3 mb-0" style="font-size:.82rem;">
+          <i class="fa-solid fa-circle-info me-1"></i>[[ aiGenError ]]
+        </div>
+
+        <div v-if="aiGenDraft" class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
+          <p class="fw-semibold small mb-1" :class="aiGenValid ? 'text-success' : 'text-warning'">
+            <i class="fa-solid me-1" :class="aiGenValid ? 'fa-circle-check' : 'fa-triangle-exclamation'"></i>
+            [[ aiGenValid ? 'This draft passes syntax validation.' : 'This draft did not pass syntax validation — review carefully before using it.' ]]
+          </p>
+          <p v-if="aiGenExplanation" class="text-muted small mb-2">[[ aiGenExplanation ]]</p>
+
+          <div class="mb-2">
+            <label class="form-label-styled mb-1" for="ai-gen-title">Title</label>
+            <input id="ai-gen-title" type="text" class="form-control" v-model="aiGenTitle">
+          </div>
+
+          <smart-editor
+            v-model="aiGenDraft"
+            mode="code"
+            language="yara"
+            name="ai_gen_draft"
+            min-height="300px"
+            max-height="60vh">
+          </smart-editor>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-sm btn-success rounded-pill px-3" @click="useAiDraft">
+              <i class="fa-solid fa-arrow-right me-1"></i>Use this draft — review &amp; submit
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="aiGenDraft = ''">
+              <i class="fa-solid fa-xmark me-1"></i>Discard
+            </button>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
   </div><!-- /tab-content -->
 </div>
 {% endblock %}
@@ -718,8 +822,9 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
       import VersionPicker from '/static/js/tags/utils/versionPicker.js';
       import AttackInput from '/static/js/attack/attackInput.js';
       import LicenseInput from '/static/js/components/LicenseInput.js';
+      import AIThinkingSteps from '/static/js/components/ai-thinking-steps.js';
 
-      const VALID_TABS = ['manual', 'parse', 'github', 'zip', 'json'];
+      const VALID_TABS = ['manual', 'parse', 'github', 'zip', 'json', 'ai_generate'];
 
       createApp({
             delimiters: ['[[', ']]'],
@@ -730,6 +835,7 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                   'version-picker': VersionPicker,
                   'attack-input': AttackInput,
                   'license-input': LicenseInput,
+                  'ai-thinking-steps': AIThinkingSteps,
             },
             setup() {
                   const requestedTab = new URLSearchParams(window.location.search).get('tab');
@@ -831,6 +937,101 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                                     if (!manualFormat.value) manualFormat.value = rules_formats.value[0].name;
                               }
                         }
+                  }
+
+                  // ── Generate with AI (Beta) ──────────────────────────────
+                  const aiGenDescription = ref('');
+                  const aiGenSample      = ref('');
+                  const aiGenBusy        = ref(false);
+                  const aiGenSteps       = ref([]);
+                  const aiGenError       = ref('');
+                  const aiGenDraft       = ref('');
+                  const aiGenTitle       = ref('');
+                  const aiGenExplanation = ref('');
+                  const aiGenValid       = ref(false);
+                  const aiGenModel       = ref('');
+
+                  async function generateWithAi() {
+                        if (!aiGenDescription.value.trim()) return;
+                        aiGenBusy.value  = true;
+                        aiGenError.value = '';
+                        aiGenSteps.value = [];
+                        aiGenDraft.value = '';
+                        aiGenTitle.value = '';
+                        aiGenExplanation.value = '';
+
+                        try {
+                              const res = await fetch('/rule/ai_generate_rule', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': $("#csrf_token").val() },
+                                    body: JSON.stringify({ description: aiGenDescription.value, sample: aiGenSample.value }),
+                              });
+                              if (!res.ok || !res.body) {
+                                    const data = await res.json().catch(() => ({}));
+                                    aiGenError.value = data.error || `Request failed (${res.status}).`;
+                                    return;
+                              }
+
+                              const reader = res.body.getReader();
+                              const decoder = new TextDecoder();
+                              let buffer = '';
+
+                              while (true) {
+                                    const { done, value } = await reader.read();
+                                    if (done) break;
+                                    buffer += decoder.decode(value, { stream: true });
+
+                                    let newlineIndex;
+                                    while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+                                          const line = buffer.slice(0, newlineIndex).trim();
+                                          buffer = buffer.slice(newlineIndex + 1);
+                                          if (!line) continue;
+
+                                          const event = JSON.parse(line);
+                                          if (event.type === 'step') {
+                                                aiGenSteps.value = [...aiGenSteps.value, { stage: event.stage, text: event.text }];
+                                          } else if (event.type === 'result') {
+                                                if (event.ok && event.rule_content) {
+                                                      aiGenDraft.value       = event.rule_content;
+                                                      aiGenTitle.value       = event.title || '';
+                                                      aiGenExplanation.value = event.explanation || '';
+                                                      aiGenValid.value       = !!event.valid;
+                                                      aiGenModel.value       = event.model || '';
+                                                } else if (!event.ok) {
+                                                      aiGenError.value = event.error || 'Could not generate a draft.';
+                                                }
+                                          }
+                                    }
+                              }
+                        } catch (e) {
+                              aiGenError.value = 'Network error: ' + e;
+                        } finally {
+                              aiGenBusy.value = false;
+                        }
+                  }
+
+                  // Hands the draft to the existing Manual tab — the human still
+                  // reviews/edits every field and clicks the normal Save button;
+                  // this never submits on its own. Title/source/description are
+                  // pre-filled defaults, not locked — everything stays editable,
+                  // and tags/license/ATT&CK/etc. still need to be filled in by hand.
+                  function useAiDraft() {
+                        manualContent.value = aiGenDraft.value;
+                        manualFormat.value  = 'yara';
+                        if (aiGenTitle.value) {
+                              const titleInput = document.getElementById('title');
+                              if (titleInput) titleInput.value = aiGenTitle.value;
+                        }
+                        const sourceInput = document.getElementById('source');
+                        if (sourceInput) sourceInput.value = `AI Generator (${aiGenModel.value || 'unknown model'})`;
+                        const descriptionInput = document.getElementById('description');
+                        if (descriptionInput) descriptionInput.value = aiGenExplanation.value || '';
+
+                        activeTab.value = 'manual';
+                        create_message(
+                              'Draft loaded into the Manual tab — Source and Description were pre-filled from the AI generation, both fully editable. Add license, tags, ATT&CK techniques etc. as usual, then click Save.',
+                              'success-subtle'
+                        );
                   }
 
                   async function import_git_url() {
@@ -1086,6 +1287,19 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                         myProposalsLoading,
                         submitGithubProposal,
                         cancelMyProposal,
+
+                        aiGenDescription,
+                        aiGenSample,
+                        aiGenBusy,
+                        aiGenSteps,
+                        aiGenError,
+                        aiGenDraft,
+                        aiGenTitle,
+                        aiGenExplanation,
+                        aiGenValid,
+                        aiGenModel,
+                        generateWithAi,
+                        useAiDraft,
                   };
             }
       }).mount('#main-container');

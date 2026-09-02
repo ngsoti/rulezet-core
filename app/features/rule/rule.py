@@ -35,6 +35,7 @@ from .exporters.sigma_convert_exporter import convert_sigma_rule, SIGMA_CONVERT_
 # Rules_core
 
 from .rules_core import bad_rule_core as BadRuleModel
+from .rules_core import rule_generator_core as RuleGeneratorModel
 
 ################################################################################################### 
 
@@ -52,6 +53,16 @@ rule_blueprint = Blueprint(
 #   Rule List       #
 #####################
 
+def _ai_generate_available() -> bool:
+    """Gate for the "Generate with AI (Beta)" tab — off when the rule_generator
+    agent is disabled instance-wide. YARA-only for now: the prompt/skeleton
+    (rule_generator_agent.py) has only been designed and tested against YARA."""
+    from app.core.db_class.db import AIAgentConfig
+
+    cfg = AIAgentConfig.query.filter_by(agent_key='rule_generator').first()
+    return cfg.enabled if cfg else True
+
+
 @rule_blueprint.route("/create_rule", methods=['GET', 'POST'])
 @login_required
 def rule() -> render_template:
@@ -61,18 +72,19 @@ def rule() -> render_template:
     form = AddNewRuleForm()
     licenses = get_licst_license()
     form.license.choices = [(lic, lic) for lic in licenses]
+    ai_generate_available = _ai_generate_available()
 
     # form send to treatment
 
     if form.validate_on_submit():
         form_dict = form_to_dict(form)
         rule_dict = fill_all_void_field(form_dict)
-        
+
         # try to compile or verify the syntax of the rule (in the format choose)
         valide , error = verify_syntax_rule_by_format(rule_dict)
 
         if valide == False:
-                return render_template("rule/rule.html", error=error, form=form)
+                return render_template("rule/rule.html", error=error, form=form, ai_generate_available=ai_generate_available)
 
         v_data = request.form.get('vulnerabilities')
         form_dict['vulnerabilities'] = v_data
@@ -109,11 +121,42 @@ def rule() -> render_template:
             t_id    = parts[2] if len(parts) > 2 else ''
             t_title = parts[3] if len(parts) > 3 else 'deleted rule'
             flash(f'TRASH_CONFLICT:{t_uuid}:{t_id}:{t_title}', 'warning')
-            return render_template("rule/rule.html", form=form)
+            return render_template("rule/rule.html", form=form, ai_generate_available=ai_generate_available)
         else:
             flash(message, 'danger')
-            return render_template("rule/rule.html", form=form)
-    return render_template("rule/rule.html", form=form )
+            return render_template("rule/rule.html", form=form, ai_generate_available=ai_generate_available)
+    return render_template("rule/rule.html", form=form, ai_generate_available=ai_generate_available)
+
+
+@rule_blueprint.route("/ai_generate_rule", methods=['POST'])
+@login_required
+def ai_generate_rule():
+    """Runs the Rule Generator agent (Beta, YARA only) against a plain-language
+    description, staging a draft — never applying it. The human still has to
+    review it and submit through the normal "Add a Detection Rule" form,
+    exactly like a manually-typed rule.
+
+    Streams the shared "thinking steps" protocol (AI_00_FOUNDATION.md §10),
+    one {"type": "step", ...} line per stage, then a final {"type": "result",
+    ...} line — same shape as the Rule Fixer's streaming route."""
+    if not _ai_generate_available():
+        return jsonify({"ok": False, "error": "AI rule generation isn't available."}), 400
+
+    data = request.get_json(silent=True) or {}
+    description = (data.get('description') or '').strip()
+    sample = (data.get('sample') or '').strip() or None
+    if not description:
+        return jsonify({"ok": False, "error": "Please describe what you want to detect."}), 400
+
+    user_id = current_user.id
+
+    def generate():
+        from app.core.db_class.db import User
+        fresh_user = User.query.get(user_id)
+        for event in RuleGeneratorModel.run_ai_generate_streaming(fresh_user, description, sample=sample):
+            yield json.dumps(event) + "\n"
+
+    return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 
 
 @rule_blueprint.route("/rules_list", methods=['GET'])

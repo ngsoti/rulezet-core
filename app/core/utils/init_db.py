@@ -246,7 +246,7 @@ def insert_default_ai_agent_configs():
         {"agent_key": "rule_analysis", "enabled": True, "max_per_hour": None,
          "timeout_s": 300, "num_predict": 4096, "default_model": "qwen2.5:7b"},
         {"agent_key": "rule_generator", "enabled": True, "max_per_hour": 20,
-         "timeout_s": 180, "num_predict": 4096},
+         "timeout_s": 180, "num_predict": 4096, "default_model": "qwen2.5-coder:7b"},
         {"agent_key": "rule_fixer", "enabled": True, "max_per_hour": 30,
          "timeout_s": 240, "num_predict": 2048, "default_model": "qwen2.5-coder:7b"},
     ]
