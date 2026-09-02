@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+{% import 'macros/ai_admin_nav.html' as ai_nav %}
+
+{% block title %}How AI Works — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<style>
+  .hiw-section { scroll-margin-top: 80px; }
+
+  .hiw-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    color: #fff;
+    font-weight: 700;
+    font-size: .85rem;
+    flex-shrink: 0;
+  }
+
+  .hiw-flow-arrow {
+    font-size: 1.4rem;
+    color: #0d6efd;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .hiw-flow-box {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--card-bg-color);
+    padding: .75rem 1rem;
+    font-size: .83rem;
+    text-align: center;
+    flex: 1;
+  }
+
+  .hiw-toc-link {
+    display: block;
+    padding: .35rem .75rem;
+    color: var(--subtle-text-color);
+    text-decoration: none;
+    font-size: .82rem;
+    border-left: 2px solid transparent;
+    transition: all .15s;
+    border-radius: 0 4px 4px 0;
+  }
+  .hiw-toc-link:hover {
+    color: #0d6efd;
+    border-left-color: #0d6efd;
+    background: rgba(13,110,253,.06);
+  }
+
+  .hiw-callout {
+    border-left: 3px solid;
+    border-radius: 0 8px 8px 0;
+    padding: .75rem 1rem;
+    font-size: .84rem;
+    margin-bottom: 0;
+  }
+  .hiw-callout--info    { border-color: #0d6efd; background: rgba(13,110,253,.07); }
+  .hiw-callout--warning { border-color: #ffc107; background: rgba(255,193,7,.07); }
+  .hiw-callout--success { border-color: #198754; background: rgba(25,135,84,.07); }
+  .hiw-callout--danger  { border-color: #dc3545; background: rgba(220,53,69,.07); }
+
+  .hiw-agent-card {
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-color);
+    padding: 1.25rem;
+    height: 100%;
+  }
+
+  .hiw-rulezy-narrate {
+    display: flex;
+    align-items: flex-start;
+    gap: .85rem;
+    background: rgba(13,110,253,.05);
+    border: 1px dashed rgba(13,110,253,.3);
+    border-radius: 12px;
+    padding: .9rem 1.1rem;
+    margin: 1rem 0;
+    font-size: .87rem;
+  }
+  .hiw-rulezy-narrate img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .hiw-rulezy-narrate i.hiw-rulezy-fallback {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(13,110,253,.1);
+    color: #0d6efd;
+    flex-shrink: 0;
+    font-size: 1.1rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-4">
+
+  <!-- ── Banner ──────────────────────────────────────────────────── -->
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-robot banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('ai.admin_overview') }}" class="text-decoration-none text-muted">AI</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">How it works</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      {% if mascot_enabled %}
+      <div class="banner-icon banner-icon--mascot"><img src="{{ url_for('static', filename='images/rulezy/simple.png') }}" alt=""></div>
+      {% else %}
+      <div class="banner-icon"><i class="fa-solid fa-robot"></i></div>
+      {% endif %}
+      <div>
+        <h2 class="fw-bold mb-1">How AI Works</h2>
+        <div class="banner-accent"></div>
+      </div>
+    </div>
+    <p class="text-muted mb-0" style="max-width:660px;font-size:.95rem;">
+      A complete walkthrough of Rulezet's AI system — the shared architecture every feature is built on,
+      then exactly how each of the four agents works under the hood.
+    </p>
+  </div>
+
+  {{ ai_nav.ai_admin_nav('how_it_works') }}
+
+  {% if mascot_enabled %}
+  <div class="hiw-rulezy-narrate">
+    <img src="{{ url_for('static', filename='images/rulezy/reflexion.png') }}" alt="Rulezy">
+    <div>
+      <strong>Hi, it's me.</strong> Before you read another word: I'm a small, self-hosted model —
+      think "enthusiastic intern with a checklist," not "evil AI overlord." No API key, no billing,
+      nothing phones home. I'll walk you through exactly how I work, section by section — no marketing fluff,
+      just the actual mechanics. Let's go.
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+
+    <!-- ── Sticky Table of Contents ──────────────────────────────── -->
+    <div class="col-lg-3 d-none d-lg-block">
+      <div class="sticky-top" style="top:1.5rem;">
+        <div class="p-3 rounded-3 border shadow-sm" style="background:var(--card-bg-color);border-color:var(--border-color)!important;">
+          <div class="fw-bold mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle-text-color);">
+            <i class="fa-solid fa-list-ul me-2 text-primary"></i>On this page
+          </div>
+          <nav class="border-start ps-1" style="border-color:var(--border-color)!important;">
+            <a class="hiw-toc-link" href="#what-is">What is Rulezet AI?</a>
+            <a class="hiw-toc-link" href="#architecture">The shared architecture</a>
+            <a class="hiw-toc-link" href="#guardrails">Security &amp; guardrails</a>
+            <a class="hiw-toc-link" href="#chatbot">Chatbot</a>
+            <a class="hiw-toc-link" href="#rule-analysis">Rule Analysis</a>
+            <a class="hiw-toc-link" href="#rule-generator">Rule Generator</a>
+            <a class="hiw-toc-link" href="#rule-fixer">Rule Fixer</a>
+            <a class="hiw-toc-link" href="#admin-controls">Admin controls</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Main content ──────────────────────────────────────────── -->
+    <div class="col-lg-9">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 1 — What is Rulezet AI?
+      ════════════════════════════════════════════════════════════ -->
+      <section id="what-is" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-circle-info" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">What is Rulezet AI?</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Rulezet's AI features are all powered by a self-hosted <strong>Ollama</strong> instance — there's no
+          third-party API key, no per-token billing, and nothing leaves the instance. Four independent agents share
+          one architecture: a <strong>Chatbot</strong> assistant, a <strong>Rule Analysis</strong> summarizer,
+          a <strong>Rule Generator</strong> (Beta, YARA-only), and a <strong>Rule Fixer</strong>. Each one is a
+          thin, single-purpose wrapper — a system prompt, a bit of parsing logic, and a call into existing
+          rule/bundle code. None of them re-implement anything Rulezet already does; they just decide
+          <em>when</em> to call it.
+        </p>
+        <div class="hiw-callout hiw-callout--warning mt-3">
+          <i class="fa-solid fa-triangle-exclamation me-2 text-warning"></i>
+          Every agent runs on whatever model the instance admin configures — often a small, fast model.
+          Small models are unreliable at strict structured output, so every agent leans on
+          <strong>deterministic code, not model trust</strong>, wherever a wrong answer would actually matter.
+          That design choice shows up throughout this page.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 2 — The shared architecture
+      ════════════════════════════════════════════════════════════ -->
+      <section id="architecture" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-layer-group" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">The shared architecture</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          All four agents extend the same base class and go through the same pipeline before a single token
+          is ever generated.
+        </p>
+
+        <div class="d-flex flex-column gap-3 mt-2">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">1</div>
+            <div style="font-size:.88rem;">
+              <strong>One agent, one class</strong><br>
+              <span class="text-muted">
+                Every feature is a small class implementing a shared <code>AIAgent</code> interface — its own
+                system prompt, its own way of turning a request into messages, and its own way of parsing the
+                model's reply back into something usable. Adding a new AI feature means writing one new class,
+                not touching the pipeline.
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">2</div>
+            <div style="font-size:.88rem;">
+              <strong>Feature flag &amp; rate limit</strong><br>
+              <span class="text-muted">
+                Before anything else, the agent checks whether it's enabled for this instance (an admin kill
+                switch) and whether the calling user is under their per-hour rate limit. Both are configurable
+                per agent — batch/admin-triggered agents like Rule Analysis have no per-user limit by design.
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">3</div>
+            <div style="font-size:.88rem;">
+              <strong>Concurrency governor</strong><br>
+              <span class="text-muted">
+                Ollama runs on the instance's own hardware, so a slot-based governor caps how many model calls
+                run at once — a burst of requests queues instead of falling over.
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">4</div>
+            <div style="font-size:.88rem;">
+              <strong>The model call</strong><br>
+              <span class="text-muted">
+                A shared Ollama client sends the prompt to whichever model this agent is configured to use
+                (an explicit per-agent choice, or the instance's global default) and reads back a response.
+              </span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">5</div>
+            <div style="font-size:.88rem;">
+              <strong>Every call, logged</strong><br>
+              <span class="text-muted">
+                Success or failure, every single call — which agent, which user, which model, how long it took,
+                and whether it looked suspicious — is written to one shared execution log, visible to admins on
+                the Models &amp; Security page.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--info mt-4">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          The model itself is swappable per agent from a shared allowlist synced straight from Ollama's own model
+          list — disabling a model there removes it from every feature's dropdown at once.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 3 — Security & guardrails
+      ════════════════════════════════════════════════════════════ -->
+      <section id="guardrails" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          {% if mascot_enabled %}
+          <div class="banner-icon banner-icon--mascot" style="width:42px;height:42px;"><img src="{{ url_for('static', filename='images/rulezy/armcross.png') }}" alt=""></div>
+          {% else %}
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-shield-halved" style="font-size:1.1rem;"></i></div>
+          {% endif %}
+          <h4 class="fw-bold mb-0">Security &amp; guardrails</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Rule content and user descriptions are <strong>untrusted input</strong> the moment they reach a model —
+          they're framed as data, never as instructions, and scanned for prompt-injection patterns before the
+          call is made.
+        </p>
+
+        <div class="row g-3 mt-1">
+          <div class="col-md-6">
+            <div class="hiw-agent-card">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-quote-left text-primary me-2"></i>Untrusted-data framing</div>
+              <p class="text-muted mb-0" style="font-size:.84rem;">
+                Anything a user typed — a rule's content, a plain-language description — is wrapped with an
+                explicit preamble telling the model it's reading data, not commands. This is the same principle
+                as any prompt-injection defense: content can describe what to detect, it can never instruct
+                the assistant to do something else.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="hiw-agent-card">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-magnifying-glass text-primary me-2"></i>Injection scanning</div>
+              <p class="text-muted mb-0" style="font-size:.84rem;">
+                The full input (not just a truncated preview) is scanned for injection-shaped phrasing before
+                the call. A flagged request still runs — the framing above already neutralizes it — but the flag
+                is visible to admins in the execution log, so a pattern of attempts stands out.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="hiw-agent-card">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-power-off text-primary me-2"></i>Per-feature kill switch</div>
+              <p class="text-muted mb-0" style="font-size:.84rem;">
+                Any of the four agents can be disabled instance-wide from the AI Overview page — instantly, no
+                restart needed — either one at a time or all at once.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="hiw-agent-card">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-gauge-high text-primary me-2"></i>Per-user rate limits</div>
+              <p class="text-muted mb-0" style="font-size:.84rem;">
+                Interactive agents (Chatbot, Rule Fixer, Rule Generator) cap how many calls a single user can
+                make per hour. Rule Analysis is admin/batch-triggered and isn't rate-limited the same way.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--danger mt-3">
+          <i class="fa-solid fa-circle-xmark me-2 text-danger"></i>
+          No agent is ever allowed to invent a value it wasn't given. Rule Generator and Rule Fixer only ever
+          propose <strong>drafts</strong> — nothing is saved until a human reviews it and clicks Save.
+          The Chatbot's create-rule action refuses to run unless the exact content it's about to save actually
+          appears in what the user typed.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 4 — Chatbot
+      ════════════════════════════════════════════════════════════ -->
+      <section id="chatbot" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          {% if mascot_enabled %}
+          <div class="banner-icon banner-icon--mascot" style="width:42px;height:42px;"><img src="{{ url_for('static', filename='images/rulezy/chatbot.png') }}" alt=""></div>
+          {% else %}
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-comment-dots" style="font-size:1.1rem;"></i></div>
+          {% endif %}
+          <h4 class="fw-bold mb-0">Chatbot</h4>
+          <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill" style="font-size:.65rem;">Prototype</span>
+        </div>
+
+        {% if mascot_enabled %}
+        <div class="hiw-rulezy-narrate">
+          <img src="{{ url_for('static', filename='images/rulezy/chatbot.png') }}" alt="Rulezy">
+          <div>
+            This one's me, in the little widget in the corner. I don't do real "tool calling" — I ask the model
+            to reply with a small JSON envelope instead: one action, plus whatever it needs to run it.
+          </div>
+        </div>
+        {% endif %}
+
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Every message is sent with a system prompt describing five possible actions —
+          <code>create_rule</code>, <code>create_bundle</code>, <code>navigate</code>, <code>search_rules</code>,
+          or plain <code>chat</code>/<code>ask</code> — and the model replies with exactly one of them as JSON.
+          The backend never re-implements rule/bundle logic itself; it just calls straight into the same
+          rule_core/bundle_core functions the rest of the site uses.
+        </p>
+
+        <div class="hiw-callout hiw-callout--warning mt-3 mb-3">
+          <i class="fa-solid fa-triangle-exclamation me-2 text-warning"></i>
+          Small models are inconsistent at this JSON-classification task — a plain "hi" can get echoed back
+          verbatim, a clear "create a bundle called X" can get answered with the raw JSON template's own
+          placeholder text instead of an actual bundle. Every one of these failure shapes, once found, gets a
+          <strong>deterministic pattern match</strong> that answers correctly without ever calling the model —
+          greetings, "who are you", search filters (tag/CVE/ATT&amp;CK id/author/source URL), navigation
+          destinations, and create-rule/bundle intent are all handled this way today. The model is only asked
+          when nothing else recognizes the message.
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="hiw-agent-card">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-magnifying-glass text-primary me-2"></i>search_rules</div>
+              <p class="text-muted mb-0" style="font-size:.84rem;">
+                Builds a link to the same filtered rule list you'd reach by clicking filters yourself — tag,
+                CVE, ATT&amp;CK technique, author/editor, GitHub source, or a free-text topic. No search API is
+                called; it's a plain redirect with the right query parameters, plus a real result count so the
+                reply is honest about whether anything actually matched.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="hiw-agent-card">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-file-circle-plus text-primary me-2"></i>create_rule</div>
+              <p class="text-muted mb-0" style="font-size:.84rem;">
+                Requires the actual rule content to already appear in what the user typed — nothing is ever
+                invented. Goes through the exact same parse-and-validate path as the "Parse" tab on the
+                create-rule page, so duplicate detection and syntax errors behave identically.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="hiw-agent-card">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-box text-primary me-2"></i>create_bundle</div>
+              <p class="text-muted mb-0" style="font-size:.84rem;">
+                Needs just a name (description optional) — calls the same bundle-creation function the manual
+                bundle form uses.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="hiw-agent-card">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-compass text-primary me-2"></i>navigate</div>
+              <p class="text-muted mb-0" style="font-size:.84rem;">
+                Picks from a fixed, closed list of page destinations — never a raw URL the model could invent.
+                Admin-only destinations are re-checked against the actual requesting user's permissions
+                server-side, regardless of what the model decided.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 5 — Rule Analysis
+      ════════════════════════════════════════════════════════════ -->
+      <section id="rule-analysis" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          {% if mascot_enabled %}
+          <div class="banner-icon banner-icon--mascot" style="width:42px;height:42px;"><img src="{{ url_for('static', filename='images/rulezy/analyseRule.png') }}" alt=""></div>
+          {% else %}
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-magnifying-glass-chart" style="font-size:1.1rem;"></i></div>
+          {% endif %}
+          <h4 class="fw-bold mb-0">Rule Analysis</h4>
+        </div>
+
+        {% if mascot_enabled %}
+        <div class="hiw-rulezy-narrate">
+          <img src="{{ url_for('static', filename='images/rulezy/analyseRule.png') }}" alt="Rulezy">
+          <div>
+            An admin points me at a rule, I read its content, tags, and ATT&amp;CK mapping, and I write up what
+            I find in plain English. That's the whole job — I'm a summarizer, not a critic with opinions I
+            haven't earned.
+          </div>
+        </div>
+        {% endif %}
+
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Triggered by an admin from a rule's detail page (or in bulk as a background job). The rule's content,
+          tags, and MITRE ATT&amp;CK associations are handed to the model with a prompt asking for a factual,
+          plain-English write-up — what the rule looks for, and how. The output is saved as one entry in that
+          rule's analysis history, and can be toggled public or admin-only.
+        </p>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          Admin-triggered and batch-friendly — this is the one agent without a per-user rate limit, since it's
+          never run by an arbitrary visitor.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 6 — Rule Generator
+      ════════════════════════════════════════════════════════════ -->
+      <section id="rule-generator" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          {% if mascot_enabled %}
+          <div class="banner-icon banner-icon--mascot" style="width:42px;height:42px;"><img src="{{ url_for('static', filename='images/rulezy/rule-generator.png') }}" alt=""></div>
+          {% else %}
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-wand-magic-sparkles" style="font-size:1.1rem;"></i></div>
+          {% endif %}
+          <h4 class="fw-bold mb-0">Rule Generator</h4>
+          <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill" style="font-size:.65rem;">Beta — YARA only</span>
+        </div>
+
+        {% if mascot_enabled %}
+        <div class="hiw-rulezy-narrate">
+          <img src="{{ url_for('static', filename='images/rulezy/rule-generator.png') }}" alt="Rulezy">
+          <div>
+            Tell me what you want to detect, I draft a YARA rule for you — one attempt, no back-and-forth
+            retries. You always land on the Manual tab afterward to actually read it before it becomes real.
+            I've never once been offended by an edit.
+          </div>
+        </div>
+        {% endif %}
+
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          You describe what the rule should detect (plus an optional sample string or pattern to ground it),
+          and the model drafts YARA content in <strong>one shot</strong> — deliberately no retry loop. A quick
+          compile check runs afterward as an <em>informational</em> signal only (shown to you, never blocking) —
+          re-validating in a loop would cost real time for a feature that's already asking you to review the
+          result by hand.
+        </p>
+
+        <div class="d-flex flex-column gap-3 mt-2">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">1</div>
+            <div style="font-size:.88rem;">
+              <strong>Describe it</strong><br>
+              <span class="text-muted">A plain-language description, optionally with a sample to anchor the pattern.</span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">2</div>
+            <div style="font-size:.88rem;">
+              <strong>One draft, one pass</strong><br>
+              <span class="text-muted">The model writes the rule once. A syntax check runs and its result is shown, but never blocks you from using the draft.</span>
+            </div>
+          </div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="hiw-step-num">3</div>
+            <div style="font-size:.88rem;">
+              <strong>You review, always</strong><br>
+              <span class="text-muted">The draft lands on the Manual creation tab — title, description, and source pre-filled — fully editable, never auto-published.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hiw-callout hiw-callout--warning mt-3">
+          <i class="fa-solid fa-triangle-exclamation me-2 text-warning"></i>
+          YARA-only for now, and marked Beta — the model can and does get pattern details wrong sometimes.
+          Treat every draft as a first pass, not a finished rule.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 7 — Rule Fixer
+      ════════════════════════════════════════════════════════════ -->
+      <section id="rule-fixer" class="hiw-section mb-5">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          {% if mascot_enabled %}
+          <div class="banner-icon banner-icon--mascot" style="width:42px;height:42px;"><img src="{{ url_for('static', filename='images/rulezy/rule-fixer.png') }}" alt=""></div>
+          {% else %}
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-wrench" style="font-size:1.1rem;"></i></div>
+          {% endif %}
+          <h4 class="fw-bold mb-0">Rule Fixer</h4>
+        </div>
+
+        {% if mascot_enabled %}
+        <div class="hiw-rulezy-narrate">
+          <img src="{{ url_for('static', filename='images/rulezy/rule-fixer.png') }}" alt="Rulezy">
+          <div>
+            I've fixed worse rules than yours. Probably. Click me on a broken rule's edit page, I read the
+            exact validator error and propose the smallest fix I can as a diff — one try, then it's your call.
+          </div>
+        </div>
+        {% endif %}
+
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Shown on a rule's edit page whenever it fails validation. One click sends the broken content and the
+          <strong>exact validator error message</strong> to the model, which proposes a minimal fix as a
+          diff against your original content. Like the Generator, this is deliberately <strong>one attempt,
+          no retry loop, no automatic re-validation</strong> — you decide whether the fix is right and click
+          Save yourself.
+        </p>
+
+        <div class="hiw-callout hiw-callout--info mt-3">
+          <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+          The fix is never applied automatically. You get a side-by-side diff and a short explanation of what
+          changed — nothing touches your rule until you review it and save.
+        </div>
+      </section>
+
+      <hr style="border-color:var(--border-color);" class="mb-5">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SECTION 8 — Admin controls
+      ════════════════════════════════════════════════════════════ -->
+      <section id="admin-controls" class="hiw-section mb-4">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="banner-icon" style="width:42px;height:42px;"><i class="fa-solid fa-sliders" style="font-size:1.1rem;"></i></div>
+          <h4 class="fw-bold mb-0">Admin controls</h4>
+        </div>
+        <p style="font-size:.92rem;color:var(--subtle-text-color);">
+          Two pages cover everything above, both under the AI admin section.
+        </p>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="hiw-agent-card">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-toggle-on text-primary me-2"></i>Overview</div>
+              <p class="text-muted mb-2" style="font-size:.84rem;">
+                Turn any of the four agents on or off instance-wide, or disable them all at once. Also has the
+                switch for whether Rulezy's mascot shows up anywhere on the site — purely cosmetic, the
+                features above keep working the same either way.
+              </p>
+              <a href="{{ url_for('ai.admin_overview') }}" class="btn btn-sm btn-outline-primary rounded-pill">Go to Overview</a>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="hiw-agent-card">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-shield-halved text-primary me-2"></i>Models &amp; Security</div>
+              <p class="text-muted mb-2" style="font-size:.84rem;">
+                The model allowlist shared by every feature, and the full cross-agent execution log — every
+                call, its status, latency, and whether it was flagged as a possible injection attempt.
+              </p>
+              <a href="{{ url_for('ai.admin_models') }}" class="btn btn-sm btn-outline-primary rounded-pill">Go to Models &amp; Security</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Back to AI overview -->
+      <div class="text-center pt-3">
+        <a href="{{ url_for('ai.admin_overview') }}" class="btn btn-primary rounded-pill px-4">
+          <i class="fa-solid fa-arrow-left me-2"></i>Back to AI Overview
+        </a>
+      </div>
+
+    </div><!-- /col main -->
+  </div><!-- /row -->
+</div><!-- /container -->
+{% endblock %}

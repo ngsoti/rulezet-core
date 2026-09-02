@@ -53,6 +53,7 @@ _ROUTES = {
     'admin_reports':          ('/report/admin', 'admin'),
     'admin_formats':          ('/rule/admin/manage_format_rule', 'admin'),
     'admin_similar_rules':    ('/admin/similar_rules', 'admin'),
+    'ai_how_it_works':        ('/ai/admin/how-it-works', 'admin'),
     'trash':                  ('/rule/trash', 'admin'),
     'connectors':             ('/connector/list', 'admin'),
     'velociraptor':           ('/velociraptor/list', 'admin'),
@@ -628,6 +629,7 @@ _NAVIGATE_KEYWORDS = (
     ('admin_reports', ('admin reports', 'the reports')),
     ('admin_formats', ('manage formats', 'rule formats page')),
     ('admin_similar_rules', ('similar rules',)),
+    ('ai_how_it_works', ('how the ai works', 'how ai works', 'ai documentation')),
     ('home', ('the home page', 'the homepage')),
 )
 

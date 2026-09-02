@@ -63,6 +63,11 @@ def admin_overview():
     return render_template('ai/admin_overview.html')
 
 
+@ai_blueprint.route('/admin/how-it-works', methods=['GET'])
+def admin_how_it_works():
+    return render_template('ai/ai_how_it_works.html')
+
+
 @ai_blueprint.route('/admin/<any(rule_analysis, rule_generator, rule_fixer):agent_key>/history/<string:uuid>', methods=['GET'])
 def history_detail(agent_key, uuid):
     gen = AIGeneration.query.filter_by(agent_key=agent_key, uuid=uuid).first()

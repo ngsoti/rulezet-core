@@ -34,6 +34,21 @@
 
   {{ ai_nav.ai_admin_nav('overview') }}
 
+  <!-- ── How AI works — link to doc page ─────────── -->
+  <div class="mb-4">
+    <a href="{{ url_for('ai.admin_how_it_works') }}"
+       class="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-pill text-decoration-none fw-semibold shadow-sm"
+       style="background:var(--card-bg-color);border:1px solid var(--border-color);color:var(--text-color);font-size:.875rem;transition:box-shadow .15s;">
+      {% if mascot_enabled %}
+      <img src="{{ url_for('static', filename='images/rulezy/simple.png') }}" alt="" style="width:24px;height:24px;object-fit:contain;">
+      {% else %}
+      <i class="fa-solid fa-circle-question text-primary"></i>
+      {% endif %}
+      How does the AI work?
+      <i class="fa-solid fa-arrow-right text-primary" style="font-size:.75rem;"></i>
+    </a>
+  </div>
+
   <!-- Per-feature toggles -->
   <div class="card border-0 shadow-sm rounded-4 mb-4">
     <div class="card-body p-4">
