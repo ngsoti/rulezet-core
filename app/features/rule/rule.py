@@ -2498,16 +2498,18 @@ def edit_bad_rule(rule_id):
 @rule_blueprint.route('/bad_rule/<int:rule_id>/ai_fix', methods=['POST'])
 @login_required
 def bad_rule_ai_fix(rule_id):
-    """Runs the Rule Fixer agent against a bad rule's existing content and
-    error message, proposing (never applying) a targeted fix — the human
+    """Runs the Rule Fixer agent once against a bad rule's existing content
+    and error message, proposing (never applying) a targeted fix — the human
     still has to explicitly click Save on the existing edit form above to
-    commit it, same as a manual fix.
+    commit it, same as a manual fix. One-shot: no retry loop, no automatic
+    syntax re-validation (see bad_rule_core.py's module docstring).
 
-    Streams newline-delimited JSON events as the loop progresses (one
-    {"type": "log", "message": "..."} line per step, then a final
-    {"type": "result", ...} line) instead of one response at the end — the
-    "Try AI fix" button otherwise just spins silently for the entire loop,
-    which reads as hung, not working."""
+    Streams newline-delimited JSON events as it progresses — the shared
+    "thinking steps" protocol (AI_00_FOUNDATION.md §10): one
+    {"type": "step", "stage": ..., "text": "..."} line per stage, then a
+    final {"type": "result", ...} line — instead of one response at the end,
+    so the "Try AI fix" button doesn't just spin silently, which reads as
+    hung, not working."""
     bad_rule = BadRuleModel.get_invalid_rule_by_id(rule_id)
     if not bad_rule:
         return jsonify({"ok": False, "error": "Not found."}), 404

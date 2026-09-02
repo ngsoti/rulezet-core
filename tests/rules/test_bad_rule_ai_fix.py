@@ -165,132 +165,38 @@ def test_ai_fix_route_blocks_when_agent_disabled(app, client):
     assert res.status_code == 400
 
 
-# ── run_ai_fix loop ────────────────────────────────────────────────────────────
+# ── run_ai_fix_streaming step sequence (one-shot design) ──────────────────────
+#
+# No retry loop, no verify_syntax_rule_by_format re-validation (see the
+# "one-shot redesign" note in bad_rule_core.py and AI_04_RULE_FIXER.md) —
+# exactly one call to the agent, then the shared "thinking steps" protocol
+# (AI_00_FOUNDATION.md §10): a sequence of {"type": "step", "stage", "text"}
+# events, closed by exactly one {"type": "result", ...}.
 
-# ── run_ai_fix_streaming event sequence ───────────────────────────────────────
-
-def test_streaming_emits_candidate_and_validated_events_live(app, monkeypatch):
+def test_streaming_emits_step_sequence_then_one_result_on_success(app, monkeypatch):
     with app.app_context():
         owner = User.query.filter_by(email="t@t.t").first()
         bad_rule_id = _make_bad_rule(app, owner.id)
         bad_rule = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
 
         fake_agent = _FakeAgent([
-            AgentResult(ok=True, content="rule x { condition: true }", model_used="m",
+            AgentResult(ok=True, content="rule x { condition: true }", model_used="qwen2.5-coder:7b",
                         meta={"explanation": "Fixed the typo."}),
         ])
         monkeypatch.setattr("app.features.ai.ai_core.get_agent", lambda key: fake_agent)
-        monkeypatch.setattr(
-            "app.features.rule.rule_format.main_format.verify_syntax_rule_by_format",
-            lambda rule_dict: (True, ""),
-        )
 
         events = list(BadRuleModel.run_ai_fix_streaming(bad_rule, owner))
-        types = [e["type"] for e in events]
+        assert len(fake_agent.calls) == 1  # exactly one model call, no retry
 
-        # The candidate's actual content must appear before validation is known,
-        # so the frontend can show the diff without waiting for the final result.
-        assert "candidate" in types
-        assert "validated" in types
-        assert types.index("candidate") < types.index("validated")
-        assert types[-1] == "result"
+        step_stages = [e["stage"] for e in events if e["type"] == "step"]
+        assert step_stages == ["reading", "thinking", "writing", "done"]
+        assert all(isinstance(e["text"], str) and e["text"] for e in events if e["type"] == "step")
 
-        candidate_event = next(e for e in events if e["type"] == "candidate")
-        assert candidate_event["content"] == "rule x { condition: true }"
-        assert candidate_event["explanation"] == "Fixed the typo."
-
-        validated_event = next(e for e in events if e["type"] == "validated")
-        assert validated_event["valid"] is True
-        assert validated_event["message"] is None
-
-
-def test_streaming_validated_event_reports_failure_reason(app, monkeypatch):
-    with app.app_context():
-        owner = User.query.filter_by(email="t@t.t").first()
-        bad_rule_id = _make_bad_rule(app, owner.id)
-        bad_rule = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
-
-        fake_agent = _FakeAgent([
-            AgentResult(ok=True, content="still broken", model_used="m", meta={}),
-            AgentResult(ok=True, content="fixed", model_used="m", meta={}),
-        ])
-        validations = iter([(False, "line 4: still wrong"), (True, "")])
-        monkeypatch.setattr("app.features.ai.ai_core.get_agent", lambda key: fake_agent)
-        monkeypatch.setattr(
-            "app.features.rule.rule_format.main_format.verify_syntax_rule_by_format",
-            lambda rule_dict: next(validations),
-        )
-
-        events = list(BadRuleModel.run_ai_fix_streaming(bad_rule, owner))
-        validated_events = [e for e in events if e["type"] == "validated"]
-
-        assert len(validated_events) == 2
-        assert validated_events[0]["valid"] is False
-        assert validated_events[0]["message"] == "line 4: still wrong"
-        assert validated_events[1]["valid"] is True
-
-
-def test_streaming_rejects_fragment_instead_of_full_rule(app, monkeypatch):
-    """A real failure mode of the small local model: instead of the full
-    rule with the fix applied, it returns just the changed line/section.
-    That must never be validated, saved, or fed forward as the next
-    attempt's starting content."""
-    long_original = "rule x {\n" + "\n".join(f'    $s{i} = "str{i}"' for i in range(20)) + "\n  condition: tru\n}"
-    with app.app_context():
-        owner = User.query.filter_by(email="t@t.t").first()
-        bad_rule_id = _make_bad_rule(app, owner.id)
-        bad_rule = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
-        bad_rule.raw_content = long_original
-        db.session.commit()
-
-        fake_agent = _FakeAgent([
-            AgentResult(ok=True, content="condition: true", model_used="m", meta={"explanation": "just the fix"}),
-            AgentResult(ok=True, content=long_original.replace("tru", "true"), model_used="m", meta={"explanation": "full fix"}),
-        ])
-        monkeypatch.setattr("app.features.ai.ai_core.get_agent", lambda key: fake_agent)
-        monkeypatch.setattr(
-            "app.features.rule.rule_format.main_format.verify_syntax_rule_by_format",
-            lambda rule_dict: (True, ""),  # would validate fine if it ever got the chance
-        )
-
-        events = list(BadRuleModel.run_ai_fix_streaming(bad_rule, owner))
-        result = next(e for e in events if e["type"] == "result")
-
-        assert result["ok"] is True
-        assert result["fixed_content"] == long_original.replace("tru", "true")
-        # The second call must have been seeded with the ORIGINAL content, not the fragment.
-        assert fake_agent.calls[1]["content"] == long_original
-        assert fake_agent.calls[1]["error_message"] == "syntax error"
-
-        validated_events = [e for e in events if e["type"] == "validated"]
-        assert validated_events[0]["valid"] is False
-        assert "fragment" in validated_events[0]["message"].lower()
-
-
-def test_run_ai_fix_succeeds_on_first_attempt(app, monkeypatch):
-    with app.app_context():
-        owner = User.query.filter_by(email="t@t.t").first()
-        bad_rule_id = _make_bad_rule(app, owner.id)
-        bad_rule = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
-
-        fake_agent = _FakeAgent([
-            AgentResult(ok=True, content="rule x { condition: true }", model_used="qwen2.5:7b",
-                        meta={"explanation": "Fixed the typo."}),
-        ])
-        monkeypatch.setattr("app.features.ai.ai_core.get_agent", lambda key: fake_agent)
-        monkeypatch.setattr(
-            "app.features.rule.rule_format.main_format.verify_syntax_rule_by_format",
-            lambda rule_dict: (True, ""),
-        )
-
-        result = BadRuleModel.run_ai_fix(bad_rule, owner)
-
+        assert [e["type"] for e in events][-1] == "result"
+        result = events[-1]
         assert result["ok"] is True
         assert result["fixed_content"] == "rule x { condition: true }"
         assert result["explanation"] == "Fixed the typo."
-        assert len(result["attempts"]) == 1
-        assert result["attempts"][0]["outcome"] == "valid"
-        assert len(fake_agent.calls) == 1
 
         # Original bad rule row is untouched — only an explicit Save commits anything.
         untouched = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
@@ -303,64 +209,38 @@ def test_run_ai_fix_succeeds_on_first_attempt(app, monkeypatch):
         assert gens[0].rule_id is None
 
 
-def test_run_ai_fix_retries_then_succeeds(app, monkeypatch):
+def test_streaming_rejects_fragment_instead_of_full_rule(app, monkeypatch):
+    """A real failure mode of the small local model: instead of the full
+    rule with the fix applied, it returns just the changed line/section.
+    That must never be saved or shown as a usable candidate — and since
+    there's no retry loop anymore, it's simply reported as a failure."""
+    long_original = "rule x {\n" + "\n".join(f'    $s{i} = "str{i}"' for i in range(20)) + "\n  condition: tru\n}"
     with app.app_context():
         owner = User.query.filter_by(email="t@t.t").first()
         bad_rule_id = _make_bad_rule(app, owner.id)
         bad_rule = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
+        bad_rule.raw_content = long_original
+        db.session.commit()
 
         fake_agent = _FakeAgent([
-            AgentResult(ok=True, content="attempt 1", model_used="m", meta={"explanation": "try 1"}),
-            AgentResult(ok=True, content="attempt 2 (valid)", model_used="m", meta={"explanation": "try 2"}),
-        ])
-        validations = iter([(False, "still broken"), (True, "")])
-        monkeypatch.setattr("app.features.ai.ai_core.get_agent", lambda key: fake_agent)
-        monkeypatch.setattr(
-            "app.features.rule.rule_format.main_format.verify_syntax_rule_by_format",
-            lambda rule_dict: next(validations),
-        )
-
-        result = BadRuleModel.run_ai_fix(bad_rule, owner)
-
-        assert result["ok"] is True
-        assert result["fixed_content"] == "attempt 2 (valid)"
-        assert len(result["attempts"]) == 2
-        assert result["attempts"][0]["outcome"] == "still_invalid"
-        assert result["attempts"][1]["outcome"] == "valid"
-        # second attempt was seeded with the first attempt's own error, not the original one
-        assert fake_agent.calls[1]["error_message"] == "still broken"
-
-
-def test_run_ai_fix_exhausts_attempts_without_touching_bad_rule(app, monkeypatch):
-    with app.app_context():
-        owner = User.query.filter_by(email="t@t.t").first()
-        bad_rule_id = _make_bad_rule(app, owner.id)
-        bad_rule = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
-
-        fake_agent = _FakeAgent([
-            AgentResult(ok=True, content=f"attempt {i}", model_used="m", meta={})
-            for i in range(3)
+            AgentResult(ok=True, content="condition: true", model_used="m", meta={"explanation": "just the fix"}),
         ])
         monkeypatch.setattr("app.features.ai.ai_core.get_agent", lambda key: fake_agent)
-        monkeypatch.setattr(
-            "app.features.rule.rule_format.main_format.verify_syntax_rule_by_format",
-            lambda rule_dict: (False, "nope"),
-        )
 
-        result = BadRuleModel.run_ai_fix(bad_rule, owner, max_attempts=3)
+        events = list(BadRuleModel.run_ai_fix_streaming(bad_rule, owner))
+        result = next(e for e in events if e["type"] == "result")
 
         assert result["ok"] is False
-        assert len(result["attempts"]) == 3
-        assert len(fake_agent.calls) == 3
-        # Still hands back the last attempt for manual review, not a dead end.
-        assert result["fixed_content"] == "attempt 2"
+        assert "fragment" in result["error"].lower()
+        assert len(fake_agent.calls) == 1
 
-        untouched = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
-        assert untouched.error_message == "syntax error"
+        failed_step = next(e for e in events if e["type"] == "step" and e["stage"] == "failed")
+        assert "fragment" in failed_step["text"].lower()
+
         assert AIGeneration.query.filter_by(agent_key='rule_fixer').count() == 0
 
 
-def test_run_ai_fix_stops_immediately_when_model_could_not_fix(app, monkeypatch):
+def test_streaming_stops_immediately_when_model_could_not_fix(app, monkeypatch):
     with app.app_context():
         owner = User.query.filter_by(email="t@t.t").first()
         bad_rule_id = _make_bad_rule(app, owner.id)
@@ -371,13 +251,35 @@ def test_run_ai_fix_stops_immediately_when_model_could_not_fix(app, monkeypatch)
         ])
         monkeypatch.setattr("app.features.ai.ai_core.get_agent", lambda key: fake_agent)
 
-        result = BadRuleModel.run_ai_fix(bad_rule, owner, max_attempts=3)
+        events = list(BadRuleModel.run_ai_fix_streaming(bad_rule, owner))
+        step_stages = [e["stage"] for e in events if e["type"] == "step"]
+        assert step_stages == ["reading", "thinking", "failed"]
 
+        result = next(e for e in events if e["type"] == "result")
         assert result["ok"] is False
-        assert len(result["attempts"]) == 1
         assert len(fake_agent.calls) == 1
         # No candidate was ever produced, so there's nothing to show for review.
         assert result.get("fixed_content") is None
+
+
+def test_run_ai_fix_succeeds_end_to_end(app, monkeypatch):
+    with app.app_context():
+        owner = User.query.filter_by(email="t@t.t").first()
+        bad_rule_id = _make_bad_rule(app, owner.id)
+        bad_rule = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
+
+        fake_agent = _FakeAgent([
+            AgentResult(ok=True, content="rule x { condition: true }", model_used="qwen2.5-coder:7b",
+                        meta={"explanation": "Fixed the typo."}),
+        ])
+        monkeypatch.setattr("app.features.ai.ai_core.get_agent", lambda key: fake_agent)
+
+        result = BadRuleModel.run_ai_fix(bad_rule, owner)
+
+        assert result["ok"] is True
+        assert result["fixed_content"] == "rule x { condition: true }"
+        assert result["explanation"] == "Fixed the typo."
+        assert len(fake_agent.calls) == 1
 
 
 def test_run_ai_fix_respects_disabled_agent_end_to_end(app):
@@ -391,8 +293,7 @@ def test_run_ai_fix_respects_disabled_agent_end_to_end(app):
         bad_rule_id = _make_bad_rule(app, owner.id)
         bad_rule = BadRuleModel.get_invalid_rule_by_id(bad_rule_id)
 
-        result = BadRuleModel.run_ai_fix(bad_rule, owner, max_attempts=3)
+        result = BadRuleModel.run_ai_fix(bad_rule, owner)
 
         assert result["ok"] is False
         assert "disabled" in result["error"].lower()
-        assert len(result["attempts"]) == 1

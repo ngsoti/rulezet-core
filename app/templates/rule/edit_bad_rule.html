@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/smart-editor.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/diff-viewer.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/ansi-terminal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/ai-thinking-steps.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -62,23 +62,8 @@ window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
                 nothing is applied until you review the diff and click Save yourself.
             </p>
 
-            <div v-if="liveLog.length" class="mt-3">
-                <ansi-terminal :entries="liveLog" :live="fixing" title="Rule Fixer" :max-lines="50"></ansi-terminal>
-            </div>
-
-            <div v-if="attempts.length" class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
-                <div v-for="a in attempts" :key="a.attempt" class="d-flex align-items-start gap-2 mb-2" style="font-size:.85rem;">
-                    <span class="badge rounded-pill mt-1"
-                          :class="a.outcome === 'valid' ? 'bg-success-subtle text-success-emphasis' : (a.outcome === 'failed' ? 'bg-secondary-subtle text-secondary-emphasis' : 'bg-warning-subtle text-warning-emphasis')">
-                        [[ a.attempt ]]
-                    </span>
-                    <div>
-                        <span v-if="a.outcome === 'valid'"><i class="fa-solid fa-check text-success me-1"></i>Valid — this fix passes validation.</span>
-                        <span v-else-if="a.outcome === 'still_invalid'"><i class="fa-solid fa-triangle-exclamation text-warning me-1"></i>Still invalid: <code>[[ a.message ]]</code></span>
-                        <span v-else class="text-muted"><i class="fa-solid fa-xmark me-1"></i>[[ a.message ]]</span>
-                        <div v-if="a.explanation" class="text-muted mt-1">[[ a.explanation ]]</div>
-                    </div>
-                </div>
+            <div v-if="steps.length" class="mt-3">
+                <ai-thinking-steps :steps="steps" :active="fixing"></ai-thinking-steps>
             </div>
 
             <div v-if="fixError" class="alert py-2 px-3 mt-3 mb-0" :class="proposedContent ? 'alert-warning' : 'alert-secondary'" style="font-size:.82rem;">
@@ -86,10 +71,9 @@ window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
             </div>
 
             <div v-if="proposedContent" class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
-                <p class="fw-semibold small mb-1">
-                    <span v-if="proposedValid === null" class="text-muted"><i class="fa-solid fa-spinner fa-spin me-1"></i>Validating…</span>
-                    <span v-else-if="proposedValid" class="text-success"><i class="fa-solid fa-check-circle me-1"></i>This fix passes validation.</span>
-                    <span v-else class="text-warning"><i class="fa-solid fa-triangle-exclamation me-1"></i>This fix did not pass automatic validation — review carefully, you may need to adjust it further.</span>
+                <p class="fw-semibold small mb-1 text-warning">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                    This is a single, unchecked proposal — not syntax-validated. Review it carefully before saving.
                 </p>
                 <p v-if="proposedExplanation" class="text-muted small mb-2">[[ proposedExplanation ]]</p>
                 <diff-viewer
@@ -153,8 +137,8 @@ window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
 <script type="module">
     const { createApp, ref } = Vue;
     import SmartEditor  from '/static/js/components/smart-editor.js';
-    import DiffViewer    from '/static/js/components/diff-viewer.js';
-    import AnsiTerminal  from '/static/js/components/ansi-terminal.js';
+    import DiffViewer       from '/static/js/components/diff-viewer.js';
+    import AIThinkingSteps  from '/static/js/components/ai-thinking-steps.js';
     import { create_message } from '/static/js/toaster.js';
 
     function csrf() {
@@ -163,31 +147,26 @@ window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
 
     createApp({
         delimiters: ['[[', ']]'],
-        components: { 'smart-editor': SmartEditor, 'diff-viewer': DiffViewer, 'ansi-terminal': AnsiTerminal },
+        components: { 'smart-editor': SmartEditor, 'diff-viewer': DiffViewer, 'ai-thinking-steps': AIThinkingSteps },
         setup() {
             const content         = ref(window.__bad_rule_content || '');
             const language        = ref(window.__bad_rule_format  || 'text');
             const errorMessage    = ref(window.__bad_rule_error   || '');
             const fixing              = ref(false);
-            const liveLog             = ref([]);
-            const attempts            = ref([]);
+            const steps               = ref([]);
             const fixError            = ref('');
             const proposedContent     = ref('');
             const proposedExplanation = ref('');
-            const proposedValid       = ref(null); // null = pending, true = valid, false = still invalid
 
-            function pushLog(message) {
-                liveLog.value = [...liveLog.value, { ts: Date.now(), level: 'info', msg: message }];
-            }
-
+            // One AI action, one place these come from — see AI_00_FOUNDATION.md
+            // §10 ("thinking steps" protocol) for the {"type": "step", "stage",
+            // "text"} shape every AI agent's streaming route now emits.
             async function tryAiFix() {
                 fixing.value = true;
                 fixError.value = '';
-                liveLog.value = [];
-                attempts.value = [];
+                steps.value = [];
                 proposedContent.value = '';
                 proposedExplanation.value = '';
-                proposedValid.value = null;
 
                 try {
                     const res = await fetch(window.__bad_rule_ai_fix_url, {
@@ -216,24 +195,13 @@ window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
                             if (!line) continue;
 
                             const event = JSON.parse(line);
-                            if (event.type === 'log') {
-                                pushLog(event.message);
-                            } else if (event.type === 'candidate') {
-                                // Show what the model actually proposed as soon as it exists —
-                                // don't make the human wait for the whole loop to see it.
-                                proposedContent.value = event.content;
-                                proposedExplanation.value = event.explanation || '';
-                                proposedValid.value = null; // pending — validated event follows right after
-                            } else if (event.type === 'validated') {
-                                proposedValid.value = event.valid;
+                            if (event.type === 'step') {
+                                steps.value = [...steps.value, { stage: event.stage, text: event.text }];
                             } else if (event.type === 'result') {
-                                attempts.value = event.attempts || [];
-                                if (event.fixed_content) {
+                                if (event.ok && event.fixed_content) {
                                     proposedContent.value = event.fixed_content;
                                     proposedExplanation.value = event.explanation || '';
-                                    proposedValid.value = !!event.ok;
-                                }
-                                if (!event.ok) {
+                                } else if (!event.ok) {
                                     fixError.value = event.error || 'Could not propose a fix.';
                                 }
                             }
@@ -253,8 +221,8 @@ window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
             }
 
             return {
-                content, language, errorMessage, fixing, liveLog, attempts, fixError,
-                proposedContent, proposedExplanation, proposedValid, tryAiFix, useProposedFix,
+                content, language, errorMessage, fixing, steps, fixError,
+                proposedContent, proposedExplanation, tryAiFix, useProposedFix,
             };
         }
     }).mount('#edit-bad-rule-app');

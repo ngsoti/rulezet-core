@@ -1,0 +1,69 @@
+/*
+  ai-thinking-steps.css — "AI is thinking" step list component.
+  All classes prefixed .ats-
+*/
+
+.ats {
+    display: flex;
+    flex-direction: column;
+}
+
+.ats-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.ats-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ats-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .78rem;
+    flex-shrink: 0;
+    transition: transform .15s ease;
+}
+
+.ats-icon--blue   { background: rgba(13, 110, 253, .12); color: #0d6efd; }
+.ats-icon--purple { background: rgba(111, 66, 193, .12); color: #6f42c1; }
+.ats-icon--green  { background: rgba(25, 135, 84, .12);  color: #198754; }
+.ats-icon--red    { background: rgba(220, 53, 69, .12);  color: #dc3545; }
+
+.ats-item--current .ats-icon {
+    animation: ats-pulse 1.4s ease-in-out infinite;
+}
+
+.ats-line {
+    width: 2px;
+    flex: 1;
+    min-height: 16px;
+    background: var(--border-color);
+    margin: 2px 0;
+}
+
+.ats-text {
+    font-size: .85rem;
+    color: var(--text-color);
+    padding-top: 5px;
+    padding-bottom: 10px;
+}
+
+.ats-item--last .ats-text { padding-bottom: 2px; }
+
+.ats-text--pulse {
+    color: var(--subtle-text-color);
+}
+
+@keyframes ats-pulse {
+    0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(13, 110, 253, .25); }
+    50%      { transform: scale(1.08); box-shadow: 0 0 0 4px rgba(13, 110, 253, 0); }
+}
