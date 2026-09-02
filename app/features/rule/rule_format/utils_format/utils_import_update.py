@@ -19,6 +19,26 @@ def _github_auth_headers() -> dict:
     token = os.environ.get('GITHUB_TOKEN')
     return {'Authorization': f'Bearer {token}'} if token else {}
 
+
+def get_github_host() -> str:
+    """Hostname that rule-import features treat as "GitHub" — github.com by
+    default, or a self-hosted GitHub Enterprise Server / offline mirror when
+    GITHUB_HOST is configured (Admin -> Server Settings -> Security)."""
+    host = os.environ.get('GITHUB_HOST', 'github.com').strip().strip('/')
+    return host or 'github.com'
+
+
+def get_github_api_base() -> str:
+    """Base URL for GitHub REST API calls, matching get_github_host().
+
+    github.com is served from the separate api.github.com host; a GitHub
+    Enterprise Server instance (or compatible offline mirror) serves its API
+    from the same host under /api/v3, per GitHub's own documentation."""
+    host = get_github_host()
+    if host == 'github.com':
+        return 'https://api.github.com'
+    return f'https://{host}/api/v3'
+
 def get_repo_name_from_url(repo_url):
     """Extract the full repository path (owner/repo) from its Git URL."""
     parts = repo_url.rstrip('/').split('/')
@@ -87,7 +107,7 @@ def is_github_repo_accessible(repo_url):
     try:
         parsed = urlparse(repo_url)
         path = parsed.path.strip("/").replace(".git", "")
-        api_url = f"https://api.github.com/repos/{path}"
+        api_url = f"{get_github_api_base()}/repos/{path}"
 
         response = requests.get(api_url, headers=_github_auth_headers(), timeout=5)
 
@@ -120,7 +140,7 @@ def get_github_branches(repo_url: str) -> tuple[list[str], str | None]:
     repo_name = get_repo_name_from_url(clean)
     if not repo_name:
         return [], "Could not parse repository name from URL."
-    api_url = f"https://api.github.com/repos/{repo_name}/branches?per_page=100"
+    api_url = f"{get_github_api_base()}/repos/{repo_name}/branches?per_page=100"
     headers = {}
     token = os.environ.get('GITHUB_TOKEN')
     if token:
@@ -155,7 +175,7 @@ def github_repo_to_api_url(git_url: str) -> str:
     owner = parts[-2]
     repo = parts[-1]
 
-    api_url = f"https://api.github.com/repos/{owner}/{repo}"
+    api_url = f"{get_github_api_base()}/repos/{owner}/{repo}"
     return api_url
 
 def extract_github_repo_metadata(data: dict, selected_license: str) -> dict:
@@ -237,7 +257,7 @@ def valider_repo_github(repo_url: str) -> bool:
         parsed = urlparse(repo_url)
         if parsed.scheme not in ("http", "https"):
             return False
-        if parsed.netloc != "github.com":
+        if parsed.netloc != get_github_host():
             return False
         path_parts = [p for p in parsed.path.split('/') if p]
         if len(path_parts) < 2:

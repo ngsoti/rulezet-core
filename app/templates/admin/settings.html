@@ -568,6 +568,40 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- GitHub Host -->
+                            <div class="config-row">
+                                <div class="config-row__key">GitHub Host</div>
+                                <div class="config-row__value">
+                                    <span class="config-secret">[[ config.app.github_host ]]</span>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill ms-2 px-2 py-0" @click="editingGithubHost = !editingGithubHost" style="font-size:.72rem;">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div v-if="editingGithubHost" class="pb-2">
+                                <div class="env-edit-form flex-wrap gap-2">
+                                    <input type="text" v-model="githubHostNew" class="form-control form-control-sm rounded-pill flex-grow-1"
+                                           placeholder="github.com" style="font-family:monospace;font-size:.78rem;">
+                                    <button class="btn btn-sm btn-success rounded-pill px-3"
+                                            @click="saveEnvKey('GITHUB_HOST', githubHostNew)" :disabled="!githubHostNew">
+                                        <i class="fa-solid fa-check me-1"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-2"
+                                            @click="editingGithubHost=false; githubHostNew=''">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                                <div class="text-muted small mt-1">
+                                    <i class="fa-solid fa-circle-info me-1"></i>
+                                    Hostname that "Import from GitHub" treats as GitHub — leave as <code>github.com</code>
+                                    unless this instance imports from a self-hosted GitHub Enterprise Server or an offline
+                                    mirror reachable at another hostname. That host's API is expected at
+                                    <code>https://&lt;host&gt;/api/v3</code> (GitHub Enterprise Server convention), and
+                                    repo URLs must be <code>https://&lt;host&gt;/owner/repo</code>. Applies immediately,
+                                    no restart needed.
+                                </div>
+                            </div>
                         </div>
 
                     </div>
@@ -1106,6 +1140,8 @@ createApp({
         const mailPortNew       = ref('')
         const editingGithubToken = ref(false)
         const githubTokenNew     = ref('')
+        const editingGithubHost  = ref(false)
+        const githubHostNew      = ref('')
 
         // Test email
         const testEmailRecipient = ref('')
@@ -1286,6 +1322,7 @@ createApp({
                 if (key === 'MAIL_USERNAME') { editingMailUser.value = false; mailUserNew.value = '' }
                 if (key === 'MAIL_PORT')     { editingMailPort.value = false; mailPortNew.value = '' }
                 if (key === 'GITHUB_TOKEN')  { editingGithubToken.value = false; githubTokenNew.value = '' }
+                if (key === 'GITHUB_HOST')   { editingGithubHost.value = false; githubHostNew.value = '' }
                 configLoaded.value = false
                 loadConfig()
             }
@@ -1376,6 +1413,7 @@ createApp({
             editingMailUser, mailUserNew,
             editingMailPort, mailPortNew,
             editingGithubToken, githubTokenNew,
+            editingGithubHost, githubHostNew,
             saveEnvKey,
             testEmailRecipient, testEmailSending, testEmailResult, sendTestEmail,
             instance, instanceLoading, instanceInitSaving, loadInstance, initInstance, copyText,

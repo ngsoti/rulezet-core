@@ -212,6 +212,7 @@ def get_app_config() -> dict:
     secret = cfg.get('SECRET_KEY') or ''
     mail_pwd = cfg.get('MAIL_PASSWORD') or ''
     github_token = os.environ.get('GITHUB_TOKEN') or ''
+    github_host = os.environ.get('GITHUB_HOST') or 'github.com'
     return {
         'mail': {
             'server': cfg.get('MAIL_SERVER', ''),
@@ -233,6 +234,7 @@ def get_app_config() -> dict:
             'secret_key_length': len(secret),
             'github_token_set': bool(github_token),
             'github_token_preview': '••••••••••••' if github_token else 'not set',
+            'github_host': github_host,
         },
     }
 
@@ -258,7 +260,7 @@ _ENV_ALLOWED = {
     'MAIL_SERVER', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD',
     'MAIL_USE_TLS', 'MAIL_USE_SSL', 'MAIL_DEFAULT_SENDER',
     'FLASK_URL', 'FLASK_PORT',
-    'GITHUB_TOKEN',
+    'GITHUB_TOKEN', 'GITHUB_HOST',
 }
 
 

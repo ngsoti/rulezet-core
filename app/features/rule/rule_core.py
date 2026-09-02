@@ -929,6 +929,7 @@ def get_rule_history_count(rule_id) -> int:
     ).count()
 
 from urllib.parse import urlparse
+from app.features.rule.rule_format.utils_format.utils_import_update import get_github_host
 
 def is_valid_github_url(url: str) -> bool:
     """
@@ -936,7 +937,7 @@ def is_valid_github_url(url: str) -> bool:
     """
     try:
         parsed = urlparse(url)
-        return parsed.scheme in ('http', 'https') and 'github.com' in parsed.netloc
+        return parsed.scheme in ('http', 'https') and parsed.netloc == get_github_host()
     except Exception:
         return False
 
@@ -1245,7 +1246,7 @@ def get_all_rule_update(search=None, rule_type=None, sourceFilter=None) -> List[
 
     if sourceFilter:
         if not sourceFilter.startswith("http"):
-            sourceFilter = f"https://github.com/{sourceFilter}"
+            sourceFilter = f"https://{get_github_host()}/{sourceFilter}"
 
         sourceFilter = sourceFilter.rstrip("/")
         if sourceFilter.endswith(".git"):
@@ -2106,7 +2107,8 @@ def filter_rules_owner_github(search=None, author=None, sort_by=None, rule_type=
     if source:    
         query = query.filter(Rule.source.ilike(f"%{source.lower()}%"))
 
-    github_patterns = ['%https://github.com/%', '%http://github.com/%', '%github.com/%']
+    _gh_host = get_github_host()
+    github_patterns = [f'%https://{_gh_host}/%', f'%http://{_gh_host}/%', f'%{_gh_host}/%']
     query = query.filter(
         or_(
             Rule.source.ilike(pattern) for pattern in github_patterns
@@ -3168,7 +3170,7 @@ def get_all_rule_by_github_url_page(search: str = None, page: int = 1):
     # Base query: only rules that have a GitHub source and belong to the current user
     query = _active().filter(
         Rule.source.isnot(None),
-        Rule.source.ilike("%github.com%"),
+        Rule.source.ilike(f"%{get_github_host()}%"),
         Rule.user_id == current_user.id
     )
 
@@ -3910,7 +3912,7 @@ def count_rules_by_url(url):
 def get_all_github_sources(exclude_urls=None):
     """Returns unique active GitHub repository URLs (excludes trash)."""
     query = db.session.query(Rule.source).distinct()
-    query = query.filter(Rule.source.like('https://github.com/%'))
+    query = query.filter(Rule.source.like(f'https://{get_github_host()}/%'))
     query = query.filter(Rule.is_deleted == False)
     if exclude_urls:
         query = query.filter(Rule.source.notin_(exclude_urls))

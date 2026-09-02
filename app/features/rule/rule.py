@@ -17,7 +17,7 @@ from app.core.utils.utils import  bump_version, form_to_dict, generate_side_by_s
 from app.features.account.account_core import add_favorite, remove_favorite, is_rule_favorited_by_user
 from app.features.misp.misp_core import  convert_misp_to_stix
 from app.features.rule.rule_format.main_format import  parse_rule_by_format, process_and_import_fixed_rule, verify_syntax_rule_by_format
-from app.features.rule.rule_format.utils_format.utils_import_update import clone_or_access_repo, fill_all_void_field, get_github_branches, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
+from app.features.rule.rule_format.utils_format.utils_import_update import clone_or_access_repo, fill_all_void_field, get_github_branches, get_github_host, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
 
 from app import db
 from . import rule_core as RuleModel
@@ -2349,7 +2349,7 @@ def get_all_sources_owner():
                 return None
 
             parsed = urlparse(src)
-            if "github.com" not in parsed.netloc:
+            if parsed.netloc != get_github_host():
                 return None  # ignore non-GitHub sources
 
             path = parsed.path
@@ -3918,7 +3918,7 @@ def delete_all_rule_github():
     if count > LARGE_DELETE_THRESHOLD:
         # ── large delete → background job ────────────────────────────────────
         import app.features.jobs.jobs_core as JobsModel
-        label = f"Delete {count} rule(s) from {url.split('github.com/')[-1]}"
+        label = f"Delete {count} rule(s) from {url.split(get_github_host() + '/')[-1]}"
         job = JobsModel.create_job(
             job_type='delete_github_rules',
             payload={'urls': [url.strip()]},
