@@ -2824,6 +2824,35 @@ body.dark-mode .table .opacity-50 {
 @media (prefers-reduced-motion: reduce) {
   .rulezy-trigger__avatar, .rulezy-trigger__avatar--busy { animation: none; }
 }
+.rulezy-trigger__avatar-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(13, 110, 253, .08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rulezy-trigger__avatar-wrap .rulezy-trigger__avatar {
+  width: auto;
+  height: auto;
+  font-size: 1.3rem;
+  color: #0d6efd;
+  animation: none;
+}
+/* Generic stand-in for a .rulezy-say__avatar spot when the mascot display is
+   turned off — same circular badge shape, a Font Awesome icon instead of the
+   character image. Size via inline style (font-size scales with it). */
+.rulezy-icon-fallback {
+  border-radius: 50%;
+  background: rgba(13, 110, 253, .08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #0d6efd;
+}
 .rulezy-say__avatar {
   width: 76px;
   height: 76px;

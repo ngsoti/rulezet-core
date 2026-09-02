@@ -15,7 +15,7 @@ from flask import Blueprint, abort, current_app, jsonify, redirect, render_templ
 from flask_login import current_user, login_required
 
 from app import db
-from app.core.db_class.db import AIAgentConfig, AIExecutionLog, AIGeneration, AIModelConfig
+from app.core.db_class.db import AIAgentConfig, AIExecutionLog, AIGeneration, AIModelConfig, InstanceConfig
 from app.core.utils.activity_log import log_activity
 
 ai_blueprint = Blueprint('ai', __name__, template_folder='templates')
@@ -58,6 +58,11 @@ def admin_models():
     return render_template('ai/models_security.html')
 
 
+@ai_blueprint.route('/admin/overview', methods=['GET'])
+def admin_overview():
+    return render_template('ai/admin_overview.html')
+
+
 @ai_blueprint.route('/admin/<any(rule_analysis, rule_generator, rule_fixer):agent_key>/history/<string:uuid>', methods=['GET'])
 def history_detail(agent_key, uuid):
     gen = AIGeneration.query.filter_by(agent_key=agent_key, uuid=uuid).first()
@@ -67,6 +72,15 @@ def history_detail(agent_key, uuid):
 
 
 # ─── Per-agent config (feature status & configuration card) ─────────────────
+
+@ai_blueprint.route('/admin/config', methods=['GET'])
+def list_configs():
+    """All 4 agents' configs in one call — feeds the Overview tab's
+    per-feature toggle list without 4 round-trips."""
+    configs = AIAgentConfig.query.filter(AIAgentConfig.agent_key.in_(_KNOWN_AGENT_KEYS)).all()
+    by_key = {c.agent_key: c.to_json() for c in configs}
+    return jsonify({'configs': [by_key.get(k) for k in sorted(_KNOWN_AGENT_KEYS) if by_key.get(k)]})
+
 
 @ai_blueprint.route('/admin/config/<string:agent_key>', methods=['GET'])
 def get_config(agent_key):
@@ -107,6 +121,25 @@ def save_config(agent_key):
     log_activity('ai.config_update', f'Updated AI agent config for "{agent_key}"',
                  target_type='ai_agent_config', target_id=cfg.id, is_public=False)
     return jsonify({"success": True, "config": cfg.to_json()})
+
+
+# ─── Mascot display toggle (cosmetic only — never touches agent.enabled) ────
+# Site-wide: whether Rulezy's avatar renders anywhere at all (chatbot, rule
+# list filter, thinking-steps badges, 404, home...). Independent of whether
+# the underlying AI agents are enabled — this only hides the character.
+
+@ai_blueprint.route('/admin/mascot_toggle', methods=['POST'])
+def mascot_toggle():
+    data = request.get_json(force=True) or {}
+    cfg = InstanceConfig.query.first()
+    if not cfg:
+        return jsonify({"error": "Instance not configured yet."}), 404
+    cfg.mascot_enabled = bool(data.get('mascot_enabled'))
+    db.session.commit()
+    log_activity('ai.mascot_toggle',
+                 f'{"Enabled" if cfg.mascot_enabled else "Disabled"} Rulezy mascot display',
+                 target_type='instance_config', target_id=cfg.id, is_public=False)
+    return jsonify({'success': True, 'mascot_enabled': cfg.mascot_enabled})
 
 
 # ─── Shared model allowlist (Models & Security page) ─────────────────────────

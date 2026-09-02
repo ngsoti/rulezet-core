@@ -61,6 +61,7 @@ import ReportModal              from '/static/js/components/ReportModal.js'
 import MultiAttackFilter        from '/static/js/attack/multiAttackFilter.js'
 import AttackDisplayList        from '/static/js/attack/attackDisplayList.js'
 import YaraMatchDetail           from '/static/js/rule_tester/YaraMatchDetail.js'
+import { MASCOT_ENABLED }       from '/static/js/components/mascot.js'
 
 const { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } = Vue
 
@@ -246,7 +247,7 @@ export default {
                 <!-- Rulezy's picks (rules with an AI analysis) — just him, no
                      button chrome. Negative vertical margin keeps the bigger
                      avatar from stretching the toolbar row's height. -->
-                <span v-if="showRulezyFilter" class="rulezy-say rulezy-say--left" role="button" tabindex="0"
+                <span v-if="showRulezyFilter && MASCOT_ENABLED" class="rulezy-say rulezy-say--left" role="button" tabindex="0"
                       style="margin:-8px 0;"
                       @click="aiAnalysisOnly = !aiAnalysisOnly"
                       @keydown.enter="aiAnalysisOnly = !aiAnalysisOnly"
@@ -2053,7 +2054,7 @@ export default {
             filtersOpen, ruleType, searchField, exactMatch, cardSort, qualityMin, qualityMax, onQualityRangeChange,
             selectedTags, selectedSources, selectedLicenses, selectedVulns, selectedAttacks,
             personFilter, onPersonFilterChange,
-            scopeMine, aiAnalysisOnly,
+            scopeMine, aiAnalysisOnly, MASCOT_ENABLED,
             rulesFormats, activeFilterCount,
             // UI
             viewMode, expandedIds,

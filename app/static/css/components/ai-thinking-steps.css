@@ -51,10 +51,18 @@
     object-fit: contain;
 }
 
+/* The current step reads as "this is where things are right now" — bigger
+   icon (mascot pose especially) and bigger text than the completed steps
+   above it, not just a pulse. */
 .ats-item--current .ats-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.05rem;
     animation: ats-pulse 1.4s ease-in-out infinite;
 }
 .ats-item--current .ats-icon--mascot {
+    width: 60px;
+    height: 60px;
     animation: ats-mascot-pulse 1.4s ease-in-out infinite;
 }
 
@@ -76,7 +84,39 @@
 .ats-item--last .ats-text { padding-bottom: 2px; }
 
 .ats-text--pulse {
-    color: var(--subtle-text-color);
+    color: var(--text-color);
+    font-size: 1rem;
+    font-weight: 500;
+    padding-top: 10px;
+}
+
+.ats-text--error {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+/* Animated "..." on the current in-progress step — a lightweight signal
+   that something's actually happening, not just a static label. */
+.ats-dots {
+    display: inline-flex;
+    gap: 2px;
+    margin-left: 2px;
+    vertical-align: baseline;
+}
+.ats-dots span {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .3;
+    animation: ats-dot-bounce 1.2s ease-in-out infinite;
+}
+.ats-dots span:nth-child(2) { animation-delay: .15s; }
+.ats-dots span:nth-child(3) { animation-delay: .3s; }
+
+@keyframes ats-dot-bounce {
+    0%, 80%, 100% { opacity: .3; transform: translateY(0); }
+    40%           { opacity: 1;  transform: translateY(-2px); }
 }
 
 @keyframes ats-pulse {

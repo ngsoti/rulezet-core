@@ -10,6 +10,8 @@
  * can or can't do beyond showing whatever reply text comes back.
  */
 
+import { MASCOT_ENABLED } from '/static/js/components/mascot.js'
+
 const { createApp, ref, nextTick } = Vue
 
 function csrf() {
@@ -135,20 +137,22 @@ const ChatbotWidget = {
             }
         }
 
-        return { open, draft, loading, messages, messagesEl, inputEl, send, autoGrow, recallOlder, recallNewer, onEnterKey }
+        return { open, draft, loading, messages, messagesEl, inputEl, send, autoGrow, recallOlder, recallNewer, onEnterKey, MASCOT_ENABLED }
     },
 
     template: `
 <div>
     <!-- ── Collapsed button ── -->
     <button v-if="!open" class="chatbot-fab" @click="open = true" title="Chat assistant">
-        <img src="/static/images/rulezy/chatbot.png" alt="" class="chatbot-fab__mascot">
+        <img v-if="MASCOT_ENABLED" src="/static/images/rulezy/chatbot.png" alt="" class="chatbot-fab__mascot">
+        <i v-else class="fa-solid fa-comment-dots"></i>
     </button>
 
     <!-- ── Expanded panel ── -->
     <div v-else class="chatbot-panel">
         <div class="chatbot-header">
-            <img src="/static/images/rulezy/chatbot.png" alt="" class="chatbot-header__mascot">
+            <img v-if="MASCOT_ENABLED" src="/static/images/rulezy/chatbot.png" alt="" class="chatbot-header__mascot">
+            <i v-else class="fa-solid fa-comment-dots"></i>
             <span class="chatbot-header__title">Rulezy <span class="chatbot-badge">prototype</span></span>
             <button class="chatbot-btn" @click="open = false" title="Close"><i class="fa-solid fa-xmark"></i></button>
         </div>
@@ -164,7 +168,8 @@ const ChatbotWidget = {
                 </div>
             </div>
             <div v-if="loading" class="chatbot-msg chatbot-msg--bot chatbot-msg--thinking">
-                <img src="/static/images/rulezy/reflexion.png" alt="" class="chatbot-thinking__mascot">
+                <img v-if="MASCOT_ENABLED" src="/static/images/rulezy/reflexion.png" alt="" class="chatbot-thinking__mascot">
+                <i v-else class="fa-solid fa-circle-notch fa-spin"></i>
                 <div class="chatbot-msg__bubble chatbot-typing"><span></span><span></span><span></span></div>
             </div>
         </div>

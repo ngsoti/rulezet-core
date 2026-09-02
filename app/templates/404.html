@@ -9,17 +9,23 @@
 <div class="error-page">
     <div class="error-card">
 
+        {% if mascot_enabled %}
         <div class="error-icon-wrap rulezy-say" tabindex="0">
             <img src="{{ url_for('static', filename='images/rulezy/lookup.png') }}" alt="Rulezy, looking for the page" class="error-icon error-icon--mascot">
             <div class="rulezy-say__bubble">Nope, not here either. Did you take a wrong turn, or are you just testing me? Either way, 0 rules matched this URL.</div>
         </div>
+        {% else %}
+        <div class="error-icon-wrap">
+            <i class="fa-solid fa-magnifying-glass error-icon"></i>
+        </div>
+        {% endif %}
 
         <div class="error-code">404</div>
 
         <h1 class="error-title">Page not found</h1>
 
         <p class="error-desc">
-            I'm Rulezy — I looked everywhere, but this page doesn't exist or has been moved.
+            {% if mascot_enabled %}I'm Rulezy — I looked everywhere, but this page doesn't exist or has been moved.{% else %}This page doesn't exist, or it's been moved.{% endif %}
             Double-check the URL or head back to a safe place<button
                 type="button" class="err-egg-trigger" id="errEggTrigger" tabindex="-1" aria-hidden="true">.</button>
         </p>

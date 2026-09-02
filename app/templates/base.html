@@ -8,6 +8,7 @@
 
     {# Inject custom themes before theme.js so applyTheme() knows about them #}
     <script>window.__CUSTOM_THEMES__ = {{ custom_themes_for_js | tojson | safe }};</script>
+    <script>window.__MASCOT_ENABLED__ = {{ mascot_enabled | tojson }};</script>
     {# theme.js — sync, runs before CSS to prevent flash #}
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 

@@ -21,10 +21,19 @@
  * Stages with a matching Rulezy mascot pose (AI_MASCOT_CONCEPT.md) render
  * that pose as a small image instead of a Font Awesome icon — see `image`
  * in STAGE_META below (`app/static/images/rulezy/*.png`). A stage with no
- * pose (writing/failed/error) keeps its Font Awesome icon; this is a
- * per-stage choice, not an all-or-nothing swap, since only some poses have
- * a clean conceptual match to a pipeline stage.
+ * pose (writing/failed) keeps its Font Awesome icon; this is a per-stage
+ * choice, not an all-or-nothing swap, since only some poses have a clean
+ * conceptual match to a pipeline stage.
+ *
+ * 'error' is special-cased: it's not something an agent streams (the
+ * protocol's own failure state is 'failed') — it's pushed locally by a
+ * caller's fetch `catch` block when the request never made it to/from the
+ * server at all (network drop, etc). It gets Rulezy's own "uh oh" reaction
+ * and its text is read as Rulezy startled by what just happened, not a
+ * calm status line — see displayText()/isError() below.
  */
+
+import { MASCOT_ENABLED } from './mascot.js'
 
 const TERMINAL_STAGES = new Set(['done', 'failed', 'error'])
 
@@ -38,7 +47,7 @@ const STAGE_META = {
     searching:  { icon: 'fa-database',            tone: 'blue',   image: RULEZY + 'lookup.png' },
     done:       { icon: 'fa-circle-check',        tone: 'green',  image: RULEZY + 'armcross.png' },
     failed:     { icon: 'fa-circle-xmark',        tone: 'red'   },
-    error:      { icon: 'fa-triangle-exclamation', tone: 'red'   },
+    error:      { icon: 'fa-triangle-exclamation', tone: 'red',    image: RULEZY + 'reflexion.png' },
 }
 const DEFAULT_META = { icon: 'fa-circle-notch', tone: 'blue' }
 
@@ -65,9 +74,15 @@ export default {
             return metaFor(stage).icon
         }
         function imageFor(stage) {
-            return metaFor(stage).image
+            return MASCOT_ENABLED ? metaFor(stage).image : null
         }
-        return { isCurrent, toneClass, iconClass, imageFor }
+        function isError(stage) {
+            return stage === 'error'
+        }
+        function displayText(step) {
+            return isError(step.stage) ? `Aieeee, j'ai eu ça : ${step.text}` : step.text
+        }
+        return { isCurrent, toneClass, iconClass, imageFor, isError, displayText }
     },
 
     template: `
@@ -82,7 +97,9 @@ export default {
             </div>
             <div v-if="i < steps.length - 1" class="ats-line"></div>
         </div>
-        <div class="ats-text" :class="{ 'ats-text--pulse': isCurrent(i) }">{{ step.text }}</div>
+        <div class="ats-text" :class="{ 'ats-text--pulse': isCurrent(i), 'ats-text--error': isError(step.stage) }">
+            {{ displayText(step) }}<span v-if="isCurrent(i)" class="ats-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+        </div>
     </div>
 </div>
     `,

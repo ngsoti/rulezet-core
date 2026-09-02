@@ -2,6 +2,9 @@
 
 {% macro ai_admin_nav(active) %}
 <div class="dr-nav mb-3" role="tablist">
+    <a href="/ai/admin/overview" class="dr-nav__item {% if active == 'overview' %}active{% endif %}">
+        <i class="fa-solid fa-toggle-on"></i><span>Overview</span>
+    </a>
     <a href="/ai/admin/chatbot" class="dr-nav__item {% if active == 'chatbot' %}active{% endif %}">
         <i class="fa-solid fa-comment-dots"></i><span>Chatbot</span>
     </a>

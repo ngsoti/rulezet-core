@@ -3034,6 +3034,7 @@ class InstanceConfig(db.Model):
     uuid              = db.Column(db.String(36), unique=True, nullable=False)
     telemetry_enabled = db.Column(db.Boolean, default=True, nullable=False)
     chatbot_enabled   = db.Column(db.Boolean, default=True, nullable=False)
+    mascot_enabled    = db.Column(db.Boolean, default=True, nullable=False)
     public_url        = db.Column(db.String(512), nullable=True)
     version           = db.Column(db.String(64), nullable=True)
     last_started_at   = db.Column(db.DateTime, nullable=True)
@@ -3044,6 +3045,7 @@ class InstanceConfig(db.Model):
             'uuid':              self.uuid,
             'telemetry_enabled': self.telemetry_enabled,
             'chatbot_enabled':   self.chatbot_enabled,
+            'mascot_enabled':    self.mascot_enabled,
             'public_url':        self.public_url,
             'version':           self.version,
             'last_started_at':   self.last_started_at.strftime('%Y-%m-%d %H:%M') if self.last_started_at else None,

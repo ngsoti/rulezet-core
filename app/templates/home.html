@@ -272,10 +272,12 @@
                             v{{ app_version }}
                         </span>
                     </a>
+                    {% if mascot_enabled %}
                     <div class="rulezy-say" tabindex="0">
                         <img src="{{ url_for('static', filename='images/rulezy/simple.png') }}" alt="Rulezy" class="rulezy-say__avatar" style="width:52px;height:52px;">
                         <div class="rulezy-say__bubble">Hi, I'm Rulezy! I'll help you create rules, search the platform, and answer questions about Rulezet — just click the chat bubble in the corner anytime.</div>
                     </div>
+                    {% endif %}
                     </div>
 
                     <h1 class="hero-big-title mb-3">

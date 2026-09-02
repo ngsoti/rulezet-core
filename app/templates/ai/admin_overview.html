@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% import 'macros/ai_admin_nav.html' as ai_nav %}
+{% block title %}Overview — AI Admin — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container my-4" id="ov-app" v-cloak>
+
+  <div class="explorer-banner mb-4">
+    <i class="fa-solid fa-toggle-on banner-watermark"></i>
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+        <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">Admin</a></li>
+        <li class="breadcrumb-item active text-muted" aria-current="page">Overview</li>
+      </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="banner-icon"><i class="fa-solid fa-toggle-on"></i></div>
+      <div>
+        <h2 class="fw-bold mb-1">AI Overview</h2>
+        <div class="banner-accent"></div>
+      </div>
+    </div>
+    <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+      Turn any AI feature on or off for the whole instance, or shut them all
+      off at once. Below that, a separate switch for whether Rulezy shows up
+      at all — purely cosmetic, doesn't touch the features themselves.
+    </p>
+  </div>
+
+  {{ ai_nav.ai_admin_nav('overview') }}
+
+  <!-- Per-feature toggles -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+        <div class="d-flex align-items-center gap-2">
+          <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+          <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+            <i class="fa-solid fa-sliders me-1"></i>AI features
+          </span>
+        </div>
+        <button class="btn btn-sm rounded-pill px-3"
+                :class="allEnabled ? 'btn-outline-danger' : 'btn-outline-success'"
+                :disabled="loading || bulkBusy"
+                @click="toggleAll">
+          <i class="fa-solid me-1" :class="bulkBusy ? 'fa-spinner fa-spin' : (allEnabled ? 'fa-power-off' : 'fa-bolt')"></i>
+          [[ allEnabled ? 'Disable all' : 'Enable all' ]]
+        </button>
+      </div>
+
+      <div v-if="loading" class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
+      <div v-else class="d-flex flex-column gap-2">
+        <div v-for="agent in agents" :key="agent.agent_key"
+             class="rounded-3 border p-3 d-flex align-items-center justify-content-between gap-3"
+             style="background:var(--light-bg-color);">
+          <div class="d-flex align-items-center gap-3">
+            <i class="fa-solid fa-fw" :class="AGENT_META[agent.agent_key].icon" style="font-size:1.1rem;color:var(--subtle-text-color);"></i>
+            <div>
+              <div class="fw-semibold">[[ AGENT_META[agent.agent_key].label ]]</div>
+              <small class="text-muted">[[ agent.enabled ? 'Available to users right now.' : 'Turned off — hidden from users.' ]]</small>
+            </div>
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" role="switch"
+                   :checked="agent.enabled" :disabled="agent.busy"
+                   @change="toggleAgent(agent)">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mascot display toggle -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+        <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+          <i class="fa-solid fa-mask me-1"></i>Rulezy display
+        </span>
+      </div>
+      <div class="rounded-3 border p-3 d-flex align-items-center justify-content-between gap-3" style="background:var(--light-bg-color);">
+        <div class="d-flex align-items-center gap-3">
+          <img v-if="mascotEnabled" src="{{ url_for('static', filename='images/rulezy/simple.png') }}" alt="" style="width:32px;height:32px;object-fit:contain;">
+          <i v-else class="fa-solid fa-robot fa-fw" style="font-size:1.1rem;color:var(--subtle-text-color);"></i>
+          <div>
+            <div class="fw-semibold">Show Rulezy everywhere</div>
+            <small class="text-muted">
+              Cosmetic only — the AI features above keep working either way.
+              Off means no Rulezy anywhere: chatbot, rule list, 404, home, all of it.
+            </small>
+          </div>
+        </div>
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" role="switch"
+                 :checked="mascotEnabled" :disabled="mascotBusy"
+                 @change="toggleMascot">
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { create_message } from '/static/js/toaster.js'
+
+const { createApp, ref, computed } = Vue
+
+const AGENT_META = {
+  chatbot:         { label: 'Chatbot',        icon: 'fa-comment-dots' },
+  rule_analysis:   { label: 'Rule Analysis',  icon: 'fa-magnifying-glass-chart' },
+  rule_generator:  { label: 'Rule Generator', icon: 'fa-wand-magic-sparkles' },
+  rule_fixer:      { label: 'Rule Fixer',     icon: 'fa-wrench' },
+}
+const AGENT_ORDER = ['chatbot', 'rule_analysis', 'rule_generator', 'rule_fixer']
+
+createApp({
+    delimiters: ['[[', ']]'],
+    setup() {
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || ''
+        const agents = ref([])
+        const loading = ref(true)
+        const bulkBusy = ref(false)
+        const mascotEnabled = ref({{ mascot_enabled | tojson }})
+        const mascotBusy = ref(false)
+
+        const allEnabled = computed(() => agents.value.length > 0 && agents.value.every(a => a.enabled))
+
+        async function fetchAgents() {
+            loading.value = true
+            try {
+                const res = await fetch('/ai/admin/config')
+                const data = await res.json()
+                const byKey = Object.fromEntries((data.configs || []).map(c => [c.agent_key, c]))
+                agents.value = AGENT_ORDER.filter(k => byKey[k]).map(k => ({ ...byKey[k], busy: false }))
+            } catch (e) {
+                create_message('Failed to load AI feature status.', 'danger-subtle')
+            } finally {
+                loading.value = false
+            }
+        }
+
+        async function setAgentEnabled(agent, enabled) {
+            const res = await fetch(`/ai/admin/config/${agent.agent_key}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ enabled }),
+            })
+            const data = await res.json()
+            if (!data.success) throw new Error(data.error || 'Update failed')
+            return data.config
+        }
+
+        async function toggleAgent(agent) {
+            agent.busy = true
+            try {
+                const cfg = await setAgentEnabled(agent, !agent.enabled)
+                agent.enabled = cfg.enabled
+                create_message(`${AGENT_META[agent.agent_key].label} ${cfg.enabled ? 'enabled' : 'disabled'}.`, 'success-subtle')
+            } catch (e) {
+                create_message('Failed to update: ' + e.message, 'danger-subtle')
+            } finally {
+                agent.busy = false
+            }
+        }
+
+        async function toggleAll() {
+            const target = !allEnabled.value
+            bulkBusy.value = true
+            try {
+                await Promise.all(agents.value.map(async agent => {
+                    const cfg = await setAgentEnabled(agent, target)
+                    agent.enabled = cfg.enabled
+                }))
+                create_message(target ? 'All AI features enabled.' : 'All AI features disabled.', 'success-subtle')
+            } catch (e) {
+                create_message('Failed to update all features: ' + e.message, 'danger-subtle')
+            } finally {
+                bulkBusy.value = false
+            }
+        }
+
+        async function toggleMascot() {
+            mascotBusy.value = true
+            const target = !mascotEnabled.value
+            try {
+                const res = await fetch('/ai/admin/mascot_toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ mascot_enabled: target }),
+                })
+                const data = await res.json()
+                if (!data.success) throw new Error(data.error || 'Update failed')
+                mascotEnabled.value = data.mascot_enabled
+                create_message(data.mascot_enabled ? "Rulezy is back." : "Rulezy is hidden site-wide now.", 'success-subtle')
+            } catch (e) {
+                create_message('Failed to update: ' + e.message, 'danger-subtle')
+            } finally {
+                mascotBusy.value = false
+            }
+        }
+
+        fetchAgents()
+
+        return { AGENT_META, agents, loading, bulkBusy, allEnabled, toggleAgent, toggleAll, mascotEnabled, mascotBusy, toggleMascot }
+    }
+}).mount('#ov-app')
+</script>
+{% endblock %}

@@ -46,11 +46,17 @@ window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-4">
             <button type="button" class="rulezy-trigger" :disabled="fixing" @click="tryAiFix">
+                {% if mascot_enabled %}
                 <span class="rulezy-say" style="cursor:inherit;">
                     <img :src="fixing ? '{{ url_for('static', filename='images/rulezy/reflexion.png') }}' : '{{ url_for('static', filename='images/rulezy/rule-fixer.png') }}'"
                          alt="Rulezy" class="rulezy-trigger__avatar" :class="{ 'rulezy-trigger__avatar--busy': fixing }">
                     <span class="rulezy-say__bubble">I've fixed worse rules than this. Probably.</span>
                 </span>
+                {% else %}
+                <span class="rulezy-trigger__avatar-wrap">
+                    <i class="fa-solid fa-wrench rulezy-trigger__avatar" :class="{ 'fa-spin': fixing }"></i>
+                </span>
+                {% endif %}
                 <div class="rulezy-trigger__text">
                     <span>[[ fixing ? "Let me take a look at that error…" : "Click me — I'll look at the exact error above and propose the smallest fix. Nothing is applied until you review the diff and click Save yourself." ]]</span>
                 </div>
@@ -203,7 +209,7 @@ window.__ai_fix_available = {{ ai_fix_available | default(false) | tojson }};
                         }
                     }
                 } catch (e) {
-                    fixError.value = 'Network error: ' + e;
+                    steps.value = [...steps.value, { stage: 'error', text: String(e) }];
                 } finally {
                     fixing.value = false;
                 }

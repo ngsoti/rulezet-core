@@ -47,6 +47,7 @@ PAGES = [
     "/ai/admin/rule-generator",
     "/ai/admin/rule-fixer",
     "/ai/admin/models",
+    "/ai/admin/overview",
 ]
 
 
@@ -78,6 +79,15 @@ def test_old_chatbot_conversations_url_redirects_to_ai_admin(app, client):
 
 
 # ── config API ───────────────────────────────────────────────────────────────
+
+def test_list_configs_returns_all_known_agents(app, client):
+    _seed_agent_configs(app)
+    _login(client, _admin(app))
+    res = client.get("/ai/admin/config")
+    assert res.status_code == 200
+    keys = {c['agent_key'] for c in res.get_json()['configs']}
+    assert keys == {'chatbot', 'rule_analysis'}  # only the ones seeded in this test
+
 
 def test_get_config_returns_seeded_row(app, client):
     _seed_agent_configs(app)

@@ -172,7 +172,7 @@ def create_app(start_worker=True):
     @app.context_processor
     def inject_globals():
         from flask import current_app
-        from app.core.db_class.db import AIAgentConfig
+        from app.core.db_class.db import AIAgentConfig, InstanceConfig
         chatbot_enabled = True
         try:
             cfg = AIAgentConfig.query.filter_by(agent_key='chatbot').first()
@@ -180,10 +180,18 @@ def create_app(start_worker=True):
                 chatbot_enabled = cfg.enabled
         except Exception:
             pass  # table may not exist yet (fresh install before migrations run)
+        mascot_enabled = True
+        try:
+            instance_cfg = InstanceConfig.query.first()
+            if instance_cfg is not None:
+                mascot_enabled = instance_cfg.mascot_enabled
+        except Exception:
+            pass  # table may not exist yet (fresh install before migrations run)
         return {
             'app_version': current_app.config.get('APP_VERSION', 'unknown'),
             'is_official': current_app.config.get('IS_OFFICIAL_INSTANCE', False),
             'chatbot_enabled': chatbot_enabled,
+            'mascot_enabled': mascot_enabled,
         }
 
     def admin_jobs_running_count():

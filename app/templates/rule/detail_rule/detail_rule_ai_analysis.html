@@ -161,10 +161,14 @@
                 </div>
                 <div class="h-card__body">
                     <div class="d-flex align-items-center gap-2 mb-3">
+                        {% if mascot_enabled %}
                         <div class="rulezy-say" tabindex="0">
                             <img src="{{ url_for('static', filename='images/rulezy/analyseRule.png') }}" alt="Rulezy" class="rulezy-say__avatar" style="width:32px;height:32px;">
                             <div class="rulezy-say__bubble">I read the rule's content, tags, and ATT&amp;CK mapping using <code>[[ latest.model || 'unknown model' ]]</code>, then wrote up what I found in plain English below.</div>
                         </div>
+                        {% else %}
+                        <i class="fa-solid fa-magnifying-glass-chart" style="color:#0d6efd;"></i>
+                        {% endif %}
                         <p class="text-muted mb-0 fst-italic" style="font-size:.78rem;">
                             "I went through this one on [[ latest.created_at ]]<span v-if="latest.username"> for [[ latest.username ]]</span> — here's what I found."
                         </p>
@@ -176,10 +180,14 @@
 
         <template v-else>
             <div class="card border-0 shadow-sm rounded-4 p-5 text-center mb-4">
+                {% if mascot_enabled %}
                 <div class="rulezy-say rulezy-say--below align-self-center mb-2" tabindex="0">
                     <img src="{{ url_for('static', filename='images/rulezy/analyseRule.png') }}" alt="Rulezy" class="rulezy-say__avatar">
                     <div class="rulezy-say__bubble">I read the rule's content, tags, and ATT&amp;CK mapping, then write up what I find in plain English — an admin just has to ask me to.</div>
                 </div>
+                {% else %}
+                <i class="fa-solid fa-magnifying-glass-chart mb-2" style="font-size:2rem;color:#0d6efd;"></i>
+                {% endif %}
                 <p class="mb-0 fst-italic" style="color: var(--subtle-text-color);">"I haven't had a chance to look at this one yet."</p>
             </div>
         </template>
