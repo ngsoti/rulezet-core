@@ -267,9 +267,15 @@ def process_and_import_fixed_rule(bad_rule_obj: InvalidRuleModel, raw_content: s
 
 
 
-def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_repo=None, github_path=None):
+def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_repo=None, github_path=None, license_override=None):
     """
     Parse a rule content based on its format.
+
+    license_override: used as the fallback license when the rule content
+    itself doesn't specify one (a format's parse_metadata always prefers
+    its own meta.license over this) — callers with a sensible non-user
+    default (e.g. the chatbot) can pass one instead of falling through to
+    "Unknown".
     """
 
     load_all_rule_formats()
@@ -290,7 +296,7 @@ def parse_rule_by_format(rule_content: str, user: User, format_name: str, url_re
     validation_result = rule_instance.validate(rule_content)
 
     info = {
-        "license": getattr(user, "license", None) or "Unknown",
+        "license": license_override or (getattr(user, "license", None) or "Unknown"),
         "author": getattr(user, "first_name", "Unknown"),
         "repo_url": url_repo or None,
         "source": (getattr(user, "first_name", "") or "") + (getattr(user, "last_name", "") or "") or "Unknown",

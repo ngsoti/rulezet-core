@@ -114,6 +114,21 @@ Never invent a rule's content or a missing required field yourself — use "ask"
 # and unified execution logging apply here too instead of being reimplemented.
 
 
+def _chatbot_model_name() -> str:
+    """The model this chatbot is actually configured to run on — same
+    default_model -> OLLAMA_MODEL fallback chain ai_core.py itself uses to
+    pick a model, so a chatbot-created rule's Source reflects reality
+    regardless of whether this particular call went through a deterministic
+    shortcut (no model consulted) or the real agent."""
+    from flask import current_app
+    from app.core.db_class.db import AIAgentConfig
+
+    cfg = AIAgentConfig.query.filter_by(agent_key='chatbot').first()
+    if cfg and cfg.default_model:
+        return cfg.default_model
+    return current_app.config.get('OLLAMA_MODEL') or 'unknown model'
+
+
 def _looks_like_rule_content(content: str) -> bool:
     """A hallucinated placeholder ('rule', 'test rule', ...) shouldn't reach
     the syntax validator and produce a confusing technical error — real rule
@@ -146,7 +161,16 @@ def _create_rule(user, params: dict) -> dict:
     # and other metadata are extracted straight from the rule content itself
     # (e.g. YARA's `rule <name> { ... }` name), so the model never has to
     # invent a title; duplicate-checking and creation happen in this one call.
-    success, message, rule = parse_rule_by_format(content, user, fmt)
+    # Every format's parse_metadata falls back to info["repo_url"] for its
+    # "source" field when the content names none — used here (not a real
+    # URL) to attribute the rule to Rulezy instead of showing "Unknown".
+    # Same for license: only ever a fallback, never overrides one the rule
+    # content actually specifies.
+    success, message, rule = parse_rule_by_format(
+        content, user, fmt,
+        url_repo=f"Rulezy ({_chatbot_model_name()})",
+        license_override="MIT",
+    )
     if not success:
         if rule is not None:
             return {"success": False, "reply": message, "link": f"/rule/detail_rule/{rule.id}"}
@@ -685,14 +709,45 @@ def _maybe_who_are_you(message: str):
 # already doing something ("Creating a new yara rule...") without asking
 # for the one thing it actually needs. Ask deterministically instead of
 # leaving this to chance, same rationale as the other shortcuts.
+#
+# "I want a yara rule" carries the same intent without using any of
+# _CREATE_VERBS_RE's verbs — confirmed live to also get a hallucinated
+# "Got it, I'll create a new rule for you." with nothing actually created
+# or asked for. Deliberately its OWN narrower pattern rather than adding
+# "want" to _CREATE_VERBS_RE: that regex also gates the search shortcut,
+# and "I want yara rules with a CVE" (an existing, correct search case) is
+# plural — "a rule"/"an X rule" (singular) is what disambiguates creation
+# intent from a search here, not the verb "want" itself.
+_WANT_A_RULE_RE = re.compile(r'\bi\s*want\s+(?:a|an)\b.{0,20}\brule\b', re.IGNORECASE)
+
+
+def _extract_rule_type_loose(message: str):
+    """Exact word match first; a light substring fallback (no difflib —
+    that's reserved for a single explicit format token elsewhere, too loose
+    to run over a whole free-text sentence) catches a typo'd format name
+    right next to the word "rule" ("yaraa rule") without risking a false
+    match on unrelated text elsewhere in the message."""
+    exact = _extract_rule_type_from_message(message)
+    if exact:
+        return exact
+    m = re.search(r'\b(\w+)\s+rule\b', message, re.IGNORECASE)
+    if not m:
+        return None
+    token = m.group(1).lower()
+    for fmt in sorted(_VALID_FORMATS):
+        if len(token) >= 4 and (fmt in token or token in fmt):
+            return fmt
+    return None
+
+
 def _maybe_create_rule_intent_shortcut(message: str):
-    if not _CREATE_VERBS_RE.search(message):
+    if not (_CREATE_VERBS_RE.search(message) or _WANT_A_RULE_RE.search(message)):
         return None
     if not _RULE_MENTION_RE.search(message):
         return None
     if _looks_like_rule_content(message):
         return None  # real content is already here — a later shortcut handles this
-    fmt = _extract_rule_type_from_message(message)
+    fmt = _extract_rule_type_loose(message)
     if fmt:
         return {
             "action": "ask",

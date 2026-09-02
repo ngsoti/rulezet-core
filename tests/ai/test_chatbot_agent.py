@@ -551,6 +551,39 @@ def test_create_rule_intent_shortcut_ignores_search_and_bundle_requests(app):
         mock_chat.assert_called_once()
 
 
+# "I want a X rule" carries create intent without any of _CREATE_VERBS_RE's
+# verbs — confirmed live to get a hallucinated "Got it, I'll create a new
+# rule for you." with nothing actually created or asked for. Deliberately a
+# separate, narrower pattern (singular "a/an rule") rather than adding
+# "want" to _CREATE_VERBS_RE, since that regex also gates the search
+# shortcut and "I want yara rules with a CVE" (plural, a real search) must
+# keep working. ───────────────────────────────────────────────────────────
+
+def test_want_a_rule_asks_for_content_never_calls_ollama(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "I want a yara rule")
+        mock_chat.assert_not_called()
+        assert result['action'] == 'ask'
+        assert 'yara' in result['reply'].lower()
+
+
+def test_want_a_rule_tolerates_a_typo_in_the_format_name(app):
+    # The exact reported case: "yaraa" (typo) right next to "rule" — a
+    # light substring fallback (not full fuzzy matching over the whole
+    # sentence) still resolves it to yara instead of asking generically.
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "I want a yaraa rule")
+        mock_chat.assert_not_called()
+        assert result['action'] == 'ask'
+        assert 'yara' in result['reply'].lower()
+
+
+
+
 # ── create_rule shortcut — a multi-turn "create a X rule" -> paste content
 #    flow confirmed live to fail: handed the exact rule text as the message,
 #    the model replied "Please provide the content of the rule" (it had
@@ -582,6 +615,45 @@ def test_create_rule_shortcut_handles_pasted_content_never_calls_ollama(app):
         assert result['action'] == 'create_rule'
         assert result['success'] is True
         assert 'link' in result
+
+
+def test_create_rule_shortcut_defaults_license_and_source(app):
+    # A rule created via the chatbot with no license/source of its own
+    # used to show "Unknown" for both — now defaults to a real license and
+    # attributes the source to Rulezy + the model it's actually configured
+    # to run on, instead of leaving the fields blank.
+    from app.core.db_class.db import Rule
+
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        history = [{"role": "user", "content": "create a yara rule"}]
+        with patch(CHAT):
+            result = handle_message(user, history, _YARA_RULE_CONTENT)
+        rule_id = int(result['link'].rsplit('/', 1)[-1])
+        rule = Rule.query.get(rule_id)
+        assert rule.license == "MIT"
+        assert rule.source.startswith("Rulezy (")
+
+
+def test_create_rule_shortcut_never_overrides_a_license_the_rule_specifies(app):
+    from app.core.db_class.db import Rule
+
+    content = """rule Own_License_Test {
+    meta:
+        license = "GPL-3.0"
+    strings:
+        $a = "marker"
+    condition:
+        $a
+}"""
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        history = [{"role": "user", "content": "create a yara rule"}]
+        with patch(CHAT):
+            result = handle_message(user, history, content)
+        rule_id = int(result['link'].rsplit('/', 1)[-1])
+        rule = Rule.query.get(rule_id)
+        assert rule.license == "GPL-3.0"
 
 
 def test_create_rule_shortcut_requires_create_verb_somewhere_in_recent_history(app):
