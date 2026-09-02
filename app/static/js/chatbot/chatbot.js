@@ -163,7 +163,8 @@ const ChatbotWidget = {
                     </div>
                 </div>
             </div>
-            <div v-if="loading" class="chatbot-msg chatbot-msg--bot">
+            <div v-if="loading" class="chatbot-msg chatbot-msg--bot chatbot-msg--thinking">
+                <img src="/static/images/rulezy/reflexion.png" alt="" class="chatbot-thinking__mascot">
                 <div class="chatbot-msg__bubble chatbot-typing"><span></span><span></span><span></span></div>
             </div>
         </div>

@@ -2760,6 +2760,12 @@ body.dark-mode .table .opacity-50 {
   flex-shrink: 0;
   cursor: help;
 }
+/* A clickable Rulezy (e.g. "click me for an example") gets a normal pointer
+   cursor instead of the help "?" — role="button" is the marker, no extra
+   class needed. */
+.rulezy-say[role="button"] {
+  cursor: pointer;
+}
 .rulezy-say__avatar {
   width: 76px;
   height: 76px;
@@ -2838,8 +2844,8 @@ body.dark-mode .table .opacity-50 {
    Needs a positioned ancestor (the card-body must have position:relative). */
 .rulezy-say--corner {
   position: absolute;
-  top: -10px;
-  right: 4px;
+  top: 6px;
+  right: 1.75rem;
   z-index: 5;
 }
 

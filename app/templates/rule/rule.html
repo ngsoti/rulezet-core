@@ -710,9 +710,9 @@
       <div class="card border-0 card_detail border-top shadow-lg mb-4" style="border-radius: 12px;">
         <div class="card-watermark-detail"><i class="fas fa-robot"></i></div>
         <div class="card-body p-4" style="position: relative; z-index: 1;">
-        <div class="rulezy-say rulezy-say--left rulezy-say--corner" tabindex="0">
+        <div class="rulezy-say rulezy-say--left rulezy-say--corner" tabindex="0" role="button" @click="fillAiGenExample" @keydown.enter="fillAiGenExample">
           <img src="{{ url_for('static', filename='images/rulezy/rule-generator.png') }}" alt="Rulezy" class="rulezy-say__avatar">
-          <div class="rulezy-say__bubble">Hi, I'm Rulezy! Describe what you want to detect and I'll draft a YARA rule for it — always just a draft, you review and edit it before it becomes a real rule.</div>
+          <div class="rulezy-say__bubble">Hi, I'm Rulezy! Describe what you want to detect and I'll draft a YARA rule for it — always just a draft, you review and edit it before it becomes a real rule. Click me for an example!</div>
         </div>
         <div class="d-flex align-items-center gap-2 mb-1">
           <div class="h-card__accent"></div>
@@ -954,6 +954,14 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                   const aiGenExplanation = ref('');
                   const aiGenValid       = ref(false);
                   const aiGenModel       = ref('');
+
+                  // Click Rulezy for a worked example — shows what a good
+                  // description/sample pair looks like, doesn't submit anything.
+                  function fillAiGenExample() {
+                        aiGenDescription.value = 'Detect a Windows executable (PE file) that imports the function CredEnumerateW from advapi32.dll and also contains the string "Mimikatz" — commonly used for credential dumping.';
+                        aiGenSample.value = 'Mimikatz';
+                        create_message('Example filled in — feel free to edit it, then click Generate.', 'success-subtle');
+                  }
 
                   async function generateWithAi() {
                         if (!aiGenDescription.value.trim()) return;
@@ -1302,6 +1310,7 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                         aiGenExplanation,
                         aiGenValid,
                         aiGenModel,
+                        fillAiGenExample,
                         generateWithAi,
                         useAiDraft,
                   };

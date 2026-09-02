@@ -199,6 +199,25 @@
 .chatbot-msg__links .chatbot-msg__link { margin-top: .15rem; }
 
 /* ── Typing indicator ── */
+.chatbot-msg--thinking {
+    align-items: center;
+    gap: .4rem;
+}
+.chatbot-thinking__mascot {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    flex-shrink: 0;
+    animation: chatbot-think-pulse 1.4s ease-in-out infinite;
+}
+@keyframes chatbot-think-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.1) rotate(-4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .chatbot-thinking__mascot { animation: none; }
+}
+
 .chatbot-typing { display: flex; gap: .25rem; padding: .65rem .75rem; }
 .chatbot-typing span {
     width: 6px;
