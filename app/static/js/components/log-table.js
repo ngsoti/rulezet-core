@@ -37,6 +37,8 @@ const CATEGORIES = [
     { value: 'github',    label: 'GitHub',    icon: 'fa-brands fa-github' },
     { value: 'connector', label: 'Connector', icon: 'fa-plug'          },
     { value: 'comment',   label: 'Comment',   icon: 'fa-comment'       },
+    { value: 'blog',      label: 'Blog',      icon: 'fa-newspaper'     },
+    { value: 'chatbot',   label: 'Chatbot',   icon: 'fa-robot'         },
     { value: 'api',       label: 'API',       icon: 'fa-code'          },
     { value: 'system',    label: 'System',    icon: 'fa-gear'          },
 ]
