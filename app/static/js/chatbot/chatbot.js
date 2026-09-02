@@ -18,6 +18,20 @@ function csrf() {
     return document.getElementById('csrf_token')?.value || ''
 }
 
+// Phrases known to hit a real search_rules filter reliably (see
+// _maybe_search_rules_shortcut in chatbot_core.py) — the "try an example"
+// dice button picks one at random so a user can see it actually work
+// instead of guessing at phrasing.
+const CHAT_EXAMPLES = [
+    'Do you have rules for CVE-2024-3094?',
+    'Do we have rules from https://github.com/Yara-Rules/rules?',
+    'Show me rules tagged tlp:clear',
+    'Do you have rules for attack technique T1055?',
+    'Show me yara rules',
+    'Do you have rules to detect Mimikatz?',
+    'Take me to my rules',
+]
+
 const ChatbotWidget = {
     delimiters: ['[[', ']]'],
     setup() {
@@ -25,7 +39,7 @@ const ChatbotWidget = {
         const draft    = ref('')
         const loading  = ref(false)
         const messages = ref([
-            { role: 'assistant', content: "Hi, I'm Rulezy — your prototype assistant. Ask me to create a rule, create a bundle, or search rules (by tag, CVE, ATT&CK technique, author...), or just say hello." },
+            { role: 'assistant', content: "Hey, I'm Rulezy! Tell me to whip up a rule or a bundle, or send me hunting through the rule list — by tag, CVE, ATT&CK technique, author, a GitHub source, you name it. Or just say hi." },
         ])
         const messagesEl = ref(null)
         const inputEl    = ref(null)
@@ -37,6 +51,19 @@ const ChatbotWidget = {
         // Sent-message recall (Up/Down, like a shell history) — oldest first.
         const sentHistory  = ref([])
         const historyCursor = ref(null)  // null = live typing; 0 = most recent sent message, 1 = one before that, ...
+
+        let lastExampleIndex = null
+        function fillExample() {
+            let idx = Math.floor(Math.random() * CHAT_EXAMPLES.length)
+            if (CHAT_EXAMPLES.length > 1 && idx === lastExampleIndex) {
+                idx = (idx + 1) % CHAT_EXAMPLES.length
+            }
+            lastExampleIndex = idx
+            draft.value = CHAT_EXAMPLES[idx]
+            historyCursor.value = null
+            autoGrow()
+            nextTick(() => inputEl.value?.focus())
+        }
 
         async function scrollToBottom() {
             await nextTick()
@@ -137,7 +164,7 @@ const ChatbotWidget = {
             }
         }
 
-        return { open, draft, loading, messages, messagesEl, inputEl, send, autoGrow, recallOlder, recallNewer, onEnterKey, MASCOT_ENABLED }
+        return { open, draft, loading, messages, messagesEl, inputEl, send, autoGrow, recallOlder, recallNewer, onEnterKey, fillExample, MASCOT_ENABLED }
     },
 
     template: `
@@ -154,6 +181,9 @@ const ChatbotWidget = {
             <img v-if="MASCOT_ENABLED" src="/static/images/rulezy/chatbot.png" alt="" class="chatbot-header__mascot">
             <i v-else class="fa-solid fa-comment-dots"></i>
             <span class="chatbot-header__title">Rulezy <span class="chatbot-badge">prototype</span></span>
+            <button type="button" class="chatbot-btn" @click="fillExample" title="Try an example that works" :disabled="loading">
+                <i class="fa-solid fa-dice"></i>
+            </button>
             <button class="chatbot-btn" @click="open = false" title="Close"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
@@ -168,7 +198,10 @@ const ChatbotWidget = {
                 </div>
             </div>
             <div v-if="loading" class="chatbot-msg chatbot-msg--bot chatbot-msg--thinking">
-                <img v-if="MASCOT_ENABLED" src="/static/images/rulezy/reflexion.png" alt="" class="chatbot-thinking__mascot">
+                <span v-if="MASCOT_ENABLED" class="rulezy-say" tabindex="0">
+                    <img src="/static/images/rulezy/reflexion.png" alt="" class="chatbot-thinking__mascot">
+                    <span class="rulezy-say__bubble" style="max-width:180px;">Give me a sec, I'm doing very serious robot thinking.</span>
+                </span>
                 <i v-else class="fa-solid fa-circle-notch fa-spin"></i>
                 <div class="chatbot-msg__bubble chatbot-typing"><span></span><span></span><span></span></div>
             </div>

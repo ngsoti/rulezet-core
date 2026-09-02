@@ -302,6 +302,182 @@ def _search_rules(params: dict) -> dict:
     return {"success": True, "reply": "Here's what I found — opening the filtered list.", "redirect": redirect}
 
 
+# A CVE written without the literal "CVE-" prefix ("cve 3456-4567") and a
+# genuinely open-ended topical ask ("do you have rule to detect Fortinet
+# exploitation?") both confirmed to make the small local model hallucinate —
+# action "chat" with a made-up "found X rules" reply for the first, action
+# "chat" with the literal reply "ask" for the second, neither one actually
+# calling search_rules. Handle both deterministically instead of trusting
+# the model every time, same rationale as _maybe_format_question/
+# _maybe_explain_question below.
+_CVE_MENTION_RE = re.compile(r'\bcve[\s-]*(\d{4}-\d{2,7})\b', re.IGNORECASE)
+_OPEN_SEARCH_RE = re.compile(
+    r'''
+    (?:
+        \b(?:do\ you\ have|have\ you\ got|got\ any|is\ there|are\ there)\b.{0,40}?
+        \b(?:rules?|detections?|signatures?)\b
+      |
+        \b(?:rules?|detections?|signatures?)\b
+    )
+    \s*(?:to\ detect|for|about|on|related\ to|regarding|that\ detect|that\ match|matching)\s+
+    (?P<topic>.+?)\??\s*$
+    ''',
+    re.IGNORECASE | re.VERBOSE,
+)
+# "rules for a CVE" / "rules about a tag" — the field is named but no real
+# value is given, which per the system prompt's own rules should be an "ask"
+# for that value, not a free-text search for the literal words "a cve".
+_VAGUE_TOPIC_RE = re.compile(r'^(?:a|an|some|any)\s+\w+$', re.IGNORECASE)
+
+# The backend's free-text search is a single ILIKE("%...%") substring match
+# (filter_rules() in rule_core.py), not a tokenized multi-word search — the
+# full phrase "Fortinet exploitation" almost never appears verbatim in a
+# title/description, while "Fortinet" alone matches broadly. Strip generic
+# trailing security-jargon words and keep only the specific term(s).
+_GENERIC_TOPIC_WORDS = {
+    'exploitation', 'exploit', 'exploits', 'attack', 'attacks', 'activity',
+    'vulnerability', 'vulnerabilities', 'campaign', 'campaigns', 'threat',
+    'threats', 'malware', 'actor', 'actors', 'technique', 'techniques',
+    'behavior', 'behaviour', 'incident', 'incidents', 'rule', 'rules',
+}
+
+
+def _simplify_search_topic(topic: str) -> str:
+    words = topic.split()
+    while len(words) > 1 and words[-1].lower().strip('.,!?') in _GENERIC_TOPIC_WORDS:
+        words.pop()
+    return ' '.join(words) if words else topic
+
+
+# A source repo URL named alongside a rules-search framing ("do we have
+# rules from https://github.com/X/Y") — same failure confirmed live: the
+# model chatted a made-up yes/no answer instead of calling search_rules.
+_URL_RE = re.compile(r'https?://\S+')
+_RULE_MENTION_RE = re.compile(r'\b(?:rules?|detections?|signatures?)\b', re.IGNORECASE)
+
+# MITRE ATT&CK technique id, e.g. "T1055" or "T1055.001".
+_ATTACK_ID_RE = re.compile(r'\bT\d{4}(?:\.\d{3})?\b', re.IGNORECASE)
+
+# "tagged ransomware" / "tag: apt" / "with the ransomware tag" — a word
+# immediately next to "tag(ged)" is unambiguous, but common enough stray
+# matches ("what tags are there") need excluding via _TAG_STOPWORDS.
+_TAG_RE = re.compile(
+    r'\btag(?:ged|s)?\b\s*(?:as|is|with|for|:)?\s*["\']?(?P<t1>[a-z0-9][\w:.\-]*)["\']?'
+    r'|\bthe\s+["\']?(?P<t2>[a-z0-9][\w:.\-]*)["\']?\s+tag\b',
+    re.IGNORECASE,
+)
+_TAG_STOPWORDS = {'are', 'is', 'exist', 'exists', 'available', 'there', 'do', 'does', 'can', 'a', 'an'}
+
+_EDITOR_RE = re.compile(r'\bedited\s+by\s+(?P<v>[\w.\-]+(?:\s+[\w.\-]+)?)', re.IGNORECASE)
+_AUTHOR_RE = re.compile(
+    r'\b(?:written|authored|created|made)\s+by\s+(?P<a1>[\w.\-]+(?:\s+[\w.\-]+)?)'
+    r'|\brules?\s+by\s+(?P<a2>[\w.\-]+(?:\s+[\w.\-]+)?)\b',
+    re.IGNORECASE,
+)
+# "rules by author" / "rules by tag" means "filter BY that criterion", not a
+# literal person named "author" or "tag" — never treat these as a real name.
+_PERSON_STOPWORDS = {
+    'tag', 'tags', 'author', 'authors', 'editor', 'editors', 'format', 'formats',
+    'type', 'types', 'license', 'licenses', 'cve', 'source', 'sources',
+}
+
+# A clear request verb turns a bare format mention into real search intent
+# ("show me yara rules") — without one, a format name alone stays too
+# ambiguous ("does Rulezet support yara" must never search).
+_REQUEST_VERB_RE = re.compile(r'\b(?:show|list|browse|find|get|give)\b', re.IGNORECASE)
+
+
+def _extract_rule_type_from_message(message: str):
+    msg_lower = message.lower()
+    for fmt in sorted(_VALID_FORMATS):
+        if re.search(rf'\b{re.escape(fmt)}\b', msg_lower):
+            return fmt
+    return None
+
+
+def _extract_tag_from_message(message: str):
+    """Only returns a tag that actually exists (via _find_matching_tag) —
+    a confidently-wrong tag filter is worse than not filtering at all."""
+    m = _TAG_RE.search(message)
+    if not m:
+        return None
+    candidate = (m.group('t1') or m.group('t2') or '').strip().lower()
+    if not candidate or candidate in _TAG_STOPWORDS:
+        return None
+    return _find_matching_tag(candidate)
+
+
+def _maybe_search_rules_shortcut(message: str):
+    """Converts an open-phrase rule search into the same structured params
+    search_rules already accepts — a small local model is unreliable at
+    recognizing this intent reliably beyond its own few-shot examples
+    (confirmed live: a CVE without the "CVE-" prefix, an open topical ask,
+    and a source-repo URL all got a hallucinated "chat" reply instead of an
+    actual search). Every field detected below combines into one search;
+    only a bare format name or a vague topic needs a clearer signal (a
+    request verb, or "rule(s) for/about/to detect X" phrasing) before it's
+    trusted, to avoid hijacking purely informational questions."""
+    if _CREATE_VERBS_RE.search(message):
+        return None
+
+    params = {}
+    precise_hit = False
+
+    cve_match = _CVE_MENTION_RE.search(message)
+    if cve_match:
+        params['vulnerabilities'] = [f"CVE-{cve_match.group(1)}".upper()]
+        precise_hit = True
+
+    url_match = _URL_RE.search(message) if _RULE_MENTION_RE.search(message) else None
+    if url_match:
+        params['sources'] = [url_match.group(0).rstrip('.,!?)')]
+        precise_hit = True
+
+    attack_match = _ATTACK_ID_RE.search(message)
+    if attack_match:
+        params['attacks'] = [attack_match.group(0).upper()]
+        precise_hit = True
+
+    tag = _extract_tag_from_message(message)
+    if tag:
+        params['tags'] = [tag]
+        precise_hit = True
+
+    editor_match = _EDITOR_RE.search(message)
+    editor_name = editor_match.group('v').strip() if editor_match else None
+    if editor_name and editor_name.lower() not in _PERSON_STOPWORDS:
+        params['editors'] = [editor_name]
+        precise_hit = True
+    else:
+        author_match = _AUTHOR_RE.search(message)
+        author_name = (author_match.group('a1') or author_match.group('a2')).strip() if author_match else None
+        if author_name and author_name.lower() not in _PERSON_STOPWORDS:
+            params['authors'] = [author_name]
+            precise_hit = True
+
+    # A repo path/name often contains a format-like substring of its own
+    # ("Yara-Rules", "sigma-hq") — scan for rule_type with the URL itself
+    # removed so the repo's name never gets misread as a format filter.
+    format_scan_text = message.replace(url_match.group(0), ' ') if url_match else message
+    rule_type = _extract_rule_type_from_message(format_scan_text)
+    if rule_type:
+        params['rule_type'] = rule_type
+        if precise_hit or _REQUEST_VERB_RE.search(message):
+            precise_hit = True
+
+    if not precise_hit:
+        open_match = _OPEN_SEARCH_RE.search(message)
+        if open_match:
+            topic = open_match.group('topic').strip(' ?.!')
+            if topic and not _VAGUE_TOPIC_RE.match(topic):
+                params['search'] = _simplify_search_topic(topic)
+                precise_hit = True
+
+    if not precise_hit or not params:
+        return None
+    return _search_rules(params)
+
+
 def _create_bundle(user, params: dict) -> dict:
     from app.features.bundle import bundle_core as BundleModel
 
@@ -399,10 +575,28 @@ def _maybe_explain_question(message: str):
 
 def _dispatch_message(user, history: list, message: str) -> dict:
     """history: list of {"role": "user"|"assistant", "content": "..."} from the current session only."""
-    for shortcut_fn in (_maybe_format_question, _maybe_explain_question):
+    for shortcut_fn in (_maybe_format_question, _maybe_explain_question, _maybe_search_rules_shortcut):
         shortcut = shortcut_fn(message)
         if shortcut is not None:
             return shortcut
+
+    # A message that's just pasted rule content, with a create-verb somewhere
+    # in recent history, is unambiguous — but confirmed live: handed the
+    # exact rule text as the message, the model replied "Please provide the
+    # content of the rule" instead of ever calling create_rule (it had
+    # already asked for the content one turn earlier and didn't recognize
+    # this as the answer). Bypass the model's own action-classification for
+    # this one turn instead of trusting it, same rationale as the shortcuts
+    # above — needs user/history unlike those, so it can't join that loop.
+    if _looks_like_rule_content(message):
+        recent_user_text = message + ' ' + ' '.join(
+            h.get('content', '') for h in history[-6:] if h.get('role') == 'user'
+        )
+        if _CREATE_VERBS_RE.search(recent_user_text):
+            fmt = _extract_rule_type_from_message(recent_user_text)
+            if fmt:
+                outcome = _create_rule(user, {'format': fmt, 'content': message})
+                return {"action": "create_rule", **outcome}
 
     from app.features.ai.ai_core import get_agent
 
