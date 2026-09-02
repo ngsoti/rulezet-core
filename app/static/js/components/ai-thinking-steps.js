@@ -18,21 +18,26 @@
  *                    static, unless it's already a terminal stage
  *                    (done/failed/error).
  *
- * Each stage's icon is a Font Awesome placeholder (AI_MASCOT_CONCEPT.md) —
- * once the mascot exists, swap the <i> in ats-icon for an <img> of that
- * stage's pose, keyed the same way, without touching any caller.
+ * Stages with a matching Rulezy mascot pose (AI_MASCOT_CONCEPT.md) render
+ * that pose as a small image instead of a Font Awesome icon — see `image`
+ * in STAGE_META below (`app/static/images/rulezy/*.png`). A stage with no
+ * pose (writing/failed/error) keeps its Font Awesome icon; this is a
+ * per-stage choice, not an all-or-nothing swap, since only some poses have
+ * a clean conceptual match to a pipeline stage.
  */
 
 const TERMINAL_STAGES = new Set(['done', 'failed', 'error'])
 
+const RULEZY = '/static/images/rulezy/'
+
 const STAGE_META = {
-    reading:    { icon: 'fa-magnifying-glass',    tone: 'blue'   },
-    thinking:   { icon: 'fa-brain',               tone: 'purple' },
-    writing:    { icon: 'fa-pen-fancy',           tone: 'blue'   },
-    validating: { icon: 'fa-check-double',        tone: 'blue'   },
-    searching:  { icon: 'fa-database',            tone: 'blue'   },
-    done:       { icon: 'fa-circle-check',        tone: 'green'  },
-    failed:     { icon: 'fa-circle-xmark',        tone: 'red'    },
+    reading:    { icon: 'fa-magnifying-glass',    tone: 'blue',   image: RULEZY + 'db.png' },
+    thinking:   { icon: 'fa-brain',               tone: 'purple', image: RULEZY + 'reflexion.png' },
+    writing:    { icon: 'fa-pen-fancy',           tone: 'blue' },
+    validating: { icon: 'fa-check-double',        tone: 'blue',   image: RULEZY + 'rule-fixer.png' },
+    searching:  { icon: 'fa-database',            tone: 'blue',   image: RULEZY + 'lookup.png' },
+    done:       { icon: 'fa-circle-check',        tone: 'green',  image: RULEZY + 'armcross.png' },
+    failed:     { icon: 'fa-circle-xmark',        tone: 'red'   },
     error:      { icon: 'fa-triangle-exclamation', tone: 'red'   },
 }
 const DEFAULT_META = { icon: 'fa-circle-notch', tone: 'blue' }
@@ -59,7 +64,10 @@ export default {
         function iconClass(stage) {
             return metaFor(stage).icon
         }
-        return { isCurrent, toneClass, iconClass }
+        function imageFor(stage) {
+            return metaFor(stage).image
+        }
+        return { isCurrent, toneClass, iconClass, imageFor }
     },
 
     template: `
@@ -68,8 +76,9 @@ export default {
          class="ats-item"
          :class="{ 'ats-item--current': isCurrent(i), 'ats-item--last': i === steps.length - 1 }">
         <div class="ats-rail">
-            <div class="ats-icon" :class="toneClass(step.stage)">
-                <i class="fa-solid" :class="[iconClass(step.stage), { 'fa-spin': isCurrent(i) && step.stage === 'thinking' }]"></i>
+            <div class="ats-icon" :class="[toneClass(step.stage), { 'ats-icon--mascot': imageFor(step.stage) }]">
+                <img v-if="imageFor(step.stage)" :src="imageFor(step.stage)" alt="" class="ats-mascot">
+                <i v-else class="fa-solid" :class="[iconClass(step.stage), { 'fa-spin': isCurrent(i) && step.stage === 'thinking' }]"></i>
             </div>
             <div v-if="i < steps.length - 1" class="ats-line"></div>
         </div>

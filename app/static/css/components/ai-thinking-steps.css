@@ -38,8 +38,24 @@
 .ats-icon--green  { background: rgba(25, 135, 84, .12);  color: #198754; }
 .ats-icon--red    { background: rgba(220, 53, 69, .12);  color: #dc3545; }
 
+/* Mascot poses are full-color illustrations, not single-tone glyphs — drop
+   the tinted circle backdrop and give them a bit more room to read clearly. */
+.ats-icon--mascot {
+    width: 40px;
+    height: 40px;
+    background: none;
+}
+.ats-mascot {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
 .ats-item--current .ats-icon {
     animation: ats-pulse 1.4s ease-in-out infinite;
+}
+.ats-item--current .ats-icon--mascot {
+    animation: ats-mascot-pulse 1.4s ease-in-out infinite;
 }
 
 .ats-line {
@@ -66,4 +82,8 @@
 @keyframes ats-pulse {
     0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(13, 110, 253, .25); }
     50%      { transform: scale(1.08); box-shadow: 0 0 0 4px rgba(13, 110, 253, 0); }
+}
+@keyframes ats-mascot-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.06); }
 }

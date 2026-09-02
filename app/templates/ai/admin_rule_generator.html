@@ -20,7 +20,7 @@
       </ol>
     </nav>
     <div class="d-flex align-items-center gap-3 mb-3">
-      <div class="banner-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+      <div class="banner-icon banner-icon--mascot"><img src="{{ url_for('static', filename='images/rulezy/rule-generator.png') }}" alt=""></div>
       <div>
         <h2 class="fw-bold mb-1">Rule Generator</h2>
         <div class="banner-accent"></div>
@@ -36,11 +36,15 @@
 
   <agent-config-card agent-key="rule_generator" :csrf-token="csrfToken" @notify="onNotify"></agent-config-card>
 
-  <div class="alert alert-secondary border-0 rounded-4 py-3 px-4 mb-4">
-    <i class="fa-solid fa-circle-info me-2"></i>
-    This agent isn't built yet — the config above is ready and waiting (enable/model/
-    timeout persist correctly), but there's no <code>RuleGeneratorAgent</code> to run
-    against it. History will start populating once it ships.
+  <div class="alert alert-secondary border-0 rounded-4 py-3 px-4 mb-4 d-flex align-items-start gap-2">
+    <i class="fa-solid fa-flask me-1 mt-1"></i>
+    <div>
+      <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill me-2" style="font-size:.68rem;">BETA</span>
+      <strong>YARA only, for now.</strong> Draft a rule from a plain-language description
+      on the <a href="/rule/create_rule?tab=ai_generate">Add a Detection Rule</a> page's
+      "Generate with AI" tab — always a draft the human reviews and submits through the
+      normal creation form, never auto-published.
+    </div>
   </div>
 
   <data-table

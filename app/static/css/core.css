@@ -2736,6 +2736,18 @@ body.dark-mode .table .opacity-50 {
   flex-shrink: 0;
 }
 
+/* A Rulezy mascot pose instead of a flat icon — full-color illustration,
+   so it gets a bit more room and no icon font-size to fight with. */
+.banner-icon--mascot {
+  width: 64px;
+  height: 64px;
+}
+.banner-icon--mascot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .banner-accent {
   width: 36px;
   height: 3px;

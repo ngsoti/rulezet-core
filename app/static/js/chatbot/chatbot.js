@@ -23,7 +23,7 @@ const ChatbotWidget = {
         const draft    = ref('')
         const loading  = ref(false)
         const messages = ref([
-            { role: 'assistant', content: "Hi — I'm a prototype assistant. Ask me to create a rule, create a bundle, or search rules (by tag, CVE, ATT&CK technique, author...), or just say hello." },
+            { role: 'assistant', content: "Hi, I'm Rulezy — your prototype assistant. Ask me to create a rule, create a bundle, or search rules (by tag, CVE, ATT&CK technique, author...), or just say hello." },
         ])
         const messagesEl = ref(null)
         const inputEl    = ref(null)
@@ -142,14 +142,14 @@ const ChatbotWidget = {
 <div>
     <!-- ── Collapsed button ── -->
     <button v-if="!open" class="chatbot-fab" @click="open = true" title="Chat assistant">
-        <i class="fa-solid fa-robot"></i>
+        <img src="/static/images/rulezy/chatbot.png" alt="" class="chatbot-fab__mascot">
     </button>
 
     <!-- ── Expanded panel ── -->
     <div v-else class="chatbot-panel">
         <div class="chatbot-header">
-            <i class="fa-solid fa-robot"></i>
-            <span class="chatbot-header__title">Assistant <span class="chatbot-badge">prototype</span></span>
+            <img src="/static/images/rulezy/chatbot.png" alt="" class="chatbot-header__mascot">
+            <span class="chatbot-header__title">Rulezy <span class="chatbot-badge">prototype</span></span>
             <button class="chatbot-btn" @click="open = false" title="Close"><i class="fa-solid fa-xmark"></i></button>
         </div>
 

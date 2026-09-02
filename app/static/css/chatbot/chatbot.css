@@ -11,24 +11,28 @@
     font-size: .85rem;
 }
 
-/* ── Collapsed button ── */
+/* ── Collapsed button ──
+   White plate behind the mascot (not the old solid blue) — Rulezy is
+   already a blue robot, a blue disc behind him swallowed the silhouette,
+   but a fully transparent button nearly disappeared against some page
+   backgrounds. A plain white circle keeps him visible everywhere. */
 .chatbot-fab {
     position: relative;
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     border: none;
-    background: #0d6efd;
-    color: #fff;
+    background: #fff;
+    color: #0d6efd;
     font-size: 1.2rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 20px rgba(13,110,253,.35);
+    box-shadow: 0 4px 16px rgba(0,0,0,.22);
     cursor: pointer;
     transition: box-shadow .18s, transform .12s;
 }
-.chatbot-fab:hover { box-shadow: 0 6px 24px rgba(13,110,253,.5); transform: translateY(-1px); }
+.chatbot-fab:hover { box-shadow: 0 6px 22px rgba(0,0,0,.3); transform: translateY(-1px); }
 
 /* Attention ring — a soft, slow "ping" so the button gets noticed without
    being distracting once someone's actually looked at it a few times. */
@@ -43,8 +47,19 @@
 }
 /* A gentle periodic nudge on the icon itself, separate cadence from the
    ring so they don't read as one single repeating "blink". */
-.chatbot-fab i {
+.chatbot-fab i, .chatbot-fab__mascot {
     animation: chatbot-nudge 4.5s ease-in-out infinite;
+}
+.chatbot-fab__mascot {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+}
+.chatbot-header__mascot {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 @keyframes chatbot-ping {
     0%   { transform: scale(1);    opacity: .55; }
@@ -59,7 +74,7 @@
     96%           { transform: rotate(0deg) scale(1); }
 }
 @media (prefers-reduced-motion: reduce) {
-    .chatbot-fab::before, .chatbot-fab i { animation: none; }
+    .chatbot-fab::before, .chatbot-fab i, .chatbot-fab__mascot { animation: none; }
 }
 
 /* ── Expanded panel ── */
