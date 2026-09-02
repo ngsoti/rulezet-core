@@ -111,11 +111,65 @@ def test_navigate_shortcut_ignores_unrelated_go_to_phrasing(app):
         mock_chat.assert_called_once()
 
 
+# ── create_bundle shortcut — confirmed live to be the model's worst
+#    failure of all: for every phrasing tried, it echoed the system
+#    prompt's own JSON-template PLACEHOLDER text back verbatim
+#    ({"reply": "short confirmation message"}) instead of attempting the
+#    action, 100% reproducible. A name is all create_bundle needs. ──────────
+
+def test_create_bundle_shortcut_handles_reported_case_never_calls_ollama(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "create a bundle called Ransomware Toolkit")
+        mock_chat.assert_not_called()
+        assert result['action'] == 'create_bundle'
+        assert result['success'] is True
+        assert 'link' in result
+
+        from app import db
+        from app.core.db_class.db import Bundle
+        bundle = Bundle.query.filter_by(name="Ransomware Toolkit").first()
+        assert bundle is not None
+        db.session.delete(bundle)
+        db.session.commit()
+
+
+def test_create_bundle_shortcut_handles_several_phrasings(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        for message in ["make a bundle named APT29 Hunt", "build a bundle titled Weekly Digest"]:
+            with patch(CHAT) as mock_chat:
+                result = handle_message(user, [], message)
+            mock_chat.assert_not_called()
+            assert result['action'] == 'create_bundle'
+            assert result['success'] is True
+
+
+def test_create_bundle_shortcut_requires_create_verb(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT, return_value=_envelope(reply="Which bundle?")) as mock_chat:
+            handle_message(user, [], "I like the bundle called Weekly Digest")
+        mock_chat.assert_called_once()
+
+
+def test_create_bundle_shortcut_never_hijacks_create_rule_requests(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT, return_value=_envelope(reply="What should it detect?")) as mock_chat:
+            handle_message(user, [], "can you create a yara rule?")
+        mock_chat.assert_called_once()
+
+
 def test_handle_message_falls_back_to_plain_text_on_invalid_json(app):
+    # Message deliberately avoids every deterministic shortcut's trigger
+    # words (greeting, format, rule/bundle, CVE, navigate...) so this
+    # actually exercises the "model returned non-JSON" fallback path.
     with app.app_context():
         user = User.query.filter_by(email="admin@admin.admin").first()
         with patch(CHAT, return_value="not json at all"):
-            result = handle_message(user, [], "hello")
+            result = handle_message(user, [], "banana pancake recipe please")
         assert result['action'] == 'chat'
         assert result['reply'] == "not json at all"
 
@@ -366,6 +420,30 @@ def test_search_shortcut_handles_bare_format_request_with_verb(app):
             result = handle_message(user, [], "show me yara rules")
         mock_chat.assert_not_called()
         assert result['redirect'] == '/rule/rules_list?rule_type=yara'
+
+
+# ── search reply honesty — the old reply always said "Here's what I found"
+#    even for a filter that matched nothing; now it runs a real (per_page=1)
+#    count first so the reply doesn't overclaim. ─────────────────────────────
+
+def test_search_shortcut_reply_is_honest_about_zero_results(app):
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "rules for CVE-9999-9999999?")
+        mock_chat.assert_not_called()
+        assert "didn't find anything" in result['reply'].lower()
+
+
+def test_search_shortcut_reply_includes_a_real_count(app):
+    # The seeded test rule is format="yara" — a real, non-zero count.
+    with app.app_context():
+        user = User.query.filter_by(email="admin@admin.admin").first()
+        with patch(CHAT) as mock_chat:
+            result = handle_message(user, [], "show me yara rules")
+        mock_chat.assert_not_called()
+        assert 'Found' in result['reply'] and 'matching rule' in result['reply']
+        assert "didn't find" not in result['reply'].lower()
 
 
 def test_search_shortcut_bare_format_without_verb_falls_through(app):

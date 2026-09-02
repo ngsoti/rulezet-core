@@ -299,7 +299,38 @@ def _search_rules(params: dict) -> dict:
         }
 
     redirect = '/rule/rules_list?' + urlencode(query)
-    return {"success": True, "reply": "Here's what I found — opening the filtered list.", "redirect": redirect}
+    return {"success": True, "reply": _search_result_reply(query), "redirect": redirect}
+
+
+def _search_result_reply(query: dict) -> str:
+    """A live count so the reply is honest about whether anything actually
+    matched, instead of always claiming "here's what I found" even for a
+    filter that turns up nothing — a count check failing for any reason
+    (schema drift, etc.) must never block the redirect itself, so this
+    always falls back to the old generic reply rather than raising."""
+    try:
+        from app.features.rule import rule_core as RuleModel
+
+        _split = lambda key: query[key].split(',') if query.get(key) else None
+        pagination = RuleModel.get_rules_data_table(
+            page=1, per_page=1,
+            search=query.get('search'),
+            rule_type=query.get('rule_type'),
+            author=_split('authors'),
+            editor_names=_split('editors'),
+            vulnerabilities=_split('vulnerabilities'),
+            licenses=_split('licenses'),
+            tags=_split('tags'),
+            attacks=_split('attacks'),
+            source=_split('sources'),
+        )
+        count = pagination.total
+    except Exception:
+        return "Here's what I found — opening the filtered list."
+
+    if count == 0:
+        return "I didn't find anything matching that, but here's the filtered view anyway in case I got a field wrong."
+    return f"Found {count} matching rule{'s' if count != 1 else ''} — opening the filtered list."
 
 
 # A CVE written without the literal "CVE-" prefix ("cve 3456-4567") and a
@@ -490,6 +521,31 @@ def _create_bundle(user, params: dict) -> dict:
     return {"success": True, "reply": f"Done — created bundle \"{name}\".", "link": f"/bundle/detail/{bundle.id}"}
 
 
+# "create a bundle called X" — confirmed live, and worse than the other
+# hallucinations: the model didn't even attempt the action, it echoed the
+# system prompt's own JSON template PLACEHOLDER text verbatim
+# ({"reply": "short confirmation message"}) as if it were a real answer,
+# 100% reproducible across several phrasings. A name is the only thing
+# create_bundle actually needs, so skip the model for this shape entirely.
+_BUNDLE_NAME_RE = re.compile(
+    r'\bbundle\b\s*(?:called|named|titled)\s+["\']?(?P<name>.+?)["\']?[.!?]?\s*$',
+    re.IGNORECASE,
+)
+
+
+def _maybe_create_bundle_shortcut(message: str, user):
+    if not _CREATE_VERBS_RE.search(message):
+        return None
+    m = _BUNDLE_NAME_RE.search(message)
+    if not m:
+        return None
+    name = m.group('name').strip()
+    if not name:
+        return None
+    outcome = _create_bundle(user, {'name': name})
+    return {"action": "create_bundle", **outcome}
+
+
 def _navigate(user, params: dict) -> dict:
     dest = (params.get('destination') or '').strip().lower()
     entry = _ROUTES.get(dest)
@@ -663,8 +719,68 @@ def _maybe_explain_question(message: str):
     return None
 
 
+# The exact placeholder strings from SYSTEM_PROMPT's own JSON-shape examples,
+# plus the action names and every navigate destination key — all confirmed
+# or plausible things the model could echo back verbatim as a "reply"
+# instead of actually answering.
+_TEMPLATE_LEAK_REPLIES = {
+    'short confirmation message',
+    'a question asking the user for whatever specific value is still missing',
+    'your normal conversational response',
+    'ask', 'chat', 'create_rule', 'create_bundle', 'navigate', 'search_rules',
+} | set(_ROUTES)
+
+# A looser variant confirmed live: instead of real JSON, the model wrote out
+# its intended call as pseudo-structured text — "create_bundle, name: 'X',
+# description: 'Y'" — as the chat reply itself. Any reply that starts with
+# one of the action names immediately followed by a separator is that same
+# leak, not a real answer.
+_ACTION_LEAK_RE = re.compile(
+    r'^(?:create_rule|create_bundle|navigate|search_rules|ask|chat)\s*[:,(]',
+    re.IGNORECASE,
+)
+
+
+def _looks_like_template_leak(reply: str) -> bool:
+    stripped = reply.strip()
+    if stripped.strip('.').lower() in _TEMPLATE_LEAK_REPLIES:
+        return True
+    return bool(_ACTION_LEAK_RE.match(stripped))
+
+
+def _agent_gate_check(user):
+    """Mirrors AIAgent.run()'s own enabled/rate-limit checks (ai_core.py) —
+    every shortcut below deliberately skips run() entirely (that's the
+    point, to skip the unreliable model for a case we can answer for
+    certain), but skipping run() must never also skip the admin's kill
+    switch or a user's rate limit. Checked once, up front, so it applies
+    uniformly whether a message ends up shortcut-served or model-served.
+    Returns a refusal dict if blocked, else None."""
+    from app.core.db_class.db import AIAgentConfig
+    from app.features.ai.ai_core import check_rate_limit
+
+    agent_config = AIAgentConfig.query.filter_by(agent_key='chatbot').first()
+    if agent_config is not None and not agent_config.enabled:
+        return {
+            "action": "chat", "reply": "This AI feature is currently disabled.",
+            "success": False, "_agent_status": "disabled",
+        }
+
+    max_per_hour = agent_config.max_per_hour if agent_config else None
+    if not check_rate_limit(getattr(user, 'id', None), 'chatbot', max_per_hour):
+        return {
+            "action": "chat", "reply": "Rate limit reached, try again later.",
+            "success": False, "_agent_status": "rate_limited",
+        }
+    return None
+
+
 def _dispatch_message(user, history: list, message: str) -> dict:
     """history: list of {"role": "user"|"assistant", "content": "..."} from the current session only."""
+    gate = _agent_gate_check(user)
+    if gate is not None:
+        return gate
+
     for shortcut_fn in (_maybe_greeting, _maybe_format_question, _maybe_explain_question, _maybe_search_rules_shortcut):
         shortcut = shortcut_fn(message)
         if shortcut is not None:
@@ -678,6 +794,13 @@ def _dispatch_message(user, history: list, message: str) -> dict:
     if nav_dest:
         outcome = _navigate(user, {'destination': nav_dest})
         return {"action": "navigate", **outcome}
+
+    # "create a bundle called X" — confirmed live to be the model's worst
+    # failure of all: it echoed the JSON template's own placeholder text
+    # back verbatim instead of attempting the action at all.
+    bundle_shortcut = _maybe_create_bundle_shortcut(message, user)
+    if bundle_shortcut is not None:
+        return bundle_shortcut
 
     # A message that's just pasted rule content, with a create-verb somewhere
     # in recent history, is unambiguous — but confirmed live: handed the
@@ -769,9 +892,13 @@ def _dispatch_message(user, history: list, message: str) -> dict:
 
     # 'ask' or 'chat' — nothing to execute, just relay the model's reply.
     # A small model doesn't always follow the "never leave reply blank"
-    # instruction (seen on real gibberish input) — backstop it in code rather
-    # than showing the user an empty bubble.
-    if not reply.strip():
+    # instruction (seen on real gibberish input), and sometimes leaks its own
+    # JSON template verbatim as if it were a real answer instead of filling
+    # it in — confirmed live: create_bundle got back the literal placeholder
+    # "short confirmation message", and a navigate request got the raw
+    # destination key ("my_tags") as chat text. Backstop both in code rather
+    # than showing the user template debris.
+    if not reply.strip() or _looks_like_template_leak(reply):
         reply = "Sorry, I'm not sure what you mean — could you rephrase that?"
     return {"action": action, "reply": reply, "success": True}
 
