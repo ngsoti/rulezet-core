@@ -446,7 +446,12 @@ createApp({
     const conflictData = ref(null)
     const highlightId  = ref(parseInt(new URLSearchParams(location.search).get('highlight')) || null)
 
-    const formats = ['yara','sigma','suricata','zeek','crs','nova','nse','wazuh','elastic','kql']
+    const formats = ref([])
+    async function fetchFormats() {
+      const res  = await fetch('/rule/get_rules_formats')
+      const data = await res.json()
+      formats.value = (data.formats || []).map(f => f.name)
+    }
 
     const batchRulesCount = computed(() => {
       const b = batches.value.find(b => b.batch_uuid === batchFilter.value)
@@ -627,7 +632,7 @@ createApp({
       handleJobResponse(data, `${data.deleted || totalCount.value} rule(s) permanently deleted`, true)
     }
 
-    onMounted(() => fetchRules(1))
+    onMounted(() => { fetchRules(1); fetchFormats() })
 
     return {
       rules, batches, totalCount, total, totalPages, page, loading,
