@@ -72,6 +72,8 @@ ICONS: dict[str, str] = {
     "blog.delete":         "fa-solid fa-trash",
     "blog.create_from_cve": "fa-solid fa-newspaper",
     "chatbot.conversation": "fa-solid fa-robot",
+    "proposal.message_edited": "fa-solid fa-pen",
+    "proposal.revised": "fa-solid fa-code-branch",
 }
 
 # Actions that are public by default
@@ -181,17 +183,20 @@ TITLES: dict[str, str] = {
     "blog.toggle_access":       "Blog Post Access Toggled",
     "blog.create_from_cve":     "Blog Post Generated from CVE",
     "chatbot.conversation":     "Chatbot Conversation Started",
+    "proposal.message_edited":  "Proposal Justification Edited",
+    "proposal.revised":         "Proposal Revised",
 }
 
 # Known category prefixes (first segment of action)
 KNOWN_CATEGORIES = frozenset({
     'rule', 'bundle', 'bundle_comment', 'user', 'tag', 'job',
-    'github', 'admin', 'comment', 'connector', 'api', 'chatbot', 'blog',
+    'github', 'admin', 'comment', 'connector', 'api', 'chatbot', 'blog', 'proposal',
 })
 
 # Prefix to display category mapping
 CATEGORY_MAP: dict[str, str] = {
     'bundle_comment': 'comment',
+    'proposal': 'rule',
 }
 
 WARNING_KEYWORDS = (

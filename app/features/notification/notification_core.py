@@ -47,10 +47,11 @@ _TYPE_ICON = {
     'github_import_done':      'fa-brands fa-github',
     'github_update_done':      'fa-solid fa-code-branch',
     'proposal_submitted':      'fa-solid fa-code-pull-request',
-    'proposal_comment':        'fa-solid fa-message-lines',
+    'proposal_comment':        'fa-solid fa-message',
     'proposal_accepted':       'fa-solid fa-circle-check',
     'proposal_rejected':       'fa-solid fa-circle-xmark',
     'comment_reply':           'fa-solid fa-reply',
+    'user_mentioned':          'fa-solid fa-at',
     'session_running':         'fa-solid fa-spinner',
     'session_done':            'fa-solid fa-circle-check',
     'report_submitted':        'fa-solid fa-triangle-exclamation',
@@ -775,6 +776,30 @@ def notify_comment_reply(parent_comment_author_id, replier_id, object_title, lin
         )
     except Exception as e:
         print(f"[notification_core] notify_comment_reply error: {e}")
+
+
+def notify_user_mentioned(mentioned_user_id, mentioner_id, object_title, link):
+    """Notify a user they were @mentioned in a comment (honours pref_mentioned)."""
+    if mentioned_user_id == mentioner_id:
+        return
+    try:
+        pref = _get_pref(mentioned_user_id)
+        if not pref.pref_mentioned:
+            return
+
+        from app.core.db_class.db import User
+        mentioner = db.session.get(User, mentioner_id)
+        mentioner_name = mentioner.get_username() if mentioner else 'Someone'
+
+        create_notification(
+            user_id    = mentioned_user_id,
+            notif_type = 'user_mentioned',
+            title      = f'{mentioner_name} mentioned you',
+            body       = object_title or '',
+            link       = link,
+        )
+    except Exception as e:
+        print(f"[notification_core] notify_user_mentioned error: {e}")
 
 
 def notify_ownership_requested(ownership_request, rule, requester):

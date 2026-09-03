@@ -49,6 +49,26 @@
     white-space: nowrap;
     flex-shrink: 0;
 }
+.proposal-card__status-badge--final {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.9rem;
+    box-shadow: 0 2px 8px rgba(25,135,84,0.35);
+}
+
+/* The accepted proposal is the final outcome of the whole discussion —
+   make it visually stand out from pending/rejected/superseded siblings. */
+.proposal-card--final {
+    border: 2px solid #198754;
+    box-shadow: 0 4px 18px rgba(25,135,84,0.15);
+    transform: scale(1.015);
+}
+.proposal-card--final:hover {
+    box-shadow: 0 8px 26px rgba(25,135,84,0.22);
+    transform: scale(1.015) translateY(-1px);
+}
+.proposal-card--final .proposal-card__body {
+    padding: 1.25rem 1.5rem;
+}
 .proposal-card__message {
     font-size: 0.875rem;
     color: var(--text-color);
@@ -133,6 +153,7 @@
 .status-approved,
 .status-accepted { background: #198754; color: #fff; border: none; }
 .status-rejected { background: #dc3545; color: #fff; border: none; }
+.status-superseded { background: #6f42c1; color: #fff; border: none; }
 </style>
 {% endblock %}
 {% import 'macros/detail_rule_nav.html' as nav with context %}
@@ -198,7 +219,8 @@
                 <div class="d-flex flex-column gap-3">
                     <a v-for="proposal in pull_request_list" :key="proposal.id"
                         :href="'/rule/proposal_content_discuss?id=' + proposal.id"
-                        class="proposal-card">
+                        class="proposal-card"
+                        :class="{ 'proposal-card--final': proposal.status === 'accepted' }">
 
                         <!-- Status stripe -->
                         <div class="proposal-card__stripe"
@@ -227,13 +249,16 @@
                                 </div>
 
                                 <span class="proposal-card__status-badge"
-                                    :class="'status-' + proposal.status">
+                                    :class="[isSuperseded(proposal) ? 'status-superseded' : 'status-' + proposal.status, { 'proposal-card__status-badge--final': proposal.status === 'accepted' }]"
+                                    :title="isSuperseded(proposal) ? 'This proposal was automatically closed because one of its revisions was accepted instead.' : ''">
                                     <i class="fas me-1"
                                         :class="{
                                             'fa-clock': proposal.status === 'pending',
                                             'fa-check': proposal.status === 'approved' || proposal.status === 'accepted',
-                                            'fa-xmark': proposal.status === 'rejected'
-                                        }"></i>[[ proposal.status ]]
+                                            'fa-code-branch': isSuperseded(proposal),
+                                            'fa-xmark': proposal.status === 'rejected' && !isSuperseded(proposal)
+                                        }"></i>[[ isSuperseded(proposal) ? 'Superseded' : proposal.status ]]
+                                    <span v-if="proposal.status === 'accepted'">&nbsp;— Final</span>
                                 </span>
                             </div>
 
@@ -262,6 +287,20 @@
                                         <span class="proposal-score__fill" :style="{ width: proposal.change_score + '%', backgroundColor: scoreColor(proposal.change_score) }"></span>
                                     </span>
                                     <span>[[ Math.round(proposal.change_score) ]]%</span>
+                                </span>
+
+                                <!-- Lineage: revision of / has revisions — concrete link between proposals -->
+                                <span v-if="proposal.previous_proposal" class="proposal-badge"
+                                      style="cursor:pointer;color:#0d6efd;border-color:#0d6efd44;background:#0d6efd12;"
+                                      @click="goToProposal(proposal.previous_proposal.id, $event)"
+                                      title="This proposal is a revision of another one">
+                                    <i class="fa-solid fa-code-branch fa-xs"></i> Revision of #[[ proposal.previous_proposal.id ]]
+                                </span>
+                                <span v-for="r in proposal.revisions" :key="'rev-' + r.id" class="proposal-badge"
+                                      style="cursor:pointer;color:#6c757d;border-color:#6c757d44;background:#6c757d12;"
+                                      @click="goToProposal(r.id, $event)"
+                                      title="A revision of this proposal exists">
+                                    <i class="fa-solid fa-code-branch fa-xs"></i> #[[ r.id ]] ([[ r.status ]])
                                 </span>
 
                                 <!-- Timestamp -->
@@ -330,6 +369,22 @@
                 return EDIT_TYPE_META[type] || { label: type || 'General', icon: 'fa-pen', color: '#6c757d' };
             }
 
+            // A proposal auto-rejected because one of its revisions got accepted
+            // (see _auto_reject_parent_on_child_accept) reads as "Superseded",
+            // not a plain "Rejected" — it wasn't rejected on its own merits.
+            function isSuperseded(proposal) {
+                return proposal.status === 'rejected' &&
+                    (proposal.revisions || []).some(r => r.status === 'accepted');
+            }
+
+            // Lineage chips sit inside the card's own <a> (which already links to
+            // proposal.id) but must navigate elsewhere — stop the outer link.
+            function goToProposal(id, event) {
+                event.stopPropagation();
+                event.preventDefault();
+                window.location.href = '/rule/proposal_content_discuss?id=' + id;
+            }
+
             function formatDate(iso) {
                 if (!iso) return '';
                 const d = new Date(iso);
@@ -370,7 +425,7 @@
 
             onMounted(() => fetchPullRequest(1));
 
-            return { RULE_TITLE_SHORT, pull_request_list, current_page, total_pages, loading, fetchPullRequest, formatDate, scoreColor, editTypeMeta };
+            return { RULE_TITLE_SHORT, pull_request_list, current_page, total_pages, loading, fetchPullRequest, formatDate, scoreColor, editTypeMeta, goToProposal, isSuperseded };
         }
     }).mount('#main-container');
 </script>

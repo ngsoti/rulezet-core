@@ -15,6 +15,47 @@ import { renderMarkdown } from '/static/js/sanitize.js'
 
 const TOAST = { SUCCESS: 'success', WARNING: 'warning', ERROR: 'danger', INFO: 'info' }
 
+function _escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+}
+
+function _initial(name) {
+    const n = (name || '').trim()
+    return n ? n[0].toUpperCase() : '?'
+}
+
+// Proposal comments only: "#123" in comment text becomes a pill-styled link
+// to that proposal's discuss page (icon + id), rendered as raw HTML before
+// marked/DOMPurify run — marked passes inline HTML through untouched, and
+// DOMPurify's allowed tag set (a/i/span) already covers it. CommonMark only
+// treats "#" as a heading when followed by a space ("# heading"), so a bare
+// "#123" is never ambiguous with heading syntax.
+function linkifyProposalRefs(text, objectType) {
+    if (objectType !== 'proposal' || !text) return text
+    return text.replace(/#(\d+)\b/g, (m, id) =>
+        `<a href="/rule/proposal_content_discuss?id=${id}" class="cm-proposal-chip">` +
+        `<i class="fa-solid fa-code-branch"></i>#${id}</a>`)
+}
+
+// Any comment section: "@[Display Name](123)" — the token inserted by the
+// mention picker — becomes a chip-styled link to that user's profile.
+// Unlike the display name (not unique) or username (often unset), the
+// numeric id is always present and unambiguous, so mentions are keyed by it.
+function linkifyMentions(text) {
+    if (!text) return text
+    return text.replace(/@\[([^\]]+)\]\((\d+)\)/g, (m, name, id) => {
+        const safeName = _escapeHtml(name)
+        return `<a href="/account/detail_user/${id}" class="cm-mention-chip">` +
+               `<span class="cm-mention-chip-avatar">${_escapeHtml(_initial(name))}</span>${safeName}</a>`
+    })
+}
+
+function preprocessCommentText(text, objectType) {
+    return linkifyMentions(linkifyProposalRefs(text, objectType))
+}
+
 // ── MarkdownComposer ─────────────────────────────────────────────────────────
 // GitHub-style "Write / Preview" tabs above a plain textarea — used by the
 // new-comment, reply and edit forms below when allow-markdown is enabled.
@@ -34,10 +75,16 @@ const MD_ACTIONS = [
 const MarkdownComposer = {
     name: 'MarkdownComposer',
     delimiters: ['[[', ']]'],
+    components: { 'user-chip': UserChip },
     props: {
         modelValue: { type: String, default: '' },
         placeholder: { type: String, default: 'Write a comment…' },
         rows: { type: Number, default: 3 },
+        // 'proposal' enables "%123" → link-to-proposal rendering below.
+        objectType: { type: String, default: '' },
+        // Proposals "associated" with the current one (parent + revisions) —
+        // shown when typing "%". Each { id, status, discuss_url }.
+        relatedProposals: { type: Array, default: () => [] },
     },
     emits: ['update:modelValue'],
     setup(props, { emit }) {
@@ -52,7 +99,7 @@ const MarkdownComposer = {
 
         async function showPreview() {
             isPreview.value = true
-            previewHtml.value = await renderMarkdown(props.modelValue)
+            previewHtml.value = await renderMarkdown(preprocessCommentText(props.modelValue, props.objectType))
         }
 
         function setValue(newVal, cursorStart, cursorEnd = null) {
@@ -64,6 +111,105 @@ const MarkdownComposer = {
                 ta.selectionStart = cursorStart
                 ta.selectionEnd = cursorEnd ?? cursorStart
             })
+        }
+
+        // ── @user / %proposal mention picker ─────────────────────────────
+        const mentionMode        = ref(null)   // null | 'user' | 'proposal'
+        const mentionResults     = ref([])
+        const mentionLoading     = ref(false)
+        const mentionActiveIndex = ref(0)
+        let mentionStart   = 0   // index in the text where the trigger char starts
+        let mentionDebounce = null
+        let mentionRequestId = 0
+
+        function closeMention() {
+            mentionMode.value = null
+            mentionResults.value = []
+            mentionLoading.value = false
+            mentionActiveIndex.value = 0
+        }
+
+        function detectMention(text, cursor) {
+            const before = text.slice(0, cursor)
+            const userMatch = before.match(/@([a-zA-Z0-9._-]{0,30})$/)
+            const propMatch = before.match(/#$/)
+
+            if (userMatch) {
+                mentionStart = cursor - userMatch[0].length
+                const query = userMatch[1]
+                if (query.length < 2) { closeMention(); return }
+                mentionMode.value = 'user'
+                mentionActiveIndex.value = 0
+                mentionLoading.value = true
+                clearTimeout(mentionDebounce)
+                const myRequestId = ++mentionRequestId
+                mentionDebounce = setTimeout(async () => {
+                    try {
+                        const res  = await fetch('/account/search_mentionable_users?q=' + encodeURIComponent(query))
+                        const data = await res.json()
+                        if (myRequestId !== mentionRequestId) return   // stale — a newer keystroke already fired
+                        mentionResults.value = data.users || []
+                    } catch {
+                        if (myRequestId === mentionRequestId) mentionResults.value = []
+                    } finally {
+                        if (myRequestId === mentionRequestId) mentionLoading.value = false
+                    }
+                }, 250)
+            } else if (propMatch && props.objectType === 'proposal') {
+                mentionStart = cursor - propMatch[0].length
+                mentionMode.value = 'proposal'
+                mentionActiveIndex.value = 0
+                mentionResults.value = props.relatedProposals
+                mentionLoading.value = false
+            } else {
+                closeMention()
+            }
+        }
+
+        function handleInput(e) {
+            const newVal = e.target.value
+            emit('update:modelValue', newVal)
+            detectMention(newVal, e.target.selectionStart)
+        }
+
+        function insertMentionToken(token) {
+            const ta    = taRef.value
+            const val   = props.modelValue
+            const start = mentionStart
+            const end   = ta ? ta.selectionStart : start
+            closeMention()
+            setValue(val.slice(0, start) + token + val.slice(end), start + token.length)
+        }
+
+        function selectMentionUser(u) {
+            insertMentionToken(`@[${u.username || 'User'}](${u.id}) `)
+        }
+
+        function selectMentionProposal(p) {
+            insertMentionToken(`#${p.id} `)
+        }
+
+        function selectMentionActive() {
+            const item = mentionResults.value[mentionActiveIndex.value]
+            if (!item) return
+            if (mentionMode.value === 'user') selectMentionUser(item)
+            else selectMentionProposal(item)
+        }
+
+        function handleKeydown(e) {
+            if (!mentionMode.value) return
+            if (e.key === 'Escape') { e.preventDefault(); closeMention(); return }
+            if (!mentionResults.value.length) return
+            if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                mentionActiveIndex.value = (mentionActiveIndex.value + 1) % mentionResults.value.length
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                mentionActiveIndex.value = (mentionActiveIndex.value - 1 + mentionResults.value.length) % mentionResults.value.length
+            } else if (e.key === 'Enter') {
+                e.preventDefault()
+                selectMentionActive()
+            }
         }
 
         function mdAction(id) {
@@ -90,7 +236,12 @@ const MarkdownComposer = {
             }
         }
 
-        return { isPreview, previewHtml, value, showPreview, taRef, mdAction, MD_ACTIONS }
+        return {
+            isPreview, previewHtml, value, showPreview, taRef, mdAction, MD_ACTIONS,
+            objectType: props.objectType,
+            mentionMode, mentionResults, mentionLoading, mentionActiveIndex,
+            handleInput, handleKeydown, closeMention, selectMentionUser, selectMentionProposal,
+        }
     },
     template: `
     <div class="cm-md-composer">
@@ -107,13 +258,41 @@ const MarkdownComposer = {
                 </button>
             </template>
         </div>
-        <textarea v-if="!isPreview" ref="taRef" class="form-control form-control-sm cm-md-textarea" v-model="value"
-                  :rows="rows" :placeholder="placeholder"></textarea>
+        <div v-if="!isPreview" class="cm-md-input-wrap">
+            <textarea ref="taRef" class="form-control form-control-sm cm-md-textarea"
+                      :value="value" @input="handleInput" @keydown="handleKeydown" @blur="closeMention"
+                      :rows="rows" :placeholder="placeholder"></textarea>
+            <div v-if="mentionMode" class="cm-mention-dropdown">
+                <div v-if="mentionMode === 'user' && mentionLoading" class="cm-mention-empty">
+                    <i class="fas fa-spinner fa-spin me-1"></i>Searching…
+                </div>
+                <div v-else-if="mentionResults.length === 0" class="cm-mention-empty">
+                    [[ mentionMode === 'proposal' ? 'No associated proposal' : 'No matching user' ]]
+                </div>
+                <template v-else>
+                    <div v-for="(item, i) in mentionResults" :key="mentionMode + '-' + item.id"
+                         class="cm-mention-row" :class="{ 'cm-mention-row--active': i === mentionActiveIndex }"
+                         @mousedown.prevent="mentionMode === 'user' ? selectMentionUser(item) : selectMentionProposal(item)">
+                        <template v-if="mentionMode === 'user'">
+                            <user-chip :user-id="item.id" :username="item.username" :avatar="item.avatar" size="xs"></user-chip>
+                        </template>
+                        <template v-else>
+                            <span class="cm-event-status" :class="'cm-event-status--' + item.status">[[ item.status ]]</span>
+                            <span>proposal #[[ item.id ]]</span>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
         <div v-else class="cm-body-md cm-md-preview-box">
             <div v-if="previewHtml" v-html="previewHtml"></div>
             <p v-else class="text-muted small fst-italic mb-0">Nothing to preview.</p>
         </div>
-        <div class="cm-md-hint"><i class="fab fa-markdown"></i> Styling with Markdown is supported</div>
+        <div class="cm-md-hint">
+            <i class="fab fa-markdown"></i> Styling with Markdown is supported
+            &middot; type <code>@</code> to mention someone
+            <span v-if="objectType === 'proposal'"> &middot; type <code>#</code> to link a proposal</span>
+        </div>
     </div>
     `,
 }
@@ -135,6 +314,13 @@ function fmt_date(dateStr) {
     })
 }
 
+// True for the event that represents the discussion's final outcome — the
+// decision itself, or a revision that went on to be the one that got
+// accepted — so it can be visually emphasized in the feed.
+function isFinalEvent(item) {
+    return item.type === 'accepted' || (item.type === 'revised' && item.status === 'accepted')
+}
+
 // ── CommentItem ────────────────────────────────────────────────────────────
 
 const CommentItem = {
@@ -150,6 +336,10 @@ const CommentItem = {
         csrfToken: { type: String, default: '' },
         // Off by default — set by the parent CommentThread's own allow-markdown prop.
         allowMarkdown: { type: Boolean, default: false },
+        // 'proposal' enables "%123" → link-to-proposal rendering in this comment's body.
+        objectType: { type: String, default: '' },
+        // Threaded down to this comment's edit/reply MarkdownComposer instances.
+        relatedProposals: { type: Array, default: () => [] },
     },
     setup(props) {
         const collapsed = ref(false)
@@ -192,7 +382,9 @@ const CommentItem = {
         const canRestore = computed(() => props.canModerate && isDeleted.value)
 
         if (props.allowMarkdown) {
-            watch(content, async (val) => { renderedContent.value = await renderMarkdown(val) }, { immediate: true })
+            watch(content, async (val) => {
+                renderedContent.value = await renderMarkdown(preprocessCommentText(val, props.objectType))
+            }, { immediate: true })
         }
 
         async function loadReplies(reset = false) {
@@ -368,6 +560,7 @@ const CommentItem = {
             canEdit, canDelete, canRestore, hasMoreReplies,
             loadReplies, submitReply, submitEdit, doDelete, doHardDelete, doRestore, doReact,
             createGithubIssue, startEdit, fmt_date,
+            objectType: props.objectType,
         }
     },
     template: `
@@ -468,7 +661,7 @@ const CommentItem = {
 
     <!-- Edit form -->
     <div v-if="showEditForm" class="cm-edit-form">
-        <markdown-composer v-if="allowMarkdown" v-model="editContent"></markdown-composer>
+        <markdown-composer v-if="allowMarkdown" v-model="editContent" :object-type="objectType" :related-proposals="relatedProposals"></markdown-composer>
         <textarea v-else class="form-control form-control-sm" v-model="editContent" rows="3"></textarea>
         <div class="cm-form-actions">
             <button class="btn btn-primary btn-sm" :disabled="submitting" @click="submitEdit">
@@ -481,7 +674,7 @@ const CommentItem = {
 
     <!-- Reply form -->
     <div v-if="showReplyForm" class="cm-reply-form">
-        <markdown-composer v-if="allowMarkdown" v-model="replyContent" placeholder="Write a reply…"></markdown-composer>
+        <markdown-composer v-if="allowMarkdown" v-model="replyContent" placeholder="Write a reply…" :object-type="objectType" :related-proposals="relatedProposals"></markdown-composer>
         <textarea v-else class="form-control form-control-sm" v-model="replyContent"
                   rows="3" placeholder="Write a reply…"></textarea>
         <div class="cm-form-actions">
@@ -511,7 +704,9 @@ const CommentItem = {
             :can-moderate="canModerate"
             :current-user-id="currentUserId"
             :csrf-token="csrfToken"
-            :allow-markdown="allowMarkdown" />
+            :allow-markdown="allowMarkdown"
+            :object-type="objectType"
+            :related-proposals="relatedProposals" />
 
         <button v-if="hasMoreReplies" class="cm-load-more" @click="loadReplies()"
                 :disabled="repliesLoading">
@@ -531,7 +726,7 @@ CommentItem.components = { CommentItem, UserChip, ReportModal, VoterPopover, 'ma
 const CommentThread = {
     name: 'CommentThread',
     delimiters: ['[[', ']]'],
-    components: { CommentItem, 'markdown-composer': MarkdownComposer },
+    components: { CommentItem, UserChip, 'markdown-composer': MarkdownComposer },
     props: {
         objectType: { type: String, required: true },
         objectId: { type: Number, required: true },
@@ -549,8 +744,21 @@ const CommentThread = {
         // (GitHub-style Write/Preview tabs) instead of plain text. Rendered
         // with marked + DOMPurify.
         allowMarkdown: { type: Boolean, default: false },
+        // Optional GitHub-PR-style system events (created/edited/accepted/...)
+        // to interleave with root-level comments in one connected feed.
+        // Each: { type, icon, text, actor_id, actor_name, actor_avatar, created_at }.
+        systemEvents: { type: Array, default: () => [] },
+        // GitHub-PR-style feed order: oldest at the top, newest at the bottom,
+        // with the "new comment" composer pinned below the feed instead of
+        // above it. Off by default so existing consumers (rule/bundle pages)
+        // keep their current newest-first, composer-on-top layout.
+        oldestFirst: { type: Boolean, default: false },
+        // Proposals "associated" with the current one (parent + revisions),
+        // used by the "%" reference picker — proposal comments only.
+        relatedProposals: { type: Array, default: () => [] },
     },
-    setup(props) {
+    emits: ['total-changed', 'participants-changed'],
+    setup(props, { emit }) {
         const comments = ref([])
         const page = ref(1)
         const total = ref(0)
@@ -559,6 +767,26 @@ const CommentThread = {
         const submitting = ref(false)
         const sentinelRef = ref(null)
         const hasNext = ref(false)
+
+        watch(total, v => emit('total-changed', v))
+
+        // Unique top-level comment authors — lets the host page fold them
+        // into a broader "Participants" list alongside the proposal author,
+        // reviewer and revision authors.
+        const commentAuthors = computed(() => {
+            const seen = new Map()
+            for (const c of comments.value) {
+                if (c.author && c.author.id && !seen.has(c.author.id)) {
+                    seen.set(c.author.id, {
+                        id: c.author.id,
+                        name: c.author.name,
+                        avatar: c.author.avatar ? '/static/uploads/avatars/' + c.author.avatar : null,
+                    })
+                }
+            }
+            return Array.from(seen.values())
+        })
+        watch(commentAuthors, v => emit('participants-changed', v), { immediate: true })
 
         async function loadComments(reset = false) {
             if (loading.value) return
@@ -653,18 +881,48 @@ const CommentThread = {
             // CommentItem onMounted hooks trigger scroll/highlight/expand from here
         })
 
+        // GitHub-style unified feed: root-level comments + system events,
+        // newest first (matches the existing unshift-on-create behaviour).
+        // Nested replies stay nested inside their root comment, untouched.
+        const feedItems = computed(() => {
+            const items = [
+                ...comments.value.map(c => ({ _kind: 'comment', _key: 'c' + c.uuid, created_at: c.created_at, comment: c })),
+                ...props.systemEvents.map((e, i) => ({ _kind: 'event', _key: 'e' + i + e.created_at, ...e })),
+            ]
+            items.sort((a, b) => props.oldestFirst
+                ? new Date(a.created_at) - new Date(b.created_at)
+                : new Date(b.created_at) - new Date(a.created_at))
+            return items
+        })
+
+        // GitHub-style "show first, collapse the middle, show last" — avoids
+        // rendering a huge feed in full when a thread has a lot of history.
+        const COLLAPSE_HEAD = 2
+        const COLLAPSE_TAIL = 5
+        const COLLAPSE_THRESHOLD = COLLAPSE_HEAD + COLLAPSE_TAIL + 2
+        const showAllItems = ref(false)
+        const visibleFeedItems = computed(() => {
+            const items = feedItems.value
+            if (showAllItems.value || items.length <= COLLAPSE_THRESHOLD) return items
+            return [
+                ...items.slice(0, COLLAPSE_HEAD),
+                { _kind: 'collapse', _key: 'collapse-divider', hiddenCount: items.length - COLLAPSE_HEAD - COLLAPSE_TAIL },
+                ...items.slice(items.length - COLLAPSE_TAIL),
+            ]
+        })
+
         return {
             comments, total, loading, newContent, submitting,
-            sentinelRef, hasNext,
+            sentinelRef, hasNext, visibleFeedItems, showAllItems, fmt_date, isFinalEvent,
             loadComments, submitComment, setupSentinel,
         }
     },
     template: `
 <div>
-    <!-- New comment form -->
-    <div v-if="canCreate" class="cm-new-form mb-3">
+    <!-- New comment form (top) — default newest-first layout -->
+    <div v-if="canCreate && !oldestFirst" class="cm-new-form mb-3">
         <p class="cm-new-form-title"><i class="fas fa-comment me-1"></i>Leave a comment</p>
-        <markdown-composer v-if="allowMarkdown" v-model="newContent" placeholder="Write a comment…"></markdown-composer>
+        <markdown-composer v-if="allowMarkdown" v-model="newContent" placeholder="Write a comment…" :object-type="objectType" :related-proposals="relatedProposals"></markdown-composer>
         <textarea v-else class="form-control form-control-sm mb-2" v-model="newContent"
                   rows="3" placeholder="Write a comment…"></textarea>
         <button class="btn btn-primary btn-sm"
@@ -680,19 +938,35 @@ const CommentThread = {
         [[ total ]] comment[[ total === 1 ? '' : 's' ]]
     </p>
 
-    <!-- Thread -->
-    <div class="cm-thread">
-        <comment-item
-            v-for="c in comments"
-            :key="c.uuid"
-            :comment="c"
-            :can-create="canCreate"
-            :can-edit-own="canEditOwn"
-            :can-delete-own="canDeleteOwn"
-            :can-moderate="canModerate"
-            :current-user-id="currentUserId"
-            :csrf-token="csrfToken"
-            :allow-markdown="allowMarkdown" />
+    <!-- Thread: comments + system events (created/edited/decided) in one connected feed -->
+    <div class="cm-thread" :class="{ 'cm-thread--events': systemEvents.length > 0 }">
+        <template v-for="item in visibleFeedItems" :key="item._key">
+            <div v-if="item._kind === 'collapse'" class="cm-collapse-divider" @click="showAllItems = true">
+                <i class="fa-solid fa-ellipsis"></i>
+                Show [[ item.hiddenCount ]] more [[ item.hiddenCount === 1 ? 'item' : 'items' ]]
+            </div>
+            <comment-item
+                v-else-if="item._kind === 'comment'"
+                :comment="item.comment"
+                :can-create="canCreate"
+                :can-edit-own="canEditOwn"
+                :can-delete-own="canDeleteOwn"
+                :can-moderate="canModerate"
+                :current-user-id="currentUserId"
+                :csrf-token="csrfToken"
+                :allow-markdown="allowMarkdown"
+                :object-type="objectType"
+                :related-proposals="relatedProposals" />
+            <div v-else class="cm-event" :class="{ 'cm-event--final': isFinalEvent(item) }">
+                <span class="cm-event-dot" :class="'cm-event-dot--' + item.type"><i :class="item.icon || 'fa-solid fa-circle-dot'"></i></span>
+                <user-chip :user-id="item.actor_id" :username="item.actor_name" :avatar="item.actor_avatar"
+                    :size="isFinalEvent(item) ? 'sm' : 'xs'"></user-chip>
+                <a v-if="item.link" :href="item.link" class="cm-event-text cm-event-link">[[ item.text ]]</a>
+                <span v-else class="cm-event-text">[[ item.text ]]</span>
+                <span v-if="item.status" class="cm-event-status" :class="'cm-event-status--' + item.status">[[ item.status ]]</span>
+                <span class="cm-event-date">[[ fmt_date(item.created_at) ]]</span>
+            </div>
+        </template>
     </div>
 
     <!-- Loading indicator -->
@@ -701,13 +975,27 @@ const CommentThread = {
     </div>
 
     <!-- Empty state -->
-    <div v-if="!loading && comments.length === 0" class="cm-empty">
+    <div v-if="!loading && comments.length === 0 && systemEvents.length === 0" class="cm-empty">
         <i class="fas fa-comments"></i>
         No comments yet. Be the first to comment!
     </div>
 
     <!-- Infinite scroll sentinel -->
     <div ref="sentinelRef" id="cm-sentinel" style="height:1px;"></div>
+
+    <!-- New comment form (bottom) — GitHub-style feed: composer always last -->
+    <div v-if="canCreate && oldestFirst" class="cm-new-form mt-3">
+        <p class="cm-new-form-title"><i class="fas fa-comment me-1"></i>Leave a comment</p>
+        <markdown-composer v-if="allowMarkdown" v-model="newContent" placeholder="Write a comment…" :object-type="objectType" :related-proposals="relatedProposals"></markdown-composer>
+        <textarea v-else class="form-control form-control-sm mb-2" v-model="newContent"
+                  rows="3" placeholder="Write a comment…"></textarea>
+        <button class="btn btn-primary btn-sm"
+                :disabled="submitting || !newContent.trim()"
+                @click="submitComment">
+            <span v-if="submitting"><i class="fas fa-spinner fa-spin me-1"></i>Posting…</span>
+            <span v-else><i class="fas fa-paper-plane me-1"></i>Post comment</span>
+        </button>
+    </div>
 </div>
     `,
 }

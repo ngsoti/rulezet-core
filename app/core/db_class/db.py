@@ -863,15 +863,32 @@ class RuleEditProposal(db.Model):
     reviewed_at = db.Column(db.DateTime, nullable=True)
     rejection_reason = db.Column(db.Text, nullable=True)
 
+    # Set when this proposal continues a prior one. The prior proposal stays
+    # fully independent and decidable — it is never auto-closed by this link.
+    previous_proposal_id = db.Column(db.Integer, db.ForeignKey('rule_edit_proposal.id'), nullable=True)
+
     # Relations
     rule = db.relationship('Rule', backref=db.backref('edit_proposals', lazy='dynamic', cascade='all, delete-orphan'))
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('proposed_edits', lazy='dynamic', cascade='all, delete-orphan'))
     reviewer = db.relationship('User', foreign_keys=[reviewed_by_id])
+    previous_proposal = db.relationship('RuleEditProposal', remote_side=[id],
+                                         backref=db.backref('revisions', lazy='dynamic'))
 
     def get_rule_title(self):
         rule_obj = Rule.query.get(self.rule_id)  
         return rule_obj.title if rule_obj else None
 
+
+    def _revision_link(self, proposal):
+        if not proposal:
+            return None
+        return {
+            'id': proposal.id, 'status': proposal.status,
+            'discuss_url': f"/rule/proposal_content_discuss?id={proposal.id}",
+            'user_id': proposal.user_id,
+            'user_name': f"{proposal.user.first_name} {proposal.user.last_name}" if proposal.user else "Unknown",
+            'user_avatar': proposal.user.get_avatar_url() if proposal.user else None,
+        }
 
     def to_json(self):
         return {
@@ -896,11 +913,14 @@ class RuleEditProposal(db.Model):
             'reviewed_by_name': f"{self.reviewer.first_name} {self.reviewer.last_name}" if self.reviewer else None,
             'reviewed_by_avatar': self.reviewer.get_avatar_url() if self.reviewer else None,
             'rejection_reason': self.rejection_reason,
+            'previous_proposal_id': self.previous_proposal_id,
+            'previous_proposal': self._revision_link(self.previous_proposal),
+            'revisions': [self._revision_link(r) for r in self.revisions.order_by(RuleEditProposal.timestamp.asc())],
             'comments': [comment.to_json() for comment in self.comments.order_by(RuleEditComment.created_at.asc())] if hasattr(self, 'comments') else []
         }
     def to_json_for_discuss(self):
         rule_obj = Rule.query.get(self.rule_id)
-        
+
         return {
             'id': self.id,
             'rule_id': self.rule_id,
@@ -914,8 +934,9 @@ class RuleEditProposal(db.Model):
             'discuss_url': f"/rule/proposal_content_discuss?id={self.id}",
             'status_color': {
                 'pending': 'warning',
+                'accepted': 'success',
                 'approved': 'success',
-                'rejected': 'danger'
+                'rejected': 'danger',
             }.get(self.status, 'secondary')
         }
 
@@ -3439,6 +3460,7 @@ class NotificationPreference(db.Model):
     pref_proposal_comment  = db.Column(db.Boolean, nullable=False, default=True)
     pref_proposal_accepted = db.Column(db.Boolean, nullable=False, default=True)
     pref_comment_reply     = db.Column(db.Boolean, nullable=False, default=True)
+    pref_mentioned         = db.Column(db.Boolean, nullable=False, default=True)
 
     # Platform content
     pref_blog_published = db.Column(db.Boolean, nullable=False, default=True)
@@ -3467,6 +3489,7 @@ class NotificationPreference(db.Model):
             'proposal_comment':   self.pref_proposal_comment,
             'proposal_accepted':  self.pref_proposal_accepted,
             'comment_reply':      self.pref_comment_reply,
+            'mentioned':          self.pref_mentioned,
             'blog_published':     self.pref_blog_published,
             'sync_run_finished':  self.pref_sync_run_finished,
             'workflow_runs':      self.pref_workflow_runs,

@@ -153,6 +153,17 @@ def user_mini(user_id):
     })
 
 
+@account_blueprint.route("/search_mentionable_users")
+@login_required
+def search_mentionable_users():
+    """Lightweight user search for the @mention picker in comments — any
+    logged-in user, not admin-gated like /get_all_users."""
+    q = (request.args.get('q') or '').strip()
+    if len(q) < 2:
+        return jsonify({"users": []})
+    return jsonify({"users": AccountModel.search_users_lite(q, limit=8, exclude_id=current_user.id)})
+
+
 @account_blueprint.route("/get_user")
 @login_required
 def get_user() -> jsonify:

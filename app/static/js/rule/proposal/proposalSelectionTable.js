@@ -237,7 +237,12 @@ const ProposalSelectionTable = {
                                 <div class="fw-bold" :class="prop.change_score > 80 ? 'text-success' : 'text-primary'">[[ prop.change_score ]]%</div>
                             </td>
                             <td class="text-end pe-4">
-                                <span class="badge" :class="prop.status === 'pending' ? 'bg-secondary' : 'bg-success'">[[ prop.status ]]</span>
+                                <span class="badge" :class="{
+                                    'bg-secondary': prop.status === 'pending',
+                                    'bg-success': prop.status === 'accepted',
+                                    'bg-danger': prop.status === 'rejected',
+                                    'bg-dark': prop.status === 'superseded',
+                                }">[[ prop.status ]]</span>
                             </td>
                         </tr>
                         

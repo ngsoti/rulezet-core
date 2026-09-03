@@ -11,6 +11,7 @@ Endpoints (all under /api/comments):
 """
 import datetime
 import os
+import re
 import uuid as _uuid_mod
 
 import requests
@@ -202,8 +203,10 @@ class CommentList(Resource):
         try:
             from app.features.notification.notification_core import (
                 notify_owner_new_comment, notify_followers_new_comment,
-                notify_comment_reply, notify_proposal_comment,
+                notify_comment_reply, notify_proposal_comment, notify_user_mentioned,
             )
+
+            link, title = None, ''
 
             if object_type == 'rule':
                 from app.core.db_class.db import Rule
@@ -255,6 +258,7 @@ class CommentList(Resource):
                 if proposal:
                     rule  = Rule.query.get(proposal.rule_id)
                     title = rule.title if rule else ''
+                    link  = f'/rule/proposal_content_discuss?id={object_id}&comment={comment.id}'
                     # Notify the proposal creator when someone else comments
                     notify_proposal_comment(object_id, proposal.user_id, current_user.id, title,
                                             comment_id=comment.id)
@@ -273,6 +277,13 @@ class CommentList(Resource):
                         parent_comment = UnifiedComment.query.get(parent_id)
                         if parent_comment and parent_comment.created_by:
                             notify_comment_reply(parent_comment.created_by, current_user.id, blog_post.title, link)
+
+            # ── @mentions — any object type, "@[Display Name](id)" tokens ──
+            if link:
+                mentioned_ids = {int(uid) for uid in re.findall(r'@\[[^\]]+\]\((\d+)\)', content)}
+                for uid in mentioned_ids:
+                    if uid != current_user.id:
+                        notify_user_mentioned(uid, current_user.id, title, link)
 
         except Exception as _e:
             print(f"[comment_api] notification error: {_e}")

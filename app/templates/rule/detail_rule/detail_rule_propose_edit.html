@@ -112,6 +112,10 @@
         <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
             Propose a correction or improvement. Your suggestion will be reviewed by the community before being applied.
         </p>
+        <div v-if="fromProposalId" class="rounded-3 border p-3 mt-3 d-flex align-items-center gap-2" style="background:var(--light-bg-color);font-size:.85rem;max-width:600px;">
+            <i class="fa-solid fa-code-branch text-muted"></i>
+            <span>Revising <a :href="'/rule/proposal_content_discuss?id=' + fromProposalId" class="fw-semibold">proposal #[[ fromProposalId ]]</a> — starting from its proposed content.</span>
+        </div>
     </div>
 
     {{ nav.detail_rule_nav(rule, 'propose_edit', similarity_count=similarity_count, history_count=history_count, proposal_count=proposal_count, scope_count=scope_count, test_count=test_count, ai_analysis_count=ai_analysis_count) }}
@@ -281,6 +285,7 @@ const RULE_TITLE  = {{ rule.title | tojson }};
 const RULE_TITLE_SHORT = RULE_TITLE.length > 40 ? RULE_TITLE.slice(0, 40) + '…' : RULE_TITLE;
 const RULE_FORMAT = '{{ rule.format or "text" }}';
 const CSRF        = '{{ csrf_token() }}';
+const FROM_PROPOSAL_ID = new URLSearchParams(location.search).get('from_proposal');
 
 createApp({
     delimiters: ['[[', ']]'],
@@ -311,14 +316,26 @@ createApp({
             { value: 'markdown', label: 'Markdown', icon: 'fa-brands fa-markdown' },
         ];
 
+        const fromProposalId = ref(FROM_PROPOSAL_ID ? parseInt(FROM_PROPOSAL_ID) : null);
+
         onMounted(async () => {
             try {
-                const res  = await fetch('/rule/get_current_rule?rule_id=' + RULE_ID);
-                const data = await res.json();
-                if (data.rule) {
-                    proposalContent.value = data.rule.to_string || '';
-                    originalContent.value = data.rule.to_string || '';
-                    ruleFormat.value      = data.rule.format || RULE_FORMAT;
+                if (fromProposalId.value) {
+                    const res  = await fetch('/rule/get_proposal?id=' + fromProposalId.value);
+                    const data = await res.json();
+                    if (data.proposal) {
+                        proposalContent.value = data.proposal.proposed_content || '';
+                        originalContent.value = data.proposal.proposed_content || '';
+                        ruleFormat.value       = data.proposal.rule_format || RULE_FORMAT;
+                    }
+                } else {
+                    const res  = await fetch('/rule/get_current_rule?rule_id=' + RULE_ID);
+                    const data = await res.json();
+                    if (data.rule) {
+                        proposalContent.value = data.rule.to_string || '';
+                        originalContent.value = data.rule.to_string || '';
+                        ruleFormat.value      = data.rule.format || RULE_FORMAT;
+                    }
                 }
             } catch {
                 create_message('Could not load rule content', 'danger');
@@ -336,7 +353,10 @@ createApp({
                 fd.append('message',      proposalMessage.value);
                 fd.append('edit_type',    editType.value);
 
-                const res  = await fetch(`/rule/propose_edit/${RULE_ID}`, {
+                const url = fromProposalId.value
+                    ? `/rule/propose_revision/${fromProposalId.value}`
+                    : `/rule/propose_edit/${RULE_ID}`;
+                const res  = await fetch(url, {
                     method:  'POST',
                     headers: { 'Accept': 'application/json' },
                     body:    fd,
@@ -361,7 +381,7 @@ createApp({
         }
 
         return {
-            RULE_TITLE_SHORT,
+            RULE_TITLE_SHORT, fromProposalId,
             proposalContent, originalContent, ruleFormat,
             showOriginal, showDiff, editType, editTypes,
             proposalMessage, messageMode, messageModes,

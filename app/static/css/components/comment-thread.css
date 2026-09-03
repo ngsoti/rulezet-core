@@ -24,6 +24,236 @@
     gap: .75rem;
 }
 
+/*---MENTION / REFERENCE PICKER ("@" and "%" dropdowns in MarkdownComposer)---*/
+
+.cm-md-input-wrap {
+    position: relative;
+}
+
+.cm-mention-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    margin-top: .25rem;
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--cm-bg-card);
+    border: 1px solid var(--cm-border);
+    border-radius: var(--cm-radius-sm);
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+
+.cm-mention-empty {
+    padding: .6rem .8rem;
+    font-size: .82rem;
+    font-style: italic;
+    color: var(--cm-text-muted);
+}
+
+.cm-mention-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .4rem .8rem;
+    font-size: .82rem;
+    cursor: pointer;
+}
+
+.cm-mention-row:hover,
+.cm-mention-row--active {
+    background: var(--cm-brand-glow);
+}
+
+/*---GITHUB-STYLE CONNECTED FEED (comments + system events)---*/
+/* Opt-in via the :system-events prop on <comment-thread>; a thread that
+   receives no system events never gets this class, so rule/bundle pages
+   render exactly as before. */
+
+.cm-thread--events {
+    position: relative;
+    padding-left: 34px;
+}
+
+.cm-thread--events::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--cm-border);
+}
+
+.cm-thread--events .cm-item {
+    position: relative;
+}
+
+.cm-thread--events .cm-item::before {
+    content: '';
+    position: absolute;
+    left: -23px;
+    top: 14px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--cm-brand);
+    border: 2px solid var(--cm-bg-card);
+    box-shadow: 0 0 0 2px var(--cm-border);
+}
+
+.cm-event {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .35rem 0;
+    font-size: .8rem;
+}
+
+/* "Accepted" is the final outcome of the whole discussion — make that
+   event row stand out from the rest of the feed. */
+.cm-event--final {
+    font-size: .95rem;
+    font-weight: 600;
+    padding: .65rem .75rem;
+    margin: .25rem 0;
+    background: rgba(25,135,84,.08);
+    border: 1px solid rgba(25,135,84,.3);
+    border-radius: 10px;
+}
+.cm-event--final .cm-event-text {
+    color: #198754;
+}
+
+/* GitHub-style "show N more" divider — collapses a long feed's middle. */
+.cm-collapse-divider {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .75rem;
+    margin: .25rem 0;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--cm-text-muted);
+    background: var(--cm-bg-muted);
+    border: 1px dashed var(--cm-border);
+    border-radius: 10px;
+    cursor: pointer;
+}
+.cm-collapse-divider:hover {
+    background: var(--cm-brand-glow);
+    color: var(--cm-brand);
+    border-color: var(--cm-brand-dim);
+}
+
+.cm-event-dot {
+    position: absolute;
+    left: -28px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--cm-bg-muted);
+    border: 1px solid var(--cm-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .62rem;
+    color: var(--cm-text-muted);
+    flex-shrink: 0;
+}
+
+.cm-event-dot--created  { color: var(--cm-brand); border-color: var(--cm-brand-dim); }
+.cm-event-dot--edited   { color: #fd7e14; border-color: rgba(253,126,20,.3); }
+.cm-event-dot--accepted { color: #198754; border-color: rgba(25,135,84,.3); }
+.cm-event-dot--rejected { color: #dc3545; border-color: rgba(220,53,69,.3); }
+
+.cm-event-text {
+    color: var(--cm-text-main);
+}
+
+.cm-event-link {
+    color: var(--cm-brand);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.cm-event-link:hover {
+    text-decoration: underline;
+}
+
+.cm-event-status {
+    display: inline-flex;
+    align-items: center;
+    padding: .1rem .5rem;
+    border-radius: 20px;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.cm-event-status--pending   { background: rgba(255,193,7,.15); color: #b8860b; }
+.cm-event-status--accepted  { background: rgba(25,135,84,.15); color: #198754; }
+.cm-event-status--rejected  { background: rgba(220,53,69,.15); color: #dc3545; }
+
+/*---MENTION / PROPOSAL-REFERENCE CHIPS (rendered inline in comment bodies)---*/
+
+.cm-mention-chip,
+.cm-proposal-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .05rem .55rem .05rem .05rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: .92em;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.cm-mention-chip {
+    background: var(--cm-brand-glow);
+    color: var(--cm-brand);
+}
+
+.cm-mention-chip:hover {
+    background: var(--cm-brand-dim);
+    color: var(--cm-brand);
+}
+
+.cm-mention-chip-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35em;
+    height: 1.35em;
+    border-radius: 50%;
+    background: var(--cm-brand);
+    color: #fff;
+    font-size: .7em;
+    font-weight: 700;
+}
+
+.cm-proposal-chip {
+    padding: .05rem .55rem;
+    background: rgba(108,117,125,.12);
+    color: #6c757d;
+}
+
+.cm-proposal-chip:hover {
+    background: rgba(108,117,125,.22);
+    color: #6c757d;
+}
+
+.cm-event-date {
+    margin-left: auto;
+    font-size: .72rem;
+    color: var(--cm-text-muted);
+    white-space: nowrap;
+}
+
 /*---BADGES---*/
 
 .cm-admin-badge {

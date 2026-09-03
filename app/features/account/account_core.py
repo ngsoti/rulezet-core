@@ -485,19 +485,21 @@ def get_user(id) -> id:
     return User.query.get(id)
 
 
-def search_users_lite(query: str, limit: int = 5) -> list[dict]:
-    """Lightweight user lookup for the global nav search — caller must only
-    invoke this for authenticated visitors; returns only fields already
-    considered public elsewhere (see /account/user_mini/<id>): id, username,
-    avatar. Never email/admin/any other field from User.to_json().
+def search_users_lite(query: str, limit: int = 5, exclude_id: int = None) -> list[dict]:
+    """Lightweight user lookup for the global nav search and the @mention
+    picker — caller must only invoke this for authenticated visitors;
+    returns only fields already considered public elsewhere (see
+    /account/user_mini/<id>): id, username, avatar. Never email/admin/any
+    other field from User.to_json().
     """
     like_pattern = f"%{query}%"
     matches = (
         User.query.filter(or_(
             User.first_name.ilike(like_pattern),
             User.last_name.ilike(like_pattern),
+            User.username.ilike(like_pattern),
         ))
-        .limit(limit)
+        .limit(limit + (1 if exclude_id else 0))
         .all()
     )
 
@@ -506,7 +508,7 @@ def search_users_lite(query: str, limit: int = 5) -> list[dict]:
     results = []
     seen_ids = set()
     for user in ([exact] if exact else []) + matches:
-        if not user or user.id in seen_ids:
+        if not user or user.id in seen_ids or user.id == exclude_id:
             continue
         seen_ids.add(user.id)
         results.append({

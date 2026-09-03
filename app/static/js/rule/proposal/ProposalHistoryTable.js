@@ -203,15 +203,42 @@ const ProposalHistoryTable = {
                 create_message("An error occurred.", "danger-subtle");
             }
         },
-        statusClass(status) {
+        // A proposal auto-rejected because one of its revisions got accepted
+        // (see _auto_reject_parent_on_child_accept) reads as "Superseded",
+        // not a plain "Rejected" — it wasn't rejected on its own merits.
+        isSuperseded(prop) {
+            return prop.status === 'rejected' && (prop.revisions || []).some(r => r.status === 'accepted');
+        },
+
+        statusClass(prop) {
+            if (this.isSuperseded(prop)) return {};
             return {
-                'bg-secondary': status === 'pending',
-                'bg-success': status === 'accepted',
-                'bg-danger': status === 'rejected',
+                'bg-secondary': prop.status === 'pending',
+                'bg-success': prop.status === 'accepted',
+                'bg-danger': prop.status === 'rejected',
             };
         },
 
+        statusStyle(prop) {
+            if (this.isSuperseded(prop)) return { background: '#6f42c1', color: '#fff' };
+            // Accepted = the final outcome of the whole discussion — stands
+            // out visually from pending/rejected/superseded siblings.
+            if (prop.status === 'accepted') return { fontSize: '.85em', padding: '.4em .8em', boxShadow: '0 2px 8px rgba(25,135,84,.35)' };
+            return {};
+        },
+
+        statusLabel(prop) {
+            if (this.isSuperseded(prop)) return 'superseded';
+            return prop.status === 'accepted' ? 'accepted — final' : prop.status;
+        },
+
         viewDiff(proposal) { this.$emit('view-diff', proposal); },
+
+        // Lineage chips must not trigger the row's own expand/collapse toggle.
+        goToProposal(id, event) {
+            if (event) event.stopPropagation();
+            window.location.href = '/rule/proposal_content_discuss?id=' + id;
+        },
 
         formatDate(ts) {
             if (!ts) return 'N/A';
@@ -436,8 +463,21 @@ const ProposalHistoryTable = {
                                                     :class="expandedProposals.has(prop.id) ? 'fa-chevron-down' : 'fa-chevron-right'">
                                                 </i>
                                             </button>
-                                            <span class="badge rounded-pill" :class="statusClass(prop.status)">
-                                                [[ prop.status ]]
+                                            <span class="badge rounded-pill" :class="statusClass(prop)" :style="statusStyle(prop)"
+                                                  :title="isSuperseded(prop) ? 'This proposal was automatically closed because one of its revisions was accepted instead.' : ''">
+                                                [[ statusLabel(prop) ]]
+                                            </span>
+                                            <span v-if="prop.revisions && prop.revisions.length && !isSuperseded(prop)" class="badge rounded-pill"
+                                                  style="background:rgba(111,66,193,.12);color:#6f42c1;cursor:pointer;"
+                                                  @click.stop="goToProposal(prop.revisions[0].id, $event)"
+                                                  title="A revision of this proposal exists">
+                                                <i class="fas fa-code-branch me-1"></i>Revised
+                                            </span>
+                                            <span v-if="prop.previous_proposal" class="badge rounded-pill"
+                                                  style="background:rgba(13,110,253,.12);color:#0d6efd;cursor:pointer;"
+                                                  @click.stop="goToProposal(prop.previous_proposal.id, $event)"
+                                                  title="This proposal is a revision of another one">
+                                                <i class="fas fa-code-branch me-1"></i>Revision of #[[ prop.previous_proposal.id ]]
                                             </span>
                                             <span class="small fw-semibold">
                                                 <i class="fas fa-user me-1 text-muted"></i>[[ prop.user_name ]]

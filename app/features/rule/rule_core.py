@@ -1451,6 +1451,39 @@ def propose_edit_core(form , user_id) -> bool:
     return True , new_proposal.id
 
 
+def create_proposal_revision(previous_proposal_id, proposed_content, message, edit_type, user_id):
+    """Create a proposal that continues a prior one (discussion-driven revision).
+
+    The prior proposal is left exactly as-is (still "pending"/"rejected") and
+    stays fully decidable — it can still be accepted or rejected on its own
+    merits at any time, independently of however many revisions get attached
+    to it. Any number of revisions can be created from the same proposal.
+    """
+    previous = RuleEditProposal.query.get(previous_proposal_id)
+    if not previous:
+        return False, None, "Proposal not found"
+    if previous.status not in ('pending', 'rejected'):
+        return False, None, "Cannot revise a decided proposal"
+
+    change_score = calculate_diff_score(previous.proposed_content or "", proposed_content)
+
+    new_proposal = RuleEditProposal(
+        rule_id=previous.rule_id,
+        user_id=user_id,
+        proposed_content=proposed_content,
+        old_content=previous.proposed_content,
+        edit_type=edit_type or "content_update",
+        message=message or "No message provided",
+        status="pending",
+        change_score=change_score or 0.0,
+        previous_proposal_id=previous.id,
+    )
+    db.session.add(new_proposal)
+    db.session.commit()
+
+    return True, new_proposal.id, None
+
+
 def bulk_manage_proposals(action: str, mode: str, selected_ids: list, excluded_ids: list, reviewed_by_id: int, is_admin: bool = False) -> dict:
     """Bulk accept or reject proposals.
 
@@ -1496,6 +1529,8 @@ def bulk_manage_proposals(action: str, mode: str, selected_ids: list, excluded_i
             proposal.status = "accepted" if action == "accept" else "rejected"
             proposal.reviewed_by_id = reviewed_by_id
             proposal.reviewed_at = now
+            if action == "accept":
+                _auto_reject_parent_on_child_accept(proposal)
 
             if action == "accept":
                 # update the rule content
@@ -1681,7 +1716,19 @@ def set_to_string_rule(rule_id, proposed_content) -> json:
     db.session.commit()
     return {"message": "Rule updated successfully"}, 200
     
-def set_status(proposal_id, status) -> json:
+def _auto_reject_parent_on_child_accept(proposal):
+    """When a revision is accepted, its parent proposal is auto-rejected —
+    the parent's own content was never the one that got merged, so leaving
+    it "pending" forever would be confusing. Never overwrites a parent
+    that's already been accepted on its own merits."""
+    if not proposal.previous_proposal_id:
+        return
+    parent = RuleEditProposal.query.get(proposal.previous_proposal_id)
+    if parent and parent.status != 'accepted':
+        parent.status = 'rejected'
+
+
+def set_status(proposal_id, status, reviewed_by_id=None) -> json:
     """Set the statue of an edit request"""
     if status not in ['accepted', 'rejected']:
         return {'error': 'Statut invalide'}, 400
@@ -1689,8 +1736,25 @@ def set_status(proposal_id, status) -> json:
     if not proposal:
         return {'error': 'Proposition non trouvée'}, 404
     proposal.status = status
+    if reviewed_by_id is not None:
+        proposal.reviewed_by_id = reviewed_by_id
+        proposal.reviewed_at = datetime.datetime.now(tz=datetime.timezone.utc)
+    if status == 'accepted':
+        _auto_reject_parent_on_child_accept(proposal)
     db.session.commit()
     return {'success': True, 'new_status': status}, 200
+
+
+def update_proposal_message(proposal_id, new_message):
+    """Update the author justification message of a pending proposal."""
+    proposal = RuleEditProposal.query.get(proposal_id)
+    if not proposal:
+        return {'success': False, 'message': 'Proposition non trouvée'}, 404
+    if proposal.status != 'pending':
+        return {'success': False, 'message': 'Cannot edit a decided proposal'}, 400
+    proposal.message = new_message
+    db.session.commit()
+    return {'success': True, 'message': proposal.message}, 200
 
 ##############
 #   discuss  #

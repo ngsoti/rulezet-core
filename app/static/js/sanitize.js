@@ -12,8 +12,13 @@
 
 export const SANITIZE_CONFIG = {
     FORBID_TAGS: ['form', 'input', 'button', 'select', 'textarea', 'option',
-                  'fieldset', 'legend', 'datalist', 'output', 'label', 'style'],
+                  'fieldset', 'legend', 'datalist', 'output', 'label', 'style',
+                  'base', 'meta', 'link'],
     FORBID_ATTR: ['style', 'action', 'method', 'formaction', 'target'],
+    // DOMPurify's default allows http(s)/mailto/tel/sms/cid/xmpp/matrix/callto/ftp
+    // in href/src. This is user-authored rule/comment content, not a chat app —
+    // restrict to the schemes we actually render links/images for.
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z\d+.-]+(?:[^a-z\d+.\-:]|$))/i,
 }
 
 let _purify = null

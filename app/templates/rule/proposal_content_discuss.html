@@ -5,6 +5,7 @@
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/diff-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/smart-editor.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/comment-thread.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/voter-popover.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rule/base/detail_rule_nav.css') }}">
@@ -26,6 +27,7 @@
 .pstatus-accepted,
 .pstatus-approved { background: #198754; color: #fff; }
 .pstatus-rejected { background: #dc3545; color: #fff; }
+.pstatus-superseded { background: #6f42c1; color: #fff; }
 
 /* ── Info grid ── */
 .proposal-meta-grid {
@@ -137,6 +139,43 @@
     font-size: 0.85rem;
     color: var(--text-color);
 }
+
+/* ── GitHub-style "ready to decide" bar (bottom of the conversation) ── */
+.proposal-decision-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.4rem;
+    background: var(--cm-brand-glow, rgba(13,110,253,.06));
+    border: 1px solid var(--cm-brand-dim, rgba(13,110,253,.25));
+    border-left: 4px solid #0d6efd;
+    border-radius: 12px;
+    flex-wrap: wrap;
+}
+.proposal-decision-box__icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #0d6efd;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+.proposal-decision-box__title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+.proposal-decision-box__subtitle {
+    font-size: 0.82rem;
+    color: var(--subtle-text-color);
+}
+@media (max-width: 576px) {
+    .proposal-decision-box { flex-direction: column; align-items: stretch; }
+}
 </style>
 {% endblock %}
 
@@ -172,14 +211,18 @@
                 <div class="min-width-0">
                     <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
                         <h2 class="fw-bold mb-0">Edit Proposal</h2>
-                        <span class="pstatus-badge" :class="'pstatus-' + proposal.status">
+                        <span class="pstatus-badge" :class="isSupersededByAcceptedChild ? 'pstatus-superseded' : 'pstatus-' + proposal.status"
+                              :style="proposal.status === 'accepted' ? 'font-size:1rem;padding:.5rem 1.1rem;box-shadow:0 3px 10px rgba(25,135,84,.4);' : ''"
+                              :title="isSupersededByAcceptedChild ? 'This proposal was automatically closed because one of its revisions was accepted instead.' : ''">
                             <i class="fas"
                                :class="{
-                                   'fa-clock':   proposal.status === 'pending',
-                                   'fa-check':   proposal.status === 'accepted' || proposal.status === 'approved',
-                                   'fa-xmark':   proposal.status === 'rejected'
+                                   'fa-clock':          proposal.status === 'pending',
+                                   'fa-check':          proposal.status === 'accepted' || proposal.status === 'approved',
+                                   'fa-code-branch':    isSupersededByAcceptedChild,
+                                   'fa-xmark':          proposal.status === 'rejected' && !isSupersededByAcceptedChild
                                }"></i>
-                            [[ proposal.status ]]
+                            [[ isSupersededByAcceptedChild ? 'Superseded' : proposal.status ]]
+                            <span v-if="proposal.status === 'accepted'">— Final</span>
                         </span>
                         <span v-if="proposal._new_version || (proposal.status === 'accepted' && proposal.rule_version)"
                               class="badge rounded-pill fw-semibold"
@@ -238,9 +281,19 @@
                         [[ isFavorited ? 'Favorited' : 'Favorite' ]]
                     </button>
 
+                    <!-- Propose a revision (author/admin, while pending or rejected) -->
+                    <a v-if="canReviseProposal"
+                       :href="'/rule/detail_rule/' + proposal.rule_id + '/propose_edit?from_proposal=' + proposal.id"
+                       class="btn btn-sm rounded-pill px-3 btn-primary"
+                       title="Submit a revised version of this proposal">
+                        <i class="fa-solid fa-code-branch me-1"></i>Propose a revision
+                    </a>
+
                     <!-- Suggest an edit -->
                     <a :href="'/rule/detail_rule/' + proposal.rule_id + '/propose_edit'"
-                       class="btn btn-sm rounded-pill px-3 btn-primary"
+                       class="btn btn-sm rounded-pill px-3"
+                       :class="canReviseProposal ? '' : 'btn-primary'"
+                       :style="canReviseProposal ? 'background:transparent; border:1px solid var(--border-color); color:var(--text-color);' : ''"
                        title="Suggest your own edit for this rule">
                         <i class="fa-solid fa-pen-to-square me-1"></i>Suggest an edit
                     </a>
@@ -348,24 +401,84 @@
                     </div>
                 </div>
 
+                <!-- Participants -->
+                <div class="meta-item" style="grid-column: span 2;">
+                    <div class="meta-item__icon"><i class="fa-solid fa-users"></i></div>
+                    <div class="flex-grow-1">
+                        <div class="meta-item__label mb-1">Participants</div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <user-chip v-for="p in participants" :key="p.id"
+                                :user-id="p.id" :username="p.name" :avatar="p.avatar" size="xs">
+                            </user-chip>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related proposals (parent + revisions) -->
+                <div class="meta-item" v-if="relatedProposals.length" style="grid-column: span 2;">
+                    <div class="meta-item__icon"><i class="fa-solid fa-code-branch"></i></div>
+                    <div class="flex-grow-1">
+                        <div class="meta-item__label mb-1">Related proposals</div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span v-for="r in relatedProposals" :key="r.id" class="d-inline-flex align-items-center gap-1">
+                                <a :href="r.discuss_url" class="cm-proposal-chip"
+                                   :style="r.status === 'accepted' ? 'font-size:1.05em;font-weight:800;box-shadow:0 2px 8px rgba(25,135,84,.35);background:rgba(25,135,84,.15);color:#198754;' : ''">
+                                    <i class="fa-solid fa-code-branch"></i>#[[ r.id ]]
+                                </a>
+                                <span class="cm-event-status" :class="'cm-event-status--' + r.status">[[ r.status ]]<span v-if="r.status === 'accepted'"> — Final</span></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Revision lineage banners -->
+            <div v-if="proposal.previous_proposal" class="rounded-3 border p-3 mb-3 d-flex align-items-center gap-2"
+                 style="background:var(--light-bg-color);font-size:.85rem;">
+                <i class="fa-solid fa-code-branch text-muted"></i>
+                <span>This is a revision of
+                    <a :href="proposal.previous_proposal.discuss_url" class="fw-semibold">proposal #[[ proposal.previous_proposal.id ]]</a>.
+                </span>
             </div>
 
             <!-- Message / Justification -->
-            <div v-if="proposal.message" class="proposal-message-block mb-3">
+            <div v-if="proposal.message || canEditMessage" class="proposal-message-block mb-3">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <div class="text-muted" style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">
                         <i class="fa-solid fa-quote-left me-1"></i>Author's justification
                     </div>
-                    <button class="btn btn-sm px-2 py-0 rounded-pill"
-                            style="font-size:.68rem;background:transparent;border:1px solid var(--border-color);color:var(--subtle-text-color);"
-                            @click="showRawMessage = !showRawMessage"
-                            type="button">
-                        <i class="fa-solid me-1" :class="showRawMessage ? 'fa-eye-slash' : 'fa-code'"></i>
-                        [[ showRawMessage ? 'Rendered' : 'Raw' ]]
-                    </button>
+                    <div class="d-flex align-items-center gap-1" v-if="!editingMessage">
+                        <button v-if="canEditMessage" class="btn btn-sm px-2 py-0 rounded-pill"
+                                style="font-size:.68rem;background:transparent;border:1px solid var(--border-color);color:var(--subtle-text-color);"
+                                @click="startEditMessage"
+                                type="button">
+                            <i class="fa-solid fa-pen me-1"></i>Edit
+                        </button>
+                        <button v-if="proposal.message" class="btn btn-sm px-2 py-0 rounded-pill"
+                                style="font-size:.68rem;background:transparent;border:1px solid var(--border-color);color:var(--subtle-text-color);"
+                                @click="showRawMessage = !showRawMessage"
+                                type="button">
+                            <i class="fa-solid me-1" :class="showRawMessage ? 'fa-eye-slash' : 'fa-code'"></i>
+                            [[ showRawMessage ? 'Rendered' : 'Raw' ]]
+                        </button>
+                    </div>
                 </div>
-                <div v-if="showRawMessage" style="font-family:monospace;font-size:.82rem;white-space:pre-wrap;color:var(--text-color);">[[ proposal.message ]]</div>
-                <div v-else v-html="renderedMessage" class="md-body"></div>
+
+                <div v-if="editingMessage">
+                    <smart-editor v-model="editMessageDraft" mode="markdown" min-height="120px" max-height="300px"></smart-editor>
+                    <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-primary btn-sm" :disabled="savingMessage || !editMessageDraft.trim()" @click="saveMessage">
+                            <span v-if="savingMessage"><i class="fa-solid fa-spinner fa-spin me-1"></i>Saving…</span>
+                            <span v-else><i class="fa-solid fa-check me-1"></i>Save</span>
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" :disabled="savingMessage" @click="cancelEditMessage">Cancel</button>
+                    </div>
+                </div>
+                <template v-else>
+                    <div v-if="showRawMessage" style="font-family:monospace;font-size:.82rem;white-space:pre-wrap;color:var(--text-color);">[[ proposal.message ]]</div>
+                    <div v-else v-html="renderedMessage" class="md-body"></div>
+                </template>
             </div>
 
             <!-- Rejection reason -->
@@ -375,31 +488,6 @@
                 </div>
                 [[ proposal.rejection_reason ]]
             </div>
-
-            {% if can_decide %}
-            <!-- Accept / Reject actions (owner or admin, pending only) -->
-            <div v-if="proposal.status === 'pending'" class="mt-3 pt-3" style="border-top:1px solid var(--border-color);">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="text-muted" style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">
-                        <i class="fa-solid fa-gavel me-1"></i>Your decision
-                    </span>
-                    <button @click="decideProposal('accepted')"
-                            class="btn btn-sm btn-success rounded-pill px-3"
-                            :disabled="deciding"
-                            title="Accept this proposal and apply the changes to the rule">
-                        <span v-if="deciding === 'accepted'" class="spinner-border spinner-border-sm me-1"></span>
-                        <i v-else class="fa-solid fa-check me-1"></i>Accept
-                    </button>
-                    <button @click="decideProposal('rejected')"
-                            class="btn btn-sm btn-danger rounded-pill px-3"
-                            :disabled="deciding"
-                            title="Reject this proposal">
-                        <span v-if="deciding === 'rejected'" class="spinner-border spinner-border-sm me-1"></span>
-                        <i v-else class="fa-solid fa-xmark me-1"></i>Reject
-                    </button>
-                </div>
-            </div>
-            {% endif %}
 
         </div>
 
@@ -432,8 +520,40 @@
             :can-moderate="{{ current_user.is_admin() | tojson }}"
             :current-user-id="{{ current_user.id if current_user.is_authenticated else 0 }}"
             :allow-markdown="true"
+            :system-events="proposal?.system_events || []"
+            :related-proposals="relatedProposals"
+            :oldest-first="true"
+            @total-changed="proposal.comment_count = $event"
+            @participants-changed="commentParticipants = $event"
             csrf-token="{{ csrf_token() }}">
         </comment-thread>
+
+        {% if can_decide %}
+        <!-- GitHub-style "ready to decide" bar — bottom of the conversation -->
+        <div v-if="proposal.status === 'pending'" class="proposal-decision-box mt-4">
+            <div class="proposal-decision-box__icon"><i class="fa-solid fa-code-pull-request"></i></div>
+            <div class="flex-grow-1 min-width-0">
+                <div class="proposal-decision-box__title">This proposal is awaiting a decision</div>
+                <div class="proposal-decision-box__subtitle">Accept to apply these changes to the rule, or reject to close it.</div>
+            </div>
+            <div class="d-flex gap-2 flex-shrink-0">
+                <button @click="decideProposal('accepted')"
+                        class="btn btn-success rounded-pill px-4"
+                        :disabled="deciding"
+                        title="Accept this proposal and apply the changes to the rule">
+                    <span v-if="deciding === 'accepted'" class="spinner-border spinner-border-sm me-1"></span>
+                    <i v-else class="fa-solid fa-check me-1"></i>Accept
+                </button>
+                <button @click="decideProposal('rejected')"
+                        class="btn btn-outline-danger rounded-pill px-4"
+                        :disabled="deciding"
+                        title="Reject this proposal">
+                    <span v-if="deciding === 'rejected'" class="spinner-border spinner-border-sm me-1"></span>
+                    <i v-else class="fa-solid fa-xmark me-1"></i>Reject
+                </button>
+            </div>
+        </div>
+        {% endif %}
 
     </div>
 
@@ -448,9 +568,12 @@
     import DiffViewer    from '/static/js/components/diff-viewer.js';
     import CommentThread from '/static/js/components/comments/comment-thread.js';
     import ReportModal   from '/static/js/components/ReportModal.js';
+    import SmartEditor   from '/static/js/components/smart-editor.js';
     import { renderMarkdown } from '/static/js/sanitize.js';
 
     const CAN_DECIDE  = {{ can_decide | tojson }};
+    const IS_ADMIN    = {{ current_user.is_admin() | tojson }};
+    const CURRENT_USER_ID = {{ current_user.id if current_user.is_authenticated else 0 }};
     const RULE_ID     = {{ rule.id }};
     const PROPOSAL_ID = {{ rule_edit_id }};
     const RULE_TITLE  = {{ rule.title | tojson }};
@@ -472,6 +595,7 @@
             'diff-viewer':    DiffViewer,
             'comment-thread': CommentThread,
             'report-modal':   ReportModal,
+            'smart-editor':   SmartEditor,
         },
         setup() {
             const proposal        = ref(null);
@@ -480,6 +604,86 @@
             const showRawMessage  = ref(false);
             const renderedMessage = ref('');
             const isAuthenticated = {{ current_user.is_authenticated | tojson }};
+
+            const editingMessage  = ref(false);
+            const editMessageDraft = ref('');
+            const savingMessage   = ref(false);
+            const canEditMessage = computed(() =>
+                !!proposal.value &&
+                proposal.value.status === 'pending' &&
+                (CURRENT_USER_ID === proposal.value.user_id || IS_ADMIN)
+            );
+            const relatedProposals = computed(() => {
+                if (!proposal.value) return [];
+                return [proposal.value.previous_proposal, ...(proposal.value.revisions || [])].filter(Boolean);
+            });
+            const commentParticipants = ref([]);
+            const participants = computed(() => {
+                if (!proposal.value) return [];
+                const p = proposal.value;
+                const candidates = [
+                    { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+                    p.reviewed_by_id ? { id: p.reviewed_by_id, name: p.reviewed_by_name, avatar: p.reviewed_by_avatar } : null,
+                    ...relatedProposals.value.map(r => ({ id: r.user_id, name: r.user_name, avatar: r.user_avatar })),
+                    ...commentParticipants.value,
+                ].filter(Boolean);
+                const seen = new Set();
+                return candidates.filter(c => {
+                    if (!c.id || seen.has(c.id)) return false;
+                    seen.add(c.id);
+                    return true;
+                });
+            });
+            // The parent was auto-rejected because one of its revisions got
+            // accepted (see _auto_reject_parent_on_child_accept) — show that
+            // as "Superseded", not a plain "Rejected", so it's clear this
+            // wasn't a manual decision against the proposal's own merits.
+            const isSupersededByAcceptedChild = computed(() =>
+                !!proposal.value &&
+                proposal.value.status === 'rejected' &&
+                (proposal.value.revisions || []).some(r => r.status === 'accepted')
+            );
+            const canReviseProposal = computed(() =>
+                !!proposal.value &&
+                (proposal.value.status === 'pending' || proposal.value.status === 'rejected') &&
+                (CURRENT_USER_ID === proposal.value.user_id || IS_ADMIN)
+            );
+
+            function startEditMessage() {
+                editMessageDraft.value = proposal.value.message || '';
+                editingMessage.value = true;
+            }
+
+            function cancelEditMessage() {
+                editingMessage.value = false;
+            }
+
+            async function saveMessage() {
+                if (!editMessageDraft.value.trim() || savingMessage.value) return;
+                savingMessage.value = true;
+                try {
+                    const csrf = document.getElementById('csrf_token')?.value || '';
+                    const res = await fetch('/rule/edit_proposal_message/' + PROPOSAL_ID, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                        body: JSON.stringify({ message: editMessageDraft.value }),
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        proposal.value.message = data.message;
+                        renderedMessage.value = await renderMarkdown(data.message);
+                        editingMessage.value = false;
+                        create_message('Justification updated', 'success-subtle');
+                        fetchRuleProposal();
+                    } else {
+                        create_message(data.message || 'Error updating justification', 'danger-subtle');
+                    }
+                } catch (e) {
+                    create_message('Error updating justification', 'danger-subtle');
+                } finally {
+                    savingMessage.value = false;
+                }
+            }
 
             function editTypeMeta(type) {
                 return EDIT_TYPE_META[type] || { label: type || 'General', icon: 'fa-pen', color: '#6c757d' };
@@ -561,6 +765,9 @@
                         }
                         create_message(msg, data.toast_class || 'success');
                         if (proposal.value) proposal.value.status = decision;
+                        // Refresh so reviewed_by/reviewed_at and the system-events
+                        // feed pick up the decision that was just recorded.
+                        fetchRuleProposal();
                     } else {
                         create_message('Error processing decision', 'danger');
                     }
@@ -577,6 +784,9 @@
                 RULE_TITLE_SHORT,
                 proposal, isFavorited, deciding,
                 showRawMessage, renderedMessage,
+                editingMessage, editMessageDraft, savingMessage, canEditMessage, canReviseProposal, relatedProposals, participants,
+                isSupersededByAcceptedChild, commentParticipants,
+                startEditMessage, cancelEditMessage, saveMessage,
                 editTypeMeta, truncate, formatDate, scoreColor,
                 toggleFavorite, decideProposal,
             };

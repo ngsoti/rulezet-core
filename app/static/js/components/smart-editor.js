@@ -357,14 +357,16 @@ export default {
             // DOMPurify failed to load — fall back to a minimal strip as last resort
             const tmp = document.createElement('div')
             tmp.innerHTML = html
-            tmp.querySelectorAll('script, iframe, object, embed, form, style, input, button, select, textarea').forEach(el => el.remove())
+            tmp.querySelectorAll('script, iframe, object, embed, form, style, input, button, select, textarea, base, meta, link').forEach(el => el.remove())
+            const SAFE_SCHEME = /^(?:https?|mailto):/i
             tmp.querySelectorAll('*').forEach(el => {
                 for (const attr of [...el.attributes]) {
                     const n = attr.name.toLowerCase()
-                    const v = attr.value
-                    if (n === 'style' || n === 'action' || n === 'formaction' ||
+                    const v = attr.value.trim()
+                    const is_uri_attr = n === 'href' || n === 'src' || n === 'xlink:href' || n === 'formaction' || n === 'action'
+                    if (n === 'style' || n === 'method' ||
                         n.startsWith('on') ||
-                        ((n === 'href' || n === 'src') && /^javascript:/i.test(v.trim()))) {
+                        (is_uri_attr && v && !SAFE_SCHEME.test(v) && !v.startsWith('#') && !v.startsWith('/'))) {
                         el.removeAttribute(attr.name)
                     }
                 }

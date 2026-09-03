@@ -1795,6 +1795,91 @@ def propose_edit(rule_id) -> redirect:
     flash("Request sended.", "success", discuss_url)
     return redirect(url_for('rule.detail_rule', rule_id=rule_id))
 
+@rule_blueprint.route('/propose_revision/<int:proposal_id>', methods=['POST'])
+@login_required
+def propose_revision(proposal_id) -> redirect:
+    """Submit a follow-up proposal that continues a prior one (discussion-driven revision).
+
+    Returns JSON when Accept: application/json.
+    """
+    from app.core.db_class.db import RuleEditProposal
+
+    is_ajax = request.headers.get('Accept', '').startswith('application/json')
+
+    def _err(msg, code=400):
+        if is_ajax:
+            return jsonify({"success": False, "message": msg, "toast_class": "danger"}), code
+        flash(msg, "error")
+        return redirect(url_for('rule.proposal_content_discuss', id=proposal_id))
+
+    previous = RuleEditProposal.query.get(proposal_id)
+    if not previous:
+        return _err("Proposal not found.", 404)
+    if current_user.id != previous.user_id and not current_user.is_admin():
+        return _err("Forbidden", 403)
+    if previous.status not in ('pending', 'rejected'):
+        return _err("Cannot revise a decided or already-revised proposal.")
+
+    data = request.form
+    proposed_content = data.get('rule_content')
+    message = data.get('message')
+
+    if not proposed_content:
+        return _err("Proposed content cannot be empty.")
+
+    rule = RuleModel.get_rule(previous.rule_id)
+    if not rule:
+        return _err("Rule not found.", 404)
+
+    current_normalized  = "".join((previous.proposed_content or "").split())
+    proposed_normalized = "".join(proposed_content.split())
+    if current_normalized == proposed_normalized:
+        return _err("Proposed content is the same as the proposal it revises (ignoring formatting).")
+
+    rule_dict = rule.to_json()
+    rule_dict['to_string'] = proposed_content
+    valide, error = verify_syntax_rule_by_format(rule_dict)
+    if not valide:
+        return _err(f"Syntax error in proposed content: {error}")
+
+    edit_type = data.get('edit_type', 'content_update')
+    success, new_proposal_id, error = RuleModel.create_proposal_revision(
+        proposal_id, proposed_content, message, edit_type, current_user.id
+    )
+    if not success:
+        return _err(error or "Failed to save revision.", 400 if error else 500)
+
+    gamification = AccountModel.get_or_create_gamification_profile(current_user.id)
+    if gamification:
+        AccountModel.update_propose_edit_gamification(gamification.id, "add_one_to_suggested")
+
+    try:
+        from app.features.notification.notification_core import notify_proposal_submitted
+        new_proposal_obj = RuleEditProposal.query.get(new_proposal_id)
+        if new_proposal_obj:
+            notify_proposal_submitted(new_proposal_obj, rule)
+    except Exception as _e:
+        print(f"[rule] notify_proposal_submitted error: {_e}")
+
+    log_activity(
+        "proposal.revised",
+        f"Submitted a revision (proposal id={new_proposal_id}) of proposal id={proposal_id} for rule '{rule.title}'",
+        target_type="proposal", target_id=proposal_id,
+        extra={"new_proposal_id": new_proposal_id, "rule_id": rule.id},
+        is_public=False,
+    )
+
+    discuss_url = f"/rule/proposal_content_discuss?id={new_proposal_id}"
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "message": "Revision submitted successfully!",
+            "toast_class": "success",
+            "redirect_url": discuss_url,
+        })
+    flash("Revision submitted.", "success", discuss_url)
+    return redirect(discuss_url)
+
 @rule_blueprint.route("/validate_proposal", methods=['GET'])
 @login_required
 def validate_proposal() -> jsonify:
@@ -1810,7 +1895,7 @@ def validate_proposal() -> jsonify:
 
             new_version = None
             if decision == "accepted":
-                RuleModel.set_status(rule_proposal_id,"accepted")
+                RuleModel.set_status(rule_proposal_id,"accepted", reviewed_by_id=current_user.id)
                 # change the to_string part of the rule in the db
                 response , status_code = RuleModel.set_to_string_rule(rule_id, rule_proposal.proposed_content)
                 message = response["message"]
@@ -1877,7 +1962,7 @@ def validate_proposal() -> jsonify:
                 )
 
             elif decision == "rejected":
-                RuleModel.set_status(rule_proposal_id,"rejected")
+                RuleModel.set_status(rule_proposal_id,"rejected", reviewed_by_id=current_user.id)
                 message = "Proposal rejected."
                 log_activity(
                     "rule.proposal_rejected",
@@ -2144,9 +2229,111 @@ def get_proposal() -> jsonify:
     rule_obj = RuleModel.get_rule(proposal.rule_id)
     d['rule_version'] = rule_obj.version if rule_obj else None
 
+    d['system_events'] = _build_proposal_system_events(proposal)
+
     return {
         "proposal": d,
     }
+
+
+def _build_proposal_system_events(proposal) -> list:
+    """Build the GitHub-style system-event feed for a proposal: created,
+    justification edits, and the final accept/reject decision."""
+    from app.core.db_class.db import ActivityLog, RuleEditProposal
+
+    events = []
+
+    if proposal.user:
+        created_event = {
+            "type": "created",
+            "icon": "fa-solid fa-plus",
+            "text": "created this proposal",
+            "actor_id": proposal.user_id,
+            "actor_name": f"{proposal.user.first_name} {proposal.user.last_name}",
+            "actor_avatar": proposal.user.get_avatar_url(),
+            "created_at": proposal.timestamp.isoformat(),
+        }
+        if proposal.previous_proposal_id:
+            created_event["text"] = "proposed this as a revision of proposal #" + str(proposal.previous_proposal_id)
+            created_event["link"] = f"/rule/proposal_content_discuss?id={proposal.previous_proposal_id}"
+        events.append(created_event)
+
+    edit_logs = (ActivityLog.query
+                 .filter_by(target_type="proposal", target_id=proposal.id, action="proposal.message_edited")
+                 .order_by(ActivityLog.created_at.asc())
+                 .all())
+    for log in edit_logs:
+        events.append({
+            "type": "edited",
+            "icon": "fa-solid fa-pen",
+            "text": "edited the justification",
+            "actor_id": log.user_id,
+            "actor_name": f"{log.user.first_name} {log.user.last_name}" if log.user else "Unknown",
+            "actor_avatar": log.user.get_avatar_url() if log.user else None,
+            "created_at": log.created_at.isoformat(),
+        })
+
+    for revision in proposal.revisions.order_by(RuleEditProposal.timestamp.asc()).all():
+        events.append({
+            "type": "revised",
+            "icon": "fa-solid fa-code-branch",
+            "text": "proposed a modification to this proposal",
+            "actor_id": revision.user_id,
+            "actor_name": f"{revision.user.first_name} {revision.user.last_name}" if revision.user else "Unknown",
+            "actor_avatar": revision.user.get_avatar_url() if revision.user else None,
+            "created_at": revision.timestamp.isoformat(),
+            "link": f"/rule/proposal_content_discuss?id={revision.id}",
+            "status": revision.status,
+        })
+
+    if proposal.status in ("accepted", "rejected") and proposal.reviewed_at:
+        events.append({
+            "type": proposal.status,
+            "icon": "fa-solid fa-check" if proposal.status == "accepted" else "fa-solid fa-xmark",
+            "text": f"{proposal.status} this proposal",
+            "actor_id": proposal.reviewed_by_id,
+            "actor_name": (f"{proposal.reviewer.first_name} {proposal.reviewer.last_name}"
+                           if proposal.reviewer else "Unknown"),
+            "actor_avatar": proposal.reviewer.get_avatar_url() if proposal.reviewer else None,
+            "created_at": proposal.reviewed_at.isoformat(),
+        })
+
+    events.sort(key=lambda e: e["created_at"])
+    return events
+
+
+@rule_blueprint.route('/edit_proposal_message/<int:proposal_id>', methods=['POST'])
+@login_required
+def edit_proposal_message(proposal_id) -> jsonify:
+    """Edit the author-justification message of a pending proposal (author or admin only)."""
+    from app.core.db_class.db import RuleEditProposal
+
+    proposal = RuleEditProposal.query.get(proposal_id)
+    if not proposal:
+        return jsonify({"success": False, "message": "Proposal not found"}), 404
+    if current_user.id != proposal.user_id and not current_user.is_admin():
+        return jsonify({"success": False, "message": "Forbidden"}), 403
+    if proposal.status != 'pending':
+        return jsonify({"success": False, "message": "Cannot edit a decided proposal"}), 400
+
+    data = request.get_json(silent=True) or {}
+    new_message = (data.get('message') or '').strip()
+    if not new_message:
+        return jsonify({"success": False, "message": "Justification cannot be empty"}), 400
+
+    result, status_code = RuleModel.update_proposal_message(proposal_id, new_message)
+    if not result.get('success'):
+        return jsonify(result), status_code
+
+    log_activity(
+        "proposal.message_edited",
+        f"Edited justification for proposal id={proposal_id}",
+        target_type="proposal", target_id=proposal_id,
+        extra={"rule_id": proposal.rule_id},
+        is_public=False,
+    )
+
+    return jsonify(result), status_code
 
 
 
