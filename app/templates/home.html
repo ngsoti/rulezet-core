@@ -40,6 +40,15 @@
     background: radial-gradient(circle, rgba(96,165,250,.1), transparent 65%);
     bottom: -100px; right: 8%;
 }
+/* Dark mode: swap the orbs' flat glow for a soft conic-gradient spiral —
+   same size/position/heavy blur, just a bit more sense of relief. Kept
+   subtle: low opacity, no rotation/animation. */
+body.dark-mode .hero-orb-1 {
+    background: conic-gradient(from 45deg, transparent 0deg, rgba(96,165,250,.16) 100deg, transparent 200deg, rgba(13,110,253,.12) 300deg, transparent 360deg);
+}
+body.dark-mode .hero-orb-2 {
+    background: conic-gradient(from 210deg, transparent 0deg, rgba(96,165,250,.12) 120deg, transparent 240deg, rgba(13,110,253,.09) 320deg, transparent 360deg);
+}
 /* Dot-grid texture */
 .hero-grid {
     position: absolute; inset: 0; pointer-events: none;
