@@ -42,6 +42,40 @@
 }
 .ai-visibility-badge--public  { background: rgba(25,135,84,.12); color: #198754; }
 .ai-visibility-badge--private { background: rgba(220,53,69,.12); color: #dc3545; }
+
+/* ── "At a glance" structured panel ── */
+.ai-badge {
+    display: inline-flex; align-items: center;
+    font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    padding: .3rem .75rem; border-radius: 20px;
+}
+.ai-badge--severity-critical { background: rgba(220,53,69,.15); color: #dc3545; }
+.ai-badge--severity-high     { background: rgba(253,126,20,.15); color: #fd7e14; }
+.ai-badge--severity-medium   { background: rgba(255,193,7,.18);  color: #b8860b; }
+.ai-badge--severity-low,
+.ai-badge--severity-info     { background: rgba(13,110,253,.12); color: #0d6efd; }
+.ai-badge--confidence { background: var(--light-bg-color); color: var(--subtle-text-color); }
+.ai-glance-block {
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: .85rem 1rem;
+    height: 100%;
+}
+.ai-glance-block__title {
+    font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--subtle-text-color); margin-bottom: .5rem;
+}
+.ai-checklist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .4rem; }
+.ai-checklist li { display: flex; align-items: flex-start; gap: .5rem; font-size: .85rem; }
+.ai-checklist li i { color: #198754; margin-top: .2rem; flex-shrink: 0; }
+.ai-bullet-list { margin: 0; padding-left: 1.1rem; font-size: .85rem; color: var(--subtle-text-color); }
+.ai-bullet-list li { margin-bottom: .3rem; }
+.ai-mitre-chip {
+    font-size: .74rem; font-weight: 600;
+    background: rgba(13,110,253,.1); color: #0d6efd;
+    padding: .25rem .6rem; border-radius: 20px; cursor: help;
+}
 </style>
 {% endblock %}
 {% import 'macros/detail_rule_nav.html' as nav with context %}
@@ -173,6 +207,52 @@
                             "I went through this one on [[ latest.created_at ]]<span v-if="latest.username"> for [[ latest.username ]]</span> — here's what I found."
                         </p>
                     </div>
+                    <!-- Structured "at a glance" panel — absent on old rows generated
+                         before the structured schema, which just show the Markdown body. -->
+                    <div v-if="latest.meta" class="ai-glance mb-4">
+                        <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+                            <span class="ai-badge" :class="'ai-badge--severity-' + latest.meta.severity">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>[[ latest.meta.severity ]] severity
+                            </span>
+                            <span class="ai-badge ai-badge--confidence">
+                                <i class="fa-solid fa-gauge-high me-1"></i>[[ latest.meta.confidence ]] confidence
+                            </span>
+                        </div>
+
+                        <div v-if="latest.meta.recommendations && latest.meta.recommendations.length" class="ai-glance-block mb-3">
+                            <div class="ai-glance-block__title"><i class="fa-solid fa-list-check me-1"></i>Recommendations</div>
+                            <ul class="ai-checklist">
+                                <li v-for="(r, i) in latest.meta.recommendations" :key="i"><i class="fa-solid fa-circle-check"></i><span>[[ r ]]</span></li>
+                            </ul>
+                        </div>
+
+                        <div v-if="latest.meta.mitre_relevance && latest.meta.mitre_relevance.length" class="ai-glance-block mb-3">
+                            <div class="ai-glance-block__title"><i class="fa-solid fa-crosshairs me-1"></i>MITRE ATT&amp;CK Relevance</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span v-for="(m, i) in latest.meta.mitre_relevance" :key="i" class="ai-mitre-chip" :title="m.relevance">[[ m.technique ]]</span>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div v-if="latest.meta.false_positive_risks && latest.meta.false_positive_risks.length" class="col-md-6">
+                                <div class="ai-glance-block">
+                                    <div class="ai-glance-block__title"><i class="fa-solid fa-flag me-1"></i>False Positive Risks</div>
+                                    <ul class="ai-bullet-list">
+                                        <li v-for="(f, i) in latest.meta.false_positive_risks" :key="i">[[ f ]]</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div v-if="latest.meta.evasion_techniques && latest.meta.evasion_techniques.length" class="col-md-6">
+                                <div class="ai-glance-block">
+                                    <div class="ai-glance-block__title"><i class="fa-solid fa-user-ninja me-1"></i>Evasion Techniques</div>
+                                    <ul class="ai-bullet-list">
+                                        <li v-for="(e, i) in latest.meta.evasion_techniques" :key="i">[[ e ]]</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="ai-summary-content" v-html="renderMarkdown(latest.content)"></div>
                 </div>
             </div>

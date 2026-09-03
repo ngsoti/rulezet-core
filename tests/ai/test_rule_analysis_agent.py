@@ -1,6 +1,9 @@
 """
-Tests for RuleAnalysisAgent (AI_02_RULE_ANALYSIS.md Phase 1) — prompt
-construction and response parsing, in isolation from the bulk job.
+Tests for RuleAnalysisAgent — prompt construction and response parsing, in
+isolation from the bulk job. Covers the structured schema (severity/
+confidence/fields_breakdown/mitre_relevance/false_positive_risks/
+evasion_techniques/recommendations) that parse_response() composes into one
+Markdown report (AIGeneration.content) plus a structured dict (meta).
 """
 
 import json
@@ -22,6 +25,23 @@ def _stub(**overrides):
     )
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
+
+
+def _valid_payload(**overrides):
+    payload = dict(
+        severity="high",
+        confidence="medium",
+        overview="Detects encoded PowerShell command execution.",
+        fields_breakdown=[{"field": "CommandLine|contains", "explanation": "Matches the '-enc' flag."}],
+        detection_logic="Fires when the selection block matches.",
+        security_implications="Indicates possible obfuscated PowerShell execution (T1059).",
+        mitre_relevance=[{"technique": "T1059", "relevance": "Command and Scripting Interpreter usage."}],
+        false_positive_risks=["Legitimate admin scripts using -enc."],
+        evasion_techniques=["Avoiding the -enc flag by decoding beforehand."],
+        recommendations=["Correlate with parent process to reduce noise."],
+    )
+    payload.update(overrides)
+    return payload
 
 
 # ── build_messages ────────────────────────────────────────────────────────────
@@ -66,52 +86,86 @@ def test_build_messages_handles_missing_context_gracefully():
 
 # ── json_schema ──────────────────────────────────────────────────────────────
 
-def test_json_schema_requires_summary():
+def test_json_schema_requires_the_structured_fields():
     schema = RuleAnalysisAgent().json_schema()
-    assert schema['required'] == ['summary']
+    assert set(schema['required']) == {
+        'severity', 'confidence', 'overview', 'fields_breakdown', 'detection_logic',
+        'security_implications', 'false_positive_risks', 'evasion_techniques', 'recommendations',
+    }
+    # mitre_relevance is intentionally optional — most rules have no linked technique.
+    assert 'mitre_relevance' not in schema['required']
 
 
 # ── parse_response ───────────────────────────────────────────────────────────
 
-def test_parse_response_strict_json():
+def test_parse_response_composes_markdown_and_meta():
     agent = RuleAnalysisAgent()
-    result = agent.parse_response(json.dumps({"summary": "## Overview\nDetects X."}))
+    result = agent.parse_response(json.dumps(_valid_payload()))
+
     assert result.ok is True
-    assert result.content == "## Overview\nDetects X."
+    assert '## Severity & Confidence' in result.content
+    assert '## Overview' in result.content
+    assert 'Detects encoded PowerShell command execution.' in result.content
+    assert '## Recommendations' in result.content
+    assert 'Correlate with parent process to reduce noise.' in result.content
+
+    assert result.meta['severity'] == 'high'
+    assert result.meta['confidence'] == 'medium'
+    assert result.meta['recommendations'] == ["Correlate with parent process to reduce noise."]
+    assert result.meta['mitre_relevance'][0]['technique'] == 'T1059'
 
 
-def test_parse_response_accepts_short_report_no_minimum_length():
-    # Explicit lesson from the reverted branch's postmortem: a sparse rule
-    # can legitimately produce a short report — this must not be rejected.
+def test_parse_response_accepts_empty_optional_arrays():
+    # A sparse rule can legitimately have nothing concrete for FP/evasion/
+    # recommendations — that's a correct result, not a failure.
     agent = RuleAnalysisAgent()
-    result = agent.parse_response(json.dumps({"summary": "Short."}))
+    result = agent.parse_response(json.dumps(_valid_payload(
+        mitre_relevance=[], false_positive_risks=[], evasion_techniques=[], recommendations=[],
+    )))
     assert result.ok is True
-    assert result.content == "Short."
+    assert 'None identified.' in result.content or '_None' in result.content
 
 
-def test_parse_response_recovers_truncated_json():
+def test_parse_response_rejects_missing_required_field():
     agent = RuleAnalysisAgent()
-    raw = '{"summary": "This report starts fine but then just stops'
-    result = agent.parse_response(raw)
-    assert result.ok is True
-    assert result.content == "This report starts fine but then just stops"
-
-
-def test_parse_response_rejects_empty_summary():
-    agent = RuleAnalysisAgent()
-    result = agent.parse_response(json.dumps({"summary": ""}))
+    payload = _valid_payload()
+    del payload['detection_logic']
+    result = agent.parse_response(json.dumps(payload))
     assert result.ok is False
+    assert 'detection_logic' in result.error
+
+
+def test_parse_response_rejects_empty_overview():
+    agent = RuleAnalysisAgent()
+    result = agent.parse_response(json.dumps(_valid_payload(overview="")))
+    assert result.ok is False
+
+
+def test_parse_response_falls_back_on_invalid_severity_or_confidence():
+    # Structured-output mode should enforce the enum, but stay resilient
+    # rather than hard-rejecting an otherwise-usable report.
+    agent = RuleAnalysisAgent()
+    result = agent.parse_response(json.dumps(_valid_payload(severity="apocalyptic", confidence="very")))
+    assert result.ok is True
+    assert result.meta['severity'] == 'info'
+    assert result.meta['confidence'] == 'medium'
 
 
 def test_parse_response_rejects_degenerate_repetition():
     agent = RuleAnalysisAgent()
-    raw = json.dumps({"summary": "loop " * (MAX_SUMMARY_CHARS // 4)})
-    result = agent.parse_response(raw)
+    payload = _valid_payload(overview="loop " * (MAX_SUMMARY_CHARS // 4))
+    result = agent.parse_response(json.dumps(payload))
     assert result.ok is False
     assert 'too long' in result.error.lower()
 
 
-def test_parse_response_rejects_unrecoverable_garbage():
+def test_parse_response_rejects_non_json():
     agent = RuleAnalysisAgent()
-    result = agent.parse_response("not json and no summary field anywhere")
+    result = agent.parse_response("not json at all")
+    assert result.ok is False
+
+
+def test_parse_response_rejects_json_array_instead_of_object():
+    agent = RuleAnalysisAgent()
+    result = agent.parse_response(json.dumps([1, 2, 3]))
     assert result.ok is False

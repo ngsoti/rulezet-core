@@ -4275,8 +4275,8 @@ def handle_rule_analysis(job, app):
         if result.ok:
             db.session.add(AIGeneration(
                 uuid=str(uuid_mod.uuid4()), agent_key='rule_analysis', rule_id=rule_id,
-                user_id=job.created_by, content=result.content, model=result.model_used,
-                is_public=bool(default_public),
+                user_id=job.created_by, content=result.content, meta=result.meta or None,
+                model=result.model_used, is_public=bool(default_public),
             ))
             db.session.commit()
             generated += 1

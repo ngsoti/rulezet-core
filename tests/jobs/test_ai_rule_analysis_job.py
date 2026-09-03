@@ -36,8 +36,23 @@ def _make_rule(title, user_id, fmt="yara"):
     return rule
 
 
-def _envelope(summary):
-    return json.dumps({"summary": summary})
+def _envelope(overview):
+    """A full, valid RuleAnalysisAgent structured response — `overview` is
+    the one field these tests care about distinguishing; it always ends up
+    embedded in the composed Markdown `content` (see rule_analysis_agent.py
+    _render_markdown), so callers assert `overview in gen.content`."""
+    return json.dumps({
+        "severity": "medium",
+        "confidence": "medium",
+        "overview": overview,
+        "fields_breakdown": [],
+        "detection_logic": "Fires when the condition matches.",
+        "security_implications": "Indicates the targeted behavior occurred.",
+        "mitre_relevance": [],
+        "false_positive_risks": [],
+        "evasion_techniques": [],
+        "recommendations": [],
+    })
 
 
 def test_generates_analysis_for_targeted_rules(app):
@@ -51,7 +66,7 @@ def test_generates_analysis_for_targeted_rules(app):
         # ignored it and always used the config-derived default).
         job = _make_job({'rule_ids': [r1.id, r2.id], 'model': 'qwen2.5:7b'}, admin.id)
 
-        with patch(CHAT, return_value=_envelope("## Overview\nDoes a thing.")):
+        with patch(CHAT, return_value=_envelope("Does a thing.")):
             handle_rule_analysis(job, app)
 
         db.session.refresh(job)
@@ -60,7 +75,7 @@ def test_generates_analysis_for_targeted_rules(app):
 
         gens = AIGeneration.query.filter(AIGeneration.rule_id.in_([r1.id, r2.id])).all()
         assert len(gens) == 2
-        assert all(g.content == "## Overview\nDoes a thing." for g in gens)
+        assert all("Does a thing." in g.content for g in gens)
         assert all(g.agent_key == 'rule_analysis' for g in gens)
         assert all(g.model == 'qwen2.5:7b' for g in gens)
 
@@ -83,7 +98,7 @@ def test_skips_rules_with_existing_analysis_by_default(app):
             assert mock_chat.call_count == 1
 
         assert AIGeneration.query.filter_by(rule_id=r1.id).one().content == "pre-existing"
-        assert AIGeneration.query.filter_by(rule_id=r2.id).one().content == "new summary"
+        assert "new summary" in AIGeneration.query.filter_by(rule_id=r2.id).one().content
 
 
 def test_regenerate_existing_adds_a_new_entry_without_deleting_the_old_one(app):
@@ -107,7 +122,7 @@ def test_regenerate_existing_adds_a_new_entry_without_deleting_the_old_one(app):
         rows = AIGeneration.query.filter_by(rule_id=r1.id).order_by(AIGeneration.id).all()
         assert len(rows) == 2
         assert rows[0].content == "older analysis"
-        assert rows[1].content == "fresh summary"
+        assert "fresh summary" in rows[1].content
 
 
 def test_accepts_filters_shape_from_task_scheduler_rule_list_picker(app):
@@ -202,7 +217,7 @@ def test_per_rule_failure_does_not_stop_the_job(app):
         db.session.refresh(job)
         assert job.status != 'failed'
         assert AIGeneration.query.filter_by(rule_id=r1.id).count() == 0
-        assert AIGeneration.query.filter_by(rule_id=r2.id).one().content == "ok summary"
+        assert "ok summary" in AIGeneration.query.filter_by(rule_id=r2.id).one().content
 
 
 def test_uses_tags_and_attack_context_in_prompt(app):

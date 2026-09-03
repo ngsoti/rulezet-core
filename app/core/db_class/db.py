@@ -4145,6 +4145,10 @@ class AIGeneration(db.Model):
     rule_id    = db.Column(db.Integer, db.ForeignKey('rule.id', ondelete='CASCADE'), nullable=True, index=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     content    = db.Column(db.Text, nullable=False)
+    # Structured extras alongside `content` (e.g. rule_analysis's severity/
+    # confidence/recommendations/etc — see rule_analysis_agent.py) — optional,
+    # agent-specific, never required so other agents and old rows are unaffected.
+    meta       = db.Column(db.JSON, nullable=True)
     model      = db.Column(db.String(128), nullable=True)
     is_public  = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc), index=True)
@@ -4160,6 +4164,7 @@ class AIGeneration(db.Model):
             'rule_id':    self.rule_id,
             'user_id':    self.user_id,
             'content':    self.content if self.is_public else None,
+            'meta':       self.meta if self.is_public else None,
             'model':      self.model,
             'is_public':  self.is_public,
             'created_at': self.created_at.isoformat() if self.created_at else None,
