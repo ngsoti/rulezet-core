@@ -2881,6 +2881,31 @@ body.dark-mode .table .opacity-50 {
   outline: 2px solid #0d6efd;
   outline-offset: 3px;
 }
+/* Small "New" sticker floating above the mascot avatar — e.g. the homepage
+   greeting bubble, to flag a recently-changed pose/feature. .rulezy-say is a
+   flex row (avatar + bubble side by side), so this is centered over the
+   avatar's own width via --rulezy-avatar-size (set inline per usage,
+   defaults to the base .rulezy-say__avatar size), not the whole row. */
+.rulezy-say__badge {
+  --rulezy-avatar-size: 76px;
+  position: absolute;
+  top: -18px;
+  left: calc(var(--rulezy-avatar-size) * 0.85);
+  transform: translateX(-50%) rotate(-14deg);
+  background: #fd7e14;
+  color: #fff;
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: .15rem .4rem;
+  border-radius: 20px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(253, 126, 20, .45);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .rulezy-say__bubble {
   position: absolute;
   left: calc(100% + 12px);
