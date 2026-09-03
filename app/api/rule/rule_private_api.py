@@ -172,12 +172,14 @@ class CreateRule(Resource):
             return {"message": msg, "rule": verif.to_json()}, 200
 
         msg_str = str(msg)
-        if msg_str.startswith("DUPLICATE:"):
+        if msg_str.startswith("DUPLICATE:") or msg_str.startswith("UUID_DUPLICATE:"):
+            is_uuid_dup = msg_str.startswith("UUID_DUPLICATE:")
             parts = msg_str.split(":", 3)
             dup_id = parts[2] if len(parts) > 2 else ''
             dup_title = parts[3] if len(parts) > 3 else 'this rule'
             dup_rule = RuleModel.get_rule(int(dup_id)) if dup_id.isdigit() else None
-            response = {"message": f'A rule with this exact content already exists: "{dup_title}".'}
+            reason = 'this UUID' if is_uuid_dup else 'this exact content'
+            response = {"message": f'A rule with {reason} already exists: "{dup_title}".'}
             if dup_rule:
                 response["rule"] = dup_rule.to_json()
             return response, 409

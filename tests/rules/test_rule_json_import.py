@@ -3,10 +3,10 @@ Tests for the "From JSON" tab on /rule/create_rule
 (POST /rule/import_from_json, app/features/rule/rule.py).
 
 Covers what the other create-rule paths (Manual/Parse) already exercise —
-syntax validation, duplicate detection — plus the two things unique to
-this route: a uuid-based duplicate check (add_rule_core only dedups by
-content) and the fact that user_id must always come from the submitter,
-never from the pasted JSON.
+syntax validation, duplicate detection (add_rule_core dedups by uuid/
+original_uuid first, then by content — see add_rule_core in rule_core.py)
+— plus what's unique to this route: the fact that user_id must always come
+from the submitter, never from the pasted JSON.
 """
 import json
 
@@ -111,8 +111,8 @@ def test_duplicate_uuid_is_rejected(client, app):
 
 
 def test_duplicate_content_redirects_to_the_existing_rule(client, app):
-    # Same to_string, different uuid — add_rule_core's own content-based
-    # dedup (not the route's uuid pre-check) is what catches this one, and
+    # Same to_string, different uuid — add_rule_core's content-based dedup
+    # (the uuid check doesn't match here) is what catches this one, and
     # should redirect straight to the existing rule instead of a dead end.
     login_user(client)
     first = import_json(client, VALID_PAYLOAD)
@@ -130,17 +130,6 @@ def test_duplicate_content_redirects_to_the_existing_rule(client, app):
         assert Rule.query.filter_by(title="Same Content Different Uuid").first() is None
 
 
-def test_duplicate_content_is_rejected(client, app):
-    login_user(client)
-    import_json(client, VALID_PAYLOAD)  # first import succeeds
-
-    same_content = dict(VALID_PAYLOAD, title="Different Title Same Body",
-                         uuid="11111111-2222-3333-4444-555555555555")
-    resp = import_json(client, same_content)
-    assert b"content matches" in resp.data
-
-    with app.app_context():
-        assert Rule.query.filter_by(title="Different Title Same Body").first() is None
 
 
 def test_invalid_json_is_rejected(client):
@@ -208,3 +197,55 @@ def test_admin_can_also_import(client, app):
         rule = Rule.query.filter_by(title="Admin Imported Rule").first()
         assert rule is not None
         assert rule.user_id == admin.id
+
+
+def download_rule_json(client, rule_id):
+    # /rule/download_rule wraps the file body in a {"content": "<json-as-string>"}
+    # envelope (the frontend triggers a client-side blob download with it) —
+    # unwrap it to get the actual exported rule JSON.
+    resp = client.get(f"/rule/download_rule?rule_id={rule_id}&format=json")
+    envelope = resp.get_json()
+    assert envelope["success"] is True
+    return json.loads(envelope["content"])
+
+
+def test_downloaded_json_has_flat_top_level_fields(client, app):
+    # Regression test: /rule/download_rule?format=json used to nest title/
+    # format/to_string under an "identity"/"content" sub-object (to_json_detail),
+    # which import_from_json's flat-field parser could never read — a rule
+    # downloaded from this app could not be re-imported into it.
+    login_user(client)
+    payload = dict(VALID_PAYLOAD, title="Downloadable Rule",
+                    to_string="rule downloadable_test { condition: true }")
+    import_json(client, payload)
+
+    with app.app_context():
+        rule = Rule.query.filter_by(title="Downloadable Rule").first()
+        rule_id = rule.id
+
+    exported = download_rule_json(client, rule_id)
+    assert exported["title"] == "Downloadable Rule"
+    assert exported["format"] == "yara"
+    assert exported["to_string"] == "rule downloadable_test { condition: true }"
+
+
+def test_reimporting_a_downloaded_rule_is_flagged_as_a_uuid_duplicate(client, app):
+    # Re-importing a rule exported from this same app carries its own uuid
+    # as "uuid" in the JSON — importing it again must be rejected as a
+    # duplicate (of itself), not silently accepted as a second copy.
+    login_user(client)
+    payload = dict(VALID_PAYLOAD, title="Round Trip Rule",
+                    to_string="rule round_trip_test { condition: true }")
+    import_json(client, payload)
+
+    with app.app_context():
+        rule = Rule.query.filter_by(title="Round Trip Rule").first()
+        rule_id = rule.id
+
+    exported = download_rule_json(client, rule_id)
+    resp = import_json(client, exported)
+    assert b"already exists" in resp.data
+
+    with app.app_context():
+        # No second copy was created — the re-import was rejected, not duplicated.
+        assert Rule.query.filter_by(title="Round Trip Rule").count() == 1

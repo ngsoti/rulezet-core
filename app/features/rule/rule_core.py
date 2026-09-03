@@ -555,8 +555,11 @@ def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, 
     Add a rule safely with error handling.
 
     Rules handling logic:
-    - If a rule with the same title AND same to_string AND same original_uuid already exists → do not add (it's an update of the same rule).
-    - If title + to_string match but original_uuid is different → it's considered a different rule, allow insertion.
+    - If an active rule already has the same uuid/original_uuid as form_dict's
+      original_uuid → reject as a duplicate (identifies a specific external
+      rule that's already been imported), regardless of content.
+    - Else if an active rule already has identical to_string content →
+      reject as a duplicate, regardless of title/uuid.
     - Otherwise → insert as a new rule.
 
     record_activity=False skips the site-wide "rule.create" activity-log entry
@@ -568,6 +571,18 @@ def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, 
         title = form_dict["title"].strip()
         new_to_string = form_dict.get("to_string", "").strip()
         new_original_uuid = str(form_dict.get("original_uuid") or "").strip()  # Normalize to string
+
+        # A provided uuid/original_uuid identifies a specific external rule —
+        # if it's already been imported, that's a stronger duplicate signal
+        # than content and is checked first. Centralized here (rather than
+        # left to individual callers) so the REST API, GitHub import, and
+        # connector sync all get the same protection as the web JSON-paste form.
+        if new_original_uuid:
+            existing_by_uuid = _active().filter(
+                or_(Rule.uuid == new_original_uuid, Rule.original_uuid == new_original_uuid)
+            ).first()
+            if existing_by_uuid is not None:
+                return False, f"UUID_DUPLICATE:{existing_by_uuid.uuid}:{existing_by_uuid.id}:{existing_by_uuid.title}"
 
         existing_rule = get_rule_by_content(new_to_string)
         if existing_rule is not None:

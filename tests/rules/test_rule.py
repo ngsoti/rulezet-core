@@ -174,7 +174,7 @@ def test_create_duplicate_rule(client):
     }
     response = client.post("/api/rule/private/create", json=duplicate, headers={"X-API-KEY": API_KEY_USER})
     assert response.status_code == 409
-    assert b"Rule already exists" in response.data
+    assert b"already exists" in response.data
 
 
 @pytest.mark.parametrize("missing_field", ["title", "version", "format", "to_string", "license"])

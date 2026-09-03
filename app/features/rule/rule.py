@@ -122,16 +122,19 @@ def rule() -> render_template:
             t_title = parts[3] if len(parts) > 3 else 'deleted rule'
             flash(f'TRASH_CONFLICT:{t_uuid}:{t_id}:{t_title}', 'warning')
             return render_template("rule/rule.html", form=form, ai_generate_available=ai_generate_available)
-        elif isinstance(message, str) and message.startswith("DUPLICATE:"):
-            # An active rule with this exact content already exists — go
-            # straight to it instead of leaving the user with a dead-end error.
+        elif isinstance(message, str) and (message.startswith("DUPLICATE:") or message.startswith("UUID_DUPLICATE:")):
+            # An active rule with this exact content (or the same uuid) already
+            # exists — go straight to it instead of leaving the user with a
+            # dead-end error.
+            is_uuid_dup = message.startswith("UUID_DUPLICATE:")
             parts    = message.split(":", 3)
             dup_id   = parts[2] if len(parts) > 2 else ''
             dup_title = parts[3] if len(parts) > 3 else 'this rule'
+            reason = 'this UUID' if is_uuid_dup else 'this exact content'
             if dup_id.isdigit():
-                flash(f'A rule with this exact content already exists: "{dup_title}".', 'info')
+                flash(f'A rule with {reason} already exists: "{dup_title}".', 'info')
                 return redirect(url_for('rule.detail_rule', rule_id=int(dup_id)))
-            flash(f'A rule with this exact content already exists: "{dup_title}".', 'danger')
+            flash(f'A rule with {reason} already exists: "{dup_title}".', 'danger')
             return render_template("rule/rule.html", form=form, ai_generate_available=ai_generate_available)
         else:
             flash(message, 'danger')
@@ -1388,7 +1391,10 @@ def download_rule_unified() -> Response:
             filename = f"{rule.title}.{extention}"
 
         elif fmt == 'json':
-            content = json.dumps(rule.to_json_detail(), indent=2)
+            # Flat shape (to_json(), not to_json_detail()) so a downloaded
+            # rule can be re-imported as-is via /rule/import_from_json —
+            # matches the bulk zip exporter and the REST API's shape.
+            content = json.dumps(rule.to_json(), indent=2)
             filename = f"{rule.title}.json"
 
         elif fmt == 'misp':
@@ -1441,7 +1447,9 @@ def download_rule_unified() -> Response:
                     zip_file.writestr("errors.txt", f"TXT error: {str(e)}\n")
 
                 try:
-                    zip_file.writestr(f"{rule.title}.json", json.dumps(rule.to_json_detail(), indent=2))
+                    # Flat shape so this file can be re-imported via
+                    # /rule/import_from_json — same reasoning as fmt == 'json' above.
+                    zip_file.writestr(f"{rule.title}.json", json.dumps(rule.to_json(), indent=2))
                 except Exception as e:
                     zip_file.writestr("errors.txt", f"JSON error: {str(e)}\n")
 
@@ -3371,15 +3379,10 @@ def import_rule_from_json():
         flash('The JSON must include at least "title", "format" and "to_string".', 'danger')
         return redirect(url_for('rule.rule', tab='json'))
 
-    candidate_uuid = rule_dict['original_uuid']
-    if candidate_uuid:
-        from app.core.db_class.db import Rule
-        existing = RuleModel._active().filter(
-            (Rule.uuid == candidate_uuid) | (Rule.original_uuid == candidate_uuid)
-        ).first()
-        if existing:
-            flash(f'A rule with this UUID already exists: "{existing.title}".', 'danger')
-            return redirect(url_for('rule.rule', tab='json'))
+    # Uuid-based duplicate detection now happens centrally inside
+    # add_rule_core() (checked before content), so every creation path
+    # (this route, the REST API, GitHub/connector import) is protected
+    # uniformly — see the UUID_DUPLICATE branch below.
 
     valide, error = verify_syntax_rule_by_format(rule_dict)
     if valide == False:
@@ -3402,16 +3405,19 @@ def import_rule_from_json():
         t_title = parts[3] if len(parts) > 3 else 'deleted rule'
         flash(f'TRASH_CONFLICT:{t_uuid}:{t_id}:{t_title}', 'warning')
         return redirect(url_for('rule.rule', tab='json'))
-    elif isinstance(message, str) and message.startswith("DUPLICATE:"):
-        # An active rule with this exact content already exists — go
-        # straight to it instead of leaving the user with a dead-end error.
+    elif isinstance(message, str) and (message.startswith("DUPLICATE:") or message.startswith("UUID_DUPLICATE:")):
+        # An active rule with this exact content (or the same uuid) already
+        # exists — go straight to it instead of leaving the user with a
+        # dead-end error.
+        is_uuid_dup = message.startswith("UUID_DUPLICATE:")
         parts    = message.split(":", 3)
         dup_id   = parts[2] if len(parts) > 2 else ''
         dup_title = parts[3] if len(parts) > 3 else 'this rule'
+        reason = 'this UUID' if is_uuid_dup else 'this exact content'
         if dup_id.isdigit():
-            flash(f'A rule with this exact content already exists: "{dup_title}".', 'info')
+            flash(f'A rule with {reason} already exists: "{dup_title}".', 'info')
             return redirect(url_for('rule.detail_rule', rule_id=int(dup_id)))
-        flash(f'A rule with this exact content already exists: "{dup_title}".', 'danger')
+        flash(f'A rule with {reason} already exists: "{dup_title}".', 'danger')
         return redirect(url_for('rule.rule', tab='json'))
     else:
         flash(message, 'danger')
