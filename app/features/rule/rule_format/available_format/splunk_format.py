@@ -15,24 +15,47 @@ from app.features.rule.rule_format.abstract_rule_type.rule_type_abstract import 
 
 # Splunk Security Content ("ESCU") detections — one YAML file per detection,
 # the SPL query itself sitting unstructured in the `search` field. Modeled
-# on splunk/security_content's exported schema (EventBasedDetection), but
-# hand-rolled rather than a full jsonschema import: that schema's
-# analytic_story/asset_type/atomic_guid enums are dynamic catalogs specific
-# to Splunk's own content repo (which stories/asset types exist), not part
-# of the generic SPL-detection format — enforcing them here would reject
-# any legitimately-formed community detection that isn't in Splunk's own
-# corpus. Only the short, spec-fixed enums (status/type/security_domain/
-# category) and the required identity/logic fields are hard errors;
-# everything else (how_to_implement, known_false_positives, analytic_story,
-# the type->finding matrix, mitre_attack_id shape) is a warning — same
+# on splunk/security_content's exported schema (EventBasedDetection, see
+# schemas/EventBasedDetection.schema.json in that repo), but hand-rolled
+# rather than a full jsonschema import: that schema's analytic_story/
+# asset_type/atomic_guid enums are dynamic catalogs specific to Splunk's own
+# content repo (which stories/asset types exist), not part of the generic
+# SPL-detection format — enforcing them here would reject any legitimately-
+# formed community detection that isn't in Splunk's own corpus. Only the
+# short, spec-fixed enums (status/type/security_domain/category) and the
+# required identity/logic fields are hard errors; everything else
+# (how_to_implement, known_false_positives, analytic_story, the
+# type->finding matrix, mitre_attack_id shape) is a warning — same
 # calibration as atr_format.py's "additive" fields.
+#
+# One extra wrinkle the live schema doesn't cover: content the upstream repo
+# has since retired (status: removed, filed under removed/) predates the
+# current flat-field schema — security_domain/category/mitre_attack_id/
+# analytic_story/asset_type live nested under a `tags:` mapping instead of
+# at the document's top level, and `category` (added later) is often absent
+# entirely. _tag_or_top() below resolves either shape the same way, and
+# category's absence is a warning rather than a hard error so this
+# legitimately-real, just older-shaped, corpus of detections still imports.
 
-_SPLUNK_STATUSES = frozenset({"production", "experimental", "deprecated"})
+_SPLUNK_STATUSES = frozenset({"production", "experimental", "deprecated", "removed"})
 _SPLUNK_TYPES = frozenset({"TTP", "Anomaly", "Correlation", "Hunting"})
 _SPLUNK_SECURITY_DOMAINS = frozenset({"access", "audit", "endpoint", "identity", "network", "threat"})
 _SPLUNK_CATEGORIES = frozenset({"application", "cloud", "endpoint", "network", "web", "deprecated"})
 
 _MITRE_ID_RE = re.compile(r'^T\d{4}(\.\d{3})?$')
+
+
+def _tag_or_top(doc: Dict[str, Any], field: str) -> Any:
+    """Read a taxonomy field (security_domain, category, mitre_attack_id,
+    analytic_story, asset_type) at the document's top level, falling back to
+    `tags.<field>` — pre-refactor ("removed") Security Content detections
+    nest these under `tags:` instead of promoting them to the top level."""
+    if doc.get(field) is not None:
+        return doc.get(field)
+    tags = doc.get("tags")
+    if isinstance(tags, dict):
+        return tags.get(field)
+    return None
 
 
 def _score_to_severity(score: Any) -> str:
@@ -69,6 +92,22 @@ def _severity_from_findings(doc: Dict[str, Any]) -> str:
                 if isinstance(e, dict) and "score" in e:
                     try:
                         scores.append(float(e["score"]))
+                    except (TypeError, ValueError):
+                        continue
+            if scores:
+                return _score_to_severity(max(scores))
+
+    # Pre-refactor ("removed") detections score risk via `rba.risk_objects`
+    # instead of `finding`/`intermediate_findings`.
+    rba = doc.get("rba")
+    if isinstance(rba, dict):
+        risk_objects = rba.get("risk_objects")
+        if isinstance(risk_objects, list):
+            scores = []
+            for ro in risk_objects:
+                if isinstance(ro, dict) and "score" in ro:
+                    try:
+                        scores.append(float(ro["score"]))
                     except (TypeError, ValueError):
                         continue
             if scores:
@@ -174,15 +213,17 @@ class SplunkRule(RuleType):
         if detection_type not in _SPLUNK_TYPES:
             errors.append(f"type '{detection_type}' is not one of: {sorted(_SPLUNK_TYPES)}")
 
-        security_domain = doc.get("security_domain")
+        security_domain = _tag_or_top(doc, "security_domain")
         if security_domain not in _SPLUNK_SECURITY_DOMAINS:
             errors.append(f"security_domain '{security_domain}' is not one of: {sorted(_SPLUNK_SECURITY_DOMAINS)}")
 
-        category = doc.get("category")
-        if category not in _SPLUNK_CATEGORIES:
+        category = _tag_or_top(doc, "category")
+        if category is None:
+            warnings.append("Missing category — absent from this document (pre-refactor Security Content detections predate this field).")
+        elif category not in _SPLUNK_CATEGORIES:
             errors.append(f"category '{category}' is not one of: {sorted(_SPLUNK_CATEGORIES)}")
 
-        mitre_ids = doc.get("mitre_attack_id")
+        mitre_ids = _tag_or_top(doc, "mitre_attack_id")
         if mitre_ids is None:
             warnings.append("Missing mitre_attack_id — ATT&CK mapping is expected for this format.")
         elif not isinstance(mitre_ids, list) or not all(isinstance(t, str) for t in mitre_ids):
@@ -192,7 +233,7 @@ class SplunkRule(RuleType):
                 if not _MITRE_ID_RE.match(tid):
                     warnings.append(f"mitre_attack_id '{tid}' doesn't look like an ATT&CK technique ID (e.g. T1059.001).")
 
-        analytic_story = doc.get("analytic_story")
+        analytic_story = _tag_or_top(doc, "analytic_story")
         if not isinstance(analytic_story, list) or not analytic_story:
             warnings.append("Missing or empty analytic_story — used upstream to group detections into a campaign/use case.")
 
@@ -242,18 +283,21 @@ class SplunkRule(RuleType):
             # Flatten Splunk's structured taxonomy into rulezet's flat tag
             # list — same convention as atr_format.py's tags flattening.
             tags_list: List[str] = []
-            for tid in doc.get("mitre_attack_id") or []:
+            for tid in _tag_or_top(doc, "mitre_attack_id") or []:
                 if isinstance(tid, str):
                     tags_list.append(tid)
-            for story in doc.get("analytic_story") or []:
+            for story in _tag_or_top(doc, "analytic_story") or []:
                 if isinstance(story, str):
                     tags_list.append(f"analytic_story:{story}")
-            if doc.get("asset_type"):
-                tags_list.append(f"asset_type:{doc['asset_type']}")
-            if doc.get("security_domain"):
-                tags_list.append(f"security_domain:{doc['security_domain']}")
-            if doc.get("category"):
-                tags_list.append(f"category:{doc['category']}")
+            asset_type = _tag_or_top(doc, "asset_type")
+            if asset_type:
+                tags_list.append(f"asset_type:{asset_type}")
+            security_domain = _tag_or_top(doc, "security_domain")
+            if security_domain:
+                tags_list.append(f"security_domain:{security_domain}")
+            category = _tag_or_top(doc, "category")
+            if category:
+                tags_list.append(f"category:{category}")
 
             return {
                 "title": title,
@@ -299,11 +343,12 @@ class SplunkRule(RuleType):
         if not isinstance(doc, dict):
             return {}
         references = doc.get("references")
+        mitre_ids = _tag_or_top(doc, "mitre_attack_id")
         return {
             "documents_references": isinstance(references, list) and len(references) > 0,
             "documents_false_positives": bool((doc.get("known_false_positives") or "").strip()) if isinstance(doc.get("known_false_positives"), str) else False,
             "documents_implementation": bool((doc.get("how_to_implement") or "").strip()) if isinstance(doc.get("how_to_implement"), str) else False,
-            "documents_attack_mapping": isinstance(doc.get("mitre_attack_id"), list) and len(doc.get("mitre_attack_id")) > 0,
+            "documents_attack_mapping": isinstance(mitre_ids, list) and len(mitre_ids) > 0,
         }
 
     ##############################
