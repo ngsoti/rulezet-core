@@ -1940,6 +1940,7 @@ export default {
                 nova:     'text',
                 nse:      'lua',
                 crs:      'text',
+                splunk:   'yaml',
             }
             return map[format.toLowerCase()] || 'auto'
         }

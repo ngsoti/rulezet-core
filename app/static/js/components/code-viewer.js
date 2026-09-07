@@ -185,6 +185,7 @@ const LANG_ALIASES = {
     nse: 'lua',       // Nmap Script Engine = Lua
     sigma: 'yaml',    // Sigma rules are YAML
     atr: 'yaml',      // ATR format is YAML
+    splunk: 'yaml',   // Splunk Security Content detections are YAML (SPL lives in the 'search' field)
     wazuh: 'xml',     // Wazuh rules are XML
     zeek: 'text',
     crs: 'text',

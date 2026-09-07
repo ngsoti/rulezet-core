@@ -207,6 +207,14 @@ class SigmaRule(RuleType):
         """
         Extract rules from YAML file.
         Never re-dumps → returns original raw rule text.
+
+        Self-filters a single-document file through detect() (same as
+        atr_format.py / splunk_format.py) — this method can be called
+        directly (e.g. find_rule_in_repo scanning every .yml in a repo)
+        without going through the candidate/detect() disambiguation that
+        main_format.py and session_class.py apply first, so an ATR/Splunk
+        file sitting next to real Sigma rules must not be misreported as
+        a Sigma one.
         """
         try:
             with open(filepath, "r", encoding="utf-8") as f:
@@ -217,7 +225,7 @@ class SigmaRule(RuleType):
                     return []
 
                 if isinstance(parsed, dict):
-                    return [content]  # keep file EXACTLY as is
+                    return [content] if self.detect(content) else []  # keep file EXACTLY as is
 
                 elif isinstance(parsed, list):
                     rules = []

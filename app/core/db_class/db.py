@@ -398,7 +398,8 @@ class Rule(db.Model):
             'wazuh': 'xml',
             'nse': 'nse',
             'crs': 'conf',
-            'nova': 'nov'
+            'nova': 'nov',
+            'splunk': 'yml'
         }
         
         return extensions.get(format_name, 'txt')

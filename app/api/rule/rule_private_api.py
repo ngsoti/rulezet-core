@@ -73,7 +73,7 @@ Create a new detection rule in the system. You must authenticate using your **AP
 | title           | string  | Yes      | Title of the rule                                                                             | Must be unique, non-empty                                        |
 | description     | string  | No       | Description of the rule                                                                       | Optional. If not provided, defaults to "No description provided"|
 | version         | string  | No      | Version of the rule                                                                           | Must be non-empty                                                |
-| format          | string  | Yes      | Rule format                                                                                   | Supported: yara, sigma, suricata, zeek, crs, nova, nse, wazuh   |
+| format          | string  | Yes      | Rule format                                                                                   | Supported: yara, sigma, suricata, zeek, crs, nova, nse, wazuh, splunk |
 | license         | string  | No      | License applied to the rule                                                                   | Must be non-empty                                                |
 | source          | string  | No       | Source or origin of the rule                                                                  | Optional. Defaults to the user's name                            |
 | to_string       | string  | Yes      | String representation of the rule content                                                    | Must be valid syntax for the specified format                    |
@@ -107,7 +107,7 @@ class CreateRule(Resource):
     "title": "Required. The title of the rule. Must be unique and non-empty.",
     "description": "Optional. Description of the rule. Defaults to 'No description provided'.",
     "version": "Required. Version of the rule. Must be non-empty.",
-    "format": "Required. Rule format (e.g., yara, sigma, suricata, zeek, crs, nova, nse, wazuh).",
+    "format": "Required. Rule format (e.g., yara, sigma, suricata, zeek, crs, nova, nse, wazuh, splunk).",
     "license": "Required. License applied to the rule. Must be non-empty.",
     "source": "Optional. Source or origin of the rule. Defaults to your name if not provided.",
     "to_string": "Required. String representation of the rule content. Must be valid syntax for the format.",

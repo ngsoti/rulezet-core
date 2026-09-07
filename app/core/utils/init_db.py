@@ -128,7 +128,8 @@ def insert_default_formats():
         {"name": "nse", "can_be_execute": True},
         {"name": "no format", "can_be_execute": False},
         {"name": "wazuh", "can_be_execute": False},
-        {"name": "kql", "can_be_execute": False}
+        {"name": "kql", "can_be_execute": False},
+        {"name": "splunk", "can_be_execute": False}
     ]
 
     user_admin = get_admin_user()

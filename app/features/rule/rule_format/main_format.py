@@ -111,6 +111,7 @@ async def extract_rule_from_repo(repo_dir: str, info: dict, user: User):
     # The function is able to parse all the formats implemented in the rule_formats folder
     # Just need to add the new class in the rule_formats folder and implement the abstract methods
     # No need to change this function
+    rule_instances = [RuleClass() for RuleClass in subclasses]
 
     # Walk the repo once (symlink-safe — see _safe_repo_files), then let each
     # format claim the files it recognizes by extension. `get_rule_files` is a
@@ -119,13 +120,35 @@ async def extract_rule_from_repo(repo_dir: str, info: dict, user: User):
     # and crash Process_rules_by_format trying to iterate over it.
     safe_files = list(_safe_repo_files(repo_dir))
 
-    for RuleClass in subclasses:
-        rule_instance = RuleClass()
+    # Several formats share the same extension (Sigma/ATR/Splunk all claim
+    # .yml/.yaml) — resolve each file to exactly ONE format instead of
+    # letting every matching format independently validate/import it (which
+    # would file the same Sigma rule as a bad Splunk rule AND a bad ATR rule
+    # too). Same detect()-based disambiguation as the interactive GitHub
+    # import (rule_from_github/import_rule/session_class.py:138-149).
+    files_by_instance = {id(ri): [] for ri in rule_instances}
+    for filepath in safe_files:
+        basename = os.path.basename(filepath)
+        candidates = [ri for ri in rule_instances if ri.get_rule_files(basename)]
+        if not candidates:
+            continue
+        if len(candidates) > 1:
+            try:
+                with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
+                    sample = f.read(8192)
+                detected = [ri for ri in candidates if hasattr(ri, 'detect') and ri.detect(sample)]
+                chosen = detected[0] if detected else candidates[0]
+            except Exception:
+                chosen = candidates[0]
+        else:
+            chosen = candidates[0]
+        files_by_instance[id(chosen)].append(filepath)
 
+    for rule_instance in rule_instances:
         format_name = rule_instance.format
-        #class_name = rule_instance.get_class()
-
-        files = [f for f in safe_files if rule_instance.get_rule_files(os.path.basename(f))]
+        files = files_by_instance[id(rule_instance)]
+        if not files:
+            continue
 
         bad, imported_count, skipped_count = Process_rules_by_format(
             files, rule_instance, info, format_name, user

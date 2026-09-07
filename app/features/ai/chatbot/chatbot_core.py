@@ -13,7 +13,7 @@ import datetime
 import difflib
 import re
 
-_VALID_FORMATS = {'yara', 'sigma', 'suricata', 'zeek', 'wazuh', 'nse', 'crs', 'nova', 'elastic'}
+_VALID_FORMATS = {'yara', 'sigma', 'suricata', 'zeek', 'wazuh', 'nse', 'crs', 'nova', 'elastic', 'splunk'}
 
 # destination_key -> (path, minimum role). "admin" destinations are refused
 # for a non-admin caller in _navigate() below — the model only ever picks a

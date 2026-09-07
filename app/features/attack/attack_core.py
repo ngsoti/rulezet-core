@@ -12,6 +12,7 @@ Key functions:
 import datetime
 import uuid as uuid_mod
 import json
+import yaml as _yaml
 from pathlib import Path
 
 from ... import db
@@ -479,6 +480,30 @@ def _extract_technique_ids(rule_format: str, content: str) -> list[str]:
         for m in _URL_ID_RE.finditer(content):
             _add(_norm_tid(m.group(1), m.group(2)))
         _add_all(_tids_from_generic(content))
+
+    # ── Splunk (YAML with a structured `mitre_attack_id` list) ────────────────
+    elif fmt == 'splunk':
+        # The format ships a clean, already-normalized list — read it
+        # directly instead of regex-scanning the SPL search query text,
+        # which could coincidentally contain an unrelated T####-looking
+        # token (e.g. a field or lookup name).
+        parsed_mitre_ids = None
+        try:
+            doc = _yaml.safe_load(content)
+            if isinstance(doc, dict):
+                parsed_mitre_ids = doc.get('mitre_attack_id')
+        except Exception:
+            parsed_mitre_ids = None
+        if isinstance(parsed_mitre_ids, list):
+            for tid in parsed_mitre_ids:
+                if isinstance(tid, str):
+                    _add_all(_tids_from_generic(tid))
+        else:
+            # Malformed/unparsable YAML — fall back to the generic scan
+            # rather than silently returning nothing.
+            for m in _FIELD_RE.finditer(content):
+                _add_all(_tids_from_field_value(m.group(1)))
+            _add_all(_tids_from_generic(content))
 
     # ── Zeek / NSE / CRS / Nova / unknown ─────────────────────────────────────
     else:
