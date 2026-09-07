@@ -91,7 +91,7 @@
             <span>Updates &amp; Status</span>
             <span v-if="total_history_update > 0" class="dr-nav__badge">[[ total_history_update ]]</span>
         </button>
-        {% if current_user.is_admin() %}
+        {% if current_user.is_admin() or current_user.has_permission('github.manage') %}
         <button class="dr-nav__item" id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule-pane"
             type="button" role="tab" aria-controls="schedule-pane" aria-selected="false">
             <i class="fa-solid fa-clock-rotate-left"></i>
@@ -199,7 +199,7 @@
                                         <th v-if="colVisible.date" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKey === 'query_date' }" @click="setSort('query_date')">
                                             <div class="dt-th-inner justify-content-center">Date <i class="fas dt-sort-icon" :class="sortIcon('query_date')"></i></div>
                                         </th>
-                                        {% if current_user.is_admin() %}
+                                        {% if current_user.is_admin() or current_user.has_permission('github.manage') %}
                                         <th class="dt-th text-center" style="width:60px;">Actions</th>
                                         {% endif %}
                                     </tr>
@@ -218,7 +218,7 @@
                                         <td v-if="colVisible.skipped" class="dt-td text-center">[[ history.skipped ]]</td>
                                         <td v-if="colVisible.total" class="dt-td text-center">[[ history.total ]]</td>
                                         <td v-if="colVisible.date" class="dt-td text-center">[[ history.query_date ]]</td>
-                                        {% if current_user.is_admin() %}
+                                        {% if current_user.is_admin() or current_user.has_permission('github.manage') %}
                                         <!-- delete button with modal-->
                                         <td class="dt-td text-center"><button class="dt-action-btn dt-action-btn--danger" data-bs-toggle="modal"
                                                 :data-bs-target="'#delete_import_modal_'+history.uuid" @click.stop title="Delete">
@@ -381,7 +381,7 @@
                                         <th v-if="colVisibleUpdate.date" class="dt-th dt-th--sortable text-center" :class="{ 'dt-th--sorted': sortKeyUpdate === 'query_date' }" @click="setSortUpdate('query_date')">
                                             <div class="dt-th-inner justify-content-center">Date <i class="fas dt-sort-icon" :class="sortIconUpdate('query_date')"></i></div>
                                         </th>
-                                        {% if current_user.is_admin() %}
+                                        {% if current_user.is_admin() or current_user.has_permission('github.manage') %}
                                         <th class="dt-th text-center" style="width:60px;">Actions</th>
                                         {% endif %}
                                     </tr>
@@ -447,7 +447,7 @@
                                         <td v-if="colVisibleUpdate.date" class="dt-td text-center">
                                             [[ history.query_date ]]
                                         </td>
-                                        {% if current_user.is_admin() %}
+                                        {% if current_user.is_admin() or current_user.has_permission('github.manage') %}
                                         <!-- delete button with modal-->
                                         <td class="dt-td text-center"><button class="dt-action-btn dt-action-btn--danger" data-bs-toggle="modal"
                                                 :data-bs-target="'#delete_update_modal_'+history.uuid" @click.stop title="Delete">
@@ -504,7 +504,7 @@
             </div>
         </div>
 
-        {% if current_user.is_admin() %}
+        {% if current_user.is_admin() or current_user.has_permission('github.manage') %}
         <div class="tab-pane fade" id="schedule-pane" role="tabpanel" aria-labelledby="schedule-tab">
             <div class="card border-0 shadow-sm rounded-3">
                 <div class="card-body p-3 p-md-4">
@@ -688,7 +688,7 @@
         {% endif %}
     </div>
 
-    {% if current_user.is_admin() %}
+    {% if current_user.is_admin() or current_user.has_permission('github.manage') %}
     <!-- Sync Schedule create/edit modal -->
     <div class="modal fade" id="syncScheduleModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -1424,7 +1424,7 @@
                 fetchProposals(proposalsCurrentPage.value)
             }
 
-            {% if current_user.is_admin() %}
+            {% if current_user.is_admin() or current_user.has_permission('github.manage') %}
             fetchSchedules(1)
             fetchProposals(1)
             {% endif %}

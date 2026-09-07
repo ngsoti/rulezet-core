@@ -112,7 +112,7 @@
                                :checked="selected_permission_ids.has(perm.id)"
                                @change="togglePermission(perm.id)">
                         <div class="ud-info-cell-icon roles-perm-check-icon">
-                            <i class="fa-solid" :class="permIcon(perm.key)"></i>
+                            <i :class="permIcon(perm.key)"></i>
                         </div>
                         <div class="flex-grow-1" style="min-width:0;">
                             <div class="roles-perm-check-title">[[ perm.label || perm.key ]]</div>
@@ -291,10 +291,12 @@
                 if (data.success) all_permissions.value = data.permissions
             }
 
-            const PERM_ICONS = { ai: 'fa-robot', rule: 'fa-scroll' }
+            // Full class (family + name) since not every icon is fa-solid —
+            // GitHub's is a fa-brands glyph.
+            const PERM_ICONS = { ai: 'fa-solid fa-robot', rule: 'fa-solid fa-scroll', github: 'fa-brands fa-github' }
             function permIcon(key) {
                 const domain = (key || '').split('.')[0]
-                return PERM_ICONS[domain] || 'fa-key'
+                return PERM_ICONS[domain] || 'fa-solid fa-key'
             }
 
             function togglePermission(id) {

@@ -9,16 +9,23 @@
 <div class="error-page">
     <div class="error-card">
 
+        {% if mascot_enabled %}
+        <div class="error-icon-wrap rulezy-say" tabindex="0">
+            <img src="{{ url_for('static', filename='images/rulezy/armcross.png') }}" alt="Rulezy, arms crossed, blocking the way" class="error-icon error-icon--mascot">
+            <div class="rulezy-say__bubble">Not this one — you don't have permission to be here. Nothing personal, I just take my job seriously.</div>
+        </div>
+        {% else %}
         <div class="error-icon-wrap">
             <i class="fa-solid fa-lock error-icon"></i>
         </div>
+        {% endif %}
 
         <div class="error-code">403</div>
 
         <h1 class="error-title">Access denied</h1>
 
         <p class="error-desc">
-            You don't have permission to view this page.
+            {% if mascot_enabled %}I'm Rulezy — you don't have permission to view this page.{% else %}You don't have permission to view this page.{% endif %}
             If you think this is a mistake, make sure you're logged in with the right account.
         </p>
 

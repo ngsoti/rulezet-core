@@ -3420,7 +3420,10 @@ def get_rule_update_list_filtered(sid: str,
 
 def get_importer_list_page(page: int = 1, per_page: int = 20, search: str = '', sort: str = 'query_date', direction: str = 'desc'):
     per_page = max(1, min(per_page or 20, 100))
-    query = ImporterResult.query
+    if current_user.is_admin() or current_user.has_permission('github.manage'):
+        query = ImporterResult.query
+    else:
+        query = ImporterResult.query.filter_by(user_id=current_user.id)
     if search:
         query = query.filter(ImporterResult.info.ilike(f"%{search}%"))
     sort_col = {
@@ -3435,7 +3438,7 @@ def get_importer_list_page(page: int = 1, per_page: int = 20, search: str = '', 
 
 def get_updater_list_page(page: int = 1, per_page: int = 20, search: str = '', mode: str = '', sort: str = 'query_date', direction: str = 'desc'):
     per_page = max(1, min(per_page or 20, 100))
-    if current_user.is_admin():
+    if current_user.is_admin() or current_user.has_permission('github.manage'):
         query = UpdateResult.query
     else:
         query = UpdateResult.query.filter_by(user_id=str(current_user.id))

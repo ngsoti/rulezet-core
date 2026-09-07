@@ -16,6 +16,14 @@ from app.features.rule.rule_core import get_updater_result_by_id
 from app import db
 from app.core.db_class.db import *
 
+
+def _can_manage_all_bad_rules() -> bool:
+    """A GitHub Manager sees/acts on every bad rule, not just their own — bad
+    rules from a GitHub import are usually owned by whichever admin/user ran
+    that particular import, not by the person managing GitHub overall."""
+    return current_user.is_admin() or current_user.has_permission('github.manage')
+
+
 def save_invalid_rule(form_dict, to_string ,rule_type, error , user) -> None:
     """
     Save an invalid rule to the database if not already existing.
@@ -166,7 +174,7 @@ def get_bad_rules_page(page, per_page=20) -> InvalidRuleModel:
     Otherwise, returns only the current user's invalid rules.
     """
     query = InvalidRuleModel.query.order_by(InvalidRuleModel.created_at.desc())
-    if not current_user.is_admin():
+    if not _can_manage_all_bad_rules():
         query = query.filter_by(user_id=current_user.id)
     return query.paginate(page=page, per_page=per_page, error_out=False)
 
@@ -205,7 +213,7 @@ def delete_all_bad_rules(filters):
         query = InvalidRuleModel.query
 
 
-        if not current_user.is_admin():
+        if not _can_manage_all_bad_rules():
             query = query.filter(InvalidRuleModel.user_id == current_user.id)
         elif filters.get('user_id'):
             query = query.filter(InvalidRuleModel.user_id == filters.get('user_id'))
@@ -250,7 +258,7 @@ def delete_bad_rules_by_ids(rule_ids: list) -> int:
         return 0
     try:
         query = InvalidRuleModel.query.filter(InvalidRuleModel.id.in_(rule_ids))
-        if not current_user.is_admin():
+        if not _can_manage_all_bad_rules():
             query = query.filter(InvalidRuleModel.user_id == current_user.id)
         deleted_count = query.delete(synchronize_session=False)
         db.session.commit()
@@ -347,14 +355,14 @@ def get_filtered_bad_rules_query(params) -> tuple:
     
     query = InvalidRuleModel.query
 
-    # A non-admin can never pass an arbitrary `user_id` to view someone
-    # else's invalid rules (which include full raw rule content and error
-    # detail) — only admins may pick a specific user via the Editor filter;
-    # everyone else is always scoped to their own rows regardless of what
-    # `user_id` was sent.
-    if current_user.is_admin() and user_id:
+    # A non-admin/non-GitHub-Manager can never pass an arbitrary `user_id` to
+    # view someone else's invalid rules (which include full raw rule content
+    # and error detail) — only admins/GitHub Managers may pick a specific
+    # user via the Editor filter; everyone else is always scoped to their
+    # own rows regardless of what `user_id` was sent.
+    if _can_manage_all_bad_rules() and user_id:
         query = query.filter(InvalidRuleModel.user_id == user_id)
-    elif not current_user.is_admin():
+    elif not _can_manage_all_bad_rules():
         query = query.filter(InvalidRuleModel.user_id == current_user.id)
 
     if search and search.strip():

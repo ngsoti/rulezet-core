@@ -32,6 +32,12 @@ DEFAULT_PERMISSIONS = [
         "description": "Use the chatbot, rule analysis, rule fixer and rule generator, "
                         "without access to the AI admin configuration/dashboard pages.",
     },
+    {
+        "key": "github.manage",
+        "label": "Manage GitHub imports",
+        "description": "Import/update/sync GitHub repos, decide import proposals, "
+                        "and manage bad rules from any source.",
+    },
 ]
 
 # System roles pre-seeded with a starter permission set, ready to assign
@@ -53,6 +59,12 @@ DEFAULT_ROLES = [
         "name": "AI Operator",
         "description": "Can use the chatbot, rule analysis, rule fixer and rule generator.",
         "permission_keys": ["ai.use"],
+    },
+    {
+        "name": "GitHub Manager",
+        "description": "Full control over GitHub import/update/sync and proposals, "
+                        "plus access to all bad rules.",
+        "permission_keys": ["github.manage"],
     },
 ]
 

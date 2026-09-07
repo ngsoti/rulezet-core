@@ -23,7 +23,7 @@ sync_schedule_blueprint = Blueprint(
 def _require_admin():
     if not current_user.is_authenticated:
         return redirect(url_for('account.login'))
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         abort(403)
 
 
@@ -31,7 +31,7 @@ def _require_admin():
 
 @sync_schedule_blueprint.route('/schedule/list', methods=['GET'])
 def schedule_list():
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
 
     page = request.args.get('page', 1, type=int)
@@ -50,7 +50,7 @@ def schedule_list():
 
 @sync_schedule_blueprint.route('/schedule/create', methods=['POST'])
 def schedule_create():
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
 
     data = request.get_json(silent=True) or {}
@@ -72,7 +72,7 @@ def schedule_create():
 
 @sync_schedule_blueprint.route('/schedule/<uuid>/update', methods=['POST'])
 def schedule_update(uuid):
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
 
     data = request.get_json(silent=True) or {}
@@ -95,7 +95,7 @@ def schedule_update(uuid):
 
 @sync_schedule_blueprint.route('/schedule/<uuid>/delete', methods=['POST'])
 def schedule_delete(uuid):
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
 
     ok = SyncScheduleModel.delete_schedule(uuid)
@@ -112,7 +112,7 @@ def schedule_delete(uuid):
 
 @sync_schedule_blueprint.route('/schedule/bulk_delete', methods=['POST'])
 def schedule_bulk_delete():
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
 
     data = request.get_json(silent=True) or {}
@@ -134,7 +134,7 @@ def schedule_bulk_delete():
 
 @sync_schedule_blueprint.route('/schedule/bulk_set_active', methods=['POST'])
 def schedule_bulk_set_active():
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
 
     data = request.get_json(silent=True) or {}
@@ -158,7 +158,7 @@ def schedule_bulk_set_active():
 
 @sync_schedule_blueprint.route('/schedule/<uuid>/run_now', methods=['POST'])
 def schedule_run_now(uuid):
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
 
     ok, err = SyncScheduleModel.run_schedule_now(uuid)
@@ -177,7 +177,7 @@ def schedule_run_now(uuid):
 
 @sync_schedule_blueprint.route('/schedule/repo_candidates', methods=['GET'])
 def repo_candidates():
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
 
     page = request.args.get('page', 1, type=int)
@@ -197,7 +197,7 @@ def repo_candidates():
 
 @sync_schedule_blueprint.route('/sync_run/<uuid>', methods=['GET'])
 def sync_run_detail(uuid):
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         abort(403)
     run = GithubSyncRun.query.filter_by(uuid=uuid).first()
     if not run:
@@ -207,7 +207,7 @@ def sync_run_detail(uuid):
 
 @sync_schedule_blueprint.route('/sync_run/<uuid>/status', methods=['GET'])
 def sync_run_status(uuid):
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
 
     from app import db

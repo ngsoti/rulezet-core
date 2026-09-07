@@ -63,6 +63,23 @@ def _ai_generate_available() -> bool:
     return cfg.enabled if cfg else True
 
 
+def _is_github_manager() -> bool:
+    """Admin, or holder of the 'github.manage' permission (GitHub Manager
+    role) — full control over GitHub import/update/sync/proposals and every
+    bad rule regardless of who owns it."""
+    return current_user.is_admin() or current_user.has_permission('github.manage')
+
+
+def _can_manage_update_session(updater) -> bool:
+    """GitHub Manager, or the user who started a 'by_rule' update-check
+    session — check_updates_by_rule() already restricts a non-manager's
+    session to rules they own, so acting on that same session (bulk
+    accept/reject) is safe without the role too."""
+    if _is_github_manager():
+        return True
+    return updater.mode == 'by_rule' and str(updater.user_id) == str(current_user.id)
+
+
 @rule_blueprint.route("/create_rule", methods=['GET', 'POST'])
 @login_required
 def rule() -> render_template:
@@ -2379,7 +2396,7 @@ def accept_all_changes() -> jsonify:
     rep = RuleModel.get_all_pending_changes()
     if rep:
         for rule_change in rep:
-            if rule_change.analyzed_by_user_id != current_user.id and not current_user.is_admin():
+            if rule_change.analyzed_by_user_id != current_user.id and not _is_github_manager():
                 return jsonify({"success": False, "message": "Access denied", "toast_class": "danger-subtle"}), 403
 
             success = RuleModel.accept_rule_change(rule_change.id)
@@ -2413,7 +2430,7 @@ def changes_decision() -> jsonify:
     if not rule_:
         return jsonify({"success": False, "message": "Rule not found", "toast_class": "danger-subtle"}), 404
 
-    if current_user.is_admin() or rule_.user_id == current_user.id:
+    if _is_github_manager() or rule_.user_id == current_user.id:
         # change all the RuleStatue from Update with this same rule_id
         succ = RuleModel.update_all_updater_status(history_id, history.message)
         if not succ:
@@ -2467,7 +2484,7 @@ def update_github_rule() -> render_template:
         flash('Rule not found', 'danger')
         return redirect(safe_referrer())
 
-    if current_user.is_admin() or rule_.user_id == current_user.id:
+    if _is_github_manager() or rule_.user_id == current_user.id:
         if decision == 'accepted':
             rule = RuleModel.get_rule(history.rule_id)
             # verify if the rule has a good syntaxe
@@ -2524,7 +2541,7 @@ def decision_rule() -> jsonify:
     if not rule_:
         return {"message": "Rule Not found", 'toast_class': "danger-subtle"}, 404
 
-    if current_user.is_admin() or rule_.user_id == current_user.id:
+    if _is_github_manager() or rule_.user_id == current_user.id:
         if decision == 'accepted':
             mess= "Updated successfully"
         elif decision == 'rejected':
@@ -2721,7 +2738,7 @@ def edit_bad_rule(rule_id):
     """Edit a bad rule to correct it"""
     bad_rule = BadRuleModel.get_invalid_rule_by_id(rule_id)
     if bad_rule:
-        if current_user.is_admin() or current_user.id == bad_rule.user_id:
+        if _is_github_manager() or current_user.id == bad_rule.user_id:
             ai_fix_available = _ai_fix_available_for(bad_rule) and (
                 current_user.is_admin() or current_user.has_permission('ai.use')
             )
@@ -2800,7 +2817,7 @@ def delete_bad_rule(rule_id) -> jsonify:
     """Delete a bad rule (error from import)"""
     bad_rule = BadRuleModel.get_invalid_rule_by_id(rule_id)
     if bad_rule:
-        if current_user.is_admin() or current_user.id == bad_rule.user_id :
+        if _is_github_manager() or current_user.id == bad_rule.user_id :
             if request.method == 'POST':
                 success = BadRuleModel.delete_bad_rule(rule_id)
                 if success:
@@ -2922,11 +2939,12 @@ def get_bad_rules_licenses_usage():
 @login_required
 def get_bad_rules_users_usage():
     """Distinct users with an invalid rule in the given source/format scope —
-    feeds BadRuleList's Editor filter dropdown. Admin-only: a non-admin is
-    always scoped to their own invalid rules (see get_filtered_bad_rules_query),
-    so a cross-user listing wouldn't be usable to them anyway, and it would
-    otherwise leak other users' identities/activity for no reason."""
-    if not current_user.is_admin():
+    feeds BadRuleList's Editor filter dropdown. Admin/GitHub-Manager only: a
+    non-admin/non-GitHub-Manager is always scoped to their own invalid rules
+    (see get_filtered_bad_rules_query), so a cross-user listing wouldn't be
+    usable to them anyway, and it would otherwise leak other users'
+    identities/activity for no reason."""
+    if not _is_github_manager():
         return jsonify([])
     source    = request.args.get('sources', None, type=str)
     rule_type = request.args.get('rule_types', None, type=str)
@@ -3457,7 +3475,7 @@ def import_rules_from_github():
     caller can redirect to the loading page immediately instead of being
     stuck waiting (potentially minutes, for a big repo) on this request.
     """
-    if not current_user.is_admin():
+    if not _is_github_manager():
         return {"message": "Admin access required. Non-admins can submit a proposal instead.", "toast_class": "danger-subtle"}, 403
     try:
         repo_url = request.json.get('url')
@@ -3541,7 +3559,7 @@ def import_rules_from_zip():
     The ZIP is extracted into a temp folder, and processed the same way
     as GitHub repositories were.
     """
-    if not current_user.is_admin():
+    if not _is_github_manager():
         return {"message": "Admin access required.", "toast_class": "danger-subtle"}, 403
 
     try:
@@ -3660,6 +3678,10 @@ def import_get_info_session(sid):
 @rule_blueprint.route("/github/manage", methods=['GET'])
 @login_required
 def manage_github():
+    """Open to any logged-in user — shows only their own import/update
+    history (see get_importer_list_page/get_updater_list_page). Admins and
+    GitHub Managers see everyone's; the Schedule tab and proposal review
+    section stay hidden to everyone else (see manage_github.html)."""
     return render_template("rule/url_github/manage_github.html")
 
 
@@ -3670,7 +3692,7 @@ def github_proposal_detail_page(uuid):
     proposal = ProposalModel.get_proposal_by_uuid(uuid)
     if not proposal:
         return render_template("404.html"), 404
-    if current_user.id != proposal.user_id and not current_user.is_admin():
+    if current_user.id != proposal.user_id and not _is_github_manager():
         return render_template("access_denied.html"), 403
     return render_template("rule/url_github/proposal_detail.html", proposal_uuid=uuid)
 
@@ -3718,7 +3740,7 @@ def find_history_page():
         target = UpdateResult.query.filter_by(uuid=uuid_param).first()
         if not target:
             return jsonify({"page": 1})
-        if current_user.is_admin():
+        if _is_github_manager():
             rank = UpdateResult.query.filter(UpdateResult.id <= target.id).count()
         else:
             rank = UpdateResult.query.filter(
@@ -3733,7 +3755,7 @@ def find_history_page():
 @rule_blueprint.route("/history_github_importer/delete", methods=['GET'])
 @login_required
 def history_github_importer_delete():
-    if current_user.is_admin() == False:
+    if not _is_github_manager():
         return {"message": "Access denied", "toast_class": "danger-subtle"}, 403
     history_github_importer_id = request.args.get('uuid', type=str)
     if not history_github_importer_id:
@@ -3748,9 +3770,9 @@ def history_github_importer_delete():
 @rule_blueprint.route("/import_get_session_running", methods=['GET'])
 @login_required
 def import_get_session_running():
-    """Return the running sessions by uuid and info (admin or user case )"""
-    
-    is_admin = current_user.is_admin()
+    """Return the running sessions by uuid and info (admin/GitHub-Manager or user case)"""
+
+    is_admin = _is_github_manager()
     current_user_id = current_user.id
 
     import_sessions = [
@@ -3848,7 +3870,7 @@ def get_news_rules(sid):
 @rule_blueprint.route("/history_github_updater/delete", methods=['GET'])
 @login_required
 def history_github_updater_delete():
-    if current_user.is_admin() == False:
+    if not _is_github_manager():
         return {"message": "Access denied", "toast_class": "danger-subtle"}, 403
     history_github_updater_id = request.args.get('uuid', type=str)
     if not history_github_updater_id:
@@ -3905,12 +3927,15 @@ def get_rules(sid):
 @login_required
 def bulk_update_decision(sid):
     """Dispatch accept-all or reject-all update as a background job, respecting active filters."""
+    updater = RuleModel.get_updater_result(sid)
+    if not updater:
+        return {'message': 'Session not found', 'toast_class': 'danger-subtle'}, 404
+    if not _can_manage_update_session(updater):
+        return {"message": "Access denied", "toast_class": "danger-subtle"}, 403
     data   = request.get_json() or {}
     action = data.get('action')
     if action not in ('accept', 'reject'):
         return {'message': 'Invalid action', 'toast_class': 'danger-subtle'}, 400
-    if not RuleModel.get_updater_result(sid):
-        return {'message': 'Session not found', 'toast_class': 'danger-subtle'}, 404
 
     def _tri(k): v = data.get(k); return True if v is True else False if v is False else None
 
@@ -3942,6 +3967,8 @@ def bulk_update_decision(sid):
 @login_required
 def bulk_new_rules_decision(sid):
     """Dispatch add-all or reject-all new rules as a background job."""
+    if not _is_github_manager():
+        return {"message": "Access denied", "toast_class": "danger-subtle"}, 403
     data = request.get_json() or {}
     action = data.get('action')
     if action not in ('add', 'reject'):
@@ -3971,6 +3998,8 @@ def accept_all_update(sid):
     updater = RuleModel.get_updater_result(sid)
     if not updater:
         return {"message": "Session Not found", 'toast_class': "danger-subtle"}, 404
+    if not _can_manage_update_session(updater):
+        return {"message": "Access denied", "toast_class": "danger-subtle"}, 403
     # get all the rule with an update available with only correct syntaxe associatio to this uuid into the table rule_status
     rule_udpate_list , number = RuleModel.get_rule_update_list(sid)
 
@@ -4008,7 +4037,7 @@ def check_updates_by_url():
     Check for updates across multiple GitHub URLs (repositories).
     Each repo is cloned/pulled, and rules inside are checked in parallel.
     """
-    if not current_user.is_admin():
+    if not _is_github_manager():
         return {"message": "Admin access required.", "toast_class": "danger-subtle"}, 403
 
     # try:
@@ -4078,10 +4107,12 @@ def check_updates_by_rule():
     """
     Check for updates on specific selected rules (by rule IDs).
     Rules are matched with their GitHub source and updated if needed.
-    """
-    if not current_user.is_admin():
-        return {"message": "Admin access required.", "toast_class": "danger-subtle"}, 403
 
+    A non-GitHub-Manager can still run this for rules they own — the
+    endpoint just silently drops any id that isn't theirs, rather than
+    outright refusing, so an owner reviewing their own GitHub-sourced rules
+    doesn't need the role to check whether any have upstream updates.
+    """
     # try:
 
 
@@ -4100,6 +4131,20 @@ def check_updates_by_rule():
             "success": False,
             "toast_class": "danger-subtle"
         }, 400
+
+    if not _is_github_manager():
+        rule_ids = [
+            rid for rid in rule_ids
+            if (r := RuleModel.get_rule(rid)) and r.user_id == current_user.id
+        ]
+        if not rule_ids:
+            return {
+                "message": "You can only check updates for rules you own.",
+                "nb_update": 0,
+                "results": [],
+                "success": False,
+                "toast_class": "danger-subtle"
+            }, 403
 
     info = {"mode": "by_rule", "count": len(rule_ids), "initiated_by": current_user.first_name}
 
@@ -4138,13 +4183,17 @@ def check_updates_by_rule():
 #########################
 
 @rule_blueprint.route("/github/list_github_url", methods=['GET'])
+@login_required
 def list_github_url() :
-    """Go to the list of all github url"""
+    """Go to the list of all github url — plain browsing/read page, open to
+    any logged-in user (like the rule list itself); only the actions further
+    down this file (import/update/sync/delete) require github.manage."""
     return render_template("rule/url_github/list_url_github.html")
-    
+
 
 
 @rule_blueprint.route("/get_url_github", methods=['GET'])
+@login_required
 def get_url_github():
     search = request.args.get("search", default=None, type=str)
     search_field = request.args.get("search_field", default='url', type=str)
@@ -4174,7 +4223,7 @@ LARGE_DELETE_THRESHOLD = 200
 @rule_blueprint.route("/delete_all_rule_github", methods=['GET', 'POST'])
 @login_required
 def delete_all_rule_github():
-    if not current_user.is_admin():
+    if not _is_github_manager():
         return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
 
     url = request.args.get("url")
@@ -4228,20 +4277,22 @@ def delete_all_rule_github():
     }), 202
 
 @rule_blueprint.route("/bulk_action_github", methods=['POST'])
+@login_required
 def bulk_action_github():
+    if not _is_github_manager():
+        return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
+
     data = request.get_json()
     action = data.get('action')
     mode = data.get('mode', 'partial')
     excluded_ids = data.get('excluded_ids') or []
-    
+
 
     if mode == 'all':
         target_urls = RuleModel.get_all_github_sources(exclude_urls=excluded_ids)
     else:
         target_urls = data.get('selected_ids') or []
     if action == 'delete':
-        if current_user.is_admin() == False:
-            return jsonify({"message": "Access denied", "toast_class": "danger-subtle"}), 403
         if not target_urls:
             return jsonify({"message": "No URLs to delete", "status": "warning-subtle"}), 400
         
@@ -4271,8 +4322,10 @@ def bulk_action_github():
     return jsonify({"message": "Action not supported"}), 400
 
 @rule_blueprint.route("/github_detail", methods=['GET'])
+@login_required
 def github_detail():
-    """Display the detail page for a specific GitHub project URL."""
+    """Display the detail page for a specific GitHub project URL — plain
+    browsing/read page, open to any logged-in user, same as list_github_url."""
     url = request.args.get("url", type=str)
 
     if not url:

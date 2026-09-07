@@ -29,7 +29,7 @@ github_proposal_blueprint = Blueprint(
 
 
 def _admin_only():
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('github.manage')):
         return jsonify({"message": "Admin access required.", "toast_class": "danger-subtle"}), 403
     return None
 
@@ -111,14 +111,15 @@ def proposal_detail(uuid):
     proposal = ProposalModel.get_proposal_by_uuid(uuid)
     if not proposal:
         return jsonify({"message": "Proposal not found.", "toast_class": "danger-subtle"}), 404
-    if current_user.id != proposal.user_id and not current_user.is_admin():
+    can_manage = current_user.is_admin() or current_user.has_permission('github.manage')
+    if current_user.id != proposal.user_id and not can_manage:
         return jsonify({"message": "Access denied.", "toast_class": "danger-subtle"}), 403
 
     return jsonify({
         "proposal": proposal.to_json(),
         "existing_rules_count": ProposalModel.count_existing_rules_for_source(proposal.repo_url),
         "is_owner": current_user.id == proposal.user_id,
-        "is_admin": current_user.is_admin(),
+        "is_admin": can_manage,
     }), 200
 
 
