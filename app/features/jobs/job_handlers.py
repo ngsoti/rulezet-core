@@ -2324,7 +2324,18 @@ def handle_github_proposal_bulk_import(job, app):
     Sequentially imports every accepted GithubProposal in the batch, one repo
     at a time (single-threaded — Session_class.run_sync, no daemon threads),
     attributing new rules' ownership to either the requester or the admin who
-    accepted the batch.
+    accepted the batch. This runs the exact same Session_class an interactive
+    "Add rule from GitHub" import uses — proposal.importer_result_uuid is set
+    (and the session registered in SessionModel.sessions) BEFORE run_sync()
+    is called, so /rule/import_loading/<uuid> shows live progress instead of
+    only reporting once everything is already done.
+
+    If the repo already had rules in Rulezet under a different owner, this
+    always imports first (picking up anything added upstream since the last
+    import) and only THEN queues a 'bulk_transfer_ownership' job (fire and
+    forget — never awaited, see handle_github_sync_schedule_run's docstring
+    on why a job handler must never block on another job) to hand those
+    pre-existing rules to the chosen owner too.
 
     Payload:
         proposal_uuids : list[str]
@@ -2400,10 +2411,20 @@ def handle_github_proposal_bulk_import(job, app):
                 info['branch'] = proposal.branch
 
             session = SessionModel.Session_class(repo_dir, owner, info)
+
+            # Set the tracking id and register the session BEFORE the blocking
+            # run_sync() call, and only then — so /rule/import_loading/<uuid>
+            # (and the proposal detail page polling for importer_result_uuid)
+            # can find and report live progress the same way a direct "Add
+            # rule from GitHub" import does, instead of only becoming visible
+            # once the whole thing is already done.
+            proposal.importer_result_uuid = session.uuid
+            db.session.commit()
+            SessionModel.sessions.append(session)
+
             imported, skipped, bad_rules, _total = session.run_sync(app, owner)
 
             proposal.status = 'imported'
-            proposal.importer_result_uuid = session.uuid
             db.session.commit()
 
             log_job(job,
@@ -2416,10 +2437,49 @@ def handle_github_proposal_bulk_import(job, app):
             except Exception as e:
                 log_job(job, f"Notification error: {e}", level='warning')
 
+            # The import just ran regardless of whether this source already
+            # had rules in Rulezet (see decide_proposals — no more "either
+            # import or hand over ownership" split). If it did, and some of
+            # those pre-existing rules belong to someone other than the
+            # chosen owner, hand them over too — fire-and-forget (a separate
+            # BackgroundJob, not awaited: this handler must never block on
+            # another job, see handle_github_sync_schedule_run's docstring).
+            try:
+                from app.features.rule.rule_core import _active
+                from app.features.rule.rule_from_github.proposal.proposal_core import _normalize_repo_url
+                other_owned = _active().filter(
+                    Rule.source.ilike(f"%{_normalize_repo_url(proposal.repo_url)}%"),
+                    Rule.user_id != owner.id,
+                ).count()
+            except Exception:
+                other_owned = 0
+            if other_owned:
+                import app.features.jobs.jobs_core as jobs_core
+                transfer_job = jobs_core.create_job(
+                    job_type='bulk_transfer_ownership',
+                    payload={
+                        'new_owner_id': owner.id,
+                        'filters': {'sources': _normalize_repo_url(proposal.repo_url)},
+                    },
+                    label=f"Transfer ownership of pre-existing rules from {proposal.repo_url} to {owner.get_username()}",
+                    created_by=job.created_by,
+                )
+                if transfer_job:
+                    log_job(job,
+                            f"{other_owned} pre-existing rule(s) from '{proposal.repo_url}' queued for "
+                            f"ownership transfer to {owner.get_username()} (job {transfer_job.uuid}).",
+                            level='info', event='progress')
+
         except Exception as e:
             db.session.rollback()
             proposal.status = 'failed'
             db.session.commit()
+            # A systemic failure before Session_class.process() reaches its own
+            # normal end-of-run finalization (e.g. the clone itself failing)
+            # would otherwise leave a stale, "still running forever" entry in
+            # SessionModel.sessions for /rule/import_loading/<uuid> to trip on.
+            if 'session' in locals() and session in SessionModel.sessions:
+                SessionModel.sessions.remove(session)
             log_job(job, f"Failed importing '{proposal.repo_url}': {e}", level='error', event='progress')
 
             try:

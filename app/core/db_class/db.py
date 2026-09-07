@@ -2155,7 +2155,10 @@ class GithubProposal(db.Model):
     message  = db.Column(db.Text, nullable=True)
     is_generic_source = db.Column(db.Boolean, default=False, nullable=False)
 
-    # pending | accepted | rejected | imported | failed | transferred
+    # pending | accepted | rejected | imported | failed
+    # ('transferred' is a legacy value from before accepting always imported
+    # — see decide_proposals in proposal_core.py — kept as a valid string for
+    # any old row, no longer produced by current code.)
     status         = db.Column(db.String(32), default="pending", index=True)
     ownership_mode = db.Column(db.String(16), nullable=True)  # 'requester' | 'admin'
 

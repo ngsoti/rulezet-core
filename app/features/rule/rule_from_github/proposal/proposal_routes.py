@@ -3,13 +3,13 @@ proposal_routes.py — JSON API for non-admin GitHub import proposals.
 
 Permission model (mixed — no blanket admin gate on this blueprint):
     create, mine, cancel   -> any authenticated user, scoped to themselves
-    list, bulk_decision, delete -> admin only
-    detail (GET /<uuid>)   -> admin OR the requester
+    list, bulk_decision, delete -> admin or github.manage (_admin_only())
+    detail (GET /<uuid>)   -> admin, github.manage, or the requester
 
-Accepting a proposal already resolves the "repo already imported" case
-automatically (transfers ownership of the existing rules instead of
-re-importing — see decide_proposals/_resolve_existing_source in
-proposal_core.py), so there is no separate manual "transfer existing rules"
+Accepting a proposal always imports the repo (see decide_proposals in
+proposal_core.py); if it already had rules in Rulezet under a different
+owner, those are handed over to the chosen owner as a second step once the
+import finishes, so there is no separate manual "transfer existing rules"
 endpoint: it's just Accept or Reject, same as any other proposal.
 
 All DB logic lives in proposal_core.py; the sequential import itself runs in

@@ -75,8 +75,9 @@
                 <h6 class="fw-bold mb-2"><i class="fas fa-triangle-exclamation me-1" style="color:#fd7e14;"></i>Already in Rulezet</h6>
                 <p style="font-size:.87rem;color:var(--text-color);">
                     This repository already has <strong>[[ existingRulesCount ]]</strong> rule(s) in Rulezet.
-                    Accepting below will <strong>not</strong> re-import it — ownership of those existing rules is transferred instead
-                    (per the ownership choice below), the same way a manual ownership request would. Rejecting leaves them untouched.
+                    Accepting below still re-imports it (picking up anything added upstream since it was last imported),
+                    then hands ownership of those <strong>[[ existingRulesCount ]]</strong> existing rule(s) over too
+                    (per the ownership choice below). Rejecting leaves everything untouched.
                     You can also delete this request without deciding either way.
                 </p>
                 <div v-if="isAdminUser">
@@ -117,10 +118,16 @@
             </div>
         </div>
 
-        <!-- Job progress: import for a new repo, or ownership transfer if the source already existed -->
+        <!-- Job progress -->
         <div v-if="proposal.job_uuid" class="card border-0 shadow-sm rounded-3 mb-4">
             <div class="card-body p-4">
-                <h6 class="fw-bold mb-3">[[ proposal.status === 'transferred' ? 'Ownership transfer progress' : 'Import progress' ]]</h6>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="fw-bold mb-0">Import progress</h6>
+                    <a v-if="proposal.importer_result_uuid" :href="'/rule/import_loading/' + proposal.importer_result_uuid"
+                       class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                        <i class="fas fa-arrow-up-right-from-square me-1"></i>View live import
+                    </a>
+                </div>
                 <job-tracker :job-uuid="proposal.job_uuid"></job-tracker>
             </div>
         </div>
@@ -171,8 +178,10 @@
                 return parts[1] || proposal.value?.repo_url || '';
             });
 
-            async function fetchDetail() {
-                loading.value = true;
+            let pollTimer = null;
+
+            async function fetchDetail({ silent = false } = {}) {
+                if (!silent) loading.value = true;
                 try {
                     const res = await fetch(`/rule/github_proposal/${proposalUuid}`);
                     const data = await res.json();
@@ -181,11 +190,22 @@
                         existingRulesCount.value = data.existing_rules_count || 0;
                         isOwner.value = data.is_owner;
                         isAdminUser.value = data.is_admin;
-                    } else {
+                        // Keep polling while the accept-time import (and, once
+                        // done, the follow-up ownership-transfer job) is still
+                        // running — this is how importer_result_uuid and the
+                        // "View live import" link above appear without a
+                        // manual refresh, same as a direct import's own page.
+                        if (proposal.value?.status === 'accepted' && !pollTimer) {
+                            pollTimer = setInterval(() => fetchDetail({ silent: true }), 4000);
+                        } else if (proposal.value?.status !== 'accepted' && pollTimer) {
+                            clearInterval(pollTimer);
+                            pollTimer = null;
+                        }
+                    } else if (!silent) {
                         create_message(data.message || 'Could not load this proposal.', data.toast_class || 'danger-subtle');
                     }
                 } finally {
-                    loading.value = false;
+                    if (!silent) loading.value = false;
                 }
             }
 

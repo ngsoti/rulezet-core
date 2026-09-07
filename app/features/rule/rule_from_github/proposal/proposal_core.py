@@ -126,16 +126,14 @@ def count_existing_rules_for_source(repo_url):
 def decide_proposals(uuids, decision, admin_user, ownership_mode=None, note=None):
     """Bulk accept/reject a set of pending proposals.
 
-    On accept, proposals are split automatically:
-      - repo not already in Rulezet -> batched into ONE 'github_proposal_bulk_import'
-        job that imports every such repo sequentially.
-      - repo already in Rulezet (existing_rules_count > 0) -> no re-import;
-        instead the existing rules are handed over through the same ownership
-        system used elsewhere (a 'bulk_transfer_ownership' job that, on
-        completion, records an approved RequestOwnerRule + full rule history
-        + notification — see _resolve_existing_source / job_handlers.py).
-    Every accepted proposal is notified immediately regardless of which path
-    it took (a second, path-specific notification fires once its job finishes).
+    On accept, every proposal is batched into ONE 'github_proposal_bulk_import'
+    job — same exact import mechanism a direct "Add rule from GitHub" import
+    uses (Session_class), regardless of whether the repo already has rules in
+    Rulezet. That handler (job_handlers.py) runs the import first (so any
+    rule added upstream since the last import is picked up), then — if the
+    repo already had existing rules under a different owner — hands those
+    over via a 'bulk_transfer_ownership' job, as a second step rather than an
+    alternative to importing.
     On reject: just notifies each requester, no job.
     """
     from app.features.notification.notification_core import notify_github_proposal_decision
@@ -158,33 +156,23 @@ def decide_proposals(uuids, decision, admin_user, ownership_mode=None, note=None
             p.decided_by_id = admin_user.id
             p.decided_at = now
             p.decision_note = note
-        db.session.commit()
-
-        to_import = [p for p in proposals if count_existing_rules_for_source(p.repo_url) == 0]
-        to_resolve_existing = [p for p in proposals if p not in to_import]
-
-        for p in to_import:
             p.status = 'accepted'
         db.session.commit()
 
-        if to_import:
-            job = jobs_core.create_job(
-                job_type='github_proposal_bulk_import',
-                payload={
-                    'proposal_uuids': [p.uuid for p in to_import],
-                    'ownership_mode': ownership_mode,
-                },
-                label=f"Import {len(to_import)} accepted GitHub proposal(s)",
-                created_by=admin_user.id,
-                total=len(to_import),
-            )
-            if job:
-                for p in to_import:
-                    p.job_uuid = job.uuid
-                db.session.commit()
-
-        for p in to_resolve_existing:
-            _resolve_existing_source(p, admin_user, ownership_mode)
+        job = jobs_core.create_job(
+            job_type='github_proposal_bulk_import',
+            payload={
+                'proposal_uuids': [p.uuid for p in proposals],
+                'ownership_mode': ownership_mode,
+            },
+            label=f"Import {len(proposals)} accepted GitHub proposal(s)",
+            created_by=admin_user.id,
+            total=len(proposals),
+        )
+        if job:
+            for p in proposals:
+                p.job_uuid = job.uuid
+            db.session.commit()
 
         for p in proposals:
             try:
@@ -209,43 +197,6 @@ def decide_proposals(uuids, decision, admin_user, ownership_mode=None, note=None
         return [], None, "decision must be 'accept' or 'reject'."
 
     return proposals, job, None
-
-
-def _resolve_existing_source(proposal, admin_user, ownership_mode):
-    """Called from decide_proposals when accepting a proposal whose repo
-    already has rules in Rulezet: rather than re-importing, hand those
-    existing rules over via the same ownership-request system used across
-    the rest of Rulezet (a 'bulk_transfer_ownership' job — see
-    handle_bulk_transfer_ownership in job_handlers.py — which synthesizes an
-    approved RequestOwnerRule row, updates each rule's history with
-    change_type='ownership', logs activity, and notifies the new owner).
-
-    ownership_mode: 'requester' -> new owner is the proposal's requester;
-                    'admin'     -> new owner is the accepting admin.
-    """
-    new_owner_id = proposal.user_id if ownership_mode == 'requester' else admin_user.id
-    new_owner = proposal.requester if ownership_mode == 'requester' else admin_user
-    new_owner_name = new_owner.get_username() if new_owner else str(new_owner_id)
-
-    job = jobs_core.create_job(
-        job_type='bulk_transfer_ownership',
-        payload={
-            'new_owner_id': new_owner_id,
-            'filters': {'sources': _normalize_repo_url(proposal.repo_url)},
-        },
-        label=f"Transfer ownership of rules from {proposal.repo_url} to {new_owner_name}",
-        created_by=admin_user.id,
-    )
-    if not job:
-        return None, "Failed to create transfer job."
-
-    proposal.status = 'transferred'
-    proposal.ownership_mode = ownership_mode
-    proposal.decided_by_id = admin_user.id
-    proposal.decided_at = datetime.datetime.utcnow()
-    proposal.job_uuid = job.uuid
-    db.session.commit()
-    return job, None
 
 
 def delete_proposal(proposal):
