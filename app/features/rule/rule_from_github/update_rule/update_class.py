@@ -32,7 +32,7 @@ class Update_class:
     Threaded class to manage batch rule updates with thread-safe DB operations.
     """
 
-    def __init__(self, repo_sources, user: User, info: dict, mode: str = "by_rule") -> None:
+    def __init__(self, repo_sources, user: User, info: dict, mode: str = "by_rule", is_generic_source: bool = False) -> None:
         self.uuid = str(uuid4())
         self.thread_count = 1
         self.jobs = Queue()
@@ -48,6 +48,9 @@ class Update_class:
             self.repo_sources = repo_sources
 
         self.mode = mode
+        # by_url only — a repo synced from a non-GitHub host (see
+        # GithubSyncScheduleRepo.is_generic_source / check_updates_by_url).
+        self.is_generic_source = is_generic_source
         # Unwrap immediately if `user` is a Flask-Login LocalProxy (existing
         # call sites pass `current_user` directly, from inside request
         # context). Storing the proxy itself would be fine here but not once
@@ -95,7 +98,7 @@ class Update_class:
         cp = 0
         if self.mode == "by_url":
             cp = 0
-            repo_dir, exists = clone_or_access_repo(self.repo_sources)
+            repo_dir, exists = clone_or_access_repo(self.repo_sources, is_generic_source=self.is_generic_source)
 
             self.local_repo_path = repo_dir
 
@@ -116,7 +119,7 @@ class Update_class:
                 # of just giving up.
                 try:
                     delete_existing_repo_folder(repo_dir)
-                    repo_dir, _ = clone_or_access_repo(self.repo_sources)
+                    repo_dir, _ = clone_or_access_repo(self.repo_sources, is_generic_source=self.is_generic_source)
                     self.local_repo_path = repo_dir
                     sha_before = None  # fresh clone — nothing meaningful to diff against
                     success = True

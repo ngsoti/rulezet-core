@@ -51,11 +51,18 @@ def get_repo_name_from_url(repo_url):
     return f"{owner}/{repo}"
   
 
-def clone_or_access_repo(repo_url, branch=None):
-    """Clone or access the repository from a GitHub URL.
+def clone_or_access_repo(repo_url, branch=None, is_generic_source=False):
+    """Clone or access the repository from a git URL.
 
     If *branch* is specified the repo is cloned on that branch and cached in a
     separate directory so it does not collide with the default-branch clone.
+
+    is_generic_source=True skips the GitHub-API accessibility pre-check
+    (is_github_repo_accessible) — that check only works against github.com's
+    REST API, so for a non-GitHub git host it would always fail even for a
+    perfectly clonable repo. The clone itself (git protocol, not GitHub's
+    API) already reports a clear error via its own except block below if the
+    repo genuinely isn't reachable.
     """
     base_dir = "app/rule_from_github/Rules_Github"
     os.makedirs(base_dir, exist_ok=True)
@@ -67,9 +74,10 @@ def clone_or_access_repo(repo_url, branch=None):
 
     existe = os.path.exists(repo_dir)
     if not existe:
-        status, msg = is_github_repo_accessible(repo_url)
-        if not status:
-            raise Exception(f"The repo {repo_url} is not accessible: {msg}")
+        if not is_generic_source:
+            status, msg = is_github_repo_accessible(repo_url)
+            if not status:
+                raise Exception(f"The repo {repo_url} is not accessible: {msg}")
         try:
             kwargs = {"branch": branch, "depth": 1} if branch else {"depth": 1}
             Repo.clone_from(repo_url, repo_dir, **kwargs)
@@ -249,18 +257,65 @@ def github_repo_metadata(repo_url: str, selected_license: str) -> dict:
 
 
 
-def valider_repo_github(repo_url: str) -> bool:
+def generic_repo_metadata(repo_url: str, selected_license: str, user) -> dict:
     """
-    Vérifie qu'une chaîne est bien une URL de dépôt GitHub valide.
+    Metadata for a non-GitHub ("generic source") repository — same shape as
+    extract_github_repo_metadata()'s output, filled locally instead of via
+    an API call that would only work against github.com. Rule formats' own
+    parse_metadata() only ever reads author/license/repo_url off this dict
+    (see e.g. splunk_format.py, sigma_format.py) — everything else is left
+    None/empty since there's no generic way to fetch it.
+    """
+    return {
+        "id": None,
+        "name": get_repo_name_from_url(repo_url),
+        "full_name": get_repo_name_from_url(repo_url),
+        "private": None,
+        "author": getattr(user, "first_name", None) or "Unknown",
+        "author_url": None,
+        "author_avatar": None,
+        "repo_url": repo_url,
+        "api_url": None,
+        "description": None,
+        "homepage": None,
+        "language": None,
+        "topics": [],
+        "created_at": None,
+        "updated_at": None,
+        "pushed_at": None,
+        "license": selected_license,
+        "license_name": selected_license,
+        "stars": 0,
+        "watchers": 0,
+        "forks": 0,
+        "open_issues": 0,
+        "default_branch": None,
+        "visibility": None,
+        "archived": False,
+        "disabled": False,
+    }
+
+
+def valider_repo_github(repo_url: str, is_generic_source: bool = False) -> bool:
+    """
+    Vérifie qu'une chaîne est bien une URL de dépôt valide.
+
+    is_generic_source=True skips the github.com/GITHUB_HOST hostname check —
+    any http(s) URL with a non-trivial path is accepted, since the actual
+    clone (GitPython) works against any git remote regardless of host.
     """
     try:
         parsed = urlparse(repo_url)
         if parsed.scheme not in ("http", "https"):
             return False
-        if parsed.netloc != get_github_host():
+        if not is_generic_source and parsed.netloc != get_github_host():
             return False
         path_parts = [p for p in parsed.path.split('/') if p]
-        if len(path_parts) < 2:
+        # GitHub-shaped URLs are always /owner/repo (2 segments); a generic
+        # git host may nest a repo under groups/subgroups (GitLab) or use a
+        # flat name, so only require a non-empty path there.
+        min_parts = 1 if is_generic_source else 2
+        if len(path_parts) < min_parts:
             return False
         return True
     except Exception as e:

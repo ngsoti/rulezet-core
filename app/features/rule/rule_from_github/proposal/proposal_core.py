@@ -30,7 +30,7 @@ def _normalize_repo_url(repo_url):
     return url
 
 
-def create_proposal(user, repo_url, branch, license, message):
+def create_proposal(user, repo_url, branch, license, message, is_generic_source=False):
     """Validate and create a GithubProposal.
     Rejects the submission outright (no proposal created) when:
       - the repo is already in Rulezet (has existing rules with that source)
@@ -38,10 +38,15 @@ def create_proposal(user, repo_url, branch, license, message):
         propose a re-import;
       - a pending proposal for the same repo already exists, from this user
         or anyone else — no duplicate proposals for the same repo.
+
+    is_generic_source=True marks this as a non-GitHub git repository (e.g. a
+    self-hosted GitLab/Gitea) — skips the github.com hostname check and,
+    once accepted, the import job uses generic (API-free) metadata instead
+    of calling GitHub's REST API.
     """
     repo_url = _normalize_repo_url(repo_url)
-    if not valider_repo_github(repo_url):
-        return None, "Please enter a valid GitHub repository URL."
+    if not valider_repo_github(repo_url, is_generic_source=is_generic_source):
+        return None, "Please enter a valid repository URL."
 
     branch = (branch or "").strip() or None
     license = (license or "").strip() or None
@@ -62,6 +67,7 @@ def create_proposal(user, repo_url, branch, license, message):
         branch=branch,
         license=license,
         message=message,
+        is_generic_source=is_generic_source,
         status='pending',
     )
     db.session.add(proposal)

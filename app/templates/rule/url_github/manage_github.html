@@ -1265,7 +1265,7 @@
                 scheduleForm.initialRepoUrls = (s.repos || []).map(r => r.repo_url)
                 const settingsMap = {}
                 for (const r of (s.repos || [])) {
-                    settingsMap[r.repo_url] = { auto_accept_update: r.auto_accept_update, auto_add_new_rule: r.auto_add_new_rule }
+                    settingsMap[r.repo_url] = { auto_accept_update: r.auto_accept_update, auto_add_new_rule: r.auto_add_new_rule, is_generic_source: r.is_generic_source }
                 }
                 scheduleForm.initialRepoSettings = settingsMap
                 currentRecurrence = {}

@@ -1854,6 +1854,7 @@ class GithubSyncScheduleRepo(db.Model):
 
     auto_accept_update = db.Column(db.Boolean, default=False)
     auto_add_new_rule  = db.Column(db.Boolean, default=False)
+    is_generic_source  = db.Column(db.Boolean, default=False, nullable=False)
 
     __table_args__ = (db.UniqueConstraint('schedule_id', 'repo_url', name='uq_schedule_repo'),)
 
@@ -1863,6 +1864,7 @@ class GithubSyncScheduleRepo(db.Model):
             "repo_url": self.repo_url,
             "auto_accept_update": self.auto_accept_update,
             "auto_add_new_rule": self.auto_add_new_rule,
+            "is_generic_source": self.is_generic_source,
         }
 
 
@@ -2151,6 +2153,7 @@ class GithubProposal(db.Model):
     branch   = db.Column(db.String(255), nullable=True)
     license  = db.Column(db.String(128), nullable=True)
     message  = db.Column(db.Text, nullable=True)
+    is_generic_source = db.Column(db.Boolean, default=False, nullable=False)
 
     # pending | accepted | rejected | imported | failed | transferred
     status         = db.Column(db.String(32), default="pending", index=True)
@@ -2180,6 +2183,7 @@ class GithubProposal(db.Model):
             "branch": self.branch,
             "license": self.license,
             "message": self.message,
+            "is_generic_source": self.is_generic_source,
             "status": self.status,
             "ownership_mode": self.ownership_mode,
             "decided_by_id": self.decided_by_id,

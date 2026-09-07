@@ -17,7 +17,7 @@ from app.core.utils.utils import  bump_version, form_to_dict, generate_side_by_s
 from app.features.account.account_core import add_favorite, remove_favorite, is_rule_favorited_by_user
 from app.features.misp.misp_core import  convert_misp_to_stix
 from app.features.rule.rule_format.main_format import  parse_rule_by_format, process_and_import_fixed_rule, verify_syntax_rule_by_format
-from app.features.rule.rule_format.utils_format.utils_import_update import clone_or_access_repo, fill_all_void_field, get_github_branches, get_github_host, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
+from app.features.rule.rule_format.utils_format.utils_import_update import clone_or_access_repo, fill_all_void_field, generic_repo_metadata, get_github_branches, get_github_host, get_licst_license, git_pull_repo, github_repo_metadata, valider_repo_github
 
 from app import db
 from . import rule_core as RuleModel
@@ -3481,8 +3481,9 @@ def import_rules_from_github():
         repo_url = request.json.get('url')
         selected_license = request.json.get('license')
         branch = (request.json.get('branch') or '').strip() or None
+        is_generic_source = bool(request.json.get('is_generic_source'))
 
-        verif = valider_repo_github(repo_url)
+        verif = valider_repo_github(repo_url, is_generic_source=is_generic_source)
         if not verif:
             return {"message": "Please enter a valid URL to import rules.", "toast_class": "danger-subtle"}, 400
 
@@ -3508,11 +3509,14 @@ def import_rules_from_github():
                     # import (surfaced to the loading page as "Import failed").
                     local_user = db.session.merge(user_obj)
 
-                    repo_dir, _ = clone_or_access_repo(repo_url, branch=branch)
+                    repo_dir, _ = clone_or_access_repo(repo_url, branch=branch, is_generic_source=is_generic_source)
                     if not repo_dir:
                         raise Exception("Failed to clone or access the repository.")
 
-                    full_info = github_repo_metadata(repo_url, selected_license)
+                    if is_generic_source:
+                        full_info = generic_repo_metadata(repo_url, selected_license, local_user)
+                    else:
+                        full_info = github_repo_metadata(repo_url, selected_license)
                     if branch:
                         full_info['branch'] = branch
                     session_th.repo_dir = repo_dir

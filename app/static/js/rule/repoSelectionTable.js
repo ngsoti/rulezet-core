@@ -35,7 +35,7 @@ const RepoSelectionTable = {
             excludedUrls: new Set(),
             isAllSelectedMode: false,
             perRepoSettings: new Map(Object.entries(this.initialRepoSettings)),
-            defaultSettings: { auto_accept_update: false, auto_add_new_rule: false },
+            defaultSettings: { auto_accept_update: false, auto_add_new_rule: false, is_generic_source: false },
         };
     },
     computed: {
@@ -144,7 +144,7 @@ const RepoSelectionTable = {
         },
 
         updateRepoSetting(url, key, value) {
-            const cfg = this.perRepoSettings.get(url) || { auto_accept_update: false, auto_add_new_rule: false };
+            const cfg = this.perRepoSettings.get(url) || { auto_accept_update: false, auto_add_new_rule: false, is_generic_source: false };
             cfg[key] = value;
             this.perRepoSettings.set(url, cfg);
             this.emitChange();
@@ -158,6 +158,7 @@ const RepoSelectionTable = {
         emitChange() {
             const repo_settings = Array.from(this.perRepoSettings.entries()).map(([repo_url, cfg]) => ({
                 repo_url, auto_accept_update: !!cfg.auto_accept_update, auto_add_new_rule: !!cfg.auto_add_new_rule,
+                is_generic_source: !!cfg.is_generic_source,
             }));
             this.$emit('selection-change', {
                 repo_mode: this.isAllSelectedMode ? 'all' : 'partial',
@@ -265,6 +266,7 @@ const RepoSelectionTable = {
                             <th class="dt-th">Repository</th>
                             <th class="dt-th text-center">Auto-accept updates</th>
                             <th class="dt-th text-center">Auto-add new rules</th>
+                            <th class="dt-th text-center">Non-GitHub</th>
                             <th class="dt-th dt-th--checkbox"></th>
                         </tr>
                     </thead>
@@ -278,6 +280,11 @@ const RepoSelectionTable = {
                             <td class="dt-td text-center">
                                 <input type="checkbox" class="dt-checkbox" :checked="repoSetting(item.url, 'auto_add_new_rule')"
                                     @change="updateRepoSetting(item.url, 'auto_add_new_rule', $event.target.checked)">
+                            </td>
+                            <td class="dt-td text-center">
+                                <input type="checkbox" class="dt-checkbox" :checked="repoSetting(item.url, 'is_generic_source')"
+                                    title="This repo isn't hosted on GitHub — skip GitHub API calls when syncing it"
+                                    @change="updateRepoSetting(item.url, 'is_generic_source', $event.target.checked)">
                             </td>
                             <td class="dt-td text-center">
                                 <button class="dt-action-btn dt-action-btn--danger" @click="updateSelection(item.url, false)" title="Remove">

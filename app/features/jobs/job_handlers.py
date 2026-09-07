@@ -2332,7 +2332,7 @@ def handle_github_proposal_bulk_import(job, app):
     """
     from app.features.rule.rule_from_github.import_rule import session_class as SessionModel
     from app.features.rule.rule_format.utils_format.utils_import_update import (
-        clone_or_access_repo, github_repo_metadata, valider_repo_github,
+        clone_or_access_repo, generic_repo_metadata, github_repo_metadata, valider_repo_github,
     )
 
     payload = job.payload or {}
@@ -2383,14 +2383,19 @@ def handle_github_proposal_bulk_import(job, app):
 
         owner = proposal.requester if ownership_mode == 'requester' else acting_admin
         try:
-            if not valider_repo_github(proposal.repo_url):
+            if not valider_repo_github(proposal.repo_url, is_generic_source=proposal.is_generic_source):
                 raise ValueError("Invalid repository URL.")
 
-            repo_dir, _ = clone_or_access_repo(proposal.repo_url, branch=proposal.branch)
+            repo_dir, _ = clone_or_access_repo(
+                proposal.repo_url, branch=proposal.branch, is_generic_source=proposal.is_generic_source,
+            )
             if not repo_dir:
                 raise ValueError("Failed to clone or access the repository.")
 
-            info = github_repo_metadata(proposal.repo_url, proposal.license)
+            if proposal.is_generic_source:
+                info = generic_repo_metadata(proposal.repo_url, proposal.license, owner)
+            else:
+                info = github_repo_metadata(proposal.repo_url, proposal.license)
             if proposal.branch:
                 info['branch'] = proposal.branch
 
@@ -3682,7 +3687,10 @@ def handle_github_sync_schedule_run(job, app):
                 "license": None,
                 "description": None,
             }
-            update_session = UpdateModel.Update_class([repo_cfg.repo_url], schedule.editor, info, mode="by_url")
+            update_session = UpdateModel.Update_class(
+                [repo_cfg.repo_url], schedule.editor, info, mode="by_url",
+                is_generic_source=repo_cfg.is_generic_source,
+            )
             update_session.start()
             UpdateModel.sessions.append(update_session)
 

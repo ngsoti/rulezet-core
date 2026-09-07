@@ -418,6 +418,12 @@
                 placeholder="https://github.com/your_username/project.git" v-model="url">
             </div>
             <div id="github-url-error" class="form-hint" style="color:#dc3545;"></div>
+            <div class="form-check mt-2">
+              <input type="checkbox" class="form-check-input" id="isGenericSource" v-model="isGenericSource">
+              <label class="form-check-label" for="isGenericSource" style="font-size:.83rem;">
+                This isn't hosted on GitHub (GitLab, Gitea, self-hosted, …)
+              </label>
+            </div>
           </div>
 
           <div class="mb-3">
@@ -435,8 +441,8 @@
                 <div class="spinner-border spinner-border-sm text-primary" style="width:14px;height:14px;border-width:2px;"></div>
               </span>
             </div>
-            <!-- Branch suggestions -->
-            <div v-if="availableBranches.length > 0" class="d-flex flex-wrap gap-1 mt-2">
+            <!-- Branch suggestions (GitHub only — a generic source has no API to list them from) -->
+            <div v-if="!isGenericSource && availableBranches.length > 0" class="d-flex flex-wrap gap-1 mt-2">
               <button v-for="b in availableBranches" :key="b" type="button"
                       @click="branch = b"
                       :class="['btn btn-xs rounded-pill px-2 py-1', branch === b ? 'btn-primary' : 'btn-outline-secondary']"
@@ -444,7 +450,7 @@
                 <i class="fas fa-code-branch me-1" style="font-size:.65rem;"></i>[[ b ]]
               </button>
             </div>
-            <div v-if="branchesError" class="form-hint mt-1" style="color:#dc3545;font-size:.75rem;">
+            <div v-if="!isGenericSource && branchesError" class="form-hint mt-1" style="color:#dc3545;font-size:.75rem;">
               <i class="fas fa-triangle-exclamation me-1"></i>[[ branchesError ]]
             </div>
           </div>
@@ -486,6 +492,12 @@
               <input type="text" name="proposal-url" class="form-control" id="proposal-url"
                 placeholder="https://github.com/your_username/project.git" v-model="url">
             </div>
+            <div class="form-check mt-2">
+              <input type="checkbox" class="form-check-input" id="proposalIsGenericSource" v-model="isGenericSource">
+              <label class="form-check-label" for="proposalIsGenericSource" style="font-size:.83rem;">
+                This isn't hosted on GitHub (GitLab, Gitea, self-hosted, …)
+              </label>
+            </div>
           </div>
 
           <div class="mb-3">
@@ -503,7 +515,7 @@
                 <div class="spinner-border spinner-border-sm text-primary" style="width:14px;height:14px;border-width:2px;"></div>
               </span>
             </div>
-            <div v-if="availableBranches.length > 0" class="d-flex flex-wrap gap-1 mt-2">
+            <div v-if="!isGenericSource && availableBranches.length > 0" class="d-flex flex-wrap gap-1 mt-2">
               <button v-for="b in availableBranches" :key="b" type="button"
                       @click="branch = b"
                       :class="['btn btn-xs rounded-pill px-2 py-1', branch === b ? 'btn-primary' : 'btn-outline-secondary']"
@@ -892,6 +904,7 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                   const selectedLicense = ref("");
                   const url              = ref("");
                   const branch           = ref("");
+                  const isGenericSource  = ref(false);
                   const availableBranches = ref([]);
                   const branchesLoading  = ref(false);
                   const branchesError    = ref("");
@@ -1093,7 +1106,7 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                               const res  = await fetch('/rule/import_rules_from_github', {
                                     headers: { "X-CSRFToken": $("#csrf_token").val(), "Content-Type": "application/json" },
                                     method:  "POST",
-                                    body:    JSON.stringify({ "url": url.value, "license": selectedLicense.value, "branch": branch.value.trim() || null })
+                                    body:    JSON.stringify({ "url": url.value, "license": selectedLicense.value, "branch": branch.value.trim() || null, "is_generic_source": isGenericSource.value })
                               });
                               const data = await res.json();
                               if (res.status === 201) {
@@ -1214,6 +1227,7 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                                           branch:   branch.value.trim() || null,
                                           license:  selectedLicense.value || null,
                                           message:  proposalMessage.value || null,
+                                          is_generic_source: isGenericSource.value,
                                     })
                               });
                               const data = await res.json();
@@ -1223,6 +1237,7 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                                     branch.value = "";
                                     selectedLicense.value = "";
                                     proposalMessage.value = "";
+                                    isGenericSource.value = false;
                                     fetchMyProposals();
                               }
                         } catch (e) {
@@ -1293,6 +1308,7 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                         selectedLicense,
                         url,
                         branch,
+                        isGenericSource,
                         availableBranches,
                         branchesLoading,
                         branchesError,

@@ -103,6 +103,7 @@ def _sync_repo_rows(schedule, repo_urls, repo_settings=None, default_settings=No
             repo_url=url,
             auto_accept_update=bool(cfg.get('auto_accept_update', False)),
             auto_add_new_rule=bool(cfg.get('auto_add_new_rule', False)),
+            is_generic_source=bool(cfg.get('is_generic_source', False)),
         ))
 
 
@@ -140,9 +141,10 @@ def create_schedule(data, editor):
 
     repo_urls = resolve_repo_urls(data.get('repo_mode', 'partial'), data.get('repo_filters'),
                                    data.get('selected_repo_urls'), data.get('excluded_repo_urls'))
-    valid_repo_urls = [u for u in repo_urls if valider_repo_github(u)]
+    generic_map = {r.get('repo_url'): bool(r.get('is_generic_source')) for r in (data.get('repo_settings') or [])}
+    valid_repo_urls = [u for u in repo_urls if valider_repo_github(u, is_generic_source=generic_map.get(u, False))]
     if not valid_repo_urls:
-        return None, "At least one valid GitHub repository must be selected."
+        return None, "At least one valid repository must be selected."
 
     schedule = GithubSyncSchedule(
         uuid=str(_uuid_mod.uuid4()),
@@ -183,9 +185,10 @@ def update_schedule(schedule_uuid, data):
     if 'repo_mode' in data or 'selected_repo_urls' in data:
         repo_urls = resolve_repo_urls(data.get('repo_mode', 'partial'), data.get('repo_filters'),
                                        data.get('selected_repo_urls'), data.get('excluded_repo_urls'))
-        valid_repo_urls = [u for u in repo_urls if valider_repo_github(u)]
+        generic_map = {r.get('repo_url'): bool(r.get('is_generic_source')) for r in (data.get('repo_settings') or [])}
+        valid_repo_urls = [u for u in repo_urls if valider_repo_github(u, is_generic_source=generic_map.get(u, False))]
         if not valid_repo_urls:
-            return None, "At least one valid GitHub repository must be selected."
+            return None, "At least one valid repository must be selected."
         _sync_repo_rows(schedule, valid_repo_urls, data.get('repo_settings'), data.get('default_repo_settings'))
     elif 'repo_settings' in data:
         # Only per-repo toggles changed — repo list itself untouched.
@@ -195,6 +198,7 @@ def update_schedule(schedule_uuid, data):
             if repo:
                 repo.auto_accept_update = bool(cfg.get('auto_accept_update', repo.auto_accept_update))
                 repo.auto_add_new_rule = bool(cfg.get('auto_add_new_rule', repo.auto_add_new_rule))
+                repo.is_generic_source = bool(cfg.get('is_generic_source', repo.is_generic_source))
 
     db.session.commit()
     _register_live(schedule)

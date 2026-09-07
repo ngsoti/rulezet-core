@@ -44,6 +44,7 @@ def proposal_create():
         branch=data.get('branch'),
         license=data.get('license'),
         message=data.get('message'),
+        is_generic_source=bool(data.get('is_generic_source')),
     )
     if err:
         return jsonify({"message": err, "toast_class": "danger-subtle"}), 400

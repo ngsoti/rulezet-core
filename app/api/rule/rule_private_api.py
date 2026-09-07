@@ -10,7 +10,7 @@ from app.api.utils.rule_validation import *
 from app.core.db_class.db import Rule
 
 from app.features.rule.rule_format.main_format import extract_rule_from_repo, verify_syntax_rule_by_format
-from app.features.rule.rule_format.utils_format.utils_import_update import clone_or_access_repo, delete_existing_repo_folder, github_repo_metadata, valider_repo_github
+from app.features.rule.rule_format.utils_format.utils_import_update import clone_or_access_repo, delete_existing_repo_folder, generic_repo_metadata, github_repo_metadata, valider_repo_github
 from app.core.utils import utils
 from app.core.utils.decorators import api_required
 from app.core.utils.activity_log import log_activity
@@ -410,8 +410,11 @@ curl -X POST http://127.0.0.1:7009/api/rule/private/import_rules_from_github \
 class ImportRulesFromGithub(Resource):
     @api_required
     @rule_private_ns.doc(params={
-    "url": "Required. URL of the GitHub repository to import rules from",
-    "license": "Required. License to apply to the imported rules (e.g., MIT, GPL)"
+    "url": "Required. URL of the repository to import rules from",
+    "license": "Required. License to apply to the imported rules (e.g., MIT, GPL)",
+    "branch": "Optional. Branch to clone (default branch if omitted).",
+    "is_generic_source": "Optional. Set true for a non-GitHub git host (GitLab, Gitea, self-hosted, …) — "
+                          "skips the GitHub REST API checks and uses a plain git clone instead.",
     })
     def post(self):
         """Import rules of any supported format from a GitHub repository (admin only)"""
@@ -426,22 +429,26 @@ class ImportRulesFromGithub(Resource):
         repo_url = data.get('url')
         selected_license = data.get('license', '').strip()
         branch = (data.get('branch') or '').strip() or None
+        is_generic_source = bool(data.get('is_generic_source'))
 
         # Validation
         if not repo_url:
             return {"success": False, "message": "Missing 'url' parameter"}, 400
         if not selected_license:
             return {"success": False, "message": "Missing 'license' parameter"}, 400
-        if not valider_repo_github(repo_url):
-            return {"success": False, "message": "Invalid GitHub URL"}, 400
+        if not valider_repo_github(repo_url, is_generic_source=is_generic_source):
+            return {"success": False, "message": "Invalid repository URL"}, 400
 
         # Clone or access repo
-        repo_dir, exists = clone_or_access_repo(repo_url, branch=branch)
+        repo_dir, exists = clone_or_access_repo(repo_url, branch=branch, is_generic_source=is_generic_source)
         if not repo_dir:
             return {"success": False, "message": "Failed to clone or access the repository"}, 500
 
         # Extract rules
-        info = github_repo_metadata(repo_url, selected_license)
+        if is_generic_source:
+            info = generic_repo_metadata(repo_url, selected_license, user)
+        else:
+            info = github_repo_metadata(repo_url, selected_license)
         if branch:
             info['branch'] = branch
         try:
