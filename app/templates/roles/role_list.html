@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/table/data-table.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/code-viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/account/user_detail.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/roles/roles.css') }}">
 {% endblock %}
 
@@ -35,6 +36,25 @@
 
     {{ anav.admin_nav('roles') }}
 
+    <!-- ── Built-in "Admin" pseudo-role — real admin status (User.admin), not a
+         Role row, so it's a plain card here rather than part of the sortable/
+         paginated table below. See roles_core.py's get_admin_count(). ── -->
+    <a href="/admin/roles/admin" class="card border-0 shadow-sm rounded-3 mb-3 text-decoration-none">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+            <div class="ud-info-cell-icon" style="background:rgba(255,193,7,.15);color:#d4a700;width:44px;height:44px;font-size:1.1rem;line-height:1;">
+                <i class="fa-solid fa-crown" style="line-height:1;"></i>
+            </div>
+            <div class="flex-grow-1" style="min-width:0;">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-semibold" style="color:var(--text-color);">Admin</span>
+                    <span class="roles-badge roles-badge--system"><i class="fa-solid fa-lock"></i> system</span>
+                </div>
+                <p class="text-muted mb-0" style="font-size:.85rem;">All rights on Rulezet — the platform's built-in administrator status.</p>
+            </div>
+            <span class="roles-badge roles-badge--count"><i class="fa-solid fa-users"></i> {{ admin_count }} user(s)</span>
+        </div>
+    </a>
+
     <data-table
         ref="table_ref"
         fetch-url="/admin/roles/data_table"
@@ -42,6 +62,8 @@
         :can-create="true"
         :can-view="true"
         :can-delete="true"
+        :row-deletable="item => !item.is_system"
+        row-not-deletable-title="System roles can't be deleted"
         :bulk-actions="bulk_actions"
         initial-sort="name"
         initial-dir="asc"

@@ -495,6 +495,11 @@ body.dark-mode mark.dt-highlight {
     flex-shrink: 0;
 }
 
+.dt-checkbox:disabled {
+    cursor: not-allowed;
+    opacity: .35;
+}
+
 /*---DT_ROW---*/
 
 .dt-row {
@@ -583,6 +588,15 @@ body.dark-mode mark.dt-highlight {
     background-color: rgba(239, 68, 68, 0.1);
     border-color: rgba(239, 68, 68, 0.5);
     color: #ef4444;
+}
+
+.dt-action-btn:disabled,
+.dt-action-btn:disabled:hover {
+    cursor: not-allowed;
+    opacity: .35;
+    background-color: transparent;
+    color: var(--text-secondary);
+    border-color: var(--border);
 }
 
 .dt-action-btn--expand {

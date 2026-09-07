@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% import 'macros/admin_nav.html' as anav %}
+{% block title %}Admin — Roles &amp; Permissions — Rulezet{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/theme-bridge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/table/data-table.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rule/base/detail_rule.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/account/user_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/roles/roles.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4" id="admin-role-detail-app" v-cloak>
+
+    <div class="explorer-banner mb-4">
+        <i class="fa-solid fa-crown banner-watermark"></i>
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                <li class="breadcrumb-item"><a href="/admin/roles/list" class="text-decoration-none text-muted">Roles &amp; Permissions</a></li>
+                <li class="breadcrumb-item active text-muted" aria-current="page">Admin</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="banner-icon"><i class="fa-solid fa-crown"></i></div>
+            <div>
+                <h2 class="fw-bold mb-1">Admin</h2>
+                <div class="banner-accent"></div>
+            </div>
+        </div>
+        <p class="text-muted mb-0" style="max-width:600px;font-size:.95rem;">
+            All rights on Rulezet — the built-in administrator status, not a granular permission set.
+        </p>
+    </div>
+
+    {{ anav.admin_nav('roles') }}
+
+    <div class="card h-100 border-0 card_detail border-top shadow-lg position-relative mb-4" style="border-radius:12px;">
+        <div class="card-watermark-detail"><i class="fa-solid fa-crown"></i></div>
+        <div class="position-absolute top-0 end-0 mt-3 me-3 d-flex gap-2" style="z-index:2;">
+            <span class="badge bg-warning shadow-sm pt-1" title="Built-in — can't be renamed or deleted">
+                <i class="fa-solid fa-lock me-1"></i> SYSTEM ROLE
+            </span>
+        </div>
+        <div class="card-body p-4 p-md-5">
+
+            <!-- Details -->
+            <div class="rounded-3 border p-3 mb-4" style="background:var(--light-bg-color);">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                    <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-circle-info me-1"></i> Details
+                    </span>
+                </div>
+
+                <div class="roles-detail-row">
+                    <div class="ud-info-cell-icon" style="background:rgba(255,193,7,.15);color:#d4a700;">
+                        <i class="fa-solid fa-tag"></i>
+                    </div>
+                    <div class="ud-info-cell-body">
+                        <div class="ud-info-cell-label">Name</div>
+                        <div class="ud-info-cell-value">Admin</div>
+                    </div>
+                </div>
+                <div class="roles-detail-row roles-detail-row--last">
+                    <div class="ud-info-cell-icon" style="background:rgba(13,202,240,.1);color:#0dcaf0;">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="ud-info-cell-body">
+                        <div class="ud-info-cell-label">Users with this role</div>
+                        <div class="ud-info-cell-value">[[ admin_count ]]</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions — no checklist: admins bypass every permission check -->
+            <div class="rounded-3 border p-3 mb-4" style="background:var(--light-bg-color);">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                    <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-key me-1"></i> Permissions
+                    </span>
+                </div>
+                <div class="roles-perm-check" style="cursor:default;">
+                    <div class="ud-info-cell-icon roles-perm-check-icon" style="background:rgba(255,193,7,.15);color:#d4a700;">
+                        <i class="fa-solid fa-crown"></i>
+                    </div>
+                    <div class="flex-grow-1" style="min-width:0;">
+                        <div class="roles-perm-check-title">All rights on Rulezet</div>
+                        <div class="roles-perm-check-desc">Admins bypass every permission check across the platform — there's nothing to grant individually.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assigned users -->
+            <div class="rounded-3 border p-3" style="background:var(--light-bg-color);">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                    <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-users-gear me-1"></i> Assigned users
+                    </span>
+                </div>
+
+                <data-table
+                    ref="users_table_ref"
+                    mode="read"
+                    fetch-url="/admin/roles/admin/users"
+                    :columns="user_columns"
+                    :row-deletable="item => item.id !== CURRENT_USER_ID"
+                    row-not-deletable-title="You can't remove your own admin rights">
+
+                    <template #toolbar-start>
+                        <button type="button" class="btn btn-sm btn-outline-primary" @click="openAddUserModal">
+                            <i class="fa-solid fa-user-plus me-1"></i> Add user
+                        </button>
+                    </template>
+
+                    <template #cell-username="{ item }">
+                        <user-chip :user-id="item.id" :username="item.username" :avatar="item.profile_picture"></user-chip>
+                    </template>
+
+                    <template #cell-actions="{ item }">
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                :disabled="item.id === CURRENT_USER_ID"
+                                :title="item.id === CURRENT_USER_ID ? 'You can\'t remove your own admin rights' : 'Remove admin rights'"
+                                @click="removeAdmin(item)">
+                            <i class="fa-solid fa-user-minus"></i>
+                        </button>
+                    </template>
+
+                </data-table>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Add user modal ── -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" ref="add_user_modal_el">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-user-plus me-2"></i>Grant admin rights</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" class="form-control mb-3" placeholder="Search a user…"
+                           v-model="user_search" @input="onUserSearch" autofocus>
+                    <div v-if="user_suggestions.length === 0 && user_search" class="text-muted text-center py-3">
+                        No match.
+                    </div>
+                    <div class="roles-user-suggestion" v-for="u in user_suggestions" :key="u.id" @click="addAdmin(u)">
+                        <img v-if="u.profile_picture" :src="u.profile_picture" class="roles-user-avatar">
+                        <div v-else class="roles-user-avatar-fallback">[[ (u.username || '?').charAt(0).toUpperCase() ]]</div>
+                        <span style="font-size:.85rem;">[[ u.username ]]</span>
+                        <i class="fa-solid fa-plus ms-auto text-muted"></i>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module">
+    const { createApp, ref } = Vue
+    import { apiFetch, TOAST } from '/static/js/constants.js'
+    import { message_list, create_message } from '/static/js/toaster.js'
+    import DataTable from '/static/js/components/table/data-table.js'
+    import UserChip  from '/static/js/components/UserChip.js'
+
+    const CURRENT_USER_ID = {{ current_user.id }}
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        components: { DataTable, UserChip },
+
+        setup() {
+            const admin_count = ref({{ admin_count }})
+
+            const users_table_ref = ref(null)
+            const user_columns = [
+                { key: 'username', label: 'User' },
+                { key: 'actions',  label: '', width: '110px' },
+            ]
+
+            const add_user_modal_el = ref(null)
+            let add_user_modal = null
+            const user_search = ref('')
+            const user_suggestions = ref([])
+            let search_debounce = null
+
+            function openAddUserModal() {
+                user_search.value = ''
+                user_suggestions.value = []
+                add_user_modal = add_user_modal || new bootstrap.Modal(add_user_modal_el.value)
+                add_user_modal.show()
+            }
+
+            function onUserSearch() {
+                clearTimeout(search_debounce)
+                search_debounce = setTimeout(async () => {
+                    if (!user_search.value.trim()) { user_suggestions.value = []; return }
+                    const res = await apiFetch(`/admin/roles/admin/users/search?search=${encodeURIComponent(user_search.value)}`)
+                    const data = await res.json()
+                    user_suggestions.value = data.success ? data.users : []
+                }, 250)
+            }
+
+            async function addAdmin(u) {
+                const res = await apiFetch('/account/promote_remove_admin', 'POST', { userId: u.id, action: 'promote' })
+                const data = await res.json()
+                if (res.ok && data.success) {
+                    create_message(`${u.username} is now an admin.`, TOAST.SUCCESS)
+                    add_user_modal?.hide()
+                    users_table_ref.value?.fetchData()
+                    admin_count.value += 1
+                } else {
+                    create_message('Failed to grant admin rights.', TOAST.ERROR, true)
+                }
+            }
+
+            async function removeAdmin(item) {
+                if (item.id === CURRENT_USER_ID) return
+                if (!confirm(`Remove admin rights from ${item.username}?`)) return
+                const res = await apiFetch('/account/promote_remove_admin', 'POST', { userId: item.id, action: 'remove' })
+                const data = await res.json()
+                if (res.ok && data.success) {
+                    create_message('Admin rights removed.', TOAST.SUCCESS)
+                    users_table_ref.value?.fetchData()
+                    admin_count.value -= 1
+                } else {
+                    create_message('Failed to remove admin rights.', TOAST.ERROR, true)
+                }
+            }
+
+            return {
+                message_list, admin_count, CURRENT_USER_ID,
+                users_table_ref, user_columns,
+                add_user_modal_el, user_search, user_suggestions,
+                openAddUserModal, onUserSearch, addAdmin, removeAdmin,
+            }
+        }
+    }).mount('#admin-role-detail-app')
+</script>
+{% endblock %}

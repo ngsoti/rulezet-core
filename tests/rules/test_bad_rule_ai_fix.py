@@ -63,13 +63,26 @@ class _FakeAgent:
 
 def test_ai_fix_button_shown_when_agent_enabled(app, client):
     _set_rule_fixer_enabled(app, True)
+    admin = _admin(app)
+    bad_rule_id = _make_bad_rule(app, admin.id)
+    _login(client, admin)
+
+    res = client.get(f"/rule/bad_rule/{bad_rule_id}/edit")
+    assert res.status_code == 200
+    assert b"rulezy-trigger" in res.data
+
+
+def test_ai_fix_button_hidden_for_owner_without_ai_permission(app, client):
+    """A rule owner with no admin/ai.use permission never sees the button,
+    even when the feature is enabled and the format is eligible."""
+    _set_rule_fixer_enabled(app, True)
     owner = _owner(app)
     bad_rule_id = _make_bad_rule(app, owner.id)
     _login(client, owner)
 
     res = client.get(f"/rule/bad_rule/{bad_rule_id}/edit")
     assert res.status_code == 200
-    assert b"rulezy-trigger" in res.data
+    assert b"rulezy-trigger" not in res.data
 
 
 def test_ai_fix_button_hidden_when_agent_disabled(app, client):
@@ -127,6 +140,18 @@ def test_ai_fix_route_forbidden_for_non_owner_non_admin(app, client):
     assert res.status_code == 403
 
 
+def test_ai_fix_route_forbidden_for_owner_without_ai_permission(app, client):
+    """AI-assisted fixing is admin/ai.use only now — the rule's own owner is
+    no longer enough on its own."""
+    _set_rule_fixer_enabled(app, True)
+    owner = _owner(app)
+    bad_rule_id = _make_bad_rule(app, owner.id)
+    _login(client, owner)
+
+    res = client.post(f"/rule/bad_rule/{bad_rule_id}/ai_fix")
+    assert res.status_code == 403
+
+
 def test_ai_fix_route_404_for_missing_bad_rule(app, client):
     _login(client, _admin(app))
     res = client.post("/rule/bad_rule/999999/ai_fix")
@@ -135,9 +160,9 @@ def test_ai_fix_route_404_for_missing_bad_rule(app, client):
 
 def test_ai_fix_route_blocks_script_format(app, client):
     _set_rule_fixer_enabled(app, True)
-    owner = _owner(app)
-    bad_rule_id = _make_bad_rule(app, owner.id, rule_type="nse")
-    _login(client, owner)
+    admin = _admin(app)
+    bad_rule_id = _make_bad_rule(app, admin.id, rule_type="nse")
+    _login(client, admin)
 
     res = client.post(f"/rule/bad_rule/{bad_rule_id}/ai_fix")
     assert res.status_code == 400
@@ -146,9 +171,9 @@ def test_ai_fix_route_blocks_script_format(app, client):
 
 def test_ai_fix_route_blocks_non_yara_format(app, client):
     _set_rule_fixer_enabled(app, True)
-    owner = _owner(app)
-    bad_rule_id = _make_bad_rule(app, owner.id, rule_type="sigma")
-    _login(client, owner)
+    admin = _admin(app)
+    bad_rule_id = _make_bad_rule(app, admin.id, rule_type="sigma")
+    _login(client, admin)
 
     res = client.post(f"/rule/bad_rule/{bad_rule_id}/ai_fix")
     assert res.status_code == 400
@@ -157,9 +182,9 @@ def test_ai_fix_route_blocks_non_yara_format(app, client):
 
 def test_ai_fix_route_blocks_when_agent_disabled(app, client):
     _set_rule_fixer_enabled(app, False)
-    owner = _owner(app)
-    bad_rule_id = _make_bad_rule(app, owner.id)
-    _login(client, owner)
+    admin = _admin(app)
+    bad_rule_id = _make_bad_rule(app, admin.id)
+    _login(client, admin)
 
     res = client.post(f"/rule/bad_rule/{bad_rule_id}/ai_fix")
     assert res.status_code == 400

@@ -9,6 +9,12 @@
  *   canEdit         Boolean (default: false)
  *   canDelete       Boolean (default: false)
  *   canView         Boolean (default: false)
+ *   rowDeletable    Function(item) => Boolean (default: null, meaning every
+ *                   row is deletable) — rows it rejects get a disabled,
+ *                   greyed-out delete button/checkbox instead of being
+ *                   omitted, and are excluded from "select all on page".
+ *   rowNotDeletableTitle  String (default: "Can't be deleted") — tooltip
+ *                   shown on a disabled delete button.
  *   bulkActions     Array   [{key, label, icon?, variant?}]
  *   defaultView     String  'table' | 'card'               (default: 'table')
  *   initialPerPage  Number  (default: 10)
@@ -55,6 +61,8 @@ export default {
         canEdit:        { type: Boolean, default: false },
         canDelete:      { type: Boolean, default: false },
         canView:        { type: Boolean, default: false },
+        rowDeletable:   { type: Function, default: null },
+        rowNotDeletableTitle: { type: String, default: "Can't be deleted" },
         bulkActions:    { type: Array,   default: () => [] },
         defaultView:    { type: String,  default: 'table' },
         initialPerPage: { type: Number,  default: 10 },
@@ -256,6 +264,7 @@ export default {
                                         type="checkbox"
                                         class="dt-checkbox"
                                         :checked="isSelected(item)"
+                                        :disabled="!canDeleteRow(item)"
                                         @change="toggleItem(item)"
                                         :aria-label="'Select row ' + item.id" />
                                 </td>
@@ -314,7 +323,8 @@ export default {
                                         <button
                                             v-if="canDelete"
                                             class="dt-action-btn dt-action-btn--danger"
-                                            title="Delete"
+                                            :disabled="!canDeleteRow(item)"
+                                            :title="canDeleteRow(item) ? 'Delete' : rowNotDeletableTitle"
                                             @click="$emit('delete', item)">
                                             <i class="fas fa-trash"></i>
                                         </button>
@@ -377,6 +387,7 @@ export default {
                             type="checkbox"
                             class="dt-checkbox dt-card-checkbox"
                             :checked="isSelected(item)"
+                            :disabled="!canDeleteRow(item)"
                             @change="toggleItem(item)" />
                         <slot name="card-title" :item="item" :search="search" :highlight="highlight">
                             <span class="dt-card-title" v-html="highlight(item[columns[0]?.key] ?? item.id)"></span>
@@ -414,7 +425,8 @@ export default {
                         <button
                             v-if="canDelete"
                             class="dt-action-btn dt-action-btn--danger"
-                            title="Delete"
+                            :disabled="!canDeleteRow(item)"
+                            :title="canDeleteRow(item) ? 'Delete' : rowNotDeletableTitle"
                             @click="$emit('delete', item)">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -523,9 +535,15 @@ export default {
             return n
         })
 
+        function canDeleteRow(item) {
+            return !props.rowDeletable || props.rowDeletable(item)
+        }
+
         const all_on_page_selected = computed(() => {
             if (!isSelectable.value || items.value.length === 0) return false
-            return items.value.every(item => selected_ids.has(item.id))
+            const selectable_items = items.value.filter(canDeleteRow)
+            if (selectable_items.length === 0) return false
+            return selectable_items.every(item => selected_ids.has(item.id))
         })
 
         const some_on_page_selected = computed(() => {
@@ -626,6 +644,7 @@ export default {
         }
 
         function toggleItem(item) {
+            if (!canDeleteRow(item)) return
             if (all_pages_selected.value) {
                 all_pages_selected.value = false
                 items.value.forEach(i => { if (i.id !== item.id) selected_ids.add(i.id) })
@@ -644,9 +663,9 @@ export default {
                 return
             }
             if (all_on_page_selected.value) {
-                items.value.forEach(i => selected_ids.delete(i.id))
+                items.value.filter(canDeleteRow).forEach(i => selected_ids.delete(i.id))
             } else {
-                items.value.forEach(i => selected_ids.add(i.id))
+                items.value.filter(canDeleteRow).forEach(i => selected_ids.add(i.id))
             }
         }
 
@@ -749,6 +768,7 @@ export default {
             onSearchInput, clearSearch,
             goToPage,
             isSelected, toggleItem, togglePageSelection, selectAllPages, clearSelection,
+            canDeleteRow,
             toggleExpand,
             toggleColumn,
             emitBulkAction, emitSend,

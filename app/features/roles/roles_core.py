@@ -312,6 +312,56 @@ def remove_user_from_role(role_id, user_id):
     return True, None
 
 
+# ─── The built-in "Admin" pseudo-role ────────────────────────────────────────
+# Real admin status is User.admin (a plain boolean, promoted/demoted via
+# app/features/account/account_core.py's promote_remove_user_admin — the
+# only writer of that column). It's deliberately NOT a Role/UserRole row:
+# is_admin() already bypasses every has_permission() check, so a real Role
+# here would just be a second, driftable source of truth for the same
+# thing. These helpers only ever read User.admin, and the UI's add/remove
+# actions call the existing promote_remove_user_admin — this module never
+# writes to User.admin itself.
+
+def get_admin_count():
+    return User.query.filter_by(admin=True).count()
+
+
+def get_admin_users(page=1, per_page=20):
+    """Matches the generic DataTable component's fetch contract
+    ({ items, total, total_pages }) — same shape as get_role_users, minus
+    granted_by/granted_at (promote_remove_user_admin doesn't track those)."""
+    query = User.query.filter_by(admin=True).order_by(User.first_name)
+    total = query.count()
+    per_page = max(1, min(per_page, 100))
+    users = query.offset((page - 1) * per_page).limit(per_page).all()
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    return {
+        "items": [
+            {"id": u.id, "username": u.get_username(), "profile_picture": u.get_avatar_url()}
+            for u in users
+        ],
+        "total": total,
+        "total_pages": total_pages,
+    }
+
+
+def search_non_admin_users(search="", limit=10):
+    """Users who aren't admins yet, for the "Admin" pseudo-role's add-user
+    picker — same shape as search_assignable_users."""
+    query = User.query.filter_by(admin=False)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(or_(
+            User.first_name.ilike(like), User.last_name.ilike(like),
+            User.username.ilike(like), User.email.ilike(like),
+        ))
+    users = query.order_by(User.first_name).limit(limit).all()
+    return [
+        {"id": u.id, "username": u.get_username(), "profile_picture": u.get_avatar_url()}
+        for u in users
+    ]
+
+
 def search_assignable_users(role_id, search="", limit=10):
     """Users not already holding this role, for the admin UI's add-user picker."""
     already = {ur.user_id for ur in UserRole.query.filter_by(role_id=role_id).all()}

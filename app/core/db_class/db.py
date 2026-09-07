@@ -162,7 +162,10 @@ class AnonymousUser(AnonymousUserMixin):
     
     def is_admin(self):
         return False
-    
+
+    def has_permission(self, key):
+        return False
+
     def is_anonymous(self):
         return True
 

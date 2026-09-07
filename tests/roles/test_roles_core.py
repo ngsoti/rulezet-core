@@ -175,12 +175,13 @@ def test_bulk_delete_roles_skips_system_roles(app):
 def test_bulk_delete_roles_none_means_all_non_system(app):
     with app.app_context():
         roles_core.seed_default_permissions_and_roles()
+        system_role_count = Role.query.filter_by(is_system=True).count()
         r1, _ = roles_core.create_role("BulkAll1")
         r2, _ = roles_core.create_role("BulkAll2")
 
         deleted, skipped = roles_core.bulk_delete_roles(None)
         assert deleted == 2
-        assert skipped == 1  # the seeded Tag manager system role
+        assert skipped == system_role_count  # every seeded system role
         assert Role.query.filter_by(is_system=False).count() == 0
         assert Role.query.filter_by(name="Tag manager").first() is not None
 

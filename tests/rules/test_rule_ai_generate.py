@@ -21,6 +21,11 @@ def _owner(app):
         return User.query.filter_by(email="t@t.t").first()
 
 
+def _admin(app):
+    with app.app_context():
+        return User.query.filter_by(email="admin@admin.admin").first()
+
+
 def _set_rule_generator_enabled(app, enabled):
     with app.app_context():
         cfg = AIAgentConfig.query.filter_by(agent_key='rule_generator').first()
@@ -46,7 +51,7 @@ class _FakeAgent:
 
 def test_ai_generate_tab_shown_when_agent_enabled(app, client):
     _set_rule_generator_enabled(app, True)
-    _login(client, _owner(app))
+    _login(client, _admin(app))
 
     res = client.get("/rule/create_rule")
     assert res.status_code == 200
@@ -56,9 +61,20 @@ def test_ai_generate_tab_shown_when_agent_enabled(app, client):
     assert b'id="ai-gen-description"' in res.data
 
 
+def test_ai_generate_tab_hidden_for_user_without_ai_permission(app, client):
+    """A regular user with no admin/ai.use permission never sees the tab,
+    regardless of the instance-wide feature toggle."""
+    _set_rule_generator_enabled(app, True)
+    _login(client, _owner(app))
+
+    res = client.get("/rule/create_rule")
+    assert res.status_code == 200
+    assert b'id="ai-gen-description"' not in res.data
+
+
 def test_ai_generate_tab_hidden_when_agent_disabled(app, client):
     _set_rule_generator_enabled(app, False)
-    _login(client, _owner(app))
+    _login(client, _admin(app))
 
     res = client.get("/rule/create_rule")
     assert res.status_code == 200
@@ -72,9 +88,19 @@ def test_ai_generate_route_requires_login(client):
     assert res.status_code in (302, 401)
 
 
-def test_ai_generate_route_requires_description(app, client):
+def test_ai_generate_route_requires_ai_permission(app, client):
+    """A regular user with no admin/ai.use permission is forbidden, even
+    when the feature is enabled instance-wide."""
     _set_rule_generator_enabled(app, True)
     _login(client, _owner(app))
+
+    res = client.post("/rule/ai_generate_rule", json={"description": "detect X"})
+    assert res.status_code == 403
+
+
+def test_ai_generate_route_requires_description(app, client):
+    _set_rule_generator_enabled(app, True)
+    _login(client, _admin(app))
 
     res = client.post("/rule/ai_generate_rule", json={"description": ""})
     assert res.status_code == 400
@@ -83,7 +109,7 @@ def test_ai_generate_route_requires_description(app, client):
 
 def test_ai_generate_route_blocks_when_agent_disabled(app, client):
     _set_rule_generator_enabled(app, False)
-    _login(client, _owner(app))
+    _login(client, _admin(app))
 
     res = client.post("/rule/ai_generate_rule", json={"description": "detect X"})
     assert res.status_code == 400

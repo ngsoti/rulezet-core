@@ -200,8 +200,8 @@ export default {
                     </div>
 
                     <div class="ul-card-badges">
-                        <span v-if="user.admin" class="badge bg-warning text-dark">
-                            <i class="fas fa-shield-halved me-1"></i>Admin
+                        <span v-if="user.admin" class="ud-profile-badge ud-profile-badge--admin">
+                            <i class="fas fa-crown me-1"></i>Admin
                         </span>
                         <span v-if="isSelf(user)" class="badge bg-info text-dark">
                             <i class="fas fa-user-check me-1"></i>You
@@ -384,8 +384,8 @@ export default {
 
                         <!-- Role -->
                         <td class="dt-td">
-                            <span v-if="user.admin" class="badge bg-warning text-dark">
-                                <i class="fas fa-shield-halved me-1"></i>Admin
+                            <span v-if="user.admin" class="ud-profile-badge ud-profile-badge--admin">
+                                <i class="fas fa-crown me-1"></i>Admin
                             </span>
                             <div v-else class="ul-role-picker">
                                 <button class="ul-role-picker-btn" @click="toggleRoleMenu(user.id, $event)">

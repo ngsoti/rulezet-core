@@ -29,7 +29,29 @@ def _require_admin():
 
 @roles_blueprint.route('/list', methods=['GET'])
 def role_list():
-    return render_template('roles/role_list.html')
+    return render_template('roles/role_list.html', admin_count=RolesModel.get_admin_count())
+
+
+@roles_blueprint.route('/admin', methods=['GET'])
+def admin_role_detail():
+    """The built-in "Admin" pseudo-role — see roles_core.py's comment above
+    get_admin_count(). Not a real Role row, so it has its own page/routes
+    instead of /detail/<int:role_id>."""
+    return render_template('roles/admin_role_detail.html', admin_count=RolesModel.get_admin_count())
+
+
+@roles_blueprint.route('/admin/users', methods=['GET'])
+def admin_role_users():
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 100)
+    return jsonify(RolesModel.get_admin_users(page, per_page))
+
+
+@roles_blueprint.route('/admin/users/search', methods=['GET'])
+def admin_role_users_search():
+    search = request.args.get('search', '')
+    results = RolesModel.search_non_admin_users(search)
+    return jsonify({"success": True, "users": results})
 
 
 @roles_blueprint.route('/detail/<int:role_id>', methods=['GET'])
