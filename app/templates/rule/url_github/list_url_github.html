@@ -29,7 +29,7 @@
   </div>
 
   <github-selection-table api-endpoint="/rule/get_url_github" submit-endpoint="/rule/bulk_action_github"
-    csrf-token="{{ csrf_token() }}" current-user-is-admin="{{ 'true' if current_user.is_admin() else 'false' }}">
+    csrf-token="{{ csrf_token() }}" current-user-is-admin="{{ 'true' if (current_user.is_admin() or current_user.has_permission('github.manage')) else 'false' }}">
   </github-selection-table>
 
   <div class="d-flex justify-content-center gap-3 mt-5 mb-3">

@@ -394,19 +394,16 @@
         <div class="d-flex align-items-start gap-2 p-3 mb-4 rounded-3" style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);">
           <i class="fas fa-circle-info mt-1" style="color:#3b82f6;flex-shrink:0;"></i>
           <div style="font-size:.83rem;color:var(--text-color);">
-            {% if current_user.is_admin() %}
             The importer walks every file in the repository and tries to parse each one using the matching format engine.
             Rules that fail validation are saved in <strong>Bad Rules</strong> for manual review rather than discarded.
-            {% else %}
-            The importer walks every file in the repository and tries to parse each one using the matching format engine.
-            Rules that fail validation are saved in <strong>Bad Rules</strong> for manual review rather than discarded.
-            Direct GitHub import is restricted to administrators, so submit a proposal instead —
-            an admin will review it and, if accepted, the repository will be imported for you.
+            {% if not (current_user.is_admin() or current_user.has_permission('github.manage')) %}
+            Direct GitHub import is restricted to admins and GitHub Managers, so submit a proposal instead —
+            it'll be reviewed and, if accepted, the repository will be imported for you.
             {% endif %}
           </div>
         </div>
 
-        {% if current_user.is_admin() %}
+        {% if current_user.is_admin() or current_user.has_permission('github.manage') %}
         <div>
           <div class="mb-3">
             <div class="d-flex align-items-center gap-1 mb-1">
@@ -587,7 +584,7 @@
           </div>
         </div>
 
-        {% if current_user.is_admin() %}
+        {% if current_user.is_admin() or current_user.has_permission('github.manage') %}
         <div>
           <div class="mb-3">
             <div class="d-flex align-items-center gap-1 mb-1">
@@ -634,7 +631,7 @@
         <div class="admin-gate">
           <div><i class="fas fa-lock"></i></div>
           <p class="fw-semibold mb-1" style="color:var(--text-color);">Admin access required</p>
-          <p class="mb-3" style="font-size:.83rem;">Importing rules from a ZIP file is restricted to administrators.</p>
+          <p class="mb-3" style="font-size:.83rem;">Importing rules from a ZIP file is restricted to admins and GitHub Managers.</p>
           <a href="/account/login" class="btn btn-primary btn-sm" style="border-radius:8px;">Sign in as admin</a>
         </div>
         {% endif %}
@@ -1184,7 +1181,7 @@ window.__title_error = {{ (form.title.errors[0] if form.title.errors else none) 
                   });
 
                   // ── GitHub import proposal (non-admin) ──────────────────────
-                  const isAdminUser        = {{ current_user.is_admin() | tojson }};
+                  const isAdminUser        = {{ (current_user.is_admin() or current_user.has_permission('github.manage')) | tojson }};
                   const proposalMessage    = ref("");
                   const proposalSubmitting = ref(false);
                   const myProposals        = ref([]);
