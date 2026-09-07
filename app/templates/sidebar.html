@@ -258,6 +258,30 @@
                </li>
                {% endif %}
 
+               <!-- ── AI Manager (dropdown, ai.manage non-admins only) ── -->
+               {% if current_user.is_authenticated and not current_user.is_admin() and current_user.has_permission('ai.manage') %}
+               <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle custom-nav-link fw-bold {% if request.path.startswith('/ai/admin') %}active{% endif %}"
+                     href="#" role="button" data-bs-toggle="dropdown">
+                     <i class="fa-solid fa-robot fa-fw me-1 text-primary"></i>AI
+                  </a>
+                  <ul class="dropdown-menu">
+                     <li><a href="/ai/admin/overview" class="dropdown-item {% if request.path == '/ai/admin/overview' %}active{% endif %}">
+                           <i class="fa-solid fa-toggle-on me-2"></i>Overview</a></li>
+                     <li><a href="/ai/admin/chatbot" class="dropdown-item {% if request.path == '/ai/admin/chatbot' %}active{% endif %}">
+                           <i class="fa-solid fa-comment-dots me-2"></i>Chatbot</a></li>
+                     <li><a href="/ai/admin/rule-analysis" class="dropdown-item {% if request.path == '/ai/admin/rule-analysis' %}active{% endif %}">
+                           <i class="fa-solid fa-magnifying-glass-chart me-2"></i>Rule Analysis</a></li>
+                     <li><a href="/ai/admin/rule-generator" class="dropdown-item {% if request.path == '/ai/admin/rule-generator' %}active{% endif %}">
+                           <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Rule Generator</a></li>
+                     <li><a href="/ai/admin/rule-fixer" class="dropdown-item {% if request.path == '/ai/admin/rule-fixer' %}active{% endif %}">
+                           <i class="fa-solid fa-wrench me-2"></i>Rule Fixer</a></li>
+                     <li><a href="/ai/admin/models" class="dropdown-item {% if request.path == '/ai/admin/models' %}active{% endif %}">
+                           <i class="fa-solid fa-shield-halved me-2"></i>Models &amp; Security</a></li>
+                  </ul>
+               </li>
+               {% endif %}
+
             </ul>
 
             <!-- ── Right: search + notifications + profile ── -->

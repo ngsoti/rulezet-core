@@ -285,7 +285,13 @@ body.dark-mode .hero-orb-2 {
                     <div class="rulezy-say" tabindex="0">
                         <span class="rulezy-say__badge" style="--rulezy-avatar-size:52px;">New</span>
                         <img src="{{ url_for('static', filename='images/rulezy/repos.png') }}" alt="Rulezy" class="rulezy-say__avatar" style="width:52px;height:52px;">
-                        <div class="rulezy-say__bubble">Hi, I'm Rulezy! I'll help you create rules, search the platform, and answer questions about Rulezet — just click the chat bubble in the corner anytime.</div>
+                        <div class="rulezy-say__bubble">
+                            {% if current_user.is_admin() or current_user.has_permission('ai.use') %}
+                            Hi, I'm Rulezy! I'll help you create rules, search the platform, and answer questions about Rulezet — just click the chat bubble in the corner anytime.
+                            {% else %}
+                            Hi, I'm Rulezy — Rulezet's mascot, and the platform's very first AI integration.
+                            {% endif %}
+                        </div>
                     </div>
                     {% endif %}
                     </div>

@@ -9,6 +9,9 @@ chatbot_blueprint = Blueprint('chatbot', __name__)
 @chatbot_blueprint.route('/message', methods=['POST'])
 @login_required
 def send_message():
+    if not (current_user.is_admin() or current_user.has_permission('ai.use')):
+        return jsonify({"success": False, "reply": "Forbidden."}), 403
+
     data = request.get_json(force=True) or {}
     message = (data.get('message') or '').strip()
     history = data.get('history') or []
@@ -52,7 +55,7 @@ def admin_conversations():
 @chatbot_blueprint.route('/admin/conversations/data', methods=['GET'])
 @login_required
 def admin_conversations_data():
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('ai.manage')):
         return jsonify({"error": "Unauthorized"}), 401
 
     from datetime import datetime, timedelta
@@ -126,7 +129,7 @@ def admin_conversations_users():
     """Distinct users who have at least one chatbot conversation, with their
     conversation count — feeds the user filter dropdown (same '[{name/label,
     count}]' shape as /rule/get_rules_authors_usage)."""
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('ai.manage')):
         return jsonify({"error": "Unauthorized"}), 401
 
     from sqlalchemy import func
@@ -150,7 +153,7 @@ def admin_conversations_users():
 @chatbot_blueprint.route('/admin/conversations/<string:conversation_uuid>', methods=['GET'])
 @login_required
 def admin_conversation_detail(conversation_uuid):
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('ai.manage')):
         return jsonify({"error": "Unauthorized"}), 401
 
     from app.core.db_class.db import ChatbotConversation
@@ -168,7 +171,7 @@ def admin_conversation_detail(conversation_uuid):
 @chatbot_blueprint.route('/admin/conversations/<string:conversation_uuid>/delete', methods=['POST'])
 @login_required
 def admin_conversation_delete(conversation_uuid):
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('ai.manage')):
         return jsonify({"error": "Unauthorized"}), 401
 
     from app import db

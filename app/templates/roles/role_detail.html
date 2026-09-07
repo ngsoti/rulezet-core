@@ -47,15 +47,15 @@
         <div class="card-body p-4 p-md-5">
 
             <!-- Details -->
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
-                <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
-                    <i class="fa-solid fa-circle-info me-1"></i> Details
-                </span>
-            </div>
+            <div class="rounded-3 border p-3 mb-4" style="background:var(--light-bg-color);">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div style="width:3px;height:14px;background:#0d6efd;border-radius:2px;flex-shrink:0;"></div>
+                    <span class="fw-bold" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle-text-color);">
+                        <i class="fa-solid fa-circle-info me-1"></i> Details
+                    </span>
+                </div>
 
-            <div class="ud-info-grid mb-3">
-                <div class="ud-info-cell">
+                <div class="roles-detail-row">
                     <div class="ud-info-cell-icon" style="background:rgba(13,110,253,.1);color:#0d6efd;">
                         <i class="fa-solid fa-tag"></i>
                     </div>
@@ -64,7 +64,7 @@
                         <div class="ud-info-cell-value">[[ role.name ]]</div>
                     </div>
                 </div>
-                <div class="ud-info-cell">
+                <div class="roles-detail-row roles-detail-row--last">
                     <div class="ud-info-cell-icon" style="background:rgba(13,202,240,.1);color:#0dcaf0;">
                         <i class="fa-solid fa-users"></i>
                     </div>
@@ -73,16 +73,9 @@
                         <div class="ud-info-cell-value">[[ role.user_count ]]</div>
                     </div>
                 </div>
-                <div class="ud-info-cell">
-                    <div class="ud-info-cell-icon" style="background:rgba(111,66,193,.1);color:#6f42c1;">
-                        <i class="fa-solid fa-align-left"></i>
-                    </div>
-                    <div class="ud-info-cell-body">
-                        <div class="ud-info-cell-label">Description</div>
-                        <div class="ud-info-cell-value">[[ role.description || 'No description.' ]]</div>
-                    </div>
-                </div>
             </div>
+            <!-- Description already shown in the banner above (same pattern as
+                 every other detail page) — not repeated here. -->
 
             <!-- Actions -->
             <div class="rounded-3 border p-3 mb-4" style="background:var(--light-bg-color);">
@@ -118,9 +111,13 @@
                         <input type="checkbox" class="form-check-input"
                                :checked="selected_permission_ids.has(perm.id)"
                                @change="togglePermission(perm.id)">
-                        <div>
-                            <div class="roles-perm-check-key">[[ perm.key ]]</div>
-                            <div class="roles-perm-check-desc">[[ perm.label ]]<span v-if="perm.description"> — [[ perm.description ]]</span></div>
+                        <div class="ud-info-cell-icon roles-perm-check-icon">
+                            <i class="fa-solid" :class="permIcon(perm.key)"></i>
+                        </div>
+                        <div class="flex-grow-1" style="min-width:0;">
+                            <div class="roles-perm-check-title">[[ perm.label || perm.key ]]</div>
+                            <div class="roles-perm-check-desc" v-if="perm.description">[[ perm.description ]]</div>
+                            <span class="roles-badge roles-badge--perm mt-2">[[ perm.key ]]</span>
                         </div>
                     </label>
                 </div>
@@ -294,6 +291,12 @@
                 if (data.success) all_permissions.value = data.permissions
             }
 
+            const PERM_ICONS = { ai: 'fa-robot', rule: 'fa-scroll' }
+            function permIcon(key) {
+                const domain = (key || '').split('.')[0]
+                return PERM_ICONS[domain] || 'fa-key'
+            }
+
             function togglePermission(id) {
                 const s = new Set(selected_permission_ids.value)
                 s.has(id) ? s.delete(id) : s.add(id)
@@ -384,7 +387,7 @@
                 edit_role, edit_modal_el, openEditModal,
                 users_table_ref, usersFetchUrl, user_columns,
                 add_user_modal_el, user_search, user_suggestions,
-                togglePermission, saveRoleInfo, savePermissions, deleteRole,
+                permIcon, togglePermission, saveRoleInfo, savePermissions, deleteRole,
                 openAddUserModal, onUserSearch, addUser, removeUser,
             }
         }

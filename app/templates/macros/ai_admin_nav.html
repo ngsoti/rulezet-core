@@ -23,8 +23,12 @@
     <a href="/ai/admin/how-it-works" class="dr-nav__item {% if active == 'how_it_works' %}active{% endif %}">
         <i class="fa-solid fa-circle-question"></i><span>How it works</span>
     </a>
+    {% if current_user.is_admin() %}
     <span class="dr-nav__sep"></span>
     {{ anav.admin_nav_toggle() }}
+    {% endif %}
 </div>
+{% if current_user.is_admin() %}
 {{ anav.admin_nav_panel('ai') }}
+{% endif %}
 {% endmacro %}

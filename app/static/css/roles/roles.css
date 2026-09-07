@@ -34,6 +34,18 @@
 
 /* ── Role detail page ── */
 
+.roles-detail-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .65rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.roles-detail-row--last {
+    border-bottom: none;
+}
+
 .roles-perm-checklist {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -67,17 +79,22 @@
     flex-shrink: 0;
 }
 
-.roles-perm-check-key {
-    font-family: var(--bs-font-monospace, monospace);
-    font-size: .78rem;
-    font-weight: 600;
+.roles-perm-check-icon {
+    background: rgba(13, 110, 253, .1);
+    color: #0d6efd;
+    flex-shrink: 0;
+}
+
+.roles-perm-check-title {
+    font-size: .85rem;
+    font-weight: 700;
     color: var(--text-color);
 }
 
 .roles-perm-check-desc {
     font-size: .75rem;
     color: var(--subtle-text-color);
-    margin-top: .1rem;
+    margin-top: .15rem;
 }
 
 .roles-user-picker {

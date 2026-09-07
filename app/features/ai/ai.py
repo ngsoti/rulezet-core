@@ -27,7 +27,10 @@ _KNOWN_AGENT_KEYS = {'chatbot', 'rule_analysis', 'rule_generator', 'rule_fixer'}
 def _require_admin():
     if not current_user.is_authenticated:
         return redirect(url_for('account.login'))
-    if not current_user.is_admin():
+    # Full AI control (config, models, execution logs, moderation) — the
+    # "AI Manager" role, in addition to real admins. "AI Operator" (ai.use
+    # only) does NOT reach this section, see app/features/roles/roles_core.py.
+    if not (current_user.is_admin() or current_user.has_permission('ai.manage')):
         abort(403)
 
 

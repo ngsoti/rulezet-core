@@ -407,11 +407,18 @@ def create_job():
 
     # Job types reachable from this endpoint are administrative by default —
     # user-level jobs are created server-side by their own gated routes,
-    # never through here. The one narrow exception: a non-admin holding
-    # rule.tag_any may create the two tag job types, matching what the
-    # rule.tag_any-gated /rule/bulk_tag page itself is allowed to do.
+    # never through here. Two narrow exceptions: a non-admin holding
+    # rule.tag_any may create the two tag job types (matching what the
+    # rule.tag_any-gated /rule/bulk_tag page itself is allowed to do), and a
+    # non-admin holding ai.use may trigger a Rule Analysis run (matching the
+    # ai.use-gated rule-analysis UI).
     is_tag_manager_job = job_type in _TAG_MANAGER_JOB_TYPES and current_user.has_permission('rule.tag_any')
-    if not current_user.is_admin() and not is_tag_manager_job:
+    is_ai_job = (
+        job_type == 'ai_generate'
+        and payload.get('agent_key') == 'rule_analysis'
+        and current_user.has_permission('ai.use')
+    )
+    if not current_user.is_admin() and not is_tag_manager_job and not is_ai_job:
         return jsonify({"error": "Forbidden."}), 403
 
     payload['user_id'] = current_user.id

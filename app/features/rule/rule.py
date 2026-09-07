@@ -72,7 +72,9 @@ def rule() -> render_template:
     form = AddNewRuleForm()
     licenses = get_licst_license()
     form.license.choices = [(lic, lic) for lic in licenses]
-    ai_generate_available = _ai_generate_available()
+    ai_generate_available = _ai_generate_available() and (
+        current_user.is_admin() or current_user.has_permission('ai.use')
+    )
 
     # form send to treatment
 
@@ -153,6 +155,8 @@ def ai_generate_rule():
     Streams the shared "thinking steps" protocol (AI_00_FOUNDATION.md §10),
     one {"type": "step", ...} line per stage, then a final {"type": "result",
     ...} line — same shape as the Rule Fixer's streaming route."""
+    if not (current_user.is_admin() or current_user.has_permission('ai.use')):
+        return jsonify({"ok": False, "error": "Forbidden."}), 403
     if not _ai_generate_available():
         return jsonify({"ok": False, "error": "AI rule generation isn't available."}), 400
 
@@ -868,7 +872,7 @@ def _rule_test_count(rule_id):
 def _rule_ai_analysis_count(rule_id):
     from app.core.db_class.db import AIGeneration
     q = AIGeneration.query.filter_by(agent_key='rule_analysis', rule_id=rule_id)
-    if not (current_user.is_authenticated and current_user.is_admin()):
+    if not (current_user.is_authenticated and (current_user.is_admin() or current_user.has_permission('ai.manage'))):
         q = q.filter_by(is_public=True)
     return q.count()
 
@@ -1013,7 +1017,7 @@ def detail_rule_ai_analysis_list(rule_id):
     private ones, so they can review/toggle/delete them)."""
     from app.core.db_class.db import AIGeneration
     q = AIGeneration.query.filter_by(agent_key='rule_analysis', rule_id=rule_id)
-    if not (current_user.is_authenticated and current_user.is_admin()):
+    if not (current_user.is_authenticated and (current_user.is_admin() or current_user.has_permission('ai.manage'))):
         q = q.filter_by(is_public=True)
     items = q.order_by(AIGeneration.created_at.desc()).limit(50).all()
     out = []
@@ -1028,13 +1032,13 @@ def detail_rule_ai_analysis_list(rule_id):
 @login_required
 def ai_analysis_models():
     """Model allowlist for the launch card — queries Ollama directly rather
-    than a separate admin-curated table, since none exists yet. Admin-only:
-    the launch card itself is admin-only in the template, this is just
-    defense in depth."""
+    than a separate admin-curated table, since none exists yet. Defense in
+    depth: the launch card itself is only shown to admins/ai.use holders in
+    the template."""
     from app.core.db_class.db import AIAgentConfig
     from app.features.ai.ai_core import AgentConnectionError, OllamaClient
 
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('ai.use')):
         return jsonify({"error": "Forbidden."}), 403
 
     cfg = AIAgentConfig.query.filter_by(agent_key='rule_analysis').first()
@@ -1055,15 +1059,18 @@ def ai_analysis_models():
 
 
 def _get_visible_ai_generation_or_none(rule_id, analysis_id):
-    """A private analysis is only visible to an admin — same rule as
-    detail_rule_ai_analysis_list above."""
+    """A private analysis is only visible to an admin or AI Manager — same
+    rule as detail_rule_ai_analysis_list above."""
     from app.core.db_class.db import AIGeneration
     analysis = AIGeneration.query.filter_by(
         id=analysis_id, rule_id=rule_id, agent_key='rule_analysis',
     ).first()
     if not analysis:
         return None
-    if not analysis.is_public and not (current_user.is_authenticated and current_user.is_admin()):
+    is_ai_manager = current_user.is_authenticated and (
+        current_user.is_admin() or current_user.has_permission('ai.manage')
+    )
+    if not analysis.is_public and not is_ai_manager:
         return None
     return analysis
 
@@ -1152,11 +1159,11 @@ def detail_rule_ai_analysis_download_pdf(rule_id, analysis_id):
 @rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis/<int:analysis_id>/visibility", methods=['POST'])
 @login_required
 def detail_rule_ai_analysis_visibility(rule_id, analysis_id):
-    """Admin-only moderation lever: an AI-generated report can be wrong on a
-    given rule — hide it without losing it."""
+    """Moderation lever (admin or AI Manager): an AI-generated report can be
+    wrong on a given rule — hide it without losing it."""
     from app.core.db_class.db import AIGeneration
 
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('ai.manage')):
         return jsonify({"success": False, "message": "Forbidden."}), 403
 
     analysis = AIGeneration.query.filter_by(
@@ -1177,10 +1184,10 @@ def detail_rule_ai_analysis_visibility(rule_id, analysis_id):
 @rule_blueprint.route("/detail_rule/<int:rule_id>/ai_analysis/<int:analysis_id>", methods=['DELETE'])
 @login_required
 def detail_rule_ai_analysis_delete(rule_id, analysis_id):
-    """Admin-only delete of a single AI analysis entry."""
+    """Delete a single AI analysis entry (admin or AI Manager)."""
     from app.core.db_class.db import AIGeneration
 
-    if not current_user.is_admin():
+    if not (current_user.is_admin() or current_user.has_permission('ai.manage')):
         return jsonify({"success": False, "message": "Forbidden."}), 403
 
     analysis = AIGeneration.query.filter_by(
@@ -2715,7 +2722,9 @@ def edit_bad_rule(rule_id):
     bad_rule = BadRuleModel.get_invalid_rule_by_id(rule_id)
     if bad_rule:
         if current_user.is_admin() or current_user.id == bad_rule.user_id:
-            ai_fix_available = _ai_fix_available_for(bad_rule)
+            ai_fix_available = _ai_fix_available_for(bad_rule) and (
+                current_user.is_admin() or current_user.has_permission('ai.use')
+            )
             if request.method == 'POST':
                 new_content = request.form.get('raw_content')
                 # success, error = RuleModel.process_and_import_fixed_rule(bad_rule, new_content )
@@ -2762,7 +2771,7 @@ def bad_rule_ai_fix(rule_id):
     bad_rule = BadRuleModel.get_invalid_rule_by_id(rule_id)
     if not bad_rule:
         return jsonify({"ok": False, "error": "Not found."}), 404
-    if not (current_user.is_admin() or current_user.id == bad_rule.user_id):
+    if not (current_user.is_admin() or current_user.has_permission('ai.use')):
         return jsonify({"ok": False, "error": "Forbidden."}), 403
     if not _ai_fix_available_for(bad_rule):
         return jsonify({"ok": False, "error": "AI fix isn't available for this rule."}), 400

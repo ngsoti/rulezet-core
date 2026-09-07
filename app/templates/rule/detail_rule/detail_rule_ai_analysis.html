@@ -119,8 +119,8 @@
 
     <template v-else>
 
-        {% if current_user.is_authenticated and current_user.is_admin() %}
-        <!-- Admin: launch a new analysis -->
+        {% if current_user.is_authenticated and (current_user.is_admin() or current_user.has_permission('ai.use')) %}
+        <!-- Admin / AI role: launch a new analysis -->
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center gap-2 mb-3">
@@ -182,7 +182,7 @@
                                 <li><a class="dropdown-item small" :href="downloadUrl(latest, 'pdf')" style="color:var(--text-color);"><i class="fa-solid fa-file-pdf me-2 opacity-50"></i>PDF</a></li>
                             </ul>
                         </div>
-                        {% if current_user.is_authenticated and current_user.is_admin() %}
+                        {% if current_user.is_authenticated and (current_user.is_admin() or current_user.has_permission('ai.manage')) %}
                         <button @click="toggleVisibility(latest)" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
                             <i class="fa-solid" :class="latest.is_public ? 'fa-eye-slash' : 'fa-eye'"></i>
                             [[ latest.is_public ? 'Make private' : 'Make public' ]]
@@ -303,7 +303,7 @@
     const { createApp, ref, onMounted } = Vue;
     import { create_message } from '/static/js/toaster.js';
 
-    const IS_ADMIN = {{ (current_user.is_authenticated and current_user.is_admin()) | tojson }};
+    const CAN_GENERATE = {{ (current_user.is_authenticated and (current_user.is_admin() or current_user.has_permission('ai.use'))) | tojson }};
 
     // Lazy-load DOMPurify to sanitize marked's HTML output before v-html —
     // rule content (what an analysis is built from) comes from any
@@ -353,7 +353,7 @@
             }
 
             async function fetchModels() {
-                if (!IS_ADMIN) return;
+                if (!CAN_GENERATE) return;
                 try {
                     const res = await fetch('/rule/ai_analysis/models');
                     if (res.ok) {

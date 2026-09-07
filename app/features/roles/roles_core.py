@@ -19,6 +19,19 @@ DEFAULT_PERMISSIONS = [
         "label": "Tag any rule",
         "description": "Add tags to any rule, not just rules the user owns.",
     },
+    {
+        "key": "ai.manage",
+        "label": "Manage AI features",
+        "description": "Full control over AI: the admin configuration/dashboard pages "
+                        "(models, prompts, execution logs, conversation/analysis moderation) "
+                        "plus usage of every AI feature.",
+    },
+    {
+        "key": "ai.use",
+        "label": "Use AI features",
+        "description": "Use the chatbot, rule analysis, rule fixer and rule generator, "
+                        "without access to the AI admin configuration/dashboard pages.",
+    },
 ]
 
 # System roles pre-seeded with a starter permission set, ready to assign
@@ -29,6 +42,17 @@ DEFAULT_ROLES = [
         "name": "Tag manager",
         "description": "Can tag any rule on the platform.",
         "permission_keys": ["rule.tag_any"],
+    },
+    {
+        "name": "AI Manager",
+        "description": "Full control over AI: admin configuration/dashboard pages "
+                        "plus usage of every AI feature.",
+        "permission_keys": ["ai.manage", "ai.use"],
+    },
+    {
+        "name": "AI Operator",
+        "description": "Can use the chatbot, rule analysis, rule fixer and rule generator.",
+        "permission_keys": ["ai.use"],
     },
 ]
 
