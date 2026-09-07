@@ -85,8 +85,9 @@
 
               
 
-               <!-- ── GitHub ── -->
-               {% if current_user.is_authenticated %}
+               <!-- ── GitHub (hidden for non-admin GitHub Managers — they get
+                    the dedicated "GitHub Manager" dropdown below instead) ── -->
+               {% if current_user.is_authenticated and (current_user.is_admin() or not current_user.has_permission('github.manage')) %}
                <li class="nav-item dropdown">
                   <a class="nav-link dropdown-toggle custom-nav-link fw-bold {% if '/github' in request.path %}active{% endif %}"
                      href="#" role="button" data-bs-toggle="dropdown">
@@ -296,8 +297,13 @@
                            href="/rule/github/manage"><i class="fa-solid fa-bars-progress fa-fw me-2"></i>Manage Github</a></li>
                      <li><a class="dropdown-item" href="/rule/create_rule?tab=github">
                            <i class="fa-solid fa-file-import fa-fw me-2"></i>Import Rules</a></li>
-                     <li><a class="dropdown-item" href="/rule/github/update_github/update_rules_from_github">
-                           <i class="fa-solid fa-rotate fa-fw me-2"></i>Update Rules</a></li>
+                     <li>
+                        <a class="dropdown-item d-flex justify-content-between align-items-center"
+                           href="/rule/github/update_github/update_rules_from_github">
+                           <span><i class="fa-solid fa-rotate fa-fw me-2"></i>Update Rules</span>
+                           <span v-if="update_to_validate > 0" class="badge rounded-pill bg-danger ms-2">[[ update_to_validate ]]</span>
+                        </a>
+                     </li>
                   </ul>
                </li>
                {% endif %}
