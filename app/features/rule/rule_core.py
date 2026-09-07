@@ -394,6 +394,14 @@ _CORPUS_IDENTIFIER_LABEL = {
     'wazuh': 'Wazuh rule ID',
 }
 
+# Every format's parse_metadata() falls back to a placeholder string like
+# "Unknown" for original_uuid when the source rule has no native id/uuid
+# field (most formats besides Sigma/ATR) — these are NOT real external
+# identifiers, so add_rule_core()'s uuid-duplicate check must not treat two
+# unrelated uuid-less rules as duplicates of each other just because they
+# share the same placeholder.
+EMPTY_UUID_VALUES = {"none", "null", "unknown", "n/a", "na", ""}
+
 
 def _extract_corpus_identifier(rule_format: str, content: str) -> Optional[str]:
     """Extract the identifier that must be unique within its format's corpus."""
@@ -577,7 +585,11 @@ def add_rule_core(form_dict, user, record_activity: bool = True) -> tuple[bool, 
         # than content and is checked first. Centralized here (rather than
         # left to individual callers) so the REST API, GitHub import, and
         # connector sync all get the same protection as the web JSON-paste form.
-        if new_original_uuid:
+        # Placeholder values (a format's fallback for "this rule has no
+        # native uuid") are excluded — otherwise every uuid-less rule ever
+        # imported, across every format and source, would collide with the
+        # first one and never import again.
+        if new_original_uuid and new_original_uuid.lower() not in EMPTY_UUID_VALUES:
             existing_by_uuid = _active().filter(
                 or_(Rule.uuid == new_original_uuid, Rule.original_uuid == new_original_uuid)
             ).first()
@@ -755,8 +767,6 @@ def rule_exists(Metadata: dict) -> tuple[bool, int]:
     - If a valid original_uuid is provided: check by original_uuid.
     - If not: check by content.
     """
-    EMPTY_UUID_VALUES = {"none", "null", "unknown", "n/a", "na", ""}
-
     original_uuid = str(Metadata.get("original_uuid") or "").strip()
 
     if original_uuid.lower() not in EMPTY_UUID_VALUES:
